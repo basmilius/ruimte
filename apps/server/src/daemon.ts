@@ -3,22 +3,21 @@ import { registerPushHandlers } from './handlers/push.ts';
 import { SnoozeStore } from './push/snoozes.ts';
 import { registerSnoozeHandlers } from './handlers/snooze.ts';
 import { dirname, join, resolve } from 'node:path';
-import type { ServerWebSocket } from 'bun';
+import type { Server, ServerWebSocket } from 'bun';
 import {
-    AuthTicketPayloadSchema,
     isIdle,
     MACHINE_HEALTH_PATH,
     MACHINE_PROOF_PATH,
+    MACHINE_STATUS_PATH,
     MACHINE_WORK_PATH,
-    PairPayloadSchema,
     PROTOCOL_PARAM,
     PROTOCOL_REFUSED_CLOSE_CODE,
-    PROTOCOL_VERSION,
     acceptsOfferedProtocol,
     protocolRefusalReason,
     type AgentKind,
     type DiagramContent,
     type HealthResult,
+    type MachineStatus,
     type MachineWork,
     type RuntimeMode
 } from '@ruimte/contracts';
@@ -43,19 +42,21 @@ import { authenticateChannel } from './pulsar/channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS } from './pulsar/data-channel.ts';
 import { BrokerRelay } from './pulsar/broker-relay.ts';
 import { BrokerSwitch } from './pulsar/broker-switch.ts';
+import { lanAddresses } from './pulsar/lan-addresses.ts';
+import { LanDoor } from './pulsar/lan-door.ts';
+import { SignalGate } from './pulsar/signal-gate.ts';
 import { StatementGate, TEST_STATEMENT_KEY_VARIABLE, trustedStatementKeys } from './pulsar/statement.ts';
 import { DirectPeers } from './pulsar/peers.ts';
 import { greetingLines } from './cli/greeting.ts';
 import { guardWeriftTurn } from './pulsar/turn-guard.ts';
 import { registerDirectHandlers } from './handlers/direct.ts';
 import { suggestChatTitle } from '@ruimte/agents/chat/chat-title';
-import { authCorsHeaders, decideAccess, handleLocalTicketRequest, isLoopbackAddress, mayInvite, reachabilityOf } from './auth/access.ts';
+import { crossOriginHeaders, decideAccess, handleLocalTicketRequest, isOwner, preflightHeaders, reachabilityOf, withHeaders } from './auth/access.ts';
 import { handleLocalProofRequest } from './auth/local-proof.ts';
 import { readOrCreateLocalSecret } from './auth/local-secret.ts';
 import { MachineAccountError, signForAccount, signLinkRequest } from './auth/registration.ts';
 import { AccountSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
-import { pairingUrl } from './cli/pairing.ts';
 import { AuthStore } from './auth/auth-store.ts';
 import { Handshake } from './auth/handshake.ts';
 import type { Relay } from './auth/relay.ts';
@@ -83,7 +84,7 @@ import { childCounter, workOf } from './service/work.ts';
 import { KeepAwake } from './power/keep-awake.ts';
 import { MachineUpdates, workEndedByInstall } from './power/machine-update.ts';
 import { BUILD, COMPILED as compiled, VERSION } from './version.ts';
-import { registerAuthHandlers } from './handlers/auth.ts';
+import { PAIRING_REMOVED, registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
 import { continueOn } from './chat/continue-on.ts';
 import { chatForkDeps, forkChat, readForkInfo } from './chat/fork.ts';
@@ -96,7 +97,6 @@ import { FolderWatcher } from './fs/watch.ts';
 import { registerBytesHandlers } from './handlers/bytes.ts';
 import { registerFsHandlers } from './handlers/fs.ts';
 import { readServedFile } from './fs/read.ts';
-import { serveClient } from './serve-client.ts';
 import { registerGitHandlers } from './handlers/git.ts';
 import { registerDiagramHandlers } from './handlers/diagram.ts';
 import { registerLaunchHandlers } from './handlers/launches.ts';
@@ -175,6 +175,8 @@ const MACHINE_LINK_PATH = '/machine/link-request';
 const MACHINE_REGISTRATION_PATH = '/machine/registration';
 // What `ruimte logout` asks: the machine leaves its account, as `endpoint.leaveAccount` does for the app.
 const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
+// Where a client of before account-only paired and signed for a ticket over HTTP; each answers that pairing links are gone.
+const LEGACY_PAIRING_PATHS = new Set(['/auth/pair', '/auth/pairing-token', '/auth/challenge', '/auth/ticket']);
 const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });
 
 // Past anything a hook or a verb sends, and the ceiling on what an unauthenticated request can make the daemon buffer.
@@ -193,7 +195,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const identity = await readOrCreateEndpointIdentity(config.home, config.label);
     const auth = new AuthStore(config.home);
     const handshake = new Handshake(auth, identity);
-    const access = { allowedOrigins: config.allowedOrigins, localSecret: await readOrCreateLocalSecret(config.home), tickets: handshake };
+    const access = { localSecret: await readOrCreateLocalSecret(config.home), tickets: handshake };
 
     const snapshots = new SnapshotStore(config.home);
     // Loaded before anything can take one: a node made just before a restart still starts on its prompt.
@@ -760,7 +762,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         identity,
         version: VERSION,
         broker: () => brokerSwitch.describe(),
-        pairingUrl: () => pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken()),
+        lanDoor: () => describeLanDoor(),
         streamingChanged: (allowed) => {
             if (!allowed) {
                 browsers.closeAll();
@@ -855,8 +857,14 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         machineId: identity.id,
         machinePublicKey: identity.publicKey,
         trustedKeys: statementKeys,
-        refusesStatements: () => identity.refuseStatements,
         store: auth
+    });
+    // One gate for the broker and the door on the local network, so an attempt belongs to the key that offered it on both.
+    const gate = new SignalGate({
+        publicKey: identity.publicKey,
+        isPaired: async (publicKey) => (await auth.sessionForPublicKey(publicKey)) !== null,
+        admitStatement: (publicKey, statementAccess) => statements.admit(publicKey, statementAccess),
+        receive: (envelope, reply) => peers.receive(envelope, reply)
     });
     /* The broker is the second way a signal reaches `peers`, next to `direct.signal` on a socket. The
        switch follows the machine's setting, so a client that changes it needs no restart here. */
@@ -869,13 +877,34 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 url,
                 publicKey: identity.publicKey,
                 sign: (message) => identity.sign(message),
-                isPaired: async (publicKey) => (await auth.sessionForPublicKey(publicKey)) !== null,
-                admitStatement: (publicKey, access) => statements.admit(publicKey, access),
-                receive: (envelope, reply) => peers.receive(envelope, reply)
+                gate
             })
     });
     identity.attachBroker(brokerSwitch);
     const relay: Relay = brokerSwitch;
+
+    /* The door on the local network, open unless a person closed it or `--no-lan` keeps it closed. The
+       addresses are read per answer, so a machine that moved to another network says so without a timer. */
+    const lanDoor = new LanDoor({
+        port: config.lanPort,
+        identity: { machineId: identity.id, publicKey: identity.publicKey, sign: (message) => identity.sign(message) },
+        gate
+    });
+    const lanDoorWanted = (): boolean => !config.lanDoorOff && identity.lanDoor;
+    const describeLanDoor = () => {
+        const port = lanDoor.port;
+        return { lan: port === null ? null : { port, addresses: lanAddresses() }, lanDoorFixed: config.lanDoorOff };
+    };
+    identity.attachLanDoor({
+        apply: () => {
+            if (lanDoorWanted()) {
+                lanDoor.start();
+            } else {
+                lanDoor.stop();
+            }
+        },
+        describe: describeLanDoor
+    });
 
     if (config.installHooks) {
         // Only the CLIs the daemon has a normalizer for are listed; the others run without status.
@@ -934,238 +963,181 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         computer
     });
 
-    const endpointInfo = (reachability: ClientAccess['reachability'], authenticated: boolean) => ({
-        id: identity.id,
-        label: identity.label,
-        nameSource: identity.nameSource,
-        icon: identity.icon,
-        agentsDeleteAnyView: identity.agentsDeleteAnyView,
-        refuseStatements: identity.refuseStatements,
-        streamingAllowed: identity.streamingAllowed,
-        resumeAtReset: identity.resumeAtReset,
-        appleFoundationEnabled: identity.appleFoundationEnabled,
-        ...identity.keepAwakeFields(),
-        keepAwakeAvailable: keepAwake.available,
-        update: updates.state(),
-        platform: process.platform,
-        version: VERSION,
-        protocol: PROTOCOL_VERSION,
-        reachability,
-        authenticated,
-        publicKey: identity.publicKey,
-        broker: identity.broker,
-        ...brokerSwitch.describe()
-    });
+    type SocketData = ClientAccess & { protocolRefused: boolean; ticket: string | null };
 
-    const server = Bun.serve<ClientAccess & { protocolRefused: boolean; ticket: string | null }>({
+    // Every HTTP route and the upgrade, before the cross-origin headers the desktop app's page needs.
+    const route = async (request: Request, server: Server<SocketData>): Promise<Response | undefined> => {
+        const url = new URL(request.url);
+        const remote = server.requestIP(request)?.address ?? '';
+
+        if (url.pathname === MACHINE_HEALTH_PATH) {
+            if (request.method !== 'GET') {
+                return new Response('Method not allowed', { status: 405 });
+            }
+            return Response.json({ ok: true, version: VERSION, build: BUILD, service: config.underService } satisfies HealthResult);
+        }
+
+        if (url.pathname === MACHINE_PROOF_PATH) {
+            return handleLocalProofRequest(request, { localSecret: access.localSecret, port: server.port ?? config.port });
+        }
+
+        // todo(bas): drop with `PAIRING_REMOVED` one release after pairing links went.
+        if (LEGACY_PAIRING_PATHS.has(url.pathname)) {
+            return new Response(PAIRING_REMOVED, { status: 410 });
+        }
+
+        if (url.pathname === '/auth/local-ticket') {
+            return handleLocalTicketRequest(request, access, handshake);
+        }
+
+        if (url.pathname === MACHINE_WORK_PATH) {
+            // Only for the local secret: the desktop app asks before it restarts the service, and nobody else needs to know.
+            if (request.method !== 'GET') {
+                return new Response('Method not allowed', { status: 405 });
+            }
+            const decision = await decideAccess(request, remote, access, 'local');
+            if (!decision.ok || decision.access.sessionId !== null) {
+                return new Response('Forbidden', { status: 403 });
+            }
+            return Response.json(machineWork());
+        }
+
+        if (url.pathname === MACHINE_LEAVE_ACCOUNT_PATH) {
+            if (request.method !== 'POST') {
+                return new Response('Method not allowed', { status: 405 });
+            }
+            const decision = await decideAccess(request, remote, access, 'local');
+            if (!decision.ok || !isOwner(decision.access)) {
+                return new Response('Forbidden', { status: 403 });
+            }
+            const revoked = await auth.leaveAccount();
+            revoked.forEach(disconnectSession);
+            return Response.json({ revoked: revoked.length });
+        }
+
+        if (url.pathname === MACHINE_STATUS_PATH) {
+            // `ruimte status` on the local secret; a client sees the same through `endpoint.info`.
+            if (request.method !== 'GET') {
+                return new Response('Method not allowed', { status: 405 });
+            }
+            const decision = await decideAccess(request, remote, access, 'local');
+            if (!decision.ok || !isOwner(decision.access)) {
+                return new Response('Forbidden', { status: 403 });
+            }
+            const binding = await auth.accountBinding();
+            return Response.json({
+                version: VERSION,
+                service: config.underService,
+                label: identity.label,
+                onAccount: binding !== undefined && binding !== null,
+                broker: { url: brokerSwitch.describe().brokerUrl, connected: brokerSwitch.isReady },
+                ...describeLanDoor()
+            } satisfies MachineStatus);
+        }
+
+        if (url.pathname === MACHINE_LINK_PATH || url.pathname === MACHINE_REGISTRATION_PATH) {
+            // `ruimte login` on the local secret: the machine signs, the terminal talks to the address book.
+            if (request.method !== 'POST') {
+                return new Response('Method not allowed', { status: 405 });
+            }
+            const decision = await decideAccess(request, remote, access, 'local');
+            if (!decision.ok || decision.access.sessionId !== null) {
+                return new Response('Forbidden', { status: 403 });
+            }
+            const { brokerUrl } = brokerSwitch.describe();
+            if (url.pathname === MACHINE_LINK_PATH) {
+                return Response.json(signLinkRequest(identity, brokerUrl));
+            }
+            const parsed = RegistrationRequestSchema.safeParse(await request.json().catch(() => null));
+            if (!parsed.success) {
+                return new Response('Expected an account id', { status: 400 });
+            }
+            try {
+                return Response.json(await signForAccount(auth, identity, brokerUrl, parsed.data.accountId, disconnectSession));
+            } catch (e) {
+                if (e instanceof MachineAccountError) {
+                    return Response.json({ code: e.code, message: e.message }, { status: 409 });
+                }
+                throw e;
+            }
+        }
+
+        if (url.pathname === '/ws') {
+            const decision = await decideAccess(request, remote, access, 'socket');
+            if (!decision.ok) {
+                return new Response(decision.reason, { status: decision.status });
+            }
+            // Upgraded and then closed, since a browser reads the code and reason of a close but never the status of a refused upgrade.
+            const protocolRefused = !acceptsOfferedProtocol(url.searchParams.get(PROTOCOL_PARAM));
+            if (server.upgrade(request, { data: { ...decision.access, protocolRefused, ticket: decision.ticket ?? null } })) {
+                return undefined;
+            }
+            if (decision.ticket !== undefined) {
+                handshake.socketClosed(decision.ticket);
+            }
+            return new Response('Expected a WebSocket upgrade', { status: 426 });
+        }
+
+        if (url.pathname.startsWith(`${ATTACHMENTS_PATH}/`)) {
+            return handleAttachmentRequest(request, url, remote, access, (chatId, id) => chats.attachment(chatId, id));
+        }
+
+        if (url.pathname.startsWith(`${PROJECTS_PATH}/`)) {
+            return handleProjectRequest(request, url, remote, access, projects);
+        }
+
+        if (url.pathname === FS_FILE_PATH) {
+            return handleFsFileRequest(request, url, remote, access, machineHome);
+        }
+
+        if (url.pathname.startsWith(`${LIVE_STREAM_PATH}/`)) {
+            return handleLiveStreamRequest(request, url, remote, access, liveStreams, () => identity.streamingAllowed);
+        }
+
+        if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {
+            return handleHookRequest(request, url.pathname, manager, (token, event, kind) => {
+                const sessionId = manager.sessionIdForToken(token);
+                if (!sessionId) {
+                    return null;
+                }
+                // Asked on every event that can carry an answer, so the memory of what this
+                // agent was told keeps up with its turns even where nothing is printed.
+                const changed = context.changeSince(sessionId);
+                // A CLI the node launched got the verbs on its line; one typed by hand in the shell did not.
+                const verbs = !(takesNoteOnLine(kind) && manager.get(sessionId)?.launch?.kind === kind);
+                return hookContext(event, context.list(sessionId), {
+                    changed,
+                    messages: messagesFor(sessionId),
+                    depth: lineage.depthOf(sessionId),
+                    verbs,
+                    computer: computer.usable
+                });
+            });
+        }
+
+        if (url.pathname.startsWith(`${CANVAS_PATH}/`)) {
+            server.timeout(request, CANVAS_REQUEST_TIMEOUT_S);
+            return handleCanvasRequest(request, url.pathname, { targetForToken, host: canvasHost });
+        }
+
+        if (url.pathname === CONTEXT_PATH || url.pathname.startsWith(`${CONTEXT_PATH}/`)) {
+            return handleContextRequest(request, url.pathname, { targetForToken, host: canvasHost });
+        }
+
+        return new Response('Not found', { status: 404 });
+    };
+
+    const server = Bun.serve<SocketData>({
         hostname: config.host,
         port: config.port,
         maxRequestBodySize: MAX_REQUEST_BODY_BYTES,
         async fetch(request, server) {
-            const url = new URL(request.url);
-            const remote = server.requestIP(request)?.address ?? '';
-
-            if (url.pathname === MACHINE_HEALTH_PATH) {
-                if (request.method !== 'GET') {
-                    return new Response('Method not allowed', { status: 405 });
-                }
-                return Response.json({ ok: true, version: VERSION, build: BUILD, service: config.underService } satisfies HealthResult);
+            const cors = crossOriginHeaders(request);
+            if (cors !== null && request.method === 'OPTIONS') {
+                return new Response(null, { status: 204, headers: preflightHeaders(cors) });
             }
-
-            if (url.pathname === MACHINE_PROOF_PATH) {
-                return handleLocalProofRequest(request, { localSecret: access.localSecret, port: server.port ?? config.port });
-            }
-
-            if (url.pathname === '/auth/pairing-token') {
-                // `ruimte pair` sends the local secret as a bearer; the socket's `auth.pairingToken` asks the same `mayInvite`.
-                if (request.method !== 'POST') {
-                    return new Response('Method not allowed', { status: 405 });
-                }
-                const decision = await decideAccess(request, remote, auth, access, 'local');
-                if (!decision.ok || !mayInvite(decision.access)) {
-                    return new Response('Forbidden', { status: 403 });
-                }
-                return Response.json({ url: pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken()) });
-            }
-
-            if (url.pathname === '/auth/pair') {
-                const cors = authCorsHeaders(request, config.allowedOrigins);
-                if (request.method === 'OPTIONS') {
-                    return new Response(null, { status: 204, headers: cors });
-                }
-                if (request.method !== 'POST') {
-                    return new Response('Method not allowed', { status: 405, headers: cors });
-                }
-                const parsed = PairPayloadSchema.safeParse(await request.json().catch(() => null));
-                if (!parsed.success) {
-                    return new Response('Bad pairing request', { status: 400, headers: cors });
-                }
-                const paired = await auth.pair(parsed.data.token, {
-                    label: parsed.data.label,
-                    ...(parsed.data.publicKey ? { publicKey: parsed.data.publicKey } : {})
-                });
-                if (!paired) {
-                    return new Response('That pairing link is used or expired. Ask for a new one.', { status: 401, headers: cors });
-                }
-                return Response.json(
-                    { ...(paired.sessionToken ? { sessionToken: paired.sessionToken } : {}), endpoint: endpointInfo(reachabilityOf(remote), true) },
-                    { headers: cors }
-                );
-            }
-
-            if (url.pathname === '/auth/challenge') {
-                const cors = authCorsHeaders(request, config.allowedOrigins);
-                if (request.method === 'OPTIONS') {
-                    return new Response(null, { status: 204, headers: cors });
-                }
-                if (request.method !== 'POST') {
-                    return new Response('Method not allowed', { status: 405, headers: cors });
-                }
-                return Response.json(handshake.challenge(), { headers: cors });
-            }
-
-            if (url.pathname === '/auth/ticket') {
-                const cors = authCorsHeaders(request, config.allowedOrigins);
-                if (request.method === 'OPTIONS') {
-                    return new Response(null, { status: 204, headers: cors });
-                }
-                if (request.method !== 'POST') {
-                    return new Response('Method not allowed', { status: 405, headers: cors });
-                }
-                const parsed = AuthTicketPayloadSchema.safeParse(await request.json().catch(() => null));
-                if (!parsed.success) {
-                    return new Response('Bad ticket request', { status: 400, headers: cors });
-                }
-                const ticket = await handshake.redeem(parsed.data);
-                if (!ticket) {
-                    return new Response('This machine does not recognize that signature. Pair again.', { status: 401, headers: cors });
-                }
-                return Response.json(ticket, { headers: cors });
-            }
-
-            if (url.pathname === '/auth/local-ticket') {
-                return handleLocalTicketRequest(request, access, handshake);
-            }
-
-            if (url.pathname === MACHINE_WORK_PATH) {
-                // Only for the local secret: the desktop app asks before it restarts the service, and nobody else needs to know.
-                if (request.method !== 'GET') {
-                    return new Response('Method not allowed', { status: 405 });
-                }
-                const decision = await decideAccess(request, remote, auth, access, 'local');
-                if (!decision.ok || decision.access.sessionId !== null) {
-                    return new Response('Forbidden', { status: 403 });
-                }
-                return Response.json(machineWork());
-            }
-
-            if (url.pathname === MACHINE_LEAVE_ACCOUNT_PATH) {
-                if (request.method !== 'POST') {
-                    return new Response('Method not allowed', { status: 405 });
-                }
-                const decision = await decideAccess(request, remote, auth, access, 'local');
-                if (!decision.ok || !mayInvite(decision.access)) {
-                    return new Response('Forbidden', { status: 403 });
-                }
-                const revoked = await auth.leaveAccount();
-                revoked.forEach(disconnectSession);
-                return Response.json({ revoked: revoked.length });
-            }
-
-            if (url.pathname === MACHINE_LINK_PATH || url.pathname === MACHINE_REGISTRATION_PATH) {
-                // `ruimte login` on the local secret: the machine signs, the terminal talks to the address book.
-                if (request.method !== 'POST') {
-                    return new Response('Method not allowed', { status: 405 });
-                }
-                const decision = await decideAccess(request, remote, auth, access, 'local');
-                if (!decision.ok || decision.access.sessionId !== null) {
-                    return new Response('Forbidden', { status: 403 });
-                }
-                const { brokerUrl } = brokerSwitch.describe();
-                if (url.pathname === MACHINE_LINK_PATH) {
-                    return Response.json(signLinkRequest(identity, brokerUrl));
-                }
-                const parsed = RegistrationRequestSchema.safeParse(await request.json().catch(() => null));
-                if (!parsed.success) {
-                    return new Response('Expected an account id', { status: 400 });
-                }
-                try {
-                    return Response.json(await signForAccount(auth, identity, brokerUrl, parsed.data.accountId, disconnectSession));
-                } catch (e) {
-                    if (e instanceof MachineAccountError) {
-                        return Response.json({ code: e.code, message: e.message }, { status: 409 });
-                    }
-                    throw e;
-                }
-            }
-
-            if (url.pathname === '/ws') {
-                const decision = await decideAccess(request, remote, auth, access, 'socket');
-                if (!decision.ok) {
-                    return new Response(decision.reason, { status: decision.status });
-                }
-                // Upgraded and then closed, since a browser reads the code and reason of a close but never the status of a refused upgrade.
-                const protocolRefused = !acceptsOfferedProtocol(url.searchParams.get(PROTOCOL_PARAM));
-                if (server.upgrade(request, { data: { ...decision.access, protocolRefused, ticket: decision.ticket ?? null } })) {
-                    return undefined;
-                }
-                if (decision.ticket !== undefined) {
-                    handshake.socketClosed(decision.ticket);
-                }
-                return new Response('Expected a WebSocket upgrade', { status: 426 });
-            }
-
-            if (url.pathname.startsWith(`${ATTACHMENTS_PATH}/`)) {
-                return handleAttachmentRequest(request, url, remote, auth, access, (chatId, id) => chats.attachment(chatId, id));
-            }
-
-            if (url.pathname.startsWith(`${PROJECTS_PATH}/`)) {
-                return handleProjectRequest(request, url, remote, auth, access, projects);
-            }
-
-            if (url.pathname === FS_FILE_PATH) {
-                return handleFsFileRequest(request, url, remote, auth, access, machineHome);
-            }
-
-            if (url.pathname.startsWith(`${LIVE_STREAM_PATH}/`)) {
-                return handleLiveStreamRequest(request, url, remote, auth, access, liveStreams, () => identity.streamingAllowed);
-            }
-
-            if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {
-                return handleHookRequest(request, url.pathname, manager, (token, event, kind) => {
-                    const sessionId = manager.sessionIdForToken(token);
-                    if (!sessionId) {
-                        return null;
-                    }
-                    // Asked on every event that can carry an answer, so the memory of what this
-                    // agent was told keeps up with its turns even where nothing is printed.
-                    const changed = context.changeSince(sessionId);
-                    // A CLI the node launched got the verbs on its line; one typed by hand in the shell did not.
-                    const verbs = !(takesNoteOnLine(kind) && manager.get(sessionId)?.launch?.kind === kind);
-                    return hookContext(event, context.list(sessionId), {
-                        changed,
-                        messages: messagesFor(sessionId),
-                        depth: lineage.depthOf(sessionId),
-                        verbs,
-                        computer: computer.usable
-                    });
-                });
-            }
-
-            if (url.pathname.startsWith(`${CANVAS_PATH}/`)) {
-                server.timeout(request, CANVAS_REQUEST_TIMEOUT_S);
-                return handleCanvasRequest(request, url.pathname, { targetForToken, host: canvasHost });
-            }
-
-            if (url.pathname === CONTEXT_PATH || url.pathname.startsWith(`${CONTEXT_PATH}/`)) {
-                return handleContextRequest(request, url.pathname, { targetForToken, host: canvasHost });
-            }
-
-            if (config.serve) {
-                return serveClient(config.serve, url.pathname);
-            }
-
-            return new Response('Not found', { status: 404 });
+            const response = await route(request, server);
+            return cors === null || response === undefined ? response : withHeaders(response, cors);
         },
         websocket: {
             backpressureLimit: SOCKET_BACKPRESSURE_LIMIT,
@@ -1216,12 +1188,6 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
 
     void relay.publish({ host: config.host, port: server.port ?? config.port });
 
-    if (!isLoopbackAddress(config.host) && config.host !== 'localhost') {
-        console.log(
-            `Pair another machine with:\n${pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken())}\n(or run \`ruimte pair\` later for a fresh one)`
-        );
-    }
-
     let shuttingDown = false;
     const shutdown = async (reason: string): Promise<void> => {
         if (shuttingDown) {
@@ -1267,6 +1233,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         launches.close();
         launchStore.closeAll();
         peers.closeAll();
+        lanDoor.stop();
         await relay.stop();
         server.stop(true);
         process.exit(0);
@@ -1287,5 +1254,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     });
     for (const line of greeting) {
         console.log(line);
+    }
+    // After the greeting, so a person who just ran `npx ruimte` reads what runs before where it is reachable.
+    if (lanDoorWanted()) {
+        lanDoor.start();
     }
 };

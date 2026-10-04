@@ -3,7 +3,7 @@ import { usePulsarMachines } from '@/pulsar/machines';
 import { mergeMachines, type MachineEntry } from '@/shell/settings/machine-list';
 import { useEndpoints } from '@/state/endpoints';
 
-/* A machine as the Machines pane knows it: a paired row, or only the account's record. */
+/* A machine as the Machines pane knows it: a row of this client, or only the account's record. */
 export const useMachineEntry = (endpointId: string): MachineEntry => {
     const endpoints = useEndpoints((s) => s.endpoints);
     const machines = usePulsarMachines((s) => s.machines);
@@ -16,7 +16,6 @@ export const useMachineEntry = (endpointId: string): MachineEntry => {
                 endpoint: null,
                 machine: null,
                 local: false,
-                paired: false,
                 onAccount: false
             },
         [endpointId, endpoints, machines]

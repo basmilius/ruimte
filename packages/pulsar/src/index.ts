@@ -5,6 +5,7 @@ export * from './broker.ts';
 export * from './broker-url.ts';
 export * from './device-link.ts';
 export * from './keys.ts';
+export * from './lan-door.ts';
 export * from './peer.ts';
 export * from './session-vault.ts';
 export * from './signaling.ts';

@@ -13,7 +13,7 @@ export type SettingsState = 'ready' | 'not-answering' | 'not-opened';
 
 export interface MachineDialogModel {
     settings: SettingsState;
-    /* Direct is a choice only for a row with an address; one opened from the account has the broker alone. */
+    /* Direct is a choice only for this machine; every other one is always reached directly. */
     direct: boolean;
     canOpen: boolean;
     canForget: boolean;
@@ -29,7 +29,7 @@ export const machineDialogModel = (entry: MachineEntry, context: MachineContext)
     const canLeaveAccount = entry.local && entry.endpoint !== null && typeof context.machineAccount === 'string';
     return {
         settings: entry.endpoint === null ? 'not-opened' : context.connected ? 'ready' : 'not-answering',
-        direct: entry.endpoint !== null && entry.endpoint.httpBaseUrl !== '',
+        direct: entry.local && entry.endpoint !== null,
         canOpen: entry.endpoint === null && (entry.machine?.brokerUrl ?? null) !== null,
         canForget: entry.endpoint !== null && !entry.local,
         canRemoveFromAccount: context.signedIn && entry.onAccount && !canLeaveAccount,
@@ -44,7 +44,7 @@ export interface MachineActionDeps {
     refreshAccount(): Promise<void>;
 }
 
-/* The pairing and the row on this client only; the machine and the account keep theirs. */
+/* The row on this client only; the machine and the account keep theirs. */
 export const forgetOnClient = async (entry: MachineEntry, deps: MachineActionDeps): Promise<void> => {
     if (entry.endpoint === null || entry.local) {
         return;

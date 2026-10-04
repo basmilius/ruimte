@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import type { MachineStatus } from '@ruimte/contracts';
 import type { DeviceLinkPollResult } from '@ruimte/pulsar';
 import { runLogin, type LoginOptions } from './login.ts';
 
@@ -12,6 +13,8 @@ interface Fakes {
     polls: Array<DeviceLinkPollResult | 'network' | 'refused'>;
     daemon?: 'down' | 'forbidden' | 'other-account';
     startRefusal?: boolean;
+    // What `/machine/status` answers; absent is a daemon from before it.
+    status?: MachineStatus;
 }
 
 interface Recorded {
@@ -50,6 +53,9 @@ const harness = (fakes: Fakes, extra: Partial<LoginOptions> = {}) => {
                     return answer({ code: 'machine-has-account', message: 'This machine is on another account.' }, 409);
                 }
                 return answer({ ...machine, issuedAt: NOW + 1, signature: SIGNATURE });
+            }
+            if (url.pathname === '/machine/status' && fakes.status) {
+                return answer(fakes.status);
             }
             return new Response('Not found', { status: 404 });
         }
@@ -119,6 +125,28 @@ describe('ruimte login', () => {
         expect(recorded.completes).toEqual([{ deviceCode: DEVICE_CODE, issuedAt: NOW + 1, signature: SIGNATURE }]);
     });
 
+    test('a daemon that says how it is reached ends the login on the ways in', async () => {
+        const approved: DeviceLinkPollResult = { status: 'approved', interval: 5, account: ACCOUNT };
+        const status: MachineStatus = {
+            version: '0.14.0',
+            service: true,
+            label: 'droplet',
+            onAccount: true,
+            broker: { url: 'wss://broker.ruimte.app', connected: true },
+            lan: { port: 4220, addresses: ['192.168.1.20'] },
+            lanDoorFixed: false
+        };
+        const both = harness({ polls: [approved], status });
+        expect(await both.run()).toBe(0);
+        expect(both.recorded.out.at(-1)).toBe(
+            'On this network they connect to it directly at 192.168.1.20:4220, and from anywhere else through wss://broker.ruimte.app.'
+        );
+
+        const none = harness({ polls: [approved], status: { ...status, broker: { url: null, connected: false }, lan: null } });
+        expect(await none.run()).toBe(0);
+        expect(none.recorded.out.at(-1)).toBe('No client can reach it yet: the broker is off, and so is the door on the local network.');
+    });
+
     test('a denial, a withdrawn code and an expired one end without a registration', async () => {
         for (const status of ['denied', 'cancelled', 'expired'] as const) {
             const { recorded, run } = harness({ polls: [{ status, interval: 5, account: null }] });
@@ -177,7 +205,7 @@ describe('ruimte login', () => {
 
         const down = harness({ polls: [], daemon: 'down' });
         expect(await down.run()).toBe(1);
-        expect(down.recorded.err).toEqual(['No daemon answers on port 4210; start one first.']);
+        expect(down.recorded.err).toEqual(['No daemon answers on port 4210. Start it with `ruimte service install`, or with `ruimte` in another terminal.']);
 
         const forbidden = harness({ polls: [], daemon: 'forbidden' });
         expect(await forbidden.run()).toBe(1);

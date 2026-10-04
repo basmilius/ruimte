@@ -4,19 +4,20 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PROTOCOL_VERSION, type ServerFrame } from '@ruimte/contracts';
 import { AuthStore, type StatementAdmission } from '../auth/auth-store.ts';
+import { admitClient } from '../auth/test-admit.ts';
 import { machineRegistrationMessage } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { generateKeyPair } from '../auth/keys.ts';
 import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
 import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
 import { MachineUpdates } from '../power/machine-update.ts';
-import { registerAuthHandlers } from './auth.ts';
+import { PAIRING_REMOVED, registerAuthHandlers } from './auth.ts';
 
 let home: string;
 let store: AuthStore;
 let identity: EndpointIdentity;
 let dispatcher: Dispatcher;
-let minted: number;
+let lanDoorOpen: boolean;
 let disconnected: string[];
 let streamingChanges: boolean[];
 let appleChanges: boolean[];
@@ -58,7 +59,7 @@ beforeEach(async () => {
     store = new AuthStore(home);
     identity = await readOrCreateEndpointIdentity(home, 'box');
     dispatcher = new Dispatcher();
-    minted = 0;
+    lanDoorOpen = true;
     disconnected = [];
     streamingChanges = [];
     appleChanges = [];
@@ -68,7 +69,7 @@ beforeEach(async () => {
         identity,
         version: '0.0.0',
         broker: () => ({ brokerUrl: identity.broker.mode === 'custom' ? identity.broker.url : null, brokerFixed: false }),
-        pairingUrl: () => `http://box:4210/pair#${store.issuePairingToken()}${minted++}`,
+        lanDoor: () => ({ lan: lanDoorOpen ? { port: 4220, addresses: ['192.168.1.20'] } : null, lanDoorFixed: false }),
         streamingChanged: (allowed) => streamingChanges.push(allowed),
         appleFoundationChanged: async (on) => {
             appleChanges.push(on);
@@ -94,29 +95,34 @@ afterEach(async () => {
 });
 
 describe('auth handlers', () => {
-    test('a client with the local secret gets a pairing link, a paired one does not, wherever it comes from', async () => {
-        const local = await ask({ reachability: 'loopback', sessionId: null }, 'auth.pairingToken');
-        expect(local).toMatchObject({ ok: true, result: { url: expect.stringMatching(/^http:\/\/box:4210\/pair#/) } });
+    test('a client of before account-only that asks for a pairing link or to hang a key on a token hears that links are gone', async () => {
+        const removed = { ok: false, error: { code: 'pairing-removed', message: PAIRING_REMOVED } };
+        expect(await ask({ reachability: 'loopback', sessionId: null }, 'auth.pairingToken')).toMatchObject(removed);
+        expect(await ask({ reachability: 'lan', sessionId: 's1' }, 'auth.registerKey', { publicKey: generateKeyPair().publicKey })).toMatchObject(removed);
+    });
 
-        const remote = await ask({ reachability: 'lan', sessionId: 's1' }, 'auth.pairingToken');
-        expect(remote).toMatchObject({ ok: false, error: { code: 'forbidden' } });
-        // Paired, but arriving through a tunnel on this machine. The address is loopback and still grants nothing.
-        const tunneled = await ask({ reachability: 'loopback', sessionId: 's1' }, 'auth.pairingToken');
-        expect(tunneled).toMatchObject({ ok: false, error: { code: 'forbidden' } });
-        expect(await ask(undefined, 'auth.pairingToken')).toMatchObject({ ok: false, error: { code: 'forbidden' } });
-        expect(minted).toBe(1);
+    test('endpoint.info says where the door on the local network stands, and the switch closes it from any client', async () => {
+        expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info')).toMatchObject({
+            ok: true,
+            result: { lan: { port: 4220, addresses: ['192.168.1.20'] }, lanDoor: true, lanDoorFixed: false }
+        });
+        const closed = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Studio', icon: null, lanDoor: false });
+        expect(closed).toMatchObject({ ok: true, result: { label: 'Studio', lanDoor: false } });
+        expect(identity.lanDoor).toBe(false);
+        const renamed = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Studio 2', icon: null });
+        expect(renamed).toMatchObject({ ok: true, result: { lanDoor: false } });
     });
 
     test('sessions list the asking client as current, and revoking an unknown one is an error', async () => {
-        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop' });
-        const listed = await ask({ reachability: 'lan', sessionId: paired!.id }, 'auth.sessions');
-        expect(listed).toMatchObject({ ok: true, result: { sessions: [{ id: paired!.id, label: 'laptop', current: true }] } });
+        const laptop = await admitClient(store, generateKeyPair().publicKey, 'laptop');
+        const listed = await ask({ reachability: 'lan', sessionId: laptop }, 'auth.sessions');
+        expect(listed).toMatchObject({ ok: true, result: { sessions: [{ id: laptop, label: 'laptop', current: true }] } });
 
         const loopback: ClientAccess = { reachability: 'loopback', sessionId: null };
         expect(await ask(loopback, 'auth.revoke', { id: 'nope' })).toMatchObject({ ok: false, error: { code: 'session-not-found' } });
-        expect(await ask(loopback, 'auth.revoke', { id: paired!.id })).toMatchObject({ ok: true });
+        expect(await ask(loopback, 'auth.revoke', { id: laptop })).toMatchObject({ ok: true });
         expect(await store.list(null)).toEqual([]);
-        expect(disconnected).toEqual([paired!.id]);
+        expect(disconnected).toEqual([laptop]);
     });
 
     test('Apple setting invokes lifecycle changes and leaves it alone on unrelated edits', async () => {
@@ -206,14 +212,14 @@ describe('auth handlers', () => {
                     nameSource: 'chosen',
                     icon: { kind: 'lucide', value: 'server' },
                     agentsDeleteAnyView: false,
-                    refuseStatements: false,
                     streamingAllowed: true,
                     resumeAtReset: false,
                     appleFoundationEnabled: false,
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,
-                    broker: { mode: 'default' }
+                    broker: { mode: 'default' },
+                    lanDoor: true
                 }
             }
         ]);
@@ -242,32 +248,6 @@ describe('auth handlers', () => {
         const empty = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: '', icon: null });
         expect(empty).toMatchObject({ ok: false });
         expect(identity.label).toBe('box');
-    });
-
-    test('a paired client hangs a key on its own session; a loopback one has no session to hang it on', async () => {
-        const paired = await store.pair(store.issuePairingToken(), { label: 'container' });
-        const { publicKey } = generateKeyPair();
-
-        const registered = await ask({ reachability: 'lan', sessionId: paired!.id }, 'auth.registerKey', { publicKey });
-        expect(registered).toMatchObject({ ok: true, result: { registered: true } });
-        expect(await store.sessionForPublicKey(publicKey)).toBe(paired!.id);
-
-        expect(await ask({ reachability: 'loopback', sessionId: null }, 'auth.registerKey', { publicKey: generateKeyPair().publicKey })).toMatchObject({
-            ok: true,
-            result: { registered: false }
-        });
-        expect(await ask({ reachability: 'lan', sessionId: paired!.id }, 'auth.registerKey', { publicKey: 'not-a-key' })).toMatchObject({
-            ok: true,
-            result: { registered: false }
-        });
-    });
-    test('the switch that refuses statements is set from any client, travels in endpoint.info and leaves the name alone', async () => {
-        expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info')).toMatchObject({ ok: true, result: { refuseStatements: false } });
-        const refused = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Studio', icon: null, refuseStatements: true });
-        expect(refused).toMatchObject({ ok: true, result: { label: 'Studio', refuseStatements: true, agentsDeleteAnyView: false } });
-        expect(identity.refuseStatements).toBe(true);
-        const renamed = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Studio 2', icon: null });
-        expect(renamed).toMatchObject({ ok: true, result: { refuseStatements: true } });
     });
 
     test('streaming starts allowed, can be disabled, and is left alone by a rename', async () => {
@@ -394,11 +374,10 @@ describe('auth handlers', () => {
             keepNonceUntil: Date.now() + 1_000,
             accountId: 'account-1'
         });
-        const laptop = await store.pair(store.issuePairingToken(), { label: 'Laptop', publicKey: generateKeyPair().publicKey });
 
         expect(await ask(LOCAL, 'endpoint.leaveAccount')).toMatchObject({ ok: true, result: { revoked: 1 } });
         expect(disconnected).toEqual([sessionOf(admitted)]);
-        expect((await store.list(null)).map((entry) => entry.id)).toEqual([laptop!.id]);
+        expect(await store.list(null)).toEqual([]);
     });
 
     test('joining an account cuts off a client another account let in on a statement', async () => {

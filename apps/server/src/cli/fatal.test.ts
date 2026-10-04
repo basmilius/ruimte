@@ -47,7 +47,7 @@ describe('portInUseMessage', () => {
         const message = portInUseMessage(4290, { version: '0.4.0', service: true });
         expect(message).toContain('`ruimte service status --port 4290`');
         expect(message).toContain('`ruimte login --port 4290`');
-        expect(message).toContain('`ruimte pair --port 4290`');
+        expect(message).toContain('`ruimte status --port 4290`');
     });
 
     test('never an en dash or an em dash', () => {

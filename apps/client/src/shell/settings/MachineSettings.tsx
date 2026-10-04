@@ -1,10 +1,10 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import i18next from 'i18next';
-import { Check, Copy, Link2, Trash } from 'lucide-react';
+import { Trash } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { brokerHostOf, brokerUrlProblem, type BrokerSetting } from '@ruimte/pulsar';
-import type { AuthSession } from '@ruimte/contracts';
-import { messageOf, Segmented, Skeleton, Switch, Button, Icon, IconButton, Tooltip, FormError, Input } from '@basmilius/desktop-ui';
+import type { AuthSession, LanDoor } from '@ruimte/contracts';
+import { messageOf, Segmented, Skeleton, Switch, Button, IconButton, Tooltip, FormError, Input } from '@basmilius/desktop-ui';
 import { formatNumericDate, formatAgo } from '@basmilius/desktop-ui/format';
 import { ConfirmDialog, SettingsRow } from '@basmilius/desktop-ui/settings';
 import { forgetEndpoint } from '@/endpoint';
@@ -34,7 +34,7 @@ export function WithReason({ reason, children }: { reason: string | null; childr
  */
 const saveMachineSetting = async (
     endpoint: Endpoint,
-    patch: { broker?: BrokerSetting; refuseStatements?: boolean; streamingAllowed?: boolean; resumeAtReset?: boolean }
+    patch: { broker?: BrokerSetting; lanDoor?: boolean; streamingAllowed?: boolean; resumeAtReset?: boolean }
 ): Promise<void> => {
     const link = transportFor(endpoint.id);
     if (!link) {
@@ -52,13 +52,15 @@ const saveMachineSetting = async (
             nameSource: answer.nameSource ?? null,
             icon: answer.icon ?? null,
             agentsDeleteAnyView: answer.agentsDeleteAnyView === true,
-            refuseStatements: answer.refuseStatements === true,
             streamingAllowed: answer.streamingAllowed ?? null,
             resumeAtReset: answer.resumeAtReset === true,
             broker: answer.broker ?? null,
-            brokerFixed: answer.brokerFixed === true
+            brokerFixed: answer.brokerFixed === true,
+            lanDoor: answer.lanDoor ?? null,
+            lanDoorFixed: answer.lanDoorFixed === true
         });
         useEndpoints.getState().learnBrokerUrl(endpoint.id, answer.brokerUrl ?? null);
+        useEndpoints.getState().learnLan(endpoint.id, answer.lan ?? null);
     } catch (e) {
         useToasts.getState().show({
             id: `endpoint-setting-${endpoint.id}`,
@@ -70,18 +72,15 @@ const saveMachineSetting = async (
 };
 
 /*
- * The per-machine experiment of running the wire over a WebRTC DataChannel instead of the socket.
- * Switching reconnects immediately, and a direct connection that fails stays failed, with the reason
- * shown on the row, rather than silently falling back to the socket.
+ * Running the wire to this machine over a WebRTC DataChannel instead of its socket, an experiment;
+ * every other machine is reached that way already. Switching reconnects immediately, and a direct
+ * connection that fails stays failed, with the reason shown on the row, rather than silently falling
+ * back to the socket.
  */
-export function DirectRow({ endpoint, available }: { endpoint: Endpoint; available: boolean }) {
+export function DirectRow({ endpoint }: { endpoint: Endpoint }) {
     const { t } = useTranslation('settings');
     const connection = useEndpointConnection(endpoint.id);
     const failure = endpoint.direct === true && connection.status !== 'open' ? (connection.failure ?? null) : null;
-
-    if (!available) {
-        return <SettingsRow muted searchId="machines.machine.direct" label={t('machine.direct.label')} description={t('machine.direct.brokerOnly')} />;
-    }
 
     const toggle = (direct: boolean): void => {
         useEndpoints.getState().setDirect(endpoint.id, direct);
@@ -97,8 +96,6 @@ export function DirectRow({ endpoint, available }: { endpoint: Endpoint; availab
                     <span className="text-status-error" role="alert">
                         {failure}
                     </span>
-                ) : endpoint.brokerUrl ? (
-                    t('machine.direct.viaBroker', { host: brokerHostOf(endpoint.brokerUrl) })
                 ) : (
                     t('machine.direct.description')
                 )
@@ -216,30 +213,56 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
     );
 }
 
-/* Whether the machine takes a statement from the address book at all; the daemon is what lets a key in. */
-export function RefuseStatementsRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
+/* Where the door listens, as addresses a person could type: a port is no quantity, so it is not formatted as a number. */
+const doorAddresses = (lan: LanDoor): string =>
+    lan.addresses.map((address) => (address.includes(':') ? `[${address}]:${lan.port}` : `${address}:${lan.port}`)).join(', ');
+
+/*
+ * Whether the machine keeps its door on the local network open, so a client on the same network
+ * reaches it without the broker. It lives on the machine because the daemon is the one that listens.
+ */
+export function LanDoorRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
     const { t } = useTranslation('settings');
-    const refuses = useServers((s) => s.byEndpoint[endpoint.id]?.refuseStatements === true);
+    const kept = useServers((s) => s.byEndpoint[endpoint.id]?.lanDoor ?? null);
+    const fixed = useServers((s) => s.byEndpoint[endpoint.id]?.lanDoorFixed === true);
     const [busy, setBusy] = useState(false);
+    const unavailable = reason ?? (kept === null ? t('machine.unsupportedReason') : fixed ? t('machine.lanDoor.fixed') : null);
 
     const set = async (checked: boolean): Promise<void> => {
         setBusy(true);
-        await saveMachineSetting(endpoint, { refuseStatements: checked });
+        await saveMachineSetting(endpoint, { lanDoor: checked });
         setBusy(false);
+    };
+
+    const description = (): string => {
+        if (reason !== null) {
+            return t('machine.notAnswering');
+        }
+        if (kept === null) {
+            return t('machine.unsupported');
+        }
+        const lan = endpoint.lan ?? null;
+        const where =
+            lan === null
+                ? t(kept ? 'machine.lanDoor.notListening' : 'machine.lanDoor.closed')
+                : lan.addresses.length > 0
+                  ? t('machine.lanDoor.open', { addresses: doorAddresses(lan) })
+                  : t('machine.lanDoor.noAddress', { port: String(lan.port) });
+        return fixed ? `${where} ${t('machine.lanDoor.fixedNote')}` : where;
     };
 
     return (
         <SettingsRow
-            searchId="machines.machine.refuse"
-            label={t('machine.refuse.label')}
-            description={reason === null ? t('machine.refuse.description') : t('machine.notAnswering')}
+            searchId="machines.machine.lanDoor"
+            label={t('machine.lanDoor.label')}
+            description={description()}
             control={
-                <WithReason reason={reason}>
+                <WithReason reason={unavailable}>
                     <Switch
-                        checked={refuses}
+                        checked={kept === true}
                         onCheckedChange={(checked) => void set(checked)}
-                        label={t('machine.refuse.toggle', { machine: endpoint.label })}
-                        disabled={busy || reason !== null}
+                        label={t('machine.lanDoor.toggle', { machine: endpoint.label })}
+                        disabled={busy || unavailable !== null}
                     />
                 </WithReason>
             }
@@ -281,17 +304,7 @@ export function StreamingRow({ endpoint, reason }: { endpoint: Endpoint; reason:
 
 const ago = (timestamp: number): string => formatAgo(Date.now() - timestamp);
 
-/* A pairing link that names the loopback address can only be a machine that nobody else can reach. */
-const onlyLoopback = (link: string): boolean => {
-    try {
-        const host = new URL(link).hostname;
-        return host === '127.0.0.1' || host === 'localhost' || host === '[::1]';
-    } catch {
-        return false;
-    }
-};
-
-/* The browsers and apps that paired with one machine, each with a way to cut it off, and on this machine a way to invite one. */
+/* The browsers and apps one machine let in, each with a way to cut it off. */
 export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
     const { t } = useTranslation('settings');
     const reachability = useServers((s) => s.byEndpoint[endpoint.id]?.reachability ?? endpoint.reachability);
@@ -299,9 +312,6 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
     const [sessions, setSessions] = useState<AuthSession[] | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
     const [target, setTarget] = useState<AuthSession | null>(null);
-    const [busy, setBusy] = useState(false);
-    const [link, setLink] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
 
     const load = (): void => {
         const transport = transportFor(endpoint.id);
@@ -340,65 +350,15 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
         load();
     };
 
-    const showLink = async (): Promise<void> => {
-        const transport = transportFor(endpoint.id);
-        if (!transport) {
-            return;
-        }
-        setBusy(true);
-        try {
-            setLink((await transport.request('auth.pairingToken', {})).url);
-            setCopied(false);
-        } catch (e) {
-            setFailure(messageOf(e, t('machine.access.linkFailed')));
-        } finally {
-            setBusy(false);
-        }
-    };
-
     /*
-     * On this machine your own client needs no pairing to get in, so a row for it adds nothing to a
-     * list of what else has access. On a machine you paired with, it stays, since revoking it there is
-     * the one way to hand your own access back to that daemon.
+     * On this machine your own client gets in with the local secret, so a row for it adds nothing to a
+     * list of what else has access. On another machine it stays, since revoking it there is the one
+     * way to hand your own access back to that daemon.
      */
     const listed = reachability === 'loopback' ? (sessions?.filter((session) => !session.current) ?? null) : sessions;
 
-    const copyLink = (): void => {
-        if (!link) {
-            return;
-        }
-        void navigator.clipboard?.writeText(link).catch(() => undefined);
-        setCopied(true);
-    };
-
     return (
-        <SettingsSection
-            title={t('machine.access.title')}
-            description={t('machine.access.description')}
-            action={
-                reachability === 'loopback' && (
-                    <Button variant="secondary" disabled={busy || status !== 'open'} onClick={() => void showLink()}>
-                        <Icon icon={Link2} size={12} /> {t('machine.access.showLink')}
-                    </Button>
-                )
-            }
-        >
-            {link && (
-                <SettingsRow
-                    label={t('machine.access.link.label')}
-                    description={onlyLoopback(link) ? t('machine.access.link.loopback') : t('machine.access.link.description')}
-                >
-                    <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface-sunken p-2.5">
-                        <code className="min-w-0 grow truncate font-mono text-code text-text select-text">{link}</code>
-                        <IconButton
-                            icon={copied ? Check : Copy}
-                            size="sm"
-                            label={copied ? t('machine.access.link.copied') : t('machine.access.link.copy')}
-                            onClick={copyLink}
-                        />
-                    </div>
-                </SettingsRow>
-            )}
+        <SettingsSection title={t('machine.access.title')} description={t('machine.access.description')}>
             {status !== 'open' && sessions === null && failure === null && (
                 <SettingsRow muted label={t('machine.access.silent.label')} description={t('machine.access.silent.description')} />
             )}

@@ -13,7 +13,6 @@ const endpoint = (id: string): Endpoint => ({
     httpBaseUrl: `http://${id}`,
     wsBaseUrl: `ws://${id}`,
     reachability: 'lan',
-    token: null,
     daemonId: id,
     daemonPublicKey: null
 });

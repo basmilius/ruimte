@@ -1,5 +1,5 @@
-# Packaging for the desktop shell. The daemon is a Bun executable compiled by `apps/server/scripts/compile.ts`
-# and rides along as a resource, outside the asar, next to the built client it serves.
+# Packaging for the desktop shell. The built client rides along as a resource the shell serves on its own
+# `app://` scheme; the daemon is a Bun executable compiled by `apps/server/scripts/compile.ts`, beside it.
 appId: app.ruimte.desktop
 productName: Ruimte
 copyright: Copyright © 2026 Bas Milius

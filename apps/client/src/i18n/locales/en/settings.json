@@ -339,7 +339,6 @@
     },
     "reach": {
         "thisMachine": "This machine",
-        "paired": "Paired",
         "onAccount": "On your account",
         "openedThroughAccount": "Opened through your account"
     },
@@ -603,8 +602,6 @@
         },
         "direct": {
             "label": "Direct",
-            "brokerOnly": "Reached through the broker only, so this machine is always direct.",
-            "viaBroker": "Connect over WebRTC, found through the broker on {{host}} (experimental).",
             "description": "Connect over WebRTC instead of the socket (experimental).",
             "toggle": "Connect directly to {{machine}} (experimental)"
         },
@@ -622,10 +619,16 @@
             "selectLabel": "Broker for {{machine}}",
             "urlLabel": "Broker URL for {{machine}}"
         },
-        "refuse": {
-            "label": "Refuse sign-in through an account",
-            "description": "On, only a pairing link lets a new client in. Off, a client signed in to an account this machine is on gets in, and shows up under Apps with access. Clients that already have access keep it.",
-            "toggle": "Refuse sign-in through an account on {{machine}}"
+        "lanDoor": {
+            "label": "Local network",
+            "search": "Lets a client on the same network connect to the machine without the broker.",
+            "open": "A client on the same network connects here without the broker. Open on {{addresses}}.",
+            "noAddress": "Open on port {{port}}, but the machine has no address on a local network right now.",
+            "notListening": "Not open right now: the port is taken, or the machine started without it.",
+            "closed": "Closed. Every client reaches this machine through the broker.",
+            "fixed": "Set by a flag when the machine started, so this switch waits until it runs without that",
+            "fixedNote": "Set by a flag when the machine started, so this switch waits until it runs without that.",
+            "toggle": "Let a client on the local network reach {{machine}} without the broker"
         },
         "streaming": {
             "label": "Browser and device streaming",
@@ -634,10 +637,8 @@
         },
         "access": {
             "title": "Apps with access",
-            "description": "Browsers and apps paired with this machine.",
-            "showLink": "Show pairing link",
-            "listFailed": "Could not list paired clients",
-            "linkFailed": "Could not create a pairing link",
+            "description": "Browsers and apps that came in through an account.",
+            "listFailed": "Could not list the clients with access",
             "empty": "Nothing else has access to this machine.",
             "thisClient": "this client",
             "revoke": "Revoke access",
@@ -651,18 +652,11 @@
                 "label": "Not answering",
                 "description": "The list loads once the machine is back."
             },
-            "link": {
-                "label": "Pairing link",
-                "loopback": "This machine only accepts local connections. Start it with --host 0.0.0.0 so other machines can use the link.",
-                "description": "Paste it under Add a machine on the other device. It works once and expires after ten minutes.",
-                "copy": "Copy pairing link",
-                "copied": "Copied"
-            },
             "confirm": {
                 "title": "Revoke {{label}}?",
-                "current": "This is the client you are using. It loses access to this machine and forgets it here. Pair again to regain access.",
-                "statement": "It loses access the next time it connects, and signing in through an account will not let it back in. Pairing again needs a link.",
-                "link": "It loses access the next time it connects. Pairing again needs a new link.",
+                "current": "This is the client you are using. It loses access to this machine and forgets it here.",
+                "statement": "It loses access the next time it connects, and signing in through an account will not let it back in.",
+                "link": "It loses access the next time it connects.",
                 "action": "Revoke"
             }
         }
@@ -679,7 +673,7 @@
         },
         "identity": {
             "title": "Name and icon",
-            "description": "Every client that pairs with this machine sees these."
+            "description": "Every client that reaches this machine sees these."
         },
         "connection": "Connection",
         "streaming": "Streaming",
@@ -695,13 +689,13 @@
             "onAnother": "This machine is on another account",
             "onNone": "This machine is on no account yet",
             "leave": {
-                "description": "A machine is on one account. Leaving it cuts off every client that came in through an account; a client paired by link keeps its access.",
+                "description": "A machine is on one account. Leaving it cuts off every client that came in through an account.",
                 "action": "Leave"
             }
         },
         "confirmLeave": {
             "title": "Take {{machine}} off its account?",
-            "description": "Every client that came in through an account loses access now, and none gets in that way until the machine joins an account again. Clients paired by link keep their access.",
+            "description": "Every client that came in through an account loses access now, and none gets in until the machine joins an account again.",
             "action": "Leave account"
         },
         "left": {
@@ -713,24 +707,24 @@
             "title": "Remove",
             "forget": {
                 "label": "Forget on this client",
-                "description": "Drops the pairing and this machine's row here. The machine, your account and other clients keep theirs.",
+                "description": "Drops this machine's row here. The machine, your account and other clients keep theirs.",
                 "action": "Forget"
             },
             "account": {
                 "label": "Remove from account",
                 "local": "Every other client signed in to your account drops this machine. It stays here, since this app runs on it.",
-                "description": "Every client signed in to your account drops this machine, one that paired by link included. The app on that machine puts it back.",
+                "description": "Every client signed in to your account drops this machine. The app on that machine puts it back.",
                 "action": "Remove"
             }
         },
         "confirmForget": {
             "title": "Forget {{machine}} on this client?",
-            "description": "Its sessions and projects stay on the machine. To get it back here, pair again with a new link or open it from your account.",
+            "description": "Its sessions and projects stay on the machine. To get it back here, open it from your account.",
             "action": "Forget"
         },
         "confirmRemove": {
             "title": "Remove {{machine}} from your account?",
-            "description": "Every client signed in to your account drops it the next time it refreshes, including a client that paired by link. Clients that are signed out keep it. The machine keeps its pairings.",
+            "description": "Every client signed in to your account drops it the next time it refreshes. Clients that are signed out keep it. The machine keeps the clients it let in.",
             "action": "Remove"
         },
         "subtitle": "{{reach}} · {{version}}"
@@ -742,12 +736,10 @@
             "description": "Add one to open its projects, terminals and agents from here."
         },
         "notOpened": "Not opened on this client",
-        "mismatch": "A different machine answers at this address. Pair again to connect.",
-        "viaRelay": "{{reach}} · via relay",
+        "mismatch": "A different machine answers for this one. Forget it here and open it from your account again.",
+        "withRoute": "{{reach}} · {{route}}",
         "dot": {
-            "brokerOnly": "Reached through the broker only",
-            "direct": "Direct connection (experimental)",
-            "directBroker": "Direct connection through the broker (experimental)"
+            "direct": "Direct connection (experimental)"
         },
         "account": {
             "title": "Sign-in",
@@ -789,14 +781,10 @@
         },
         "add": {
             "title": "Add a machine",
-            "description": "Paste a pairing link from the other machine.",
-            "linkLabel": "Pairing link",
-            "hint": "Find it under Show pairing link in the settings of that machine, or run `ruimte pair` there. Pairing lets this client in; only the app on that machine puts it on your account.",
+            "description": "A machine joins through your account. On that machine, run `npx ruimte login`, or open the Ruimte app there and sign in. It shows up here once it is on your account.",
             "codeHint": "For a machine without the app that ran `ruimte login`",
             "withCode": "Link a machine with a code",
-            "pair": "Pair",
-            "failed": "Pairing failed",
-            "reclaimFailed": "{{machine}} is paired, but not back on your account",
+            "enterCode": "Enter code",
             "short": "Add"
         },
         "listLabel": "Account and machines",

@@ -3,6 +3,9 @@ import type { BytesPiece } from './piece';
 
 export type TransportStatus = 'connecting' | 'open' | 'closed';
 
+/* The way the offer and answer of a direct connection travelled: the machine's door on the local network, or the broker. */
+export type SignalRoute = 'lan' | 'broker';
+
 export interface ConnectionState {
     status: TransportStatus;
     /* Reconnects tried since the last open socket; 0 while connected. */
@@ -15,6 +18,8 @@ export interface ConnectionState {
     noLink?: boolean;
     /* True while an open direct connection runs through a TURN relay rather than straight to the machine. */
     relayed?: boolean;
+    /* How the open direct connection was signaled; null over a socket, and for the row of this machine, whose signals go over its own socket. */
+    signaled?: SignalRoute | null;
 }
 
 export interface Transport {

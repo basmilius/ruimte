@@ -14,7 +14,7 @@
     "docker:up": "docker compose -f docker/compose.yml up -d --build --wait",
     "docker:down": "docker compose -f docker/compose.yml down",
     "docker:reset": "docker compose -f docker/compose.yml --profile test down -v",
-    "docker:pair": "docker/pair.sh",
+    "docker:login": "docker exec -it ruimte-remote bun /app/apps/server/src/main.ts login --port 4310",
     "docker:test": "docker/test.sh"
   },
   "dependencies": {
@@ -22,7 +22,6 @@
     "@ruimte/actions": "workspace:*",
     "@ruimte/agents": "workspace:*",
     "@ruimte/contracts": "workspace:*",
-    "@ruimte/csp": "workspace:*",
     "@ruimte/diagram": "workspace:*",
     "@ruimte/drawing": "workspace:*",
     "@ruimte/merge": "workspace:*",

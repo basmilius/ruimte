@@ -148,32 +148,13 @@
             }
         }
     },
-    "pairing": {
-        "notALink": "That is not a pairing link. A pairing link looks like http://machine:4210/pair#token",
-        "refused": "That machine refused the pairing",
-        "noKeyOrToken": "That machine answered without a key or a token",
-        "ownDaemon": "That link is for the machine that served this page. It is already in the list as {{label}}.",
-        "merged": {
-            "title": "{{label}} is already in the list",
-            "description": "That link points to the same machine. Its address is now {{address}}."
-        }
-    },
     "handshake": {
-        "wrongKey": "{{address}} does not hold the key this client paired with",
-        "noEndpoint": "No endpoint {{id}} to connect to",
-        "unknownKey": {
-            "title": "{{label}} does not know this client",
-            "description": "Its access was revoked, or the machine lost the pairing. Pair again to connect."
-        },
-        "imposter": {
-            "title": "{{label}} cannot prove its identity",
-            "description": "{{address}} answers with a different key than the one this client paired with. Pair again to connect."
-        }
+        "noEndpoint": "No endpoint {{id}} to connect to"
     },
     "identity": {
         "mismatch": {
             "title": "{{label}} answers as another machine",
-            "description": "{{address}} is not the machine this client paired with. Pair again to connect."
+            "description": "{{address}} answers as another machine than the one this client opened. Forget it here and open it from your account again."
         },
         "merged": {
             "title": "{{label}} is already in the list",
@@ -258,8 +239,8 @@
             "failed": "The machine could not answer the direct connection",
             "timeout": "The machine gave up waiting for the direct connection",
             "done": "The machine ended the direct connection",
-            "not-paired": "The machine does not know this client. Its access was revoked, or it lost the pairing; pair again to connect.",
-            "statements-refused": "The machine turns away sign-in through an account. Pair with a link to connect.",
+            "not-paired": "The machine does not let this client in. Its access was revoked, or your account could not vouch for it.",
+            "statements-refused": "The machine turns away sign-in through an account.",
             "other": "The machine closed the direct connection"
         },
         "channelEarly": "The channel opened before the answer that describes it",
@@ -279,12 +260,23 @@
         "noKeyOverBroker": "A direct connection over the broker signs in with a key, and this browser cannot make one",
         "notProven": "{{label}} did not prove its identity over the direct connection",
         "noKey": "A direct connection signs in with a key, and this browser cannot make one",
-        "needsPairedKey": "A direct connection needs a paired key. Pair this machine again.",
+        "needsPairedKey": "A direct connection needs a machine on your account, or the Ruimte app on this machine",
         "timedOut": "The direct connection did not come up within {{seconds}} seconds",
         "frameRefused": "The direct connection refused a frame: {{reason}}",
         "answerNotApplied": "The machine's answer did not apply: {{reason}}",
         "refusedVerdict": "The machine refused the direct connection: {{reason}}",
         "setupFailed": "Could not set up a direct connection: {{reason}}"
+    },
+    "lan": {
+        "notProven": "The machine at this address on the local network could not prove it is this machine",
+        "noKey": "A connection on the local network signs in with a key, and this browser cannot make one",
+        "unsignedSignal": "A signal on the local network names the machine but is not signed by it",
+        "refused": "The machine's door on the local network refused this client: {{reason}}",
+        "failed": "Could not use the machine's door on the local network: {{reason}}",
+        "unreachable": "The machine's door on the local network could not be reached"
+    },
+    "route": {
+        "none": "This machine is not connected to a broker, and this client knows no door of it on the local network"
     },
     "connection": {
         "notConnected": "The machine is not connected",
@@ -299,8 +291,5 @@
         "tooLarge": "This file is {{size}} MB; at most {{max}} MB loads over a direct connection",
         "emptyPiece": "The machine sent an empty piece before the end of the file",
         "changed": "The file changed while it was loading"
-    },
-    "station": {
-        "mixedContent": "This page is served over https, and a browser does not let it reach a machine on plain http. Add the machine to your account from the desktop app and open it here, or put it behind https."
     }
 }

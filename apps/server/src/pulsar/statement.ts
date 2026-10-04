@@ -84,8 +84,6 @@ export interface StatementGateOptions {
     machineId: string;
     machinePublicKey: string;
     trustedKeys: readonly string[];
-    // Read on every offer, so a switch flipped from a client bites on the next attempt.
-    refusesStatements(): boolean;
     // Decides the account as well, against the machine's own account at the moment it lets a key in.
     store: {
         admitStatement(entry: StatementEntry): Promise<StatementAdmission>;
@@ -94,12 +92,11 @@ export interface StatementGateOptions {
     log?: Pick<Console, 'log' | 'warn'>;
 }
 
-export type StatementVerdict = 'admitted' | 'refused' | 'statements-refused';
+export type StatementVerdict = 'admitted' | 'refused';
 
 /*
- * Validate the signed machine, its key, the client key and the lifetime before consulting the opt-out.
- * This prevents invalid callers from learning whether the machine accepts account statements. The
- * nonce and the account are the store's, which decides them as it lets the key in.
+ * Checks the signed machine, its key, the client key and the lifetime of a statement. The nonce and
+ * the account are the store's, which decides them as it lets the key in.
  */
 export class StatementGate {
     private readonly options: StatementGateOptions;
@@ -126,10 +123,6 @@ export class StatementGate {
             this.log.warn(`Refused a statement for key ${tag}: ${refusal}`);
             return 'refused';
         }
-        if (this.options.refusesStatements()) {
-            this.log.warn(`Refused a statement for key ${tag}: this machine takes no statements`);
-            return 'statements-refused';
-        }
         const accountId = statement.accountId ?? null;
         const result = await this.options.store.admitStatement({
             publicKey: from,
@@ -143,7 +136,7 @@ export class StatementGate {
             return 'refused';
         }
         if (result.created) {
-            this.log.log(`Paired "${label}" (key ${tag}) through a statement from the address book`);
+            this.log.log(`Let "${label}" (key ${tag}) in through a statement from the address book`);
         }
         return 'admitted';
     }

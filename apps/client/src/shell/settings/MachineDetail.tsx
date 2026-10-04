@@ -10,7 +10,7 @@ import { useRegistrationFailures } from '@/pulsar/auto-register-watch';
 import { addMachineToAccount, leaveAccount, openAccountMachine, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { BackgroundServiceSection } from '@/shell/settings/BackgroundServiceSection';
 import { MachineIdentityForm } from '@/shell/settings/MachineIdentityForm';
-import { BrokerRow, DirectRow, MachineAccess, RefuseStatementsRow, StreamingRow, WithReason } from '@/shell/settings/MachineSettings';
+import { BrokerRow, DirectRow, LanDoorRow, MachineAccess, StreamingRow, WithReason } from '@/shell/settings/MachineSettings';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps } from '@/shell/settings/machine-actions';
@@ -30,7 +30,7 @@ type Confirming = 'forget' | 'remove' | 'leave' | null;
 /* Everything about one machine, beside its row in the Account pane. */
 export function MachineDetail({ entry }: { entry: MachineEntry }) {
     const { t } = useTranslation('settings');
-    // The detail is a person looking at this machine, the one place in the pane that connects to it. Its name, broker and paired clients are live.
+    // The detail is a person looking at this machine, the one place in the pane that connects to it. Its name, broker and clients with access are live.
     useMachineHold(entry.endpoint);
     const connection = useEndpointConnection(entry.endpoint?.id ?? entry.id);
     const signedIn = usePulsarAccount((s) => s.status === 'signed-in');
@@ -133,8 +133,8 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                     />
                     <SettingsSection title={t('machineDialog.connection')}>
                         <BrokerRow endpoint={entry.endpoint} reason={reason} />
-                        <DirectRow endpoint={entry.endpoint} available={model.direct} />
-                        <RefuseStatementsRow endpoint={entry.endpoint} reason={reason} />
+                        <LanDoorRow endpoint={entry.endpoint} reason={reason} />
+                        {model.direct && <DirectRow endpoint={entry.endpoint} />}
                         <StreamingRow endpoint={entry.endpoint} reason={reason} />
                     </SettingsSection>
                     {(registrationFailure !== null || model.canAddToAccountAgain || accountState !== null) && (

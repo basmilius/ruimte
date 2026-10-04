@@ -2,27 +2,24 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AuthStore } from '../auth/auth-store.ts';
 import { handleProjectRequest, PROJECTS_PATH } from './icon-route.ts';
 import { ProjectStore } from './project-store.ts';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
 
-// No handshake in these tests, so a credential is only ever a session token.
 // What the desktop app on this machine presents; a loopback address alone gets nothing.
 const LOCAL_SECRET = 'the-local-secret';
-const OPTIONS = { allowedOrigins: [], localSecret: LOCAL_SECRET, tickets: { ticketAccess: async () => null } };
+const OPTIONS = { localSecret: LOCAL_SECRET, tickets: { ticketAccess: async () => null } };
 
 let root: string;
 let folder: string;
 let store: ProjectStore;
-let auth: AuthStore;
 let projectId: string;
 
 const ask = (path: string, remote = '127.0.0.1', init?: RequestInit): Promise<Response> => {
     const url = new URL(`http://127.0.0.1:4210${path}`);
-    return handleProjectRequest(new Request(url, asLocal(init)), url, remote, auth, OPTIONS, store);
+    return handleProjectRequest(new Request(url, asLocal(init)), url, remote, OPTIONS, store);
 };
 // Every request below carries the local secret unless a test says otherwise, the way the desktop app's does.
 const asLocal = (init?: RequestInit): RequestInit => ({
@@ -36,7 +33,6 @@ beforeEach(async () => {
     await mkdir(join(folder, '.ruimte'), { recursive: true });
     await writeFile(join(folder, '.ruimte', 'icon.png'), PNG);
     store = new ProjectStore(join(root, 'home'));
-    auth = new AuthStore(join(root, 'home'));
     projectId = (await store.openProject({ folder })).summary.projectId;
 });
 
@@ -48,7 +44,7 @@ afterEach(async () => {
 describe('the icon route', () => {
     test('a loopback address without a credential gets nothing', async () => {
         const url = new URL(`http://127.0.0.1:4210${PROJECTS_PATH}/${projectId}/icon?v=1`);
-        expect((await handleProjectRequest(new Request(url), url, '127.0.0.1', auth, OPTIONS, store)).status).toBe(401);
+        expect((await handleProjectRequest(new Request(url), url, '127.0.0.1', OPTIONS, store)).status).toBe(401);
     });
 
     test('serves the icon of the folder to the local secret, to be shown inline', async () => {

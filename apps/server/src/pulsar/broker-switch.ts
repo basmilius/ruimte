@@ -52,6 +52,11 @@ export class BrokerSwitch implements Relay {
         return { brokerUrl: url === null ? null : (this.options.advertise ?? url), brokerFixed: this.options.override !== null };
     }
 
+    /* Whether the broker the machine is on took its signature; false while no broker is on. */
+    get isReady(): boolean {
+        return this.relay?.isReady === true;
+    }
+
     /* What the running relay hands out for a direct connection; nothing while no broker is on. */
     iceServers(): IceServer[] {
         return this.relay?.iceServers?.() ?? [];

@@ -155,7 +155,7 @@ const install = async (facts: ServiceFacts, plan: ServicePlan, deps: ServiceDeps
     }
     lingerNote(deps);
     deps.out('');
-    deps.out('Next: `npx ruimte pair` for a pairing link, or `npx ruimte login` to add this machine to your account.');
+    deps.out('Next: `npx ruimte login` puts this machine on your account, and `npx ruimte status` says how clients reach it.');
     return 0;
 };
 
@@ -172,7 +172,7 @@ const uninstall = (plan: ServicePlan, deps: ServiceDeps): number => {
     deps.manager.stop();
     deps.manager.uninstall();
     deps.removeBinaries(plan.binDir);
-    deps.out('Stopped and removed the background service. Your projects and pairings stay where they were.');
+    deps.out('Stopped and removed the background service. Your projects and the devices you let in stay where they were.');
     return 0;
 };
 

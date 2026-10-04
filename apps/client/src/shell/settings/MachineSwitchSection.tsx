@@ -47,7 +47,6 @@ function MachineSwitchRow({ endpoint, setting, searchId }: { endpoint: Endpoint;
                 nameSource: next.nameSource ?? null,
                 icon: next.icon ?? null,
                 agentsDeleteAnyView: next.agentsDeleteAnyView === true,
-                refuseStatements: next.refuseStatements === true,
                 resumeAtReset: next.resumeAtReset === true
             });
         } catch (e) {
@@ -82,7 +81,7 @@ function MachineSwitchRow({ endpoint, setting, searchId }: { endpoint: Endpoint;
 
 /*
  * One section per machine for what its agents may do, under the settings about agents rather than in
- * the Account pane. That pane is about pairing a machine and whether it answers; this is about an agent.
+ * the Account pane. That pane is about reaching a machine and whether it answers; this is about an agent.
  */
 export function MachineSwitchSections() {
     const { t } = useTranslation('settings');

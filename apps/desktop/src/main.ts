@@ -4,7 +4,9 @@ import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'no
 import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
+import { buildIdentityOf, DESKTOP_APP_ORIGIN, DESKTOP_APP_SCHEME, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
+import { registerAppScheme, serveAppScheme } from './app-protocol';
+import { moveLegacyStorage } from './legacy-storage';
 import {
     createMenuCommands,
     createPageKeys,
@@ -93,8 +95,14 @@ const port = Number(process.env.RUIMTE_PORT ?? DEFAULT_PORT);
 // The home the daemon runs with, where its local secret lives; a checkout uses the dev home, as the server's `bun dev` does.
 const ruimteHome = app.isPackaged ? (process.env.RUIMTE_HOME ?? join(homedir(), '.ruimte')) : (process.env.RUIMTE_DEV_HOME ?? join(homedir(), '.ruimte-dev'));
 
-const appUrl = devUrl ?? `http://127.0.0.1:${port}/`;
-const appOrigin = new URL(appUrl).origin;
+// The page is the shell's own, from the build in its resources; only `bun dev` serves it from Vite.
+const appUrl = devUrl ?? `${DESKTOP_APP_ORIGIN}/`;
+const appOrigin = devUrl ? new URL(devUrl).origin : DESKTOP_APP_ORIGIN;
+const APP_SCHEMES = [DESKTOP_APP_SCHEME];
+// What the page reaches its own machine at, now that it is not served from there.
+const daemonUrl = `http://127.0.0.1:${port}`;
+
+registerAppScheme();
 
 let daemon: ChildProcess | null = null;
 const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
@@ -104,7 +112,7 @@ const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
  * only talks to its host), but a page the window was navigated to would inherit the bridge.
  */
 const fromAppWindow = (event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): boolean =>
-    isAppSender(windows.fromPage(event.sender) !== null, event.senderFrame, appOrigin);
+    isAppSender(windows.fromPage(event.sender) !== null, event.senderFrame, appOrigin, APP_SCHEMES);
 
 /* The window whose page a message came from, which is where its dialog, its sheet and its answer belong. */
 const senderWindow = (event: { sender: Electron.WebContents }): Electron.BrowserWindow | null => windows.fromPage(event.sender);
@@ -154,21 +162,21 @@ const askLoginShellPath = (): string | null => {
     return match?.[1] || null;
 };
 
-/* Where the daemon and the client it serves are: compiled into the app's resources, or the repo when run from a checkout. */
+/* Where the daemon is: compiled into the app's resources, or the repo when run from a checkout. */
 const daemonCommand = (): { command: string; args: string[] } | null => {
     if (app.isPackaged) {
         const bin = join(process.resourcesPath, 'bin');
-        return {
-            command: join(bin, process.platform === 'win32' ? 'ruimte.exe' : 'ruimte'),
-            args: ['--port', String(port), '--serve', join(process.resourcesPath, 'client')]
-        };
+        return { command: join(bin, process.platform === 'win32' ? 'ruimte.exe' : 'ruimte'), args: ['--port', String(port)] };
     }
     const entry = join(repoRoot, 'apps', 'server', 'src', 'main.ts');
     if (!existsSync(entry)) {
         return null;
     }
-    return { command: 'bun', args: [entry, '--port', String(port), '--serve', join(repoRoot, 'apps', 'client', 'dist')] };
+    return { command: 'bun', args: [entry, '--port', String(port)] };
 };
+
+/* The built client the shell serves on its scheme: in the app's resources, or the repo's build when run from a checkout. */
+const clientRoot = (): string => (app.isPackaged ? join(process.resourcesPath, 'client') : join(repoRoot, 'apps', 'client', 'dist'));
 
 const MISSING_DAEMON = 'The background service is missing. Run the desktop app from the repository or install a release.';
 
@@ -427,7 +435,7 @@ const routePreviewLinks = (contents: Electron.WebContents): void => {
 /* Nothing but the app loads in its window: a dropped link or file would otherwise take the bridge with it. */
 const guardAppNavigation = (contents: Electron.WebContents): void => {
     contents.on('will-navigate', (event) => {
-        const verdict = appWindowNavigation(event.url, appOrigin);
+        const verdict = appWindowNavigation(event.url, appOrigin, APP_SCHEMES);
         if (verdict === 'allow') {
             return;
         }
@@ -438,14 +446,14 @@ const guardAppNavigation = (contents: Electron.WebContents): void => {
     });
     // Nobody chose where a redirect goes, so one that leaves the app only stops.
     contents.on('will-redirect', (event) => {
-        const verdict = event.isMainFrame ? appWindowNavigation(event.url, appOrigin) : appSubframeNavigation(event.url, appOrigin);
+        const verdict = event.isMainFrame ? appWindowNavigation(event.url, appOrigin, APP_SCHEMES) : appSubframeNavigation(event.url, appOrigin, APP_SCHEMES);
         if (verdict !== 'allow') {
             event.preventDefault();
         }
     });
     // The main frame is `will-navigate`'s, which is the one that may hand a link to the system browser.
     contents.on('will-frame-navigate', (event) => {
-        if (!event.isMainFrame && appSubframeNavigation(event.url, appOrigin) !== 'allow') {
+        if (!event.isMainFrame && appSubframeNavigation(event.url, appOrigin, APP_SCHEMES) !== 'allow') {
             event.preventDefault();
         }
     });
@@ -576,7 +584,12 @@ const createWindow = (
             // On macOS the first is `NSLocale.currentLocale`, so it follows the Region setting, and
             // the second is the language order from System Settings; `app.getLocale()` would hand
             // back the language of the bundle, which is `en-US` even on a Dutch Mac.
-            additionalArguments: [`--ruimte-system-locale=${app.getSystemLocale()}`, `--ruimte-system-languages=${app.getPreferredSystemLanguages().join(',')}`]
+            additionalArguments: [
+                `--ruimte-system-locale=${app.getSystemLocale()}`,
+                `--ruimte-system-languages=${app.getPreferredSystemLanguages().join(',')}`,
+                // Under `bun dev` the page reaches its machine through Vite's proxy on its own origin instead.
+                ...(devUrl ? [] : [`--ruimte-daemon-url=${daemonUrl}`])
+            ]
         }
     });
     const id = window.id;
@@ -1381,6 +1394,7 @@ if (!app.requestSingleInstanceLock()) {
 
     void app.whenReady().then(async () => {
         setStaticMenu();
+        serveAppScheme(clientRoot());
         sealAppSession();
         sealPreviewSession();
         sealBrowserSession();
@@ -1406,7 +1420,9 @@ if (!app.requestSingleInstanceLock()) {
             app.quit();
             return;
         }
+        const closeStorageMove = devUrl ? () => undefined : await moveLegacyStorage(port, join(app.getPath('userData'), 'storage-moved-to-app-scheme'));
         windows.restore();
+        closeStorageMove();
         updater.start();
         watchPendingRestart();
     });

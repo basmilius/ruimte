@@ -91,7 +91,7 @@ export type MachineLink =
     | { kind: 'failed'; reason: string }
     /* No link yet, and the account is the way in. */
     | { kind: 'account' }
-    /* A paired machine nothing has asked for yet. */
+    /* This machine, while nothing has asked for it yet. */
     | { kind: 'idle' }
     /* On the account without a broker, which nothing outside its own network can reach. */
     | { kind: 'network-only' };
@@ -126,7 +126,7 @@ export const machineLink = (entry: MachineEntry, connection: ConnectionState, wa
     if (connection.attempts > 0) {
         return { kind: 'failed', reason: i18next.t('shell:browse.machineSilent') };
     }
-    return entry.endpoint.pairedBy === 'statement' ? { kind: 'account' } : { kind: 'idle' };
+    return entry.local ? { kind: 'idle' } : { kind: 'account' };
 };
 
 /* The one quiet line a row carries beside its name. An open machine says nothing: the dot is the whole of it. */

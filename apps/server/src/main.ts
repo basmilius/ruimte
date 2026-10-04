@@ -17,8 +17,8 @@ process.on('uncaughtException', fail);
 process.on('unhandledRejection', fail);
 
 /*
- * One binary, several jobs: `ruimte` serves, `ruimte pair` prints a pairing URL, `ruimte login` puts
- * the machine on an account with a code and `ruimte logout` takes it off, `ruimte service` sets up the
+ * One binary, several jobs: `ruimte` serves, `ruimte login` puts the machine on an account with a code
+ * and `ruimte logout` takes it off, `ruimte status` says how clients reach it, `ruimte service` sets up the
  * background service, `ruimte context` is the agent-side CLI. The daemon is imported only when it is needed, so the CLI commands
  * do not pay for loading the terminal emulator.
  */
@@ -46,9 +46,15 @@ if (config.command === 'service') {
     process.exit(await runService(config.args, { port: config.port, ruimteHome: config.home, compiled: COMPILED }));
 }
 
+// todo(bas): drop the command one release after pairing links went.
 if (config.command === 'pair') {
-    const { runPair } = await import('./cli/pairing.ts');
-    process.exit(await runPair(config.port, config.home));
+    console.error('Pairing links are gone. Run `ruimte login` to put this machine on your account.');
+    process.exit(1);
+}
+
+if (config.command === 'status') {
+    const { runStatus } = await import('./cli/status.ts');
+    process.exit(await runStatus({ port: config.port, home: config.home }));
 }
 
 if (config.command === 'login') {

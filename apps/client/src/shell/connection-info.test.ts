@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { LOCAL_ENDPOINT_ID } from '../state/endpoints';
-import { describeConnection, describeLastSeen, describeMachine, describePing, describeVersion, tooltipMachines } from './connection-info';
+import { describeConnection, describeLastSeen, describeMachine, describePing, describeRoute, describeVersion, tooltipMachines } from './connection-info';
 
 describe('describeConnection', () => {
     test('says connected while the socket is open', () => {
@@ -31,6 +31,20 @@ describe('describeConnection', () => {
 
     test('says disconnected when nothing is scheduled anymore', () => {
         expect(describeConnection({ status: 'closed', attempts: 4, retryAt: null }, 0)).toBe('Disconnected');
+    });
+});
+
+describe('the route of a direct connection', () => {
+    test('names the door on the local network, the broker, or a relay, and nothing over a socket', () => {
+        const open = { status: 'open', attempts: 0, retryAt: null } as const;
+        expect(describeRoute({ ...open, signaled: 'lan' })).toBe('Local network');
+        expect(describeRoute({ ...open, signaled: 'broker' })).toBe('Via broker');
+        expect(describeRoute({ ...open, signaled: 'broker', relayed: true })).toBe('Via relay');
+        expect(describeRoute({ ...open, signaled: null })).toBeNull();
+        expect(describeRoute({ status: 'closed', attempts: 1, retryAt: null, signaled: 'lan' })).toBeNull();
+
+        expect(describeConnection({ ...open, signaled: 'lan' }, 0)).toBe('Connected on the local network');
+        expect(describeConnection({ ...open, signaled: 'broker' }, 0)).toBe('Connected via broker');
     });
 });
 

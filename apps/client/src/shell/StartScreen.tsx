@@ -288,7 +288,7 @@ function StartContent() {
                         <Tile
                             icon={<Icon icon={MonitorSmartphone} size={16} />}
                             title={t('start.connectMachine')}
-                            description={t('start.withALink')}
+                            description={t('start.throughAccount')}
                             onClick={() => setDialog('add')}
                         />
                     </div>
@@ -323,7 +323,7 @@ function StartContent() {
                                 <Tile
                                     icon={<Icon icon={MonitorSmartphone} size={16} />}
                                     title={t('start.connectMachine')}
-                                    description={t('start.withPairingLink')}
+                                    description={t('start.throughAccount')}
                                     disabled={waiting}
                                     onClick={() => setDialog('add')}
                                 />

@@ -11,6 +11,7 @@ import {
 import type { z } from 'zod';
 import { readLocalSecret } from '../auth/local-secret.ts';
 import { describeError } from '../error-text.ts';
+import { readMachineStatus, reachSentence, startFirst } from './machine-status.ts';
 
 type Fetch = (input: string, init: RequestInit) => Promise<Response>;
 
@@ -69,7 +70,7 @@ export const runLogin = async (options: LoginOptions): Promise<number> => {
 
     const secret = await (options.readSecret ?? readLocalSecret)(options.home).catch(() => null);
     if (secret === null) {
-        err(`No daemon has started with ${options.home} as its home; start one first.`);
+        err(`No daemon has started with ${options.home} as its home. ${startFirst(options.port)}`);
         return 1;
     }
 
@@ -80,7 +81,7 @@ export const runLogin = async (options: LoginOptions): Promise<number> => {
             body: body === undefined ? undefined : JSON.stringify(body)
         }).catch(() => null);
         if (!response) {
-            throw new LoginFailure(`No daemon answers on port ${options.port}; start one first.`);
+            throw new LoginFailure(`No daemon answers on port ${options.port}. ${startFirst(options.port)}`);
         }
         if (response.status === 404) {
             throw new LoginFailure(`The daemon on port ${options.port} is older than \`ruimte login\`; update it first.`);
@@ -175,6 +176,11 @@ export const runLogin = async (options: LoginOptions): Promise<number> => {
                         signature: registration.signature
                     });
                     out(`Added to ${whose(result.account)} account. Clients signed in to it can open ${result.machine.name} now.`);
+                    // A daemon from before `ruimte status` says nothing about its ways in, and the login stands without it.
+                    const reach = await readMachineStatus(options.port, secret, fetcher);
+                    if ('status' in reach) {
+                        out(reachSentence(reach.status));
+                    }
                     return 0;
                 }
             }

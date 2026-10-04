@@ -134,14 +134,14 @@ describe('readOrCreateEndpointIdentity', () => {
                     nameSource: 'chosen',
                     icon: null,
                     agentsDeleteAnyView: false,
-                    refuseStatements: false,
                     streamingAllowed: true,
                     resumeAtReset: false,
                     appleFoundationEnabled: false,
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,
-                    broker: { mode: 'default' }
+                    broker: { mode: 'default' },
+                    lanDoor: true
                 }
             }
         ]);
@@ -151,6 +151,19 @@ describe('readOrCreateEndpointIdentity', () => {
         await identity.setIdentity('Studio again', null);
         expect(first).toHaveLength(2);
         expect(second).toHaveLength(1);
+    });
+
+    test('the door on the local network starts open, and a closed one stays closed across a restart', async () => {
+        const identity = await readOrCreateEndpointIdentity(home);
+        expect(identity.lanDoor).toBe(true);
+        const applied: boolean[] = [];
+        identity.attachLanDoor({ apply: () => applied.push(identity.lanDoor), describe: () => ({ lan: null, lanDoorFixed: false }) });
+        await identity.setIdentity(null, null, { lanDoor: false });
+        expect(applied).toEqual([false]);
+        // A rename is not the switch, so the door is left alone.
+        await identity.setIdentity('Studio', null);
+        expect(applied).toEqual([false]);
+        expect((await readOrCreateEndpointIdentity(home)).lanDoor).toBe(false);
     });
 
     test('what an agent may delete is off on a fresh machine and survives a restart', async () => {

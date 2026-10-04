@@ -10,7 +10,6 @@ const row = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
     httpBaseUrl: `http://${id}`,
     wsBaseUrl: `ws://${id}`,
     reachability: 'lan',
-    token: `token-${id}`,
     daemonId: id,
     daemonPublicKey: null,
     ...overrides
@@ -22,7 +21,6 @@ const local = (daemonId: string | null): Endpoint =>
         httpBaseUrl: 'http://127.0.0.1:4210',
         wsBaseUrl: 'ws://127.0.0.1:4210',
         reachability: 'loopback',
-        token: null,
         daemonId
     });
 
@@ -48,7 +46,7 @@ describe('a row that turns out to be a machine already in the list', () => {
         expect(useToasts.getState().toasts[0]?.description).toContain('another address of This machine');
     });
 
-    test('a machine paired over the LAN before this page said who it is folds into the local row', async () => {
+    test('a row of this machine opened before this page said who it is folds into the local row', async () => {
         useEndpoints.setState({ endpoints: [local(null), row('daemon-here')] });
 
         expect(noteDaemonIdentity(LOCAL_ENDPOINT_ID, answers('daemon-here'))).toBe(LOCAL_ENDPOINT_ID);
@@ -64,8 +62,8 @@ describe('a row that turns out to be a machine already in the list', () => {
         useEndpoints.setState({
             endpoints: [
                 local(null),
-                row('daemon-a', { httpBaseUrl: 'http://old:4210', token: 'old', daemonPublicKey: 'pinned-key' }),
-                row('192.168.1.9:4210', { httpBaseUrl: 'http://new:4210', token: 'new', daemonId: null })
+                row('daemon-a', { httpBaseUrl: 'http://old:4210', daemonPublicKey: 'pinned-key' }),
+                row('192.168.1.9:4210', { httpBaseUrl: 'http://new:4210', daemonId: null })
             ]
         });
 
@@ -74,14 +72,13 @@ describe('a row that turns out to be a machine already in the list', () => {
 
         const rows = useEndpoints.getState().endpoints;
         expect(rows.map((entry) => entry.id)).toEqual([LOCAL_ENDPOINT_ID, 'daemon-a']);
-        // The row that just answered is the one whose address and credential are known to work.
+        // The row that just answered is the one whose address is known to work.
         expect(rows[1]?.httpBaseUrl).toBe('http://new:4210');
-        expect(rows[1]?.token).toBe('new');
         expect(rows[1]?.daemonPublicKey).toBe('pinned-key');
         expect(useToasts.getState().toasts[0]?.title).toBe('daemon-a is already in the list');
     });
 
-    test('a paired row that answers as a different daemon is warned about, never merged', async () => {
+    test('a row that answers as a different daemon is warned about, never merged', async () => {
         useEndpoints.setState({ endpoints: [local(null), row('daemon-a'), row('daemon-b')] });
 
         expect(noteDaemonIdentity('daemon-a', answers('daemon-b'))).toBe('daemon-a');

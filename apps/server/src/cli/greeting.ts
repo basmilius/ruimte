@@ -21,6 +21,6 @@ export const greetingLines = (facts: GreetingFacts): string[] => {
     const portFlag = facts.port === DEFAULT_PORT ? '' : ` --port ${facts.port}`;
     return [
         `This machine runs Ruimte ${facts.version} on ${address} (home: ${facts.home}). Ctrl+C stops it.`,
-        `Next: \`ruimte login${portFlag}\` puts it on your account, \`ruimte pair${portFlag}\` prints a pairing link, and \`ruimte service install${portFlag}\` keeps it running in the background.`
+        `Next: \`ruimte login${portFlag}\` puts it on your account, \`ruimte service install${portFlag}\` keeps it running in the background, and \`ruimte status${portFlag}\` says how clients reach it.`
     ];
 };

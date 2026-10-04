@@ -72,7 +72,7 @@ describe('proveChallenge', () => {
     test('a row with neither a pinned key nor the secret cannot connect directly', async () => {
         const daemon = await keyPair();
         await expect(proveChallenge({ pinned: null, key: null, secret: null, label: 'box' }, await challengeFrom(daemon), BINDING)).rejects.toThrow(
-            /paired key/
+            /machine on your account/
         );
     });
 });

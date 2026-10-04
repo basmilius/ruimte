@@ -11,7 +11,6 @@ const machine = (id: string, reachability: Endpoint['reachability']): Endpoint =
     httpBaseUrl: `http://${id}:4210`,
     wsBaseUrl: `ws://${id}:4210`,
     reachability,
-    token: null,
     daemonId: id,
     daemonPublicKey: null
 });

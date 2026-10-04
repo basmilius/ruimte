@@ -1,8 +1,6 @@
 /*
- * A ticket comes out of the handshake and rotates on every connection; it lives in memory only,
- * because writing it down is the thing this replaces. The session token underneath it is what a
- * client paired with before there were key pairs still carries, dropped as soon as a ticket proves
- * it is not needed.
+ * A ticket comes out of the local secret's trade or a direct channel's verdict and rotates on every
+ * connection; it lives in memory only, because writing it down would make it a session token.
  */
 const tickets = new Map<string, string>();
 
@@ -54,10 +52,5 @@ export const rememberSecretForUrls = (endpointId: string, secret: string | null)
     secretsForUrls.set(endpointId, secret);
 };
 
-/*
- * What goes in the `token` query of a socket URL or of a URL an `<img>` fetches. The name stayed
- * because the daemon takes a ticket and a session token in the same place, which is what keeps a
- * client of either kind talking to a daemon of either kind.
- */
-export const credentialFor = (endpoint: { id: string; token: string | null }): string | null =>
-    tickets.get(endpoint.id) ?? endpoint.token ?? secretsForUrls.get(endpoint.id) ?? null;
+/* What goes in the `token` query of a socket URL or of a URL an `<img>` fetches, the name the daemon reads it under. */
+export const credentialFor = (endpoint: { id: string }): string | null => tickets.get(endpoint.id) ?? secretsForUrls.get(endpoint.id) ?? null;

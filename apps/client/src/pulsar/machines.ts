@@ -4,33 +4,31 @@ import { AddressBookRequestError, type Machine } from '@ruimte/pulsar';
 import { hasLocalMachine, listedEndpoints } from '@/state/local-machine';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
-import { pool, transportFor } from '@/transport';
+import { transportFor } from '@/transport';
 import { messageOf } from '@basmilius/desktop-ui';
 import { accountRefusalText } from './account-refusal';
 import { usePulsarAccount, withAccessToken } from './account';
-import { reclaimPairedMachine } from './removal';
 
 interface MachinesState {
     // Null until the account list has been asked for once.
     machines: Machine[] | null;
     // Machines a person took off the account, which only a person puts back.
     removedMachineIds: string[];
-    // Removed machines this client just paired with again, on their way back onto the account.
-    reclaiming: string[];
     error: string | null;
 }
 
 /* The machines on the account this client is signed in to. */
-export const usePulsarMachines = create<MachinesState>(() => ({ machines: null, removedMachineIds: [], reclaiming: [], error: null }));
+export const usePulsarMachines = create<MachinesState>(() => ({ machines: null, removedMachineIds: [], error: null }));
 
 /* The row this client keeps for a machine on the account, whatever id the row is under. */
 export const rowForAccountMachine = (machineId: string, endpoints: readonly Endpoint[], local = hasLocalMachine()): Endpoint | null =>
     listedEndpoints(endpoints, local).find((endpoint) => endpoint.id === machineId || endpoint.daemonId === machineId) ?? null;
 
 /*
- * A row for a machine this client has never reached. There is no address to try, so the broker is the
- * only route and Direct is on; the key comes from the account list, which is the trust signing in buys.
- * Null for a machine on no broker, which a client somewhere else has no way to find.
+ * A row for a machine this client has never reached. There is no address of its own to try, so it is
+ * reached directly through the broker until `endpoint.info` names its doors on the local network; the
+ * key comes from the account list, which is the trust signing in buys. Null for a machine on no
+ * broker, which a client that never reached it has no way to find.
  */
 export const endpointForAccountMachine = (machine: Machine): Endpoint | null =>
     machine.brokerUrl === null
@@ -41,7 +39,6 @@ export const endpointForAccountMachine = (machine: Machine): Endpoint | null =>
               httpBaseUrl: '',
               wsBaseUrl: '',
               reachability: 'public',
-              token: null,
               daemonId: machine.id,
               daemonPublicKey: machine.publicKey,
               direct: true,
@@ -134,52 +131,5 @@ export const openAccountMachine = (machine: Machine): Endpoint => {
 };
 
 export const forgetAccountMachines = (): void => {
-    usePulsarMachines.setState({ machines: null, removedMachineIds: [], reclaiming: [], error: null });
+    usePulsarMachines.setState({ machines: null, removedMachineIds: [], error: null });
 };
-
-const setReclaiming = (machineId: string, on: boolean): void => {
-    usePulsarMachines.setState((state) => ({
-        reclaiming: on ? [...state.reclaiming.filter((id) => id !== machineId), machineId] : state.reclaiming.filter((id) => id !== machineId)
-    }));
-};
-
-/* As long as `ensureMachine` waits, so a machine that does not answer lets go of its link the same way. */
-const OPEN_TIMEOUT_MS = 45_000;
-
-/* The machine has to answer to sign its registration, so the socket is held until it does or the wait is over. */
-export const waitForOpen = (endpointId: string): Promise<void> =>
-    new Promise((resolve, reject) => {
-        const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
-        if (!endpoint) {
-            resolve();
-            return;
-        }
-        const release = pool.hold(endpoint);
-        let off: (() => void) | null = null;
-        const finish = (failure: Error | null): void => {
-            clearTimeout(timer);
-            off?.();
-            release();
-            if (failure === null) {
-                resolve();
-            } else {
-                reject(failure);
-            }
-        };
-        const timer = setTimeout(() => finish(new Error(i18next.t('machines:link.silent'))), OPEN_TIMEOUT_MS);
-        const check = (): void => {
-            if (pool.statusOf(endpointId).status === 'open') {
-                finish(null);
-            }
-        };
-        off = pool.subscribeStatus(endpointId, check);
-        check();
-    });
-
-/* Called after every pairing by link; see `reclaimPairedMachine` for why a removed machine goes back on the account. */
-export const reclaimAfterPairing = (endpoint: Endpoint): Promise<'untouched' | 'reclaimed'> =>
-    reclaimPairedMachine(
-        endpoint,
-        { signedIn: usePulsarAccount.getState().status === 'signed-in', removedMachineIds: usePulsarMachines.getState().removedMachineIds },
-        { waitForOpen, addToAccount: addMachineToAccount, setReclaiming }
-    );

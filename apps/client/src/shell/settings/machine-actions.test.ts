@@ -7,10 +7,9 @@ import type { MachineEntry } from './machine-list';
 const endpoint = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
     id,
     label: id,
-    httpBaseUrl: `http://${id}:4210`,
-    wsBaseUrl: `ws://${id}:4210`,
-    reachability: 'lan',
-    token: null,
+    httpBaseUrl: '',
+    wsBaseUrl: '',
+    reachability: 'public',
     daemonId: id,
     daemonPublicKey: null,
     ...overrides
@@ -25,25 +24,24 @@ const machine = (id: string, brokerUrl: string | null = 'wss://broker.example.co
     lastSeenAt: null
 });
 
-const paired: MachineEntry = { id: 'studio', endpoint: endpoint('studio'), machine: machine('studio'), local: false, paired: true, onAccount: true };
-const accountOnly: MachineEntry = { id: 'attic', endpoint: null, machine: machine('attic'), local: false, paired: false, onAccount: true };
+const opened: MachineEntry = { id: 'studio', endpoint: endpoint('studio'), machine: machine('studio'), local: false, onAccount: true };
+const accountOnly: MachineEntry = { id: 'attic', endpoint: null, machine: machine('attic'), local: false, onAccount: true };
 const here: MachineEntry = {
     id: 'home',
-    endpoint: endpoint(LOCAL_ENDPOINT_ID, { daemonId: 'home' }),
+    endpoint: endpoint(LOCAL_ENDPOINT_ID, { daemonId: 'home', httpBaseUrl: 'http://127.0.0.1:4210', wsBaseUrl: 'ws://127.0.0.1:4210' }),
     machine: null,
     local: true,
-    paired: false,
     onAccount: false
 };
 
 const signedIn = { connected: true, signedIn: true, removedMachineIds: [] };
 
 describe('machineDialogModel', () => {
-    test('a paired machine on the account offers both destructive actions', () => {
-        const model = machineDialogModel(paired, signedIn);
+    test('a machine opened from the account offers both destructive actions', () => {
+        const model = machineDialogModel(opened, signedIn);
         expect(model).toEqual({
             settings: 'ready',
-            direct: true,
+            direct: false,
             canOpen: false,
             canForget: true,
             canRemoveFromAccount: true,
@@ -53,11 +51,11 @@ describe('machineDialogModel', () => {
     });
 
     test('a machine that does not answer keeps its settings but disables them', () => {
-        expect(machineDialogModel(paired, { ...signedIn, connected: false }).settings).toBe('not-answering');
+        expect(machineDialogModel(opened, { ...signedIn, connected: false }).settings).toBe('not-answering');
     });
 
     test('signed out, a machine cannot be removed from the account', () => {
-        expect(machineDialogModel(paired, { ...signedIn, signedIn: false }).canRemoveFromAccount).toBe(false);
+        expect(machineDialogModel(opened, { ...signedIn, signedIn: false }).canRemoveFromAccount).toBe(false);
     });
 
     test('a machine only on the account is opened first, and never forgotten', () => {
@@ -85,11 +83,12 @@ describe('machineDialogModel', () => {
         const silent = machineDialogModel({ ...here, onAccount: true }, signedIn);
         expect(silent.canLeaveAccount).toBe(false);
         expect(silent.canRemoveFromAccount).toBe(true);
-        expect(machineDialogModel(paired, { ...signedIn, machineAccount: 'account-1' }).canLeaveAccount).toBe(false);
+        expect(machineDialogModel(opened, { ...signedIn, machineAccount: 'account-1' }).canLeaveAccount).toBe(false);
     });
 
-    test('a row opened from the account has no Direct to turn off', () => {
-        expect(machineDialogModel({ ...paired, endpoint: endpoint('studio', { httpBaseUrl: '' }) }, signedIn).direct).toBe(false);
+    test('only this machine has a Direct to turn off', () => {
+        expect(machineDialogModel(opened, signedIn).direct).toBe(false);
+        expect(machineDialogModel(here, signedIn).direct).toBe(true);
     });
 });
 
@@ -112,7 +111,7 @@ const recorder = () => {
 describe('machine actions', () => {
     test('forgetting touches this client only', async () => {
         const { calls, deps } = recorder();
-        await forgetOnClient(paired, deps);
+        await forgetOnClient(opened, deps);
         await forgetOnClient(here, deps);
         await forgetOnClient(accountOnly, deps);
         expect(calls).toEqual(['forget studio']);
@@ -120,7 +119,7 @@ describe('machine actions', () => {
 
     test('removing from the account also drops the row here', async () => {
         const { calls, deps } = recorder();
-        await removeFromAccount(paired, deps);
+        await removeFromAccount(opened, deps);
         expect(calls).toEqual(['delete studio', 'forget studio', 'refresh']);
     });
 
@@ -136,7 +135,7 @@ describe('machine actions', () => {
         deps.deleteFromAccount = async () => {
             throw new Error('not-found');
         };
-        await expect(removeFromAccount(paired, deps)).rejects.toThrow('not-found');
+        await expect(removeFromAccount(opened, deps)).rejects.toThrow('not-found');
         expect(calls).toEqual([]);
     });
 });

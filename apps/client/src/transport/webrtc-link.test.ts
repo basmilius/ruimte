@@ -453,14 +453,19 @@ describe('webRtcLink', () => {
     });
 
     test('a machine that does not know the key says so through the signals, and a route that fails ends the link', async () => {
+        let forgotten = 0;
         const refused = setup({
             signaling: () => (_connectionId, events) => {
                 queueMicrotask(() => events.signal({ kind: 'close', reason: 'not-paired' }));
                 return { send: () => undefined, close: () => undefined };
+            },
+            unknownKey: () => {
+                forgotten += 1;
             }
         });
         await tick();
-        expect(refused.log.closes).toEqual(['The machine does not know this client. Its access was revoked, or it lost the pairing; pair again to connect.']);
+        expect(refused.log.closes).toEqual(['The machine does not let this client in. Its access was revoked, or your account could not vouch for it.']);
+        expect(forgotten).toBe(1);
 
         const failed = setup({
             signaling: () => (_connectionId, events) => {

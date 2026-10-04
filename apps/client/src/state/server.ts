@@ -19,9 +19,6 @@ export interface ServerInfo {
     /* Whether an agent on this machine may remove a view it did not make. The daemon enforces it, so
        this is only what the Machines pane stands at; false for a daemon that predates the setting. */
     agentsDeleteAnyView: boolean;
-    /* Whether this machine turns away a statement from the address book, so only a pairing link lets a
-       client in. Enforced by the daemon; false for a daemon that predates statements. */
-    refuseStatements: boolean;
     /* Whether the daemon permits browser and device streaming; null for a daemon without the setting. */
     streamingAllowed: boolean | null;
     /* Whether a chat that stopped on a limit may be taken up again on a clock; false for a daemon without the setting. */
@@ -39,6 +36,10 @@ export interface ServerInfo {
     broker: BrokerSetting | null;
     /* Whether a flag or the environment on the machine decides the broker, which leaves the setting without effect. */
     brokerFixed: boolean;
+    /* Whether a person keeps the machine's door on the local network open; null for a daemon from before the door. */
+    lanDoor: boolean | null;
+    /* Whether a flag on the machine decides the door, which leaves the setting without effect. */
+    lanDoorFixed: boolean;
     reachability: Reachability | null;
     /* The key the machine announces, which the record on an account carries; null until it answers. */
     publicKey: string | null;
@@ -57,7 +58,6 @@ const UNKNOWN: ServerInfo = {
     nameSource: null,
     icon: null,
     agentsDeleteAnyView: false,
-    refuseStatements: false,
     streamingAllowed: null,
     resumeAtReset: false,
     appleFoundationEnabled: null,
@@ -68,6 +68,8 @@ const UNKNOWN: ServerInfo = {
     update: null,
     broker: null,
     brokerFixed: false,
+    lanDoor: null,
+    lanDoorFixed: false,
     reachability: null,
     publicKey: null,
     accountId: undefined
@@ -84,7 +86,6 @@ interface ServersStore {
             | 'nameSource'
             | 'icon'
             | 'agentsDeleteAnyView'
-            | 'refuseStatements'
             | 'streamingAllowed'
             | 'resumeAtReset'
             | 'appleFoundationEnabled'
@@ -95,6 +96,8 @@ interface ServersStore {
             | 'update'
             | 'broker'
             | 'brokerFixed'
+            | 'lanDoor'
+            | 'lanDoorFixed'
             | 'reachability'
             | 'publicKey'
             | 'accountId'
@@ -109,7 +112,6 @@ interface ServersStore {
             Partial<
                 Pick<
                     ServerInfo,
-                    | 'refuseStatements'
                     | 'streamingAllowed'
                     | 'resumeAtReset'
                     | 'appleFoundationEnabled'
@@ -118,6 +120,8 @@ interface ServersStore {
                     | 'keepAwakeDisplay'
                     | 'broker'
                     | 'brokerFixed'
+                    | 'lanDoor'
+                    | 'lanDoorFixed'
                 >
             >
     ): void;

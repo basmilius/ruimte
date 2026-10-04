@@ -181,7 +181,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     // On the account row of the Account pane.
     { id: 'machines.signIn', section: 'machines', label: 'settings:machines.account.title', description: 'settings:machines.account.description' },
-    { id: 'machines.add', section: 'machines', label: 'settings:machines.add.title', description: 'settings:machines.add.hint' },
+    { id: 'machines.add', section: 'machines', label: 'settings:machines.add.title', description: 'settings:machines.add.description' },
     // On the detail of a machine this client opened: the one picked, else this machine.
     {
         id: 'machines.machine.identity',
@@ -198,18 +198,18 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         available: hasOpenedMachine
     },
     {
+        id: 'machines.machine.lanDoor',
+        section: 'machines',
+        label: 'settings:machine.lanDoor.label',
+        description: 'settings:machine.lanDoor.search',
+        available: hasOpenedMachine
+    },
+    {
         id: 'machines.machine.direct',
         section: 'machines',
         label: 'settings:machine.direct.label',
         description: 'settings:machine.direct.description',
-        available: hasOpenedMachine
-    },
-    {
-        id: 'machines.machine.refuse',
-        section: 'machines',
-        label: 'settings:machine.refuse.label',
-        description: 'settings:machine.refuse.description',
-        available: hasOpenedMachine
+        available: hasLocalMachine
     },
     {
         id: 'machines.machine.streaming',

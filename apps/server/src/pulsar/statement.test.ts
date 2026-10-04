@@ -125,7 +125,6 @@ describe('trustedStatementKeys', () => {
 describe('StatementGate', () => {
     let home: string;
     let store: AuthStore;
-    let refuses: boolean;
     let now: number;
 
     let warnings: string[];
@@ -135,7 +134,6 @@ describe('StatementGate', () => {
             machineId: MACHINE_ID,
             machinePublicKey: machine.publicKey,
             trustedKeys: [addressBook.publicKey],
-            refusesStatements: () => refuses,
             store,
             now: () => now,
             log: { log: () => undefined, warn: (line: string) => warnings.push(line) }
@@ -146,7 +144,6 @@ describe('StatementGate', () => {
     beforeEach(async () => {
         home = await mkdtemp(join(tmpdir(), 'ruimte-statement-'));
         store = new AuthStore(home, () => now);
-        refuses = false;
         now = NOW + 1_000;
         warnings = [];
     });
@@ -198,33 +195,12 @@ describe('StatementGate', () => {
         expect(await store.list(null)).toEqual([]);
     });
 
-    test('with the refusal switch on a good statement gets statements-refused and nothing else, and its nonce is left unspent', async () => {
-        const client = generateKeyPair();
-        const statement = statementV2For(client.publicKey, 'owner');
-        refuses = true;
-        expect(await gate().admit(client.publicKey, access(statement))).toBe('statements-refused');
-        expect(await store.list(null)).toEqual([]);
-        // A bad statement never learns about the switch.
-        expect(await gate().admit(client.publicKey, access(statementV2For(client.publicKey, 'owner', machine.publicKey, {}, generateKeyPair())))).toBe(
-            'refused'
-        );
-
-        refuses = false;
-        expect(await gate().admit(client.publicKey, access(statement))).toBe('admitted');
-    });
-
-    test('a device a person revoked does not walk back in on a statement, until it is paired with a link again', async () => {
+    test('a device a person revoked does not walk back in on a statement', async () => {
         const client = generateKeyPair();
         expect(await gate().admit(client.publicKey, access(statementV2For(client.publicKey, 'owner')))).toBe('admitted');
         await store.revoke((await store.list(null))[0]!.id);
         expect(await gate().admit(client.publicKey, access(statementV2For(client.publicKey, 'owner')))).toBe('refused');
         expect(await store.sessionForPublicKey(client.publicKey)).toBeNull();
-
-        await store.pair(store.issuePairingToken(), { label: 'By hand', publicKey: client.publicKey });
-        await store.revoke((await store.list(null))[0]!.id);
-        await store.pair(store.issuePairingToken(), { label: 'By hand again', publicKey: client.publicKey });
-        expect(await gate().admit(client.publicKey, access(statementV2For(client.publicKey, 'owner')))).toBe('admitted');
-        expect(await store.list(null)).toEqual([expect.objectContaining({ label: 'By hand again', origin: 'link' })]);
     });
 
     test('the auth file keeps the spent nonces and forgets them once the statement could not be believed anyway', async () => {
@@ -274,13 +250,11 @@ describe('StatementGate', () => {
         await store.bindAccount('owner');
         const phone = generateKeyPair();
         expect(await gate().admit(phone.publicKey, access(statementV2For(phone.publicKey, 'owner')))).toBe('admitted');
-        const laptop = generateKeyPair();
-        await store.pair(store.issuePairingToken(), { label: 'By link', publicKey: laptop.publicKey });
         const phoneSession = await store.sessionForPublicKey(phone.publicKey);
 
         expect(await store.leaveAccount()).toEqual([phoneSession!]);
         expect(await store.sessionForPublicKey(phone.publicKey)).toBeNull();
-        expect(await store.list(null)).toEqual([expect.objectContaining({ label: 'By link', origin: 'link' })]);
+        expect(await store.list(null)).toEqual([]);
         expect(await store.accountBinding()).toBeNull();
 
         for (const statement of [statementV2For(phone.publicKey, 'owner'), statementFor(phone.publicKey)]) {

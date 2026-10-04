@@ -148,32 +148,13 @@
             }
         }
     },
-    "pairing": {
-        "notALink": "Dat is geen koppellink. Een koppellink ziet eruit als http://machine:4210/pair#token",
-        "refused": "Die machine weigerde het koppelen",
-        "noKeyOrToken": "Die machine antwoordde zonder key of token",
-        "ownDaemon": "Die link is voor de machine die deze pagina serveerde. Die staat al in de lijst als {{label}}.",
-        "merged": {
-            "title": "{{label}} staat al in de lijst",
-            "description": "Die link wijst naar dezelfde machine. Het adres is nu {{address}}."
-        }
-    },
     "handshake": {
-        "wrongKey": "{{address}} heeft niet de key waarmee deze client gekoppeld is",
-        "noEndpoint": "Geen endpoint {{id}} om mee te verbinden",
-        "unknownKey": {
-            "title": "{{label}} kent deze client niet",
-            "description": "De toegang is ingetrokken, of de machine is de koppeling kwijt. Koppel opnieuw om te verbinden."
-        },
-        "imposter": {
-            "title": "{{label}} kan zijn identiteit niet bewijzen",
-            "description": "{{address}} antwoordt met een andere key dan die waarmee deze client gekoppeld is. Koppel opnieuw om te verbinden."
-        }
+        "noEndpoint": "Geen endpoint {{id}} om mee te verbinden"
     },
     "identity": {
         "mismatch": {
             "title": "{{label}} antwoordt als een andere machine",
-            "description": "{{address}} is niet de machine waarmee deze client gekoppeld is. Koppel opnieuw om te verbinden."
+            "description": "{{address}} antwoordt als een andere machine dan die deze client opende. Vergeet hem hier en open hem opnieuw vanuit je account."
         },
         "merged": {
             "title": "{{label}} staat al in de lijst",
@@ -258,8 +239,8 @@
             "failed": "De machine kon de directe verbinding niet beantwoorden",
             "timeout": "De machine gaf het wachten op de directe verbinding op",
             "done": "De machine heeft de directe verbinding beëindigd",
-            "not-paired": "De machine kent deze client niet. De toegang is ingetrokken, of de koppeling is kwijt; koppel opnieuw om te verbinden.",
-            "statements-refused": "De machine weigert inloggen via een account. Koppel met een link om te verbinden.",
+            "not-paired": "De machine laat deze client niet binnen. De toegang is ingetrokken, of je account kon er niet voor instaan.",
+            "statements-refused": "De machine weigert inloggen via een account.",
             "other": "De machine heeft de directe verbinding gesloten"
         },
         "channelEarly": "Het channel ging open vóór het answer dat het beschrijft",
@@ -279,12 +260,23 @@
         "noKeyOverBroker": "Een directe verbinding via de broker logt in met een key, en deze browser kan er geen maken",
         "notProven": "{{label}} bewees zijn identiteit niet over de directe verbinding",
         "noKey": "Een directe verbinding logt in met een key, en deze browser kan er geen maken",
-        "needsPairedKey": "Een directe verbinding heeft een gekoppelde key nodig. Koppel deze machine opnieuw.",
+        "needsPairedKey": "Een directe verbinding vraagt om een machine op je account, of om de Ruimte-app op deze machine",
         "timedOut": "De directe verbinding kwam niet binnen {{seconds}} seconden op",
         "frameRefused": "De directe verbinding weigerde een frame: {{reason}}",
         "answerNotApplied": "Het answer van de machine liet zich niet toepassen: {{reason}}",
         "refusedVerdict": "De machine weigerde de directe verbinding: {{reason}}",
         "setupFailed": "Een directe verbinding opzetten lukte niet: {{reason}}"
+    },
+    "lan": {
+        "notProven": "De machine op dit adres in het lokale netwerk kon niet bewijzen dat ze deze machine is",
+        "noKey": "Een verbinding op het lokale netwerk logt in met een key, en deze browser kan er geen maken",
+        "unsignedSignal": "Een signaal op het lokale netwerk noemt de machine, maar is niet door haar ondertekend",
+        "refused": "De deur van de machine op het lokale netwerk weigerde deze client: {{reason}}",
+        "failed": "Kon de deur van de machine op het lokale netwerk niet gebruiken: {{reason}}",
+        "unreachable": "De deur van de machine op het lokale netwerk was niet te bereiken"
+    },
+    "route": {
+        "none": "Deze machine is niet verbonden met een broker, en deze client kent geen deur van haar op het lokale netwerk"
     },
     "connection": {
         "notConnected": "De machine is niet verbonden",
@@ -299,8 +291,5 @@
         "tooLarge": "Dit bestand is {{size}} MB; over een directe verbinding laadt hoogstens {{max}} MB",
         "emptyPiece": "De machine stuurde een leeg stuk vóór het einde van het bestand",
         "changed": "Het bestand veranderde tijdens het laden"
-    },
-    "station": {
-        "mixedContent": "Deze pagina wordt over https geserveerd, en een browser laat hem geen machine op gewoon http bereiken. Voeg de machine vanuit de desktop-app toe aan je account en open hem hier, of zet hem achter https."
     }
 }

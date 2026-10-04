@@ -1,5 +1,6 @@
 import { toBase64Url } from '@ruimte/pulsar';
 import { z } from 'zod';
+import { LanDoorSchema } from './lan-door.ts';
 
 /*
  * The HTTP routes a daemon answers beside the socket, asked by the desktop shell and by
@@ -8,6 +9,14 @@ import { z } from 'zod';
  */
 
 export const MACHINE_HEALTH_PATH = '/health';
+
+/*
+ * Where the desktop app's own page lives: the shell serves the built client under this scheme, so the
+ * page never depends on a daemon to exist. The daemon takes this origin beside loopback; a page on the
+ * web cannot carry it.
+ */
+export const DESKTOP_APP_SCHEME = 'app';
+export const DESKTOP_APP_ORIGIN = `${DESKTOP_APP_SCHEME}://ruimte`;
 export const MACHINE_WORK_PATH = '/machine/work';
 
 export const HealthResultSchema = z.object({
@@ -60,6 +69,26 @@ export const machineWorkOf = (body: unknown): MachineWork | null => {
 };
 
 export const isIdle = (work: MachineWork): boolean => work.terminals === 0 && work.agents === 0;
+
+/*
+ * How clients reach a daemon, which `ruimte status` asks on the local secret: what the app shows under
+ * Settings, Machines, for a terminal on a machine without the app.
+ */
+export const MACHINE_STATUS_PATH = '/machine/status';
+
+export const MachineStatusSchema = z.object({
+    version: z.string().min(1),
+    service: z.boolean(),
+    label: z.string(),
+    // Whether the machine is on an address book account; which one is for the app to show, not a terminal.
+    onAccount: z.boolean(),
+    // The broker the machine announces itself to, null when it is on none, and whether that broker took its signature.
+    broker: z.object({ url: z.string().nullable(), connected: z.boolean() }),
+    // The door on the local network, null while it is closed, and whether `--no-lan` closed it.
+    lan: LanDoorSchema.nullable(),
+    lanDoorFixed: z.boolean()
+});
+export type MachineStatus = z.infer<typeof MachineStatusSchema>;
 
 /*
  * Where a daemon proves it holds the local secret of its home without showing it. The desktop shell

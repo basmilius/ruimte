@@ -1,11 +1,13 @@
 import i18next from 'i18next';
 import { create } from 'zustand';
-import type { Reachability } from '@ruimte/contracts';
+import type { LanDoor, Reachability } from '@ruimte/contracts';
 import { credentialFor } from '@/endpoint/credentials';
+import { desktop } from '@/desktop/bridge';
 
 export const ENDPOINTS_STORAGE_KEY = 'ruimte.endpoints';
-// Version 1 keyed a row on its address; version 2 keys it on the id the daemon answers with; version 3 pins its key.
-const STORAGE_VERSION = 3;
+/* Version 1 keyed a row on its address; version 2 keys it on the id the daemon answers with; version 3 pins its key;
+   version 4 holds only rows reached through the account, since a machine takes nobody else in. */
+const STORAGE_VERSION = 4;
 export const LOCAL_ENDPOINT_ID = 'local';
 /* What the row for this machine says when nothing better is known about it. */
 export const localEndpointLabel = (): string => i18next.t('state:localMachine');
@@ -27,35 +29,34 @@ export interface Endpoint {
     wsBaseUrl: string;
     reachability: Reachability;
     /*
-     * The session token from pairing, for a daemon or a browser that cannot do key pairs. Null once
-     * this client has signed for a ticket instead, which is what every fresh pairing does.
-     */
-    token: string | null;
-    /*
      * The daemon that last answered on this address. `local` learns it too, which is how the client
-     * tells that a paired row and the page's own daemon are the same machine.
+     * tells that a row of the account and the page's own daemon are the same machine.
      */
     daemonId: string | null;
     /*
-     * The daemon's ed25519 public key, pinned the first time this client saw it over a connection it
-     * already trusted (pairing, or a token-authenticated socket). From then on a daemon has to sign
-     * a challenge with it, so the id above is a proof rather than a string read off the wire.
+     * The daemon's ed25519 public key, from the account list that vouched for it. A daemon has to sign
+     * a challenge with it, so the id above is a proof rather than a string read off the wire. Null for
+     * the row of this machine, which proves itself with the local secret instead.
      */
     daemonPublicKey: string | null;
     /*
-     * Whether this client reaches the machine over a WebRTC DataChannel instead of the socket, an
-     * experiment a person turns on per machine. Absent is off, which is every row from before it.
+     * Whether this client reaches the machine over a WebRTC DataChannel instead of the socket. Every
+     * other machine is reached that way; for the row of this machine it is a choice, off when absent.
      */
     direct?: boolean;
     /*
-     * The broker the machine announces itself to, as the pairing answer and `endpoint.info` last said.
-     * With it and Direct on, the signals go over the broker and nothing is asked of the address above.
+     * The broker the machine announces itself to, as the account list and `endpoint.info` last said.
      * Absent on a row from before the broker.
      */
     brokerUrl?: string | null;
     /*
-     * How this client got in: a pairing link, or a statement from the account it is signed in to.
-     * Absent is a link, which is every row from before accounts.
+     * The machine's door on the local network as `endpoint.info` last said, tried before the broker.
+     * Null while the door is closed, absent on a row that never heard of it.
+     */
+    lan?: LanDoor | null;
+    /*
+     * How this client got in. A row from before accounts said `link` or nothing; those rows are dropped
+     * when the list loads, since a machine takes nobody in that way any more.
      */
     pairedBy?: 'link' | 'statement';
     /*
@@ -70,7 +71,7 @@ interface EndpointsStore {
     activeId: string;
     /* Rows whose address answered as another daemon, and the id it answered with; a warning, never a change. */
     mismatched: Record<string, string>;
-    /* A machine that just paired. One daemon is one row, so a pairing with a machine already listed moves that row. */
+    /* A machine opened from the account. One daemon is one row, so a machine already listed keeps its place. */
     add(endpoint: Endpoint): void;
     remove(id: string): void;
     setActive(id: string): void;
@@ -81,48 +82,51 @@ interface EndpointsStore {
     reload(): void;
     setLabel(id: string, label: string): void;
     learnDaemonId(id: string, daemonId: string): void;
-    /* Trust on first use: the key is written once and never overwritten, so a later answer cannot replace it. */
-    pinDaemonKey(id: string, publicKey: string): void;
-    /* The session token is not needed any more; this client signs for its credential now. */
-    clearToken(id: string): void;
     /* Moves a row onto the id its daemon answers with, over a row already under that id; the pre-phase-1 rows were keyed on an address. */
     rekeyEndpoint(oldId: string, newId: string): void;
     noteMismatch(id: string, daemonId: string): void;
     setDirect(id: string, direct: boolean): void;
     learnBrokerUrl(id: string, brokerUrl: string | null): void;
+    learnLan(id: string, lan: LanDoor | null): void;
     /* The machine let this client in on a statement, so the next attempt needs none. */
     settleStatement(id: string): void;
+    /* The machine no longer knows this client's key, so the next attempt carries a statement again. */
+    requireStatement(id: string): void;
 }
 
-/* The daemon this page was served by, or in dev the Vite origin that proxies to it. */
+/* The machine the desktop app started, or the page's own origin: the daemon or, in dev, the Vite origin that proxies to it. */
 const localEndpoint = (): Endpoint => {
-    const origin = typeof location === 'undefined' ? 'http://127.0.0.1:4210' : location.origin;
+    const origin = desktop()?.daemonUrl ?? (typeof location === 'undefined' ? 'http://127.0.0.1:4210' : location.origin);
     return {
         id: LOCAL_ENDPOINT_ID,
         label: localEndpointLabel(),
         httpBaseUrl: origin,
         wsBaseUrl: origin.replace(/^http/, 'ws'),
         reachability: 'loopback',
-        token: null,
         daemonId: null,
         daemonPublicKey: null
     };
 };
 
 /*
- * The remembered rows, without the local one, which is rebuilt from this page's own origin. A blob
- * from before endpoints had a daemon id keeps its host-shaped ids: which machine such a row is only
- * becomes known when it answers again, and `rekeyEndpoint` moves it then.
+ * The remembered rows, without the local one, which is rebuilt from this page's own origin. A row
+ * from a pairing link is dropped: the machine lets nobody in that way any more, and the account list
+ * opens a machine on the account again under the same id. What is left is reached directly.
  */
 export const parseStoredEndpoints = (raw: string | null): { endpoints: Endpoint[]; activeId: string | null; migrated: boolean } => {
     if (raw === null) {
         return { endpoints: [], activeId: null, migrated: false };
     }
     try {
-        const stored = JSON.parse(raw) as { version?: number; endpoints?: Endpoint[]; activeId?: string };
+        const stored = JSON.parse(raw) as { version?: number; endpoints?: Array<Endpoint & { token?: unknown }>; activeId?: string };
         const endpoints = (stored.endpoints ?? [])
-            .filter((endpoint) => endpoint?.id !== undefined && endpoint.id !== LOCAL_ENDPOINT_ID)
-            .map((endpoint) => ({ ...endpoint, daemonId: endpoint.daemonId ?? null, daemonPublicKey: endpoint.daemonPublicKey ?? null }));
+            .filter((endpoint) => endpoint?.id !== undefined && endpoint.id !== LOCAL_ENDPOINT_ID && endpoint.pairedBy === 'statement')
+            .map(({ token: _token, ...endpoint }) => ({
+                ...endpoint,
+                daemonId: endpoint.daemonId ?? null,
+                daemonPublicKey: endpoint.daemonPublicKey ?? null,
+                direct: true
+            }));
         return { endpoints, activeId: stored.activeId ?? null, migrated: stored.version !== STORAGE_VERSION };
     } catch {
         return { endpoints: [], activeId: null, migrated: false };
@@ -177,8 +181,7 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
     mismatched: {},
     add(endpoint) {
         const known = get().endpoints.find((entry) => entry.id === endpoint.id);
-        /* The row keeps its place in the list and takes the address and the credential the pairing
-           handed out. The key it pinned survives a pairing that brings none, which is what a client without ed25519 does. */
+        // The row keeps its place in the list; the key it pinned survives a row that brings none.
         const row = known
             ? { ...endpoint, daemonPublicKey: endpoint.daemonPublicKey ?? known.daemonPublicKey, ...(known.direct === true ? { direct: true } : {}) }
             : endpoint;
@@ -231,23 +234,11 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
         set({ endpoints });
         persist({ endpoints, activeId: get().activeId });
     },
-    pinDaemonKey(id, publicKey) {
-        const endpoints = get().endpoints.map((entry) =>
-            entry.id === id && entry.daemonPublicKey === null ? { ...entry, daemonPublicKey: publicKey } : entry
-        );
-        set({ endpoints });
-        persist({ endpoints, activeId: get().activeId });
-    },
-    clearToken(id) {
-        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, token: null } : entry));
-        set({ endpoints });
-        persist({ endpoints, activeId: get().activeId });
-    },
     rekeyEndpoint(oldId, newId) {
         if (oldId === newId || oldId === LOCAL_ENDPOINT_ID || !get().endpoints.some((entry) => entry.id === oldId)) {
             return;
         }
-        // The row that just answered carries the address and the token that work, so it wins from an older row under that id.
+        // The row that just answered carries the address that works, so it wins from an older row under that id.
         const replaced = get().endpoints.find((entry) => entry.id === newId);
         const endpoints = get()
             .endpoints.filter((entry) => entry.id !== newId)
@@ -279,11 +270,28 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
         set({ endpoints });
         persist({ endpoints, activeId: get().activeId });
     },
+    learnLan(id, lan) {
+        // Asked on every connection like the broker, and written only when the door moved.
+        if (!get().endpoints.some((entry) => entry.id === id && JSON.stringify(entry.lan ?? null) !== JSON.stringify(lan))) {
+            return;
+        }
+        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, lan } : entry));
+        set({ endpoints });
+        persist({ endpoints, activeId: get().activeId });
+    },
     settleStatement(id) {
         if (!get().endpoints.some((entry) => entry.id === id && entry.needsStatement === true)) {
             return;
         }
         const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, needsStatement: false } : entry));
+        set({ endpoints });
+        persist({ endpoints, activeId: get().activeId });
+    },
+    requireStatement(id) {
+        if (id === LOCAL_ENDPOINT_ID || !get().endpoints.some((entry) => entry.id === id && entry.needsStatement !== true)) {
+            return;
+        }
+        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, needsStatement: true } : entry));
         set({ endpoints });
         persist({ endpoints, activeId: get().activeId });
     }
@@ -322,22 +330,7 @@ export const activeEndpoint = (): Endpoint => {
  * put a header on a WebSocket handshake; what makes that bearable is that a ticket is what normally
  * sits there, good for one connection and for nothing on any other machine.
  */
-export const socketUrlFor = (endpoint: Endpoint): string => {
+export const socketUrlFor = (endpoint: Pick<Endpoint, 'id' | 'wsBaseUrl'>): string => {
     const credential = credentialFor(endpoint);
     return `${endpoint.wsBaseUrl}/ws${credential ? `?token=${encodeURIComponent(credential)}` : ''}`;
-};
-
-/* `http://host:port/pair#token`, as the daemon prints it. */
-export const parsePairingUrl = (input: string): { httpBaseUrl: string; token: string } | null => {
-    let url: URL;
-    try {
-        url = new URL(input.trim());
-    } catch {
-        return null;
-    }
-    const token = url.hash.replace(/^#/, '');
-    if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.pathname !== '/pair' || !token) {
-        return null;
-    }
-    return { httpBaseUrl: url.origin, token };
 };

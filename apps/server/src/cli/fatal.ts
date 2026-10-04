@@ -43,7 +43,7 @@ export const portInUseMessage = (port: number, running: RunningMachine | null): 
     const check = running.service === true ? `\`ruimte service status${portFlag}\` checks on it, ` : '';
     return (
         `A Ruimte machine is already running on port ${port} (version ${running.version}${how}).\n` +
-        `There is no need to start another: ${check}\`ruimte login${portFlag}\` puts it on your account and \`ruimte pair${portFlag}\` prints a pairing link. ` +
+        `There is no need to start another: ${check}\`ruimte login${portFlag}\` puts it on your account and \`ruimte status${portFlag}\` says how clients reach it. ` +
         'To run a second one anyway, give it its own --port and RUIMTE_HOME.'
     );
 };

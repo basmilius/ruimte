@@ -27,7 +27,7 @@ export const readLocalSecret = async (home: string): Promise<string | null> => {
 
 /**
  * The secret of a home, minted on the first start. It survives restarts, so a desktop app or a
- * `ruimte pair` that read it once does not have to know that the daemon came back.
+ * `ruimte login` that read it once does not have to know that the daemon came back.
  */
 export const readOrCreateLocalSecret = async (home: string): Promise<string> => {
     const existing = await readLocalSecret(home);

@@ -9,8 +9,6 @@ export interface MachineEntry {
     endpoint: Endpoint | null;
     machine: Machine | null;
     local: boolean;
-    /* Paired with a link, as opposed to a row opened from the account. */
-    paired: boolean;
     onAccount: boolean;
 }
 
@@ -35,8 +33,7 @@ export const mergeMachines = ({ endpoints, accountMachines, showLocal }: MergeIn
         if (entries.some((entry) => entry.id === id)) {
             continue;
         }
-        const isLocal = endpoint.id === LOCAL_ENDPOINT_ID;
-        entries.push({ id, endpoint, machine: null, local: isLocal, paired: !isLocal && endpoint.pairedBy !== 'statement', onAccount: false });
+        entries.push({ id, endpoint, machine: null, local: endpoint.id === LOCAL_ENDPOINT_ID, onAccount: false });
     }
     for (const machine of accountMachines ?? []) {
         const known = entries.find((entry) => entry.id === machine.id);
@@ -44,24 +41,21 @@ export const mergeMachines = ({ endpoints, accountMachines, showLocal }: MergeIn
             known.machine = machine;
             known.onAccount = true;
         } else {
-            entries.push({ id: machine.id, endpoint: null, machine, local: false, paired: false, onAccount: true });
+            entries.push({ id: machine.id, endpoint: null, machine, local: false, onAccount: true });
         }
     }
     return entries;
 };
 
-/* How a machine is reached, in the words of its row: "Paired", "On your account" or both. */
+/* How a machine is reached, in the words of its row: "This machine", "On your account" or both. */
 export const reachLabel = (entry: MachineEntry): string => {
     const parts: string[] = [];
     if (entry.local) {
         parts.push(i18next.t('settings:reach.thisMachine'));
     }
-    if (entry.paired) {
-        parts.push(i18next.t('settings:reach.paired'));
-    }
     if (entry.onAccount) {
         parts.push(i18next.t('settings:reach.onAccount'));
-    } else if (entry.endpoint !== null && !entry.local && !entry.paired) {
+    } else if (entry.endpoint !== null && !entry.local) {
         // A row opened from the account while this client cannot see the account list.
         parts.push(i18next.t('settings:reach.openedThroughAccount'));
     }
@@ -100,6 +94,7 @@ export const pickForTarget = (target: string, entries: readonly MachineEntry[], 
     }
     const local = entries.find((entry) => entry.local) ?? null;
     const opened = picked?.endpoint ? picked : (local ?? entries.find((entry) => entry.endpoint !== null) ?? null);
-    const entry = target === 'machines.machine.keepRunning' ? local : opened;
+    // Running in the background and Direct are about this machine only.
+    const entry = target === 'machines.machine.keepRunning' || target === 'machines.machine.direct' ? local : opened;
     return entry === null ? null : { kind: 'machine', id: entry.id };
 };

@@ -254,7 +254,6 @@ describe('announcedRecordOf', () => {
         httpBaseUrl: 'http://127.0.0.1:4211',
         wsBaseUrl: 'ws://127.0.0.1:4211',
         reachability: 'loopback',
-        token: null,
         daemonId: 'macbook',
         daemonPublicKey: null,
         brokerUrl: 'wss://broker.ruimte.test'

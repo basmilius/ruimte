@@ -3,6 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AuthStore } from '../auth/auth-store.ts';
+import { admitClient } from '../auth/test-admit.ts';
 import { Handshake } from '../auth/handshake.ts';
 import { generateKeyPair, signMessage } from '../auth/keys.ts';
 import { HIGH_WATER_MARK } from '../backpressure.ts';
@@ -12,6 +13,10 @@ import { authenticateChannel } from './channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
 import { DirectClient, type DirectCredential } from './direct-client.ts';
 import { DirectPeers } from './peers.ts';
+import { LanDoor } from './lan-door.ts';
+import { SignalGate } from './signal-gate.ts';
+import { lanDoorMessage, lanDoorUrl, signalMessage, type LanDoorMachineFrame, type SignalEnvelope } from '@ruimte/pulsar';
+import { verifySignature } from '@ruimte/pulsar/verify-node';
 
 /*
  * Both ends of a direct connection in one process, over real ICE, DTLS and SCTP on loopback: the
@@ -27,6 +32,7 @@ let home: string;
 let store: AuthStore;
 let handshake: Handshake;
 let peers: DirectPeers;
+let door: LanDoor;
 const opened: Array<{ channel: DirectChannel; access: ClientAccess }> = [];
 const logged: string[] = [];
 const clients: DirectClient[] = [];
@@ -72,6 +78,19 @@ beforeAll(async () => {
             channel.receiveWith((frame) => connection.receive(frame), AUTHENTICATED_FRAME_CHARS);
         }
     });
+    const gate = new SignalGate({
+        publicKey: daemonKey.publicKey,
+        isPaired: async (publicKey) => (await store.sessionForPublicKey(publicKey)) !== null,
+        receive: (envelope, reply) => peers.receive(envelope, reply),
+        log: { warn: () => undefined }
+    });
+    door = new LanDoor({
+        port: 0,
+        identity: { machineId: DAEMON_ID, publicKey: daemonKey.publicKey, sign: (message) => signMessage(daemonKey.privateKey, message) },
+        gate,
+        log: { log: () => undefined, warn: () => undefined }
+    });
+    expect(door.start()).toBe(true);
 });
 
 afterEach(() => {
@@ -81,6 +100,7 @@ afterEach(() => {
 });
 
 afterAll(async () => {
+    door.stop();
     peers.closeAll();
     await rm(home, { recursive: true, force: true });
 });
@@ -97,10 +117,8 @@ const connect = (credential: DirectCredential, signal?: (client: DirectClient, e
 };
 
 const pairedKey = async () => {
-    const paired = await store.pair(store.issuePairingToken(), { label: 'direct test' });
     const key = generateKeyPair();
-    await store.registerKey(paired!.id, key.publicKey);
-    return { ...key, sessionId: paired!.id };
+    return { ...key, sessionId: await admitClient(store, key.publicKey, 'direct test') };
 };
 
 describe('a direct connection', () => {
@@ -140,7 +158,7 @@ describe('a direct connection', () => {
                 daemonId: DAEMON_ID,
                 daemonPublicKey: daemonKey.publicKey
             }).open()
-        ).rejects.toThrow(/does not recognize/);
+        ).rejects.toThrow(/does not know this device/);
         await expect(connect({ kind: 'secret', secret: 'not-the-secret', daemonId: DAEMON_ID }).open()).rejects.toThrow(/not the secret/);
         const key = await pairedKey();
         await expect(
@@ -274,4 +292,82 @@ describe('a direct connection', () => {
         expect(clientIce).not.toBe('closed');
         expect(peers.size).toBe(before - 1);
     }, 20_000);
+});
+
+/*
+ * A client of the door on the local network, as the app is one: hello first, the machine's proof
+ * checked against the pinned key, and only then the signals, signed for the machine's key.
+ */
+const throughDoor = async (key: { publicKey: string; privateKey: string }): Promise<{ client: DirectClient; socket: WebSocket }> => {
+    const socket = new WebSocket(lanDoorUrl('127.0.0.1', door.port!));
+    await new Promise((resolve, reject) => {
+        socket.onopen = resolve;
+        socket.onerror = reject;
+    });
+    const nonce = 'n'.repeat(32);
+    let client: DirectClient | null = null;
+    const proven = new Promise<void>((resolve, reject) => {
+        socket.onmessage = (message) => {
+            const frame = JSON.parse(String(message.data)) as LanDoorMachineFrame;
+            if (frame.type === 'door') {
+                if (
+                    frame.publicKey !== daemonKey.publicKey ||
+                    !verifySignature(daemonKey.publicKey, lanDoorMessage(nonce, frame.machineId, frame.publicKey), frame.signature)
+                ) {
+                    reject(new Error('The door did not prove the pinned key'));
+                    return;
+                }
+                resolve();
+                return;
+            }
+            if (
+                frame.type === 'signal' &&
+                verifySignature(daemonKey.publicKey, signalMessage(daemonKey.publicKey, key.publicKey, frame.envelope), frame.signature)
+            ) {
+                client?.receiveSignal(frame.envelope);
+            }
+        };
+    });
+    socket.send(JSON.stringify({ type: 'hello', nonce }));
+    await proven;
+    client = connect(
+        { kind: 'key', publicKey: key.publicKey, privateKey: key.privateKey, daemonId: DAEMON_ID, daemonPublicKey: daemonKey.publicKey },
+        (_client, envelope: SignalEnvelope) =>
+            socket.send(
+                JSON.stringify({
+                    type: 'signal',
+                    from: key.publicKey,
+                    envelope,
+                    signature: signMessage(key.privateKey, signalMessage(key.publicKey, daemonKey.publicKey, envelope))
+                })
+            )
+    );
+    return { client, socket };
+};
+
+describe('the door on the local network', () => {
+    test('a key the machine let in opens a direct channel through it without any broker', async () => {
+        const key = await pairedKey();
+        const { client, socket } = await throughDoor(key);
+        const verdict = await client.open();
+        expect(verdict.ticket).not.toBeNull();
+        expect(opened.at(-1)?.access).toEqual({ reachability: 'lan', sessionId: key.sessionId });
+        // The door only carried the signals; the channel outlives it.
+        socket.close();
+        const info = await client.request<{ authenticated: boolean }>('endpoint.info', {});
+        expect(info.authenticated).toBe(true);
+    }, 20_000);
+
+    test('a key the machine never let in gets no channel through it', async () => {
+        const count = opened.length;
+        const { client, socket } = await throughDoor(generateKeyPair());
+        await expect(client.open()).rejects.toThrow();
+        socket.close();
+        expect(opened.length).toBe(count);
+    }, 20_000);
+
+    test('anything but the door answers 404', async () => {
+        expect((await fetch(`http://127.0.0.1:${door.port}/ws`)).status).toBe(404);
+        expect((await fetch(`http://127.0.0.1:${door.port}/health`)).status).toBe(404);
+    });
 });

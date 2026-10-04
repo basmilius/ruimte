@@ -41,6 +41,8 @@ export interface WebRtcLinkOptions {
     prove(challenge: DirectChallengeFrame, binding: string): Promise<DirectProofFrame>;
     /* The daemon let this client in; the ticket is for the HTTP routes an `<img>` still fetches. */
     accepted?(ticket: string | null): void;
+    /* The machine does not know this client's key (`not-paired`): it left its account, lost its home, or this client has a new key. */
+    unknownKey?(): void;
     /* How this attempt's signals travel, given the address the transport resolved; a socket to the machine unless said otherwise. */
     signaling?(url: string): SignalingOpener;
     createPeer?(configuration: RTCConfiguration): RTCPeerConnection;
@@ -161,6 +163,9 @@ export const webRtcLink =
                 return;
             }
             if (incoming.kind === 'close') {
+                if (incoming.reason === 'not-paired') {
+                    options.unknownKey?.();
+                }
                 end(closeReason(incoming.reason));
             }
         };

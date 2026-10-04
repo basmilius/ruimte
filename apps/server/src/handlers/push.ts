@@ -12,7 +12,7 @@ export const registerPushHandlers = (dispatcher: Dispatcher, auth: AuthStore, ch
     dispatcher.register('push.subscribe', async (payload, client) => {
         const sessionId = client.access?.sessionId;
         if (!sessionId || !(await auth.setPush(sessionId, payload))) {
-            throw new RequestError('unauthorized', 'Push requires a paired client key');
+            throw new RequestError('unauthorized', 'Push needs a client that proved its key to this machine');
         }
         changed();
         return {};
@@ -20,7 +20,7 @@ export const registerPushHandlers = (dispatcher: Dispatcher, auth: AuthStore, ch
     dispatcher.register('push.preferences', async (_payload, client) => {
         const sessionId = client.access?.sessionId;
         if (!sessionId) {
-            throw new RequestError('unauthorized', 'Push requires a paired client key');
+            throw new RequestError('unauthorized', 'Push needs a client that proved its key to this machine');
         }
         const subscription = (await auth.pushSubscriptions()).find((entry) => entry.sessionId === sessionId)?.subscription;
         return {
@@ -33,7 +33,7 @@ export const registerPushHandlers = (dispatcher: Dispatcher, auth: AuthStore, ch
     dispatcher.register('push.unsubscribe', async (payload, client) => {
         const sessionId = client.access?.sessionId;
         if (!sessionId) {
-            throw new RequestError('unauthorized', 'Push requires a paired client key');
+            throw new RequestError('unauthorized', 'Push needs a client that proved its key to this machine');
         }
         await auth.removePush(sessionId, payload.handle);
         changed();

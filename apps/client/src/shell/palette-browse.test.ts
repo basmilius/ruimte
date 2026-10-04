@@ -99,15 +99,15 @@ describe('browseStart', () => {
 
 const KEY = 'A'.repeat(43);
 
-const paired = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
+const opened = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
     id,
     label: `Row ${id}`,
-    httpBaseUrl: `http://${id}`,
-    wsBaseUrl: `ws://${id}`,
-    reachability: 'lan',
-    token: null,
+    httpBaseUrl: '',
+    wsBaseUrl: '',
+    reachability: 'public',
     daemonId: id,
     daemonPublicKey: KEY,
+    pairedBy: 'statement',
     ...overrides
 });
 
@@ -121,7 +121,14 @@ const record = (id: string, overrides: Partial<Machine> = {}): Machine => ({
     ...overrides
 });
 
-const localRow = paired('local', { label: 'This machine', daemonId: 'home', daemonPublicKey: null, reachability: 'loopback' });
+const localRow = opened('local', {
+    label: 'This machine',
+    httpBaseUrl: 'http://127.0.0.1:4210',
+    wsBaseUrl: 'ws://127.0.0.1:4210',
+    daemonId: 'home',
+    daemonPublicKey: null,
+    reachability: 'loopback'
+});
 
 const OPEN: ConnectionState = { status: 'open', attempts: 0, retryAt: null, failure: null };
 const NO_LINK: ConnectionState = { status: 'closed', attempts: 0, retryAt: null, failure: null };
@@ -129,7 +136,7 @@ const NO_LINK: ConnectionState = { status: 'closed', attempts: 0, retryAt: null,
 describe('browseMachines', () => {
     test('every machine the client knows, deduplicated with the account, this machine first', () => {
         const entries = mergeMachines({
-            endpoints: [paired('studio'), localRow],
+            endpoints: [opened('studio'), localRow],
             accountMachines: [record('studio'), record('home'), record('attic')],
             showLocal: true
         });
@@ -142,9 +149,9 @@ describe('browseMachines', () => {
 
 describe('machineLink', () => {
     const entries = mergeMachines({
-        endpoints: [paired('studio'), paired('opened', { pairedBy: 'statement', needsStatement: true })],
+        endpoints: [opened('studio'), opened('fresh', { needsStatement: true }), localRow],
         accountMachines: [record('attic'), record('cellar', { brokerUrl: null })],
-        showLocal: false
+        showLocal: true
     });
     const byId = (id: string) => entries.find((entry) => entry.id === id)!;
 
@@ -158,8 +165,9 @@ describe('machineLink', () => {
     test('a machine not dialed yet says how it is reached, or that nothing outside its network can', () => {
         expect(linkHint(machineLink(byId('attic'), NO_LINK, null))).toBe('Connects through your account');
         expect(linkHint(machineLink(byId('cellar'), NO_LINK, null))).toBe('On its own network only');
-        expect(linkHint(machineLink(byId('opened'), NO_LINK, null))).toBe('Connects through your account');
-        expect(linkHint(machineLink(byId('studio'), NO_LINK, null))).toBe('Not connected');
+        expect(linkHint(machineLink(byId('fresh'), NO_LINK, null))).toBe('Connects through your account');
+        expect(linkHint(machineLink(byId('studio'), NO_LINK, null))).toBe('Connects through your account');
+        expect(linkHint(machineLink(byId('home'), NO_LINK, null))).toBe('Not connected');
     });
 
     test('a link under way or one that failed says so, with the reason the attempt gave', () => {

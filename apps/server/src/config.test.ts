@@ -33,10 +33,9 @@ describe('parseServerArgs', () => {
         expect(parseServerArgs(['--no-stun'], {}).stun).toEqual([]);
     });
 
-    test('--no-hooks skips the installers and --serve names a client build', () => {
+    test('--no-hooks skips the installers, and --serve from an older service definition is taken and ignored', () => {
         expect(parseServerArgs(['--no-hooks'], {}).installHooks).toBe(false);
-        expect(parseServerArgs([], {}).serve).toBeNull();
-        expect(parseServerArgs(['--serve', '/tmp/dist'], {}).serve).toBe('/tmp/dist');
+        expect(parseServerArgs(['--serve', '/tmp/dist'], {})).not.toHaveProperty('serve');
     });
 
     test('reads --host and --port', () => {
@@ -46,11 +45,11 @@ describe('parseServerArgs', () => {
         expect(config.home.endsWith('.ruimte')).toBe(true);
     });
 
-    test('reads the endpoint flags and the pair command', () => {
-        const config = parseServerArgs(['pair', '--label', 'box', '--allow-origin', 'https://a.example', '--allow-origin', 'https://b.example'], {});
-        expect(config.command).toBe('pair');
+    test('reads the endpoint flags and the commands', () => {
+        const config = parseServerArgs(['status', '--label', 'box'], {});
+        expect(config.command).toBe('status');
         expect(config.label).toBe('box');
-        expect(config.allowedOrigins).toEqual(['https://a.example', 'https://b.example']);
+        expect(parseServerArgs(['pair'], {}).command).toBe('pair');
         expect(parseServerArgs([], { RUIMTE_LABEL: 'named' }).label).toBe('named');
         expect(() => parseServerArgs(['dance'], {})).toThrow('Unknown command');
         expect(parseServerArgs(['context', 'read', 'abc'], {})).toMatchObject({ command: 'context', args: ['read', 'abc'] });
@@ -66,6 +65,17 @@ describe('parseServerArgs', () => {
             command: 'context',
             args: ['node', 'note', '--text', 'hi', '--port=1']
         });
+    });
+
+    test('the door on the local network listens ten ports above the daemon unless a flag says otherwise', () => {
+        expect(parseServerArgs([], {})).toMatchObject({ lanPort: 4220, lanDoorOff: false });
+        expect(parseServerArgs(['--port', '4211'], {}).lanPort).toBe(4221);
+        expect(parseServerArgs(['--port', '0'], {}).lanPort).toBe(0);
+        expect(parseServerArgs(['--port', '65530'], {}).lanPort).toBe(0);
+        expect(parseServerArgs(['--lan-port', '5000'], {}).lanPort).toBe(5000);
+        expect(parseServerArgs(['--no-lan'], {}).lanDoorOff).toBe(true);
+        expect(() => parseServerArgs(['--lan-port', '4210'], {})).toThrow('Invalid --lan-port');
+        expect(() => parseServerArgs(['--lan-port', 'door'], {})).toThrow('Invalid --lan-port');
     });
 
     test('no broker flag leaves it to the machine, and the flag or the environment forces one', () => {

@@ -73,6 +73,8 @@
     "connection": {
         "connected": "Verbonden",
         "relayed": "Verbonden via relay",
+        "overLan": "Verbonden op het lokale netwerk",
+        "viaBroker": "Verbonden via broker",
         "noLink": "Niet verbonden",
         "connecting": "Verbinden",
         "disconnected": "Verbinding verbroken",
@@ -88,6 +90,11 @@
             "lan": "Op het lokale netwerk",
             "tunnel": "Via een tunnel",
             "public": "Op het openbare internet"
+        },
+        "route": {
+            "lan": "Lokaal netwerk",
+            "broker": "Via broker",
+            "relayed": "Via relay"
         }
     },
     "machineCrash": {
@@ -339,7 +346,6 @@
         "connecting": "Verbinden met {{machine}}…",
         "opening": "{{title}} openen…",
         "returning": "Terug…",
-        "viaRelay": "via relay",
         "goBack": "Terug"
     },
     "releaseNotes": {
@@ -462,8 +468,7 @@
         "onAMachine": "Op een machine",
         "projectIsAFolder": "Een project is een map met een .ruimte/project.json erin, die Ruimte schrijft zodra de map voor het eerst opengaat.",
         "connectMachine": "Machine verbinden",
-        "withALink": "Met een link",
-        "withPairingLink": "Met een pairing-link",
+        "throughAccount": "Via je account",
         "commandPalette": "Commandopalet",
         "whatsNew": "Wat is er nieuw",
         "copyFolder": "Mappad kopiëren"
@@ -486,7 +491,7 @@
             "selectFirst": "Selecteer eerst nodes",
             "rememberLayout": "Onthoud waar alles staat",
             "usage": "Kosten, tokens en limieten van je abonnement",
-            "remote": "Je machines, je account en pairing",
+            "remote": "Je machines en je account",
             "toggleFlag": "De geselecteerde nodes, anders deze weergave"
         },
         "commands": {

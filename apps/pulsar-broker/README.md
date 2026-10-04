@@ -90,7 +90,7 @@ and the tests wrap their own socket around it.
 
 The container on `127.0.0.1:4310` (`apps/server/docker`) reaches this machine as `host.docker.internal`,
 so it dials the broker under that name while a client here dials `127.0.0.1`. `--broker-advertise` is the
-URL the daemon hands clients in its pairing answer and in `endpoint.info`.
+URL the daemon hands clients in `endpoint.info`.
 
 1. Start the broker on this machine and leave it running:
 
@@ -98,7 +98,7 @@ URL the daemon hands clients in its pairing answer and in `endpoint.info`.
     bun run --cwd apps/pulsar-broker start
     ```
 
-2. Recreate the container with the broker URL. The home volume keeps its pairings:
+2. Recreate the container with the broker URL. The home volume keeps the account and the devices it let in:
 
     ```sh
     RUIMTE_BROKER_URL=ws://host.docker.internal:4400 RUIMTE_BROKER_ADVERTISE_URL=ws://127.0.0.1:4400 bun run --cwd apps/server docker:up
@@ -107,19 +107,19 @@ URL the daemon hands clients in its pairing answer and in `endpoint.info`.
     `docker logs ruimte-remote` says `Announced to the broker at ws://host.docker.internal:4400`, and
     `curl -s http://127.0.0.1:4400/health` counts one machine.
 
-3. Start the Electron dev app with `bun dev`. If `docker-linux` is not under Settings, Machines yet,
-   pair it: `bun run --cwd apps/server docker:pair` prints a link to paste there. A machine that was
-   paired before learns the broker URL the next time it connects.
+3. Put the container on your account, if it is not yet: `bun run --cwd apps/server docker:login` prints a
+   code; approve it on the page it names. Start the Electron dev app with `bun dev`, signed in to the same
+   account; `docker-linux` appears under Settings, Machines.
 
-4. Turn Direct on for `docker-linux`. The machine reconnects over WebRTC with the offer and the answer
-   going through the broker; the tooltip on its status dot says "Direct connection through the broker".
-   Open a terminal on it and type something.
+4. Open it. The connection is a WebRTC channel whose offer and answer go through the broker, since the
+   container's door on the local network is closed; its row says "Via broker". Open a terminal on it and
+   type something.
 
 5. Stop the broker with Ctrl+C. The terminal keeps working: the channel does not run through it.
 
-6. To see that the signals really went over the broker: with the broker still stopped, turn Direct off
-   and on again. The row says `The broker at 127.0.0.1:4400 could not be reached` instead of connecting
-   over port 4310. Start the broker again and the next retry comes up.
+6. To see that the signals really went over the broker: with the broker still stopped, quit the dev app and
+   start it again. The row says `The broker at 127.0.0.1:4400 could not be reached`. Start the broker again
+   and the next retry comes up.
 
 To go back, stop the broker and run `bun run --cwd apps/server docker:up` without the two variables,
 which recreates the container with the broker off.

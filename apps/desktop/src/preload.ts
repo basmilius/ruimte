@@ -6,6 +6,7 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron') as typeof i
 /* Where the main process puts the system's region and languages on the command line of this renderer. */
 const LOCALE_ARGUMENT = '--ruimte-system-locale=';
 const LANGUAGES_ARGUMENT = '--ruimte-system-languages=';
+const DAEMON_URL_ARGUMENT = '--ruimte-daemon-url=';
 
 const argument = (prefix: string): string | undefined => process.argv.find((arg) => arg.startsWith(prefix))?.slice(prefix.length) || undefined;
 
@@ -17,6 +18,7 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
        the client needs both before it draws its first word or its first number. */
     systemLocale: argument(LOCALE_ARGUMENT),
     systemLanguages: argument(LANGUAGES_ARGUMENT)?.split(','),
+    daemonUrl: argument(DAEMON_URL_ARGUMENT),
     pickFolder: (initialPath?: string): Promise<string | null> => ipcRenderer.invoke('dialog:pick-folder', initialPath),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
     openSystemSettings: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-system-settings', url),

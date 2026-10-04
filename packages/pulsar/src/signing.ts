@@ -16,7 +16,8 @@ export const SIGNING_PURPOSES = {
     sessionKey: 'pulsar-session-key-v1',
     sessionRefresh: 'pulsar-session-refresh-v1',
     deviceLinkStart: 'pulsar-device-link-start-v1',
-    push: 'pulsar-push-v1'
+    push: 'pulsar-push-v1',
+    lanDoor: 'pulsar-lan-door-v1'
 } as const;
 export type SigningPurpose = (typeof SIGNING_PURPOSES)[keyof typeof SIGNING_PURPOSES];
 
@@ -135,3 +136,11 @@ export const pushMessage = (push: PushEnvelope): string => {
     }
     return signedBytes(SIGNING_PURPOSES.push, [push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId, push.pushType, ...body]);
 };
+
+/*
+ * A machine answering a client at its door on the local network. The nonce is the client's, so an
+ * answer recorded once proves nothing later, and the machine's id and key are in it, so a client that
+ * pinned one machine never believes another one that happens to sit at the same private address.
+ */
+export const lanDoorMessage = (nonce: string, machineId: string, publicKey: string): string =>
+    signedBytes(SIGNING_PURPOSES.lanDoor, [nonce, machineId, publicKey]);

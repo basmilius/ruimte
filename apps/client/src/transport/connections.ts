@@ -33,9 +33,9 @@ import type { Transport } from '@/transport/transport';
 import { LinkHold } from '@/transport/workspace-hold';
 
 /*
- * One daemon, as everything inside a workspace sees it. The address and the token are deliberately
- * not in here. They live on the endpoint row, which a re-pair rewrites, and a copy taken when a
- * workspace was built would keep making URLs with a token that has been revoked since.
+ * One daemon, as everything inside a workspace sees it. The address and the credential are
+ * deliberately not in here. They live on the endpoint row and rotate per connection, and a copy taken
+ * when a workspace was built would keep making URLs with a ticket that lapsed since.
  */
 export interface Connection {
     endpointId: string;

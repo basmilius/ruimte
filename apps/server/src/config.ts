@@ -10,12 +10,8 @@ export interface ServerConfig {
     home: string;
     // Whether to put the status hooks into the CLIs' settings files at startup.
     installHooks: boolean;
-    // A built client to serve next to the socket, so one origin covers both.
-    serve: string | null;
     // What this daemon calls itself towards clients.
     label: string;
-    // Browser origins allowed on top of our own and loopback.
-    allowedOrigins: string[];
     // Whether the daemon may ask LiteLLM for the price table; off leaves it on the bundled snapshot.
     priceFetch: boolean;
     // Whether the daemon may ask the address book for newer model catalogs; off leaves the shipped ones.
@@ -30,11 +26,15 @@ export interface ServerConfig {
     broker: BrokerOverride;
     // The broker URL clients are told to dial, when it is not the one this machine dials (a container reaching the host by another name).
     brokerAdvertise: string | null;
+    // The port of the door on the local network (`src/pulsar/lan-door.ts`); 0 lets the system pick one.
+    lanPort: number;
+    // `--no-lan`: the door stays closed whatever the machine's setting says.
+    lanDoorOff: boolean;
     // Started by the background service (`RUIMTE_SERVICE=1` in its definition), which starts it again when it exits.
     underService: boolean;
-    // `pair` asks the running daemon for a pairing URL; `login` puts it on an account with a code; `context` is the agent-side CLI (`ruimte-context`);
-    // `service` installs, removes or reports the background service; `version` prints the version.
-    command: 'serve' | 'pair' | 'login' | 'logout' | 'context' | 'service' | 'version';
+    // `login` puts it on an account with a code; `status` says how the running daemon is reached; `context` is the agent-side CLI (`ruimte-context`);
+    // `service` installs, removes or reports the background service; `version` prints the version; `pair` only says that pairing links are gone.
+    command: 'serve' | 'pair' | 'login' | 'logout' | 'status' | 'context' | 'service' | 'version';
     // What follows the command: the words of `context`, and the action of `service` followed by the daemon flags its service runs with.
     args: string[];
 }
@@ -54,6 +54,12 @@ export const forgetInheritedSession = (env: Record<string, string | undefined>):
 
 export const DEFAULT_HOST = '127.0.0.1';
 export const DEFAULT_PORT = 4210;
+
+// The door on the local network listens this far above the daemon's port: 4220 beside 4210, 4221 beside a dev daemon on 4211.
+const LAN_PORT_OFFSET = 10;
+
+/* The door's port when no flag names one; a daemon on a port the system picked gets a door on one too. */
+export const defaultLanPort = (port: number): number => (port === 0 || port + LAN_PORT_OFFSET > 65535 ? 0 : port + LAN_PORT_OFFSET);
 
 /* `4330-4339` as the first and last port; one port on its own is a range of one. */
 export const parsePortRange = (value: string): [number, number] => {
@@ -96,9 +102,9 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
             host: { type: 'string', default: DEFAULT_HOST },
             port: { type: 'string', default: String(DEFAULT_PORT) },
             'no-hooks': { type: 'boolean', default: false },
+            // todo(bas): drop one release after the shell served its own page; a service definition from before still passes it.
             serve: { type: 'string' },
             label: { type: 'string' },
-            'allow-origin': { type: 'string', multiple: true, default: [] },
             'no-price-fetch': { type: 'boolean', default: false },
             'no-model-fetch': { type: 'boolean', default: false },
             stun: { type: 'string', multiple: true, default: [] },
@@ -108,6 +114,8 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
             broker: { type: 'string' },
             'no-broker': { type: 'boolean', default: false },
             'broker-advertise': { type: 'string' },
+            'lan-port': { type: 'string' },
+            'no-lan': { type: 'boolean', default: false },
             version: { type: 'boolean', short: 'v', default: false }
         },
         strict: true,
@@ -119,6 +127,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         command !== 'pair' &&
         command !== 'login' &&
         command !== 'logout' &&
+        command !== 'status' &&
         command !== 'context' &&
         command !== 'service' &&
         command !== 'version'
@@ -135,15 +144,17 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
     if (!Number.isInteger(port) || port < 0 || port > 65535) {
         throw new Error(`Invalid --port: ${values.port}`);
     }
+    const lanPort = values['lan-port'] === undefined ? defaultLanPort(port) : Number(values['lan-port']);
+    if (!Number.isInteger(lanPort) || lanPort < 0 || lanPort > 65535 || (lanPort !== 0 && lanPort === port)) {
+        throw new Error(`Invalid --lan-port: ${values['lan-port']}`);
+    }
 
     return {
         host: values.host,
         port,
         home: env.RUIMTE_HOME ?? join(homedir(), '.ruimte'),
         installHooks: !values['no-hooks'],
-        serve: values.serve ?? null,
         label: values.label ?? env.RUIMTE_LABEL ?? hostname(),
-        allowedOrigins: values['allow-origin'],
         priceFetch: !values['no-price-fetch'],
         modelFetch: !values['no-model-fetch'],
         stun: values['no-stun'] ? [] : values.stun.length > 0 ? values.stun : [DEFAULT_STUN_SERVER],
@@ -151,6 +162,8 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         directHostAddresses: values['direct-host-address'],
         broker: parseBrokerOverride(values['no-broker'], values.broker ?? env.RUIMTE_BROKER_URL),
         brokerAdvertise: parseBrokerUrl(values['broker-advertise'] ?? env.RUIMTE_BROKER_ADVERTISE_URL, '--broker-advertise'),
+        lanPort,
+        lanDoorOff: values['no-lan'],
         underService: env.RUIMTE_SERVICE === '1',
         command,
         args: cli || service ? argv.slice(1) : positionals.slice(1)

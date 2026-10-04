@@ -9,8 +9,9 @@
 export type CspDirectives = Readonly<Record<string, readonly string[]>>;
 
 /*
- * `connect-src`, `img-src` and `media-src` are wide because a paired machine is any host the person
- * adds, and its socket, images, attachments and file bytes all come from there. Shiki needs
+ * `connect-src`, `img-src` and `media-src` are wide because a machine's door on the local network is
+ * whatever address that machine reports and its broker whatever host a person picks, and its signals,
+ * images, attachments and file bytes come over those. Shiki needs
  * WebAssembly and the UI libraries inject styles, which is what the other two exceptions are for.
  */
 export const CLIENT_CSP_DIRECTIVES = {

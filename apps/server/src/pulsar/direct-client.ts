@@ -64,6 +64,7 @@ export class DirectClient {
     private closing = false;
     private offerSdp: string | null = null;
     private answered: (sdp: string) => void = () => undefined;
+    private refused: (reason: string) => void = () => undefined;
     private nextId = 1;
     private liveness: ChannelLiveness | null = null;
     private livenessTimer: ReturnType<typeof setInterval> | null = null;
@@ -82,6 +83,7 @@ export class DirectClient {
             this.answered(envelope.signal.sdp);
         }
         if (envelope.signal.kind === 'close') {
+            this.refused(envelope.signal.reason);
             this.close();
         }
     }
@@ -93,8 +95,10 @@ export class DirectClient {
         const channel = directChannel(fromWerift(raw));
         this.raw = raw;
         this.channel = channel;
-        const answer = new Promise<string>((resolve) => {
+        const answer = new Promise<string>((resolve, reject) => {
             this.answered = resolve;
+            // A machine that refuses the offer says so at once, so a refused attempt does not wait out the timeout.
+            this.refused = (reason) => reject(new Error(`The machine closed the attempt: ${reason}`));
         });
         await this.peer.setLocalDescription(await this.peer.createOffer());
         await waitFor(() => this.peer.iceGatheringState === 'complete', 5_000).catch(() => undefined);

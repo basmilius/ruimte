@@ -17,8 +17,8 @@ import { useUi } from '@/state/ui';
 
 /*
  * The Ruimte account and one list of machines beside the detail of what is picked. The list joins the
- * rows of this client (this machine, and every machine paired by link) with the machines on the
- * account, one entry per machine id.
+ * rows of this client (this machine, and every machine it opened) with the machines on the account,
+ * one entry per machine id.
  */
 export function MachinesPane() {
     const { t } = useTranslation('settings');
@@ -29,7 +29,6 @@ export function MachinesPane() {
     const machinesError = usePulsarMachines((s) => s.error);
     const target = useUi((s) => s.settings.target);
     const [picked, setPicked] = useState<MachinePick | null>(null);
-    const [focusPairing, setFocusPairing] = useState(0);
 
     // An open pane is one of the moments a client learns what the account says, removals included.
     useEffect(() => {
@@ -54,10 +53,7 @@ export function MachinesPane() {
         }
     }
 
-    const addMachine = (): void => {
-        setPicked({ kind: 'account' });
-        setFocusPairing((count) => count + 1);
-    };
+    const addMachine = (): void => setPicked({ kind: 'account' });
 
     const list = (
         <>
@@ -115,11 +111,7 @@ export function MachinesPane() {
             detail={
                 <ErrorBoundary label={t('machines.failed')} resetKeys={[current.kind, currentEntry?.id]}>
                     <div className="flex min-w-0 flex-col gap-7">
-                        {currentEntry !== null ? (
-                            <MachineDetail key={currentEntry.id} entry={currentEntry} />
-                        ) : (
-                            <RuimteAccountDetail focusPairing={focusPairing} />
-                        )}
+                        {currentEntry !== null ? <MachineDetail key={currentEntry.id} entry={currentEntry} /> : <RuimteAccountDetail />}
                     </div>
                 </ErrorBoundary>
             }

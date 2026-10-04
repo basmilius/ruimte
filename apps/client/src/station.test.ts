@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Machine } from '@ruimte/pulsar';
-import { mixedContentRefusal, stationBoot, type StationBootInput } from './station';
+import { stationBoot, type StationBootInput } from './station';
 
 const machine: Machine = { id: 'studio', name: 'Studio', icon: null, publicKey: 'A'.repeat(43), brokerUrl: 'wss://broker.ruimte.app', lastSeenAt: null };
 
@@ -27,17 +27,5 @@ describe('the web boot state', () => {
 
     test('a build that is not the web client keeps the desktop order', () => {
         expect(stationBoot(input({ station: false }))).toBeNull();
-    });
-});
-
-describe('mixed content', () => {
-    test('an https page is told it cannot reach a machine on plain http', () => {
-        expect(mixedContentRefusal('https:', 'http://192.168.1.20:4210')).toContain('plain http');
-        expect(mixedContentRefusal('https:', 'ws://192.168.1.20:4210/ws')).not.toBeNull();
-    });
-
-    test('an https machine, or a page that is not https, is let through', () => {
-        expect(mixedContentRefusal('https:', 'https://studio.example.com')).toBeNull();
-        expect(mixedContentRefusal('http:', 'http://192.168.1.20:4210')).toBeNull();
     });
 });

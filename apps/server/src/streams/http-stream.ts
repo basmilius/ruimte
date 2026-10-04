@@ -1,5 +1,4 @@
 import { LIVE_STREAM_MAGIC, encodeLiveStreamFrame, liveStreamContentType } from '@ruimte/contracts';
-import type { AuthStore } from '../auth/auth-store.ts';
 import { decideAccess, originAllowed, type AccessOptions } from '../auth/access.ts';
 import { STREAMING_DISABLED_MESSAGE } from '../handlers/streaming.ts';
 import type { LiveStreamHub } from './live-stream.ts';
@@ -12,7 +11,6 @@ export const handleLiveStreamRequest = async (
     request: Request,
     url: URL,
     remoteAddress: string,
-    auth: AuthStore,
     options: AccessOptions,
     hub: LiveStreamHub,
     streamingAllowed: () => boolean = () => true
@@ -20,7 +18,7 @@ export const handleLiveStreamRequest = async (
     const origin = request.headers.get('origin');
     const headers = corsHeaders(origin);
     if (request.method === 'OPTIONS') {
-        if (!originAllowed(origin, request.headers.get('host'), options.allowedOrigins)) {
+        if (!originAllowed(origin, request.headers.get('host'))) {
             return new Response('Origin not allowed', { status: 403 });
         }
         return new Response(null, {
@@ -31,7 +29,7 @@ export const handleLiveStreamRequest = async (
     if (request.method !== 'GET') {
         return new Response('Method not allowed', { status: 405, headers });
     }
-    const decision = await decideAccess(request, remoteAddress, auth, options, 'bytes');
+    const decision = await decideAccess(request, remoteAddress, options, 'bytes');
     if (!decision.ok) {
         return new Response(decision.reason, { status: decision.status, headers });
     }

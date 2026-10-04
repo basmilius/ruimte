@@ -3,17 +3,14 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatAttachment } from '@ruimte/contracts';
-import { AuthStore } from '../auth/auth-store.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from './attachment-route.ts';
 import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 
-// No handshake in these tests, so a credential is only ever a session token.
 // What the desktop app on this machine presents; a loopback address alone gets nothing.
 const LOCAL_SECRET = 'the-local-secret';
-const OPTIONS = { allowedOrigins: [], localSecret: LOCAL_SECRET, tickets: { ticketAccess: async () => null } };
+const OPTIONS = { localSecret: LOCAL_SECRET, tickets: { ticketAccess: async () => null } };
 
 let root: string;
-let auth: AuthStore;
 let store: AttachmentStore;
 let png: ChatAttachment;
 let zip: ChatAttachment;
@@ -27,7 +24,7 @@ const lookup = (chatId: string, id: string): ChatAttachment | null => {
 
 const ask = (chatId: string, id: string, remote = '127.0.0.1', init?: RequestInit): Promise<Response> => {
     const url = new URL(`http://127.0.0.1:4210${ATTACHMENTS_PATH}/${encodeURIComponent(chatId)}/${id}`);
-    return handleAttachmentRequest(new Request(url, asLocal(init)), url, remote, auth, OPTIONS, lookup);
+    return handleAttachmentRequest(new Request(url, asLocal(init)), url, remote, OPTIONS, lookup);
 };
 // Every request below carries the local secret unless a test says otherwise, the way the desktop app's does.
 const asLocal = (init?: RequestInit): RequestInit => ({
@@ -37,7 +34,6 @@ const asLocal = (init?: RequestInit): RequestInit => ({
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-attach-route-'));
-    auth = new AuthStore(join(root, 'home'));
     store = new AttachmentStore(root);
     png = await store.save('node-1', { name: 'shot.png', mime: 'image/png', data: Buffer.from('png bytes').toString('base64') });
     zip = await store.save('node-1', { name: 'bundle.zip', mime: 'application/zip', data: Buffer.from('zip bytes').toString('base64') });
@@ -73,12 +69,12 @@ describe('the attachment route', () => {
 
     test('a request without a credential gets nothing, from elsewhere or from a tunnel on this machine', async () => {
         const bare = new URL(`http://127.0.0.1:4210${ATTACHMENTS_PATH}/node-1/${png.id}`);
-        expect((await handleAttachmentRequest(new Request(bare), bare, '192.168.1.20', auth, OPTIONS, lookup)).status).toBe(401);
-        expect((await handleAttachmentRequest(new Request(bare), bare, '127.0.0.1', auth, OPTIONS, lookup)).status).toBe(401);
+        expect((await handleAttachmentRequest(new Request(bare), bare, '192.168.1.20', OPTIONS, lookup)).status).toBe(401);
+        expect((await handleAttachmentRequest(new Request(bare), bare, '127.0.0.1', OPTIONS, lookup)).status).toBe(401);
     });
 
     test('answers 404 for a path that names no attachment', async () => {
         const short = new URL(`http://127.0.0.1:4210${ATTACHMENTS_PATH}/node-1`);
-        expect((await handleAttachmentRequest(new Request(short, asLocal()), short, '127.0.0.1', auth, OPTIONS, lookup)).status).toBe(404);
+        expect((await handleAttachmentRequest(new Request(short, asLocal()), short, '127.0.0.1', OPTIONS, lookup)).status).toBe(404);
     });
 });

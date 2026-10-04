@@ -8,7 +8,6 @@ const studio: Endpoint = {
     httpBaseUrl: 'http://studio.local:4210',
     wsBaseUrl: 'ws://studio.local:4210',
     reachability: 'lan',
-    token: null,
     daemonId: 'studio',
     daemonPublicKey: null
 };

@@ -2,7 +2,14 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, rename } from 'node:fs/promises';
 import { hostname } from 'node:os';
 import { dirname, join } from 'node:path';
-import { KeepAwakeModeSchema, ProjectIconChoiceSchema, type EndpointNameSource, type KeepAwakeMode, type ProjectIconChoice } from '@ruimte/contracts';
+import {
+    KeepAwakeModeSchema,
+    ProjectIconChoiceSchema,
+    type EndpointNameSource,
+    type KeepAwakeMode,
+    type LanDoor,
+    type ProjectIconChoice
+} from '@ruimte/contracts';
 import { BrokerSettingSchema, type BrokerSetting } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { generateKeyPair, signMessage } from './auth/keys.ts';
@@ -31,10 +38,6 @@ const FileSchema = z.object({
        only the ones it made. It is here rather than in a client's settings because the daemon is
        what enforces it, and a client setting would hold nothing back. Absent is off. */
     agentsDeleteAnyView: z.boolean().optional().catch(undefined),
-    /* Whether a statement from the address book is turned away, which leaves a pairing link as the only
-       way in. Here for the same reason as the switch above: the daemon is what takes a statement or
-       does not. Absent is off, which is what "logging in grants access" means. */
-    refuseStatements: z.boolean().optional().catch(undefined),
     /* Whether clients may stream browser pages and, later, device screens from this daemon. Absent
        is on so existing machines keep the behavior they had before this switch existed. */
     streamingAllowed: z.boolean().optional().catch(undefined),
@@ -50,7 +53,10 @@ const FileSchema = z.object({
     keepAwakeDisplay: z.boolean().optional().catch(undefined),
     /* Which broker this machine announces itself to, set from a client. Absent is the build's default;
        one that will not read falls back to it too, since a machine on the default broker is findable. */
-    broker: BrokerSettingSchema.optional().catch(undefined)
+    broker: BrokerSettingSchema.optional().catch(undefined),
+    /* Whether the door on the local network is open, so a client on the same network signals without
+       the broker. Absent is open: a machine nobody changed is found at home without anything set. */
+    lanDoor: z.boolean().optional().catch(undefined)
 });
 
 interface IdentityOptions {
@@ -63,12 +69,12 @@ interface IdentityOptions {
     name: string | null;
     icon: ProjectIconChoice | null;
     agentsDeleteAnyView: boolean;
-    refuseStatements: boolean;
     streamingAllowed: boolean;
     resumeAtReset: boolean;
     appleFoundationEnabled: boolean;
     keepAwake: KeepAwakeSetting;
     broker: BrokerSetting;
+    lanDoor: boolean;
 }
 
 export interface KeepAwakeSetting {
@@ -85,10 +91,15 @@ export interface IdentityBroker {
     describe(): { brokerUrl: string | null; brokerFixed: boolean };
 }
 
+/* What the daemon's door on the local network lends the identity: a way to follow a new setting and to say where the door stands. */
+export interface IdentityLanDoor {
+    apply(): void;
+    describe(): { lan: LanDoor | null; lanDoorFixed: boolean };
+}
+
 /* The switches a client sets on the machine; one left out stays as it stands. */
 export interface IdentityFlags {
     agentsDeleteAnyView?: boolean;
-    refuseStatements?: boolean;
     streamingAllowed?: boolean;
     resumeAtReset?: boolean;
     appleFoundationEnabled?: boolean;
@@ -96,6 +107,7 @@ export interface IdentityFlags {
     keepAwakeOnBattery?: boolean;
     keepAwakeDisplay?: boolean;
     broker?: BrokerSetting;
+    lanDoor?: boolean;
 }
 
 /*
@@ -115,13 +127,14 @@ export class EndpointIdentity {
     private chosenName: string | null;
     private chosenIcon: ProjectIconChoice | null;
     private deleteAnyView: boolean;
-    private noStatements: boolean;
     private allowStreaming: boolean;
     private resumeLimited: boolean;
     private appleEnabled: boolean;
     private awake: KeepAwakeSetting;
     private brokerSetting: BrokerSetting;
     private brokerSwitch: IdentityBroker | null = null;
+    private lanDoorOpen: boolean;
+    private door: IdentityLanDoor | null = null;
 
     constructor(options: IdentityOptions) {
         this.path = options.path;
@@ -132,12 +145,12 @@ export class EndpointIdentity {
         this.chosenName = options.name;
         this.chosenIcon = options.icon;
         this.deleteAnyView = options.agentsDeleteAnyView;
-        this.noStatements = options.refuseStatements;
         this.allowStreaming = options.streamingAllowed;
         this.resumeLimited = options.resumeAtReset;
         this.appleEnabled = options.appleFoundationEnabled;
         this.awake = options.keepAwake;
         this.brokerSetting = options.broker;
+        this.lanDoorOpen = options.lanDoor;
     }
 
     /* What clients call this machine: the name a person gave it, or the one it started with. */
@@ -157,11 +170,6 @@ export class EndpointIdentity {
        an agent destroys only what it made until a person says otherwise. */
     get agentsDeleteAnyView(): boolean {
         return this.deleteAnyView;
-    }
-
-    /* What an offer carrying a statement is asked about. Off on a fresh machine. */
-    get refuseStatements(): boolean {
-        return this.noStatements;
     }
 
     /* The daemon checks this at the streaming boundary; native views on a client do not need it. */
@@ -197,6 +205,16 @@ export class EndpointIdentity {
         this.brokerSwitch = broker;
     }
 
+    /* Whether a person keeps the door on the local network open, which `--no-lan` may still override. */
+    get lanDoor(): boolean {
+        return this.lanDoorOpen;
+    }
+
+    /* Hands a changed door setting to the door, and lets the event say where it stands. */
+    attachLanDoor(door: IdentityLanDoor): void {
+        this.door = door;
+    }
+
     /* Signs a message with the daemon's private key; the private half never leaves this object. */
     sign(message: string): string {
         return signMessage(this.privateKey, message);
@@ -215,7 +233,6 @@ export class EndpointIdentity {
         this.chosenName = name;
         this.chosenIcon = icon;
         this.deleteAnyView = flags.agentsDeleteAnyView ?? this.deleteAnyView;
-        this.noStatements = flags.refuseStatements ?? this.noStatements;
         this.allowStreaming = flags.streamingAllowed ?? this.allowStreaming;
         this.resumeLimited = flags.resumeAtReset ?? this.resumeLimited;
         this.appleEnabled = flags.appleFoundationEnabled ?? this.appleEnabled;
@@ -225,9 +242,13 @@ export class EndpointIdentity {
             display: flags.keepAwakeDisplay ?? this.awake.display
         };
         this.brokerSetting = flags.broker ?? this.brokerSetting;
+        this.lanDoorOpen = flags.lanDoor ?? this.lanDoorOpen;
         await this.persist();
         if (flags.broker !== undefined) {
             await this.brokerSwitch?.apply();
+        }
+        if (flags.lanDoor !== undefined) {
+            this.door?.apply();
         }
         const event: SessionEvent = {
             event: 'endpoint.changed',
@@ -237,13 +258,14 @@ export class EndpointIdentity {
                 nameSource: this.nameSource,
                 icon: this.chosenIcon,
                 agentsDeleteAnyView: this.deleteAnyView,
-                refuseStatements: this.noStatements,
                 streamingAllowed: this.allowStreaming,
                 resumeAtReset: this.resumeLimited,
                 appleFoundationEnabled: this.appleEnabled,
                 ...this.keepAwakeFields(),
                 broker: this.brokerSetting,
-                ...this.brokerSwitch?.describe()
+                ...this.brokerSwitch?.describe(),
+                lanDoor: this.lanDoorOpen,
+                ...this.door?.describe()
             }
         };
         this.sinks.emit(event);
@@ -259,14 +281,14 @@ export class EndpointIdentity {
             ...(this.chosenName === null ? {} : { name: this.chosenName }),
             ...(this.chosenIcon === null ? {} : { icon: this.chosenIcon }),
             ...(this.deleteAnyView ? { agentsDeleteAnyView: true } : {}),
-            ...(this.noStatements ? { refuseStatements: true } : {}),
             ...(!this.allowStreaming ? { streamingAllowed: false } : {}),
             ...(this.resumeLimited ? { resumeAtReset: true } : {}),
             ...(this.appleEnabled ? { appleFoundationEnabled: true } : {}),
             ...(this.awake.mode === 'off' ? {} : { keepAwake: this.awake.mode }),
             ...(this.awake.onBattery ? { keepAwakeOnBattery: true } : {}),
             ...(this.awake.display ? { keepAwakeDisplay: true } : {}),
-            ...(this.brokerSetting.mode === 'default' ? {} : { broker: this.brokerSetting })
+            ...(this.brokerSetting.mode === 'default' ? {} : { broker: this.brokerSetting }),
+            ...(this.lanDoorOpen ? {} : { lanDoor: false })
         };
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
         // Durable: a power cut right after a change must not leave an empty file where the key pair was.
@@ -320,7 +342,6 @@ export const readOrCreateEndpointIdentity = async (home: string, defaultName: st
         name: file?.name ?? null,
         icon: file?.icon ?? null,
         agentsDeleteAnyView: file?.agentsDeleteAnyView ?? false,
-        refuseStatements: file?.refuseStatements ?? false,
         streamingAllowed: file?.streamingAllowed ?? true,
         resumeAtReset: file?.resumeAtReset ?? false,
         appleFoundationEnabled: file?.appleFoundationEnabled ?? false,
@@ -329,7 +350,8 @@ export const readOrCreateEndpointIdentity = async (home: string, defaultName: st
             onBattery: file?.keepAwakeOnBattery ?? KEEP_AWAKE_OFF.onBattery,
             display: file?.keepAwakeDisplay ?? KEEP_AWAKE_OFF.display
         },
-        broker: file?.broker ?? { mode: 'default' }
+        broker: file?.broker ?? { mode: 'default' },
+        lanDoor: file?.lanDoor ?? true
     });
     if (!keys) {
         await identity.persist();

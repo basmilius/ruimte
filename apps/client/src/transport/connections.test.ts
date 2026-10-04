@@ -24,7 +24,6 @@ const other: Endpoint = {
     httpBaseUrl: 'http://127.0.0.1:1',
     wsBaseUrl: 'ws://127.0.0.1:1',
     reachability: 'lan',
-    token: null,
     daemonId: null,
     daemonPublicKey: null
 };

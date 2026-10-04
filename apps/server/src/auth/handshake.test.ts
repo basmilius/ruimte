@@ -22,13 +22,37 @@ const identity = {
     sign: (message: string) => signMessage(daemon.privateKey, message)
 };
 
+// The binding of one direct channel, which every challenge and signature here is made over.
+const BINDING = '[["sha-256 AA"],["sha-256 BB"]]';
+
 const signIn = async (key: { publicKey: string; privateKey: string }, daemonId = DAEMON_ID) => {
-    const { challenge } = handshake.challenge();
-    return handshake.redeem({
+    const { challenge } = handshake.challenge(BINDING);
+    return handshake.redeem(
+        {
+            publicKey: key.publicKey,
+            challenge,
+            signature: signMessage(key.privateKey, clientChannelMessage(daemonId, challenge, key.publicKey, BINDING))
+        },
+        BINDING
+    );
+};
+
+let nonces = 0;
+
+/* Lets a key in the way a statement does, answering its session. */
+const admit = async (key: { publicKey: string }): Promise<string> => {
+    nonces += 1;
+    const admitted = await store.admitStatement({
         publicKey: key.publicKey,
-        challenge,
-        signature: signMessage(key.privateKey, clientAuthMessage(daemonId, challenge, key.publicKey))
+        label: 'laptop',
+        nonce: `nonce-${nonces}`.padEnd(22, 'n'),
+        keepNonceUntil: clock + 150_000,
+        accountId: 'owner'
     });
+    if (!('sessionId' in admitted)) {
+        throw new Error(`Not admitted: ${admitted.refused}`);
+    }
+    return admitted.sessionId;
 };
 
 const sessionOf = async (ticket: string) => (await handshake.ticketAccess(ticket, 'bytes'))?.sessionId;
@@ -46,21 +70,21 @@ afterEach(async () => {
 
 describe('Handshake', () => {
     test('the daemon signs its own challenge, so a client can tell which machine answered', () => {
-        const answer = handshake.challenge();
+        const answer = handshake.challenge(BINDING);
         expect(answer.daemon.id).toBe(DAEMON_ID);
         expect(answer.daemon.publicKey).toBe(daemon.publicKey);
-        expect(verifySignature(daemon.publicKey, daemonChallengeMessage(DAEMON_ID, answer.challenge), answer.daemon.signature)).toBe(true);
+        expect(verifySignature(daemon.publicKey, daemonChannelMessage(DAEMON_ID, answer.challenge, BINDING), answer.daemon.signature)).toBe(true);
         // Another machine's key does not open this, which is the whole of the pinning.
-        expect(verifySignature(generateKeyPair().publicKey, daemonChallengeMessage(DAEMON_ID, answer.challenge), answer.daemon.signature)).toBe(false);
-        expect(handshake.challenge().challenge).not.toBe(answer.challenge);
+        expect(verifySignature(generateKeyPair().publicKey, daemonChannelMessage(DAEMON_ID, answer.challenge, BINDING), answer.daemon.signature)).toBe(false);
+        expect(handshake.challenge(BINDING).challenge).not.toBe(answer.challenge);
     });
 
-    test('a paired key signs its way to a ticket that opens the socket', async () => {
+    test('a key the machine let in signs its way to a ticket that opens the socket', async () => {
         const key = generateKeyPair();
-        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const sessionId = await admit(key);
         const ticket = await signIn(key);
         expect(ticket?.expiresIn).toBe(TICKET_TTL_MS);
-        expect(await sessionOf(ticket!.ticket)).toBe(paired!.id);
+        expect(await sessionOf(ticket!.ticket)).toBe(sessionId);
         expect(await handshake.ticketAccess('made-up', 'bytes')).toBeNull();
         // Every connection signs again, and no two connections carry the same credential.
         const second = await signIn(key);
@@ -69,71 +93,76 @@ describe('Handshake', () => {
 
     test('a signature that is not over the challenge gets nothing', async () => {
         const key = generateKeyPair();
-        await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
-        const { challenge } = handshake.challenge();
-
-        expect(await handshake.redeem({ publicKey: key.publicKey, challenge, signature: signMessage(key.privateKey, 'something else') })).toBeNull();
-        expect(await handshake.redeem({ publicKey: key.publicKey, challenge, signature: 'not-a-signature' })).toBeNull();
+        await admit(key);
+        const first = handshake.challenge(BINDING).challenge;
+        expect(
+            await handshake.redeem({ publicKey: key.publicKey, challenge: first, signature: signMessage(key.privateKey, 'something else') }, BINDING)
+        ).toBeNull();
+        const second = handshake.challenge(BINDING).challenge;
+        expect(await handshake.redeem({ publicKey: key.publicKey, challenge: second, signature: 'not-a-signature' }, BINDING)).toBeNull();
     });
 
     test('a signature made for another daemon does not open this one', async () => {
         const key = generateKeyPair();
-        await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        await admit(key);
         expect(await signIn(key, 'some-other-daemon')).toBeNull();
     });
 
     test('a challenge is good for one attempt and one minute', async () => {
         const key = generateKeyPair();
-        await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
-        const { challenge } = handshake.challenge();
-        const signature = signMessage(key.privateKey, clientAuthMessage(DAEMON_ID, challenge, key.publicKey));
+        await admit(key);
+        const { challenge } = handshake.challenge(BINDING);
+        const signature = signMessage(key.privateKey, clientChannelMessage(DAEMON_ID, challenge, key.publicKey, BINDING));
 
-        expect(await handshake.redeem({ publicKey: key.publicKey, challenge, signature })).not.toBeNull();
+        expect(await handshake.redeem({ publicKey: key.publicKey, challenge, signature }, BINDING)).not.toBeNull();
         // The same signature over the same nonce, which is exactly what a replay looks like.
-        expect(await handshake.redeem({ publicKey: key.publicKey, challenge, signature })).toBeNull();
+        expect(await handshake.redeem({ publicKey: key.publicKey, challenge, signature }, BINDING)).toBeNull();
 
-        const stale = handshake.challenge();
+        const stale = handshake.challenge(BINDING);
         clock += CHALLENGE_TTL_MS + 1;
         expect(
-            await handshake.redeem({
-                publicKey: key.publicKey,
-                challenge: stale.challenge,
-                signature: signMessage(key.privateKey, clientAuthMessage(DAEMON_ID, stale.challenge, key.publicKey))
-            })
+            await handshake.redeem(
+                {
+                    publicKey: key.publicKey,
+                    challenge: stale.challenge,
+                    signature: signMessage(key.privateKey, clientChannelMessage(DAEMON_ID, stale.challenge, key.publicKey, BINDING))
+                },
+                BINDING
+            )
         ).toBeNull();
     });
 
-    test('a key this daemon never paired with signs correctly and still gets nowhere', async () => {
+    test('a key this daemon never let in signs correctly and still gets nowhere', async () => {
         expect(await signIn(generateKeyPair())).toBeNull();
     });
 
-    test('revoking takes the tickets away as well as the pairing', async () => {
+    test('revoking takes the tickets away as well as the access', async () => {
         const key = generateKeyPair();
-        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const sessionId = await admit(key);
         const ticket = await signIn(key);
 
-        await store.revoke(paired!.id);
-        handshake.revoke(paired!.id);
+        await store.revoke(sessionId);
+        handshake.revoke(sessionId);
         expect(await handshake.ticketAccess(ticket!.ticket, 'bytes')).toBeNull();
         expect(await signIn(key)).toBeNull();
     });
 
     test('a ticket goes stale on its own, and using it puts its life back', async () => {
         const key = generateKeyPair();
-        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const sessionId = await admit(key);
         const ticket = await signIn(key);
 
         clock += TICKET_TTL_MS - 1;
-        expect(await sessionOf(ticket!.ticket)).toBe(paired!.id);
+        expect(await sessionOf(ticket!.ticket)).toBe(sessionId);
         clock += TICKET_TTL_MS - 1;
-        expect(await sessionOf(ticket!.ticket)).toBe(paired!.id);
+        expect(await sessionOf(ticket!.ticket)).toBe(sessionId);
         clock += TICKET_TTL_MS + 1;
         expect(await handshake.ticketAccess(ticket!.ticket, 'bytes')).toBeNull();
     });
 
     test('a client that keeps reconnecting does not pile up tickets on the daemon', async () => {
         const key = generateKeyPair();
-        await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        await admit(key);
         const tickets = [];
         for (let i = 0; i < 12; i++) {
             tickets.push((await signIn(key))!.ticket);
@@ -148,35 +177,22 @@ describe('Handshake', () => {
         expect(alive).toEqual(tickets.slice(-8));
     });
 
-    test('a caller that asks for nonces and never signs one does not grow the daemon', async () => {
-        const key = generateKeyPair();
-        await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
-        const first = handshake.challenge().challenge;
-        for (let i = 0; i < 600; i++) {
-            handshake.challenge();
-        }
-        const signature = signMessage(key.privateKey, clientAuthMessage(DAEMON_ID, first, key.publicKey));
-        expect(await handshake.redeem({ publicKey: key.publicKey, challenge: first, signature })).toBeNull();
-        // The one that was just handed out still works, so a flood costs a re-ask and nothing more.
-        expect(await signIn(key)).not.toBeNull();
-    });
-
     test('a ticket opens one socket and serves bytes for as long as it lives', async () => {
         const key = generateKeyPair();
-        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const sessionId = await admit(key);
         const { ticket } = (await signIn(key))!;
 
-        expect(await handshake.ticketAccess(ticket, 'socket')).toEqual({ sessionId: paired!.id });
+        expect(await handshake.ticketAccess(ticket, 'socket')).toEqual({ sessionId: sessionId });
         expect(await handshake.ticketAccess(ticket, 'socket')).toBeNull();
-        expect(await sessionOf(ticket)).toBe(paired!.id);
+        expect(await sessionOf(ticket)).toBe(sessionId);
         handshake.socketClosed(ticket);
         expect(await handshake.ticketAccess(ticket, 'socket')).toBeNull();
-        expect(await sessionOf(ticket)).toBe(paired!.id);
+        expect(await sessionOf(ticket)).toBe(sessionId);
     });
 
     test('a ticket behind an open socket outlives its time, and lives its time again once the socket closes', async () => {
         const key = generateKeyPair();
-        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const sessionId = await admit(key);
         const { ticket } = (await signIn(key))!;
         await handshake.ticketAccess(ticket, 'socket');
 
@@ -185,7 +201,7 @@ describe('Handshake', () => {
         for (let i = 0; i < 12; i++) {
             await signIn(key);
         }
-        expect(await sessionOf(ticket)).toBe(paired!.id);
+        expect(await sessionOf(ticket)).toBe(sessionId);
         handshake.socketClosed(ticket);
         clock += TICKET_TTL_MS + 1;
         expect(await handshake.ticketAccess(ticket, 'bytes')).toBeNull();
@@ -201,7 +217,7 @@ describe('Handshake', () => {
 
     test('a revoke between looking the key up and handing out the ticket leaves no ticket', async () => {
         const key = generateKeyPair();
-        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const sessionId = await admit(key);
         const racing = Object.create(store) as AuthStore;
         racing.sessionForPublicKey = async (publicKey) => {
             const sessionId = await store.sessionForPublicKey(publicKey);
@@ -211,15 +227,15 @@ describe('Handshake', () => {
         };
         handshake = new Handshake(racing, identity, () => clock);
         expect(await signIn(key)).toBeNull();
-        expect(await store.hasSession(paired!.id)).toBe(false);
+        expect(await store.hasSession(sessionId)).toBe(false);
     });
 
     test('a revoke that lands while the ticket is written leaves a ticket that opens nothing', async () => {
         const key = generateKeyPair();
-        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const sessionId = await admit(key);
         const racing = Object.create(store) as AuthStore;
-        racing.noteSignedIn = async (sessionId) => {
-            const noted = await store.noteSignedIn(sessionId);
+        racing.noteSeen = async (sessionId) => {
+            const noted = await store.noteSeen(sessionId);
             await store.revoke(sessionId);
             handshake.revoke(sessionId);
             return noted;
@@ -229,38 +245,14 @@ describe('Handshake', () => {
         expect(ticket).not.toBeNull();
         expect(await handshake.ticketAccess(ticket!.ticket, 'socket')).toBeNull();
         expect(await handshake.ticketAccess(ticket!.ticket, 'bytes')).toBeNull();
-        expect(await store.hasSession(paired!.id)).toBe(false);
-    });
-
-    test('revoking a key that paired twice shuts out every record of it', async () => {
-        const key = generateKeyPair();
-        await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
-        const again = await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
-        expect(await signIn(key)).not.toBeNull();
-
-        await store.revoke(again!.id);
-        handshake.revoke(again!.id);
-        expect(await signIn(key)).toBeNull();
-    });
-
-    test('signing in for the first time drops the session token that client paired with', async () => {
-        const paired = await store.pair(store.issuePairingToken(), { label: 'container' });
-        const key = generateKeyPair();
-        await store.registerKey(paired!.id, key.publicKey);
-        expect(await store.authenticate(paired!.sessionToken!)).toBe(paired!.id);
-
-        expect(await signIn(key)).not.toBeNull();
-        expect(await store.authenticate(paired!.sessionToken!)).toBeNull();
+        expect(await store.hasSession(sessionId)).toBe(false);
     });
 });
 
 describe('Handshake on a direct channel', () => {
-    const BINDING = '[["sha-256 AA"],["sha-256 BB"]]';
-
     const pairedKey = async () => {
-        const paired = await store.pair(store.issuePairingToken(), { label: 'phone' });
         const key = generateKeyPair();
-        await store.registerKey(paired!.id, key.publicKey);
+        await admit(key);
         return key;
     };
 
@@ -288,18 +280,7 @@ describe('Handshake on a direct channel', () => {
         expect(await handshake.redeem({ publicKey: key.publicKey, challenge: plain, signature: http }, BINDING)).toBeNull();
     });
 
-    test('a flood of challenges over HTTP never pushes out the one a channel is waiting on', async () => {
-        const key = await pairedKey();
-        const { challenge } = handshake.challenge(BINDING);
-        for (let i = 0; i < 2000; i++) {
-            handshake.challenge();
-        }
-        const signature = signMessage(key.privateKey, clientChannelMessage(DAEMON_ID, challenge, key.publicKey, BINDING));
-        expect(await handshake.redeem({ publicKey: key.publicKey, challenge, signature }, BINDING)).not.toBeNull();
-    });
-
-    test('a challenge from the HTTP route cannot be spent on a channel, nor one from a channel on another', () => {
-        expect(handshake.spend(handshake.challenge().challenge, BINDING)).toBe(false);
+    test('a challenge from one channel cannot be spent on another', () => {
         expect(handshake.spend(handshake.challenge(BINDING).challenge, '[[],[]]')).toBe(false);
         const challenge = handshake.challenge(BINDING).challenge;
         expect(handshake.spend(challenge, BINDING)).toBe(true);

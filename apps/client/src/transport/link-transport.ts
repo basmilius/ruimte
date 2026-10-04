@@ -14,7 +14,7 @@ import {
 } from '@ruimte/contracts';
 import { decodeBase64, type BytesPiece } from './piece';
 import type { PooledTransport } from './pool';
-import { TransportError, type ConnectionState, type TransportStatus } from './transport';
+import { TransportError, type ConnectionState, type SignalRoute, type TransportStatus } from './transport';
 
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 10_000;
@@ -33,7 +33,8 @@ export interface Link {
 }
 
 export interface LinkEvents {
-    open(): void;
+    /* `signaled` says which way a direct connection's signals went, when they went over a route rather than the machine's own socket. */
+    open(signaled?: SignalRoute): void;
     /* A text frame, or a binary one (a `bytes.read` reply that asked for it). */
     message(data: string | Uint8Array): void;
     /* The path of an open link changed: through a TURN relay or not. Only a direct connection says. */
@@ -198,7 +199,10 @@ export class LinkTransport implements PooledTransport {
     private setConnection(next: Partial<ConnectionState>): void {
         const merged = { ...this.currentConnection, ...next };
         // The path is drawn on the machine's row as well, so a link that moved onto a relay or off one is news too.
-        const changed = this.currentConnection.status !== merged.status || this.currentConnection.relayed !== merged.relayed;
+        const changed =
+            this.currentConnection.status !== merged.status ||
+            this.currentConnection.relayed !== merged.relayed ||
+            this.currentConnection.signaled !== merged.signaled;
         this.currentConnection = merged;
         if (!changed) {
             return;
@@ -237,9 +241,9 @@ export class LinkTransport implements PooledTransport {
         const token = {};
         this.linkToken = token;
         const events: LinkEvents = {
-            open: () => {
+            open: (signaled) => {
                 if (this.linkToken === token) {
-                    this.setConnection({ status: 'open', attempts: 0, retryAt: null, failure: null, relayed: false });
+                    this.setConnection({ status: 'open', attempts: 0, retryAt: null, failure: null, relayed: false, signaled: signaled ?? null });
                 }
             },
             route: (relayed) => {
@@ -265,7 +269,7 @@ export class LinkTransport implements PooledTransport {
                 }
                 // Scheduling first, so the closed status arrives with the attempt it announces.
                 this.scheduleReconnect();
-                this.setConnection({ status: 'closed', failure, relayed: false });
+                this.setConnection({ status: 'closed', failure, relayed: false, signaled: null });
                 this.rejectPending('disconnected', i18next.t('machines:connection.closedBeforeAnswer'));
             }
         };

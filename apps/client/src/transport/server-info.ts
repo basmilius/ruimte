@@ -21,12 +21,12 @@ const load = (endpointId: string): void => {
         .then(async (info) => {
             const settled = noteDaemonIdentity(endpointId, info);
             useEndpoints.getState().learnBrokerUrl(settled, info.brokerUrl ?? null);
+            useEndpoints.getState().learnLan(settled, info.lan ?? null);
             useServers.getState().setEndpoint(settled, {
                 label: info.label,
                 nameSource: info.nameSource ?? null,
                 icon: info.icon ?? null,
                 agentsDeleteAnyView: info.agentsDeleteAnyView === true,
-                refuseStatements: info.refuseStatements === true,
                 streamingAllowed: info.streamingAllowed ?? null,
                 resumeAtReset: info.resumeAtReset === true,
                 appleFoundationEnabled: info.appleFoundationEnabled ?? null,
@@ -37,6 +37,8 @@ const load = (endpointId: string): void => {
                 update: info.update ?? null,
                 broker: info.broker ?? null,
                 brokerFixed: info.brokerFixed === true,
+                lanDoor: info.lanDoor ?? null,
+                lanDoorFixed: info.lanDoorFixed === true,
                 reachability: info.reachability,
                 publicKey: info.publicKey ?? null,
                 accountId: info.accountId
@@ -57,7 +59,7 @@ const load = (endpointId: string): void => {
 /*
  * A name a person gave a machine is the machine's own, so the endpoint row this client keeps takes
  * it and every list stops saying two things at once. A default name is a hostname, which the row's
- * own label ("This MacBook Pro", or what the pairing put there) reads better than. Clearing the name
+ * own label ("This MacBook Pro", or the name the account lists) reads better than. Clearing the name
  * lands here too, which is why the row for this machine is written back rather than left alone.
  */
 export const adoptMachineName = (endpointId: string, label: string, nameSource: EndpointNameSource | null): void => {

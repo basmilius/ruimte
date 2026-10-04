@@ -9,7 +9,6 @@ const row = (id: string): Endpoint => ({
     httpBaseUrl: '',
     wsBaseUrl: '',
     reachability: 'public',
-    token: null,
     daemonId: id,
     daemonPublicKey: 'key',
     direct: true,

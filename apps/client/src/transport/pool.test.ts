@@ -11,7 +11,6 @@ const endpoint = (id: string): Endpoint => ({
     httpBaseUrl: `http://${id}`,
     wsBaseUrl: `ws://${id}`,
     reachability: 'lan',
-    token: null,
     daemonId: null,
     daemonPublicKey: null
 });
@@ -185,15 +184,6 @@ describe('TransportPool', () => {
         expect(currentId!()).toBe('10.0.0.4:4210');
         pool.rekey('10.0.0.4:4210', 'daemon-a', 'ws://10.0.0.4:4210/ws');
         expect(currentId!()).toBe('daemon-a');
-    });
-
-    test('an endpoint that moved keeps its socket', () => {
-        const { pool, opened } = setup();
-        pool.hold(endpoint('a'));
-        pool.readdress('a', 'ws://elsewhere/ws');
-        expect(opened).toHaveLength(1);
-        expect(opened[0]?.url).toBe('ws://elsewhere/ws');
-        expect(opened[0]?.disposed).toBe(false);
     });
 
     test('a row that learns its daemon id keeps the socket that just answered', () => {

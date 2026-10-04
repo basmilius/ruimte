@@ -5221,6 +5221,42 @@
           "brokerFixed": {
             "type": "boolean"
           },
+          "lan": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "port": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  "addresses": {
+                    "maxItems": 16,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  }
+                },
+                "required": [
+                  "port",
+                  "addresses"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lanDoor": {
+            "type": "boolean"
+          },
+          "lanDoorFixed": {
+            "type": "boolean"
+          },
           "accountId": {
             "type": [
               "string",
@@ -39118,6 +39154,42 @@
       "brokerFixed": {
         "type": "boolean"
       },
+      "lan": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "port": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "addresses": {
+                "maxItems": 16,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              }
+            },
+            "required": [
+              "port",
+              "addresses"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "lanDoor": {
+        "type": "boolean"
+      },
+      "lanDoorFixed": {
+        "type": "boolean"
+      },
       "accountId": {
         "type": [
           "string",
@@ -39419,6 +39491,9 @@
             ]
           }
         ]
+      },
+      "lanDoor": {
+        "type": "boolean"
       }
     },
     "required": [
@@ -39799,6 +39874,42 @@
         ]
       },
       "brokerFixed": {
+        "type": "boolean"
+      },
+      "lan": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "port": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "addresses": {
+                "maxItems": 16,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              }
+            },
+            "required": [
+              "port",
+              "addresses"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "lanDoor": {
+        "type": "boolean"
+      },
+      "lanDoorFixed": {
         "type": "boolean"
       },
       "accountId": {
@@ -46559,6 +46670,42 @@
         ]
       },
       "brokerFixed": {
+        "type": "boolean"
+      },
+      "lan": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "port": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "addresses": {
+                "maxItems": 16,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              }
+            },
+            "required": [
+              "port",
+              "addresses"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "lanDoor": {
+        "type": "boolean"
+      },
+      "lanDoorFixed": {
         "type": "boolean"
       }
     },

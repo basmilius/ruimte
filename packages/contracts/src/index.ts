@@ -245,6 +245,7 @@ export * from './git.ts';
 export * from './ids.ts';
 export * from './launches.ts';
 export * from './live-stream.ts';
+export * from './lan-door.ts';
 export * from './machine-http.ts';
 export * from './machine-update.ts';
 export * from './model.ts';

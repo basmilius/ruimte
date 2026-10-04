@@ -8,7 +8,6 @@ const endpoint = (id: string): Endpoint => ({
     label: id,
     httpBaseUrl: '',
     wsBaseUrl: '',
-    token: null,
     daemonId: id,
     daemonPublicKey: null,
     reachability: 'lan'

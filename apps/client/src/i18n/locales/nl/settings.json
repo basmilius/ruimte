@@ -339,7 +339,6 @@
     },
     "reach": {
         "thisMachine": "Deze machine",
-        "paired": "Gekoppeld",
         "onAccount": "Op je account",
         "openedThroughAccount": "Geopend via je account"
     },
@@ -603,8 +602,6 @@
         },
         "direct": {
             "label": "Direct",
-            "brokerOnly": "Alleen bereikbaar via de broker, dus deze machine is altijd direct.",
-            "viaBroker": "Verbinden via WebRTC, gevonden via de broker op {{host}} (experimenteel).",
             "description": "Verbinden via WebRTC in plaats van via de socket (experimenteel).",
             "toggle": "Direct verbinden met {{machine}} (experimenteel)"
         },
@@ -622,10 +619,16 @@
             "selectLabel": "Broker voor {{machine}}",
             "urlLabel": "Broker-URL voor {{machine}}"
         },
-        "refuse": {
-            "label": "Inloggen via een account weigeren",
-            "description": "Aan laat alleen een pairing link een nieuwe client binnen. Uit komt een client die is ingelogd op een account waar deze machine op staat er ook in, en die verschijnt onder Apps met toegang. Clients die al toegang hebben, houden die.",
-            "toggle": "Inloggen via een account weigeren op {{machine}}"
+        "lanDoor": {
+            "label": "Lokaal netwerk",
+            "search": "Laat een client op hetzelfde netwerk verbinden met de machine zonder de broker.",
+            "open": "Een client op hetzelfde netwerk verbindt hier zonder de broker. Open op {{addresses}}.",
+            "noAddress": "Open op poort {{port}}, maar de machine heeft nu geen adres op een lokaal netwerk.",
+            "notListening": "Nu niet open: de poort is bezet, of de machine is zonder gestart.",
+            "closed": "Dicht. Elke client bereikt deze machine via de broker.",
+            "fixed": "Ingesteld met een flag bij het starten van de machine, dus deze schakelaar wacht tot die zonder draait",
+            "fixedNote": "Ingesteld met een flag bij het starten van de machine, dus deze schakelaar wacht tot die zonder draait.",
+            "toggle": "{{machine}} bereikbaar maken voor een client op het lokale netwerk, zonder de broker"
         },
         "streaming": {
             "label": "Streamen van browser en apparaten",
@@ -634,10 +637,8 @@
         },
         "access": {
             "title": "Apps met toegang",
-            "description": "Browsers en apps die aan deze machine gekoppeld zijn.",
-            "showLink": "Pairing link tonen",
-            "listFailed": "Kon de gekoppelde clients niet opsommen",
-            "linkFailed": "Kon geen pairing link maken",
+            "description": "Browsers en apps die via een account binnenkwamen.",
+            "listFailed": "Kon de clients met toegang niet opsommen",
             "empty": "Verder heeft niets toegang tot deze machine.",
             "thisClient": "deze client",
             "revoke": "Toegang intrekken",
@@ -651,18 +652,11 @@
                 "label": "Geeft geen antwoord",
                 "description": "De lijst laadt zodra de machine terug is."
             },
-            "link": {
-                "label": "Pairing link",
-                "loopback": "Deze machine accepteert alleen lokale verbindingen. Start hem met --host 0.0.0.0 zodat andere machines de link kunnen gebruiken.",
-                "description": "Plak hem onder Een machine toevoegen op het andere apparaat. Hij werkt één keer en verloopt na tien minuten.",
-                "copy": "Pairing link kopiëren",
-                "copied": "Gekopieerd"
-            },
             "confirm": {
                 "title": "{{label}} intrekken?",
-                "current": "Dit is de client die je gebruikt. Hij verliest toegang tot deze machine en vergeet die hier. Koppel opnieuw om weer toegang te krijgen.",
-                "statement": "Hij verliest toegang bij de volgende verbinding, en inloggen via een account laat hem er niet meer in. Opnieuw koppelen vraagt om een link.",
-                "link": "Hij verliest toegang bij de volgende verbinding. Opnieuw koppelen vraagt om een nieuwe link.",
+                "current": "Dit is de client die je gebruikt. Hij verliest toegang tot deze machine en vergeet die hier.",
+                "statement": "Hij verliest toegang bij de volgende verbinding, en inloggen via een account laat hem er niet meer in.",
+                "link": "Hij verliest toegang bij de volgende verbinding.",
                 "action": "Intrekken"
             }
         }
@@ -679,7 +673,7 @@
         },
         "identity": {
             "title": "Naam en icoon",
-            "description": "Elke client die aan deze machine koppelt ziet ze."
+            "description": "Elke client die deze machine bereikt ziet ze."
         },
         "connection": "Verbinding",
         "streaming": "Streaming",
@@ -695,13 +689,13 @@
             "onAnother": "Deze machine staat op een ander account",
             "onNone": "Deze machine staat nog op geen account",
             "leave": {
-                "description": "Een machine staat op één account. Verlaten sluit elke client af die via een account binnenkwam; een client die via een link gekoppeld is houdt zijn toegang.",
+                "description": "Een machine staat op één account. Verlaten sluit elke client af die via een account binnenkwam.",
                 "action": "Verlaten"
             }
         },
         "confirmLeave": {
             "title": "{{machine}} van zijn account halen?",
-            "description": "Elke client die via een account binnenkwam verliest nu zijn toegang, en er komt er geen meer zo binnen tot de machine weer op een account staat. Clients die via een link gekoppeld zijn houden hun toegang.",
+            "description": "Elke client die via een account binnenkwam verliest nu zijn toegang, en er komt er geen meer binnen tot de machine weer op een account staat.",
             "action": "Account verlaten"
         },
         "left": {
@@ -713,24 +707,24 @@
             "title": "Verwijderen",
             "forget": {
                 "label": "Vergeten op deze client",
-                "description": "Laat de pairing en de regel van deze machine hier los. De machine, je account en andere clients houden de hunne.",
+                "description": "Laat de regel van deze machine hier los. De machine, je account en andere clients houden de hunne.",
                 "action": "Vergeten"
             },
             "account": {
                 "label": "Van account verwijderen",
                 "local": "Elke andere client die op je account is ingelogd laat deze machine vallen. Hier blijft hij staan, want deze app draait erop.",
-                "description": "Elke client die op je account is ingelogd laat deze machine vallen, ook een die via een link gekoppeld is. De app op die machine zet hem terug.",
+                "description": "Elke client die op je account is ingelogd laat deze machine vallen. De app op die machine zet hem terug.",
                 "action": "Verwijderen"
             }
         },
         "confirmForget": {
             "title": "{{machine}} vergeten op deze client?",
-            "description": "De sessies en projecten blijven op de machine staan. Koppel opnieuw met een nieuwe link of open hem vanuit je account om hem hier terug te krijgen.",
+            "description": "De sessies en projecten blijven op de machine staan. Open hem vanuit je account om hem hier terug te krijgen.",
             "action": "Vergeten"
         },
         "confirmRemove": {
             "title": "{{machine}} van je account verwijderen?",
-            "description": "Elke client die op je account is ingelogd laat hem vallen bij de volgende verversing, ook een client die via een link gekoppeld is. Clients die uitgelogd zijn houden hem. De machine houdt zijn pairings.",
+            "description": "Elke client die op je account is ingelogd laat hem vallen bij de volgende verversing. Clients die uitgelogd zijn houden hem. De machine houdt de clients die ze binnenliet.",
             "action": "Verwijderen"
         },
         "subtitle": "{{reach}} · {{version}}"
@@ -742,12 +736,10 @@
             "description": "Voeg er een toe om de projecten, terminals en agents ervan hiervandaan te openen."
         },
         "notOpened": "Niet geopend op deze client",
-        "mismatch": "Op dit adres antwoordt een andere machine. Koppel opnieuw om te verbinden.",
-        "viaRelay": "{{reach}} · via relay",
+        "mismatch": "Een andere machine antwoordt voor deze. Vergeet hem hier en open hem opnieuw vanuit je account.",
+        "withRoute": "{{reach}} · {{route}}",
         "dot": {
-            "brokerOnly": "Alleen bereikbaar via de broker",
-            "direct": "Directe verbinding (experimenteel)",
-            "directBroker": "Directe verbinding via de broker (experimenteel)"
+            "direct": "Directe verbinding (experimenteel)"
         },
         "account": {
             "title": "Inloggen",
@@ -789,14 +781,10 @@
         },
         "add": {
             "title": "Een machine toevoegen",
-            "description": "Plak een pairing link van de andere machine.",
-            "linkLabel": "Pairing link",
-            "hint": "Je vindt hem onder Pairing link tonen in de instellingen van die machine, of door daar `ruimte pair` te draaien. Koppelen laat deze client binnen; alleen de app op die machine zet hem op je account.",
+            "description": "Een machine komt erbij via je account. Draai op die machine `npx ruimte login`, of open daar de Ruimte-app en log in. Hij verschijnt hier zodra hij op je account staat.",
             "codeHint": "Voor een machine zonder de app die `ruimte login` draaide",
             "withCode": "Een machine koppelen met een code",
-            "pair": "Koppelen",
-            "failed": "Koppelen mislukt",
-            "reclaimFailed": "{{machine}} is gekoppeld, maar staat niet terug op je account",
+            "enterCode": "Code invoeren",
             "short": "Toevoegen"
         },
         "listLabel": "Account en machines",

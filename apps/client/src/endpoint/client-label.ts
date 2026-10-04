@@ -107,8 +107,8 @@ export const clientLabelFrom = (env: ClientEnvironment): string => {
 };
 
 /*
- * What this client is called on the page it runs in, read from the page's own navigator. Here rather
- * than beside pairing, so the account code can name a device without importing the transport.
+ * What this client is called on the page it runs in, read from the page's own navigator. Here, so
+ * the account code can name a device without importing the transport.
  */
 export const currentClientLabel = (): string => {
     if (typeof navigator === 'undefined') {

@@ -124,6 +124,15 @@ describe('LinkTransport', () => {
         expect(transport.connection.relayed).toBe(false);
     });
 
+    test('an open link says which route its signals took, and a closed one took none', async () => {
+        const { transport, links } = setup();
+        await tick();
+        links[0]!.events.open('lan');
+        expect(transport.connection.signaled).toBe('lan');
+        links[0]!.events.close('The direct connection closed');
+        expect(transport.connection.signaled).toBeNull();
+    });
+
     test('a link that fails says why, and the reason stays until a link opens again', async () => {
         const { transport, links } = setup();
         const statuses: TransportStatus[] = [];

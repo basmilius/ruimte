@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { Check, CircleAlert, KeyRound, Link2, LogOut, X } from 'lucide-react';
+import { Check, CircleAlert, KeyRound, LogOut, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PROVIDER_NAMES, type ProviderId } from '@ruimte/pulsar';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
@@ -8,8 +8,7 @@ import { DeleteAccountDialog } from '@/shell/settings/DeleteAccountDialog';
 import { cancelPulsarSignIn, linkPulsarProvider, refreshPulsarIdentities, signOutOfPulsar, unlinkPulsarProvider, usePulsarAccount } from '@/pulsar/account';
 import { PROVIDER_ORDER, identityDetail, signedInLabel, takeoverWarning } from '@/pulsar/account-name';
 import { dismissAccountConfirmation, useAccountConfirmation } from '@/pulsar/confirmation';
-import { PAIRING_PLACEHOLDER, usePairMachine } from '@/shell/settings/pair-machine';
-import { Skeleton, Button, Icon, IconButton, Tooltip, FormError, Input } from '@basmilius/desktop-ui';
+import { Skeleton, Button, Icon, IconButton } from '@basmilius/desktop-ui';
 import { SettingsRow } from '@basmilius/desktop-ui/settings';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { ProviderButton, SignInButtons } from '@/shell/SignInButtons';
@@ -97,7 +96,7 @@ function AccountOutcome() {
     );
 }
 
-/* Signing in is what lets a client reach a machine it never paired with. The account vouches for this client's key. */
+/* Signing in is what lets a client reach a machine at all. The account vouches for this client's key. */
 function SignInSection() {
     const { t } = useTranslation('settings');
     const status = usePulsarAccount((s) => s.status);
@@ -170,63 +169,34 @@ function SignInSection() {
     );
 }
 
-/* Pairing with a link from the other machine, or a code for one without the app. `focusAt` moves the focus to the link whenever it changes. */
-function AddMachineSection({ focusAt }: { focusAt: number }) {
+/* How a machine joins the account, from that machine, or with the code of a machine that ran `ruimte login`. */
+function AddMachineSection() {
     const { t } = useTranslation('settings');
-    const { link, setLink, failure, pair, canPair } = usePairMachine();
     const [linkOpen, setLinkOpen] = useState(false);
-    const input = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        if (focusAt > 0) {
-            input.current?.focus();
-        }
-    }, [focusAt]);
 
     return (
         <SettingsSection title={t('machines.add.title')} description={t('machines.add.description')}>
-            <SettingsRow searchId="machines.add" label={t('machines.add.linkLabel')} description={t('machines.add.hint')}>
-                <div className="flex min-w-0 flex-col gap-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                        <Input
-                            ref={input}
-                            mono
-                            className="min-w-0 grow"
-                            aria-label={t('machines.add.linkLabel')}
-                            placeholder={PAIRING_PLACEHOLDER}
-                            value={link}
-                            spellCheck={false}
-                            onChange={(e) => setLink(e.target.value)}
-                            onKeyDown={(e) => {
-                                e.stopPropagation();
-                                if (e.key === 'Enter' && canPair) {
-                                    void pair();
-                                }
-                            }}
-                        />
-                        <Button variant="primary" disabled={!canPair} onClick={() => void pair()}>
-                            <Icon icon={Link2} size={12} /> {t('machines.add.pair')}
-                        </Button>
-                    </div>
-                    {failure && <FormError className="break-words">{failure}</FormError>}
-                    <Tooltip label={t('machines.add.codeHint')}>
-                        <Button className="-ml-2 self-start" onClick={() => setLinkOpen(true)}>
-                            <Icon icon={KeyRound} size={12} /> {t('machines.add.withCode')}
-                        </Button>
-                    </Tooltip>
-                </div>
-            </SettingsRow>
+            <SettingsRow
+                searchId="machines.add"
+                label={t('machines.add.withCode')}
+                description={t('machines.add.codeHint')}
+                control={
+                    <Button onClick={() => setLinkOpen(true)}>
+                        <Icon icon={KeyRound} size={12} /> {t('machines.add.enterCode')}
+                    </Button>
+                }
+            />
             <LinkMachineDialog nested open={linkOpen} initialCode={null} onOpenChange={setLinkOpen} />
         </SettingsSection>
     );
 }
 
-/* The Ruimte account of this client: how it signs in, and adding a machine to what it reaches. */
-export function RuimteAccountDetail({ focusPairing }: { focusPairing: number }) {
+/* The Ruimte account of this client: how it signs in, and how a machine joins what it reaches. */
+export function RuimteAccountDetail() {
     return (
         <>
             <SignInSection />
-            <AddMachineSection focusAt={focusPairing} />
+            <AddMachineSection />
         </>
     );
 }

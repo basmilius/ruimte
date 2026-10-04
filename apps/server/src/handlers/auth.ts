@@ -1,6 +1,6 @@
-import { PROTOCOL_VERSION, type MachineUpdate, type MachineUpdateReport, type MachineWork } from '@ruimte/contracts';
+import { PROTOCOL_VERSION, type LanDoor, type MachineUpdate, type MachineUpdateReport, type MachineWork } from '@ruimte/contracts';
 import { RequestError, translate, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
-import { mayInvite } from '../auth/access.ts';
+import { isOwner } from '../auth/access.ts';
 import { signForAccount } from '../auth/registration.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
@@ -12,8 +12,8 @@ interface EndpointHost {
     version: string;
     // The broker clients are told to dial right now (null when this machine announces itself to none), and whether a flag decides it.
     broker(): BrokerDescription;
-    // Mints a one-time pairing URL; what `ruimte pair` and the settings dialog hand to another machine.
-    pairingUrl(): string;
+    // Where the door on the local network stands right now (null while it is closed), and whether a flag decides it.
+    lanDoor(): { lan: LanDoor | null; lanDoorFixed: boolean };
     // Revoking must take effect now, not at the next connection, so the daemon drops that session's sockets here.
     disconnect(sessionId: string): void;
     // A disabled policy stops streams already in flight as well as refusing the next one.
@@ -32,6 +32,8 @@ interface EndpointHost {
     };
 }
 
+export const PAIRING_REMOVED = 'Pairing links are gone. Put this machine on your account with `ruimte login`, or from the Ruimte app on it.';
+
 export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, host: EndpointHost): void => {
     const { identity } = host;
 
@@ -42,7 +44,6 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         nameSource: identity.nameSource,
         icon: identity.icon,
         agentsDeleteAnyView: identity.agentsDeleteAnyView,
-        refuseStatements: identity.refuseStatements,
         streamingAllowed: identity.streamingAllowed,
         resumeAtReset: identity.resumeAtReset,
         appleFoundationEnabled: identity.appleFoundationEnabled,
@@ -57,27 +58,29 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         publicKey: identity.publicKey,
         broker: identity.broker,
         ...host.broker(),
+        lanDoor: identity.lanDoor,
+        ...host.lanDoor(),
         // Only the app on this machine is told which account it is on; it is the one that can take it off.
-        ...(mayInvite(access) ? { accountId: (await store.accountBinding())?.id ?? null } : {})
+        ...(isOwner(access) ? { accountId: (await store.accountBinding())?.id ?? null } : {})
     });
 
     dispatcher.register('endpoint.info', (_payload, client) => info(client.access));
 
     /*
-     * Any client that paired may name the machine. A name and an icon are how a person tells two
+     * Any client the machine let in may name it. A name and an icon are how a person tells two
      * machines apart, so they belong to the machine and not to whichever client typed them.
      */
     dispatcher.register('endpoint.setIdentity', async (payload, client) => {
         await identity.setIdentity(payload.name, payload.icon, {
             agentsDeleteAnyView: payload.agentsDeleteAnyView,
-            refuseStatements: payload.refuseStatements,
             streamingAllowed: payload.streamingAllowed,
             resumeAtReset: payload.resumeAtReset,
             appleFoundationEnabled: payload.appleFoundationEnabled,
             keepAwake: payload.keepAwake,
             keepAwakeOnBattery: payload.keepAwakeOnBattery,
             keepAwakeDisplay: payload.keepAwakeDisplay,
-            broker: payload.broker
+            broker: payload.broker,
+            lanDoor: payload.lanDoor
         });
         if (payload.keepAwake !== undefined || payload.keepAwakeOnBattery !== undefined || payload.keepAwakeDisplay !== undefined) {
             host.keepAwake?.changed();
@@ -96,7 +99,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
 
     /* Only the app on this machine holds the updater, so only the local secret may say where it stands. */
     dispatcher.register('endpoint.reportUpdate', (payload, client) => {
-        if (!mayInvite(client.access)) {
+        if (!isOwner(client.access)) {
             throw new RequestError('forbidden', 'Only the app on this machine can say where its update stands');
         }
         host.updates?.report(client.id, payload);
@@ -104,8 +107,8 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
     });
 
     /*
-     * Any client may ask, a paired one included: it installs only a signed release of the app, and a
-     * paired client can already stop every terminal and chat one by one. What it cannot do is end that
+     * Any client may ask, not only the owner: it installs only a signed release of the app, and any
+     * client can already stop every terminal and chat one by one. What it cannot do is end that
      * work unawares, so the first ask says what ends and only a second one with `confirm` installs.
      */
     dispatcher.register('endpoint.installUpdate', (payload) => {
@@ -129,12 +132,12 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
 
     /*
      * The machine agreeing to be listed on one address book account, which puts it on that account. Only
-     * the app on this machine may ask: a machine is shared only with its owner, so a paired client must
+     * the app on this machine may ask: a machine is shared only with its owner, so another client must
      * not move it onto an account of its choosing. The client posts the answer with its own session, so
      * no account token ever reaches the daemon.
      */
     dispatcher.register('endpoint.signRegistration', async (payload, client) => {
-        if (!mayInvite(client.access)) {
+        if (!isOwner(client.access)) {
             throw new RequestError('forbidden', 'Only the app on this machine can put it on an account');
         }
         return {
@@ -146,7 +149,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
 
     /* A person on this machine taking it off its account: every client a statement let in loses its access at once. */
     dispatcher.register('endpoint.leaveAccount', async (_payload, client) => {
-        if (!mayInvite(client.access)) {
+        if (!isOwner(client.access)) {
             throw new RequestError('forbidden', 'Only the app on this machine can take it off its account');
         }
         const revoked = await store.leaveAccount();
@@ -154,31 +157,20 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         return { revoked: revoked.length };
     });
 
-    /*
-     * The way over to a key pair for a client that paired when a session token was all there was.
-     * It proves nothing beyond the connection it arrives on, which is exactly as much as the token
-     * it already holds proves; what it buys is that the token stops being needed.
-     */
-    dispatcher.register('auth.registerKey', async (payload, client) => {
-        const sessionId = client.access?.sessionId ?? null;
-        if (sessionId === null) {
-            return { registered: false };
-        }
-        return { registered: await store.registerKey(sessionId, payload.publicKey) };
-    });
+    /* Pairing links are gone; a client of before them that still asks hears where to go instead. */
+    const pairingRemoved = (): never => {
+        throw new RequestError('pairing-removed', PAIRING_REMOVED);
+    };
+
+    // todo(bas): drop both and their schemas one release after pairing links went.
+    dispatcher.register('auth.registerKey', pairingRemoved);
+    dispatcher.register('auth.pairingToken', pairingRemoved);
 
     dispatcher.register('auth.sessions', async (_payload, client) => ({ sessions: await store.list(client.access?.sessionId ?? null) }));
 
-    dispatcher.register('auth.pairingToken', (_payload, client) => {
-        if (!mayInvite(client.access)) {
-            throw new RequestError('forbidden', 'Only the app on this machine can make a pairing link');
-        }
-        return { url: host.pairingUrl() };
-    });
-
     dispatcher.register('auth.revoke', async (payload) => {
         if (!(await store.revoke(payload.id))) {
-            throw new RequestError('session-not-found', `No paired client ${payload.id}`);
+            throw new RequestError('session-not-found', `No client ${payload.id} on this machine`);
         }
         host.disconnect(payload.id);
         return {};

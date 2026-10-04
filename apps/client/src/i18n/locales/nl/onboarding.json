@@ -48,7 +48,7 @@
         },
         "machines": {
             "title": "Meerdere accounts, meerdere machines",
-            "body": "Voeg per CLI meer dan één account toe en kies er per chat een. Koppel een andere machine één keer en de projecten erop openen als lokale."
+            "body": "Voeg per CLI meer dan één account toe en kies er per chat een. Zet een andere machine één keer op je account en de projecten erop openen als lokale."
         },
         "gotIt": "Begrepen"
     },

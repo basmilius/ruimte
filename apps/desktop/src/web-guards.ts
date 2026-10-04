@@ -31,8 +31,8 @@ const SYSTEM_SETTINGS_PANES: ReadonlySet<string> = new Set([
 export const isSystemSettingsPane = (url: string): boolean => SYSTEM_SETTINGS_PANES.has(url);
 
 /* A frame inside the app's page never leaves for the system browser: nobody chose that link. */
-export const appSubframeNavigation = (url: string, appOrigin: string): NavigationVerdict =>
-    isAppUrl(url, appOrigin) || url === 'about:blank' || url === 'about:srcdoc' ? 'allow' : 'refuse';
+export const appSubframeNavigation = (url: string, appOrigin: string, schemes: readonly string[] = []): NavigationVerdict =>
+    isAppUrl(url, appOrigin, [...schemes]) || url === 'about:blank' || url === 'about:srcdoc' ? 'allow' : 'refuse';
 
 // TODO(Bas): media, location and notifications through a prompt per origin in the client, once that exists.
 const GUEST_PERMISSIONS: ReadonlySet<string> = new Set(['fullscreen', 'pointerLock', 'clipboard-sanitized-write']);

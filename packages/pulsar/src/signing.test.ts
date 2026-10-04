@@ -7,6 +7,7 @@ import {
     accessStatementV2Message,
     brokerHelloMessage,
     deviceLinkStartMessage,
+    lanDoorMessage,
     machineRegistrationMessage,
     pushMessage,
     sessionKeyMessage,
@@ -34,7 +35,8 @@ const everyPurpose = (): Record<keyof typeof SIGNING_PURPOSES, string> => ({
     sessionKey: sessionKeyMessage(nonce, key),
     sessionRefresh: sessionRefreshMessage(nonce, 0),
     deviceLinkStart: deviceLinkStartMessage('machine-1', key, 'machine', 0),
-    push: pushMessage(alert)
+    push: pushMessage(alert),
+    lanDoor: lanDoorMessage(nonce, 'machine-1', key)
 });
 
 describe('signed bytes', () => {

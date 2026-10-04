@@ -13,7 +13,6 @@ export const startEndpointWatch = (): (() => void) =>
                     nameSource: payload.nameSource,
                     icon: payload.icon,
                     agentsDeleteAnyView: payload.agentsDeleteAnyView === true,
-                    refuseStatements: payload.refuseStatements === true,
                     ...(payload.streamingAllowed === undefined ? {} : { streamingAllowed: payload.streamingAllowed }),
                     resumeAtReset: payload.resumeAtReset === true,
                     ...(payload.keepAwake === undefined
@@ -23,11 +22,15 @@ export const startEndpointWatch = (): (() => void) =>
                               keepAwakeOnBattery: payload.keepAwakeOnBattery === true,
                               keepAwakeDisplay: payload.keepAwakeDisplay === true
                           }),
-                    ...(payload.broker === undefined ? {} : { broker: payload.broker, brokerFixed: payload.brokerFixed === true })
+                    ...(payload.broker === undefined ? {} : { broker: payload.broker, brokerFixed: payload.brokerFixed === true }),
+                    ...(payload.lanDoor === undefined ? {} : { lanDoor: payload.lanDoor, lanDoorFixed: payload.lanDoorFixed === true })
                 });
-                // A daemon from before the broker setting sends no URL, which says nothing about its broker.
+                // A daemon from before the broker setting sends no URL, which says nothing about its broker; the same for the door.
                 if (payload.brokerUrl !== undefined) {
                     useEndpoints.getState().learnBrokerUrl(endpointId, payload.brokerUrl);
+                }
+                if (payload.lan !== undefined) {
+                    useEndpoints.getState().learnLan(endpointId, payload.lan);
                 }
                 adoptMachineName(endpointId, payload.label, payload.nameSource);
             }),

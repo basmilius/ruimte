@@ -48,7 +48,7 @@
         },
         "machines": {
             "title": "Several accounts, several machines",
-            "body": "Add more than one account per CLI and pick one per chat. Pair another machine once and its projects open like local ones."
+            "body": "Add more than one account per CLI and pick one per chat. Put another machine on your account once and its projects open like local ones."
         },
         "gotIt": "Got it"
     },

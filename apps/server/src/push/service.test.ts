@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { PUSH_HKDF_SALT, pushEncryptionInfo, pushMessage, pushRoutingMessage, type PushEnvelope } from '@ruimte/pulsar';
 import type { AgentStatus, ProcessAlert, PushSubscribePayload, ServerFrame } from '@ruimte/contracts';
 import { AuthStore } from '../auth/auth-store.ts';
+import { admitClient } from '../auth/test-admit.ts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { generateKeyPair, signMessage } from '../auth/keys.ts';
 import { Dispatcher } from '../dispatcher.ts';
@@ -50,8 +51,7 @@ const decrypt = (push: PushEnvelope): unknown => {
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-push-'));
     auth = new AuthStore(home, () => NOW);
-    const paired = await auth.pair(auth.issuePairingToken(), { label: 'Phone', publicKey: generateKeyPair().publicKey });
-    sessionId = paired!.id;
+    sessionId = await admitClient(auth, generateKeyPair().publicKey, 'Phone');
     await auth.setPush(sessionId, subscription);
     pushes = [];
     service = new PushService({
@@ -200,12 +200,11 @@ describe('offline push delivery', () => {
         expect(await restarted.list(null)).toEqual([]);
     });
 
-    test('subscriptions survive restarts and cannot be assigned to secret or bearer-only clients', async () => {
+    test('subscriptions survive restarts and cannot be assigned to the local secret or a client the machine does not know', async () => {
         expect(await new AuthStore(home).pushSubscriptions()).toEqual([{ sessionId, subscription }]);
-        const bearer = await auth.pair(auth.issuePairingToken(), { label: 'Old client' });
         const dispatcher = new Dispatcher();
         registerPushHandlers(dispatcher, auth);
-        for (const owner of [null, bearer!.id, 'missing']) {
+        for (const owner of [null, 'missing']) {
             const replies: ServerFrame[] = [];
             await dispatcher.handle(
                 { id: 'client', access: { reachability: 'loopback', sessionId: owner }, send: (frame) => replies.push(frame) },

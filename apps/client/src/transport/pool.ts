@@ -37,8 +37,8 @@ interface Entry {
 
 /*
  * The sockets this client holds, one per daemon. A daemon is a socket, a socket is never shared,
- * and it never changes machines. Picking another machine picks another entry. Only a daemon that
- * answers on another address (a re-pair, a new port) moves the socket it already has.
+ * and it never changes machines. Picking another machine picks another entry. Only a row that turns
+ * out to be a daemon known under another id moves the socket it already has.
  */
 export class TransportPool {
     private readonly open: (endpoint: Endpoint, currentId: () => string) => PooledTransport;
@@ -84,11 +84,6 @@ export class TransportPool {
     /* The endpoints this client has a socket for. The array only changes when the set does. */
     ids(): string[] {
         return this.snapshot;
-    }
-
-    /* The address of an endpoint changed (a re-pair, another port); move the socket it already has. */
-    readdress(endpointId: string, address: SocketAddress): void {
-        this.byId.get(endpointId)?.transport.switchTo(address);
     }
 
     /*

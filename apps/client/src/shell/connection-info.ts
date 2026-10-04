@@ -21,11 +21,34 @@ export interface MachineInfo {
     platform: string | null;
 }
 
+/*
+ * Which way an open direct connection reaches the machine, as a label: its door on the local network,
+ * the broker, or a TURN relay the broker handed out. Null over a socket, which has no route to name.
+ */
+export const describeRoute = (connection: ConnectionState): string | null => {
+    if (connection.status !== 'open') {
+        return null;
+    }
+    if (connection.relayed === true) {
+        return i18next.t('shell:connection.route.relayed');
+    }
+    if (connection.signaled === 'lan') {
+        return i18next.t('shell:connection.route.lan');
+    }
+    return connection.signaled === 'broker' ? i18next.t('shell:connection.route.broker') : null;
+};
+
 /* The socket's state in the words the tooltip shows. The countdown needs a clock, so it comes in;
    `now` as null leaves the countdown off, which is what a screen reader wants to hear. */
 export const describeConnection = (connection: ConnectionState, now: number | null): string => {
     if (connection.status === 'open') {
-        return connection.relayed === true ? i18next.t('shell:connection.relayed') : i18next.t('shell:connection.connected');
+        if (connection.relayed === true) {
+            return i18next.t('shell:connection.relayed');
+        }
+        if (connection.signaled === 'lan') {
+            return i18next.t('shell:connection.overLan');
+        }
+        return connection.signaled === 'broker' ? i18next.t('shell:connection.viaBroker') : i18next.t('shell:connection.connected');
     }
     if (connection.noLink === true) {
         return i18next.t('shell:connection.noLink');

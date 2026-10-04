@@ -1012,7 +1012,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                                 <MachineGlyph icon={browseIcon} size={20} className="text-text-muted" />
                                 {linkWait.state === 'connecting' ? (
                                     <span role="status">
-                                        {browseRow?.entry.endpoint?.pairedBy === 'statement' || browseRow?.entry.endpoint === null
+                                        {browseRow !== null && !browseRow.entry.local
                                             ? t('palette.connectingThroughAccount', { machine: browseLabel })
                                             : t('switch.connecting', { machine: browseLabel })}
                                     </span>

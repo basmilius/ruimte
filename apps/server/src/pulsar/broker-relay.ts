@@ -1,16 +1,7 @@
-import {
-    BrokerPeer,
-    brokerHostOf,
-    signalMessage,
-    type BrokerIce,
-    type BrokerRelayed,
-    type IceServer,
-    type SignalAccess,
-    type SignalEnvelope
-} from '@ruimte/pulsar';
-import { verifySignature } from '@ruimte/pulsar/verify-node';
+import { BrokerPeer, brokerHostOf, type BrokerIce, type BrokerRelayed, type IceServer, type SignalEnvelope } from '@ruimte/pulsar';
 import type { Relay } from '../auth/relay.ts';
 import { errorText } from '../error-text.ts';
+import type { SignalGate } from './signal-gate.ts';
 
 // The first retry after a lost broker, doubling up to the second; a broker that is down is not hammered.
 const BACKOFF_MIN_MS = 1_000;
@@ -18,9 +9,6 @@ const BACKOFF_MAX_MS = 30_000;
 
 // The broker pings every 25 seconds by default; three missed pings is a socket that only looks open.
 const SILENCE_MS = 90_000;
-
-// How long a connection id stays tied to the key that offered it; well past the attempt timeout in `DirectPeers`.
-const OWNER_TTL_MS = 60_000;
 
 // A broker that could not hand out ICE servers is asked again after this, unless it said how long to wait.
 const ICE_RETRY_MS = 60_000;
@@ -46,12 +34,8 @@ export interface BrokerRelayOptions {
     /* The daemon's own key from `endpoint.json`, and a signer that never hands out the private half. */
     publicKey: string;
     sign(message: string): string;
-    /* Whether a client key is one a person paired with this machine. */
-    isPaired(publicKey: string): Promise<boolean>;
-    /* What an offer from a key nobody paired gets for the statement it carries (`StatementGate`); without it no statement is taken. */
-    admitStatement?(publicKey: string, access: SignalAccess): Promise<'admitted' | 'refused' | 'statements-refused'>;
-    /* The WebRTC answer code, which takes a signal and a way back and knows nothing of where either goes. */
-    receive(envelope: SignalEnvelope, reply: (envelope: SignalEnvelope) => void): void;
+    /* What every relayed signal goes through before it reaches the WebRTC answer code. */
+    gate: SignalGate;
     createSocket?(url: string): WebSocket;
     backoffMinMs?: number;
     backoffMaxMs?: number;
@@ -63,13 +47,11 @@ export interface BrokerRelayOptions {
 /*
  * The daemon's socket to the broker, so a client that has no route to this machine's address can
  * still signal a direct connection. It announces the key from `endpoint.json`, keeps the socket up
- * with a backoff, and hands every signal that a paired client signed to `DirectPeers`, signing what
- * goes back. What a signal is allowed to do past that is decided on the channel by its own handshake.
+ * with a backoff, and hands every relayed signal to the gate (`SignalGate`), signing what goes back.
  */
 export class BrokerRelay implements Relay {
     private readonly options: BrokerRelayOptions;
     private readonly log: Pick<Console, 'log' | 'warn'>;
-    private readonly owners = new Map<string, { publicKey: string; expiresAt: number }>();
     private socket: WebSocket | null = null;
     private peer: BrokerPeer | null = null;
     private attempts = 0;
@@ -304,47 +286,10 @@ export class BrokerRelay implements Relay {
         }
     }
 
-    /*
-     * Drop invalid signatures silently to avoid signing attacker-chosen replies. A valid but unknown
-     * offer gets `not-paired`, unless its accepted statement pairs the key first.
-     */
     private async relayed(frame: BrokerRelayed): Promise<void> {
         const { from, envelope, signature } = frame;
-        if (!verifySignature(from, signalMessage(from, this.options.publicKey, envelope), signature)) {
-            this.log.warn('Dropped a signal whose signature does not verify');
-            return;
-        }
-        const reply = (answer: SignalEnvelope): void => {
+        await this.options.gate.accept(from, envelope, signature, (answer: SignalEnvelope): void => {
             void this.peer?.relay(from, answer);
-        };
-        if (!(await this.options.isPaired(from))) {
-            const { signal } = envelope;
-            if (signal.kind !== 'offer') {
-                return;
-            }
-            const verdict = signal.access && this.options.admitStatement ? await this.options.admitStatement(from, signal.access) : 'refused';
-            if (verdict !== 'admitted') {
-                reply({
-                    connectionId: envelope.connectionId,
-                    signal: { kind: 'close', reason: verdict === 'statements-refused' ? 'statements-refused' : 'not-paired' }
-                });
-                return;
-            }
-        }
-        const now = Date.now();
-        for (const [connectionId, owner] of this.owners) {
-            if (owner.expiresAt < now) {
-                this.owners.delete(connectionId);
-            }
-        }
-        // An attempt belongs to the key that offered it, so another paired client cannot close or feed it.
-        const owner = this.owners.get(envelope.connectionId);
-        if (owner && owner.publicKey !== from) {
-            return;
-        }
-        if (!owner && envelope.signal.kind === 'offer') {
-            this.owners.set(envelope.connectionId, { publicKey: from, expiresAt: now + OWNER_TTL_MS });
-        }
-        this.options.receive(envelope, reply);
+        });
     }
 }

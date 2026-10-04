@@ -1,5 +1,4 @@
 import type { AccessOptions } from '../auth/access.ts';
-import type { AuthStore } from '../auth/auth-store.ts';
 import { bytesResponse, guardBytesRequest } from '../bytes/byte-route.ts';
 import type { ProjectStore } from './project-store.ts';
 
@@ -7,13 +6,12 @@ export const PROJECTS_PATH = '/projects';
 
 /*
  * `GET /projects/<projectId>/icon?v=<version>&theme=dark`: the image a project's folder declares.
- * Behind the same access rules as the socket, so a paired client sends the token it already has.
+ * Behind the same access rules as the socket, so a client sends the ticket its channel handed out.
  */
 export const handleProjectRequest = async (
     request: Request,
     url: URL,
     remoteAddress: string,
-    auth: AuthStore,
     options: AccessOptions,
     projects: ProjectStore
 ): Promise<Response> => {
@@ -21,7 +19,7 @@ export const handleProjectRequest = async (
     if (parts.length !== 2 || parts[1] !== 'icon' || parts[0] === '') {
         return new Response('Not found', { status: 404 });
     }
-    const refused = await guardBytesRequest(request, remoteAddress, auth, options);
+    const refused = await guardBytesRequest(request, remoteAddress, options);
     if (refused) {
         return refused;
     }

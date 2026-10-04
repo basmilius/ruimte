@@ -1,5 +1,4 @@
 import type { AccessOptions } from '../auth/access.ts';
-import type { AuthStore } from '../auth/auth-store.ts';
 import { bytesResponse, guardBytesRequest, parseByteRange } from '../bytes/byte-route.ts';
 import { MachineHomeError, type MachineHome } from './machine-home.ts';
 import { readServedFile } from './read.ts';
@@ -14,14 +13,13 @@ export const handleFsFileRequest = async (
     request: Request,
     url: URL,
     remoteAddress: string,
-    auth: AuthStore,
     options: AccessOptions,
     machineHome: MachineHome
 ): Promise<Response> => {
     if (url.pathname !== FS_FILE_PATH) {
         return new Response('Not found', { status: 404 });
     }
-    const refused = await guardBytesRequest(request, remoteAddress, auth, options);
+    const refused = await guardBytesRequest(request, remoteAddress, options);
     if (refused) {
         return refused;
     }

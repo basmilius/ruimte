@@ -28,10 +28,10 @@ const hmac = async (secret: string, message: string): Promise<string> => {
 };
 
 /*
- * What this client answers a channel's challenge with. A paired row first checks that the daemon
- * signed this channel's binding with the key it pinned, the same check the HTTP handshake makes, and
- * then signs the same binding back. The row of this machine proves the local secret with an HMAC
- * over the binding, so the secret never crosses a channel it cannot check the other end of.
+ * What this client answers a channel's challenge with. A row of the account first checks that the
+ * daemon signed this channel's binding with the key it pinned, and then signs the same binding back.
+ * The row of this machine proves the local secret with an HMAC over the binding, so the secret never
+ * crosses a channel it cannot check the other end of.
  */
 export const proveChallenge = async (credentials: ProofCredentials, challenge: DirectChallengeFrame, binding: string): Promise<DirectProofFrame> => {
     const { daemon } = challenge;

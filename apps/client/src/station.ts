@@ -1,4 +1,3 @@
-import i18next from 'i18next';
 import type { Machine } from '@ruimte/pulsar';
 import type { AccountStatus } from '@/pulsar/account';
 
@@ -38,16 +37,4 @@ export const stationBoot = (input: StationBootInput): StationBoot | null => {
         case 'signed-in':
             return input.machines === null ? 'loading' : 'machines';
     }
-};
-
-/*
- * A page loaded over https may not open a plain http or ws connection, and the browser says so only in
- * its console. A machine paired by link on its own address is exactly that, so the refusal is a
- * sentence before anything is tried.
- */
-export const mixedContentRefusal = (pageProtocol: string, machineUrl: string): string | null => {
-    if (pageProtocol !== 'https:' || !/^(http|ws):/i.test(machineUrl)) {
-        return null;
-    }
-    return i18next.t('machines:station.mixedContent');
 };

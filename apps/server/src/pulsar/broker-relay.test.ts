@@ -3,6 +3,7 @@ import { BrokerPeerFrameSchema, brokerHelloMessage, signalMessage, type BrokerPe
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { generateKeyPair, signMessage } from '../auth/keys.ts';
 import { BrokerRelay, weriftIceServers } from './broker-relay.ts';
+import { SignalGate } from './signal-gate.ts';
 
 const BROKER_URL = 'ws://broker.test:4400';
 const NONCE = 'n'.repeat(32);
@@ -59,7 +60,7 @@ const quiet = { log: () => undefined, warn: () => undefined };
 let clock = 0;
 
 const setup = async (
-    admitStatement?: (publicKey: string, access: SignalAccess) => Promise<'admitted' | 'refused' | 'statements-refused'>,
+    admitStatement?: (publicKey: string, access: SignalAccess) => Promise<'admitted' | 'refused'>,
     log: Pick<Console, 'log' | 'warn'> = quiet
 ) => {
     const machine = generateKeyPair();
@@ -72,12 +73,17 @@ const setup = async (
         url: BROKER_URL,
         publicKey: machine.publicKey,
         sign: (message) => signMessage(machine.privateKey, message),
-        isPaired: async (publicKey) => pairedKeys.has(publicKey),
-        ...(admitStatement ? { admitStatement } : {}),
-        receive: (envelope, reply) => {
-            received.push(envelope);
-            replies.push(reply);
-        },
+        gate: new SignalGate({
+            publicKey: machine.publicKey,
+            isPaired: async (publicKey) => pairedKeys.has(publicKey),
+            ...(admitStatement ? { admitStatement } : {}),
+            receive: (envelope, reply) => {
+                received.push(envelope);
+                replies.push(reply);
+            },
+            log,
+            now: () => clock
+        }),
         createSocket: () => {
             const socket = new FakeSocket();
             sockets.push(socket);
@@ -126,8 +132,7 @@ describe('BrokerRelay and ICE servers', () => {
             url: BROKER_URL,
             publicKey: machine.publicKey,
             sign: (message) => signMessage(machine.privateKey, message),
-            isPaired: async () => true,
-            receive: () => undefined,
+            gate: new SignalGate({ publicKey: machine.publicKey, isPaired: async () => true, receive: () => undefined }),
             createSocket: () => {
                 const socket = new FakeSocket();
                 sockets.push(socket);
@@ -299,7 +304,7 @@ describe('BrokerRelay', () => {
             statement: { machineId: 'm', clientPublicKey: 'A'.repeat(43), nonce: 'n'.repeat(22), issuedAt: 0, expiresAt: 1, signature: 's'.repeat(86) },
             label: 'Laptop'
         };
-        const verdicts = new Map<string, 'admitted' | 'refused' | 'statements-refused'>();
+        const verdicts = new Map<string, 'admitted' | 'refused'>();
         const asked: string[] = [];
         const { relay, machine, pairedKeys, socket, received } = await setup(async (publicKey, carried) => {
             asked.push(`${publicKey}:${carried.label}`);
@@ -316,18 +321,14 @@ describe('BrokerRelay', () => {
         await waitUntil(() => received.length === 1);
         expect(asked).toEqual([`${newcomer.publicKey}:Laptop`]);
 
-        const refusedByFlag = generateKeyPair();
-        verdicts.set(refusedByFlag.publicKey, 'statements-refused');
-        socket.deliver(relayedFrom(refusedByFlag, machine.publicKey, { ...carrying, connectionId: 'attempt-0003' }));
         const refusedOutright = generateKeyPair();
         socket.deliver(relayedFrom(refusedOutright, machine.publicKey, { ...carrying, connectionId: 'attempt-0004' }));
-        await waitUntil(() => socket.sent.length === 4);
+        await waitUntil(() => socket.sent.length === 3);
         const reasons = socket.sent.slice(2).map((frame) => {
             const relayFrame = frame as Extract<BrokerPeerFrame, { type: 'relay' }>;
             return [relayFrame.to, relayFrame.envelope.signal.kind === 'close' ? relayFrame.envelope.signal.reason : null];
         });
-        expect(reasons).toContainEqual([refusedByFlag.publicKey, 'statements-refused']);
-        expect(reasons).toContainEqual([refusedOutright.publicKey, 'not-paired']);
+        expect(reasons).toEqual([[refusedOutright.publicKey, 'not-paired']]);
         expect(received).toHaveLength(1);
 
         // A key that is paired already is never asked about the statement it carries.

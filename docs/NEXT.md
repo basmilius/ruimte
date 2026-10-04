@@ -250,6 +250,13 @@ remaining provider limitation. Folder-isolation tests alone cannot establish log
 6. Decide a supported protocol-version window using
    [the protocol report](reports/2026-09-15-protocol-versions.html). Implement negotiation and
    cross-version fixtures only after that decision; today's gate accepts exactly the same version.
+7. Verify the door on the local network on real devices
+   ([the plan](reports/2026-10-04-remote-access-plan.html)): iPhone and iPad on the same Wi-Fi as
+   the MacBook show Local network, also with `--no-broker` after a first connection; on 4G the
+   connection opens through the broker with at most a second more. Check whether the macOS firewall
+   asks about the npm binary listening on the LAN, and what the iPhone does when Local Network access
+   is denied. (Electron 44 lets the `app://ruimte` page open `ws://` and `fetch` to loopback and to a
+   LAN address; checked with a probe on 2026-10-04.)
 
 Done when connection drops have an explained, tested outcome, real-network media/terminal
 measurements meet the agreed budgets, and broker migration has verified rollback. Preserve the

@@ -2,6 +2,7 @@ import { BrokerSettingSchema, RegisterMachinePayloadSchema } from '@ruimte/pulsa
 import { z } from 'zod';
 import { MachineUpdateSchema } from './machine-update.ts';
 import { ProjectIconChoiceSchema } from './project.ts';
+import { LanDoorSchema } from './lan-door.ts';
 import { ProtocolVersionSchema } from './protocol.ts';
 
 // How a client reaches a daemon; the loopback one is what the app starts with.
@@ -75,6 +76,14 @@ export const EndpointInfoSchema = z.object({
     broker: BrokerSettingSchema.optional(),
     // True when a flag or the environment decides the broker, so `broker` is kept but changes nothing.
     brokerFixed: z.boolean().optional(),
+    /* Where the machine's door on the local network listens right now, so a client on the same network
+       signals a direct connection there before it tries the broker. The addresses are read from the
+       interfaces when asked. Null while the door is closed, absent from a daemon from before the door. */
+    lan: LanDoorSchema.nullish(),
+    // Whether a person keeps the door open, kept in `endpoint.json`; absent from a daemon from before the door.
+    lanDoor: z.boolean().optional(),
+    // True when a flag decides the door, so `lanDoor` is kept but changes nothing.
+    lanDoorFixed: z.boolean().optional(),
     /* The address book account this machine is on, null when it is on none. Only a client that presented
        the local secret is told; absent for any other, and from a daemon from before a machine had one account. */
     accountId: z.string().nullable().optional()
@@ -121,7 +130,9 @@ export const EndpointSetIdentityPayloadSchema = z.object({
     keepAwakeOnBattery: z.boolean().optional(),
     keepAwakeDisplay: z.boolean().optional(),
     // Which broker the machine announces itself to; left out, the machine stays on the one it has.
-    broker: BrokerSettingSchema.optional()
+    broker: BrokerSettingSchema.optional(),
+    // Whether the door on the local network stays open; left out, the machine stays as it stands.
+    lanDoor: z.boolean().optional()
 });
 export type EndpointSetIdentityPayload = z.infer<typeof EndpointSetIdentityPayloadSchema>;
 
@@ -142,7 +153,10 @@ export const EndpointChangedEventSchema = z.object({
     broker: BrokerSettingSchema.optional(),
     // What the machine hands clients as its broker now, so a client follows a change without asking again.
     brokerUrl: z.string().nullish(),
-    brokerFixed: z.boolean().optional()
+    brokerFixed: z.boolean().optional(),
+    lan: LanDoorSchema.nullish(),
+    lanDoor: z.boolean().optional(),
+    lanDoorFixed: z.boolean().optional()
 });
 export type EndpointChangedEvent = z.infer<typeof EndpointChangedEventSchema>;
 

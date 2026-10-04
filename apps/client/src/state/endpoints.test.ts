@@ -4,7 +4,6 @@ import {
     LOCAL_ENDPOINT_ID,
     endpointForDaemon,
     localMachineLabel,
-    parsePairingUrl,
     parseStoredEndpoints,
     storedLocalDirect,
     socketUrlFor,
@@ -18,9 +17,9 @@ const row = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
     httpBaseUrl: `http://${id}:4210`,
     wsBaseUrl: `ws://${id}:4210`,
     reachability: 'lan',
-    token: `token-${id}`,
     daemonId: id,
     daemonPublicKey: null,
+    pairedBy: 'statement',
     ...overrides
 });
 
@@ -33,33 +32,13 @@ describe('endpoints', () => {
         expect(localMachineLabel('')).toBe('This machine');
     });
 
-    test('parsePairingUrl reads the origin and the token out of the daemon URL', () => {
-        expect(parsePairingUrl('http://box.local:4210/pair#abc123')).toEqual({ httpBaseUrl: 'http://box.local:4210', token: 'abc123' });
-        expect(parsePairingUrl('  https://ruimte.example/pair#t  ')).toEqual({ httpBaseUrl: 'https://ruimte.example', token: 't' });
-        expect(parsePairingUrl('http://box.local:4210/pair')).toBeNull();
-        expect(parsePairingUrl('http://box.local:4210/other#t')).toBeNull();
-        expect(parsePairingUrl('ftp://box/pair#t')).toBeNull();
-        expect(parsePairingUrl('not a url')).toBeNull();
-    });
-
-    test('socketUrlFor puts the credential in the query and leaves a row without one bare', () => {
-        const base = {
-            id: 'x',
-            label: 'x',
-            httpBaseUrl: 'http://box:4210',
-            wsBaseUrl: 'ws://box:4210',
-            reachability: 'lan' as const,
-            daemonId: null,
-            daemonPublicKey: null
-        };
-        expect(socketUrlFor({ ...base, token: 'a b' })).toBe('ws://box:4210/ws?token=a%20b');
-        expect(socketUrlFor({ ...base, token: null })).toBe('ws://box:4210/ws');
-
-        // A ticket wins from the session token underneath it, which is what makes the credential rotate.
-        rememberTicket('x', 'ticket-9');
-        expect(socketUrlFor({ ...base, token: 'a b' })).toBe('ws://box:4210/ws?token=ticket-9');
+    test('socketUrlFor puts the ticket in the query and leaves a row without one bare', () => {
+        const base = { id: 'x', wsBaseUrl: 'ws://box:4210' };
+        expect(socketUrlFor(base)).toBe('ws://box:4210/ws');
+        rememberTicket('x', 'ticket 9');
+        expect(socketUrlFor(base)).toBe('ws://box:4210/ws?token=ticket%209');
         forgetTicket('x');
-        expect(socketUrlFor({ ...base, token: 'a b' })).toBe('ws://box:4210/ws?token=a%20b');
+        expect(socketUrlFor(base)).toBe('ws://box:4210/ws');
     });
 
     test('the local row never puts the secret the desktop shell read in its URL, only the ticket it traded it for', () => {
@@ -69,7 +48,6 @@ describe('endpoints', () => {
             httpBaseUrl: 'http://127.0.0.1:4211',
             wsBaseUrl: 'ws://127.0.0.1:4211',
             reachability: 'loopback' as const,
-            token: null,
             daemonId: null,
             daemonPublicKey: null
         };
@@ -90,42 +68,32 @@ describe('endpoints', () => {
 });
 
 describe('the stored endpoint list', () => {
-    test('a blob from before daemon ids keeps its host-shaped ids and asks to be written again', () => {
+    test('a row from a pairing link is dropped, a row of the account is reached directly, and the blob asks to be written again', () => {
         const legacy = JSON.stringify({
+            version: 3,
             endpoints: [
-                { id: '10.0.0.4:4210', label: 'box', httpBaseUrl: 'http://10.0.0.4:4210', wsBaseUrl: 'ws://10.0.0.4:4210', reachability: 'lan', token: 't' }
+                { id: '10.0.0.4:4210', label: 'box', httpBaseUrl: 'http://10.0.0.4:4210', wsBaseUrl: 'ws://10.0.0.4:4210', reachability: 'lan', token: 't' },
+                { ...row('linked'), pairedBy: 'link', token: null },
+                { ...row('studio', { httpBaseUrl: '', wsBaseUrl: '', daemonPublicKey: 'key' }), token: null, direct: false }
             ],
             activeId: '10.0.0.4:4210'
         });
         const parsed = parseStoredEndpoints(legacy);
         expect(parsed.migrated).toBe(true);
-        expect(parsed.activeId).toBe('10.0.0.4:4210');
-        expect(parsed.endpoints).toEqual([
-            {
-                id: '10.0.0.4:4210',
-                label: 'box',
-                httpBaseUrl: 'http://10.0.0.4:4210',
-                wsBaseUrl: 'ws://10.0.0.4:4210',
-                reachability: 'lan',
-                token: 't',
-                daemonId: null,
-                daemonPublicKey: null
-            }
-        ]);
+        expect(parsed.endpoints).toEqual([row('studio', { httpBaseUrl: '', wsBaseUrl: '', daemonPublicKey: 'key', direct: true })]);
     });
 
     test('a blob of this version is taken as it stands, and the local row is never read back', () => {
-        const stored = JSON.stringify({ version: 3, endpoints: [row('box'), { ...row('stale'), id: LOCAL_ENDPOINT_ID }], activeId: 'box' });
+        const stored = JSON.stringify({ version: 4, endpoints: [row('box', { direct: true }), { ...row('stale'), id: LOCAL_ENDPOINT_ID }], activeId: 'box' });
         const parsed = parseStoredEndpoints(stored);
         expect(parsed.migrated).toBe(false);
         expect(parsed.endpoints.map((endpoint) => endpoint.id)).toEqual(['box']);
     });
 
-    test('a blob from before the daemon key keeps its token and pins nothing yet', () => {
+    test('a row from before the daemon key pins nothing yet', () => {
         const { daemonPublicKey: _none, ...before } = row('box');
-        const parsed = parseStoredEndpoints(JSON.stringify({ version: 2, endpoints: [before], activeId: 'box' }));
-        expect(parsed.migrated).toBe(true);
-        expect(parsed.endpoints[0]).toEqual({ ...before, daemonPublicKey: null });
+        const parsed = parseStoredEndpoints(JSON.stringify({ version: 4, endpoints: [before], activeId: 'box' }));
+        expect(parsed.endpoints[0]).toEqual({ ...before, daemonPublicKey: null, direct: true });
     });
 
     test('nothing stored and a blob that will not parse both end up empty', () => {
@@ -146,20 +114,19 @@ describe('rekeying an endpoint', () => {
 
         const moved = useEndpoints.getState().endpoints.find((endpoint) => endpoint.id === 'Kc9Ax2pQ0Zs');
         expect(moved?.daemonId).toBe('Kc9Ax2pQ0Zs');
-        // The address and the token are what made the connection; only the key changes.
+        // The address is what made the connection; only the key changes.
         expect(moved?.httpBaseUrl).toBe('http://10.0.0.4:4210');
-        expect(moved?.token).toBe('token-10.0.0.4:4210');
         expect(useEndpoints.getState().activeId).toBe('Kc9Ax2pQ0Zs');
     });
 
     test('the same daemon under two addresses ends up as one row, the one that just answered', () => {
-        useEndpoints.getState().add(row('daemon-a', { httpBaseUrl: 'http://old:4210', token: 'old', daemonPublicKey: 'pinned-key' }));
-        useEndpoints.getState().add(row('192.168.1.9:4210', { daemonId: null, daemonPublicKey: null, httpBaseUrl: 'http://new:4210', token: 'new' }));
+        useEndpoints.getState().add(row('daemon-a', { httpBaseUrl: 'http://old:4210', daemonPublicKey: 'pinned-key' }));
+        useEndpoints.getState().add(row('192.168.1.9:4210', { daemonId: null, daemonPublicKey: null, httpBaseUrl: 'http://new:4210' }));
         useEndpoints.getState().rekeyEndpoint('192.168.1.9:4210', 'daemon-a');
 
         const rows = useEndpoints.getState().endpoints.filter((endpoint) => endpoint.id === 'daemon-a');
         expect(rows).toHaveLength(1);
-        expect(rows[0]?.token).toBe('new');
+        expect(rows[0]?.httpBaseUrl).toBe('http://new:4210');
         // The row that held the id is gone, the daemon it pinned is the same machine.
         expect(rows[0]?.daemonPublicKey).toBe('pinned-key');
     });
@@ -184,15 +151,14 @@ describe('one row per daemon', () => {
         useEndpoints.setState({ endpoints: [row(LOCAL_ENDPOINT_ID, { daemonId: null })], activeId: LOCAL_ENDPOINT_ID, mismatched: {} });
     });
 
-    test('a machine that pairs again keeps its place in the list and takes the new address', () => {
-        useEndpoints.getState().add(row('daemon-a', { httpBaseUrl: 'http://old:4210', token: 'old', daemonPublicKey: 'pinned-key' }));
+    test('a machine added again keeps its place in the list and the key it pinned', () => {
+        useEndpoints.getState().add(row('daemon-a', { label: 'old', daemonPublicKey: 'pinned-key' }));
         useEndpoints.getState().add(row('daemon-b'));
-        useEndpoints.getState().add(row('daemon-a', { httpBaseUrl: 'http://new:4210', token: 'new', daemonPublicKey: null }));
+        useEndpoints.getState().add(row('daemon-a', { label: 'new', daemonPublicKey: null }));
 
         const rows = useEndpoints.getState().endpoints;
         expect(rows.map((endpoint) => endpoint.id)).toEqual([LOCAL_ENDPOINT_ID, 'daemon-a', 'daemon-b']);
-        expect(rows[1]?.httpBaseUrl).toBe('http://new:4210');
-        expect(rows[1]?.token).toBe('new');
+        expect(rows[1]?.label).toBe('new');
         expect(rows[1]?.daemonPublicKey).toBe('pinned-key');
     });
 
@@ -223,9 +189,8 @@ describe('a direct connection per machine', () => {
         useEndpoints.setState({ endpoints: [row(LOCAL_ENDPOINT_ID, { daemonId: null }), row('daemon-a')], activeId: LOCAL_ENDPOINT_ID, mismatched: {} });
     });
 
-    test('is off until a person turns it on, and is kept with the row, the local one included', () => {
+    test('is a choice for this machine, kept beside the list, and every other machine is always reached directly', () => {
         expect(useEndpoints.getState().endpoints.every((endpoint) => endpoint.direct !== true)).toBe(true);
-        useEndpoints.getState().setDirect('daemon-a', true);
         useEndpoints.getState().setDirect(LOCAL_ENDPOINT_ID, true);
 
         const raw = localStorage.getItem('ruimte.endpoints');
@@ -237,10 +202,35 @@ describe('a direct connection per machine', () => {
         expect(storedLocalDirect(null)).toBe(false);
     });
 
-    test('survives pairing with the same machine again', () => {
+    test('a machine that forgot this client gets a statement on the next attempt again, and this machine never does', () => {
+        useEndpoints.getState().settleStatement('daemon-a');
+        useEndpoints.getState().requireStatement('daemon-a');
+        useEndpoints.getState().requireStatement(LOCAL_ENDPOINT_ID);
+        const rows = parseStoredEndpoints(localStorage.getItem('ruimte.endpoints')).endpoints;
+        expect(rows.find((endpoint) => endpoint.id === 'daemon-a')?.needsStatement).toBe(true);
+        expect(useEndpoints.getState().endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID)?.needsStatement).toBeUndefined();
+        useEndpoints.getState().settleStatement('daemon-a');
+        expect(useEndpoints.getState().endpoints.find((endpoint) => endpoint.id === 'daemon-a')?.needsStatement).toBe(false);
+    });
+
+    test('survives the account opening the same machine again', () => {
         useEndpoints.getState().setDirect('daemon-a', true);
-        useEndpoints.getState().add(row('daemon-a', { httpBaseUrl: 'http://new:4210' }));
+        useEndpoints.getState().add(row('daemon-a', { label: 'again' }));
         expect(useEndpoints.getState().endpoints.find((endpoint) => endpoint.id === 'daemon-a')?.direct).toBe(true);
+    });
+
+    test('remembers the door on the local network, and writes only when it moved', () => {
+        const door = { port: 4220, addresses: ['192.168.1.20'] };
+        useEndpoints.getState().learnLan('daemon-a', door);
+        const raw = localStorage.getItem('ruimte.endpoints');
+        expect(parseStoredEndpoints(raw).endpoints.find((endpoint) => endpoint.id === 'daemon-a')?.lan).toEqual(door);
+
+        const before = useEndpoints.getState().endpoints;
+        useEndpoints.getState().learnLan('daemon-a', { port: 4220, addresses: ['192.168.1.20'] });
+        expect(useEndpoints.getState().endpoints).toBe(before);
+
+        useEndpoints.getState().learnLan('daemon-a', null);
+        expect(useEndpoints.getState().endpoints.find((endpoint) => endpoint.id === 'daemon-a')?.lan).toBeNull();
     });
 });
 
@@ -248,7 +238,7 @@ describe('another window writing the list', () => {
     const items = new Map<string, string>();
     /* What another window of the same origin leaves in the storage both read. */
     const written = (endpoints: Endpoint[], activeId: string, localDirect = false): void => {
-        items.set('ruimte.endpoints', JSON.stringify({ version: 3, endpoints, activeId, localDirect }));
+        items.set('ruimte.endpoints', JSON.stringify({ version: 4, endpoints, activeId, localDirect }));
     };
 
     beforeEach(() => {
@@ -270,7 +260,7 @@ describe('another window writing the list', () => {
         });
     });
 
-    test('takes the rows it paired, and this window stays on its own machine', () => {
+    test('takes the rows it opened, and this window stays on its own machine', () => {
         written([row('daemon-a'), row('daemon-b')], LOCAL_ENDPOINT_ID);
         useEndpoints.getState().reload();
         const state = useEndpoints.getState();

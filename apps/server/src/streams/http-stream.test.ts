@@ -3,19 +3,16 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { H264_STREAM_CONTENT_TYPE, HEVC_STREAM_CONTENT_TYPE, LiveStreamDecoder } from '@ruimte/contracts';
-import { AuthStore } from '../auth/auth-store.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from './http-stream.ts';
 import { LiveStreamHub } from './live-stream.ts';
 
 const LOCAL_SECRET = 'the-local-secret';
-const OPTIONS = { allowedOrigins: ['https://client.example'], localSecret: LOCAL_SECRET, tickets: { ticketAccess: async () => null } };
+const OPTIONS = { localSecret: LOCAL_SECRET, tickets: { ticketAccess: async () => null } };
 
 let root: string;
-let auth: AuthStore;
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-live-stream-'));
-    auth = new AuthStore(root);
 });
 
 afterEach(async () => {
@@ -37,7 +34,7 @@ describe('the live stream route', () => {
         });
         const url = new URL(`http://127.0.0.1:4210${LIVE_STREAM_PATH}/browser%3Anode-1`);
         const request = new Request(url, { headers: { authorization: `Bearer ${LOCAL_SECRET}` } });
-        const response = await handleLiveStreamRequest(request, url, '127.0.0.1', auth, OPTIONS, hub);
+        const response = await handleLiveStreamRequest(request, url, '127.0.0.1', OPTIONS, hub);
         const reader = response.body!.getReader();
         const decoder = new LiveStreamDecoder();
 
@@ -53,12 +50,14 @@ describe('the live stream route', () => {
     test('refuses missing credentials and answers allowed preflights', async () => {
         const hub = new LiveStreamHub();
         const url = new URL(`http://127.0.0.1:4210${LIVE_STREAM_PATH}/missing`);
-        expect((await handleLiveStreamRequest(new Request(url), url, '127.0.0.1', auth, OPTIONS, hub)).status).toBe(401);
+        expect((await handleLiveStreamRequest(new Request(url), url, '127.0.0.1', OPTIONS, hub)).status).toBe(401);
 
-        const preflight = new Request(url, { method: 'OPTIONS', headers: { origin: 'https://client.example' } });
-        const response = await handleLiveStreamRequest(preflight, url, '127.0.0.1', auth, OPTIONS, hub);
+        const preflight = new Request(url, { method: 'OPTIONS', headers: { origin: 'http://localhost:4212' } });
+        const response = await handleLiveStreamRequest(preflight, url, '127.0.0.1', OPTIONS, hub);
         expect(response.status).toBe(204);
         expect(response.headers.get('access-control-allow-headers')).toBe('authorization');
+        const foreign = new Request(url, { method: 'OPTIONS', headers: { origin: 'https://client.example' } });
+        expect((await handleLiveStreamRequest(foreign, url, '127.0.0.1', OPTIONS, hub)).status).toBe(403);
     });
 
     test('announces an HEVC source without changing its bounded frame envelope', async () => {
@@ -66,7 +65,7 @@ describe('the live stream route', () => {
         hub.register('device:phone-1', { format: 'hevc', async start() {}, async stop() {} });
         const url = new URL(`http://127.0.0.1:4210${LIVE_STREAM_PATH}/device%3Aphone-1`);
         const request = new Request(url, { headers: { authorization: `Bearer ${LOCAL_SECRET}` } });
-        const response = await handleLiveStreamRequest(request, url, '127.0.0.1', auth, OPTIONS, hub);
+        const response = await handleLiveStreamRequest(request, url, '127.0.0.1', OPTIONS, hub);
 
         expect(response.headers.get('content-type')).toBe(HEVC_STREAM_CONTENT_TYPE);
         await response.body?.cancel();
@@ -88,7 +87,7 @@ describe('the live stream route', () => {
         });
         const url = new URL(`http://127.0.0.1:4210${LIVE_STREAM_PATH}/device%3Apixel`);
         const request = new Request(url, { headers: { authorization: `Bearer ${LOCAL_SECRET}` } });
-        const response = await handleLiveStreamRequest(request, url, '127.0.0.1', auth, OPTIONS, hub);
+        const response = await handleLiveStreamRequest(request, url, '127.0.0.1', OPTIONS, hub);
         const reader = response.body!.getReader();
         const decoder = new LiveStreamDecoder();
         const read = async (): Promise<number[]> => decoder.push((await reader.read()).value!).map((frame) => frame.sequence);
@@ -118,7 +117,7 @@ describe('the live stream route', () => {
         hub.register('browser:node-1', { async start() {}, async stop() {} });
         const url = new URL(`http://127.0.0.1:4210${LIVE_STREAM_PATH}/browser%3Anode-1`);
         const request = new Request(url, { headers: { authorization: `Bearer ${LOCAL_SECRET}` } });
-        const response = await handleLiveStreamRequest(request, url, '127.0.0.1', auth, OPTIONS, hub, () => false);
+        const response = await handleLiveStreamRequest(request, url, '127.0.0.1', OPTIONS, hub, () => false);
 
         expect(response.status).toBe(403);
         expect(await response.text()).toContain('streaming is disabled');

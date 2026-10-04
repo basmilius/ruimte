@@ -18,7 +18,7 @@ describe('greetingLines', () => {
     test('another port rides along with every command', () => {
         const [, next] = greetingLines({ ...facts, port: 4290, interactive: true });
         expect(next).toContain('`ruimte login --port 4290`');
-        expect(next).toContain('`ruimte pair --port 4290`');
+        expect(next).toContain('`ruimte status --port 4290`');
         expect(next).toContain('`ruimte service install --port 4290`');
     });
 });

@@ -120,6 +120,10 @@ export interface DesktopBridge {
     /* The languages the operating system asks for, best first, read the same way and at the same
        moment as the region. */
     systemLanguages?: string[];
+    /* Where the machine this app started listens, since the shell serves the page on a scheme of its
+       own. Absent under `bun dev`, where Vite's proxy makes the page's own origin the machine, and
+       from a shell from before the scheme, whose page the machine served. */
+    daemonUrl?: string;
     pickFolder(initialPath?: string): Promise<string | null>;
     openExternal(url: string): Promise<void>;
     /* Opens a pane of System Settings on macOS, only the ones the shell allows (`isSystemSettingsPane`).
@@ -201,9 +205,9 @@ export interface DesktopBridge {
     /* The notes of the last releases, from the shell's copy on disk. `refresh` asks GitHub first.
        Optional for the same reason `onBrowserContextMenu` is; without it About offers no notes. */
     releaseNotes?(refresh?: boolean): Promise<ReleaseNotesState>;
-    /* The secret in the home of the daemon this app started, which the local row presents instead of
-       pairing. A loopback address is no proof of anything. Null while the daemon has not written it.
-       Optional for the same reason `onBrowserContextMenu` is; without it the local row has to pair. */
+    /* The secret in the home of the daemon this app started, which the local row presents to get in.
+       A loopback address is no proof of anything. Null while the daemon has not written it. Optional
+       for the same reason `onBrowserContextMenu` is; without it the local row does not get in. */
     localSecret?(): Promise<string | null>;
     /* macOS owns the application-level microphone grant; the shell asks while the renderer only
        receives the result. Other platforms let Chromium handle the same request. */

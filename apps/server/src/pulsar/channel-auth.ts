@@ -101,7 +101,7 @@ export const authenticateChannel = (options: ChannelAuthOptions): Promise<Client
                 const ticket = await handshake.redeem({ publicKey: proof.publicKey, challenge: proof.challenge, signature: proof.signature }, binding);
                 const sessionId = ticket === null ? null : ((await handshake.ticketAccess(ticket.ticket, 'bytes'))?.sessionId ?? null);
                 if (ticket === null || sessionId === null) {
-                    refuse('This machine does not recognize that signature. Pair again.');
+                    refuse('This machine does not know this device. Sign in to the account it is on to be let in again.');
                     return;
                 }
                 accept({ reachability: options.reachability, sessionId }, ticket);

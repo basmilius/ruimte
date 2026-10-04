@@ -6,6 +6,7 @@ import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { projectSwitch, useProjectSwitch } from '@/project/open';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import type { SwitchState, SwitchTarget } from '@/project/project-switch';
+import { describeRoute } from '@/shell/connection-info';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';
@@ -67,7 +68,7 @@ function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }
     const { target } = state;
     const entry = useMachineEntry(target.endpointId);
     const machineIcon = useMachineIcon(entry);
-    const connection = useEndpointConnection(entry.endpoint?.id ?? target.endpointId);
+    const route = describeRoute(useEndpointConnection(entry.endpoint?.id ?? target.endpointId));
     const machine = nameOf(entry);
     const title = titleOf(target, machine);
     // A project the cached list does not have has nothing but its machine's name to show, and saying it twice says nothing.
@@ -97,7 +98,7 @@ function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }
                         <MachineGlyph icon={machineIcon} size={12} />
                         <span className="truncate">{machine}</span>
                         {/* Known only once the link is open, which is exactly when the project step runs. */}
-                        {state.kind === 'opening' && connection.relayed && <span className="shrink-0 text-text-faint">{t('switch.viaRelay')}</span>}
+                        {state.kind === 'opening' && route !== null && <span className="shrink-0 text-text-faint">· {route}</span>}
                     </span>
                 )
             }

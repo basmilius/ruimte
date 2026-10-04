@@ -2,12 +2,12 @@ import type { ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { describeConnection, describeLastSeen, describePing, reachabilityLabel } from '@/shell/connection-info';
+import { describeConnection, describeLastSeen, describePing, describeRoute, reachabilityLabel } from '@/shell/connection-info';
 import { MasterItem } from '@basmilius/desktop-ui/settings';
 import { Tooltip, useNow } from '@basmilius/desktop-ui';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-list';
-import { brokerRouteOf, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import type { TransportStatus } from '@/transport';
 import { useLatency } from '@/transport/ping';
@@ -51,10 +51,8 @@ function ConnectedTile({ entry, endpoint }: { entry: MachineEntry; endpoint: End
             <span>{describeConnection(connection, null)}</span>
             {lastSeen !== null && <span className="text-text-muted">{lastSeen}</span>}
             <span className="text-text-muted">{reachabilityLabel(reachability)}</span>
-            <span className="font-mono text-text-muted">{endpoint.httpBaseUrl === '' ? t('machines.dot.brokerOnly') : endpoint.httpBaseUrl}</span>
-            {endpoint.direct === true && (
-                <span className="text-text-muted">{brokerRouteOf(endpoint) === null ? t('machines.dot.direct') : t('machines.dot.directBroker')}</span>
-            )}
+            {endpoint.id === LOCAL_ENDPOINT_ID && <span className="font-mono text-text-muted">{endpoint.httpBaseUrl}</span>}
+            {endpoint.id === LOCAL_ENDPOINT_ID && endpoint.direct === true && <span className="text-text-muted">{t('machines.dot.direct')}</span>}
             <span className="text-text-muted">{describePing(latency)}</span>
         </span>
     );
@@ -83,6 +81,7 @@ export function MachineListItem({ entry, selected, onSelect }: { entry: MachineE
     const failure = useRowFailure(entry.endpoint);
     const connection = useEndpointConnection(entry.endpoint?.id ?? '');
     const reach = reachLabel(entry);
+    const route = entry.endpoint === null ? null : describeRoute(connection);
     const status = entry.endpoint === null ? t('machines.notOpened') : describeConnection(connection, null);
 
     return (
@@ -94,7 +93,7 @@ export function MachineListItem({ entry, selected, onSelect }: { entry: MachineE
             )}
             <span className="flex min-w-0 grow flex-col">
                 <span className="truncate text-sm text-text">{nameOf(entry)}</span>
-                <span className="text-xs break-words text-text-muted">{connection.relayed === true ? t('machines.viaRelay', { reach }) : reach}</span>
+                <span className="text-xs break-words text-text-muted">{route === null ? reach : t('machines.withRoute', { reach, route })}</span>
                 {failure !== null && (
                     <span className="text-xs break-words text-status-error" role="alert">
                         {failure}

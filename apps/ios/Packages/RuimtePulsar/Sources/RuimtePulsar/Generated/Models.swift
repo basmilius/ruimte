@@ -3469,9 +3469,12 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `brokerUrl`: Presence<String>
     public let `broker`: PairResultEndpointBroker?
     public let `brokerFixed`: Bool?
+    public let `lan`: Presence<PairResultEndpointLan>
+    public let `lanDoor`: Bool?
+    public let `lanDoorFixed`: Bool?
     public let `accountId`: Presence<String>
 
-    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `accountId`: Presence<String> = .missing) {
+    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `lan`: Presence<PairResultEndpointLan> = .missing, `lanDoor`: Bool? = nil, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
@@ -3495,6 +3498,9 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         self.`brokerUrl` = `brokerUrl`
         self.`broker` = `broker`
         self.`brokerFixed` = `brokerFixed`
+        self.`lan` = `lan`
+        self.`lanDoor` = `lanDoor`
+        self.`lanDoorFixed` = `lanDoorFixed`
         self.`accountId` = `accountId`
     }
 
@@ -3523,6 +3529,9 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         `brokerUrl` = try container.contains(.`brokerUrl`) ? (container.decodeNil(forKey: .`brokerUrl`) ? .null : .value(container.decode(String.self, forKey: .`brokerUrl`))) : .missing
         `broker` = try container.decodeIfPresent(PairResultEndpointBroker.self, forKey: .`broker`)
         `brokerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`brokerFixed`)
+        `lan` = try container.contains(.`lan`) ? (container.decodeNil(forKey: .`lan`) ? .null : .value(container.decode(PairResultEndpointLan.self, forKey: .`lan`))) : .missing
+        `lanDoor` = try container.decodeIfPresent(Bool.self, forKey: .`lanDoor`)
+        `lanDoorFixed` = try container.decodeIfPresent(Bool.self, forKey: .`lanDoorFixed`)
         `accountId` = try container.contains(.`accountId`) ? (container.decodeNil(forKey: .`accountId`) ? .null : .value(container.decode(String.self, forKey: .`accountId`))) : .missing
     }
 
@@ -3559,6 +3568,13 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         }
         try container.encodeIfPresent(`broker`, forKey: .`broker`)
         try container.encodeIfPresent(`brokerFixed`, forKey: .`brokerFixed`)
+        switch `lan` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`lan`)
+        case .value(let value): try container.encode(value, forKey: .`lan`)
+        }
+        try container.encodeIfPresent(`lanDoor`, forKey: .`lanDoor`)
+        try container.encodeIfPresent(`lanDoorFixed`, forKey: .`lanDoorFixed`)
         switch `accountId` {
         case .missing: break
         case .null: try container.encodeNil(forKey: .`accountId`)
@@ -3590,6 +3606,9 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case `brokerUrl` = "brokerUrl"
         case `broker` = "broker"
         case `brokerFixed` = "brokerFixed"
+        case `lan` = "lan"
+        case `lanDoor` = "lanDoor"
+        case `lanDoorFixed` = "lanDoorFixed"
         case `accountId` = "accountId"
     }
 }
@@ -3768,6 +3787,33 @@ public struct PairResultEndpointBrokerVariant2: Codable, Sendable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case `mode` = "mode"
         case `url` = "url"
+    }
+}
+
+public struct PairResultEndpointLan: Codable, Sendable, Equatable {
+    public let `port`: Int64
+    public let `addresses`: [String]
+
+    public init(`port`: Int64, `addresses`: [String]) {
+        self.`port` = `port`
+        self.`addresses` = `addresses`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `port` = try container.decode(Int64.self, forKey: .`port`)
+        `addresses` = try container.decode([String].self, forKey: .`addresses`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`port`, forKey: .`port`)
+        try container.encode(`addresses`, forKey: .`addresses`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `port` = "port"
+        case `addresses` = "addresses"
     }
 }
 

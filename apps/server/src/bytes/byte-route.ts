@@ -1,5 +1,4 @@
 import { decideAccess, type AccessOptions } from '../auth/access.ts';
-import type { AuthStore } from '../auth/auth-store.ts';
 
 // Every URL that serves bytes carries the version of what is behind it, so it never changes; a year is forever enough.
 const CACHE_CONTROL = 'private, max-age=31536000, immutable';
@@ -47,11 +46,11 @@ export const parseByteRange = (header: string | null, size: number): ByteRange |
  * What every route that serves bytes asks before it looks anything up: the method it answers and the
  * access rules the socket itself is behind. A response here is the answer; null means carry on.
  */
-export const guardBytesRequest = async (request: Request, remoteAddress: string, auth: AuthStore, options: AccessOptions): Promise<Response | null> => {
+export const guardBytesRequest = async (request: Request, remoteAddress: string, options: AccessOptions): Promise<Response | null> => {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
         return new Response('Method not allowed', { status: 405 });
     }
-    const decision = await decideAccess(request, remoteAddress, auth, options, 'bytes');
+    const decision = await decideAccess(request, remoteAddress, options, 'bytes');
     return decision.ok ? null : new Response(decision.reason, { status: decision.status });
 };
 

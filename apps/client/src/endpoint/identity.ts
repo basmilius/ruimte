@@ -5,22 +5,16 @@ import { rekeyClientLocal } from '@/project/client-local';
 import { browserStorage, rekeyLastProject } from '@/project/last-project';
 import { LOCAL_ENDPOINT_ID, endpointById, endpointForDaemon, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
-import { pool, rekeyMachineTransport, transportFor } from '@/transport';
-import { clientKey } from './client-key';
+import { connectionAddressFor, pool, rekeyMachineTransport } from '@/transport';
 import { rekeyTicket } from './credentials';
-import { socketAddressFor } from './handshake';
 
 /*
  * What the daemon behind an endpoint just said it is, and the id that row ends up on. A row keyed on
  * an address (every row written before endpoints had a daemon id) moves onto that id here. A row
  * that already knows a different daemon keeps everything it has, because the address now points at
- * another machine and the token is for the old one; that mismatch is reported rather than adopted.
+ * another machine; that mismatch is reported rather than adopted.
  */
-export const noteDaemonIdentity = (endpointId: string, info: EndpointInfo): string => {
-    const settled = settleId(endpointId, info.id);
-    void adoptKey(settled, info);
-    return settled;
-};
+export const noteDaemonIdentity = (endpointId: string, info: EndpointInfo): string => settleId(endpointId, info.id);
 
 const settleId = (endpointId: string, daemonId: string): string => {
     const endpoint = endpointById(endpointId);
@@ -30,7 +24,7 @@ const settleId = (endpointId: string, daemonId: string): string => {
     /*
      * One row per daemon. Two rows for one machine would fill with the same sessions, chats and
      * projects under two keys, and forgetting one of them would look like forgetting the machine.
-     * Only a row that is free to take this id looks for a twin. A paired row that answers as another
+     * Only a row that is free to take this id looks for a twin. A row that answers as another
      * daemon is the mismatch handled below; adopting anything there is what pinning exists to prevent.
      */
     const twin = endpoint.daemonId === null || endpoint.daemonId === daemonId ? endpointForDaemon(daemonId, endpoint.id) : null;
@@ -45,7 +39,7 @@ const settleId = (endpointId: string, daemonId: string): string => {
             useEndpoints.getState().learnDaemonId(endpoint.id, daemonId);
         }
         if (twin) {
-            // A machine paired over its LAN address before this row said who it is turns out to be this one.
+            // A row of the account that answered before this one said who it is turns out to be this machine.
             void dropDuplicate(endpoint, twin);
         }
         return endpoint.id;
@@ -58,7 +52,7 @@ const settleId = (endpointId: string, daemonId: string): string => {
         rekeyClientLocal(browserStorage(), endpoint.id, daemonId);
         // The socket moves with the row, since it is the one that just answered; closing it would drop what is attached to it.
         rekeyMachineTransport(endpoint.id, daemonId);
-        pool.rekey(endpoint.id, daemonId, () => socketAddressFor(daemonId));
+        pool.rekey(endpoint.id, daemonId, () => connectionAddressFor(daemonId));
         rekeyTicket(endpoint.id, daemonId);
         // The row that just answered keeps the address and the credential that work; `rekeyEndpoint` drops the row that held the id.
         useEndpoints.getState().rekeyEndpoint(endpoint.id, daemonId);
@@ -91,31 +85,4 @@ const reportOneMachine = (kept: Endpoint, dropped: Endpoint): void => {
         title: i18next.t('machines:identity.merged.title', { label: dropped.label }),
         description: i18next.t('machines:identity.merged.description', { address: dropped.httpBaseUrl, machine: kept.label })
     });
-};
-
-/*
- * Upgrade a legacy token-authenticated connection by registering the client key and pinning the
- * daemon key in the same trusted session. Both sides drop the token after signatures succeed.
- */
-const adoptKey = async (endpointId: string, info: EndpointInfo): Promise<void> => {
-    const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
-    if (!endpoint || !info.publicKey || endpoint.token === null) {
-        return;
-    }
-    const key = await clientKey();
-    if (!key) {
-        return;
-    }
-    const link = transportFor(endpointId);
-    if (!link) {
-        return;
-    }
-    try {
-        const { registered } = await link.request('auth.registerKey', { publicKey: key.publicKey });
-        if (registered) {
-            useEndpoints.getState().pinDaemonKey(endpointId, info.publicKey);
-        }
-    } catch {
-        // A daemon that does not know the request is one without key pairs; the token keeps working.
-    }
 };

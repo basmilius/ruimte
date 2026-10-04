@@ -179,7 +179,7 @@ export const brokerSockets = new BrokerSockets();
 
 export interface BrokerSignalingOptions {
     brokerUrl: string;
-    /* The machine's key this row pinned at pairing. A signal is believed only from this key. */
+    /* The machine's key this row pinned from the account list. A signal is believed only from this key. */
     machineKey: string;
     key(): Promise<ClientKey | null>;
     verify(publicKey: string, message: string, signature: string): Promise<boolean>;
