@@ -12,6 +12,8 @@ interface InputContext {
 export interface NativeInputHost {
     readOnly(): boolean;
     replace(text: string): void;
+    /* One typed character, with the pairing and the overtyping a keystroke gets. */
+    type(character: string): void;
     apply(edit: TextEdit, selection: Selection): void;
     preview(text: string | undefined): void;
     selectionChanged(selection: Selection): void;
@@ -19,6 +21,9 @@ export interface NativeInputHost {
 
 /* The most of the document the textarea holds around the caret; a screen reader gets its context, a megabyte file does not get copied on every keystroke. */
 const CONTEXT = 8192;
+
+/* A dead key and the key after it commit as one composition of at most two characters, which is typing and not an input method's text. */
+const DEAD_KEY_RESULT = /^[\x20-\x7e]{1,2}$/;
 
 /*
  * The hidden textarea. It is the sink for what the platform types, composes and pastes, and carries
@@ -148,7 +153,13 @@ export class NativeInput {
         this.compositionContext = undefined;
         this.host.preview(undefined);
         if (data && !unchanged && !this.host.readOnly()) {
-            this.host.replace(text);
+            if (DEAD_KEY_RESULT.test(text)) {
+                for (const character of text) {
+                    this.host.type(character);
+                }
+            } else {
+                this.host.replace(text);
+            }
         }
         this.sync();
     }

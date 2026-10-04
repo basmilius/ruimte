@@ -97,7 +97,7 @@ export function lineElement(
             continue;
         }
         const span = document.createElement('span');
-        span.className = 'se-inlay';
+        span.className = box.inlay.composition ? 'se-composition' : 'se-inlay';
         span.dataset.inlayId = box.inlay.id;
         span.textContent = box.inlay.text;
         span.style.left = `${box.x}px`;

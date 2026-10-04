@@ -86,6 +86,12 @@ describe('geometry', () => {
         expect(geometry.offsets).toEqual([0, 2, 3]);
     });
 
+    test('draws a composition as text, without the padding of an inlay', () => {
+        const { layout } = layoutOf('ab');
+        layout.configure({ inlays: [{ id: 'composition', at: 1, text: "'", composition: true }] });
+        expect(layout.geometry(layout.rows[0] as never).inlays[0]).toMatchObject({ x: 10, width: 20 });
+    });
+
     test('adds an inlay between two characters', () => {
         const { layout } = layoutOf('ab');
         layout.configure({ inlays: [{ id: 'hint', at: 1, text: 'xx' }] });

@@ -116,6 +116,14 @@ describe('lexical pairing contexts', () => {
         expectMarked(block, '/*\n¦)\n*/');
     });
 
+    it('reads a closer as code once a typed quote ends the string it was inside', () => {
+        const model = at("console.log('Hallo wereld!¦)");
+        model.typeText("'", { language: 'typescript' });
+        expectMarked(model, "console.log('Hallo wereld!'¦)");
+        model.typeText(')', { language: 'typescript' });
+        expectMarked(model, "console.log('Hallo wereld!')¦");
+    });
+
     it('honors disabled pairing and preserves text history across a pure closer skip', () => {
         type('call(1¦)', ')', 'call(1)¦)', { autoClosingPairs: false });
         const model = at('¦');

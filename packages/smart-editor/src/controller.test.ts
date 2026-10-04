@@ -247,12 +247,39 @@ describe('an input method', () => {
         input.dispatchEvent(new page.window.Event('compositionstart', { bubbles: true }));
         compose(page.window, input, 'aにb', 2);
         expect(editor.getText()).toBe('ab');
-        expect(page.host.querySelector('.se-inlay')!.textContent).toBe('に');
+        expect(page.host.querySelector('.se-composition')!.textContent).toBe('に');
         const end = new page.window.Event('compositionend', { bubbles: true });
         Object.assign(end, { data: 'に' });
         input.dispatchEvent(end);
         expect(editor.getText()).toBe('aにb');
-        expect(page.host.querySelector('.se-inlay')).toBeNull();
+        expect(page.host.querySelector('.se-composition')).toBeNull();
+    });
+
+    test('types the result of a dead key, so the closer after it is overtyped', () => {
+        const text = "console.log('Hallo wereld!)";
+        const { editor, page, input, press } = mountEditor({ text, language: 'typescript' });
+        press('End');
+        press('ArrowLeft');
+        input.dispatchEvent(new page.window.Event('compositionstart', { bubbles: true }));
+        compose(page.window, input, text.replace(')', "'))"), text.length + 1);
+        expect(editor.getText()).toBe(text);
+        expect(page.host.querySelector('.se-composition')!.textContent).toBe("')");
+        const end = new page.window.Event('compositionend', { bubbles: true });
+        Object.assign(end, { data: "')" });
+        input.dispatchEvent(end);
+        expect(editor.getText()).toBe("console.log('Hallo wereld!')");
+    });
+
+    test('keeps the text of a longer composition literal', () => {
+        const { editor, page, input, press } = mountEditor({ text: 'a()', language: 'typescript' });
+        press('End');
+        press('ArrowLeft');
+        input.dispatchEvent(new page.window.Event('compositionstart', { bubbles: true }));
+        compose(page.window, input, 'a(日本語)', 5);
+        const end = new page.window.Event('compositionend', { bubbles: true });
+        Object.assign(end, { data: '日本語' });
+        input.dispatchEvent(end);
+        expect(editor.getText()).toBe('a(日本語)');
     });
 
     test('commits an edit the platform made to the textarea itself', () => {

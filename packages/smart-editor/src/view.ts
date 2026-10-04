@@ -417,7 +417,9 @@ export class EditorView {
     }
 
     private displayedInlays(): Inlay[] {
-        return this.composition ? [...this.inlays, { id: '__composition', at: this.model.getSelections()[0]!.head, text: this.composition }] : this.inlays;
+        return this.composition
+            ? [...this.inlays, { id: '__composition', at: this.model.getSelections()[0]!.head, text: this.composition, composition: true }]
+            : this.inlays;
     }
 
     private configureText(): void {

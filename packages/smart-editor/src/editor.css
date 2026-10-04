@@ -394,6 +394,12 @@
     white-space: pre;
     cursor: default;
 }
+.se-composition {
+    position: absolute;
+    white-space: pre;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
 .se-widget {
     padding: 0;
     color: var(--text);

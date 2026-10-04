@@ -65,6 +65,7 @@ export class InputController {
         this.native = new NativeInput(input, model, {
             readOnly: () => view.settings.readOnly,
             replace: (text) => this.replaceSelections(text),
+            type: (character) => this.typeText(character),
             apply: (edit, selection) => {
                 this.applyEdits([edit], [selection]);
                 view.revealCaret();
