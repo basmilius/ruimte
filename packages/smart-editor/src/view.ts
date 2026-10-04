@@ -277,7 +277,8 @@ export class EditorView {
         this.foldTimer = setTimeout(() => this.refreshFolds(), FOLD_DELAY_MS);
     }
 
-    private refreshFolds(): void {
+    /* Reads the folds off the document now, which otherwise waits for a pause in editing. */
+    refreshFolds(): void {
         if (this.disposed) {
             return;
         }
@@ -328,8 +329,8 @@ export class EditorView {
     }
 
     private refoldLayout(): void {
-        this.moveHiddenCarets();
         this.anchorScroll(() => this.layout.configure({ folds: this.foldStates() }));
+        this.moveHiddenCarets();
         this.render();
     }
 
