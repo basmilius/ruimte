@@ -1,19 +1,14 @@
-import { useEffect, useState, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
 import { CircleX, Info, TriangleAlert } from 'lucide-react';
 import { fileUriToPath } from '@ruimte/smart-editor-lsp';
 import { Button, Icon, Tooltip } from '@basmilius/desktop-ui';
 import { formatNumber } from '@basmilius/desktop-ui/format';
-import { highlightCode } from '@/shell/panels/highlight';
-import { useCodeTheme } from '@/state/code-theme';
 import { basenameOf } from '@/shell/panels/files-tree';
 import type { EditorPosition } from '@ruimte/smart-editor';
 import type { EditorLanguage } from './editor-language';
 import { codeLabelOf, severityOf, type Problem } from './diagnostics-model';
-import { hoverSectionsOf, markdownParts, type DocTag, type HoverSection } from './hover-content';
 import type { HoverInfo } from './popups';
-import { declaredNameOf, linkTypeNames } from './symbol-links';
+import { SymbolSections } from './HoverSections';
 
 const SEVERITY_ICONS = { error: CircleX, warning: TriangleAlert, info: Info, hint: Info } as const;
 const SEVERITY_COLORS = { error: 'text-status-error', warning: 'text-status-needs-you', info: 'text-status-running', hint: 'text-text-muted' } as const;
@@ -67,81 +62,6 @@ function ProblemSection({ problem, language }: { problem: Problem; language: Edi
     );
 }
 
-/* Code as the viewer colors it, plain until the grammar is in so the card never changes size under the pointer by much. */
-export function Signature({ code, language, onName }: { code: string; language: string; onName?: (name: string) => void }) {
-    const theme = useCodeTheme();
-    const [html, setHtml] = useState<{ key: string; html: string } | null>(null);
-    const key = `${language}\0${theme}\0${code}\0${onName !== undefined}`;
-    // Only whether there are links goes into the highlighting; the handler is read when a name is pressed.
-    const linked = onName !== undefined;
-
-    useEffect(() => {
-        let alive = true;
-        highlightCode(code, language, theme)
-            .then((result) => alive && setHtml({ key, html: linked ? linkTypeNames(result) : result }))
-            .catch(() => undefined);
-        return () => {
-            alive = false;
-        };
-    }, [code, language, theme, key, linked]);
-
-    const className =
-        'font-mono text-code break-words whitespace-pre-wrap [&_.line]:block [&_pre]:m-0 [&_pre]:bg-transparent! [&_pre]:whitespace-pre-wrap [&_code]:font-mono';
-    // One handler for every name, since the names are part of the highlighted HTML and not elements of ours.
-    const follow = (event: MouseEvent<HTMLDivElement>): void => {
-        const name = (event.target as HTMLElement).closest<HTMLElement>('[data-symbol]')?.dataset.symbol;
-        if (name !== undefined && onName !== undefined) {
-            onName(name);
-        }
-    };
-    return html?.key === key ? (
-        <div className={className} onClick={follow} dangerouslySetInnerHTML={{ __html: html.html }} />
-    ) : (
-        <div className={className}>{code}</div>
-    );
-}
-
-/* A docblock's tags as rows: the tag once beside each run of the same tag, so a list of parameters reads as one. */
-function DocTags({ tags }: { tags: readonly DocTag[] }) {
-    return (
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-xs/[18px] select-text">
-            {tags.map((tag, index) => (
-                <div key={index} className="contents">
-                    <span className="font-mono text-text-faint">{tags[index - 1]?.name === tag.name ? '' : `@${tag.name}`}</span>
-                    <div className="min-w-0 break-words text-text-muted [&_.chat-markdown]:text-xs [&_code]:bg-transparent! [&_code]:p-0! [&_p]:m-0">
-                        <Markdown text={tag.markdown} fileLinks={false} />
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function SymbolSection({ section, onName }: { section: HoverSection; onName: (name: string, declared: string | null) => void }) {
-    const declared = declaredNameOf(section.signatures[0]?.code ?? '');
-    const follow = (name: string): void => onName(name, declared);
-    return (
-        <div className="flex flex-col gap-1.5 px-3 py-2">
-            {section.title !== null && <div className="truncate font-mono text-xs text-text-faint select-text">{section.title}</div>}
-            {section.signatures.map((block, index) => (
-                <Signature key={index} code={block.code} language={block.language} onName={follow} />
-            ))}
-            {markdownParts(section.markdown).map((part, index) =>
-                part.kind === 'code' ? (
-                    <div key={index} className="rounded-md bg-surface-sunken px-2 py-1.5">
-                        <Signature code={part.block.code} language={part.block.language} onName={follow} />
-                    </div>
-                ) : (
-                    <div key={index} className="text-text-muted select-text [&_.chat-markdown]:text-xs [&_p]:my-1">
-                        <Markdown text={part.text} fileLinks={false} />
-                    </div>
-                )
-            )}
-            {section.tags.length > 0 && <DocTags tags={section.tags} />}
-        </div>
-    );
-}
-
 function InfoSection({ language, info, anchor, position }: { language: EditorLanguage; info: HoverInfo; anchor: EditorPosition; position: EditorPosition }) {
     const { t } = useTranslation('panels');
     const { text, definition } = info;
@@ -156,9 +76,7 @@ function InfoSection({ language, info, anchor, position }: { language: EditorLan
 
     return (
         <div className="flex flex-col divide-y divide-border">
-            {hoverSectionsOf(text).map((section, index) => (
-                <SymbolSection key={index} section={section} onName={followName} />
-            ))}
+            <SymbolSections text={text} onName={followName} />
             {definition !== null && (
                 <div className="flex items-center gap-3 border-t border-border px-3 py-1.5 text-xs">
                     <button type="button" className="text-accent hover:underline" onClick={() => language.goTo(definition)}>

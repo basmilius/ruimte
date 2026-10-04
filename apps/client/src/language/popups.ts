@@ -43,6 +43,14 @@ export interface CompletionRow {
     readonly deprecated: boolean;
 }
 
+/* What is said about the active suggestion beside the list. */
+export interface CompletionDocs {
+    /* Where it comes from, such as `use Raxos\\Orm\\Property` or `Auto import from './lib'`; one line, empty when the server says nothing. */
+    readonly source: string;
+    /* The signature, prose and tags the same way a hover has them. */
+    readonly text: HoverText;
+}
+
 /* The suggestions while a word is being typed. */
 export interface CompletionView {
     /* The start of the word, which the list is placed under. */
@@ -51,7 +59,7 @@ export interface CompletionView {
     readonly active: number;
     /* Whether the documentation of the active row is shown beside the list. */
     readonly detailsOpen: boolean;
-    readonly docs: { readonly signature: string; readonly markdown: string } | null;
+    readonly docs: CompletionDocs | null;
     /* The server the suggestions came from. */
     readonly server: string;
     /* The shiki id of the file's language, for the signature in the documentation. */

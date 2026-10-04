@@ -287,7 +287,7 @@ describe('accepting', () => {
         await settle();
         timers.advance(200);
         await settle();
-        expect(view()?.docs).toEqual({ signature: 'filter(): void', markdown: 'Resolved docs' });
+        expect(view()?.docs).toEqual({ source: '', text: { signatures: [{ language: 'typescript', code: 'filter(): void' }], markdown: 'Resolved docs' } });
     });
 
     test('closes when the caret leaves the word', async () => {

@@ -1,11 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
 import type { EditorRect } from '@ruimte/smart-editor';
 import type { EditorLanguage } from './editor-language';
 import { kindLetterOf, kindToneOf, type KindTone } from './completion-model';
-import { Signature } from './HoverCard';
+import { SourceLine, SymbolSections } from './HoverSections';
 import { PathText } from './PathText';
 import { placeBeside, placePopup } from './popup-placement';
 import type { CompletionView } from './popups';
@@ -142,16 +141,16 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
             {view.detailsOpen && view.docs !== null && (
                 <div
                     ref={docs}
-                    className={`${CARD} flex w-[320px] flex-col gap-2 overflow-y-auto p-3 select-text`}
+                    className={`${CARD} flex w-[360px] flex-col divide-y divide-border overflow-y-auto select-text`}
                     style={{ visibility: 'hidden' }}
                     onPointerDown={(event) => event.preventDefault()}
                 >
-                    {view.docs.signature !== '' && <Signature code={view.docs.signature} language={view.highlightLanguage} />}
-                    {view.docs.markdown !== '' && (
-                        <div className="text-text-muted [&_.chat-markdown]:text-xs">
-                            <Markdown text={view.docs.markdown} fileLinks={false} />
+                    {view.docs.source !== '' && (
+                        <div className="px-3 py-2">
+                            <SourceLine text={view.docs.source} language={view.highlightLanguage} />
                         </div>
                     )}
+                    <SymbolSections text={view.docs.text} />
                 </div>
             )}
         </>,

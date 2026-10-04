@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { CompletionItem } from '@ruimte/smart-editor-lsp';
 import {
+    completionDocsOf,
     identifierPrefix,
     insertionOf,
     itemsOf,
@@ -205,5 +206,49 @@ describe('itemsOf', () => {
         expect(result.incomplete).toBe(true);
         expect(result.items[0]).toMatchObject({ textEdit: { newText: 'aa', range: { start: at(1, 2), end: at(1, 4) } }, insertTextFormat: 2 });
         expect(itemsOf(null)).toEqual({ items: [], incomplete: false });
+    });
+});
+
+describe('completionDocsOf', () => {
+    const phpDoc = [
+        '__Raxos\\\\Database\\\\Orm\\\\Attribute\\\\PrimaryKey__',
+        '',
+        'Marks the primary key of a model.',
+        '',
+        '```php',
+        '<?php',
+        'final class PrimaryKey { }',
+        '```',
+        '',
+        '<code>#[PrimaryKey] public int $id;</code>',
+        '',
+        '_@see_ `Raxos\\Database\\Orm\\Attribute\\Property`',
+        '',
+        '_@since_ 1.0'
+    ].join('\n');
+
+    test('keeps the `use` line of a PHP class apart and hands the documentation over as a hover would have it', () => {
+        const docs = completionDocsOf(
+            item('PrimaryKey', { detail: 'use Raxos\\Database\\Orm\\Attribute\\PrimaryKey', documentation: { kind: 'markdown', value: phpDoc } }),
+            'php'
+        );
+        expect(docs?.source).toBe('use Raxos\\Database\\Orm\\Attribute\\PrimaryKey');
+        expect(docs?.text.signatures).toEqual([]);
+        expect(docs?.text.markdown).toContain('Marks the primary key');
+    });
+
+    test('splits the auto import line of a TypeScript item from the signature that follows', () => {
+        const docs = completionDocsOf(item('parseFoo', { detail: "Auto import from './lib'\nfunction parseFoo(a: number): void" }), 'typescript');
+        expect(docs).toEqual({
+            source: "Auto import from './lib'",
+            text: { signatures: [{ language: 'typescript', code: 'function parseFoo(a: number): void' }], markdown: '' }
+        });
+    });
+
+    test('takes a plain detail as the signature, and says nothing when there is nothing to say', () => {
+        expect(completionDocsOf(item('map', { detail: 'map(): void' }), 'typescript')?.text.signatures).toEqual([
+            { language: 'typescript', code: 'map(): void' }
+        ]);
+        expect(completionDocsOf(item('map'), 'typescript')).toBeNull();
     });
 });

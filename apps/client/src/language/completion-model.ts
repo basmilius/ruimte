@@ -1,6 +1,8 @@
 import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
 import type { CompletionItem, CompletionList, CompletionResult, InsertReplaceEdit, MarkupContent, TextEdit } from '@ruimte/smart-editor-lsp';
 import { comparePositions } from './diagnostics-model';
+import { isEmptyHover, splitSignatures, type HoverText } from './hover-content';
+import type { CompletionDocs } from './popups';
 import { parseSnippet, tabOrder, type SnippetStop } from './snippet';
 
 const IDENTIFIER_CHARACTER = /[\p{L}\p{N}\p{M}_$]/u;
@@ -266,6 +268,26 @@ export function documentationText(documentation: string | MarkupContent | undefi
         : documentation.kind === 'plaintext'
           ? documentation.value.replace(/([\\`*_{}[\]()#+\-.!|<>~])/g, '\\$1')
           : documentation.value;
+}
+
+const SOURCE_LINE = /^(?:use\s|Auto import from\b)/;
+
+/*
+ * What is said about a suggestion beside the list, in the shape a hover has: the signature it names and the
+ * documentation split into signature, prose and tags. A first line that only says where the item comes from is
+ * kept apart, since it is no code.
+ */
+export function completionDocsOf(item: CompletionItem, highlightLanguage: string): CompletionDocs | null {
+    const lines = (item.detail ?? '').trim().split('\n');
+    const hasSource = SOURCE_LINE.test(lines[0] ?? '');
+    const source = hasSource ? lines[0]!.trim() : '';
+    const code = (hasSource ? lines.slice(1) : lines).join('\n').trim();
+    const parsed = splitSignatures(documentationText(item.documentation));
+    const text: HoverText = {
+        signatures: code === '' ? parsed.signatures : [{ language: highlightLanguage, code }, ...parsed.signatures],
+        markdown: parsed.markdown
+    };
+    return source === '' && isEmptyHover(text) ? null : { source, text };
 }
 
 export type { InsertReplaceEdit, TextEdit };

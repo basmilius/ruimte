@@ -5,7 +5,7 @@ import { useToasts } from '@/state/toasts';
 import { comparePositions, shiftPosition } from './diagnostics-model';
 import type { EditorLanguage } from './editor-language';
 import {
-    documentationText,
+    completionDocsOf,
     identifierPrefix,
     insertionOf,
     isIdentifierCharacter,
@@ -409,16 +409,15 @@ export class CompletionFeature {
             matches: matchedCharacters(row.label, prefix),
             deprecated: row.deprecated === true || row.tags?.includes(1) === true
         }));
-        const signature = item.detail ?? '';
-        const markdown = documentationText(item.documentation);
+        const highlightLanguage = shikiLanguageOf(this.language.languageId);
         const view: CompletionView = {
             anchor: this.start,
             rows,
             active: this.active,
             detailsOpen: this.detailsOpen,
-            docs: signature === '' && markdown === '' ? null : { signature, markdown },
+            docs: completionDocsOf(item, highlightLanguage),
             server: this.server,
-            highlightLanguage: shikiLanguageOf(this.language.languageId)
+            highlightLanguage
         };
         this.language.popups.setState({ completion: view });
     }
