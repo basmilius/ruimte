@@ -180,7 +180,8 @@
             "failedTitle": "Some files could not be saved",
             "keepEditing": "Keep editing"
         },
-        "revealFailed": "Could not show this file"
+        "revealFailed": "Could not show this file",
+        "breadcrumb": "Location of the cursor in the project and the file"
     },
     "files": {
         "copyMentions": "Copy mentions",

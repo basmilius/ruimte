@@ -12,11 +12,14 @@ import { useFileActions } from '@/shell/panels/file-actions';
 import { FileEditor } from '@/shell/panels/FileEditor';
 import { FileScroll } from '@/shell/panels/FileScroll';
 import { FileToolbar } from '@/shell/panels/FileToolbar';
+import { FileBreadcrumb } from '@/shell/panels/FileBreadcrumb';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useEditorFind } from '@/shell/panels/use-editor-find';
+import { useEditorScope } from '@/shell/panels/use-editor-scope';
 import { useFileEditing } from '@/shell/panels/use-file-editing';
 import { useCodeTheme } from '@/state/code-theme';
 import { useFiles } from '@/state/files';
+import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 
 // One screen of code, near enough. Small enough to highlight without a stutter, large enough that a
@@ -200,10 +203,24 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     // Only the editor can be searched; the viewer that stands in while it loads, and for a finger, cannot.
     const find = useFind(surface, editor !== null);
     const editorFind = useEditorFind(find, editor);
+    const scope = useEditorScope(editor);
+    const folder = useProject((s) => s.current?.folder ?? null);
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            <FileToolbar>
+            <FileToolbar
+                leading={
+                    <FileBreadcrumb
+                        path={path}
+                        folder={folder}
+                        scope={scope}
+                        onSelect={(block) => {
+                            editor?.revealLine(block.startLine);
+                            editor?.focus();
+                        }}
+                    />
+                }
+            >
                 {readOnlyReason !== null && (
                     <Tooltip label={readOnlyReason}>
                         <Pill>{t('file.edit.readOnly')}</Pill>

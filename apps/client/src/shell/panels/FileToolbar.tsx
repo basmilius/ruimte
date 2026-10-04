@@ -14,9 +14,10 @@ import { cameThroughPortal, IconButton, Separator, Menu, TextMenu, ContextMenu }
  * One component for all the renderers, so a control keeps its place when the open file changes
  * type, and the menu at its end is the same everywhere for the same reason. Where the surface
  * carries a bar already (`file-toolbar-slot.ts`) the controls go up into that one instead, since a
- * second row under it would say the same thing twice.
+ * second row under it would say the same thing twice. `leading` sits at the other end of that bar,
+ * and goes nowhere where the controls go up, since the surface above says where the file is already.
  */
-export function FileToolbar({ children, menu }: { children?: ReactNode; menu?: ReactNode }) {
+export function FileToolbar({ children, menu, leading }: { children?: ReactNode; menu?: ReactNode; leading?: ReactNode }) {
     const { host } = useFileToolbarSlot();
     const controls = (
         <>
@@ -31,7 +32,7 @@ export function FileToolbar({ children, menu }: { children?: ReactNode; menu?: R
     }
     return (
         <FileContextMenu className={FILE_TOOLBAR}>
-            <span className="grow" />
+            {leading === undefined ? <span className="grow" /> : <div className="flex min-w-0 grow items-center">{leading}</div>}
             {controls}
         </FileContextMenu>
     );

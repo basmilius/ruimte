@@ -180,7 +180,8 @@
             "failedTitle": "Sommige bestanden konden niet worden opgeslagen",
             "keepEditing": "Verder bewerken"
         },
-        "revealFailed": "Dit bestand kon niet worden getoond"
+        "revealFailed": "Dit bestand kon niet worden getoond",
+        "breadcrumb": "Locatie van de cursor in het project en het bestand"
     },
     "files": {
         "copyMentions": "Mentions kopiëren",
