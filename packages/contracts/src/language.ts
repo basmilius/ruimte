@@ -1,0 +1,194 @@
+import { z } from 'zod';
+import { ProjectIdSchema } from './project.ts';
+
+/*
+ * The language side of a project: the daemon runs the language servers, is their LSP client, and
+ * keeps one server per project per kind, shared by every client of that project. A client opens a
+ * document and asks for features; the daemon owns the version of the text and answers in LSP 3.17
+ * shapes. A path is a stored path (`stored-path.ts`): relative to the project folder, POSIX, and
+ * absolute only for a file outside it.
+ */
+
+/* A kind is one server, or for Vue a pair: `@vue/language-server` with a TypeScript server that loads `@vue/typescript-plugin`. */
+export const LanguageServerKindSchema = z.enum(['typescript', 'vue', 'php']);
+export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
+
+export const LanguageServerStateSchema = z.enum([
+    // Nothing is on this machine yet; a person presses Install.
+    'not-installed',
+    'installing',
+    // Installed, and no document of the project needs it.
+    'stopped',
+    'starting',
+    'ready',
+    // Ready, and the server reports work in progress, such as loading a project.
+    'indexing',
+    // The process ended or never came up; only a person's restart brings it back.
+    'crashed'
+]);
+export type LanguageServerState = z.infer<typeof LanguageServerStateSchema>;
+
+export const LanguageServerStatusSchema = z.object({
+    // Open on purpose: a client reading a reply whole must not refuse it for a kind a newer daemon adds.
+    server: z.string(),
+    state: LanguageServerStateSchema,
+    // The version of the pinned package the kind is named after.
+    version: z.string(),
+    // Open documents in the project that the server serves.
+    documents: z.number().int().nonnegative(),
+    // The reason behind `crashed`, or behind a kind that is `not-installed` after a failed install.
+    message: z.string().optional(),
+    // LSP `ServerCapabilities` of each process the kind runs, by its name (`typescript`, `vue`, `php`). Once a server answered its handshake.
+    capabilities: z.record(z.string(), z.unknown()).optional()
+});
+export type LanguageServerStatus = z.infer<typeof LanguageServerStatusSchema>;
+
+export const LanguageStatusPayloadSchema = z.object({ projectId: ProjectIdSchema });
+export const LanguageStatusResultSchema = z.object({ servers: z.array(LanguageServerStatusSchema) });
+export type LanguageStatusResult = z.infer<typeof LanguageStatusResultSchema>;
+
+/* The kinds install into `$RUIMTE_HOME/language-servers` for the whole machine, so no project is named. */
+export const LanguageInstallPayloadSchema = z.object({ server: LanguageServerKindSchema });
+
+export const LanguageServerTargetPayloadSchema = z.object({ projectId: ProjectIdSchema, server: LanguageServerKindSchema });
+
+/* The status the kind has right after the request: `installing` or `starting`, with the end of it coming as an event. */
+export const LanguageServerStatusResultSchema = z.object({ status: LanguageServerStatusSchema });
+
+export const LanguageLogLineSchema = z.object({
+    at: z.number().int().nonnegative(),
+    // What wrote it: the installer, the server's own log and stderr, or the daemon about the server.
+    stream: z.enum(['install', 'server', 'host']),
+    text: z.string()
+});
+export type LanguageLogLine = z.infer<typeof LanguageLogLineSchema>;
+
+/* A bounded tail of the log of the kind in this project, the last install of it included. */
+export const LanguageLogResultSchema = z.object({ lines: z.array(LanguageLogLineSchema) });
+
+export const LanguageDocumentTargetPayloadSchema = z.object({ projectId: ProjectIdSchema, path: z.string().min(1) });
+
+/*
+ * The text replaces what the daemon holds when another client already has the file open, so two
+ * clients with different unsaved text take turns; the version in the answer is the one to change against.
+ */
+export const LanguageDocumentOpenPayloadSchema = LanguageDocumentTargetPayloadSchema.extend({
+    languageId: z.string().min(1),
+    text: z.string()
+});
+
+/* What each method of the document may ask, by LSP method, as the options its server gave (`{}` for a plain yes). Empty while no server is up. */
+export const LanguageProvidersSchema = z.record(z.string(), z.unknown());
+export type LanguageProviders = z.infer<typeof LanguageProvidersSchema>;
+
+export const LanguageDocumentOpenResultSchema = z.object({
+    version: z.number().int().positive(),
+    // Which kinds serve the document, installed or not.
+    servers: z.array(z.string()),
+    providers: LanguageProvidersSchema
+});
+export type LanguageDocumentOpenResult = z.infer<typeof LanguageDocumentOpenResultSchema>;
+
+/* One entry of `textDocument/didChange`: a range of the text it replaces, or without one the whole text. */
+export const LanguageContentChangeSchema = z.object({
+    range: z
+        .object({
+            start: z.object({ line: z.number().int().nonnegative(), character: z.number().int().nonnegative() }),
+            end: z.object({ line: z.number().int().nonnegative(), character: z.number().int().nonnegative() })
+        })
+        .optional(),
+    text: z.string()
+});
+export type LanguageContentChange = z.infer<typeof LanguageContentChangeSchema>;
+
+/*
+ * Every accepted change raises the version by one. A change that names another base than the one
+ * the daemon is at is refused as `stale-document`, and the client opens the document again with its
+ * whole text.
+ */
+export const LanguageDocumentChangePayloadSchema = LanguageDocumentTargetPayloadSchema.extend({
+    baseVersion: z.number().int().positive(),
+    changes: z.array(LanguageContentChangeSchema).min(1)
+});
+
+export const LanguageDocumentChangeResultSchema = z.object({ version: z.number().int().positive() });
+
+export const LANGUAGE_STALE_DOCUMENT = 'stale-document';
+
+/* The LSP methods a client may ask of a document. The daemon adds the `textDocument` itself. */
+export const LANGUAGE_METHODS = [
+    'textDocument/completion',
+    'completionItem/resolve',
+    'textDocument/hover',
+    'textDocument/signatureHelp',
+    'textDocument/definition',
+    'textDocument/declaration',
+    'textDocument/typeDefinition',
+    'textDocument/implementation',
+    'textDocument/references',
+    'textDocument/documentHighlight',
+    'textDocument/documentSymbol',
+    'textDocument/prepareRename',
+    'textDocument/rename',
+    'textDocument/codeAction',
+    'codeAction/resolve',
+    'textDocument/codeLens',
+    'codeLens/resolve',
+    'textDocument/formatting',
+    'textDocument/rangeFormatting',
+    'textDocument/foldingRange',
+    'textDocument/semanticTokens/full',
+    'textDocument/semanticTokens/full/delta',
+    'textDocument/semanticTokens/range',
+    'textDocument/inlayHint',
+    'inlayHint/resolve'
+] as const;
+export const LanguageMethodSchema = z.enum(LANGUAGE_METHODS);
+export type LanguageMethod = z.infer<typeof LanguageMethodSchema>;
+
+/*
+ * `params` are the LSP 3.17 params of the method without `textDocument`; for a `/resolve` method
+ * they are the item itself. `version` is the version the client believes the document is at, and the
+ * request is refused as `stale-document` when it is not. `server` names the process that produced
+ * an item being resolved, as an earlier answer said.
+ */
+export const LanguageRequestPayloadSchema = LanguageDocumentTargetPayloadSchema.extend({
+    method: LanguageMethodSchema,
+    params: z.unknown(),
+    version: z.number().int().positive().optional(),
+    server: z.string().optional()
+});
+
+/* `result` is the LSP 3.17 result of the method, `server` the process that answered and `version` the version it answered for. */
+export const LanguageRequestResultSchema = z.object({
+    result: z.unknown(),
+    server: z.string(),
+    version: z.number().int().positive()
+});
+export type LanguageRequestResult = z.infer<typeof LanguageRequestResultSchema>;
+
+/* To every client that has the project open, from one process of the kind. A report replaces the earlier one of the same `server` for the file. */
+export const LanguageDiagnosticsEventSchema = z.object({
+    projectId: ProjectIdSchema,
+    path: z.string(),
+    server: z.string(),
+    version: z.number().int().positive().optional(),
+    // LSP `Diagnostic[]`.
+    diagnostics: z.array(z.unknown())
+});
+export type LanguageDiagnosticsEvent = z.infer<typeof LanguageDiagnosticsEventSchema>;
+
+/* A null project is the machine: an install started, ended or failed, which every client hears. */
+export const LanguageStatusEventSchema = z.object({
+    projectId: ProjectIdSchema.nullable(),
+    status: LanguageServerStatusSchema
+});
+export type LanguageStatusEvent = z.infer<typeof LanguageStatusEventSchema>;
+
+/* A server came up, registered a feature or asked for a refresh: what a document may ask changed. */
+export const LanguageProvidersEventSchema = z.object({
+    projectId: ProjectIdSchema,
+    path: z.string(),
+    providers: LanguageProvidersSchema
+});
+export type LanguageProvidersEvent = z.infer<typeof LanguageProvidersEventSchema>;

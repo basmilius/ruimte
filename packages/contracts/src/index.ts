@@ -146,6 +146,24 @@ import {
     DiagramTargetPayloadSchema
 } from './diagram.ts';
 import {
+    LanguageDiagnosticsEventSchema,
+    LanguageDocumentChangePayloadSchema,
+    LanguageDocumentChangeResultSchema,
+    LanguageDocumentOpenPayloadSchema,
+    LanguageDocumentOpenResultSchema,
+    LanguageDocumentTargetPayloadSchema,
+    LanguageInstallPayloadSchema,
+    LanguageLogResultSchema,
+    LanguageProvidersEventSchema,
+    LanguageRequestPayloadSchema,
+    LanguageRequestResultSchema,
+    LanguageServerStatusResultSchema,
+    LanguageServerTargetPayloadSchema,
+    LanguageStatusEventSchema,
+    LanguageStatusPayloadSchema,
+    LanguageStatusResultSchema
+} from './language.ts';
+import {
     LaunchListResultSchema,
     LaunchStartPayloadSchema,
     LaunchStartResultSchema,
@@ -244,6 +262,7 @@ export * from './font.ts';
 export * from './fs.ts';
 export * from './git.ts';
 export * from './ids.ts';
+export * from './language.ts';
 export * from './launches.ts';
 export * from './live-stream.ts';
 export * from './lan-door.ts';
@@ -377,6 +396,15 @@ export const REQUEST_SCHEMAS = {
     'diagram.save': { payload: DiagramSavePayloadSchema, result: DiagramSaveResultSchema },
     'diagram.close': { payload: DiagramTargetPayloadSchema, result: EmptySchema },
     'diagram.copy': { payload: DiagramCopyPayloadSchema, result: EmptySchema },
+    'language.status': { payload: LanguageStatusPayloadSchema, result: LanguageStatusResultSchema },
+    // Only a person's request installs: the daemon never installs a server on its own, and no verb does.
+    'language.install': { payload: LanguageInstallPayloadSchema, result: LanguageServerStatusResultSchema },
+    'language.restart': { payload: LanguageServerTargetPayloadSchema, result: LanguageServerStatusResultSchema },
+    'language.log': { payload: LanguageServerTargetPayloadSchema, result: LanguageLogResultSchema },
+    'language.document.open': { payload: LanguageDocumentOpenPayloadSchema, result: LanguageDocumentOpenResultSchema },
+    'language.document.change': { payload: LanguageDocumentChangePayloadSchema, result: LanguageDocumentChangeResultSchema },
+    'language.document.close': { payload: LanguageDocumentTargetPayloadSchema, result: EmptySchema },
+    'language.request': { payload: LanguageRequestPayloadSchema, result: LanguageRequestResultSchema },
     'launches.read': { payload: LaunchesTargetPayloadSchema, result: LaunchesDocumentSchema },
     // A person's save; it approves on this machine every launch it adds or changes.
     'launches.save': { payload: LaunchesSavePayloadSchema, result: LaunchesSaveResultSchema },
@@ -508,6 +536,9 @@ export const EVENT_SCHEMAS = {
     'project.summary': ProjectSummaryEventSchema,
     'drawing.changed': DrawingChangedEventSchema,
     'diagram.changed': DiagramChangedEventSchema,
+    'language.diagnostics': LanguageDiagnosticsEventSchema,
+    'language.status': LanguageStatusEventSchema,
+    'language.providers': LanguageProvidersEventSchema,
     'launch.status': LaunchStatusSchema,
     'launches.changed': LaunchesChangedEventSchema,
     'fs.changed': FsChangedEventSchema,

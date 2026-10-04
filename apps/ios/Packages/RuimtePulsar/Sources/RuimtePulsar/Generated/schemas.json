@@ -33621,6 +33621,539 @@
     "type": "object",
     "properties": {}
   },
+  "request.language.status.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.language.status.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "servers": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "server": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "not-installed",
+                "installing",
+                "stopped",
+                "starting",
+                "ready",
+                "indexing",
+                "crashed"
+              ]
+            },
+            "version": {
+              "type": "string"
+            },
+            "documents": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "message": {
+              "type": "string"
+            },
+            "capabilities": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "server",
+            "state",
+            "version",
+            "documents"
+          ]
+        }
+      }
+    },
+    "required": [
+      "servers"
+    ]
+  },
+  "request.language.install.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "server": {
+        "type": "string",
+        "enum": [
+          "typescript",
+          "vue",
+          "php"
+        ]
+      }
+    },
+    "required": [
+      "server"
+    ]
+  },
+  "request.language.install.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "not-installed",
+              "installing",
+              "stopped",
+              "starting",
+              "ready",
+              "indexing",
+              "crashed"
+            ]
+          },
+          "version": {
+            "type": "string"
+          },
+          "documents": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "message": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "server",
+          "state",
+          "version",
+          "documents"
+        ]
+      }
+    },
+    "required": [
+      "status"
+    ]
+  },
+  "request.language.restart.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "server": {
+        "type": "string",
+        "enum": [
+          "typescript",
+          "vue",
+          "php"
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "server"
+    ]
+  },
+  "request.language.restart.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "not-installed",
+              "installing",
+              "stopped",
+              "starting",
+              "ready",
+              "indexing",
+              "crashed"
+            ]
+          },
+          "version": {
+            "type": "string"
+          },
+          "documents": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "message": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "server",
+          "state",
+          "version",
+          "documents"
+        ]
+      }
+    },
+    "required": [
+      "status"
+    ]
+  },
+  "request.language.log.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "server": {
+        "type": "string",
+        "enum": [
+          "typescript",
+          "vue",
+          "php"
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "server"
+    ]
+  },
+  "request.language.log.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "lines": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "at": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "stream": {
+              "type": "string",
+              "enum": [
+                "install",
+                "server",
+                "host"
+              ]
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "at",
+            "stream",
+            "text"
+          ]
+        }
+      }
+    },
+    "required": [
+      "lines"
+    ]
+  },
+  "request.language.document.open.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "languageId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "projectId",
+      "path",
+      "languageId",
+      "text"
+    ]
+  },
+  "request.language.document.open.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "version": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      },
+      "servers": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "providers": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {}
+      }
+    },
+    "required": [
+      "version",
+      "servers",
+      "providers"
+    ]
+  },
+  "request.language.document.change.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "baseVersion": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      },
+      "changes": {
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "range": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "object",
+                  "properties": {
+                    "line": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "character": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "line",
+                    "character"
+                  ]
+                },
+                "end": {
+                  "type": "object",
+                  "properties": {
+                    "line": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "character": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "line",
+                    "character"
+                  ]
+                }
+              },
+              "required": [
+                "start",
+                "end"
+              ]
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "text"
+          ]
+        }
+      }
+    },
+    "required": [
+      "projectId",
+      "path",
+      "baseVersion",
+      "changes"
+    ]
+  },
+  "request.language.document.change.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "version": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "version"
+    ]
+  },
+  "request.language.document.close.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "path"
+    ]
+  },
+  "request.language.document.close.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.language.request.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "method": {
+        "type": "string",
+        "enum": [
+          "textDocument/completion",
+          "completionItem/resolve",
+          "textDocument/hover",
+          "textDocument/signatureHelp",
+          "textDocument/definition",
+          "textDocument/declaration",
+          "textDocument/typeDefinition",
+          "textDocument/implementation",
+          "textDocument/references",
+          "textDocument/documentHighlight",
+          "textDocument/documentSymbol",
+          "textDocument/prepareRename",
+          "textDocument/rename",
+          "textDocument/codeAction",
+          "codeAction/resolve",
+          "textDocument/codeLens",
+          "codeLens/resolve",
+          "textDocument/formatting",
+          "textDocument/rangeFormatting",
+          "textDocument/foldingRange",
+          "textDocument/semanticTokens/full",
+          "textDocument/semanticTokens/full/delta",
+          "textDocument/semanticTokens/range",
+          "textDocument/inlayHint",
+          "inlayHint/resolve"
+        ]
+      },
+      "params": {},
+      "version": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      },
+      "server": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "projectId",
+      "path",
+      "method",
+      "params"
+    ]
+  },
+  "request.language.request.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "result": {},
+      "server": {
+        "type": "string"
+      },
+      "version": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "result",
+      "server",
+      "version"
+    ]
+  },
   "request.launches.read.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -51724,6 +52257,127 @@
       "projectId",
       "viewId",
       "document"
+    ]
+  },
+  "event.language.diagnostics": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string"
+      },
+      "server": {
+        "type": "string"
+      },
+      "version": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      },
+      "diagnostics": {
+        "type": "array",
+        "items": {}
+      }
+    },
+    "required": [
+      "projectId",
+      "path",
+      "server",
+      "diagnostics"
+    ]
+  },
+  "event.language.status": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "status": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "not-installed",
+              "installing",
+              "stopped",
+              "starting",
+              "ready",
+              "indexing",
+              "crashed"
+            ]
+          },
+          "version": {
+            "type": "string"
+          },
+          "documents": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "message": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "server",
+          "state",
+          "version",
+          "documents"
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "status"
+    ]
+  },
+  "event.language.providers": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string"
+      },
+      "providers": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {}
+      }
+    },
+    "required": [
+      "projectId",
+      "path",
+      "providers"
     ]
   },
   "event.launch.status": {
