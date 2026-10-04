@@ -51,6 +51,8 @@ const FileSchema = z.object({
     keepAwake: KeepAwakeModeSchema.optional().catch(undefined),
     keepAwakeOnBattery: z.boolean().optional().catch(undefined),
     keepAwakeDisplay: z.boolean().optional().catch(undefined),
+    // Also with the lid closed; it does nothing until the sudoers rule is installed. Absent is off.
+    keepAwakeLidClosed: z.boolean().optional().catch(undefined),
     /* Which broker this machine announces itself to, set from a client. Absent is the build's default;
        one that will not read falls back to it too, since a machine on the default broker is findable. */
     broker: BrokerSettingSchema.optional().catch(undefined),
@@ -81,9 +83,10 @@ export interface KeepAwakeSetting {
     mode: KeepAwakeMode;
     onBattery: boolean;
     display: boolean;
+    lidClosed: boolean;
 }
 
-const KEEP_AWAKE_OFF: KeepAwakeSetting = { mode: 'off', onBattery: false, display: false };
+const KEEP_AWAKE_OFF: KeepAwakeSetting = { mode: 'off', onBattery: false, display: false, lidClosed: false };
 
 /* What the daemon's broker switch lends the identity: a way to follow a new setting and to say where it ended up. */
 export interface IdentityBroker {
@@ -97,6 +100,11 @@ export interface IdentityLanDoor {
     describe(): { lan: LanDoor | null; lanDoorFixed: boolean };
 }
 
+/* What the closed lid lends the identity: whether its rule is installed, which every event carries. */
+export interface IdentityClosedLid {
+    describe(): { keepAwakeLidRule: boolean };
+}
+
 /* The switches a client sets on the machine; one left out stays as it stands. */
 export interface IdentityFlags {
     agentsDeleteAnyView?: boolean;
@@ -106,6 +114,7 @@ export interface IdentityFlags {
     keepAwake?: KeepAwakeMode;
     keepAwakeOnBattery?: boolean;
     keepAwakeDisplay?: boolean;
+    keepAwakeLidClosed?: boolean;
     broker?: BrokerSetting;
     lanDoor?: boolean;
 }
@@ -135,6 +144,7 @@ export class EndpointIdentity {
     private brokerSwitch: IdentityBroker | null = null;
     private lanDoorOpen: boolean;
     private door: IdentityLanDoor | null = null;
+    private closedLid: IdentityClosedLid | null = null;
 
     constructor(options: IdentityOptions) {
         this.path = options.path;
@@ -191,8 +201,18 @@ export class EndpointIdentity {
     }
 
     /* The setting as `endpoint.info` and `endpoint.changed` spell it. */
-    keepAwakeFields(): { keepAwake: KeepAwakeMode; keepAwakeOnBattery: boolean; keepAwakeDisplay: boolean } {
-        return { keepAwake: this.awake.mode, keepAwakeOnBattery: this.awake.onBattery, keepAwakeDisplay: this.awake.display };
+    keepAwakeFields(): { keepAwake: KeepAwakeMode; keepAwakeOnBattery: boolean; keepAwakeDisplay: boolean; keepAwakeLidClosed: boolean } {
+        return {
+            keepAwake: this.awake.mode,
+            keepAwakeOnBattery: this.awake.onBattery,
+            keepAwakeDisplay: this.awake.display,
+            keepAwakeLidClosed: this.awake.lidClosed
+        };
+    }
+
+    /* Lets every event say whether the closed-lid rule is installed. */
+    attachClosedLid(closedLid: IdentityClosedLid): void {
+        this.closedLid = closedLid;
     }
 
     /* The broker a person picked for this machine, which a flag or the environment may still override. */
@@ -239,7 +259,8 @@ export class EndpointIdentity {
         this.awake = {
             mode: flags.keepAwake ?? this.awake.mode,
             onBattery: flags.keepAwakeOnBattery ?? this.awake.onBattery,
-            display: flags.keepAwakeDisplay ?? this.awake.display
+            display: flags.keepAwakeDisplay ?? this.awake.display,
+            lidClosed: flags.keepAwakeLidClosed ?? this.awake.lidClosed
         };
         this.brokerSetting = flags.broker ?? this.brokerSetting;
         this.lanDoorOpen = flags.lanDoor ?? this.lanDoorOpen;
@@ -250,6 +271,16 @@ export class EndpointIdentity {
         if (flags.lanDoor !== undefined) {
             this.door?.apply();
         }
+        this.announce();
+    }
+
+    /* Changes the switches only, keeping the name and the icon as they are. */
+    setSwitches(flags: IdentityFlags): Promise<void> {
+        return this.setIdentity(this.chosenName, this.chosenIcon, flags);
+    }
+
+    /* Tells every client how the machine stands now, after a change of its own or of something it describes. */
+    announce(): void {
         const event: SessionEvent = {
             event: 'endpoint.changed',
             payload: {
@@ -262,6 +293,7 @@ export class EndpointIdentity {
                 resumeAtReset: this.resumeLimited,
                 appleFoundationEnabled: this.appleEnabled,
                 ...this.keepAwakeFields(),
+                ...this.closedLid?.describe(),
                 broker: this.brokerSetting,
                 ...this.brokerSwitch?.describe(),
                 lanDoor: this.lanDoorOpen,
@@ -287,6 +319,7 @@ export class EndpointIdentity {
             ...(this.awake.mode === 'off' ? {} : { keepAwake: this.awake.mode }),
             ...(this.awake.onBattery ? { keepAwakeOnBattery: true } : {}),
             ...(this.awake.display ? { keepAwakeDisplay: true } : {}),
+            ...(this.awake.lidClosed ? { keepAwakeLidClosed: true } : {}),
             ...(this.brokerSetting.mode === 'default' ? {} : { broker: this.brokerSetting }),
             ...(this.lanDoorOpen ? {} : { lanDoor: false })
         };
@@ -348,7 +381,8 @@ export const readOrCreateEndpointIdentity = async (home: string, defaultName: st
         keepAwake: {
             mode: file?.keepAwake ?? KEEP_AWAKE_OFF.mode,
             onBattery: file?.keepAwakeOnBattery ?? KEEP_AWAKE_OFF.onBattery,
-            display: file?.keepAwakeDisplay ?? KEEP_AWAKE_OFF.display
+            display: file?.keepAwakeDisplay ?? KEEP_AWAKE_OFF.display,
+            lidClosed: file?.keepAwakeLidClosed ?? KEEP_AWAKE_OFF.lidClosed
         },
         broker: file?.broker ?? { mode: 'default' },
         lanDoor: file?.lanDoor ?? true

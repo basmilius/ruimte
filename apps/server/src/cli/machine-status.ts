@@ -1,4 +1,4 @@
-import { MACHINE_STATUS_PATH, MachineStatusSchema, type MachineStatus } from '@ruimte/contracts';
+import { CLOSED_LID_BATTERY_FLOOR, MACHINE_STATUS_PATH, MachineStatusSchema, type MachineStatus } from '@ruimte/contracts';
 import { DEFAULT_PORT } from '../config.ts';
 
 type Fetch = (input: string, init: RequestInit) => Promise<Response>;
@@ -47,6 +47,36 @@ export const reachSentence = (status: MachineStatus): string => {
     return 'No client can reach it yet: the broker is off, and so is the door on the local network.';
 };
 
+type KeepAwakeStatus = NonNullable<MachineStatus['keepAwake']>;
+
+const awakeLine = (keepAwake: KeepAwakeStatus): string => {
+    if (keepAwake.mode === 'off') {
+        return 'off';
+    }
+    const when = keepAwake.mode === 'always' ? 'always' : 'while agents work';
+    const where = keepAwake.onBattery ? 'on battery too' : 'on the power adapter only';
+    return `${when}, ${where}; ${keepAwake.holding ? 'holding now' : 'not holding now'}`;
+};
+
+/* The closed lid in one phrase, for `ruimte status` and after `ruimte closed-lid install`; null where it is not offered. */
+export const lidLine = (keepAwake: KeepAwakeStatus): string | null => {
+    const { lid } = keepAwake;
+    if (lid === null) {
+        return null;
+    }
+    if (!lid.rule) {
+        return 'a closed lid sleeps this Mac; `ruimte closed-lid install` lets keep awake hold it';
+    }
+    if (!lid.on) {
+        return 'allowed but off, so a closed lid sleeps this Mac';
+    }
+    if (lid.holding) {
+        return 'sleep is off, so this Mac stays awake with the lid closed';
+    }
+    const power = keepAwake.onBattery ? `on the power adapter, or on battery from ${CLOSED_LID_BATTERY_FLOOR}% up` : 'on the power adapter';
+    return `on, not holding now: it holds while keep awake does, ${power}`;
+};
+
 /* What `ruimte status` prints: one line per way in, and a warning when there is none. */
 export const statusLines = (status: MachineStatus, port: number): string[] => {
     const { lan, broker } = status;
@@ -65,6 +95,13 @@ export const statusLines = (status: MachineStatus, port: number): string[] => {
                   : `open on port ${lan.port}, but this machine has no address on a local network`
         }`
     ];
+    if (status.keepAwake) {
+        lines.push(`Awake     ${awakeLine(status.keepAwake)}`);
+        const lid = lidLine(status.keepAwake);
+        if (lid !== null) {
+            lines.push(`Lid       ${lid}`);
+        }
+    }
     if (broker.url === null && (lan === null || lan.addresses.length === 0)) {
         lines.push('', 'No client elsewhere can reach this machine: the broker is off, and nothing on the local network can reach it either.');
     }

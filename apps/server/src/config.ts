@@ -33,8 +33,9 @@ export interface ServerConfig {
     // Started by the background service (`RUIMTE_SERVICE=1` in its definition), which starts it again when it exits.
     underService: boolean;
     // `login` puts it on an account with a code; `status` says how the running daemon is reached; `context` is the agent-side CLI (`ruimte-context`);
-    // `service` installs, removes or reports the background service; `version` prints the version; `pair` only says that pairing links are gone.
-    command: 'serve' | 'pair' | 'login' | 'logout' | 'status' | 'context' | 'service' | 'version';
+    // `service` installs, removes or reports the background service; `closed-lid` installs or removes the sudoers rule behind keep awake
+    // with the lid closed; `version` prints the version; `pair` only says that pairing links are gone.
+    command: 'serve' | 'pair' | 'login' | 'logout' | 'status' | 'context' | 'service' | 'closed-lid' | 'version';
     // What follows the command: the words of `context`, and the action of `service` followed by the daemon flags its service runs with.
     args: string[];
 }
@@ -130,6 +131,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         command !== 'status' &&
         command !== 'context' &&
         command !== 'service' &&
+        command !== 'closed-lid' &&
         command !== 'version'
     ) {
         throw new Error(`Unknown command: ${command}`);
@@ -138,6 +140,10 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
     const service = command === 'service';
     if (service && (argv[0] !== 'service' || positionals.length !== 2)) {
         throw new Error('Usage: ruimte service install|uninstall|status [daemon flags]');
+    }
+
+    if (command === 'closed-lid' && positionals.length !== 2) {
+        throw new Error('Usage: ruimte closed-lid install|remove');
     }
 
     const port = Number(values.port);

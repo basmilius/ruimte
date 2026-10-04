@@ -22,10 +22,18 @@ struct MachineKeepAwake: Equatable, Sendable {
     var mode: KeepAwakeMode
     var onBattery: Bool
     var display: Bool
+    /// Also with the lid closed, which only does something on a Mac that offers it (`MachineEndpoint.closedLid`).
+    var lidClosed: Bool
 
     /// macOS has no display assertion that lets go on battery, so the display stays on only under `always` and only
     /// together with battery.
     var displayApplies: Bool { mode == .always && onBattery }
+}
+
+/// Keep awake with the lid closed on a Mac. Only a person on the Mac can install the rule it needs, so a phone shows
+/// the switch and uses it once the rule is there.
+struct MachineClosedLid: Equatable, Sendable {
+    var ruleInstalled: Bool
 }
 
 /// What a restart of the app on a machine would end, from `endpoint.installUpdate`.
@@ -151,6 +159,8 @@ final class MachineEndpoint {
     private(set) var update: MachineUpdate?
     /// Nil on a machine that cannot hold a block on sleep, or whose daemon predates the setting.
     private(set) var keepAwake: MachineKeepAwake?
+    /// Nil where the machine does not offer keep awake with the lid closed, which only a Mac does.
+    private(set) var closedLid: MachineClosedLid?
     /// The last round trip in milliseconds, nil while unmeasured or after a failed one.
     private(set) var latency: Int?
     private(set) var lastConnected: Date?
@@ -256,6 +266,7 @@ final class MachineEndpoint {
         info = value
         update = MachineUpdate(value["update"])
         keepAwake = Self.keepAwake(in: value)
+        closedLid = Self.closedLid(in: value)
         learnedLan(LanDoorAddress(value["lan"]))
     }
 
@@ -272,7 +283,13 @@ final class MachineEndpoint {
         else { return nil }
         return MachineKeepAwake(
             mode: mode, onBattery: value["keepAwakeOnBattery"]?.boolValue ?? false,
-            display: value["keepAwakeDisplay"]?.boolValue ?? false)
+            display: value["keepAwakeDisplay"]?.boolValue ?? false,
+            lidClosed: value["keepAwakeLidClosed"]?.boolValue ?? false)
+    }
+
+    static func closedLid(in value: JSONValue) -> MachineClosedLid? {
+        guard value["keepAwakeLidAvailable"]?.boolValue == true else { return nil }
+        return MachineClosedLid(ruleInstalled: value["keepAwakeLidRule"]?.boolValue == true)
     }
 
     /// Times `server.ping` every interval for as long as the calling task runs, which is as long as a page shows it.
@@ -309,14 +326,15 @@ final class MachineEndpoint {
         keepAwake = next
         savingKeepAwake = true
         defer { savingKeepAwake = false }
+        var payload: [String: JSONValue] = [
+            "name": currentName, "icon": info?["icon"] ?? .null,
+            "keepAwake": .string(next.mode.rawValue), "keepAwakeOnBattery": .bool(next.onBattery),
+            "keepAwakeDisplay": .bool(next.display),
+        ]
+        // A machine that does not offer the closed lid is not told about it.
+        if closedLid != nil { payload["keepAwakeLidClosed"] = .bool(next.lidClosed) }
         do {
-            let answer = try await client.request(
-                WireRequest.endpointSetIdentity.rawValue,
-                payload: .object([
-                    "name": currentName, "icon": info?["icon"] ?? .null,
-                    "keepAwake": .string(next.mode.rawValue), "keepAwakeOnBattery": .bool(next.onBattery),
-                    "keepAwakeDisplay": .bool(next.display),
-                ]))
+            let answer = try await client.request(WireRequest.endpointSetIdentity.rawValue, payload: .object(payload))
             apply(answer)
             problem = nil
         } catch {

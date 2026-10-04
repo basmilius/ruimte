@@ -254,6 +254,7 @@
     "computer.revoke",
     "endpoint.info",
     "endpoint.setIdentity",
+    "endpoint.closedLidRule",
     "endpoint.signRegistration",
     "endpoint.leaveAccount",
     "endpoint.reportUpdate",

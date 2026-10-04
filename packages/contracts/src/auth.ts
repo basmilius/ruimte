@@ -4,6 +4,7 @@ import { MachineUpdateSchema } from './machine-update.ts';
 import { ProjectIconChoiceSchema } from './project.ts';
 import { LanDoorSchema } from './lan-door.ts';
 import { ProtocolVersionSchema } from './protocol.ts';
+import { KeepAwakeModeSchema } from './keep-awake.ts';
 
 // How a client reaches a daemon; the loopback one is what the app starts with.
 export const ReachabilitySchema = z.enum(['loopback', 'lan', 'tunnel', 'public']);
@@ -13,9 +14,7 @@ export type Reachability = z.infer<typeof ReachabilitySchema>;
 export const EndpointNameSourceSchema = z.enum(['chosen', 'default']);
 export type EndpointNameSource = z.infer<typeof EndpointNameSourceSchema>;
 
-/* When the machine keeps itself from sleeping: never, while an agent works, or always. */
-export const KeepAwakeModeSchema = z.enum(['off', 'working', 'always']);
-export type KeepAwakeMode = z.infer<typeof KeepAwakeModeSchema>;
+export { CLOSED_LID_BATTERY_FLOOR, KeepAwakeModeSchema, type KeepAwakeMode } from './keep-awake.ts';
 
 export const EndpointInfoSchema = z.object({
     // The daemon's own id, minted once and kept in its home; a client keys a machine on this because an address moves.
@@ -54,6 +53,15 @@ export const EndpointInfoSchema = z.object({
     keepAwakeDisplay: z.boolean().optional(),
     // Whether this machine can hold the block at all; false where the daemon has no way to (only macOS has one).
     keepAwakeAvailable: z.boolean().optional(),
+    /* Keep the Mac awake with its lid closed too, by turning sleep off (`pmset disablesleep`) while the
+       block holds: on the power adapter, or on battery above `CLOSED_LID_BATTERY_FLOOR` when the block
+       may hold there. Absent from an older daemon. */
+    keepAwakeLidClosed: z.boolean().optional(),
+    // Whether this machine offers the closed-lid mode at all; only a Mac does.
+    keepAwakeLidAvailable: z.boolean().optional(),
+    /* Whether Ruimte's sudoers rule is installed, without which the daemon cannot turn sleep off and the
+       switch does nothing. Only the local secret installs or removes it (`endpoint.closedLidRule`). */
+    keepAwakeLidRule: z.boolean().optional(),
     /* Where the update of the desktop app on this machine stands. Absent from an older daemon. Changes
        come as `endpoint.updateChanged`, not `endpoint.changed`, which every client answers by asking again. */
     update: MachineUpdateSchema.optional(),
@@ -129,6 +137,8 @@ export const EndpointSetIdentityPayloadSchema = z.object({
     keepAwake: KeepAwakeModeSchema.optional(),
     keepAwakeOnBattery: z.boolean().optional(),
     keepAwakeDisplay: z.boolean().optional(),
+    // Turning it on is refused with `closed-lid-no-rule` while the rule is not installed; off always goes through.
+    keepAwakeLidClosed: z.boolean().optional(),
     // Which broker the machine announces itself to; left out, the machine stays on the one it has.
     broker: BrokerSettingSchema.optional(),
     // Whether the door on the local network stays open; left out, the machine stays as it stands.
@@ -150,6 +160,9 @@ export const EndpointChangedEventSchema = z.object({
     keepAwake: KeepAwakeModeSchema.optional(),
     keepAwakeOnBattery: z.boolean().optional(),
     keepAwakeDisplay: z.boolean().optional(),
+    keepAwakeLidClosed: z.boolean().optional(),
+    // The rule came or went, so a phone shows the closed-lid switch as usable or not without asking again.
+    keepAwakeLidRule: z.boolean().optional(),
     broker: BrokerSettingSchema.optional(),
     // What the machine hands clients as its broker now, so a client follows a change without asking again.
     brokerUrl: z.string().nullish(),
@@ -159,6 +172,20 @@ export const EndpointChangedEventSchema = z.object({
     lanDoorFixed: z.boolean().optional()
 });
 export type EndpointChangedEvent = z.infer<typeof EndpointChangedEventSchema>;
+
+/*
+ * `endpoint.closedLidRule`: installs or removes the sudoers rule that lets the daemon run exactly
+ * `pmset -a disablesleep 1` and `0` without a password. Local secret only; the daemon asks macOS for an
+ * administrator through its own dialog, so the request waits on a person. Removing turns sleep back on
+ * and the closed-lid switch off. Refused with `closed-lid-unavailable` off a Mac and with
+ * `closed-lid-cancelled` when the person cancels the dialog.
+ */
+export const EndpointClosedLidRulePayloadSchema = z.object({
+    install: z.boolean(),
+    // The line macOS shows in its dialog, in the language of the asking client; left out, an English one.
+    prompt: z.string().min(1).max(300).optional()
+});
+export type EndpointClosedLidRulePayload = z.infer<typeof EndpointClosedLidRulePayloadSchema>;
 
 /* How a client got its access: a pairing link a person handed over, or a statement from the address
    book that it is signed in to the same account as the machine. */

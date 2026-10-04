@@ -3,6 +3,7 @@ import { registerPushHandlers } from './handlers/push.ts';
 import { SnoozeStore } from './push/snoozes.ts';
 import { registerSnoozeHandlers } from './handlers/snooze.ts';
 import { dirname, join, resolve } from 'node:path';
+import { userInfo } from 'node:os';
 import type { Server, ServerWebSocket } from 'bun';
 import {
     isIdle,
@@ -81,7 +82,9 @@ import { Dispatcher, type ClientAccess } from './dispatcher.ts';
 import { readOrCreateEndpointIdentity } from './endpoint-id.ts';
 import { SelfUpdater, buildFileOf, readBuildFile } from './service/self-update.ts';
 import { childCounter, workOf } from './service/work.ts';
-import { KeepAwake } from './power/keep-awake.ts';
+import { KeepAwake, agentsWorking } from './power/keep-awake.ts';
+import { ClosedLid } from './power/closed-lid.ts';
+import { macClosedLidSystem } from './power/closed-lid-system.ts';
 import { MachineUpdates, workEndedByInstall } from './power/machine-update.ts';
 import { BUILD, COMPILED as compiled, VERSION } from './version.ts';
 import { PAIRING_REMOVED, registerAuthHandlers } from './handlers/auth.ts';
@@ -705,14 +708,40 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         spawn: (command) => Bun.spawn(command, { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore' }),
         log: (line) => console.log(line)
     });
+    const uid = process.getuid?.() ?? -1;
+    // Beside the block, for a closed lid; it never holds root, only a sudoers rule a person installed.
+    const closedLid = new ClosedLid({
+        platform: process.platform,
+        uid,
+        user: userInfo().username,
+        setting: () => identity.keepAwake,
+        working: () => agentsWorking({ sessions: manager.list(), chats: chats.list() }),
+        system: macClosedLidSystem(config.home, uid),
+        // A rule that went takes the switch with it, so a new rule never turns sleep off on a choice made before it.
+        ruleChanged: (present) => {
+            if (!present && identity.keepAwake.lidClosed) {
+                void identity
+                    .setSwitches({ keepAwakeLidClosed: false })
+                    .catch((e: unknown) => console.error('Turning the closed-lid switch off failed:', errorText(e)));
+                return;
+            }
+            identity.announce();
+        },
+        log: (line) => console.log(line)
+    });
+    identity.attachClosedLid({ describe: () => ({ keepAwakeLidRule: closedLid.ruleInstalled }) });
+    const checkAwake = (): void => {
+        keepAwake.check();
+        closedLid.check();
+    };
     manager.observe((event) => {
         if (event.event === 'session.status' || event.event === 'session.exit' || event.event === 'session.list-changed') {
-            keepAwake.check();
+            checkAwake();
         }
     });
     chats.observe((event) => {
         if (event.event === 'chat.event' && (event.payload.event.type === 'info' || event.payload.event.type === 'reset')) {
-            keepAwake.check();
+            checkAwake();
         }
     });
     const updates = new MachineUpdates();
@@ -781,7 +810,12 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
             await providerAccounts.refresh();
         },
-        keepAwake: { available: keepAwake.available, changed: () => keepAwake.check() },
+        keepAwake: { available: keepAwake.available, changed: checkAwake },
+        closedLid: {
+            available: closedLid.available,
+            rule: () => closedLid.refreshRule(),
+            setRule: (install, prompt) => closedLid.setRule(install, prompt)
+        },
         updates: {
             state: () => updates.state(),
             report: (clientId, report) => updates.report(clientId, report),
@@ -1031,7 +1065,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 label: identity.label,
                 onAccount: binding !== undefined && binding !== null,
                 broker: { url: brokerSwitch.describe().brokerUrl, connected: brokerSwitch.isReady },
-                ...describeLanDoor()
+                ...describeLanDoor(),
+                keepAwake: {
+                    mode: identity.keepAwake.mode,
+                    onBattery: identity.keepAwake.onBattery,
+                    holding: keepAwake.holding,
+                    lid: closedLid.available ? { on: identity.keepAwake.lidClosed, rule: await closedLid.refreshRule(), holding: closedLid.holding } : null
+                }
             } satisfies MachineStatus);
         }
 
@@ -1197,6 +1237,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         console.log(`ruimte server stopping for ${reason}, writing snapshots`);
         selfUpdate.stop();
         keepAwake.stop();
+        closedLid.stop();
         snoozes.stop();
         outboxWorker.stop();
         taskWiring.coordinator.stop();
@@ -1244,6 +1285,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     selfUpdate.start();
     // `always` holds from the start, before any agent has moved.
     keepAwake.check();
+    // Puts back what a daemon before this one left, and only then decides for the lid.
+    void closedLid.start();
 
     const greeting = greetingLines({
         version: VERSION,

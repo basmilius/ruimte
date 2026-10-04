@@ -10,6 +10,8 @@ npx ruimte logout               # take this machine off its account
 npx ruimte service install      # keep it running in the background for this user
 npx ruimte service status
 npx ruimte service uninstall
+npx ruimte closed-lid install   # on a Mac: let keep awake hold with the lid closed
+npx ruimte closed-lid remove
 npx ruimte --version
 ```
 
@@ -34,6 +36,18 @@ loginctl enable-linger "$USER"
 Running `npx ruimte@latest service install` again installs the newer binary. A daemon that is running switches to it as soon as no agent or shell is busy on it.
 
 `RUIMTE_HOME` (default `~/.ruimte`) is where the machine keeps its identity, the devices it let in and its projects.
+
+## Awake with the lid closed
+
+Keep awake keeps a Mac from sleeping while agents work, but a closed lid still sleeps it unless an external display and the power adapter are connected. Only root can turn that off, so a person installs one rule, once:
+
+```sh
+npx ruimte closed-lid install
+```
+
+It prints the rule before sudo asks for your password. The rule goes in `/etc/sudoers.d/ruimte-closed-lid-<uid>` and lets you run exactly `/usr/bin/pmset -a disablesleep 1` and `/usr/bin/pmset -a disablesleep 0` without a password, nothing else. Then turn on "Also with the lid closed" under keep awake, from Ruimte on your phone or in the app on the Mac.
+
+Sleep stays off only while keep awake holds: on the power adapter, or on battery when keep awake may hold there and the battery is at 20% or more. It comes back on when keep awake lets go, when the machine stops, and through a small watchdog when the machine is killed. `npx ruimte status` says whether keep awake and the closed lid hold right now. `npx ruimte closed-lid remove` turns sleep back on and removes the rule. Removing Ruimte leaves the rule in place, so remove it first.
 
 ## License
 

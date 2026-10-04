@@ -140,6 +140,7 @@ describe('readOrCreateEndpointIdentity', () => {
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,
+                    keepAwakeLidClosed: false,
                     broker: { mode: 'default' },
                     lanDoor: true
                 }
@@ -211,15 +212,44 @@ describe('readOrCreateEndpointIdentity', () => {
 
     test('keep awake is off by default, each part set on its own survives a restart, and off writes nothing', async () => {
         const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
-        expect(identity.keepAwake).toEqual({ mode: 'off', onBattery: false, display: false });
+        expect(identity.keepAwake).toEqual({ mode: 'off', onBattery: false, display: false, lidClosed: false });
 
         await identity.setIdentity(null, null, { keepAwake: 'always', keepAwakeDisplay: true });
         await identity.setIdentity(null, null, { keepAwakeOnBattery: true });
-        expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).keepAwake).toEqual({ mode: 'always', onBattery: true, display: true });
+        await identity.setIdentity(null, null, { keepAwakeLidClosed: true });
+        expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).keepAwake).toEqual({
+            mode: 'always',
+            onBattery: true,
+            display: true,
+            lidClosed: true
+        });
 
-        await identity.setIdentity(null, null, { keepAwake: 'off', keepAwakeOnBattery: false, keepAwakeDisplay: false });
+        await identity.setIdentity(null, null, { keepAwake: 'off', keepAwakeOnBattery: false, keepAwakeDisplay: false, keepAwakeLidClosed: false });
         const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
-        expect([written.keepAwake, written.keepAwakeOnBattery, written.keepAwakeDisplay]).toEqual([undefined, undefined, undefined]);
+        expect([written.keepAwake, written.keepAwakeOnBattery, written.keepAwakeDisplay, written.keepAwakeLidClosed]).toEqual([
+            undefined,
+            undefined,
+            undefined,
+            undefined
+        ]);
+    });
+
+    test('a switch set on its own keeps the name and icon, and an announcement carries the closed-lid rule as described', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        await identity.setIdentity('Studio', { kind: 'lucide', value: 'server' });
+        let rule = false;
+        identity.attachClosedLid({ describe: () => ({ keepAwakeLidRule: rule }) });
+        const heard: unknown[] = [];
+        identity.subscribe('c1', (event) => heard.push(event));
+
+        await identity.setSwitches({ keepAwakeLidClosed: true });
+        expect([identity.label, identity.icon, identity.keepAwake.lidClosed]).toEqual(['Studio', { kind: 'lucide', value: 'server' }, true]);
+        rule = true;
+        identity.announce();
+        expect(heard).toMatchObject([
+            { event: 'endpoint.changed', payload: { label: 'Studio', keepAwakeLidClosed: true, keepAwakeLidRule: false } },
+            { event: 'endpoint.changed', payload: { label: 'Studio', keepAwakeLidClosed: true, keepAwakeLidRule: true } }
+        ]);
     });
 
     test('Apple Foundation Models is off by default, persists and broadcasts changes to every client', async () => {

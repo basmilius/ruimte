@@ -1,11 +1,21 @@
+import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import type { RuntimeMode } from '@ruimte/contracts';
+import { CLOSED_LID_BATTERY_FLOOR, type RuntimeMode } from '@ruimte/contracts';
 import { rememberChatPreferences, useChatPreferences } from '@ruimte/agents-react/chat/preferences';
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@ruimte/agents-react/chat/runtime-modes';
-import { setKeepAwake, useKeepAwakeAvailable, useKeepAwakeChoice, useMachineKeepsAwake } from '@/state/keep-awake';
+import {
+    setClosedLidRule,
+    setKeepAwake,
+    setKeepAwakeLidClosed,
+    useClosedLid,
+    useKeepAwakeAvailable,
+    useKeepAwakeChoice,
+    useMachineKeepsAwake
+} from '@/state/keep-awake';
 import { MachineSwitchSections } from '@/shell/settings/MachineSwitchSection';
 import { SettingsRow } from '@basmilius/desktop-ui/settings';
-import { Switch, Select, type SelectItem } from '@basmilius/desktop-ui';
+import { Button, FormError, Switch, Select, type SelectItem } from '@basmilius/desktop-ui';
+import { formatPercent } from '@basmilius/desktop-ui/format';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
@@ -36,6 +46,19 @@ export function AgentsPane() {
     // The machine holds the display only with battery allowed; the shell from before weighed the power source itself.
     const displayNeedsBattery = useMachineKeepsAwake() && !keepAwakeOnBattery;
     const keepAwakeDescription = KEEP_AWAKE_DESCRIPTIONS[keepAwake];
+    const lid = useClosedLid();
+    const lidShown = awake && lid.offered && keepAwake !== 'off';
+    // The rule waits on macOS's administrator dialog, so the row stays busy for as long as that is up.
+    const [lidBusy, setLidBusy] = useState(false);
+    const [lidError, setLidError] = useState<string | null>(null);
+
+    const changeLidRule = (install: boolean): void => {
+        setLidBusy(true);
+        setLidError(null);
+        void setClosedLidRule(install)
+            .catch((e: unknown) => setLidError(e instanceof Error ? e.message : String(e)))
+            .finally(() => setLidBusy(false));
+    };
 
     return (
         <>
@@ -171,6 +194,36 @@ export function AgentsPane() {
                             />
                         }
                     />
+                )}
+                {lidShown && (
+                    <SettingsRow
+                        indent
+                        searchId="agents.keepAwake.lid"
+                        label={t('agents.keepAwake.lid.label')}
+                        description={t('agents.keepAwake.lid.description', { percent: formatPercent(CLOSED_LID_BATTERY_FLOOR) })}
+                        control={
+                            <Switch
+                                checked={lid.on}
+                                disabled={!lid.rule || lidBusy}
+                                onCheckedChange={setKeepAwakeLidClosed}
+                                label={t('agents.keepAwake.lid.label')}
+                            />
+                        }
+                    />
+                )}
+                {lidShown && (
+                    <SettingsRow
+                        indent
+                        label={t('agents.keepAwake.lid.rule.label')}
+                        description={t(lid.rule ? 'agents.keepAwake.lid.rule.installed' : 'agents.keepAwake.lid.rule.missing')}
+                        control={
+                            <Button variant="secondary" disabled={lidBusy} onClick={() => changeLidRule(!lid.rule)}>
+                                {t(lid.rule ? 'agents.keepAwake.lid.rule.remove' : 'agents.keepAwake.lid.rule.install')}
+                            </Button>
+                        }
+                    >
+                        {lidError !== null && <FormError>{lidError}</FormError>}
+                    </SettingsRow>
                 )}
                 {awake && keepAwake === 'always' && (
                     <SettingsRow

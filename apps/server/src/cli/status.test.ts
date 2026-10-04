@@ -66,6 +66,27 @@ describe('ruimte status', () => {
         ).toEqual(['Broker    wss://broker.ruimte.app, not connected yet', 'Network   open on port 4220, but this machine has no address on a local network']);
     });
 
+    test('keep awake says whether it holds, and the closed lid what stands between it and holding', () => {
+        const awake = (keepAwake: MachineStatus['keepAwake']): string[] => statusLines({ ...STATUS, keepAwake }, 4210).slice(5);
+        const lid = { on: true, rule: true, holding: false };
+        expect(awake(undefined)).toEqual([]);
+        expect(awake({ mode: 'off', onBattery: false, holding: false, lid: null })).toEqual(['Awake     off']);
+        expect(awake({ mode: 'working', onBattery: false, holding: true, lid: { ...lid, holding: true } })).toEqual([
+            'Awake     while agents work, on the power adapter only; holding now',
+            'Lid       sleep is off, so this Mac stays awake with the lid closed'
+        ]);
+        expect(awake({ mode: 'always', onBattery: true, holding: true, lid })).toEqual([
+            'Awake     always, on battery too; holding now',
+            'Lid       on, not holding now: it holds while keep awake does, on the power adapter, or on battery from 20% up'
+        ]);
+        expect(awake({ mode: 'always', onBattery: false, holding: true, lid: { ...lid, on: false } })[1]).toBe(
+            'Lid       allowed but off, so a closed lid sleeps this Mac'
+        );
+        expect(awake({ mode: 'always', onBattery: false, holding: true, lid: { ...lid, rule: false } })[1]).toBe(
+            'Lid       a closed lid sleeps this Mac; `ruimte closed-lid install` lets keep awake hold it'
+        );
+    });
+
     test('no home, no daemon, another home or an older daemon ends with 1 and a sentence', async () => {
         const out: string[] = [];
         const err: string[] = [];

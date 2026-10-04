@@ -19,8 +19,9 @@ process.on('unhandledRejection', fail);
 /*
  * One binary, several jobs: `ruimte` serves, `ruimte login` puts the machine on an account with a code
  * and `ruimte logout` takes it off, `ruimte status` says how clients reach it, `ruimte service` sets up the
- * background service, `ruimte context` is the agent-side CLI. The daemon is imported only when it is needed, so the CLI commands
- * do not pay for loading the terminal emulator.
+ * background service, `ruimte closed-lid` installs the rule behind keep awake with the lid closed,
+ * `ruimte context` is the agent-side CLI. The daemon is imported only when it is needed, so the CLI
+ * commands do not pay for loading the terminal emulator.
  */
 const arguments_ = process.argv.slice(2);
 if (arguments_[0] === 'device-helper') {
@@ -55,6 +56,36 @@ if (config.command === 'pair') {
 if (config.command === 'status') {
     const { runStatus } = await import('./cli/status.ts');
     process.exit(await runStatus({ port: config.port, home: config.home }));
+}
+
+if (config.command === 'closed-lid') {
+    const { runClosedLid } = await import('./cli/closed-lid.ts');
+    const { closedLidRulePath } = await import('./power/closed-lid.ts');
+    const { readLocalSecret } = await import('./auth/local-secret.ts');
+    const { readMachineStatus } = await import('./cli/machine-status.ts');
+    const { fileExists } = await import('@ruimte/agents/fs');
+    const { userInfo } = await import('node:os');
+    const uid = process.getuid?.() ?? -1;
+    process.exit(
+        await runClosedLid({
+            action: config.args[0] ?? '',
+            platform: process.platform,
+            uid,
+            user: userInfo().username,
+            rulePresent: () => fileExists(closedLidRulePath(uid)),
+            runAttached: (command) => Bun.spawn(command, { stdin: 'inherit', stdout: 'inherit', stderr: 'inherit' }).exited,
+            status: async () => {
+                const secret = await readLocalSecret(config.home).catch(() => null);
+                if (secret === null) {
+                    return null;
+                }
+                const answer = await readMachineStatus(config.port, secret, (input, init) => fetch(input, init));
+                return 'status' in answer ? answer.status : null;
+            },
+            out: (line) => console.log(line),
+            err: (line) => console.error(line)
+        })
+    );
 }
 
 if (config.command === 'login') {

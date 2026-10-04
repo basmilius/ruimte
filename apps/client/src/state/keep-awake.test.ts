@@ -4,7 +4,7 @@ import { useChats, type ChatState } from '@ruimte/agents-react/state/chats';
 import { useSessions, type SessionState } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import type { DesktopBridge, KeepAwakeRequest } from '@/desktop/bridge';
-import { keepAwakeChoice, keepAwakeTeller, keepAwakeToMove, keepAwakeWanted, startKeepAwake, type KeepAwakeSettings } from '@/state/keep-awake';
+import { closedLidOf, keepAwakeChoice, keepAwakeTeller, keepAwakeToMove, keepAwakeWanted, startKeepAwake, type KeepAwakeSettings } from '@/state/keep-awake';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { serverInfoOf, useServers, type ServerInfo } from '@/state/server';
 
@@ -199,5 +199,20 @@ describe('moving the setting this client kept to its machine', () => {
     test('nothing moves to a daemon from before or one that cannot hold a block', () => {
         expect(keepAwakeToMove(machine({ keepAwake: null }), settings('working'))).toBeNull();
         expect(keepAwakeToMove(machine({ keepAwake: 'off', keepAwakeAvailable: false }), settings('working'))).toBeNull();
+    });
+});
+
+describe('the closed lid', () => {
+    test('offered only by a machine that holds keep awake and says it can keep its lid open', () => {
+        expect(closedLidOf(machine({ keepAwake: 'working', keepAwakeLidAvailable: true }))).toEqual({ offered: true, rule: false, on: false });
+        expect(closedLidOf(machine({ keepAwake: null, keepAwakeLidAvailable: true })).offered).toBe(false);
+        expect(closedLidOf(machine({ keepAwake: 'working', keepAwakeLidAvailable: false })).offered).toBe(false);
+        expect(closedLidOf(undefined)).toEqual({ offered: false, rule: false, on: false });
+    });
+
+    test('a switch left on reads as off while the rule is missing', () => {
+        const info = machine({ keepAwake: 'always', keepAwakeLidAvailable: true, keepAwakeLidClosed: true });
+        expect(closedLidOf(info).on).toBe(false);
+        expect(closedLidOf({ ...info, keepAwakeLidRule: true })).toEqual({ offered: true, rule: true, on: true });
     });
 });

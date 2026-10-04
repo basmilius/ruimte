@@ -120,6 +120,7 @@ import {
     AuthRevokePayloadSchema,
     AuthSessionsResultSchema,
     EndpointChangedEventSchema,
+    EndpointClosedLidRulePayloadSchema,
     EndpointInfoSchema,
     EndpointLeaveAccountResultSchema,
     EndpointSetIdentityPayloadSchema,
@@ -441,6 +442,7 @@ export const REQUEST_SCHEMAS = {
     'computer.revoke': { payload: ComputerRevokePayloadSchema, result: ComputerRevokeResultSchema },
     'endpoint.info': { payload: EmptySchema, result: EndpointInfoSchema },
     'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
+    'endpoint.closedLidRule': { payload: EndpointClosedLidRulePayloadSchema, result: EndpointInfoSchema },
     'endpoint.signRegistration': { payload: EndpointSignRegistrationPayloadSchema, result: EndpointSignRegistrationResultSchema },
     'endpoint.leaveAccount': { payload: EmptySchema, result: EndpointLeaveAccountResultSchema },
     // The desktop app on this machine saying where its updater stands. Local secret only: it speaks for the machine.

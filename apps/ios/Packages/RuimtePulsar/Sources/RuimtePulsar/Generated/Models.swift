@@ -3459,6 +3459,9 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `keepAwakeOnBattery`: Bool?
     public let `keepAwakeDisplay`: Bool?
     public let `keepAwakeAvailable`: Bool?
+    public let `keepAwakeLidClosed`: Bool?
+    public let `keepAwakeLidAvailable`: Bool?
+    public let `keepAwakeLidRule`: Bool?
     public let `update`: PairResultEndpointUpdate?
     public let `platform`: String
     public let `version`: String
@@ -3474,7 +3477,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `lanDoorFixed`: Bool?
     public let `accountId`: Presence<String>
 
-    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `lan`: Presence<PairResultEndpointLan> = .missing, `lanDoor`: Bool? = nil, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing) {
+    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `lan`: Presence<PairResultEndpointLan> = .missing, `lanDoor`: Bool? = nil, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
@@ -3488,6 +3491,9 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         self.`keepAwakeOnBattery` = `keepAwakeOnBattery`
         self.`keepAwakeDisplay` = `keepAwakeDisplay`
         self.`keepAwakeAvailable` = `keepAwakeAvailable`
+        self.`keepAwakeLidClosed` = `keepAwakeLidClosed`
+        self.`keepAwakeLidAvailable` = `keepAwakeLidAvailable`
+        self.`keepAwakeLidRule` = `keepAwakeLidRule`
         self.`update` = `update`
         self.`platform` = `platform`
         self.`version` = `version`
@@ -3519,6 +3525,9 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         `keepAwakeOnBattery` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeOnBattery`)
         `keepAwakeDisplay` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeDisplay`)
         `keepAwakeAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeAvailable`)
+        `keepAwakeLidClosed` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidClosed`)
+        `keepAwakeLidAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidAvailable`)
+        `keepAwakeLidRule` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeLidRule`)
         `update` = try container.decodeIfPresent(PairResultEndpointUpdate.self, forKey: .`update`)
         `platform` = try container.decode(String.self, forKey: .`platform`)
         `version` = try container.decode(String.self, forKey: .`version`)
@@ -3554,6 +3563,9 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`keepAwakeOnBattery`, forKey: .`keepAwakeOnBattery`)
         try container.encodeIfPresent(`keepAwakeDisplay`, forKey: .`keepAwakeDisplay`)
         try container.encodeIfPresent(`keepAwakeAvailable`, forKey: .`keepAwakeAvailable`)
+        try container.encodeIfPresent(`keepAwakeLidClosed`, forKey: .`keepAwakeLidClosed`)
+        try container.encodeIfPresent(`keepAwakeLidAvailable`, forKey: .`keepAwakeLidAvailable`)
+        try container.encodeIfPresent(`keepAwakeLidRule`, forKey: .`keepAwakeLidRule`)
         try container.encodeIfPresent(`update`, forKey: .`update`)
         try container.encode(`platform`, forKey: .`platform`)
         try container.encode(`version`, forKey: .`version`)
@@ -3596,6 +3608,9 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case `keepAwakeOnBattery` = "keepAwakeOnBattery"
         case `keepAwakeDisplay` = "keepAwakeDisplay"
         case `keepAwakeAvailable` = "keepAwakeAvailable"
+        case `keepAwakeLidClosed` = "keepAwakeLidClosed"
+        case `keepAwakeLidAvailable` = "keepAwakeLidAvailable"
+        case `keepAwakeLidRule` = "keepAwakeLidRule"
         case `update` = "update"
         case `platform` = "platform"
         case `version` = "version"

@@ -6,6 +6,7 @@ import type { AuthStore } from '../auth/auth-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { BrokerDescription } from '../pulsar/broker-switch.ts';
 import type { InstallVerdict } from '../power/machine-update.ts';
+import { DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
 
 interface EndpointHost {
     identity: EndpointIdentity;
@@ -23,6 +24,12 @@ interface EndpointHost {
     appleFoundationChanged?(on: boolean): Promise<void>;
     // Whether this machine can hold a block on sleep, and the call that follows a changed setting.
     keepAwake?: { available: boolean; changed(): void };
+    // The closed-lid mode of a Mac: whether it is offered, whether its rule is installed, and installing or removing that.
+    closedLid?: {
+        available: boolean;
+        rule(): Promise<boolean>;
+        setRule(install: boolean, prompt: string): Promise<void>;
+    };
     // The update of the desktop app on this machine, and what installing it would end right now.
     updates?: {
         state(): MachineUpdate;
@@ -49,6 +56,8 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         appleFoundationEnabled: identity.appleFoundationEnabled,
         ...identity.keepAwakeFields(),
         keepAwakeAvailable: host.keepAwake?.available === true,
+        keepAwakeLidAvailable: host.closedLid?.available === true,
+        keepAwakeLidRule: host.closedLid?.available === true ? await host.closedLid.rule() : false,
         ...(host.updates ? { update: host.updates.state() } : {}),
         platform: process.platform,
         version: host.version,
@@ -71,6 +80,15 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
      * machines apart, so they belong to the machine and not to whichever client typed them.
      */
     dispatcher.register('endpoint.setIdentity', async (payload, client) => {
+        // Off always goes through, and a switch already on stays on; only turning it on needs the rule.
+        if (payload.keepAwakeLidClosed === true && !identity.keepAwake.lidClosed) {
+            if (host.closedLid?.available !== true) {
+                throw new RequestError('closed-lid-unavailable', 'Only a Mac can stay awake with its lid closed');
+            }
+            if (!(await host.closedLid.rule())) {
+                throw new RequestError('closed-lid-no-rule', 'Allow it on the Mac first: Ruimte there installs the rule with an administrator password');
+            }
+        }
         await identity.setIdentity(payload.name, payload.icon, {
             agentsDeleteAnyView: payload.agentsDeleteAnyView,
             streamingAllowed: payload.streamingAllowed,
@@ -79,10 +97,16 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
             keepAwake: payload.keepAwake,
             keepAwakeOnBattery: payload.keepAwakeOnBattery,
             keepAwakeDisplay: payload.keepAwakeDisplay,
+            keepAwakeLidClosed: payload.keepAwakeLidClosed,
             broker: payload.broker,
             lanDoor: payload.lanDoor
         });
-        if (payload.keepAwake !== undefined || payload.keepAwakeOnBattery !== undefined || payload.keepAwakeDisplay !== undefined) {
+        if (
+            payload.keepAwake !== undefined ||
+            payload.keepAwakeOnBattery !== undefined ||
+            payload.keepAwakeDisplay !== undefined ||
+            payload.keepAwakeLidClosed !== undefined
+        ) {
             host.keepAwake?.changed();
         }
         if (payload.streamingAllowed !== undefined) {
@@ -94,6 +118,23 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         if (payload.appleFoundationEnabled !== undefined) {
             await host.appleFoundationChanged?.(identity.appleFoundationEnabled);
         }
+        return info(client.access);
+    });
+
+    /*
+     * Only a person on this Mac may give the daemon a way to turn sleep off, so only the local secret
+     * asks; macOS then asks that person for an administrator. Removing turns sleep back on and, once the
+     * rule is gone, the switch off with it.
+     */
+    dispatcher.register('endpoint.closedLidRule', async (payload, client) => {
+        if (!isOwner(client.access)) {
+            throw new RequestError('forbidden', 'Only a person on this Mac can let it stay awake with its lid closed');
+        }
+        const closedLid = host.closedLid;
+        if (closedLid?.available !== true) {
+            throw new RequestError('closed-lid-unavailable', 'Only a Mac can stay awake with its lid closed');
+        }
+        await translate(() => closedLid.setRule(payload.install, payload.prompt ?? DEFAULT_ADMIN_PROMPT[payload.install ? 'install' : 'remove']));
         return info(client.access);
     });
 

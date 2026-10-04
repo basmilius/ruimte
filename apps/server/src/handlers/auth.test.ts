@@ -12,6 +12,7 @@ import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatc
 import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
 import { MachineUpdates } from '../power/machine-update.ts';
 import { PAIRING_REMOVED, registerAuthHandlers } from './auth.ts';
+import { ClosedLidError, DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
 
 let home: string;
 let store: AuthStore;
@@ -22,6 +23,9 @@ let disconnected: string[];
 let streamingChanges: boolean[];
 let appleChanges: boolean[];
 let keepAwakeChanges: number;
+let lidRule: boolean;
+let lidCancels: boolean;
+let ruleRequests: { install: boolean; prompt: string }[];
 let updates: MachineUpdates;
 
 const client = (access?: ClientAccess): { connection: ClientConnection; frames: ServerFrame[] } => {
@@ -64,6 +68,9 @@ beforeEach(async () => {
     streamingChanges = [];
     appleChanges = [];
     keepAwakeChanges = 0;
+    lidRule = false;
+    lidCancels = false;
+    ruleRequests = [];
     updates = new MachineUpdates();
     registerAuthHandlers(dispatcher, store, {
         identity,
@@ -78,6 +85,17 @@ beforeEach(async () => {
             available: true,
             changed: () => {
                 keepAwakeChanges += 1;
+            }
+        },
+        closedLid: {
+            available: true,
+            rule: async () => lidRule,
+            setRule: async (install, prompt) => {
+                ruleRequests.push({ install, prompt });
+                if (lidCancels) {
+                    throw new ClosedLidError('closed-lid-cancelled', 'The administrator dialog was cancelled');
+                }
+                lidRule = install;
             }
         },
         updates: {
@@ -144,6 +162,57 @@ describe('auth handlers', () => {
         expect(set).toMatchObject({ ok: true, result: { keepAwake: 'working' } });
         await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Box', icon: null });
         expect(keepAwakeChanges).toBe(1);
+    });
+
+    test('the closed-lid switch turns on only once the rule is installed, and off always goes through', async () => {
+        const paired: ClientAccess = { reachability: 'lan', sessionId: 's1' };
+        expect(await ask(paired, 'endpoint.info')).toMatchObject({
+            result: { keepAwakeLidClosed: false, keepAwakeLidAvailable: true, keepAwakeLidRule: false }
+        });
+        expect(await ask(paired, 'endpoint.setIdentity', { name: null, icon: null, keepAwakeLidClosed: true })).toMatchObject({
+            ok: false,
+            error: { code: 'closed-lid-no-rule' }
+        });
+        expect([identity.keepAwake.lidClosed, keepAwakeChanges]).toEqual([false, 0]);
+
+        lidRule = true;
+        expect(await ask(paired, 'endpoint.setIdentity', { name: null, icon: null, keepAwakeLidClosed: true })).toMatchObject({
+            ok: true,
+            result: { keepAwakeLidClosed: true, keepAwakeLidRule: true }
+        });
+        expect(keepAwakeChanges).toBe(1);
+
+        // A phone that sends the whole keep awake back after the rule went is not refused for a switch that was on already.
+        lidRule = false;
+        expect(await ask(paired, 'endpoint.setIdentity', { name: null, icon: null, keepAwake: 'always', keepAwakeLidClosed: true })).toMatchObject({
+            ok: true
+        });
+        expect(await ask(paired, 'endpoint.setIdentity', { name: null, icon: null, keepAwakeLidClosed: false })).toMatchObject({
+            ok: true,
+            result: { keepAwakeLidClosed: false }
+        });
+        expect(keepAwakeChanges).toBe(3);
+    });
+
+    test('only the app on this machine installs or removes the closed-lid rule, through the dialog it asks macOS for', async () => {
+        expect(await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.closedLidRule', { install: true })).toMatchObject({
+            ok: false,
+            error: { code: 'forbidden' }
+        });
+        expect(ruleRequests).toEqual([]);
+
+        expect(await ask(LOCAL, 'endpoint.closedLidRule', { install: true })).toMatchObject({ ok: true, result: { keepAwakeLidRule: true } });
+        expect(await ask(LOCAL, 'endpoint.closedLidRule', { install: false, prompt: 'Ruimte wil de regel weghalen.' })).toMatchObject({
+            ok: true,
+            result: { keepAwakeLidRule: false }
+        });
+        expect(ruleRequests).toEqual([
+            { install: true, prompt: DEFAULT_ADMIN_PROMPT.install },
+            { install: false, prompt: 'Ruimte wil de regel weghalen.' }
+        ]);
+
+        lidCancels = true;
+        expect(await ask(LOCAL, 'endpoint.closedLidRule', { install: true })).toMatchObject({ ok: false, error: { code: 'closed-lid-cancelled' } });
     });
 
     test('only the app on this machine says where its update stands', async () => {
@@ -218,6 +287,7 @@ describe('auth handlers', () => {
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,
+                    keepAwakeLidClosed: false,
                     broker: { mode: 'default' },
                     lanDoor: true
                 }

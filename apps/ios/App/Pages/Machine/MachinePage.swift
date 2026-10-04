@@ -218,9 +218,7 @@ struct MachinePage: View {
         if let keepAwake = endpoint.keepAwake {
             Picker(
                 "Keep awake",
-                selection: Binding(
-                    get: { keepAwake.mode },
-                    set: { mode in Task { await endpoint.setKeepAwake(MachineKeepAwake(mode: mode, onBattery: keepAwake.onBattery, display: keepAwake.display)) } })
+                selection: Binding(get: { keepAwake.mode }, set: { mode in changeKeepAwake { $0.mode = mode } })
             ) {
                 ForEach(KeepAwakeMode.allCases) { Text($0.label).tag($0) }
             }
@@ -229,30 +227,50 @@ struct MachinePage: View {
             if keepAwake.mode != .off {
                 Toggle(
                     "Also on battery",
-                    isOn: Binding(
-                        get: { keepAwake.onBattery },
-                        set: { value in
-                            Task {
-                                await endpoint.setKeepAwake(
-                                    MachineKeepAwake(mode: keepAwake.mode, onBattery: value, display: keepAwake.display))
-                            }
-                        }))
+                    isOn: Binding(get: { keepAwake.onBattery }, set: { value in changeKeepAwake { $0.onBattery = value } }))
                 .disabled(endpoint.savingKeepAwake)
+                if let closedLid = endpoint.closedLid {
+                    closedLidRow(keepAwake, closedLid)
+                }
             }
             if keepAwake.mode == .always {
                 Toggle(
                     "Keep the display on",
                     isOn: Binding(
                         get: { keepAwake.displayApplies && keepAwake.display },
-                        set: { value in
-                            Task {
-                                await endpoint.setKeepAwake(
-                                    MachineKeepAwake(mode: keepAwake.mode, onBattery: keepAwake.onBattery, display: value))
-                            }
-                        }))
+                        set: { value in changeKeepAwake { $0.display = value } }))
                 .disabled(endpoint.savingKeepAwake || !keepAwake.onBattery)
             }
         }
+    }
+
+    /// The rule behind it can only be installed on the Mac itself, so until then the switch says where.
+    private func closedLidRow(_ keepAwake: MachineKeepAwake, _ closedLid: MachineClosedLid) -> some View {
+        Toggle(
+            isOn: Binding(
+                get: { closedLid.ruleInstalled && keepAwake.lidClosed },
+                set: { value in changeKeepAwake { $0.lidClosed = value } })
+        ) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Also with the lid closed")
+                Group {
+                    if closedLid.ruleInstalled {
+                        Text("Sleep stays off while keep awake holds, so the Mac keeps running with its lid shut.")
+                    } else {
+                        Text("Allow it once in Ruimte on the Mac, under Settings, Agents.")
+                    }
+                }
+                .font(.caption).foregroundStyle(MobileStyle.muted)
+            }
+        }
+        .disabled(endpoint.savingKeepAwake || !closedLid.ruleInstalled)
+    }
+
+    /// Changes one part of keep awake and sends the rest as the machine has it now.
+    private func changeKeepAwake(_ change: (inout MachineKeepAwake) -> Void) {
+        guard var next = endpoint.keepAwake else { return }
+        change(&next)
+        Task { await endpoint.setKeepAwake(next) }
     }
 
     private func row(

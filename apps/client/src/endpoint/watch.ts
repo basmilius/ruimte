@@ -20,8 +20,10 @@ export const startEndpointWatch = (): (() => void) =>
                         : {
                               keepAwake: payload.keepAwake,
                               keepAwakeOnBattery: payload.keepAwakeOnBattery === true,
-                              keepAwakeDisplay: payload.keepAwakeDisplay === true
+                              keepAwakeDisplay: payload.keepAwakeDisplay === true,
+                              keepAwakeLidClosed: payload.keepAwakeLidClosed === true
                           }),
+                    ...(payload.keepAwakeLidRule === undefined ? {} : { keepAwakeLidRule: payload.keepAwakeLidRule }),
                     ...(payload.broker === undefined ? {} : { broker: payload.broker, brokerFixed: payload.brokerFixed === true }),
                     ...(payload.lanDoor === undefined ? {} : { lanDoor: payload.lanDoor, lanDoorFixed: payload.lanDoorFixed === true })
                 });

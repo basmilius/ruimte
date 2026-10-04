@@ -60,6 +60,8 @@ describe('parseServerArgs', () => {
             args: ['install', '--port', '4300', '--no-broker']
         });
         expect(() => parseServerArgs(['service'], {})).toThrow('Usage: ruimte service');
+        expect(parseServerArgs(['closed-lid', 'install', '--port', '4211'], {})).toMatchObject({ command: 'closed-lid', args: ['install'], port: 4211 });
+        expect(() => parseServerArgs(['closed-lid'], {})).toThrow('Usage: ruimte closed-lid');
         expect(() => parseServerArgs(['--port', '1', 'service', 'install'], {})).toThrow('Usage: ruimte service');
         expect(parseServerArgs(['context', 'node', 'note', '--text', 'hi', '--port=1'], {})).toMatchObject({
             command: 'context',

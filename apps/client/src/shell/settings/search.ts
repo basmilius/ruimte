@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import { canSwipeBetweenPages, desktop } from '@/desktop/bridge';
-import { keepAwakeAvailable } from '@/state/keep-awake';
+import { closedLidOffered, keepAwakeAvailable } from '@/state/keep-awake';
 import { ALL_SETTINGS_SECTIONS, sectionDescription, sectionLabel } from '@/shell/settings/sections';
 import { shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
@@ -142,6 +142,13 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         label: 'settings:agents.keepAwake.mode.label',
         description: 'settings:agents.keepAwake.mode.working.description',
         available: keepAwakeAvailable
+    },
+    {
+        id: 'agents.keepAwake.lid',
+        section: 'agents',
+        label: 'settings:agents.keepAwake.lid.label',
+        description: 'settings:agents.keepAwake.lid.search',
+        available: closedLidOffered
     },
     { id: 'usage.currency', section: 'usage', label: 'agent-usage:settings.currency.label', description: 'agent-usage:settings.currency.dollars' },
     { id: 'usage.page', section: 'usage', label: 'agent-usage:settings.page.label', description: 'agent-usage:settings.page.description' },

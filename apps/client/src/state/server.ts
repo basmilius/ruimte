@@ -30,6 +30,12 @@ export interface ServerInfo {
     keepAwakeDisplay: boolean;
     /* Whether the machine can hold a block on sleep at all. */
     keepAwakeAvailable: boolean;
+    /* Also with the lid closed, which turns sleep off while the block holds; false for a daemon from before. */
+    keepAwakeLidClosed: boolean;
+    /* Whether the machine offers the closed-lid mode at all, which only a Mac does. */
+    keepAwakeLidAvailable: boolean;
+    /* Whether the sudoers rule the closed-lid mode needs is installed on the machine. */
+    keepAwakeLidRule: boolean;
     /* Where the update of the desktop app on the machine stands; null for a daemon from before. */
     update: MachineUpdate | null;
     /* The broker a person picked for this machine; null for a daemon that predates the setting. */
@@ -65,6 +71,9 @@ const UNKNOWN: ServerInfo = {
     keepAwakeOnBattery: false,
     keepAwakeDisplay: false,
     keepAwakeAvailable: false,
+    keepAwakeLidClosed: false,
+    keepAwakeLidAvailable: false,
+    keepAwakeLidRule: false,
     update: null,
     broker: null,
     brokerFixed: false,
@@ -93,6 +102,9 @@ interface ServersStore {
             | 'keepAwakeOnBattery'
             | 'keepAwakeDisplay'
             | 'keepAwakeAvailable'
+            | 'keepAwakeLidClosed'
+            | 'keepAwakeLidAvailable'
+            | 'keepAwakeLidRule'
             | 'update'
             | 'broker'
             | 'brokerFixed'
@@ -118,6 +130,8 @@ interface ServersStore {
                     | 'keepAwake'
                     | 'keepAwakeOnBattery'
                     | 'keepAwakeDisplay'
+                    | 'keepAwakeLidClosed'
+                    | 'keepAwakeLidRule'
                     | 'broker'
                     | 'brokerFixed'
                     | 'lanDoor'

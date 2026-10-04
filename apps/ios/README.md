@@ -66,7 +66,10 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   follows `endpoint.changed` and `endpoint.updateChanged`; it also keeps when this phone last reached the machine.
   Keep awake (Off, While agents work, Always, then Also on battery and, under Always and only with battery, Keep the
   display on) shows only where the machine can hold it (`keepAwakeAvailable`) and is written with
-  `endpoint.setIdentity`, which sends the name back only when a person chose it. The update banner says what the app
+  `endpoint.setIdentity`, which sends the name back only when a person chose it. On a Mac that offers it
+  (`keepAwakeLidAvailable`) Also with the lid closed sits under Also on battery; it is usable only once the sudoers rule
+  is installed there (`keepAwakeLidRule`, followed through `endpoint.changed`), and until then it says to allow it in
+  Ruimte on the Mac, since only the local secret installs the rule. The update banner says what the app
   on the machine has (available, downloading with its percent, ready, failed); Update or Restart first asks
   `endpoint.installUpdate` with `confirm: false`, says what a restart ends right now (terminals and agents, or
   nothing under the service) and installs only after Restart on that question. Without the app on the machine it says

@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import i18next from 'i18next';
+import type { EndpointInfo } from '@ruimte/contracts';
 import { canKeepAwake, desktop, type DesktopBridge, type KeepAwakeRequest } from '@/desktop/bridge';
 import { agentsWorking } from '@/state/agent-work';
 import { useChats, type ChatsById } from '@ruimte/agents-react/state/chats';
@@ -9,6 +11,7 @@ import { useSessions, type SessionsByKey } from '@/state/sessions';
 import { useSettings, type Settings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
+import { TransportError } from '@/transport/transport';
 
 export type KeepAwakeSettings = Pick<Settings, 'keepAwake' | 'keepAwakeOnBattery' | 'keepAwakeDisplay'>;
 
@@ -51,21 +54,8 @@ export const keepAwakeAvailable = (): boolean => (hasLocalMachine() && machineKe
 /* The same as `keepAwakeAvailable` inside a render, which follows the machine as it answers. */
 export const useKeepAwakeAvailable = (): boolean => useMachineKeepsAwake() || canKeepAwake();
 
-/* The machine takes name, icon and switches together, so the name and icon it has go back with it. */
-const saveOnMachine = async (patch: Partial<KeepAwakeSettings>): Promise<void> => {
-    const link = transportFor(LOCAL_ENDPOINT_ID);
-    if (!link) {
-        return;
-    }
-    const info = localInfo();
-    const answer = await link.request('endpoint.setIdentity', {
-        // A machine nobody named answers to its own default, and sending that name back would make it chosen.
-        name: info.nameSource === 'chosen' ? info.label : null,
-        icon: info.icon,
-        keepAwake: patch.keepAwake,
-        keepAwakeOnBattery: patch.keepAwakeOnBattery,
-        keepAwakeDisplay: patch.keepAwakeDisplay
-    });
+/* What the machine answered a write with, so the pane moves without waiting for the event. */
+const adoptAnswer = (answer: EndpointInfo): void => {
     useServers.getState().setIdentity(LOCAL_ENDPOINT_ID, {
         label: answer.label,
         nameSource: answer.nameSource ?? null,
@@ -73,7 +63,38 @@ const saveOnMachine = async (patch: Partial<KeepAwakeSettings>): Promise<void> =
         agentsDeleteAnyView: answer.agentsDeleteAnyView === true,
         keepAwake: answer.keepAwake ?? null,
         keepAwakeOnBattery: answer.keepAwakeOnBattery === true,
-        keepAwakeDisplay: answer.keepAwakeDisplay === true
+        keepAwakeDisplay: answer.keepAwakeDisplay === true,
+        keepAwakeLidClosed: answer.keepAwakeLidClosed === true,
+        keepAwakeLidRule: answer.keepAwakeLidRule === true
+    });
+};
+
+/* The machine takes name, icon and switches together, so the name and icon it has go back with it. */
+const saveOnMachine = async (patch: Partial<KeepAwakeSettings> & { keepAwakeLidClosed?: boolean }): Promise<void> => {
+    const link = transportFor(LOCAL_ENDPOINT_ID);
+    if (!link) {
+        return;
+    }
+    const info = localInfo();
+    adoptAnswer(
+        await link.request('endpoint.setIdentity', {
+            // A machine nobody named answers to its own default, and sending that name back would make it chosen.
+            name: info.nameSource === 'chosen' ? info.label : null,
+            icon: info.icon,
+            keepAwake: patch.keepAwake,
+            keepAwakeOnBattery: patch.keepAwakeOnBattery,
+            keepAwakeDisplay: patch.keepAwakeDisplay,
+            keepAwakeLidClosed: patch.keepAwakeLidClosed
+        })
+    );
+};
+
+const showSaveFailed = (e: unknown): void => {
+    useToasts.getState().show({
+        id: 'keep-awake-save',
+        kind: 'error',
+        title: i18next.t('settings:agents.keepAwake.saveFailed'),
+        description: e instanceof Error ? e.message : i18next.t('settings:machine.toast.unchanged')
     });
 };
 
@@ -83,14 +104,62 @@ export const setKeepAwake = (patch: Partial<KeepAwakeSettings>): void => {
         useSettings.getState().update(patch);
         return;
     }
-    void saveOnMachine(patch).catch((e: unknown) =>
-        useToasts.getState().show({
-            id: 'keep-awake-save',
-            kind: 'error',
-            title: i18next.t('settings:agents.keepAwake.saveFailed'),
-            description: e instanceof Error ? e.message : i18next.t('settings:machine.toast.unchanged')
-        })
-    );
+    void saveOnMachine(patch).catch(showSaveFailed);
+};
+
+/*
+ * Keep awake with the lid closed. Only a Mac whose daemon holds keep awake offers it, the switch works
+ * once the sudoers rule is installed there, and that rule is this computer's to install or remove.
+ */
+export interface ClosedLid {
+    offered: boolean;
+    rule: boolean;
+    on: boolean;
+}
+
+export const closedLidOf = (
+    info: Pick<ServerInfo, 'keepAwake' | 'keepAwakeAvailable' | 'keepAwakeLidAvailable' | 'keepAwakeLidRule' | 'keepAwakeLidClosed'> | undefined
+): ClosedLid =>
+    info === undefined
+        ? { offered: false, rule: false, on: false }
+        : { offered: machineKeepsAwake(info) && info.keepAwakeLidAvailable, rule: info.keepAwakeLidRule, on: info.keepAwakeLidRule && info.keepAwakeLidClosed };
+
+/* Whether the closed-lid row is drawn, outside a render: offered, and keep awake not off. */
+export const closedLidOffered = (): boolean => hasLocalMachine() && closedLidOf(localInfo()).offered && keepAwakeChoice().keepAwake !== 'off';
+
+/* The closed lid of this computer's machine, inside a render. */
+export const useClosedLid = (): ClosedLid => {
+    const info = useServers((s) => (hasLocalMachine() ? s.byEndpoint[LOCAL_ENDPOINT_ID] : undefined));
+    return useMemo(() => closedLidOf(info), [info]);
+};
+
+export const setKeepAwakeLidClosed = (on: boolean): void => {
+    void saveOnMachine({ keepAwakeLidClosed: on }).catch(showSaveFailed);
+};
+
+/*
+ * Installs or removes the rule on this computer's machine, after macOS asks for an administrator in its
+ * own dialog. Resolves false when the person cancelled that dialog, which is nothing to report.
+ */
+export const setClosedLidRule = async (install: boolean): Promise<boolean> => {
+    const link = transportFor(LOCAL_ENDPOINT_ID);
+    if (!link) {
+        throw new Error(i18next.t('settings:machine.notAnswering'));
+    }
+    try {
+        adoptAnswer(
+            await link.request('endpoint.closedLidRule', {
+                install,
+                prompt: i18next.t(install ? 'settings:agents.keepAwake.lid.rule.prompt.install' : 'settings:agents.keepAwake.lid.rule.prompt.remove')
+            })
+        );
+        return true;
+    } catch (e) {
+        if (e instanceof TransportError && e.code === 'closed-lid-cancelled') {
+            return false;
+        }
+        throw e;
+    }
 };
 
 const OFF: KeepAwakeSettings = { keepAwake: 'off', keepAwakeOnBattery: false, keepAwakeDisplay: false };

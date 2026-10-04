@@ -23,6 +23,10 @@ export const agentsWorking = (work: KeepAwakeWork): boolean =>
 /* Where the daemon can hold a block. Only macOS ships a tool that holds one for as long as a process lives. */
 export const keepAwakeAvailable = (platform: NodeJS.Platform): boolean => platform === 'darwin';
 
+/* Whether the setting asks for a block right now, before the power source has a say. */
+export const keepAwakeWanted = (setting: KeepAwakeSetting, working: boolean, platform: NodeJS.Platform): boolean =>
+    keepAwakeAvailable(platform) && setting.mode !== 'off' && (setting.mode !== 'working' || working);
+
 /*
  * The command that holds the block, or null for none. `-w` ties it to the daemon, so a daemon that is
  * killed never leaves the Mac awake. `-s` holds on the power adapter only and `-i` on any source. The
@@ -30,7 +34,7 @@ export const keepAwakeAvailable = (platform: NodeJS.Platform): boolean => platfo
  * `-d` there would keep a laptop on battery awake that a person said should sleep.
  */
 export const keepAwakeCommand = (setting: KeepAwakeSetting, working: boolean, platform: NodeJS.Platform, pid: number): string[] | null => {
-    if (!keepAwakeAvailable(platform) || setting.mode === 'off' || (setting.mode === 'working' && !working)) {
+    if (!keepAwakeWanted(setting, working, platform)) {
         return null;
     }
     const display = setting.mode === 'always' && setting.display && setting.onBattery;

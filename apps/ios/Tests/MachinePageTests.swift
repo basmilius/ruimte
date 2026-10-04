@@ -34,7 +34,7 @@ final class MachinePageTests: XCTestCase {
         machine.answers["endpoint.info"] = { _ in self.info() }
         let endpoint = await started(machine)
         XCTAssertEqual(endpoint.version, "0.42.1")
-        XCTAssertEqual(endpoint.keepAwake, MachineKeepAwake(mode: .working, onBattery: false, display: false))
+        XCTAssertEqual(endpoint.keepAwake, MachineKeepAwake(mode: .working, onBattery: false, display: false, lidClosed: false))
         XCTAssertEqual(endpoint.update?.action, "Restart")
         XCTAssertEqual(endpoint.update?.headline, "Ruimte 0.43.0 is ready on this machine.")
 
@@ -92,19 +92,55 @@ final class MachinePageTests: XCTestCase {
             ])
         }
         let endpoint = await started(machine)
-        await endpoint.setKeepAwake(MachineKeepAwake(mode: .always, onBattery: true, display: false))
+        await endpoint.setKeepAwake(MachineKeepAwake(mode: .always, onBattery: true, display: false, lidClosed: false))
         let sent = try XCTUnwrap(machine.sent.last { $0.0 == "endpoint.setIdentity" }?.1)
         XCTAssertEqual(sent["name"], .null, "A default name sent back would become a chosen one")
         XCTAssertEqual(sent["icon"], .null)
         XCTAssertEqual(sent["keepAwake"], .string("always"))
         XCTAssertEqual(sent["keepAwakeOnBattery"], .bool(true))
-        XCTAssertEqual(endpoint.keepAwake, MachineKeepAwake(mode: .always, onBattery: true, display: false))
+        XCTAssertEqual(endpoint.keepAwake, MachineKeepAwake(mode: .always, onBattery: true, display: false, lidClosed: false))
         XCTAssertTrue(endpoint.keepAwake?.displayApplies == true)
 
         machine.refusals["endpoint.setIdentity"] = "forbidden"
-        await endpoint.setKeepAwake(MachineKeepAwake(mode: .off, onBattery: true, display: false))
+        await endpoint.setKeepAwake(MachineKeepAwake(mode: .off, onBattery: true, display: false, lidClosed: false))
         XCTAssertEqual(endpoint.keepAwake?.mode, .always, "A refused write puts the switch back")
         XCTAssertNotNil(endpoint.problem)
+        endpoint.stop()
+    }
+
+    @MainActor func testTheClosedLidIsUsableOnlyOnceTheRuleIsOnTheMacAndFollowsItsEvents() async throws {
+        let machine = FakeMachine()
+        machine.answers["endpoint.info"] = { _ in
+            self.info(["keepAwakeLidAvailable": .bool(true), "keepAwakeLidRule": .bool(false), "keepAwakeLidClosed": .bool(false)])
+        }
+        machine.answers["endpoint.setIdentity"] = { payload in
+            self.info([
+                "keepAwakeLidAvailable": .bool(true), "keepAwakeLidRule": .bool(true),
+                "keepAwakeLidClosed": payload["keepAwakeLidClosed"] ?? .null,
+            ])
+        }
+        let endpoint = await started(machine)
+        XCTAssertEqual(endpoint.closedLid, MachineClosedLid(ruleInstalled: false))
+
+        machine.emit("endpoint.changed", .object(["keepAwakeLidRule": .bool(true)]))
+        XCTAssertEqual(endpoint.closedLid, MachineClosedLid(ruleInstalled: true), "Installing on the Mac reaches the phone")
+
+        await endpoint.setKeepAwake(MachineKeepAwake(mode: .working, onBattery: false, display: false, lidClosed: true))
+        let sent = try XCTUnwrap(machine.sent.last { $0.0 == "endpoint.setIdentity" }?.1)
+        XCTAssertEqual(sent["keepAwakeLidClosed"], .bool(true))
+        XCTAssertEqual(endpoint.keepAwake?.lidClosed, true)
+        endpoint.stop()
+    }
+
+    @MainActor func testAMachineWithoutTheClosedLidIsNeverToldAboutIt() async throws {
+        let machine = FakeMachine()
+        machine.answers["endpoint.info"] = { _ in self.info() }
+        machine.answers["endpoint.setIdentity"] = { _ in self.info(["keepAwake": .string("always")]) }
+        let endpoint = await started(machine)
+        XCTAssertNil(endpoint.closedLid)
+        await endpoint.setKeepAwake(MachineKeepAwake(mode: .always, onBattery: false, display: false, lidClosed: false))
+        let sent = try XCTUnwrap(machine.sent.last { $0.0 == "endpoint.setIdentity" }?.1)
+        XCTAssertNil(sent["keepAwakeLidClosed"])
         endpoint.stop()
     }
 

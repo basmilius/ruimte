@@ -1,5 +1,6 @@
 import { toBase64Url } from '@ruimte/pulsar';
 import { z } from 'zod';
+import { KeepAwakeModeSchema } from './keep-awake.ts';
 import { LanDoorSchema } from './lan-door.ts';
 
 /*
@@ -86,7 +87,17 @@ export const MachineStatusSchema = z.object({
     broker: z.object({ url: z.string().nullable(), connected: z.boolean() }),
     // The door on the local network, null while it is closed, and whether `--no-lan` closed it.
     lan: LanDoorSchema.nullable(),
-    lanDoorFixed: z.boolean()
+    lanDoorFixed: z.boolean(),
+    /* Keep awake as it stands and whether it holds right now. `lid` is null where the closed-lid mode is not
+       offered. Absent from a daemon from before, which `ruimte status` then says nothing about. */
+    keepAwake: z
+        .object({
+            mode: KeepAwakeModeSchema,
+            onBattery: z.boolean(),
+            holding: z.boolean(),
+            lid: z.object({ on: z.boolean(), rule: z.boolean(), holding: z.boolean() }).nullable()
+        })
+        .optional()
 });
 export type MachineStatus = z.infer<typeof MachineStatusSchema>;
 

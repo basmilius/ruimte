@@ -395,6 +395,22 @@
                 "description": "Uit mag het scherm nog uitgaan terwijl de computer wakker blijft.",
                 "needsBattery": "Alleen samen met Ook op de batterij, omdat macOS het scherm niet alleen op de netadapter aan kan houden."
             },
+            "lid": {
+                "label": "Ook met de klep dicht",
+                "description": "Zet slaap uit zolang wakker houden geldt, zodat de Mac doorwerkt met de klep dicht. Slaap komt terug zodra wakker houden loslaat of de machine stopt. Op de batterij geldt het alleen met Ook op de batterij, en onder {{percent}} laat het los. Zonder dit gaat de Mac slapen als je de klep sluit, tenzij er een extern scherm en de netadapter aan hangen.",
+                "search": "De Mac laten doorwerken met de klep dicht zolang wakker houden geldt.",
+                "rule": {
+                    "label": "Toestemming op deze Mac",
+                    "missing": "Voegt een regel toe aan /etc/sudoers.d waarmee Ruimte pmset -a disablesleep 1 en 0 zonder wachtwoord mag uitvoeren, en verder niets. macOS vraagt eerst om een beheerderswachtwoord.",
+                    "installed": "Een regel in /etc/sudoers.d laat Ruimte pmset -a disablesleep 1 en 0 zonder wachtwoord uitvoeren, en verder niets. Verwijderen zet slaap weer aan en de schakelaar hierboven uit.",
+                    "install": "Toestaan",
+                    "remove": "Verwijderen",
+                    "prompt": {
+                        "install": "Ruimte wil deze Mac wakker laten blijven met de klep dicht. Het voegt een regel toe waarmee het slaap uit en weer aan mag zetten, en verder niets.",
+                        "remove": "Ruimte wil de regel verwijderen waarmee het deze Mac wakker houdt met de klep dicht."
+                    }
+                }
+            },
             "saveFailed": "Wakker houden kon niet worden aangepast"
         },
         "chats": {
