@@ -58,6 +58,8 @@ interface OpenDocument {
     /* The version the daemon will be at once every change sent so far has landed. 0 until the first open is answered. */
     version: number;
     providers: LanguageProviders;
+    /* The kinds of language server that serve the document, as the daemon's last answer to its open said. */
+    servers: readonly string[];
     /* While the daemon's copy is being replaced, changes wait for it: the text it carries is read after they were made. */
     resyncing: Promise<void> | null;
 }
@@ -161,6 +163,7 @@ export class WireLanguageService implements LanguageService {
             languageId: document.languageId,
             version: 0,
             providers: {},
+            servers: [],
             resyncing: null
         };
         this.documents.set(document.uri, open);
@@ -171,6 +174,7 @@ export class WireLanguageService implements LanguageService {
             text: document.text
         });
         open.version = reply.version;
+        open.servers = reply.servers;
         this.setProviders(open, reply.providers);
     }
 
@@ -220,6 +224,11 @@ export class WireLanguageService implements LanguageService {
         for (const controller of this.latest.values()) {
             controller.abort();
         }
+    }
+
+    /* The kinds of language server the daemon says serve the document: installed or not, and empty before the first answer. */
+    serversOf(uri: string): readonly string[] {
+        return this.documents.get(uri)?.servers ?? [];
     }
 
     supports(method: string, uri: string): boolean {
@@ -430,6 +439,7 @@ export class WireLanguageService implements LanguageService {
                         text
                     });
                     document.version = reply.version;
+                    document.servers = reply.servers;
                     this.setProviders(document, reply.providers);
                     if (this.options.textOf(document.uri) === text) {
                         return;

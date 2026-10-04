@@ -45,6 +45,28 @@ export interface EditorChangeMark {
     readonly endLine: number;
 }
 
+/* A place in the text as a language server names it: a zero-based line and a UTF-16 character. */
+export interface EditorPosition {
+    readonly line: number;
+    readonly character: number;
+}
+
+export interface EditorRange {
+    readonly start: EditorPosition;
+    readonly end: EditorPosition;
+}
+
+/* The range replaced, in the text as it stands after the changes listed before this one, and what takes its place. */
+export interface EditorContentChange {
+    readonly range: EditorRange;
+    readonly text: string;
+}
+
+export interface EditorTextChange {
+    /* In order, so a language server can follow them one by one. */
+    readonly changes: readonly EditorContentChange[];
+}
+
 export interface EditorIndentation {
     readonly tabSize: number;
     readonly insertSpaces: boolean;
@@ -70,6 +92,11 @@ export interface Editor {
        reported as a change, and the cursor and the scroll stay put wherever the text around them did. */
     setText(text: string): void;
     onChange(listener: () => void): () => void;
+    /* Every change of the text, `setText` and undo included, with what changed in the positions a language server expects. */
+    onTextChange(listener: (change: EditorTextChange) => void): () => void;
+    /* An offset past the end, or a character past the end of its line, lands on the end. */
+    positionAt(offset: number): EditorPosition;
+    offsetAt(position: EditorPosition): number;
     /* Mod+S from inside the editor; what happens then is the client's. */
     onSave(listener: () => void): () => void;
     /* The focus left the editor and every widget of its own, such as its suggestions. */

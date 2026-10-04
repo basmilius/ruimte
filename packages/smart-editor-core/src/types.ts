@@ -24,6 +24,13 @@ export interface Position {
     column: number;
 }
 
+/* A replacement as a language server's `didChange` wants it: a range of the document as it stands after the edits listed before this one. */
+export interface ContentEdit {
+    start: Position;
+    end: Position;
+    text: string;
+}
+
 export interface Disposable {
     dispose(): void;
 }
@@ -39,6 +46,8 @@ export interface EditorSnapshot {
     canRedo: boolean;
     /* One entry per transaction, present when the text changed. */
     changes?: readonly (readonly DocumentChange[])[];
+    /* The same change in order, as a sequence a language server can follow; present when the text changed. */
+    contentEdits?: readonly ContentEdit[];
     source?: ChangeSource;
 }
 

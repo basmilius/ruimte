@@ -1,7 +1,6 @@
-import { DocumentModel, replacementText } from '@ruimte/smart-editor-core';
+import { changedSpan, DocumentModel, type EditorSnapshot, replacementText } from '@ruimte/smart-editor-core';
 import { InputController } from './controller.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
-import { changedSpan } from './text-span.ts';
 import type {
     Editor,
     EditorBlock,
@@ -11,6 +10,8 @@ import type {
     EditorIndentation,
     EditorFindState,
     EditorOptions,
+    EditorPosition,
+    EditorTextChange,
     EditorTheme,
     SmartEditorEngineOptions
 } from './types.ts';
@@ -24,6 +25,7 @@ class SmartEditor implements Editor {
     private readonly view: EditorView;
     private readonly controller: InputController;
     private readonly changes = new Set<Listener>();
+    private readonly textChanges = new Set<(change: EditorTextChange) => void>();
     private readonly saves = new Set<Listener>();
     private readonly blurs = new Set<Listener>();
     private readonly subscription: { dispose(): void };
@@ -60,6 +62,9 @@ class SmartEditor implements Editor {
         this.subscription = this.model.subscribe((snapshot) => {
             if (snapshot.revision !== this.revision) {
                 this.revision = snapshot.revision;
+                if (snapshot.contentEdits !== undefined && snapshot.contentEdits.length > 0) {
+                    this.announceTextChange(snapshot.contentEdits);
+                }
                 if (!this.settingText) {
                     emit(this.changes);
                 }
@@ -119,6 +124,34 @@ class SmartEditor implements Editor {
 
     onChange(listener: Listener): () => void {
         return subscribe(this.changes, listener);
+    }
+
+    onTextChange(listener: (change: EditorTextChange) => void): () => void {
+        this.textChanges.add(listener);
+        return () => {
+            this.textChanges.delete(listener);
+        };
+    }
+
+    private announceTextChange(edits: NonNullable<EditorSnapshot['contentEdits']>): void {
+        const change: EditorTextChange = {
+            changes: edits.map((edit) => ({
+                range: { start: { line: edit.start.line, character: edit.start.column }, end: { line: edit.end.line, character: edit.end.column } },
+                text: edit.text
+            }))
+        };
+        for (const listener of [...this.textChanges]) {
+            listener(change);
+        }
+    }
+
+    positionAt(offset: number): EditorPosition {
+        const { line, column } = this.model.positionAt(offset);
+        return { line, character: column };
+    }
+
+    offsetAt(position: EditorPosition): number {
+        return this.model.offsetAt({ line: Math.max(0, position.line), column: Math.max(0, position.character) });
     }
 
     onSave(listener: Listener): () => void {
@@ -263,6 +296,7 @@ class SmartEditor implements Editor {
         }
         this.disposed = true;
         this.changes.clear();
+        this.textChanges.clear();
         this.saves.clear();
         this.blurs.clear();
         this.subscription.dispose();

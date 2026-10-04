@@ -15,6 +15,7 @@ import { FileToolbar } from '@/shell/panels/FileToolbar';
 import { FileBreadcrumb } from '@/shell/panels/FileBreadcrumb';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useEditorFind } from '@/shell/panels/use-editor-find';
+import { useEditorLanguage } from '@/shell/panels/use-editor-language';
 import { useChangeMarks } from '@/shell/panels/use-change-marks';
 import { useEditorScope } from '@/shell/panels/use-editor-scope';
 import { useFileEditing } from '@/shell/panels/use-file-editing';
@@ -205,6 +206,7 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const find = useFind(surface, editor !== null);
     const editorFind = useEditorFind(find, editor);
     const scope = useEditorScope(editor);
+    useEditorLanguage(editor, path, plain ? undefined : read.language);
     useChangeMarks(editor, useGitBase(path, read.text));
     const folder = useProject((s) => s.current?.folder ?? null);
 

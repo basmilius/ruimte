@@ -5,7 +5,18 @@ import { findMatches, replacementText, splitsSurrogate } from './search.ts';
 import type { FindMatch, FindNextOptions, FindOptions } from './search.ts';
 import { deriveFoldingRanges, indentationColumn, scanStructure, tabWidth } from './structure.ts';
 import type { FoldingOptions, FoldingRange, StructureRange } from './structure.ts';
-import type { CommandOptions, Disposable, DocumentChange, EditOptions, EditorCommand, EditorSnapshot, Position, Selection, TextEdit } from './types.ts';
+import type {
+    CommandOptions,
+    ContentEdit,
+    Disposable,
+    DocumentChange,
+    EditOptions,
+    EditorCommand,
+    EditorSnapshot,
+    Position,
+    Selection,
+    TextEdit
+} from './types.ts';
 import { TypingContexts } from './typing-context.ts';
 import type { TypingContext } from './typing-context.ts';
 import { wordBoundary } from './words.ts';
@@ -233,6 +244,46 @@ function indentStopLength(prefix: string, tabSize: number): number {
     return length;
 }
 
+function positionIn(rope: TextRope, offset: number): Position {
+    const line = rope.lineAt(offset);
+    return { line, column: Math.min(offset, rope.lineBounds(line).end) - rope.lineBounds(line).start };
+}
+
+/* Simultaneous edits of `rope` as a sequence, last to first, so each edit's position in `rope` is also its position once the ones after it are applied. */
+function editsOf(rope: TextRope, edits: readonly TextEdit[]): ContentEdit[] {
+    return [...edits].reverse().map((edit) => ({ start: positionIn(rope, edit.from), end: positionIn(rope, edit.to), text: edit.text }));
+}
+
+/*
+ * What a history step did, as the one stretch that holds every change. The intermediate texts of its
+ * transactions are gone, so the stretch runs from the first changed offset to the last, counted from
+ * either end, and is a little more than the change when two of them are far apart.
+ */
+function stretchEdits(before: TextRope, after: TextRope, transactions: readonly (readonly DocumentChange[])[]): ContentEdit[] {
+    let length = before.length;
+    let prefix = Number.POSITIVE_INFINITY;
+    let suffix = Number.POSITIVE_INFINITY;
+    for (const changes of transactions) {
+        let delta = 0;
+        for (const change of changes) {
+            prefix = Math.min(prefix, change.from);
+            suffix = Math.min(suffix, length - change.to);
+            delta += change.insertedLength - (change.to - change.from);
+        }
+        length += delta;
+    }
+    if (!Number.isFinite(prefix)) {
+        return [];
+    }
+    const kept = Math.min(Math.max(0, suffix), before.length - prefix, after.length - prefix);
+    const oldEnd = before.length - kept;
+    const newEnd = after.length - kept;
+    if (oldEnd === prefix && newEnd === prefix) {
+        return [];
+    }
+    return [{ start: positionIn(before, prefix), end: positionIn(before, oldEnd), text: after.slice(prefix, newEnd) }];
+}
+
 /*
  * Text with a selection, undo history and the editing commands of a code editor, and no idea how it
  * is drawn. Offsets are UTF-16 code units, lines and columns zero-based. The text is a persistent
@@ -360,6 +411,7 @@ export class DocumentModel {
 
         const before = this.state();
         const firstLine = this.rope.lineAt(changed[0]!.from);
+        const previous = this.rope;
         this.rope = next;
         this.invalidate();
         this.typingContexts.invalidate(firstLine);
@@ -385,7 +437,7 @@ export class DocumentModel {
         }
         this.groupOpen = Boolean(options.historyGroup);
         this.redoStack = [];
-        this.emit([changes], options.source ?? 'external');
+        this.emit([changes], options.source ?? 'external', () => editsOf(previous, changed));
         return true;
     }
 
@@ -1097,20 +1149,26 @@ export class DocumentModel {
     }
 
     private restore(state: State, changes: readonly (readonly DocumentChange[])[]): void {
+        const previous = this.rope;
         this.rope = state.rope;
         this.invalidate();
         this.typingContexts.invalidate();
         this.selections = state.selections.map((selection) => ({ ...selection }));
         this.revision++;
         this.groupOpen = false;
-        this.emit(changes, 'command');
+        this.emit(changes, 'command', () => stretchEdits(previous, state.rope, changes));
     }
 
-    private emit(changes?: readonly (readonly DocumentChange[])[], source?: EditorSnapshot['source']): void {
+    /* `contentEdits` is worked out when a listener asks, since most listeners never do and a restore of a large text would otherwise read all of it. */
+    private emit(changes?: readonly (readonly DocumentChange[])[], source?: EditorSnapshot['source'], contentEdits?: () => ContentEdit[]): void {
         const snapshot = this.getSnapshot();
         if (changes) {
             snapshot.changes = changes.map((transaction) => transaction.map((change) => ({ ...change })));
             snapshot.source = source;
+            if (contentEdits) {
+                let edits: ContentEdit[] | undefined;
+                Object.defineProperty(snapshot, 'contentEdits', { get: () => (edits ??= contentEdits()), enumerable: true });
+            }
         }
         for (const listener of this.listeners) {
             listener(snapshot);

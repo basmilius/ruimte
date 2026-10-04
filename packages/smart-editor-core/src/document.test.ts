@@ -329,3 +329,32 @@ describe('editing commands', () => {
         }
     });
 });
+
+describe('content edits', () => {
+    it('reports simultaneous edits last to first, in the positions of the text before them', () => {
+        const model = new DocumentModel('one\ntwo\nthree');
+        let seen: unknown;
+        model.subscribe((snapshot) => {
+            seen = snapshot.contentEdits;
+        });
+        model.applyEdits([
+            { from: 0, to: 3, text: 'a\nb' },
+            { from: 8, to: 13, text: 'x' }
+        ]);
+        expect(seen).toEqual([
+            { start: { line: 2, column: 0 }, end: { line: 2, column: 5 }, text: 'x' },
+            { start: { line: 0, column: 0 }, end: { line: 0, column: 3 }, text: 'a\nb' }
+        ]);
+    });
+
+    it('reports an undo as the one stretch that differs', () => {
+        const model = new DocumentModel('hello world');
+        model.applyEdits([{ from: 5, to: 5, text: ',' }], { historyGroup: 'g' });
+        let seen: unknown;
+        model.subscribe((snapshot) => {
+            seen = snapshot.contentEdits;
+        });
+        model.undo();
+        expect(seen).toEqual([{ start: { line: 0, column: 5 }, end: { line: 0, column: 6 }, text: '' }]);
+    });
+});

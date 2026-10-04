@@ -7,9 +7,18 @@ import type {
     EditorFindState,
     EditorIndentation,
     EditorOptions,
+    EditorPosition,
+    EditorTextChange,
     EditorTheme
 } from './types.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
+import { changedSpan } from '@ruimte/smart-editor-core';
+
+function positionIn(text: string, offset: number): EditorPosition {
+    const before = text.slice(0, Math.max(0, offset));
+    const lines = before.split('\n');
+    return { line: lines.length - 1, character: lines.at(-1)!.length };
+}
 
 /* An editor without a DOM, for tests: `type`, `save` and `blur` do what a person would, the rest says what the client asked of it. */
 export class FakeEditor implements Editor {
@@ -33,6 +42,7 @@ export class FakeEditor implements Editor {
     findState: EditorFindState = { count: 0, current: null };
     private text: string;
     private readonly changes = new Set<Listener>();
+    private readonly textChanges = new Set<(change: EditorTextChange) => void>();
     private readonly saves = new Set<Listener>();
     private readonly blurs = new Set<Listener>();
     private readonly finds = new Set<(state: EditorFindState) => void>();
@@ -58,7 +68,7 @@ export class FakeEditor implements Editor {
         if (this.readOnly || text === this.text) {
             return;
         }
-        this.text = text;
+        this.replaceText(text);
         emit(this.changes);
     }
 
@@ -81,7 +91,44 @@ export class FakeEditor implements Editor {
 
     setText(text: string): void {
         this.assertLive();
+        this.replaceText(text);
+    }
+
+    /* The text becomes `text`, and listeners of the text hear the one stretch that differs, as the real editor reports it. */
+    private replaceText(text: string): void {
+        const span = changedSpan(this.text, text);
+        const before = this.text;
         this.text = text;
+        if (span === null) {
+            return;
+        }
+        const change: EditorTextChange = {
+            changes: [{ range: { start: positionIn(before, span.start), end: positionIn(before, span.end) }, text: span.text }]
+        };
+        for (const listener of [...this.textChanges]) {
+            listener(change);
+        }
+    }
+
+    onTextChange(listener: (change: EditorTextChange) => void): () => void {
+        this.textChanges.add(listener);
+        return () => {
+            this.textChanges.delete(listener);
+        };
+    }
+
+    positionAt(offset: number): EditorPosition {
+        return positionIn(this.text, offset);
+    }
+
+    offsetAt(position: EditorPosition): number {
+        const lines = this.text.split('\n');
+        let offset = 0;
+        for (let line = 0; line < Math.min(position.line, lines.length - 1); line++) {
+            offset += lines[line]!.length + 1;
+        }
+        const current = lines[Math.min(position.line, lines.length - 1)]!;
+        return offset + Math.min(position.character, current.length);
     }
 
     onChange(listener: Listener): () => void {
@@ -198,6 +245,7 @@ export class FakeEditor implements Editor {
     dispose(): void {
         this.disposed = true;
         this.changes.clear();
+        this.textChanges.clear();
         this.saves.clear();
         this.blurs.clear();
         this.finds.clear();

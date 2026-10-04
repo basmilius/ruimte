@@ -7,6 +7,7 @@ export { isHumpBoundary, isWordBoundary, wordBoundary, type WordText } from './w
 export type {
     ChangeSource,
     CommandOptions,
+    ContentEdit,
     Disposable,
     DocumentChange,
     EditOptions,
@@ -16,3 +17,4 @@ export type {
     Selection,
     TextEdit
 } from './types.ts';
+export { changedSpan, type TextSpan } from './text-span.ts';

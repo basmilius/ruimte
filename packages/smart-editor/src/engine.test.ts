@@ -410,3 +410,25 @@ describe('replace', () => {
         expect(changes).toBe(1);
     });
 });
+
+describe('text changes', () => {
+    test('reports every change as a language server wants it, an outside setText and an undo included', () => {
+        const { editor, type, press } = setup({ text: 'one\ntwo' });
+        const heard: unknown[] = [];
+        editor.onTextChange((change) => heard.push(change.changes));
+        editor.setText('one\ntwo!');
+        expect(heard.at(-1)).toEqual([{ range: { start: { line: 1, character: 3 }, end: { line: 1, character: 3 } }, text: '!' }]);
+        type('x');
+        expect(heard).toHaveLength(2);
+        press('z', { metaKey: true });
+        press('z', { ctrlKey: true });
+        expect(heard.length).toBeGreaterThan(2);
+    });
+
+    test('turns offsets into positions and back', () => {
+        const { editor } = setup({ text: 'one\ntwo' });
+        expect(editor.positionAt(5)).toEqual({ line: 1, character: 1 });
+        expect(editor.offsetAt({ line: 1, character: 2 })).toBe(6);
+        expect(editor.offsetAt({ line: 9, character: 9 })).toBe(7);
+    });
+});

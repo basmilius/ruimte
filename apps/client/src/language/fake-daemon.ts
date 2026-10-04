@@ -1,4 +1,5 @@
 import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
+import { applyContentChanges, type ContentChange } from '@ruimte/smart-editor-lsp';
 import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
 
 interface Call {
@@ -74,7 +75,7 @@ export class FakeLanguageTransport implements Transport {
 
     private daemon(
         type: string,
-        payload: { path: string; text: string; languageId: string; baseVersion: number; version?: number; changes: Array<{ text: string }> }
+        payload: { path: string; text: string; languageId: string; baseVersion: number; version?: number; changes: ContentChange[] }
     ): unknown {
         if (type === 'language.document.open') {
             const held = this.documents.get(payload.path);
@@ -102,7 +103,7 @@ export class FakeLanguageTransport implements Transport {
             if (payload.baseVersion !== held.version) {
                 throw new TransportError('stale-document', 'stale');
             }
-            held.text = payload.changes.at(-1)?.text ?? held.text;
+            held.text = applyContentChanges(held.text, payload.changes);
             return { version: ++held.version };
         }
         if (type === 'language.request') {
