@@ -1,14 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bookmark, ChevronDown, ChevronRight, Search, Trash2 } from 'lucide-react';
-import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo } from '@ruimte/agent-contracts';
+import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo, UsageProvider } from '@ruimte/agent-contracts';
 import { AgentIcon } from '../../agents/AgentIcon';
-import { modelName } from '../../agents/model-name';
+import { ProviderLogo } from '../../agents/ProviderLogo';
+import { agentChipOf, modelName } from '../../agents/model-name';
 import { forgetStashed, STASH_SHORTCUT, useStash, type StashedPrompt } from '../stash';
 import { Icon, IconButton, Menu, Popover, Tooltip } from '@basmilius/desktop-ui';
 
 const triggerClass =
     'flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text';
+
+const chipClass =
+    'flex h-6 min-w-0 shrink items-center gap-1.5 whitespace-nowrap rounded-md bg-surface-hover px-2 text-xs text-text hover:bg-surface-active data-[popup-open]:bg-surface-active';
 
 /* A model row, or the one row that folds the legacy models open. Both take a turn in the arrow keys. */
 type PickerEntry = { kind: 'model'; provider: ProviderInfo; model: ModelInfo } | { kind: 'legacy'; count: number };
@@ -30,6 +34,12 @@ interface ModelPickerProps {
     kbd?: string | null;
     /* Where the popup opens: over the composer by default, below the trigger in a form. */
     side?: 'top' | 'bottom';
+    /* `chip` names the provider beside the model, on a ground of its own, for a picker that sits in a card or a form. */
+    trigger?: 'plain' | 'chip';
+    /* Where the focus goes when the popup closes; by default back to the trigger. */
+    finalFocus?: RefObject<HTMLElement | null>;
+    /* A note under the list, such as what picking an agent here does. */
+    footer?: ReactNode;
 }
 
 /*
@@ -39,7 +49,19 @@ interface ModelPickerProps {
  * another provider's model is also how a chat picks its provider. A chat bound to one CLI passes
  * only that CLI, which drops the group headers and leaves its own catalog to choose from.
  */
-export function ModelPicker({ providers, provider, selection, open, onOpenChange, onChange, kbd = '/model', side = 'top' }: ModelPickerProps) {
+export function ModelPicker({
+    providers,
+    provider,
+    selection,
+    open,
+    onOpenChange,
+    onChange,
+    kbd = '/model',
+    side = 'top',
+    trigger = 'plain',
+    finalFocus,
+    footer
+}: ModelPickerProps) {
     const { t } = useTranslation('agent-chat');
     const [query, setQuery] = useState('');
     const [legacyOpen, setLegacyOpen] = useState(false);
@@ -49,6 +71,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
 
     const owner = providers.find((entry) => entry.kind === provider);
     const current = modelName(selection.model, owner?.models);
+    const chip = agentChipOf(providers, provider, selection.model);
     const grouped = providers.length > 1;
     const trimmed = query.trim().toLowerCase();
 
@@ -109,13 +132,22 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
     return (
         <Popover.Root open={open} onOpenChange={setOpen}>
             <Tooltip label={owner ? `${owner.name} · ${current}` : t('pickers.model.choose')} kbd={kbd ?? undefined}>
-                <Popover.Trigger className={triggerClass}>
-                    <AgentIcon kind={provider} size={12} />
-                    <span className="max-w-40 truncate">{current}</span>
-                    <Icon icon={ChevronDown} size={12} className="text-text-faint" />
-                </Popover.Trigger>
+                {trigger === 'chip' ? (
+                    <Popover.Trigger className={chipClass}>
+                        {chip.mark === 'logo' ? <ProviderLogo provider={provider as UsageProvider} size={12} /> : <AgentIcon kind={provider} size={12} />}
+                        <span className="truncate">{chip.name}</span>
+                        <span className="max-w-32 truncate text-text-muted">{chip.model}</span>
+                        <Icon icon={ChevronDown} size={12} className="shrink-0 text-text-faint" />
+                    </Popover.Trigger>
+                ) : (
+                    <Popover.Trigger className={triggerClass}>
+                        <AgentIcon kind={provider} size={12} />
+                        <span className="max-w-40 truncate">{current}</span>
+                        <Icon icon={ChevronDown} size={12} className="text-text-faint" />
+                    </Popover.Trigger>
+                )}
             </Tooltip>
-            <Popover.Popup variant="picker" side={side} initialFocus={inputRef}>
+            <Popover.Popup variant="picker" side={side} initialFocus={inputRef} {...(finalFocus === undefined ? {} : { finalFocus })}>
                 <div className="flex items-center gap-2 border-b border-border px-2.5">
                     <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
                     <input
@@ -185,6 +217,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                         );
                     })}
                 </div>
+                {footer !== undefined && <div className="border-t border-border-soft px-3 py-2 text-xs text-text-faint">{footer}</div>}
             </Popover.Popup>
         </Popover.Root>
     );

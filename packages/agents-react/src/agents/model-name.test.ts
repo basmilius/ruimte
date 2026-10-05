@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { ModelInfo } from '@ruimte/agent-contracts';
-import { modelName, modelNameFromSlug, sharedModelPrefix, shortModelName } from './model-name.ts';
+import type { ModelInfo, ProviderInfo } from '@ruimte/agent-contracts';
+import { agentChipOf, modelName, modelNameFromSlug, sharedModelPrefix, shortModelName } from './model-name.ts';
 
 function model(slug: string, name: string): ModelInfo {
     return { slug, name, legacy: false, isDefault: false, options: [] };
@@ -54,5 +54,26 @@ describe('shortModelName', () => {
 
     test('leaves a catalog of one alone', () => {
         expect(shortModelName('Claude Opus 5.5', catalog('Claude Opus 5.5'))).toBe('Claude Opus 5.5');
+    });
+});
+
+describe('the chip of an agent picker', () => {
+    const providers = [
+        { kind: 'claude', name: 'Claude Code', models: [model('opus', 'Opus 4.1')] },
+        { kind: 'codex', name: 'Codex', models: [model('gpt-5-codex', 'GPT-5 Codex')] },
+        { kind: 'gemini', name: 'Gemini CLI', models: [] }
+    ] as unknown as ProviderInfo[];
+
+    test('names the provider beside the model, with the logo for the CLIs that have one', () => {
+        expect(agentChipOf(providers, 'claude', 'opus')).toEqual({ mark: 'logo', name: 'Claude Code', model: 'Opus 4.1' });
+        expect(agentChipOf(providers, 'codex', 'gpt-5-codex')).toEqual({ mark: 'logo', name: 'Codex', model: 'GPT-5 Codex' });
+    });
+
+    test('draws the generic icon for another CLI and reads a model its catalog dropped from the slug', () => {
+        expect(agentChipOf(providers, 'gemini', 'gemini-2-5-pro')).toEqual({ mark: 'icon', name: 'Gemini CLI', model: 'Gemini 2.5 Pro' });
+    });
+
+    test('goes by the CLI id while the machine has not listed it', () => {
+        expect(agentChipOf([], 'claude', 'opus')).toEqual({ mark: 'logo', name: 'claude', model: 'Opus' });
     });
 });

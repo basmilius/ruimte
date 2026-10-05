@@ -1,4 +1,4 @@
-import type { AgentKind, ModelInfo } from '@ruimte/agent-contracts';
+import type { AgentKind, ModelInfo, ProviderInfo } from '@ruimte/agent-contracts';
 import { useProviders } from '../state/providers';
 
 /*
@@ -23,6 +23,22 @@ export function modelNameFromSlug(slug: string): string {
 /* What the CLI calls the model, so every surface says the same thing; a slug it no longer offers is read as one. */
 export function modelName(slug: string, models: readonly ModelInfo[] | undefined): string {
     return models?.find((entry) => entry.slug === slug)?.name ?? modelNameFromSlug(slug);
+}
+
+/* What an agent picker's chip says: the provider's name beside the model, and whether its mark is the logo of the usage page or the generic icon. */
+export interface AgentChip {
+    readonly mark: 'logo' | 'icon';
+    readonly name: string;
+    readonly model: string;
+}
+
+export function agentChipOf(providers: readonly ProviderInfo[], provider: AgentKind, model: string): AgentChip {
+    const owner = providers.find((entry) => entry.kind === provider);
+    return {
+        mark: provider === 'claude' || provider === 'codex' ? 'logo' : 'icon',
+        name: owner?.name ?? provider,
+        model: modelName(model, owner?.models)
+    };
 }
 
 /* The same answer for the machine in scope, whose catalog is the only one that can name the slug. */
