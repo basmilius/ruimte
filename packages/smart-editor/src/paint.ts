@@ -1,4 +1,4 @@
-import { type EditorLayout, type LayoutRect, type LayoutRow, type LineGeometry, scanLine, type TextRow } from './layout.ts';
+import { type BlockWidget, type EditorLayout, type LayoutRect, type LayoutRow, type LineGeometry, scanLine, type TextRow } from './layout.ts';
 import type { EditorChangeKind, LineToken } from './types.ts';
 
 const ITALIC = 1;
@@ -16,6 +16,8 @@ interface PaintedRow {
     /* What a collapsed fold keeps drawn after its placeholder, and the colors of the line it is from. */
     tail: string;
     tailTokens: readonly LineToken[] | null;
+    /* The revision of the widget a block row was drawn from. */
+    revision: number;
 }
 
 /* The gap around a collapsed fold's placeholder, so it reads as `{…}` and not as three separate things. */
@@ -207,7 +209,17 @@ export class RowPainter {
             } else {
                 this.code.append(element);
             }
-            entry = { element, text: geometry.text, tokens, layoutVersion: paint.layoutVersion, whitespace: paint.whitespace, folded, tail, tailTokens };
+            entry = {
+                element,
+                text: geometry.text,
+                tokens,
+                layoutVersion: paint.layoutVersion,
+                whitespace: paint.whitespace,
+                folded,
+                tail,
+                tailTokens,
+                revision: 0
+            };
             this.rows.set(row.key, entry);
         }
         entry.element.style.top = `${row.top}px`;
@@ -263,24 +275,33 @@ export class RowPainter {
     }
 
     private paintBlock(row: Extract<LayoutRow, { kind: 'block' }>, paint: RowPaint): boolean {
+        const { widget } = row;
+        const revision = widget.revision ?? 0;
         let entry = this.rows.get(row.key);
         if (!entry) {
             const element = this.code.ownerDocument.createElement('div');
             element.className = 'se-block';
             element.dataset.rowKey = row.key;
-            element.dataset.widgetId = row.widget.id;
-            if (row.widget.render) {
-                row.widget.render(element);
-            } else {
-                element.textContent = row.widget.text ?? '';
-            }
+            element.dataset.widgetId = widget.id;
+            this.fillBlock(element, widget);
             this.code.append(element);
-            this.observer?.observe(element);
-            entry = { element, text: '', tokens: null, layoutVersion: 0, whitespace: false, folded: false, tail: '', tailTokens: null };
+            if (!widget.lens) {
+                this.observer?.observe(element);
+            }
+            entry = { element, text: '', tokens: null, layoutVersion: 0, whitespace: false, folded: false, tail: '', tailTokens: null, revision };
             this.rows.set(row.key, entry);
+        } else if (entry.revision !== revision) {
+            entry.element.replaceChildren();
+            this.fillBlock(entry.element, widget);
+            entry.revision = revision;
         }
         entry.element.style.top = `${row.top}px`;
-        if (row.widget.render) {
+        if (widget.lens) {
+            entry.element.style.left = `${this.layout.indentX(row.line)}px`;
+            entry.element.style.height = `${row.height}px`;
+            return false;
+        }
+        if (widget.render) {
             entry.element.style.left = `${paint.hostLeft}px`;
             entry.element.style.width = `${paint.hostWidth}px`;
         } else {
@@ -288,6 +309,14 @@ export class RowPainter {
         }
         const height = entry.element.getBoundingClientRect?.().height ?? 0;
         return height > 0 && this.layout.setMeasuredHeight(row.key, height);
+    }
+
+    private fillBlock(element: HTMLElement, widget: BlockWidget): void {
+        if (widget.render) {
+            widget.render(element);
+        } else {
+            element.textContent = widget.text ?? '';
+        }
     }
 
     clear(): void {

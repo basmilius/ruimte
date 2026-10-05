@@ -2,6 +2,7 @@ import type {
     Editor,
     EditorBlock,
     EditorChangeMark,
+    EditorCodeVision,
     EditorClick,
     EditorClickHandler,
     EditorContextMenu,
@@ -265,6 +266,13 @@ export class FakeEditor implements Editor {
 
     setWidgets(widgets: readonly EditorWidget[]): void {
         this.widgets = widgets;
+    }
+
+    /* The code vision rows the client set last. */
+    codeVision: readonly EditorCodeVision[] = [];
+
+    setCodeVision(rows: readonly EditorCodeVision[]): void {
+        this.codeVision = rows;
     }
 
     /* The button the client set in the gutter last. */

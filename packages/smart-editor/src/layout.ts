@@ -34,6 +34,10 @@ export interface BlockWidget {
     text?: string;
     render?: (container: HTMLElement) => void;
     height?: number;
+    /* Drawn again in the element it already has when this changes, which `render` alone never is. */
+    revision?: number;
+    /* A quiet row of one code line's height, placed at the indentation of its line and never measured. */
+    lens?: boolean;
 }
 
 /* Collapsed, it hides the lines after `startLine` through `endLine`. */
@@ -411,7 +415,7 @@ export class EditorLayout {
                 line,
                 widget,
                 top: 0,
-                height: this.measuredHeights.get(key) ?? widget.height ?? DEFAULT_BLOCK_HEIGHT
+                height: widget.lens ? this.metrics.lineHeight : (this.measuredHeights.get(key) ?? widget.height ?? DEFAULT_BLOCK_HEIGHT)
             });
         };
         for (let line = 0; line < count; line++) {
@@ -507,6 +511,20 @@ export class EditorLayout {
             }
         }
         return this.rows[low]!;
+    }
+
+    /* Where a line's text starts after its indentation, which is where a lens row begins. */
+    indentX(line: number): number {
+        const row = this.rowForLine(line);
+        if (row.kind !== 'text') {
+            return TEXT_PADDING;
+        }
+        const geometry = this.geometry(row);
+        let stop = 0;
+        while (stop < geometry.text.length && isSpace(geometry.text[stop])) {
+            stop++;
+        }
+        return TEXT_PADDING + geometry.before[Math.min(stop, geometry.before.length - 1)]!;
     }
 
     rowForLine(line: number): LayoutRow {

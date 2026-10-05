@@ -69,6 +69,28 @@ describe('rows', () => {
     });
 });
 
+describe('lens rows', () => {
+    test('are one code line high whatever they were given, and sit above the line they follow', () => {
+        const { layout } = layoutOf('one\n    two');
+        layout.configure({ blocks: [{ id: 'l', at: 8, placement: 'above', height: 99, lens: true }] });
+        expect(layout.rows.map((row) => [row.key, row.top, row.height])).toEqual([
+            ['line:0', 0, 20],
+            ['block:l', 20, 20],
+            ['line:1', 40, 20]
+        ]);
+        expect(layout.setMeasuredHeight('block:l', 99)).toBe(true);
+        layout.configure({ metrics: { ...METRICS, lineHeight: 24 } });
+        expect(layout.rows[1]!.height).toBe(24);
+    });
+
+    test('begin where the indentation of their line ends, tabs included', () => {
+        const { layout } = layoutOf('one\n    two\n\tthree\n');
+        expect(layout.indentX(0)).toBe(0);
+        expect(layout.indentX(1)).toBe(40);
+        expect(layout.indentX(2)).toBe(40);
+    });
+});
+
 describe('geometry', () => {
     test('places each character at its width and tabs on the next stop', () => {
         const { layout } = layoutOf('a\tb');

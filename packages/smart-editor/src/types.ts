@@ -210,6 +210,27 @@ export interface EditorWidget {
     render(container: HTMLElement): void;
 }
 
+/* One thing a code vision row says, such as how many times a declaration is used. */
+export interface EditorCodeVisionEntry {
+    readonly id: string;
+    readonly text: string;
+    /* A person for one author, several for more. */
+    readonly icon?: 'user' | 'users';
+    /* The entry was pressed; `anchor` is where it stands, in the page's pixels, for what opens beside it. */
+    activate(anchor: EditorRect): void;
+}
+
+/*
+ * A quiet row above a declaration, in the declaration's indentation and one code line high. A row with
+ * no entries yet still holds its height, so the text does not move when they arrive.
+ */
+export interface EditorCodeVision {
+    readonly id: string;
+    /* Zero-based line of the declaration; the row sits above it and follows it through edits until the host sets the rows again. */
+    readonly line: number;
+    readonly entries: readonly EditorCodeVisionEntry[];
+}
+
 /* Returns true when the key was taken; the editor then prevents its default and does nothing else with it. */
 export type EditorKeyHandler = (event: KeyboardEvent) => boolean;
 
@@ -380,6 +401,8 @@ export interface Editor {
     onViewChange(listener: () => void): () => void;
     /* Rows of the host's own DOM under lines of the text, replacing the ones set before. */
     setWidgets(widgets: readonly EditorWidget[]): void;
+    /* The code vision rows above declarations, replacing the ones set before. Separate from the widgets, which they never displace. */
+    setCodeVision(rows: readonly EditorCodeVision[]): void;
     /* Handlers see a press of the primary button before the editor does, the first to take it winning. */
     onClick(handler: EditorClickHandler): () => void;
     /* The context menu was asked for. The editor draws none of its own and does not move the caret. */

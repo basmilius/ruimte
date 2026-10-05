@@ -528,6 +528,45 @@
     white-space: normal;
 }
 
+/*
+ * A code vision row is quiet text one code line high above a declaration, in the declaration's
+ * indentation. Its entries stand a text size apart and light up as a link under the pointer.
+ */
+.se-block.se-lens {
+    display: flex;
+    align-items: center;
+    gap: var(--text-xs);
+    padding: 0;
+    white-space: nowrap;
+}
+.se-lens-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+.se-lens-entry:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+.se-lens-icon {
+    width: 1em;
+    height: 1em;
+    background: var(--text-muted);
+}
+/* Lucide's user and users. */
+.se-lens-icon-user {
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.se-lens-icon-users {
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/%3E%3Cpath d='M16 3.128a4 4 0 0 1 0 7.744'/%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87'/%3E%3Ccircle cx='9' cy='7' r='4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
 .se-input {
     position: absolute;
     z-index: 5;

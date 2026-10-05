@@ -6,6 +6,7 @@ import type {
     Editor,
     EditorBlock,
     EditorChangeMark,
+    EditorCodeVision,
     EditorClickHandler,
     EditorContextMenu,
     EditorContentChange,
@@ -35,6 +36,7 @@ import type {
     EditorWidget,
     SmartEditorEngineOptions
 } from './types.ts';
+import { fillLens, lensSignature } from './lens.ts';
 import { EditorView, type ViewSettings } from './view.ts';
 
 const DEFAULT_TAB_SIZE = 4;
@@ -54,6 +56,8 @@ class SmartEditor implements Editor {
     private language: string | undefined;
     private theme: EditorTheme;
     private revision: number;
+    private lensRows = new Map<string, EditorCodeVision>();
+    private lensRevisions = new Map<string, { signature: string; revision: number }>();
     private tokenizerRequest = 0;
     private settingText = false;
     private disposed = false;
@@ -504,6 +508,38 @@ class SmartEditor implements Editor {
                 }
             }))
         );
+    }
+
+    setCodeVision(rows: readonly EditorCodeVision[]): void {
+        const current = new Map(rows.map((row) => [row.id, row]));
+        const revisions = new Map<string, { signature: string; revision: number }>();
+        for (const row of rows) {
+            const signature = lensSignature(row.entries);
+            const before = this.lensRevisions.get(row.id);
+            revisions.set(row.id, {
+                signature,
+                revision: before === undefined || before.signature === signature ? (before?.revision ?? 0) : before.revision + 1
+            });
+        }
+        this.lensRows = current;
+        this.lensRevisions = revisions;
+        this.view.setLenses(
+            rows.map((row) => ({
+                id: `lens:${row.id}`,
+                at: this.indentOffsetOf(row.line),
+                placement: 'above' as const,
+                lens: true,
+                revision: revisions.get(row.id)!.revision,
+                render: (container: HTMLElement) =>
+                    fillLens(container, row.entries, (id) => this.lensRows.get(row.id)?.entries.find((entry) => entry.id === id))
+            }))
+        );
+    }
+
+    /* Where the text of a line begins after its indentation, so a row sitting there stays with the declaration when something is typed in front of it. */
+    private indentOffsetOf(line: number): number {
+        const { start, text } = this.model.getLine(Math.max(0, Math.min(line, this.model.getLineCount() - 1)));
+        return start + (/^[ \t]*/.exec(text)?.[0].length ?? 0);
     }
 
     setGutterAction(action: EditorGutterAction | null): void {

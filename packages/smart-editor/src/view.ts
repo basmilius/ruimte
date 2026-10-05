@@ -165,6 +165,7 @@ export class EditorView {
     private disposed = false;
     private inlays: Inlay[] = [];
     private blocks: BlockWidget[] = [];
+    private lenses: BlockWidget[] = [];
     private occurrences: Occurrence[] = [];
     private replacePreview: { text: string; preserveCase: boolean } | null = null;
     private dropCaret: number | null = null;
@@ -308,8 +309,19 @@ export class EditorView {
 
     setBlockWidgets(blocks: readonly BlockWidget[]): void {
         this.blocks = [...blocks];
-        this.anchorScroll(() => this.layout.configure({ blocks: this.blocks }));
+        this.anchorScroll(() => this.layout.configure({ blocks: this.allBlocks() }));
         this.render();
+    }
+
+    /* The quiet rows above declarations: kept apart from the host's widgets, so setting one kind never takes the other away. */
+    setLenses(lenses: readonly BlockWidget[]): void {
+        this.lenses = [...lenses];
+        this.anchorScroll(() => this.layout.configure({ blocks: this.allBlocks() }));
+        this.render();
+    }
+
+    private allBlocks(): BlockWidget[] {
+        return [...this.blocks, ...this.lenses];
     }
 
     setOccurrences(occurrences: readonly Occurrence[]): void {
@@ -452,6 +464,7 @@ export class EditorView {
             for (const changes of batches) {
                 this.inlays = this.inlays.map((inlay) => ({ ...inlay, at: mapOffset(inlay.at, changes) }));
                 this.blocks = this.blocks.map((block) => ({ ...block, at: mapOffset(block.at, changes) }));
+                this.lenses = this.lenses.map((lens) => ({ ...lens, at: mapOffset(lens.at, changes) }));
                 this.collapsed = new Set([...this.collapsed].map((anchor) => mapOffset(anchor, changes)));
                 this.customFolds = this.customFolds.map((fold) => ({ from: mapOffset(fold.from, changes), to: mapOffset(fold.to, changes) }));
                 this.find.mapBounds(changes);
@@ -468,7 +481,7 @@ export class EditorView {
             this.outline.edited(batches);
             this.changeVersion++;
             this.tokens.edited(batches, (offset) => this.model.positionAt(offset).line);
-            this.layout.configure({ textChanged: true, inlays: this.displayedInlays(), blocks: this.blocks, folds: this.foldStates() });
+            this.layout.configure({ textChanged: true, inlays: this.displayedInlays(), blocks: this.allBlocks(), folds: this.foldStates() });
             if (anchor && this.viewport.scrollTop > 0) {
                 let offset = anchor.offset;
                 for (const changes of batches) {

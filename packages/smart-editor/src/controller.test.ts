@@ -752,3 +752,63 @@ describe('widgets', () => {
         expect(page.host.querySelectorAll('.se-widget')).toHaveLength(0);
     });
 });
+
+describe('code vision', () => {
+    function mountLens(text = 'one\n    two\nthree') {
+        jest.useFakeTimers();
+        const mounted = mountEditor({ text });
+        jest.runAllTimers();
+        jest.useRealTimers();
+        return mounted;
+    }
+    const pressed: string[] = [];
+    const entry = (id: string, text: string, icon?: 'user' | 'users') => ({ id, text, ...(icon ? { icon } : {}), activate: () => void pressed.push(id) });
+
+    test('draws a row above the declaration, in its indentation, and the entries as buttons', () => {
+        const { editor, page } = mountLens();
+        editor.setCodeVision([{ id: 'two', line: 1, entries: [entry('usages', '2 usages'), entry('authors', 'Ada', 'user')] }]);
+        const row = page.host.querySelector('.se-lens') as HTMLElement;
+        expect(Number.parseFloat(row.style.left)).toBeCloseTo(4 * 7.8, 1);
+        expect(row.style.top).toBe('20px');
+        expect([...row.querySelectorAll('button')].map((button) => button.textContent)).toEqual(['2 usages', 'Ada']);
+        expect(row.querySelectorAll('.se-lens-icon-user')).toHaveLength(1);
+    });
+
+    test('holds its height with no entries, so the text stays put when they arrive', () => {
+        const { editor, page } = mountLens();
+        const second = () => (page.host.querySelector('[data-line="1"]') as HTMLElement).style.top;
+        editor.setCodeVision([{ id: 'two', line: 1, entries: [] }]);
+        const reserved = second();
+        expect(reserved).toBe('40px');
+        editor.setCodeVision([{ id: 'two', line: 1, entries: [entry('usages', 'No usages')] }]);
+        expect(second()).toBe(reserved);
+        expect(page.host.querySelector('.se-lens')!.textContent).toBe('No usages');
+    });
+
+    test('draws an entry again only when its words change, and a press reaches the entry set last', () => {
+        const { editor, page } = mountLens();
+        editor.setCodeVision([{ id: 'two', line: 1, entries: [entry('usages', '2 usages')] }]);
+        const first = page.host.querySelector('.se-lens-entry');
+        const calls: string[] = [];
+        editor.setCodeVision([{ id: 'two', line: 1, entries: [{ id: 'usages', text: '2 usages', activate: () => void calls.push('new') }] }]);
+        expect(page.host.querySelector('.se-lens-entry')).toBe(first);
+        (first as HTMLElement).click();
+        expect(calls).toEqual(['new']);
+        editor.setCodeVision([{ id: 'two', line: 1, entries: [entry('usages', '3 usages')] }]);
+        expect(page.host.querySelector('.se-lens-entry')).not.toBe(first);
+        expect(page.host.querySelector('.se-lens')!.textContent).toBe('3 usages');
+    });
+
+    test('follows its declaration through an edit above it, and leaves the widgets alone', () => {
+        const { editor, page, type } = mountLens();
+        editor.setWidgets([{ id: 'peek', line: 2, height: 40, render: (container) => (container.textContent = 'peek') }]);
+        editor.setCodeVision([{ id: 'two', line: 1, entries: [entry('usages', '2 usages')] }]);
+        editor.setCaret({ line: 0, character: 3 });
+        type('\nnew');
+        expect((page.host.querySelector('.se-lens') as HTMLElement).style.top).toBe('40px');
+        expect(page.host.querySelector('.se-widget')!.textContent).toBe('peek');
+        editor.setCodeVision([]);
+        expect(page.host.querySelectorAll('.se-lens')).toHaveLength(0);
+        expect(page.host.querySelectorAll('.se-widget')).toHaveLength(1);
+    });
+});

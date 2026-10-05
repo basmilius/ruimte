@@ -29,7 +29,7 @@ The element needs a positioned box that its parent sizes, and the page needs `ed
 
 ## What a language feature gets
 
-The editor knows no language server. It reports every change of the text as LSP content changes (`onTextChange`, with its source), says where the caret is (`getCaret`, `onCaret`) and where a character is on the screen (`rectAt`, in the page's pixels so a popup is right at any canvas zoom), and takes what a host draws or does: `setMarkers` (squiggles, faded and struck text, a lane in the scroll track), `setInlayHints`, `setSemanticTokens`, `setHighlights`, `setBlocks`, `setWidgets` (rows of the host's own DOM under lines, drawn in the layout's block rows), `setGutterAction` (one button in the gutter, such as a lightbulb, which `onGutterAction` reports), `setLink` (a name underlined as a link while a modifier is held) and `applyEdits`. A marker's `message` is what the tick of the problem says in the scroll track, where a press on the tick goes to the problem. `getSelection`, `getVisibleRange` and `getIndentation` say what a feature asks about, and `setSelection` selects a range, such as the stop of a snippet. `onHover` reports the character under the pointer, `onClick` offers a press on a character first (Mod+click follows a name) and `onContextMenu` asks the host for its menu, which the editor does not draw, `onKeyDown` lets a host take a key before the editor does, and `onViewChange` says when the screen position of a character moved.
+The editor knows no language server. It reports every change of the text as LSP content changes (`onTextChange`, with its source), says where the caret is (`getCaret`, `onCaret`) and where a character is on the screen (`rectAt`, in the page's pixels so a popup is right at any canvas zoom), and takes what a host draws or does: `setMarkers` (squiggles, faded and struck text, a lane in the scroll track), `setInlayHints`, `setSemanticTokens`, `setHighlights`, `setBlocks`, `setWidgets` (rows of the host's own DOM under lines, drawn in the layout's block rows), `setCodeVision` (a quiet row above a declaration, see below), `setGutterAction` (one button in the gutter, such as a lightbulb, which `onGutterAction` reports), `setLink` (a name underlined as a link while a modifier is held) and `applyEdits`. A marker's `message` is what the tick of the problem says in the scroll track, where a press on the tick goes to the problem. `getSelection`, `getVisibleRange` and `getIndentation` say what a feature asks about, and `setSelection` selects a range, such as the stop of a snippet. `onHover` reports the character under the pointer, `onClick` offers a press on a character first (Mod+click follows a name) and `onContextMenu` asks the host for its menu, which the editor does not draw, `onKeyDown` lets a host take a key before the editor does, and `onViewChange` says when the screen position of a character moved.
 
 `runCommand` runs an editing command by name, which is how a menu or the palette reaches the editor; the folding commands and column mode are the view's own.
 
@@ -37,9 +37,13 @@ Folds are kept by line (`getFolds`, and `folds` or `collapseImports` on mounting
 
 `handBack` shortcuts are not handled by the editor and not prevented, so the page's own listeners get them. Mod+S is `onSave`.
 
+## Code vision rows
+
+`setCodeVision` takes a row per declaration: the line, and the entries of the row (`id`, `text`, an optional `user` or `users` icon, and `activate`, which gets the box of the pressed entry in the page's pixels). The row is a block row above the line (`lens` on a `BlockWidget`, `lens.ts` for its buttons), one code line high whatever its entries are, placed at the indentation of the declaration and never measured, so it holds its height with no entries and the text does not move when they arrive. It follows its declaration through edits like every block does, is kept apart from `setWidgets` (a peek under a name never takes a row away), and is drawn again only when the words of its entries change. An entry stands a text size from the next one, is muted, and lights up as a link with an underline under the pointer; a press on it never moves the caret or takes the focus.
+
 ## Limits
 
-- No rendered documentation blocks. Code lenses and widget rows are in the layout, but nothing draws them yet.
+- No rendered documentation blocks.
 - Wrapped lines break at spaces and inside a word that does not fit, and continue at the line's indentation plus two characters. A click past the end of a visual line draws the caret at its end until the caret moves; an arrow key onto that offset draws it at the start of the next line.
 - A line over 20,000 characters is not colored.
 - Every edit rebuilds the row list, which is linear in the number of lines.

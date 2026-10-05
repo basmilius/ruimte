@@ -6,6 +6,8 @@ export type {
     EditorBlock,
     EditorChangeKind,
     EditorChangeMark,
+    EditorCodeVision,
+    EditorCodeVisionEntry,
     EditorClick,
     EditorClickHandler,
     EditorCommand,
