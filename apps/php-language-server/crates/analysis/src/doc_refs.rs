@@ -27,6 +27,8 @@ pub enum DocItemKind {
     },
     /// `function()` after `@see`.
     Function(String),
+    /// A name from `@template`, where it is declared and where a type uses it.
+    Template(String),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -235,7 +237,13 @@ impl Cursor<'_> {
         if word_end == 0 {
             return;
         }
-        self.templates.push(rest[..word_end].to_string());
+        let name = rest[..word_end].to_string();
+        out.push(DocItem {
+            start: self.base + self.position as u32,
+            end: self.base + (self.position + word_end) as u32,
+            kind: DocItemKind::Template(name.clone()),
+        });
+        self.templates.push(name);
         self.position += word_end;
         self.skip_spaces();
         let rest = self.rest();
@@ -311,7 +319,13 @@ impl Cursor<'_> {
                     let lower = word.to_ascii_lowercase();
                     let keyword = KEYWORDS.contains(&lower.as_str());
                     let template = self.templates.iter().any(|template| template == word);
-                    if !keyword && !template {
+                    if template && !keyword {
+                        out.push(DocItem {
+                            start: self.base + name_start as u32,
+                            end: self.base + index as u32,
+                            kind: DocItemKind::Template(word.to_string()),
+                        });
+                    } else if !keyword {
                         out.push(DocItem {
                             start: self.base + name_start as u32,
                             end: self.base + index as u32,

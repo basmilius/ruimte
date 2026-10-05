@@ -20,6 +20,7 @@ pub mod refs;
 pub mod rename;
 pub mod render;
 mod selection;
+pub mod semantic_tokens;
 pub mod signature;
 mod symbols;
 pub mod target;
@@ -57,3 +58,6 @@ mod signature_tests;
 
 #[cfg(test)]
 mod hierarchy_tests;
+
+#[cfg(test)]
+mod semantic_tokens_tests;

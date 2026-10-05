@@ -2,16 +2,92 @@
 //! hints.
 
 use lsp_types::{
-    Documentation, MarkupContent, MarkupKind, ParameterInformation, ParameterLabel, SignatureHelp, SignatureHelpParams,
+    Documentation, MarkupContent, MarkupKind, ParameterInformation, ParameterLabel, SemanticToken,
+    SemanticTokenModifier, SemanticTokenType, SemanticTokens, SemanticTokensLegend, SemanticTokensParams,
+    SemanticTokensRangeParams, SemanticTokensRangeResult, SemanticTokensResult, SignatureHelp, SignatureHelpParams,
     SignatureInformation,
 };
+use php_analysis::semantic_tokens::{TOKEN_MODIFIERS, TOKEN_TYPES, semantic_tokens};
 use php_analysis::signature::signature_help;
+use php_syntax::{TextRange, TextSize};
 
 use crate::convert::Mapper;
 use crate::paths::uri_to_path;
 use crate::server::Server;
 
+/// The token types and modifiers a client is told to expect, in the order the analysis numbers them.
+pub(crate) fn semantic_legend() -> SemanticTokensLegend {
+    SemanticTokensLegend {
+        token_types: TOKEN_TYPES.iter().map(|name| SemanticTokenType::new(name)).collect(),
+        token_modifiers: TOKEN_MODIFIERS
+            .iter()
+            .map(|name| SemanticTokenModifier::new(name))
+            .collect(),
+    }
+}
+
 impl Server<'_> {
+    /// The tokens of a document, or of a range of it, in the delta encoding LSP uses.
+    fn tokens_of(&mut self, uri: &lsp_types::Uri, range: Option<lsp_types::Range>) -> Option<Vec<SemanticToken>> {
+        let path = uri_to_path(uri);
+        self.sync_symbols(uri);
+        let encoding = self.encoding;
+        let document = self.documents.get_mut(uri)?;
+        let root = document.parse().syntax();
+        let mapper = Mapper {
+            text: &document.text,
+            index: &document.index,
+            encoding,
+        };
+        let range = range.map(|range| TextRange::new(mapper.offset(range.start), mapper.offset(range.end)));
+        let project = match &path {
+            Some(path) => self.workspace.project_for(path),
+            None => &self.workspace.loose,
+        };
+        let tokens = semantic_tokens(&project.index, &root, range);
+        let mut data = Vec::with_capacity(tokens.len());
+        let (mut previous_line, mut previous_start) = (0, 0);
+        for token in tokens {
+            let start = mapper.position(TextSize::from(token.start));
+            let end = mapper.position(TextSize::from(token.end));
+            if end.line != start.line {
+                continue;
+            }
+            let delta_line = start.line - previous_line;
+            let delta_start = if delta_line == 0 {
+                start.character - previous_start
+            } else {
+                start.character
+            };
+            data.push(SemanticToken {
+                delta_line,
+                delta_start,
+                length: end.character - start.character,
+                token_type: token.ty,
+                token_modifiers_bitset: token.modifiers,
+            });
+            previous_line = start.line;
+            previous_start = start.character;
+        }
+        Some(data)
+    }
+
+    pub(crate) fn semantic_tokens_full(&mut self, params: SemanticTokensParams) -> Option<SemanticTokensResult> {
+        let data = self.tokens_of(&params.text_document.uri, None)?;
+        Some(SemanticTokensResult::Tokens(SemanticTokens { result_id: None, data }))
+    }
+
+    pub(crate) fn semantic_tokens_range(
+        &mut self,
+        params: SemanticTokensRangeParams,
+    ) -> Option<SemanticTokensRangeResult> {
+        let data = self.tokens_of(&params.text_document.uri, Some(params.range))?;
+        Some(SemanticTokensRangeResult::Tokens(SemanticTokens {
+            result_id: None,
+            data,
+        }))
+    }
+
     pub(crate) fn signature_help(&mut self, params: SignatureHelpParams) -> Option<SignatureHelp> {
         let position = params.text_document_position_params;
         let uri = position.text_document.uri;

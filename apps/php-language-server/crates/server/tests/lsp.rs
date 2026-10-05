@@ -1072,3 +1072,82 @@ fn walks_call_and_type_hierarchies() {
     assert_eq!(supertypes[0]["name"], "User");
     client.shutdown();
 }
+
+#[test]
+fn serves_semantic_tokens_in_the_delta_encoding_of_its_legend() {
+    let disk = Disk::new();
+    let (mut client, result) = Client::start_in(PROGRESS_CAPABILITIES(), disk.options(), json!(disk.uri("project")));
+    client.wait_for_indexing();
+    let legend = &result["capabilities"]["semanticTokensProvider"]["legend"];
+    let types: Vec<&str> = legend["tokenTypes"]
+        .as_array()
+        .expect("types")
+        .iter()
+        .filter_map(Value::as_str)
+        .collect();
+    let modifiers: Vec<&str> = legend["tokenModifiers"]
+        .as_array()
+        .expect("modifiers")
+        .iter()
+        .filter_map(Value::as_str)
+        .collect();
+    assert_eq!(result["capabilities"]["semanticTokensProvider"]["range"], true);
+    assert_eq!(result["capabilities"]["semanticTokensProvider"]["full"], true);
+    assert!(types.contains(&"class") && types.contains(&"method") && types.contains(&"parameter"));
+    assert!(modifiers.contains(&"static") && modifiers.contains(&"defaultLibrary"));
+
+    let uri = disk.uri("project/src/Page.php");
+    client.open(
+        &uri,
+        "<?php\nuse App\\Models\\User;\nfunction f(User $u) {\n    return User::find(1);\n}\n",
+    );
+    let tokens = client.request(
+        "textDocument/semanticTokens/full",
+        json!({ "textDocument": { "uri": uri } }),
+    );
+    let data: Vec<u64> = tokens["data"]
+        .as_array()
+        .expect("data")
+        .iter()
+        .filter_map(Value::as_u64)
+        .collect();
+    let mut decoded = Vec::new();
+    let (mut line, mut start) = (0, 0);
+    for token in data.chunks(5) {
+        line += token[0];
+        start = if token[0] == 0 { start + token[1] } else { token[1] };
+        let mods: Vec<&str> = modifiers
+            .iter()
+            .enumerate()
+            .filter(|(bit, _)| token[4] & (1 << bit) != 0)
+            .map(|(_, name)| *name)
+            .collect();
+        decoded.push(format!(
+            "{line}:{start}+{} {} {}",
+            token[2],
+            types[token[3] as usize],
+            mods.join(",")
+        ));
+    }
+    assert_eq!(
+        decoded,
+        [
+            "1:4+10 namespace ",
+            "1:15+4 class ",
+            "2:9+1 function declaration",
+            "2:11+4 class ",
+            "2:16+2 parameter declaration",
+            "3:11+4 class ",
+            "3:17+4 method static",
+        ]
+    );
+    let ranged = client.request(
+        "textDocument/semanticTokens/range",
+        json!({
+            "textDocument": { "uri": uri },
+            "range": { "start": { "line": 3, "character": 0 }, "end": { "line": 4, "character": 0 } }
+        }),
+    );
+    assert_eq!(ranged["data"].as_array().map(Vec::len), Some(10));
+    client.shutdown();
+}

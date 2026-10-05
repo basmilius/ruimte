@@ -10,8 +10,9 @@ use lsp_types::notification::{
     PublishDiagnostics,
 };
 use lsp_types::request::{
-    CallHierarchyIncomingCalls, CallHierarchyOutgoingCalls, CallHierarchyPrepare, SignatureHelpRequest,
-    TypeHierarchyPrepare, TypeHierarchySubtypes, TypeHierarchySupertypes,
+    CallHierarchyIncomingCalls, CallHierarchyOutgoingCalls, CallHierarchyPrepare, SemanticTokensFullRequest,
+    SemanticTokensRangeRequest, SignatureHelpRequest, TypeHierarchyPrepare, TypeHierarchySubtypes,
+    TypeHierarchySupertypes,
 };
 use lsp_types::request::{
     Completion, DocumentDiagnosticRequest, DocumentHighlightRequest, DocumentSymbolRequest, FoldingRangeRequest,
@@ -218,6 +219,14 @@ impl<'a> Server<'a> {
             implementation_provider: Some(ImplementationProviderCapability::Simple(true)),
             workspace_symbol_provider: Some(OneOf::Left(true)),
             references_provider: Some(OneOf::Left(true)),
+            semantic_tokens_provider: Some(lsp_types::SemanticTokensServerCapabilities::SemanticTokensOptions(
+                lsp_types::SemanticTokensOptions {
+                    work_done_progress_options: WorkDoneProgressOptions::default(),
+                    legend: crate::insight::semantic_legend(),
+                    range: Some(true),
+                    full: Some(lsp_types::SemanticTokensFullOptions::Bool(true)),
+                },
+            )),
             call_hierarchy_provider: Some(lsp_types::CallHierarchyServerCapability::Simple(true)),
             signature_help_provider: Some(lsp_types::SignatureHelpOptions {
                 trigger_characters: Some(vec!["(".to_string(), ",".to_string()]),
@@ -317,6 +326,8 @@ impl<'a> Server<'a> {
             WorkspaceSymbolRequest::METHOD => self.answer(id, request.params, Self::workspace_symbols),
             References::METHOD => self.answer(id, request.params, Self::references),
             SignatureHelpRequest::METHOD => self.answer(id, request.params, Self::signature_help),
+            SemanticTokensFullRequest::METHOD => self.answer(id, request.params, Self::semantic_tokens_full),
+            SemanticTokensRangeRequest::METHOD => self.answer(id, request.params, Self::semantic_tokens_range),
             CallHierarchyPrepare::METHOD => self.answer(id, request.params, Self::prepare_call_hierarchy),
             CallHierarchyIncomingCalls::METHOD => self.answer(id, request.params, Self::incoming_calls),
             CallHierarchyOutgoingCalls::METHOD => self.answer(id, request.params, Self::outgoing_calls),

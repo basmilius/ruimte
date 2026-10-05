@@ -918,7 +918,7 @@ fn doc_hits(ctx: &FileContext, token: &SyntaxToken, word: &str, query: &Query, h
                 };
                 (Symbol::Function(function.decl.name.clone()), HitKind::Doc, false, range)
             }
-            DocItemKind::Tag(_) | DocItemKind::Variable(_) => continue,
+            DocItemKind::Tag(_) | DocItemKind::Variable(_) | DocItemKind::Template(_) => continue,
         };
         if !query.matches(&symbol) {
             continue;

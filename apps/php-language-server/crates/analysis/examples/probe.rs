@@ -1,5 +1,5 @@
 //! Asks the analyses a question about a real project: `cargo run --release -p php-analysis --example
-//! probe -- <project> <stubs> <file> <line> <column> [complete|hover|definition|references|rename:<name>]`. Lines and columns
+//! probe -- <project> <stubs> <file> <line> <column> [complete|hover|definition|references|rename:<name>|tokens|hints|signature]`. Lines and columns
 //! count from 1 and in bytes.
 
 use std::path::{Path, PathBuf};
@@ -35,7 +35,7 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.len() < 5 {
         eprintln!(
-            "usage: probe <project> <stubs> <file> <line> <column> [complete|hover|definition|references|rename:<name>]"
+            "usage: probe <project> <stubs> <file> <line> <column> [complete|hover|definition|references|rename:<name>|tokens|hints|signature]"
         );
         std::process::exit(2);
     }
@@ -132,6 +132,21 @@ fn main() {
                     );
                 }
                 None => println!("nothing"),
+            }
+            return;
+        }
+        "tokens" => {
+            let root = parse(&text).syntax();
+            let started = Instant::now();
+            let tokens = php_analysis::semantic_tokens::semantic_tokens(&project.index, &root, None);
+            println!("{} tokens in {:?}", tokens.len(), started.elapsed());
+            for token in tokens.iter().take(15) {
+                println!(
+                    "{} {} {}",
+                    &text[token.start as usize..token.end as usize],
+                    php_analysis::semantic_tokens::TOKEN_TYPES[token.ty as usize],
+                    token.modifiers
+                );
             }
             return;
         }
