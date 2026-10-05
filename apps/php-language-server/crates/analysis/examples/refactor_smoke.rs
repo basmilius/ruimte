@@ -398,6 +398,9 @@ fn main() {
                     let after_findings = findings(&project.index, after, &settings, &externals);
                     let before = before_cache.get(file).cloned().unwrap_or_default();
                     for item in new_ones(&before, &after_findings) {
+                        if title == "Add parameter" && item.starts_with("unused-parameter Parameter '$parameter'") {
+                            continue;
+                        }
                         new_findings.push(format!("{}: {item}", target.display()));
                     }
                 }

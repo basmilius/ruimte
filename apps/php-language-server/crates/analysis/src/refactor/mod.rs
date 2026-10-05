@@ -8,11 +8,13 @@
 mod diff;
 mod draft;
 mod exprs;
+mod extract_member;
 mod extract_method;
 mod extract_variable;
 mod inline_variable;
 mod names;
 mod scope;
+mod signature;
 #[cfg(test)]
 mod tests;
 
@@ -144,5 +146,7 @@ pub fn with_refactors<R>(renv: &RefactorEnv<'_>, range: TextRange, run: impl FnO
     extract_variable::offer(&rcx, &mut out);
     inline_variable::offer(&rcx, &mut out);
     extract_method::offer(&rcx, &mut out);
+    extract_member::offer(&rcx, &mut out);
+    signature::offer(&rcx, &mut out);
     run(out)
 }

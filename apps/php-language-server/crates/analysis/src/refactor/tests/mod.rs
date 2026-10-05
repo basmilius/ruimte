@@ -13,9 +13,11 @@ use crate::inspections::tests::index_with;
 use crate::inspections::{Externals, InspectionEnv, InspectionSettings, inspect};
 use crate::references::Sources;
 
+mod extract_member;
 mod extract_method;
 mod extract_variable;
 mod inline_variable;
+mod signature;
 
 pub(super) const CURSOR: &str = "$0";
 const START: char = '«';

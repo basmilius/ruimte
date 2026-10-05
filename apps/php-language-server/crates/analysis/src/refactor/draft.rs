@@ -6,12 +6,16 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use php_format::FormatOptions;
-use php_syntax::parse;
+use php_index::UseKind;
+use php_syntax::{TextRange, parse};
 
 use super::diff::hunks;
 use super::{Change, Edit, FileChange, FileMove, Focus, RefactorEnv};
 use crate::actions::edits::{apply, line_end, line_start};
+use crate::actions::imports::remove_import;
 use crate::completion::TextEdit;
+use crate::inspections::unused::import_clauses;
+use crate::inspections::{Cx, InspectionEnv};
 
 /// Brackets around the text that names a new thing, so that the client can start a rename on it
 /// once the formatter has moved everything around it.
@@ -118,6 +122,13 @@ impl<'a> Draft<'a> {
             if format && !touched.is_empty() {
                 if let Some((laid_out, moved)) = lay_out(&original, &final_text, &touched, &renv.format, mark) {
                     final_text = laid_out;
+                    mark = moved;
+                    formatted = true;
+                }
+            }
+            if format {
+                if let Some((tidied, moved)) = tidy_imports(renv, &original, &final_text, mark) {
+                    final_text = tidied;
                     mark = moved;
                     formatted = true;
                 }
@@ -284,4 +295,83 @@ pub(crate) fn applied(text: &str, edits: &[Edit]) -> String {
         })
         .collect();
     apply(text, &converted)
+}
+
+/// The `use` clauses of a text that nothing refers to, by what they import.
+fn unused_clauses(renv: &RefactorEnv<'_>, text: &str) -> Vec<(String, UseKind, TextRange)> {
+    let tree = parse(text);
+    let root = tree.syntax();
+    let env = InspectionEnv {
+        index: renv.env.index,
+        text,
+        root: &root,
+        settings: renv.env.settings,
+        ready: renv.env.ready,
+        externals: renv.env.externals,
+    };
+    let cx = Cx::new(&env);
+    import_clauses(&cx)
+        .into_iter()
+        .filter(|clause| !clause.used)
+        .map(|clause| {
+            let alone = clause.clause.parent().is_some_and(|parent| parent == clause.statement)
+                && clause
+                    .statement
+                    .children()
+                    .filter(|child| child.kind() == php_syntax::SyntaxKind::USE_CLAUSE)
+                    .count()
+                    == 1;
+            let range = if alone {
+                clause.statement.text_range()
+            } else {
+                clause.clause.text_range()
+            };
+            (clause.full.to_ascii_lowercase(), clause.kind, range)
+        })
+        .collect()
+}
+
+/// Takes out the imports that the change left nothing to use, and only those: what was unused
+/// before is not this refactor's business.
+fn tidy_imports(
+    renv: &RefactorEnv<'_>,
+    original: &str,
+    text: &str,
+    mark: Option<(usize, usize)>,
+) -> Option<(String, Option<(usize, usize)>)> {
+    if !original.contains("use ") || !parse(original).errors().is_empty() {
+        return None;
+    }
+    let before: Vec<(String, UseKind)> = unused_clauses(renv, original)
+        .into_iter()
+        .map(|(full, kind, _)| (full, kind))
+        .collect();
+    let mut text = text.to_string();
+    let mut mark = mark;
+    let mut changed = false;
+    for _ in 0..8 {
+        let found = unused_clauses(renv, &text);
+        let Some((_, _, range)) = found
+            .into_iter()
+            .find(|(full, kind, _)| !before.iter().any(|(old, old_kind)| old == full && old_kind == kind))
+        else {
+            break;
+        };
+        let tree = parse(&text);
+        let Some(edit) = remove_import(&text, &tree.syntax(), range) else {
+            break;
+        };
+        let (from, to) = (edit.start as usize, edit.end as usize);
+        let delta = edit.new_text.len() as isize - (to - from) as isize;
+        mark = mark.map(|(start, end)| {
+            if to <= start {
+                ((start as isize + delta) as usize, (end as isize + delta) as usize)
+            } else {
+                (start, end)
+            }
+        });
+        text.replace_range(from..to, &edit.new_text);
+        changed = true;
+    }
+    changed.then_some((text, mark))
 }

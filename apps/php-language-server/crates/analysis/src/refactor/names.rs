@@ -8,7 +8,7 @@ use php_syntax::SyntaxKind::*;
 use php_syntax::{SyntaxElement, SyntaxNode};
 
 use super::exprs::name_of;
-use crate::ast::{child_of, text_of};
+use crate::ast::text_of;
 use crate::infer::literal_string;
 use crate::inspections::Cx;
 
@@ -119,9 +119,10 @@ fn from_type(ty: &Type) -> Option<String> {
 }
 
 fn member_name(access: &SyntaxNode) -> Option<String> {
-    child_of(access, NAME)
-        .or_else(|| access.children().nth(1))
+    access
+        .children()
         .filter(|node| node.kind() == NAME)
+        .last()
         .map(|name| text_of(&name))
 }
 

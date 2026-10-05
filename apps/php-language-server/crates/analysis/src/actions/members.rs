@@ -21,13 +21,13 @@ use crate::refs::is_write_target;
 // Writing methods -------------------------------------------------------------------------------
 
 /// How a file lays out its classes: the indentation of a member and where a method's brace goes.
-struct Style {
-    indent: String,
-    unit: String,
-    brace_on_next_line: bool,
+pub(crate) struct Style {
+    pub indent: String,
+    pub unit: String,
+    pub brace_on_next_line: bool,
 }
 
-fn style_of(cx: &Cx, class: &SyntaxNode) -> Style {
+pub(crate) fn style_of(cx: &Cx, class: &SyntaxNode) -> Style {
     let class_indent = indent_of(cx.text, usize::from(class.text_range().start()));
     let member_indent = child_of(class, CLASS_BODY)
         .and_then(|body| body.children().next())
