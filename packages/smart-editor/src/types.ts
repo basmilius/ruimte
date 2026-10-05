@@ -177,6 +177,8 @@ export interface EditorLineHighlight {
     readonly endLine: number;
     /* The tint is this color at a low alpha, so the code keeps its colors on it in either theme. */
     readonly color: EditorMarkColor;
+    /* A color the rows are filled with as it stands, instead of the low alpha tint of `color`, which keeps naming the sign's color. A custom property name or any CSS color. */
+    readonly fill?: EditorMarkColor;
     /* A character in the gutter of each line, such as `+`, in the same color. */
     readonly sign?: string;
 }
@@ -358,6 +360,15 @@ export interface EditorGutterAction {
     readonly label: string;
 }
 
+/* A small button in the gutter on one line that the host keeps apart from the code action, such as the mark of a saved inline edit. */
+export interface EditorGutterMarker {
+    /* What `onGutterMarker` says when it is pressed. */
+    readonly id: string;
+    /* Zero-based; it stays on this line until the host sets its markers again. */
+    readonly line: number;
+    readonly label: string;
+}
+
 /*
  * How the view follows a caret that was moved from outside. `relative` keeps it in view with a line
  * of margin, `center` puts a target out of view a third from the top and leaves one in view alone, and
@@ -491,6 +502,10 @@ export interface Editor {
     setGutterAction(action: EditorGutterAction | null): void;
     /* The button was pressed; the zero-based line it is on. */
     onGutterAction(listener: (line: number) => void): () => void;
+    /* The markers of one owner (`default` without one), replacing the ones it set before and leaving every other owner's alone. An empty list takes them away. */
+    setGutterMarkers(markers: readonly EditorGutterMarker[], owner?: string): void;
+    /* A marker was pressed; its id. */
+    onGutterMarker(listener: (id: string) => void): () => void;
     getCaret(): EditorPosition;
     /* In pixels, what `scrollTop` on mounting takes back. */
     getScrollTop(): number;

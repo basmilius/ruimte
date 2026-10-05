@@ -27,6 +27,7 @@ export type {
     EditorFindState,
     EditorReplaceOptions,
     EditorGutterAction,
+    EditorGutterMarker,
     EditorIndentation,
     EditorContentChange,
     EditorHighlight,

@@ -1131,6 +1131,15 @@ describe('setLineHighlights', () => {
         expect(tinted(host)).toEqual([]);
     });
 
+    test('fills the rows with the fill as it stands, and keeps the color for the sign', () => {
+        const { editor, host } = setup({ text });
+        editor.setLineHighlights([
+            { startLine: 3, endLine: 3, color: '--accent', fill: '--editor-selection' },
+            { startLine: 4, endLine: 4, color: '--accent' }
+        ]);
+        expect(tinted(host)).toEqual(['40px:var(--editor-selection)', '60px:color-mix(in srgb, var(--accent) 14%, transparent)']);
+    });
+
     test('keeps a row of a widget between two tinted lines clear, and puts the sign in the gutter', () => {
         jest.useFakeTimers();
         const { editor, host } = setup({ text });

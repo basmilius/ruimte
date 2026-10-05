@@ -8,12 +8,14 @@ export interface AttributedLines {
     readonly id: string;
     readonly color: string;
     readonly sign?: string;
+    readonly fill?: string;
 }
 
 interface Run {
     id: string;
     color: string;
     sign: string | undefined;
+    fill: string | undefined;
     from: number;
     to: number;
 }
@@ -42,7 +44,7 @@ export class AttributionRuns {
 
     /* Marks name lines one-based and inclusive; `lineBounds` answers for the document as it is now. */
     set(
-        marks: readonly { id: string; startLine: number; endLine: number; color: string; sign?: string }[],
+        marks: readonly { id: string; startLine: number; endLine: number; color: string; sign?: string; fill?: string }[],
         lineCount: number,
         lineBounds: (line: number) => { start: number; end: number }
     ): void {
@@ -50,7 +52,7 @@ export class AttributionRuns {
         this.runs = marks.map((mark) => {
             const start = clamp(mark.startLine);
             const end = Math.max(start, clamp(mark.endLine));
-            return { id: mark.id, color: mark.color, sign: mark.sign, from: lineBounds(start).start, to: lineBounds(end).end };
+            return { id: mark.id, color: mark.color, sign: mark.sign, fill: mark.fill, from: lineBounds(start).start, to: lineBounds(end).end };
         });
     }
 
@@ -72,7 +74,7 @@ export class AttributionRuns {
             if (run.to < from || run.from > to) {
                 continue;
             }
-            const value = { id: run.id, color: run.color, sign: run.sign };
+            const value = { id: run.id, color: run.color, sign: run.sign, fill: run.fill };
             const end = Math.min(Math.max(lineOf(run.from), lineOf(run.to)), last);
             for (let line = Math.max(lineOf(run.from), first); line <= end; line++) {
                 lines.set(line, value);

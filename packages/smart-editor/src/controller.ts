@@ -814,6 +814,11 @@ export class InputController {
         }
         event.preventDefault();
         /* On the press and not on click: a repaint in between replaces the gutter's buttons, and a click whose button left the DOM never arrives. */
+        const markerId = this.view.gutterMarkerIdOf(event.target);
+        if (markerId !== null) {
+            this.view.pressGutterMarker(markerId);
+            return;
+        }
         const actionLine = this.view.gutterActionLineOf(event.target);
         if (actionLine !== null) {
             this.view.pressGutterAction(actionLine);

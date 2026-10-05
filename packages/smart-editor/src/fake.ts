@@ -16,6 +16,7 @@ import type {
     EditorFindState,
     EditorReplaceOptions,
     EditorGutterAction,
+    EditorGutterMarker,
     EditorHighlight,
     EditorHover,
     EditorIndentation,
@@ -382,6 +383,32 @@ export class FakeEditor implements Editor {
         return () => {
             this.gutterActionListeners.delete(listener);
         };
+    }
+
+    /* What each owner put in the gutter last. */
+    readonly gutterMarkersByOwner = new Map<string, readonly EditorGutterMarker[]>();
+    private readonly gutterMarkerListeners = new Set<(id: string) => void>();
+
+    setGutterMarkers(markers: readonly EditorGutterMarker[], owner = 'default'): void {
+        if (markers.length === 0) {
+            this.gutterMarkersByOwner.delete(owner);
+        } else {
+            this.gutterMarkersByOwner.set(owner, markers);
+        }
+    }
+
+    onGutterMarker(listener: (id: string) => void): () => void {
+        this.gutterMarkerListeners.add(listener);
+        return () => {
+            this.gutterMarkerListeners.delete(listener);
+        };
+    }
+
+    /* A press on a gutter marker. */
+    pressGutterMarker(id: string): void {
+        for (const listener of [...this.gutterMarkerListeners]) {
+            listener(id);
+        }
     }
 
     /* A press on the gutter button, if there is one. */

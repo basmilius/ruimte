@@ -341,6 +341,8 @@ export interface GutterPaint {
     foldable: ReadonlyMap<number, boolean>;
     /* The line that carries the host's button, and what it is called. */
     action: { line: number; label: string } | null;
+    /* The host's markers by line. */
+    markers: ReadonlyMap<number, { id: string; label: string }>;
 }
 
 /* The line numbers of the visible rows, and the fold control of the lines that have one. */
@@ -365,6 +367,16 @@ export function paintGutter(container: HTMLElement, layout: EditorLayout, rows: 
             button.dataset.gutterAction = String(row.line);
             button.tabIndex = -1;
             button.setAttribute('aria-label', paint.action.label);
+            item.append(button);
+        }
+        const marker = paint.markers.get(row.line);
+        if (marker !== undefined) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'se-gutter-marker';
+            button.dataset.gutterMarker = marker.id;
+            button.tabIndex = -1;
+            button.setAttribute('aria-label', marker.label);
             item.append(button);
         }
         const sign = paint.highlights.get(row.line)?.sign;

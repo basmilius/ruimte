@@ -13,7 +13,7 @@ import {
 import { FindController } from './find.ts';
 import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type LayoutRect, type LayoutRow, RIGHT_PADDING, type TextRow } from './layout.ts';
 import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
-import { type AttributedLines, AttributionRuns, tintValue } from './attribution.ts';
+import { type AttributedLines, AttributionRuns, colorValue, tintValue } from './attribution.ts';
 import { renderCodeBlock } from './code-block.ts';
 import { mapOffset } from './offsets.ts';
 import { mapTrackedRange } from './tracked-range.ts';
@@ -167,6 +167,8 @@ export class EditorView {
     private readonly viewListeners = new Set<() => void>();
     private readonly gutterActionListeners = new Set<(line: number) => void>();
     private gutterAction: { line: number; label: string } | null = null;
+    private readonly gutterMarkerListeners = new Set<(id: string) => void>();
+    private readonly gutterMarkers = new Map<string, readonly { id: string; line: number; label: string }[]>();
     private semantic: ViewSemanticToken[] = [];
     private scopeColors: ScopeColors | null = null;
     private semanticVersion = 0;
@@ -1700,7 +1702,8 @@ export class EditorView {
             highlights: highlighted,
             activeLines: new Set(selections.map((selection) => this.model.positionAt(selection.head).line)),
             foldable,
-            action: this.gutterAction
+            action: this.gutterAction,
+            markers: this.markersByLine()
         });
         const marks: { className: string; rects: LayoutRect[]; background?: string }[] = this.highlightMarks(rows, highlighted);
         const row = this.layout.rowForLine(this.model.positionAt(primary.head).line);
@@ -1883,7 +1886,7 @@ export class EditorView {
     }
 
     /* Lines the host tinted, which follow their text through edits until it sets them again. */
-    setLineHighlights(highlights: readonly { startLine: number; endLine: number; color: string; sign?: string }[]): void {
+    setLineHighlights(highlights: readonly { startLine: number; endLine: number; color: string; sign?: string; fill?: string }[]): void {
         this.highlights.set(
             highlights.map((highlight) => ({ id: '', ...highlight })),
             this.model.getLineCount(),
@@ -1907,17 +1910,18 @@ export class EditorView {
         rows: readonly LayoutRow[],
         lines: ReadonlyMap<number, AttributedLines>
     ): { className: string; rects: LayoutRect[]; background: string }[] {
-        const byColor = new Map<string, LayoutRect[]>();
+        const byBackground = new Map<string, LayoutRect[]>();
         const width = Math.max(this.layout.width, this.viewportWidth);
         for (const row of rows) {
             const highlight = row.kind === 'text' ? lines.get(row.line) : undefined;
             if (highlight !== undefined) {
-                const rects = byColor.get(highlight.color) ?? [];
+                const background = highlight.fill === undefined ? tintValue(highlight.color) : colorValue(highlight.fill);
+                const rects = byBackground.get(background) ?? [];
                 rects.push({ x: 0, y: row.top, width, height: row.height });
-                byColor.set(highlight.color, rects);
+                byBackground.set(background, rects);
             }
         }
-        return [...byColor].map(([color, rects]) => ({ className: 'se-line-highlight', rects, background: tintValue(color) }));
+        return [...byBackground].map(([background, rects]) => ({ className: 'se-line-highlight', rects, background }));
     }
 
     /* Code that is not in the document, drawn in the editor's own face and colors. */
@@ -2181,6 +2185,47 @@ export class EditorView {
         };
     }
 
+    setGutterMarkers(owner: string, markers: readonly { id: string; line: number; label: string }[]): void {
+        if (markers.length === 0) {
+            this.gutterMarkers.delete(owner);
+        } else {
+            this.gutterMarkers.set(owner, markers);
+        }
+        this.render();
+    }
+
+    onGutterMarker(listener: (id: string) => void): () => void {
+        this.gutterMarkerListeners.add(listener);
+        return () => {
+            this.gutterMarkerListeners.delete(listener);
+        };
+    }
+
+    /* The id of the host's gutter marker when the target is it. */
+    gutterMarkerIdOf(target: EventTarget | null): string | null {
+        const button = (target as HTMLElement | null)?.closest?.<HTMLElement>('[data-gutter-marker]');
+        return button?.dataset.gutterMarker ?? null;
+    }
+
+    pressGutterMarker(id: string): void {
+        for (const listener of [...this.gutterMarkerListeners]) {
+            listener(id);
+        }
+    }
+
+    /* One marker per line: where two owners mark the same line, the owner named first stays. */
+    private markersByLine(): ReadonlyMap<number, { id: string; label: string }> {
+        const byLine = new Map<number, { id: string; label: string }>();
+        for (const owner of [...this.gutterMarkers.keys()].sort()) {
+            for (const marker of this.gutterMarkers.get(owner)!) {
+                if (!byLine.has(marker.line)) {
+                    byLine.set(marker.line, { id: marker.id, label: marker.label });
+                }
+            }
+        }
+        return byLine;
+    }
+
     /* The line of the host's gutter button when the target is it. */
     gutterActionLineOf(target: EventTarget | null): number | null {
         const button = (target as HTMLElement | null)?.closest?.('[data-gutter-action]');
@@ -2220,6 +2265,8 @@ export class EditorView {
         this.viewListeners.clear();
         this.hoverListeners.clear();
         this.gutterActionListeners.clear();
+        this.gutterMarkerListeners.clear();
+        this.gutterMarkers.clear();
         this.tracked.clear();
         this.remoteCarets = [];
         this.attribution.clear();

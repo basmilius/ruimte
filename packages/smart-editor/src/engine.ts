@@ -23,6 +23,7 @@ import type {
     EditorFindState,
     EditorReplaceOptions,
     EditorGutterAction,
+    EditorGutterMarker,
     EditorHighlight,
     EditorHover,
     EditorInlayHint,
@@ -602,6 +603,14 @@ class SmartEditor implements Editor {
 
     onGutterAction(listener: (line: number) => void): () => void {
         return this.view.onGutterAction(listener);
+    }
+
+    setGutterMarkers(markers: readonly EditorGutterMarker[], owner: string = 'default'): void {
+        this.view.setGutterMarkers(owner, markers);
+    }
+
+    onGutterMarker(listener: (id: string) => void): () => void {
+        return this.view.onGutterMarker(listener);
     }
 
     setBlocks(blocks: readonly EditorBlock[] | null): void {

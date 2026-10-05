@@ -699,6 +699,28 @@ describe('the gutter action', () => {
     });
 });
 
+describe('gutter markers', () => {
+    test('draw one button per line for every owner, report a press without moving the caret and go with their owner', () => {
+        jest.useFakeTimers();
+        const { editor, page, viewport } = mountEditor({ text: 'one\ntwo\nthree' });
+        jest.runAllTimers();
+        jest.useRealTimers();
+        const pressed: string[] = [];
+        editor.onGutterMarker((id) => pressed.push(id));
+        editor.setGutterMarkers([{ id: 'edit', line: 2, label: 'Show inline edit' }], 'inline-edit');
+        editor.setGutterMarkers([{ id: 'other', line: 0, label: 'Other' }], 'other');
+        const buttons = () => [...page.host.querySelectorAll('.se-gutter-marker')] as HTMLElement[];
+        expect(buttons().map((button) => button.getAttribute('aria-label'))).toEqual(['Other', 'Show inline edit']);
+        const caret = editor.getCaret();
+        pointer(page.window, buttons()[1]!, 'pointerdown', 0, 0);
+        pointer(page.window, viewport, 'pointerup', 0, 0);
+        expect(pressed).toEqual(['edit']);
+        expect(editor.getCaret()).toEqual(caret);
+        editor.setGutterMarkers([], 'other');
+        expect(buttons().map((button) => button.getAttribute('aria-label'))).toEqual(['Show inline edit']);
+    });
+});
+
 describe('clicks the host answers', () => {
     test('offers a press on a character to the host, which can take it and leave the caret alone', () => {
         const { editor, click, type } = mountEditor({ text: 'abcdef' }, { apple: false });
