@@ -405,7 +405,20 @@ fn relation_of(
 /// given in place of the template.
 fn relation_from_body(index: &Index, model_type: &Type, method: &Method, tree: &SyntaxNode) -> Option<Type> {
     let declaration = method_at(tree, method.name_span.start)?;
-    let call = returned_expression(&declaration)?;
+    let mut call = returned_expression(&declaration)?;
+    // `$this->morphMany(...)->latest()` is still the relation: the builder calls after it return it.
+    loop {
+        let receiver = call
+            .children()
+            .next()
+            .filter(|callee| callee.kind() == PROPERTY_FETCH_EXPR)
+            .and_then(|callee| callee.children().next())
+            .filter(|receiver| receiver.kind() == CALL_EXPR);
+        match receiver {
+            Some(receiver) => call = receiver,
+            None => break,
+        }
+    }
     if call.kind() != CALL_EXPR {
         return None;
     }
@@ -1135,6 +1148,11 @@ class User extends Model
         return $this->hasMany(Post::class);
     }
 
+    public function recentPosts(): HasMany
+    {
+        return $this->hasMany(Post::class)->where('a', 1)->orderBy('b');
+    }
+
     public function getFullNameAttribute(): string {}
 
     protected function nickName(): Attribute
@@ -1225,6 +1243,10 @@ class User extends Model
         assert_eq!(property(&index, "team").as_deref(), Some("?App\\Models\\Team"));
         assert_eq!(
             property(&index, "latestPost").as_deref(),
+            Some("Illuminate\\Database\\Eloquent\\Collection<int, App\\Models\\Post>")
+        );
+        assert_eq!(
+            property(&index, "recentPosts").as_deref(),
             Some("Illuminate\\Database\\Eloquent\\Collection<int, App\\Models\\Post>")
         );
         assert!(property(&index, "rename").is_none());

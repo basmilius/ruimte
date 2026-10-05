@@ -344,3 +344,51 @@ fn forward_calls<'a>(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    fn detect(require: serde_json::Value) -> Frameworks {
+        Frameworks::detect(&Composer::from_json(Path::new("/p"), &json!({ "require": require })))
+    }
+
+    #[test]
+    fn a_framework_is_detected_from_what_the_project_requires() {
+        let laravel = detect(json!({ "laravel/framework": "^13.0" }));
+        assert!(laravel.laravel && laravel.facades && laravel.eloquent && !laravel.symfony);
+        let eloquent = detect(json!({ "illuminate/database": "^11.0" }));
+        assert!(eloquent.eloquent && !eloquent.laravel && !eloquent.facades);
+        let support = detect(json!({ "illuminate/support": "^11.0" }));
+        assert!(support.facades && !support.eloquent);
+        let symfony = detect(json!({ "symfony/framework-bundle": "8.1.*", "doctrine/orm": "^3", "twig/twig": "^3" }));
+        assert!(symfony.symfony && symfony.doctrine && symfony.twig && !symfony.laravel);
+        assert!(!detect(json!({ "php": "^8.3", "monolog/monolog": "^3" })).any());
+    }
+
+    #[test]
+    fn nothing_is_made_up_in_a_project_without_the_framework() {
+        let mut index = crate::framework::testing::project(&[
+            (
+                "vendor/laravel/Facade.php",
+                "<?php namespace Illuminate\\Support\\Facades; abstract class Facade { public static function __callStatic($m, $a) {} }",
+            ),
+            (
+                "app/Facades/F.php",
+                "<?php namespace App\\Facades; /** @see \\App\\Real */ class F extends \\Illuminate\\Support\\Facades\\Facade {}",
+            ),
+            (
+                "app/Real.php",
+                "<?php namespace App; class Real { public function run() {} }",
+            ),
+        ]);
+        let ty = crate::types::Type::class("App\\Facades\\F");
+        assert!(index.find_method(&ty, "run").is_some());
+        index.set_frameworks(Path::new(testing::ROOT), Frameworks::default());
+        assert!(index.find_method(&ty, "run").is_none());
+        assert!(overlay::markers_for(&index, None, None, "config").is_empty());
+        assert!(overlay::markers_for(&index, Some("Illuminate\\Support\\Facades\\Config"), None, "get").is_empty());
+    }
+}

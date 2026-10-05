@@ -416,3 +416,14 @@ fn a_long_chain_of_unknown_calls_is_typed_in_one_pass() {
     let code = format!("<?php\nnamespace App;\nfunction f() {{\n    $x = unknown(){chain};\n    $0\n}}\n");
     assert_eq!(var(&fixture, &code, "x"), "mixed");
 }
+
+#[test]
+fn a_template_of_an_omitted_argument_is_what_its_default_is() {
+    let fixture = Fixture::new(&[(
+        "pick.php",
+        "<?php\n/**\n * @template T\n * @template D\n * @param array<int, T> $items\n * @param D $default\n * @return T|D\n */\nfunction pick(array $items, $default = null) {}\n",
+    )]);
+    let code = "<?php\n$items = [1, 2];\n$a = pick($items);\n$b = pick($items, 'x');\n$0";
+    assert_eq!(var(&fixture, code, "a"), "?int");
+    assert_eq!(var(&fixture, code, "b"), "int|string");
+}

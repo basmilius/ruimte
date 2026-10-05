@@ -363,12 +363,21 @@ impl Analyzer<'_> {
         let mut by_name: HashMap<String, Type> = HashMap::new();
         self.bind_args(callee, args, env, ArgPass::Plain, &mut map, &mut by_name);
         self.bind_args(callee, args, env, ArgPass::Closures, &mut map, &mut by_name);
-        for param in callee.callable.params_at(self.level()) {
-            if let Some(default) = &param.default {
-                by_name
-                    .entry(format!("${}", param.name))
-                    .or_insert_with(|| default_type(default));
+        let level = self.level();
+        for (position, param) in callee.callable.params_at(level).enumerate() {
+            let Some(default) = &param.default else {
+                continue;
+            };
+            let omitted = !args.iter().enumerate().any(|(at, arg)| {
+                arg.name.as_deref() == Some(param.name.as_str()) || arg.name.is_none() && at == position
+            });
+            let ty = default_type(default);
+            if omitted && !ty.is_unknown() {
+                if let Some(expected) = param.effective_type(level) {
+                    self.bind_templates(expected, &ty, &mut map);
+                }
             }
+            by_name.entry(format!("${}", param.name)).or_insert(ty);
         }
         (map, by_name)
     }
