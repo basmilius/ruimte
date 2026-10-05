@@ -4,6 +4,7 @@ import { Tooltip } from '@basmilius/desktop-ui';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useCodeTheme } from '@/state/code-theme';
 import { hoverSectionsOf, markdownParts, type DocTag, type HoverSection, type HoverText } from './hover-content';
+import { BaselineStatus } from './BaselineStatus';
 import { declaredNameOf, linkTypeNames } from './symbol-links';
 
 /* Code as the viewer colors it, plain until the grammar is in so the card never changes size under the pointer by much. */
@@ -66,6 +67,7 @@ export function SymbolSection({ section, onName }: { section: HoverSection; onNa
             {section.signatures.map((block, index) => (
                 <Signature key={index} code={block.code} language={block.language} onName={follow} />
             ))}
+            {section.baseline !== null && <BaselineStatus baseline={section.baseline} />}
             {markdownParts(section.markdown).map((part, index) =>
                 part.kind === 'code' ? (
                     <div key={index} className="rounded-md bg-surface-sunken px-2 py-1.5">

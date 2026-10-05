@@ -128,6 +128,29 @@ export interface HoverSection {
     readonly signatures: readonly SignatureBlock[];
     readonly markdown: string;
     readonly tags: readonly DocTag[];
+    readonly baseline: Baseline | null;
+}
+
+export type BaselineLevel = 'widely' | 'newly' | 'limited';
+
+/* How widely a web feature is available, as the CSS servers state it under a property. */
+export interface Baseline {
+    readonly level: BaselineLevel;
+    readonly text: string;
+}
+
+/* A CSS server draws the status as a data URL image in front of an italic sentence, and a data URL is not an address the markdown renderer lets through. */
+const BASELINE = /!\[Baseline icon\]\([^)\s]*\)[ \t]*_([^\n]+?)_[ \t]*(?:\n|$)/;
+
+/* The Baseline status a text carries, which the card draws with a mark of its own, and the text without it. */
+function takeBaseline(markdown: string): { baseline: Baseline | null; rest: string } {
+    const match = BASELINE.exec(markdown);
+    if (match === null) {
+        return { baseline: null, rest: markdown };
+    }
+    const text = match[1]!.trim();
+    const level = text.startsWith('Widely') ? 'widely' : text.startsWith('Newly') ? 'newly' : 'limited';
+    return { baseline: { level, text }, rest: (markdown.slice(0, match.index) + markdown.slice(match.index + match[0].length)).replace(/\n{3,}/g, '\n\n') };
 }
 
 const RULE = /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/m;
@@ -212,12 +235,14 @@ function sectionOf(chunk: string, leading: readonly SignatureBlock[]): HoverSect
         signatures.push({ language: fence[1] || 'text', code: fence[2]! });
         rest = (rest.slice(0, fence.index) + rest.slice(fence.index + fence[0].length)).trim();
     }
-    const doc = splitDocTags(docblockMarkdown(rest, signatures[0]?.language ?? 'text'));
+    const taken = takeBaseline(rest);
+    const doc = splitDocTags(docblockMarkdown(taken.rest, signatures[0]?.language ?? 'text'));
     return {
         title: title === null ? null : unescapeMarkdown((title[1] ?? title[2])!.trim()),
         signatures: signatures.map(withoutOpenTag),
         markdown: doc.markdown,
-        tags: doc.tags
+        tags: doc.tags,
+        baseline: taken.baseline
     };
 }
 
@@ -227,8 +252,9 @@ export function hoverSectionsOf(text: HoverText): HoverSection[] {
     const sections = chunks.map((chunk, index) => sectionOf(chunk, index === 0 ? text.signatures : []));
     const seen = new Set<string>();
     return sections.filter((section) => {
-        const empty = section.title === null && section.signatures.length === 0 && section.markdown === '' && section.tags.length === 0;
-        const key = JSON.stringify([section.title, section.signatures, section.markdown]);
+        const empty =
+            section.title === null && section.signatures.length === 0 && section.markdown === '' && section.tags.length === 0 && section.baseline === null;
+        const key = JSON.stringify([section.title, section.signatures, section.markdown, section.baseline]);
         if (empty || seen.has(key)) {
             return false;
         }

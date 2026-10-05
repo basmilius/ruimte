@@ -69,6 +69,29 @@ describe('splitDocTags', () => {
     });
 });
 
+describe('the Baseline status of a CSS property', () => {
+    const icon = '![Baseline icon](data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=)';
+
+    test('is taken out of the prose with its level, whichever image the server drew', () => {
+        const markdown = `Sets the color of an element's text\n\n${icon} _Widely available across major browsers (Baseline since 2015)_\n\nSyntax: <color>\n\n[MDN Reference](https://developer.mozilla.org/docs/Web/CSS/Reference/Properties/color)`;
+        const [section] = hoverSectionsOf({ signatures: [], markdown });
+        expect(section!.baseline).toEqual({ level: 'widely', text: 'Widely available across major browsers (Baseline since 2015)' });
+        expect(section!.markdown).not.toContain('data:');
+        expect(section!.markdown).toContain('Syntax: <color>');
+        expect(section!.markdown).toContain('MDN Reference');
+    });
+
+    test('tells newly and limited availability from widely', () => {
+        const levelOf = (status: string) => hoverSectionsOf({ signatures: [], markdown: `Text\n\n${icon} _${status}_` })[0]!.baseline?.level;
+        expect(levelOf('Newly available across major browsers (Baseline since 2024)')).toBe('newly');
+        expect(levelOf('Limited availability across major browsers (Not fully implemented in Firefox)')).toBe('limited');
+    });
+
+    test('leaves a text without it alone', () => {
+        expect(hoverSectionsOf({ signatures: [], markdown: 'Just words.' })[0]!.baseline).toBeNull();
+    });
+});
+
 describe('hoverSectionsOf', () => {
     const php =
         '__Passly\\Message\\IssueTicketsMessage__\n\nClass IssueTicketsMessage\n\n```php\n<?php\nfinal class IssueTicketsMessage {\n```\n\n---\n\n' +
@@ -82,7 +105,8 @@ describe('hoverSectionsOf', () => {
             title: 'Passly\\Message\\IssueTicketsMessage',
             signatures: [{ language: 'php', code: 'final class IssueTicketsMessage {' }],
             markdown: 'Class IssueTicketsMessage',
-            tags: []
+            tags: [],
+            baseline: null
         });
         expect(sections[1]!.title).toBe('Passly\\Message\\IssueTicketsMessage::__construct');
         expect(sections[1]!.tags).toEqual([{ name: 'param', markdown: '`string $id`' }]);
@@ -95,7 +119,8 @@ describe('hoverSectionsOf', () => {
                 title: null,
                 signatures: [{ language: 'ts', code: 'function share(): number' }],
                 markdown: 'Share.',
-                tags: [{ name: 'returns', markdown: 'a fraction' }]
+                tags: [{ name: 'returns', markdown: 'a fraction' }],
+                baseline: null
             }
         ]);
     });
