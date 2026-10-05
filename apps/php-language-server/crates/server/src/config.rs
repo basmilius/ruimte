@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use php_analysis::DiagnosticSeverity;
+use php_analysis::inspections::{InspectionSettings, Override};
 use php_syntax::PhpVersion;
 use serde_json::Value;
 
@@ -8,7 +10,7 @@ pub const SECTION: &str = "phpLanguageServer";
 
 /// The settings the server reads. Both `{ "phpVersion": "8.4" }` and the same object under
 /// [`SECTION`] are understood, so a client may pass the settings as it likes.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Settings {
     /// The language level for a project whose `composer.json` does not say.
     pub php_version: Option<PhpVersion>,
@@ -21,6 +23,8 @@ pub struct Settings {
     pub hint_parameter_names: Option<bool>,
     /// `inlayHints.closureTypes`: show the type a function promises for a closure's parameter.
     pub hint_closure_types: Option<bool>,
+    /// `inspections`: a switch or a severity per inspection code. `None` when the key is absent.
+    pub inspections: Option<InspectionSettings>,
 }
 
 impl Settings {
@@ -35,7 +39,58 @@ impl Settings {
             stubs_path: text("stubsPath").map(PathBuf::from),
             hint_parameter_names: flag("parameterNames"),
             hint_closure_types: flag("closureTypes"),
+            inspections: object.get("inspections").map(parse_inspections),
         }
+    }
+}
+
+/// `{ "unused-import": "off", "undefined-class": { "severity": "warning" }, "deprecated": false }`.
+fn parse_inspections(value: &Value) -> InspectionSettings {
+    let mut settings = InspectionSettings::default();
+    let Some(map) = value.as_object() else {
+        return settings;
+    };
+    for (code, choice) in map {
+        let choice = match choice {
+            Value::Bool(enabled) => Override {
+                enabled: Some(*enabled),
+                severity: None,
+            },
+            Value::String(text) => override_of(text),
+            Value::Object(fields) => {
+                let named = fields.get("severity").and_then(Value::as_str).map(override_of);
+                Override {
+                    enabled: fields
+                        .get("enabled")
+                        .and_then(Value::as_bool)
+                        .or_else(|| named.and_then(|named| named.enabled)),
+                    severity: named.and_then(|named| named.severity),
+                }
+            }
+            _ => continue,
+        };
+        settings.set(code, choice);
+    }
+    settings
+}
+
+fn override_of(text: &str) -> Override {
+    let severity = match text.to_ascii_lowercase().as_str() {
+        "off" | "none" | "false" => {
+            return Override {
+                enabled: Some(false),
+                severity: None,
+            };
+        }
+        "error" => DiagnosticSeverity::Error,
+        "warning" | "warn" => DiagnosticSeverity::Warning,
+        "information" | "info" => DiagnosticSeverity::Information,
+        "hint" => DiagnosticSeverity::Hint,
+        _ => return Override::default(),
+    };
+    Override {
+        enabled: Some(true),
+        severity: Some(severity),
     }
 }
 
@@ -62,6 +117,29 @@ mod tests {
         let settings = Settings::from_value(&json!({ "storagePath": "/cache", "stubsPath": "/stubs" }));
         assert_eq!(settings.storage_path, Some(PathBuf::from("/cache")));
         assert_eq!(settings.stubs_path, Some(PathBuf::from("/stubs")));
+    }
+
+    #[test]
+    fn reads_inspection_switches_and_severities() {
+        let settings = Settings::from_value(&json!({
+            "inspections": {
+                "unused-import": "off",
+                "undefined-class": "hint",
+                "deprecated": { "severity": "error" },
+                "unused-variable": { "enabled": false },
+                "missing-strict-types": true,
+            }
+        }));
+        let inspections = settings.inspections.expect("the key is there");
+        let severity =
+            |code: &str| inspections.severity_of(php_analysis::inspections::inspection_info(code).expect("a code"));
+        assert_eq!(severity("unused-import"), None);
+        assert_eq!(severity("undefined-class"), Some(DiagnosticSeverity::Hint));
+        assert_eq!(severity("deprecated"), Some(DiagnosticSeverity::Error));
+        assert_eq!(severity("unused-variable"), None);
+        assert_eq!(severity("missing-strict-types"), Some(DiagnosticSeverity::Hint));
+        assert_eq!(severity("undefined-function"), Some(DiagnosticSeverity::Error));
+        assert!(Settings::from_value(&json!({})).inspections.is_none());
     }
 
     #[test]

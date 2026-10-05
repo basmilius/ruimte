@@ -211,6 +211,13 @@ pub struct Promotion {
 }
 
 impl Param {
+    /// Whether a call may leave the argument out: it has a default or is variadic, or the doc comment
+    /// says so, as the stubs do with `[optional]` and an `@method` line does with `= value`.
+    pub fn is_optional(&self) -> bool {
+        let note = self.description.trim_start();
+        self.default.is_some() || self.variadic || note.starts_with("[optional]") || note.starts_with('=')
+    }
+
     /// The type calls and bodies see: the PHPDoc type when there is one, else the native one.
     pub fn effective_type(&self, level: PhpVersion) -> Option<&Type> {
         self.doc_ty
@@ -237,6 +244,8 @@ pub struct Callable {
     pub leveled_ret: Option<LeveledType>,
     pub by_ref_return: bool,
     pub is_generator: bool,
+    /// The body asks for its arguments as a list, so it takes more than it names.
+    pub reads_all_arguments: bool,
 }
 
 impl Callable {
@@ -420,6 +429,9 @@ pub struct FileSymbols {
     pub classes: Vec<ClassDecl>,
     pub functions: Vec<Function>,
     pub constants: Vec<ConstDecl>,
+    /// A `define()` the file makes that the declarations above do not hold, because its name is
+    /// only known when the code runs.
+    pub dynamic_define: bool,
 }
 
 impl FileSymbols {
@@ -474,12 +486,14 @@ pub struct FileSummary {
     pub classes: Vec<ClassSummary>,
     pub functions: Vec<NameSummary>,
     pub constants: Vec<NameSummary>,
+    pub dynamic_define: bool,
 }
 
 impl FileSummary {
     pub fn of(symbols: &FileSymbols) -> FileSummary {
         let deprecated = |doc: &Option<Box<Doc>>| doc.as_ref().is_some_and(|doc| doc.deprecated.is_some());
         FileSummary {
+            dynamic_define: symbols.dynamic_define,
             classes: symbols
                 .classes
                 .iter()

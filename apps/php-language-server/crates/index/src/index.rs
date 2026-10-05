@@ -430,6 +430,31 @@ impl Index {
         .map(|(file, decl)| Class { file, decl })
     }
 
+    /// How many files declare a class of this name that exists at the level. More than one means
+    /// the declarations are conditional, and which of them runs is not known.
+    pub fn class_declarations(&self, name: &str) -> usize {
+        let name = name.trim_start_matches('\\');
+        let Some(slots) = self.classes.get(&class_key(name)) else {
+            return 0;
+        };
+        slots
+            .iter()
+            .filter(|(file, index)| {
+                self.files
+                    .get(*file as usize)
+                    .and_then(Option::as_ref)
+                    .and_then(|entry| entry.summary.classes.get(*index as usize))
+                    .is_some_and(|class| class.availability.contains(self.level))
+            })
+            .count()
+    }
+
+    /// Whether any file defines constants at run time, so that a constant the index does not hold
+    /// may still be there.
+    pub fn has_dynamic_defines(&self) -> bool {
+        self.files.iter().flatten().any(|entry| entry.summary.dynamic_define)
+    }
+
     pub fn function(&self, name: &str) -> Option<FunctionRef<'_>> {
         let name = name.trim_start_matches('\\');
         let slots = self.functions.get(&class_key(name))?;

@@ -1227,3 +1227,96 @@ fn completes_the_methods_a_class_can_override() {
     );
     client.shutdown();
 }
+
+// Inspections ----------------------------------------------------------------------------------
+
+fn codes(diagnostics: &[Value]) -> Vec<String> {
+    diagnostics
+        .iter()
+        .map(|found| found["code"].as_str().unwrap_or_default().to_string())
+        .collect()
+}
+
+const PAGE: &str = "<?php\nnamespace App;\n\nuse Acme\\Lib\\Widget;\nuse App\\Models\\User;\n\nclass Page\n{\n    public function show(User $user): void\n    {\n        echo strlen($user->name);\n        missing_function();\n        $unused = new Redis();\n        new SwooleServer();\n        $user->nothing();\n    }\n}\n";
+
+#[test]
+fn reports_inspections_once_the_project_is_indexed() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Page.php");
+    client.open(&uri, PAGE);
+    let found = client.diagnostics(&uri);
+    assert_eq!(
+        codes(&found),
+        [
+            "unused-import",
+            "undefined-function",
+            "unused-variable",
+            "undefined-class",
+            "undefined-class",
+            "undefined-method"
+        ],
+        "{found:?}"
+    );
+    assert_eq!(found[0]["tags"], json!([1]), "an unused import is unnecessary");
+    assert_eq!(found[1]["severity"], 1);
+    assert_eq!(
+        found[3]["message"], "Undefined class 'Redis'",
+        "a global class needs a backslash in a namespace"
+    );
+    client.shutdown();
+}
+
+#[test]
+fn a_class_only_an_unrequired_extension_has_is_not_undefined() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Page.php");
+    client.open(&uri, "<?php\nnamespace App;\n\nfinal class Page\n{\n    public function show(): void\n    {\n        new \\SwooleServer();\n        new \\Redis();\n        new \\Gone();\n    }\n}\n");
+    let found = client.diagnostics(&uri);
+    assert_eq!(messages(&found), ["Undefined class 'Gone'"]);
+    client.shutdown();
+}
+
+#[test]
+fn nothing_is_undefined_before_the_index_is_read() {
+    let (mut client, _) = Client::start(json!({}), Value::Null);
+    client.open(URI, PAGE);
+    let found = client.diagnostics(URI);
+    assert!(
+        codes(&found)
+            .iter()
+            .all(|code| code != "undefined-class" && code != "undefined-function"),
+        "{found:?}"
+    );
+    client.shutdown();
+}
+
+#[test]
+fn inspection_settings_switch_and_move_severities() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Page.php");
+    client.open(&uri, PAGE);
+    assert_eq!(client.diagnostics(&uri).len(), 6);
+    client.notify(
+        "workspace/didChangeConfiguration",
+        json!({ "settings": { "phpLanguageServer": { "inspections": {
+            "unused-import": "off",
+            "undefined-function": { "severity": "hint" },
+            "unused-variable": false
+        } } } }),
+    );
+    let found = client.diagnostics(&uri);
+    assert_eq!(
+        codes(&found),
+        [
+            "undefined-function",
+            "undefined-class",
+            "undefined-class",
+            "undefined-method"
+        ]
+    );
+    assert_eq!(found[0]["severity"], 4);
+    client.shutdown();
+}

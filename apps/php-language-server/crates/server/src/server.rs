@@ -35,6 +35,7 @@ use lsp_types::{
     WorkDoneProgressEnd, WorkDoneProgressOptions, WorkDoneProgressReport, WorkspaceFoldersServerCapabilities,
     WorkspaceServerCapabilities,
 };
+use php_analysis::inspections::{Externals, InspectionEnv, inspect};
 use php_analysis::{PositionEncoding, diagnostics, document_symbols, folding_ranges, selection_ranges};
 use php_index::StubFile;
 use php_index::indexer::{IndexEvent, index_file};
@@ -118,6 +119,17 @@ pub(crate) struct Server<'a> {
     internal_sender: Sender<Internal>,
     internal_receiver: Receiver<Internal>,
     progress: Progress,
+}
+
+/// Whether Composer's autoload maps point at a file that exists for the class, which the index
+/// reads when something asks for it.
+fn composer_loads(project: &php_index::Project, class: &str) -> bool {
+    project.composer.as_ref().is_some_and(|composer| {
+        composer
+            .class_candidates(class)
+            .iter()
+            .any(|candidate| candidate.is_file())
+    })
 }
 
 fn folders_of(params: &InitializeParams) -> Vec<PathBuf> {
@@ -487,10 +499,42 @@ impl<'a> Server<'a> {
     }
 
     fn diagnostics_of(&mut self, uri: &Uri) -> Option<Vec<lsp_types::Diagnostic>> {
+        self.sync_symbols(uri);
         let encoding = self.encoding;
         let level = self.level_of(uri, self.documents.get(uri)?.level);
+        let path = uri_to_path(uri);
+        let ready = path.as_ref().is_some_and(|path| self.workspace.is_ready(path));
         let document = self.documents.get_mut(uri)?;
-        let found = diagnostics(document.parse(), level);
+        let mut found = diagnostics(document.parse(), level);
+        let root = document.parse().syntax();
+        let settings = document
+            .inspections
+            .clone()
+            .or_else(|| self.settings.inspections.clone())
+            .unwrap_or_default();
+        let project = match &path {
+            Some(path) => self.workspace.project_for(path),
+            None => &self.workspace.loose,
+        };
+        let names = &self.workspace.stub_names;
+        let has_class = |name: &str| names.has_class(name) || composer_loads(project, name);
+        let has_function = |name: &str| names.has_function(name);
+        let has_constant = |name: &str| names.has_constant(name);
+        let externals = Externals {
+            class: &has_class,
+            function: &has_function,
+            constant: &has_constant,
+        };
+        let env = InspectionEnv {
+            index: &project.index,
+            text: &document.text,
+            root: &root,
+            settings: &settings,
+            ready,
+            externals: &externals,
+        };
+        found.extend(inspect(&env).into_iter().map(|finding| finding.diagnostic));
+        found.sort_by_key(|diagnostic| (diagnostic.range.start(), diagnostic.range.end()));
         let mapper = Mapper {
             text: &document.text,
             index: &document.index,
@@ -694,7 +738,11 @@ impl<'a> Server<'a> {
                     }
                 }
                 IndexEvent::Finished(stats) => {
+                    self.workspace.indexed.insert(root.clone());
                     self.resync_open_documents();
+                    for uri in self.documents.uris() {
+                        self.mark_dirty(uri);
+                    }
                     self.log(
                         MessageType::INFO,
                         format!(
@@ -849,6 +897,7 @@ impl<'a> Server<'a> {
         let default_level = self.workspace.default_level;
         let stubs: Vec<StubFile> = std::mem::take(&mut self.workspace.stubs);
         let stubs_loaded = self.workspace.stubs_loaded;
+        self.workspace.indexed.remove(root);
         if let Some(project) = self.workspace.project_by_root(root) {
             project.reload_composer(default_level);
             project.index = php_index::Index::new(project.level);
@@ -878,6 +927,9 @@ impl<'a> Server<'a> {
         }
         if pushed.hint_closure_types.is_some() {
             self.settings.hint_closure_types = pushed.hint_closure_types;
+        }
+        if pushed.inspections.is_some() {
+            self.settings.inspections = pushed.inspections;
         }
         self.refresh_editor_features()?;
         if pushed.php_version.is_some() || !self.configuration_support {
@@ -947,10 +999,12 @@ impl<'a> Server<'a> {
             .response_result
             .ok()
             .and_then(|result| result.as_array().and_then(|items| items.first().cloned()))
-            .map(|item| Settings::from_value(&item))
-            .and_then(|settings| settings.php_version);
-        if document.level != answer {
-            document.level = answer;
+            .map(|item| Settings::from_value(&item));
+        let level = answer.as_ref().and_then(|settings| settings.php_version);
+        let inspections = answer.and_then(|settings| settings.inspections);
+        if document.level != level || document.inspections != inspections {
+            document.level = level;
+            document.inspections = inspections;
             self.mark_dirty(uri);
             self.refresh_pulled_diagnostics()?;
         }

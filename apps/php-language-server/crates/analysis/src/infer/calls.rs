@@ -237,6 +237,7 @@ impl Analyzer<'_> {
                                 leveled_ret: None,
                                 by_ref_return: false,
                                 is_generator: false,
+                                reads_all_arguments: false,
                             },
                             doc: None,
                             subst: HashMap::new(),
@@ -280,6 +281,9 @@ impl Analyzer<'_> {
         let Some(callee_node) = node.children().next() else {
             return Type::Unknown;
         };
+        if is_first_class_callable(node) {
+            return Type::class("Closure");
+        }
         let callees = self.callees(node, env);
         if callees.is_empty() {
             return Type::Unknown;
@@ -377,6 +381,12 @@ impl Analyzer<'_> {
             _ => resolved,
         }
     }
+}
+
+/// `strlen(...)`, `$object->method(...)` and `Foo::method(...)`: the callable itself, not a call.
+pub fn is_first_class_callable(call: &SyntaxNode) -> bool {
+    child_of(call, ARGUMENT_LIST)
+        .is_some_and(|list| list.children().next().is_none() && tokens(&list).any(|token| token.kind() == ELLIPSIS))
 }
 
 fn param_of_signature(param: &CallableParam, index: usize) -> Param {

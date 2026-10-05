@@ -24,6 +24,7 @@ pub fn extract(root: &SyntaxNode, options: ExtractOptions) -> FileSymbols {
         out: FileSymbols::default(),
     };
     extractor.statements(root);
+    extractor.out.dynamic_define = extractor.has_dynamic_define(root);
     extractor.out
 }
 
@@ -88,6 +89,11 @@ fn doc_of(node: &SyntaxNode) -> Option<SyntaxToken> {
 
 fn collapse(text: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// The stubs spell a method named like a keyword with this prefix, for tools that cannot read the keyword there.
+fn unreserved(name: &str) -> String {
+    name.strip_prefix("PS_UNRESERVE_PREFIX_").unwrap_or(name).to_string()
 }
 
 fn unquote(text: &str) -> String {
@@ -385,10 +391,12 @@ impl Extractor {
         let (Some(first), Some(second)) = (arguments.next(), arguments.next()) else {
             return;
         };
-        let Some(literal) = first.children().find(|child| child.kind() == LITERAL) else {
+        let Some(literal) = first.children().next() else {
             return;
         };
-        let name = unquote(&literal.text().to_string());
+        let Some(name) = self.defined_name(&literal) else {
+            return;
+        };
         if name.is_empty() {
             return;
         }
@@ -403,6 +411,58 @@ impl Extractor {
             name_span: span(literal.text_range()),
             span: span(statement.text_range()),
         });
+    }
+
+    /// Whether the file calls `define` in a way the constants above do not account for.
+    fn has_dynamic_define(&self, root: &SyntaxNode) -> bool {
+        let recorded: Vec<Span> = self.out.constants.iter().map(|constant| constant.name_span).collect();
+        root.descendants().filter(|node| node.kind() == CALL_EXPR).any(|call| {
+            let Some(callee) = call.children().next() else {
+                return false;
+            };
+            let is_define = callee.kind() == NAME
+                && callee
+                    .text()
+                    .to_string()
+                    .trim_start_matches('\\')
+                    .eq_ignore_ascii_case("define");
+            if !is_define {
+                return false;
+            }
+            let first = call
+                .children()
+                .find(|child| child.kind() == ARGUMENT_LIST)
+                .and_then(|list| list.children().find(|child| child.kind() == ARGUMENT))
+                .and_then(|argument| argument.children().next());
+            match first {
+                Some(first) => !recorded.contains(&span(first.text_range())),
+                None => false,
+            }
+        })
+    }
+
+    /// The name `define` is given: a string, or `__NAMESPACE__ . '\NAME'`, which is how a file
+    /// defines a constant of its namespace.
+    fn defined_name(&self, expression: &SyntaxNode) -> Option<String> {
+        match expression.kind() {
+            LITERAL if expression.text().to_string().starts_with(['\'', '"']) => {
+                Some(unquote(&expression.text().to_string()))
+            }
+            BINARY_EXPR => {
+                let mut parts = expression.children();
+                let (first, second) = (parts.next()?, parts.next()?);
+                if parts.next().is_some()
+                    || first.kind() != LITERAL
+                    || !first.text().to_string().eq_ignore_ascii_case("__NAMESPACE__")
+                    || second.kind() != LITERAL
+                {
+                    return None;
+                }
+                let tail = unquote(&second.text().to_string());
+                Some(format!("{}{tail}", self.resolver.namespace))
+            }
+            _ => None,
+        }
     }
 
     fn function(&mut self, node: &SyntaxNode) {
@@ -456,6 +516,7 @@ impl Extractor {
             leveled_ret: self.leveled(attributes, scope),
             by_ref_return: has_token(node, AMP),
             is_generator,
+            reads_all_arguments: reads_all_arguments(node),
         }
     }
 
@@ -604,7 +665,7 @@ impl Extractor {
         let callable = self.callable(node, doc.as_deref(), &attributes, Some(scope));
         let has_body = node.children().any(|child| child.kind() == BLOCK);
         Some(Method {
-            name: name.text().to_string(),
+            name: unreserved(&name.text().to_string()),
             visibility: visibility.unwrap_or(Visibility::Public),
             is_static: has_modifier(STATIC_KW),
             is_abstract: has_modifier(ABSTRACT_KW) || (in_interface && !has_body),
@@ -804,6 +865,27 @@ impl Extractor {
             })
             .collect()
     }
+}
+
+fn reads_all_arguments(node: &SyntaxNode) -> bool {
+    let Some(body) = node.children().find(|child| child.kind() == BLOCK) else {
+        return false;
+    };
+    body.descendants().any(|call| {
+        call.kind() == CALL_EXPR
+            && call.children().next().is_some_and(|callee| {
+                callee.kind() == NAME
+                    && matches!(
+                        callee
+                            .text()
+                            .to_string()
+                            .trim_start_matches('\\')
+                            .to_ascii_lowercase()
+                            .as_str(),
+                        "func_get_args" | "func_get_arg" | "func_num_args"
+                    )
+            })
+    })
 }
 
 fn contains_yield(node: &SyntaxNode) -> bool {

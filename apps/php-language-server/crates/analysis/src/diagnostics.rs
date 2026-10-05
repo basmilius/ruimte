@@ -4,6 +4,8 @@ use php_syntax::{LevelSeverity, Parse, PhpVersion, TextRange, check_language_lev
 pub enum DiagnosticSeverity {
     Error,
     Warning,
+    Information,
+    Hint,
 }
 
 /// A problem in a file, from the syntax or from the language level it is read at.
@@ -14,6 +16,8 @@ pub struct Diagnostic {
     pub severity: DiagnosticSeverity,
     /// Set for deprecated syntax, which a client may draw struck through.
     pub deprecated: bool,
+    /// Set for code that does nothing, which a client may draw faded.
+    pub unnecessary: bool,
     /// `syntax` for a parse error, the feature id for a language level finding.
     pub code: &'static str,
 }
@@ -28,6 +32,7 @@ pub fn diagnostics(parse: &Parse, level: PhpVersion) -> Vec<Diagnostic> {
             message: error.message.clone(),
             severity: DiagnosticSeverity::Error,
             deprecated: false,
+            unnecessary: false,
             code: "syntax",
         })
         .collect();
@@ -42,6 +47,7 @@ pub fn diagnostics(parse: &Parse, level: PhpVersion) -> Vec<Diagnostic> {
                     LevelSeverity::Warning => DiagnosticSeverity::Warning,
                 },
                 deprecated: finding.deprecated,
+                unnecessary: false,
                 code: finding.feature,
             }),
     );

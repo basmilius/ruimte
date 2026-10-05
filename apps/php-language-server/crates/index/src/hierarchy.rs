@@ -382,6 +382,7 @@ fn pseudo_method(pseudo: &DocMethod, class: &ClassDecl) -> Method {
             leveled_ret: None,
             by_ref_return: false,
             is_generator: false,
+            reads_all_arguments: false,
         },
         doc: (!pseudo.description.is_empty()).then(|| {
             Box::new(Doc {
@@ -464,6 +465,7 @@ fn enum_methods(decl: &ClassDecl) -> Vec<Method> {
             leveled_ret: None,
             by_ref_return: false,
             is_generator: false,
+            reads_all_arguments: false,
         },
         doc: None,
         attributes: Vec::new(),

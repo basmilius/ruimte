@@ -86,14 +86,27 @@ impl Mapper<'_> {
             severity: Some(match found.severity {
                 php_analysis::DiagnosticSeverity::Error => DiagnosticSeverity::ERROR,
                 php_analysis::DiagnosticSeverity::Warning => DiagnosticSeverity::WARNING,
+                php_analysis::DiagnosticSeverity::Information => DiagnosticSeverity::INFORMATION,
+                php_analysis::DiagnosticSeverity::Hint => DiagnosticSeverity::HINT,
             }),
             code: Some(NumberOrString::String(found.code.to_string())),
             source: Some("php".to_string()),
             message: found.message.clone(),
-            tags: found.deprecated.then(|| vec![DiagnosticTag::DEPRECATED]),
+            tags: diagnostic_tags(found),
             ..Diagnostic::default()
         }
     }
+}
+
+fn diagnostic_tags(found: &php_analysis::Diagnostic) -> Option<Vec<DiagnosticTag>> {
+    let mut tags = Vec::new();
+    if found.deprecated {
+        tags.push(DiagnosticTag::DEPRECATED);
+    }
+    if found.unnecessary {
+        tags.push(DiagnosticTag::UNNECESSARY);
+    }
+    (!tags.is_empty()).then_some(tags)
 }
 
 fn symbol_kind(kind: php_analysis::SymbolKind) -> SymbolKind {

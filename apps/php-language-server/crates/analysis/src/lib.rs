@@ -14,6 +14,7 @@ pub mod hierarchy;
 mod imports;
 pub mod infer;
 pub mod inlay_hints;
+pub mod inspections;
 mod line_index;
 pub mod nav;
 pub mod references;

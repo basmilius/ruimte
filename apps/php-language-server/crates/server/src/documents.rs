@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use lsp_types::{TextDocumentContentChangeEvent, Uri};
+use php_analysis::inspections::InspectionSettings;
 use php_analysis::{LineCol, LineIndex, PositionEncoding};
 use php_syntax::{Parse, PhpVersion, parse};
 
@@ -11,6 +12,8 @@ pub struct Document {
     pub index: LineIndex,
     /// The language level of this document alone, when the client gave one.
     pub level: Option<PhpVersion>,
+    /// The inspection settings of this document alone, when the client gave some.
+    pub inspections: Option<InspectionSettings>,
     parsed: Option<Parse>,
     /// The version whose declarations the index holds.
     pub indexed_version: Option<i32>,
@@ -24,6 +27,7 @@ impl Document {
             text,
             index,
             level: None,
+            inspections: None,
             parsed: None,
             indexed_version: None,
         }

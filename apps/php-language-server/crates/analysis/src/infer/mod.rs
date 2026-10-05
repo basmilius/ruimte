@@ -20,7 +20,8 @@ use php_syntax::SyntaxNode;
 
 use crate::ast::{self, child_of, node_at, text_of};
 
-pub use calls::{Arg, ResolvedCallable, arguments};
+pub use calls::{Arg, ResolvedCallable, arguments, is_first_class_callable};
+pub use expr::literal_string;
 pub use unify::template_names;
 
 /// The variables in scope and their types, without the `$`.

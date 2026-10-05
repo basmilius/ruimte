@@ -38,6 +38,8 @@ pub struct Composer {
     pub autoload: Autoload,
     /// The installed packages, from `vendor/composer/installed.json`.
     pub packages: Vec<Package>,
+    /// `composer.json` requires packages, so a project whose `packages` are empty is not installed.
+    pub requires_packages: bool,
 }
 
 impl Composer {
@@ -72,6 +74,12 @@ impl Composer {
                 }
             }
         }
+        let requires_packages = ["require", "require-dev"].iter().any(|section| {
+            json.get(section).and_then(Value::as_object).is_some_and(|map| {
+                map.keys()
+                    .any(|key| key != "php" && !key.starts_with("ext-") && !key.starts_with("lib-"))
+            })
+        });
         let mut autoload = parse_autoload(json.get("autoload"), root);
         merge(&mut autoload, parse_autoload(json.get("autoload-dev"), root));
         let packages = read_installed(&vendor_dir);
@@ -82,6 +90,7 @@ impl Composer {
             extensions: extensions.into_iter().collect(),
             autoload,
             packages,
+            requires_packages,
         }
     }
 
@@ -371,6 +380,7 @@ mod tests {
                 ],
                 ..Autoload::default()
             },
+            requires_packages: false,
             packages: vec![Package {
                 name: "old/lib".into(),
                 path: PathBuf::from("/p/vendor/old/lib"),
