@@ -26,6 +26,7 @@ The plan for the code editor that replaces the previous engine (`packages/editor
 - The file tree no longer follows the open file.
 - Inline edit (⌘I) follows design 2b: the proposal sits under the selection, and the code stays untouched until Apply.
 - Agent changes in open files follow the settings design: Off, Gutter (2c) or Review (2d).
+- The editor's settings are one section, Editor, with a tab per kind (General, Smart keys, Language servers); the AI tab arrives with phase 5. The code font face stays under Appearance because terminals share it.
 
 ## Keymap
 

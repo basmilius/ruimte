@@ -53,15 +53,6 @@
             },
             "terminalSize": {
                 "label": "Terminal font size"
-            },
-            "codeSize": {
-                "label": "Code font size",
-                "description": "Code and diffs in files, the editor and the git panel. Chats keep their own size.",
-                "preview": "Code at the chosen size"
-            },
-            "ligatures": {
-                "label": "Ligatures",
-                "description": "Draws => and !== as one symbol in files, the editor, diffs and chats."
             }
         },
         "code": {
@@ -74,18 +65,64 @@
                 "label": "Dark theme",
                 "description": "The colors of code while the app is dark."
             },
-            "preview": "Preview of {{theme}}",
-            "wrap": {
-                "label": "Wrap long lines",
-                "description": "In files, the editor and diffs."
+            "preview": "Preview of {{theme}}"
+        },
+        "sidebar": {
+            "label": "Sidebar",
+            "description": "Choose which projects appear in the sidebar and Needs attention, across all your machines.",
+            "current": "Current project",
+            "all-open": "All open projects"
+        },
+        "needsYou": {
+            "label": "Needs you from every open project",
+            "description": "Also list what waits for you in your other open projects, grouped by project."
+        }
+    },
+    "editor": {
+        "tabs": {
+            "label": "Editor sections",
+            "general": "General",
+            "smartKeys": "Smart keys",
+            "languageServers": "Language servers"
+        },
+        "general": {
+            "font": {
+                "title": "Font",
+                "size": {
+                    "label": "Code font size",
+                    "description": "Code and diffs in files, the editor and the git panel. Chats keep their own size. The font itself is under Appearance.",
+                    "preview": "Code at the chosen size"
+                },
+                "ligatures": {
+                    "label": "Ligatures",
+                    "description": "Draws => and !== as one symbol in files, the editor, diffs and chats."
+                }
             },
-            "indentGuides": {
-                "label": "Indent guides",
-                "description": "A line at each indentation level in the editor, with the one around the cursor stronger."
+            "display": {
+                "title": "Display",
+                "wrap": {
+                    "label": "Wrap long lines",
+                    "description": "In files, the editor and diffs."
+                },
+                "indentGuides": {
+                    "label": "Indent guides",
+                    "description": "A line at each indentation level in the editor, with the one around the cursor stronger."
+                },
+                "whitespace": {
+                    "label": "Show whitespace",
+                    "description": "Spaces as dots and tabs as arrows in the editor."
+                },
+                "rightMargin": {
+                    "label": "Right margin",
+                    "description": "A line at the column set by max_line_length in the project's .editorconfig. Off for a project without one."
+                }
             },
-            "whitespace": {
-                "label": "Show whitespace",
-                "description": "Spaces as dots and tabs as arrows in the editor."
+            "navigation": {
+                "title": "Navigation",
+                "camelHumps": {
+                    "label": "Camel humps",
+                    "description": "Moving by word also stops inside camelCase and snake_case words."
+                }
             }
         },
         "smartKeys": {
@@ -117,21 +154,13 @@
             "smartSemicolon": {
                 "label": "Smart semicolon",
                 "description": "A semicolon typed inside a call goes to the end of the statement."
-            },
-            "camelHumps": {
-                "label": "Camel humps",
-                "description": "Moving by word also stops inside camelCase and snake_case words."
             }
         },
-        "sidebar": {
-            "label": "Sidebar",
-            "description": "Choose which projects appear in the sidebar and Needs attention, across all your machines.",
-            "current": "Current project",
-            "all-open": "All open projects"
-        },
-        "needsYou": {
-            "label": "Needs you from every open project",
-            "description": "Also list what waits for you in your other open projects, grouped by project."
+        "servers": {
+            "title": "Language servers",
+            "needsProject": "Open a project to manage its language servers. A server is installed once per machine and runs per project.",
+            "description": "Installed once on the machine, started per project when a file needs it.",
+            "failed": "The language servers failed to render"
         }
     },
     "sections": {
@@ -142,6 +171,10 @@
         "keyboard": {
             "label": "Keyboard",
             "description": "Every keyboard shortcut."
+        },
+        "editor": {
+            "label": "Editor",
+            "description": "The code editor: its font, wrapping and smart keys, and the language servers behind it."
         },
         "views": {
             "label": "Views",

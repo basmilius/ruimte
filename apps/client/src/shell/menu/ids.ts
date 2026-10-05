@@ -109,6 +109,7 @@ export const PALETTE_IDS = [
     'settings',
     'settings-search',
     'settings-keyboard',
+    'settings-editor',
     'settings-machines',
     'settings-computer',
     'onboarding',

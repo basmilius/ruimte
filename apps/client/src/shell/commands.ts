@@ -690,6 +690,11 @@ export function appCommands(): Command[] {
             run: () => useUi.getState().setSettings({ open: true, section: 'keyboard' })
         },
         {
+            id: 'settings-editor',
+            label: i18next.t('shell:palette.commands.editorSettings'),
+            run: () => useUi.getState().setSettings({ open: true, section: 'editor' })
+        },
+        {
             id: 'settings-machines',
             label: i18next.t('shell:palette.commands.remote'),
             hint: i18next.t('shell:palette.hints.remote'),

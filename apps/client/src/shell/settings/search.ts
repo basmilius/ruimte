@@ -66,18 +66,6 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     { id: 'appearance.font.terminalSize', section: 'appearance', label: 'settings:appearance.font.terminalSize.label' },
     {
-        id: 'appearance.font.codeSize',
-        section: 'appearance',
-        label: 'settings:appearance.font.codeSize.label',
-        description: 'settings:appearance.font.codeSize.description'
-    },
-    {
-        id: 'appearance.font.ligatures',
-        section: 'appearance',
-        label: 'settings:appearance.font.ligatures.label',
-        description: 'settings:appearance.font.ligatures.description'
-    },
-    {
         id: 'appearance.code.light',
         section: 'appearance',
         label: 'settings:appearance.code.light.label',
@@ -90,59 +78,90 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         description: 'settings:appearance.code.dark.description'
     },
     {
-        id: 'appearance.code.wrap',
-        section: 'appearance',
-        label: 'settings:appearance.code.wrap.label',
-        description: 'settings:appearance.code.wrap.description'
+        id: 'editor.general.font.size',
+        section: 'editor',
+        label: 'settings:editor.general.font.size.label',
+        description: 'settings:editor.general.font.size.description'
     },
     {
-        id: 'appearance.smartKeys.pairBrackets',
-        section: 'appearance',
-        label: 'settings:appearance.smartKeys.pairBrackets.label',
-        description: 'settings:appearance.smartKeys.pairBrackets.description'
+        id: 'editor.general.font.ligatures',
+        section: 'editor',
+        label: 'settings:editor.general.font.ligatures.label',
+        description: 'settings:editor.general.font.ligatures.description'
     },
     {
-        id: 'appearance.smartKeys.pairQuotes',
-        section: 'appearance',
-        label: 'settings:appearance.smartKeys.pairQuotes.label',
-        description: 'settings:appearance.smartKeys.pairQuotes.description'
+        id: 'editor.general.display.wrap',
+        section: 'editor',
+        label: 'settings:editor.general.display.wrap.label',
+        description: 'settings:editor.general.display.wrap.description'
     },
     {
-        id: 'appearance.smartKeys.surroundSelection',
-        section: 'appearance',
-        label: 'settings:appearance.smartKeys.surroundSelection.label',
-        description: 'settings:appearance.smartKeys.surroundSelection.description'
+        id: 'editor.general.display.indentGuides',
+        section: 'editor',
+        label: 'settings:editor.general.display.indentGuides.label',
+        description: 'settings:editor.general.display.indentGuides.description'
     },
     {
-        id: 'appearance.smartKeys.tabOut',
-        section: 'appearance',
-        label: 'settings:appearance.smartKeys.tabOut.label',
-        description: 'settings:appearance.smartKeys.tabOut.description'
+        id: 'editor.general.display.whitespace',
+        section: 'editor',
+        label: 'settings:editor.general.display.whitespace.label',
+        description: 'settings:editor.general.display.whitespace.description'
     },
     {
-        id: 'appearance.smartKeys.smartEnter',
-        section: 'appearance',
-        label: 'settings:appearance.smartKeys.smartEnter.label',
-        description: 'settings:appearance.smartKeys.smartEnter.description'
+        id: 'editor.general.display.rightMargin',
+        section: 'editor',
+        label: 'settings:editor.general.display.rightMargin.label',
+        description: 'settings:editor.general.display.rightMargin.description'
     },
     {
-        id: 'appearance.smartKeys.indentOnPaste',
-        section: 'appearance',
-        label: 'settings:appearance.smartKeys.indentOnPaste.label',
-        description: 'settings:appearance.smartKeys.indentOnPaste.description'
+        id: 'editor.general.navigation.camelHumps',
+        section: 'editor',
+        label: 'settings:editor.general.navigation.camelHumps.label',
+        description: 'settings:editor.general.navigation.camelHumps.description'
     },
     {
-        id: 'appearance.smartKeys.smartSemicolon',
-        section: 'appearance',
-        label: 'settings:appearance.smartKeys.smartSemicolon.label',
-        description: 'settings:appearance.smartKeys.smartSemicolon.description'
+        id: 'editor.smartKeys.pairBrackets',
+        section: 'editor',
+        label: 'settings:editor.smartKeys.pairBrackets.label',
+        description: 'settings:editor.smartKeys.pairBrackets.description'
     },
     {
-        id: 'appearance.smartKeys.camelHumps',
-        section: 'appearance',
-        label: 'settings:appearance.smartKeys.camelHumps.label',
-        description: 'settings:appearance.smartKeys.camelHumps.description'
+        id: 'editor.smartKeys.pairQuotes',
+        section: 'editor',
+        label: 'settings:editor.smartKeys.pairQuotes.label',
+        description: 'settings:editor.smartKeys.pairQuotes.description'
     },
+    {
+        id: 'editor.smartKeys.surroundSelection',
+        section: 'editor',
+        label: 'settings:editor.smartKeys.surroundSelection.label',
+        description: 'settings:editor.smartKeys.surroundSelection.description'
+    },
+    {
+        id: 'editor.smartKeys.tabOut',
+        section: 'editor',
+        label: 'settings:editor.smartKeys.tabOut.label',
+        description: 'settings:editor.smartKeys.tabOut.description'
+    },
+    {
+        id: 'editor.smartKeys.smartEnter',
+        section: 'editor',
+        label: 'settings:editor.smartKeys.smartEnter.label',
+        description: 'settings:editor.smartKeys.smartEnter.description'
+    },
+    {
+        id: 'editor.smartKeys.indentOnPaste',
+        section: 'editor',
+        label: 'settings:editor.smartKeys.indentOnPaste.label',
+        description: 'settings:editor.smartKeys.indentOnPaste.description'
+    },
+    {
+        id: 'editor.smartKeys.smartSemicolon',
+        section: 'editor',
+        label: 'settings:editor.smartKeys.smartSemicolon.label',
+        description: 'settings:editor.smartKeys.smartSemicolon.description'
+    },
+    { id: 'editor.servers', section: 'editor', label: 'settings:editor.servers.title', description: 'settings:editor.servers.description' },
     { id: 'views.drawing.snap', section: 'views', label: 'settings:views.drawing.snap.label', description: 'settings:views.drawing.snap.description' },
     {
         id: 'views.browser.swipe',

@@ -411,6 +411,7 @@ export function menuModel(context: MenuContext): MenuSpec {
             ...only(workspace && !context.scratch, command('panel-problems', t('problems'), { checked: context.panel === 'problems' })),
             command('usage', t('usage')),
             command('models', t('compareModels')),
+            command('settings-editor', t('editorSettings')),
             command('settings-machines', t('machines')),
             command('settings-computer', t('computerUse')),
             ...only(desktop && apple, separator, role('front', t('front')))

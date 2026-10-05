@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { highlightCode } from '@/shell/panels/highlight';
 import { SettingsRow } from '@basmilius/desktop-ui/settings';
-import { Switch, Select } from '@basmilius/desktop-ui';
+import { Select } from '@basmilius/desktop-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { codeThemesOf, useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
@@ -65,14 +65,11 @@ export function CodeThemePreview({ theme, mode, label, code = PREVIEW_CODE }: Co
     );
 }
 
-/* How code reads in the file viewer, the editor and a chat: its colors under either theme of the app, and whether long lines wrap. */
+/* How code reads in the file viewer, the editor and a chat: its colors under either theme of the app. */
 export function CodeSection() {
     const { t } = useTranslation('settings');
     const codeThemeLight = useSettings((s) => s.codeThemeLight);
     const codeThemeDark = useSettings((s) => s.codeThemeDark);
-    const codeWrap = useSettings((s) => s.codeWrap);
-    const codeIndentGuides = useSettings((s) => s.codeIndentGuides);
-    const codeWhitespace = useSettings((s) => s.codeWhitespace);
     const update = useSettings((s) => s.update);
     const side = useTheme((s) => s.resolved);
     const lightThemes = codeThemesOf('light').map((info) => ({ value: info.id, label: info.displayName }));
@@ -121,36 +118,6 @@ export function CodeSection() {
             >
                 {side === 'dark' && preview}
             </SettingsRow>
-            <SettingsRow
-                searchId="appearance.code.wrap"
-                label={t('appearance.code.wrap.label')}
-                description={t('appearance.code.wrap.description')}
-                control={<Switch checked={codeWrap} onCheckedChange={(checked) => update({ codeWrap: checked })} label={t('appearance.code.wrap.label')} />}
-            />
-            <SettingsRow
-                searchId="appearance.code.indentGuides"
-                label={t('appearance.code.indentGuides.label')}
-                description={t('appearance.code.indentGuides.description')}
-                control={
-                    <Switch
-                        checked={codeIndentGuides}
-                        onCheckedChange={(checked) => update({ codeIndentGuides: checked })}
-                        label={t('appearance.code.indentGuides.label')}
-                    />
-                }
-            />
-            <SettingsRow
-                searchId="appearance.code.whitespace"
-                label={t('appearance.code.whitespace.label')}
-                description={t('appearance.code.whitespace.description')}
-                control={
-                    <Switch
-                        checked={codeWhitespace}
-                        onCheckedChange={(checked) => update({ codeWhitespace: checked })}
-                        label={t('appearance.code.whitespace.label')}
-                    />
-                }
-            />
         </SettingsSection>
     );
 }

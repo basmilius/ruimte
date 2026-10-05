@@ -53,15 +53,6 @@
             },
             "terminalSize": {
                 "label": "Tekstgrootte terminal"
-            },
-            "codeSize": {
-                "label": "Tekstgrootte code",
-                "description": "Code en diffs in bestanden, de editor en het git-paneel. Chats houden hun eigen grootte.",
-                "preview": "Code op de gekozen grootte"
-            },
-            "ligatures": {
-                "label": "Ligaturen",
-                "description": "Tekent => en !== als één teken in bestanden, de editor, diffs en chats."
             }
         },
         "code": {
@@ -74,18 +65,64 @@
                 "label": "Donker thema",
                 "description": "De kleuren van code als de app donker is."
             },
-            "preview": "Voorbeeld van {{theme}}",
-            "wrap": {
-                "label": "Lange regels afbreken",
-                "description": "In bestanden, de editor en diffs."
+            "preview": "Voorbeeld van {{theme}}"
+        },
+        "sidebar": {
+            "label": "Sidebar",
+            "description": "Kies welke projecten de sidebar en Needs attention tonen, over al je machines.",
+            "current": "Huidig project",
+            "all-open": "Alle open projecten"
+        },
+        "needsYou": {
+            "label": "Wacht op jou uit elk open project",
+            "description": "Toon ook wat in je andere open projecten op je wacht, gegroepeerd per project."
+        }
+    },
+    "editor": {
+        "tabs": {
+            "label": "Onderdelen van de editor",
+            "general": "Algemeen",
+            "smartKeys": "Slimme toetsen",
+            "languageServers": "Language servers"
+        },
+        "general": {
+            "font": {
+                "title": "Lettertype",
+                "size": {
+                    "label": "Tekstgrootte code",
+                    "description": "Code en diffs in bestanden, de editor en het git-paneel. Chats houden hun eigen grootte. Het lettertype zelf staat onder Uiterlijk.",
+                    "preview": "Code op de gekozen grootte"
+                },
+                "ligatures": {
+                    "label": "Ligaturen",
+                    "description": "Tekent => en !== als één teken in bestanden, de editor, diffs en chats."
+                }
             },
-            "indentGuides": {
-                "label": "Inspringlijnen",
-                "description": "Een lijn bij elk inspringniveau in de editor, met de lijn rond de cursor sterker."
+            "display": {
+                "title": "Weergave",
+                "wrap": {
+                    "label": "Lange regels afbreken",
+                    "description": "In bestanden, de editor en diffs."
+                },
+                "indentGuides": {
+                    "label": "Inspringlijnen",
+                    "description": "Een lijn bij elk inspringniveau in de editor, met de lijn rond de cursor sterker."
+                },
+                "whitespace": {
+                    "label": "Witruimte tonen",
+                    "description": "Spaties als punten en tabs als pijlen in de editor."
+                },
+                "rightMargin": {
+                    "label": "Rechtermarge",
+                    "description": "Een lijn op de kolom die max_line_length in de .editorconfig van het project aangeeft. Uit voor een project zonder."
+                }
             },
-            "whitespace": {
-                "label": "Witruimte tonen",
-                "description": "Spaties als punten en tabs als pijlen in de editor."
+            "navigation": {
+                "title": "Navigatie",
+                "camelHumps": {
+                    "label": "Camel humps",
+                    "description": "Woord voor woord bewegen stopt ook binnen camelCase- en snake_case-woorden."
+                }
             }
         },
         "smartKeys": {
@@ -117,21 +154,13 @@
             "smartSemicolon": {
                 "label": "Slimme puntkomma",
                 "description": "Een puntkomma die je binnen een aanroep typt, gaat naar het einde van de instructie."
-            },
-            "camelHumps": {
-                "label": "Camel humps",
-                "description": "Woord voor woord bewegen stopt ook binnen camelCase- en snake_case-woorden."
             }
         },
-        "sidebar": {
-            "label": "Sidebar",
-            "description": "Kies welke projecten de sidebar en Needs attention tonen, over al je machines.",
-            "current": "Huidig project",
-            "all-open": "Alle open projecten"
-        },
-        "needsYou": {
-            "label": "Wacht op jou uit elk open project",
-            "description": "Toon ook wat in je andere open projecten op je wacht, gegroepeerd per project."
+        "servers": {
+            "title": "Language servers",
+            "needsProject": "Open een project om de language servers ervan te beheren. Een server installeer je eenmalig per machine en hij draait per project.",
+            "description": "Eenmalig geïnstalleerd op de machine, per project gestart als een bestand het nodig heeft.",
+            "failed": "De language servers konden niet worden getoond"
         }
     },
     "sections": {
@@ -142,6 +171,10 @@
         "keyboard": {
             "label": "Toetsenbord",
             "description": "Elke sneltoets."
+        },
+        "editor": {
+            "label": "Editor",
+            "description": "De code-editor: het lettertype, regelafbreking en slimme toetsen, en de language servers erachter."
         },
         "views": {
             "label": "Weergaven",

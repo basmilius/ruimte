@@ -16,9 +16,9 @@ describe('searching the settings', () => {
     });
 
     test('a row is found by its label and by its description', () => {
-        expect(searchSettings('wrap long').map((result) => result.id)).toEqual(['appearance.code.wrap']);
+        expect(searchSettings('wrap long').map((result) => result.id)).toEqual(['editor.general.display.wrap']);
         expect(searchSettings('pinned tab').map((result) => result.id)).toContain('files.files.openFiles');
-        expect(searchSettings('whitespace')[0]).toMatchObject({ section: 'files', id: 'files.git.whitespace', label: 'Show whitespace changes' });
+        expect(searchSettings('whitespace changes')[0]).toMatchObject({ section: 'files', id: 'files.git.whitespace', label: 'Show whitespace changes' });
     });
 
     test('every word must match, in any case and order', () => {

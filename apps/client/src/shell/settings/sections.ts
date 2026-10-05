@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { Bot, Folder, Info, Keyboard, LayoutGrid, Mic, MousePointer2, Palette, Server, type LucideIcon } from 'lucide-react';
+import { Bot, CodeXml, Folder, Info, Keyboard, LayoutGrid, Mic, MousePointer2, Palette, Server, type LucideIcon } from 'lucide-react';
 import { PROVIDERS_SECTION, USAGE_SECTION, type AgentsSettingsSection } from '@ruimte/agents-react/settings/sections';
 import type { SettingsSectionId } from '@/state/ui';
 
@@ -32,6 +32,7 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
     {
         label: 'workspace',
         sections: [
+            { id: 'editor', icon: CodeXml },
             { id: 'views', icon: LayoutGrid },
             { id: 'files', icon: Folder }
         ]

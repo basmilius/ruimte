@@ -267,6 +267,7 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     'panel-problems': CircleAlert,
     usage: Gauge,
     models: ChartSpline,
+    'settings-editor': CodeXml,
     'settings-machines': Server,
     'settings-computer': MousePointer2,
     'release-notes': ScrollText,

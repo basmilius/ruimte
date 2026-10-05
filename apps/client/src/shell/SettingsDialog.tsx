@@ -20,6 +20,7 @@ import { formatShortcut, lazyNamed } from '@basmilius/desktop-ui';
 // Each pane is a chunk of its own, loaded when it is opened; the search index in `search.ts` never imports one.
 const PANES: Record<SettingsSectionId, ComponentType> = {
     appearance: lazyNamed(() => import('@/shell/settings/panes/AppearancePane'), 'AppearancePane'),
+    editor: lazyNamed(() => import('@/shell/settings/panes/EditorPane'), 'EditorPane'),
     views: lazyNamed(() => import('@/shell/settings/panes/ViewsPane'), 'ViewsPane'),
     files: lazyNamed(() => import('@/shell/settings/panes/FilesPane'), 'FilesPane'),
     providers: lazyNamed(() => import('@/shell/settings/panes/ProvidersPane'), 'ProvidersPane'),

@@ -3,7 +3,19 @@ import { useMemo } from 'react';
 import { create } from 'zustand';
 import { isScratchProject, useProject } from '@/state/project';
 
-export type SettingsSectionId = 'appearance' | 'keyboard' | 'views' | 'files' | 'providers' | 'voice' | 'computer' | 'agents' | 'usage' | 'machines' | 'about';
+export type SettingsSectionId =
+    | 'appearance'
+    | 'keyboard'
+    | 'editor'
+    | 'views'
+    | 'files'
+    | 'providers'
+    | 'voice'
+    | 'computer'
+    | 'agents'
+    | 'usage'
+    | 'machines'
+    | 'about';
 
 /* Launches is a kind the project's file does not know, so it is stored beside `panel` (`launchesPanel`). Problems is one too, and only for this session: the file stores it as closed. */
 export type PanelKind = ProjectPanelKind | 'launches' | 'problems';
