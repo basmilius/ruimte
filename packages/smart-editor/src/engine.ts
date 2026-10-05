@@ -8,6 +8,7 @@ import type {
     EditorAttributionMark,
     EditorBlock,
     EditorCodeBlockOptions,
+    EditorLineAction,
     EditorLineHighlight,
     EditorChangeMark,
     EditorCodeVision,
@@ -550,6 +551,17 @@ class SmartEditor implements Editor {
                     container.classList.add('se-widget');
                     widget.render(container);
                 }
+            }))
+        );
+    }
+
+    setLineActions(actions: readonly EditorLineAction[], owner: string = DEFAULT_WIDGET_OWNER): void {
+        this.view.setLineActions(
+            owner,
+            actions.map((action) => ({
+                id: action.id,
+                at: this.offsetAt({ line: action.line, character: 0 }),
+                render: (container) => action.render(container)
             }))
         );
     }

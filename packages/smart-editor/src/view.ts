@@ -83,6 +83,9 @@ const MIN_OVERSCAN = 400;
 const COLOR_SLICE_MS = 8;
 const FIRST_PAINT_MS = 12;
 const FOLD_DELAY_MS = 300;
+
+/* The space between the last character of a line and what the host puts after it. */
+const LINE_ACTION_GAP = 28;
 const NOTICE_MS = 3000;
 const DEFAULT_HEIGHT = 400;
 const DEFAULT_WIDTH = 800;
@@ -151,6 +154,7 @@ export class EditorView {
     private readonly over: HTMLElement;
     private readonly carets: HTMLElement;
     private readonly remote: HTMLElement;
+    private readonly actions: HTMLElement;
     private readonly preview: HTMLElement;
     private readonly signs: HTMLElement;
     private readonly notice: HTMLElement;
@@ -188,6 +192,9 @@ export class EditorView {
     private readonly highlights = new AttributionRuns();
     private remoteCarets: { id: string; name: string; color: string; at: number }[] = [];
     private remoteKey: string | null = null;
+    /* The host's DOM after the last character of a line, by owner; `at` is the start of its line and follows the text through edits. */
+    private readonly lineActions = new Map<string, { id: string; at: number; render: (container: HTMLElement) => void }[]>();
+    private readonly actionElements = new Map<string, HTMLElement>();
     private readonly attributionListeners = new Set<(hover: { id: string; rect: EditorRect } | null) => void>();
     private attributionHover: { id: string; rect: EditorRect } | null = null;
     /* Where the pointer is in the gutter, so the bar under it is found again after the view scrolled or the text moved. */
@@ -263,6 +270,7 @@ export class EditorView {
         this.over = make('div', 'se-over');
         this.carets = make('div', 'se-carets');
         this.remote = make('div', 'se-remote');
+        this.actions = make('div', 'se-actions');
         this.signs = make('div', 'se-signs');
         this.signs.setAttribute('aria-hidden', 'true');
         this.preview = make('div', 'se-preview');
@@ -272,7 +280,7 @@ export class EditorView {
             layer.setAttribute('aria-hidden', 'true');
         }
         code.setAttribute('aria-hidden', 'true');
-        this.content.append(this.overlays, this.signs, code, this.over, this.carets, this.remote, this.preview);
+        this.content.append(this.overlays, this.signs, code, this.over, this.carets, this.remote, this.actions, this.preview);
         // The gutter is in the scroller with the text and sticks to its left, so the browser moves both in the same frame.
         const scroller = make('div', 'se-scroller');
         // The pinned headers stick to the corner the same way, which keeps them still against the text while the browser scrolls.
@@ -545,6 +553,12 @@ export class EditorView {
                 this.attribution.map(changes);
                 this.highlights.map(changes);
                 this.remoteCarets = this.remoteCarets.map((caret) => ({ ...caret, at: mapOffset(caret.at, changes) }));
+                for (const [owner, entries] of this.lineActions) {
+                    this.lineActions.set(
+                        owner,
+                        entries.map((entry) => ({ ...entry, at: mapOffset(entry.at, changes) }))
+                    );
+                }
                 this.semantic = this.semantic.map((token) => ({ ...token, from: mapOffset(token.from, changes), to: mapOffset(token.to, changes) }));
             }
             this.foldRanges = this.mappedFolds(batches);
@@ -1084,7 +1098,7 @@ export class EditorView {
 
     /* The offset of the character under a point of the page, or null over anything that is not text. */
     characterAtPoint(clientX: number, clientY: number, target: EventTarget | null): number | null {
-        if ((target as HTMLElement | null)?.closest?.('.se-inlay, .se-block, .se-gutter, .se-sticky, .se-fold-chip, .se-overview')) {
+        if ((target as HTMLElement | null)?.closest?.('.se-inlay, .se-block, .se-line-action, .se-gutter, .se-sticky, .se-fold-chip, .se-overview')) {
             return null;
         }
         const point = this.contentPoint(clientX, clientY);
@@ -1673,6 +1687,7 @@ export class EditorView {
             this.paintSticky();
             this.paintOverview();
             this.paintRemote();
+            this.paintLineActions();
             if (this.attributionPointer !== null) {
                 this.refreshAttributionHover();
             }
@@ -1876,6 +1891,54 @@ export class EditorView {
         if (key !== this.remoteKey) {
             this.remoteKey = key;
             paintRemoteCarets(this.remote, carets);
+        }
+    }
+
+    /* The host's own DOM after the end of a line, which stays on its line through edits until the owner sets its actions again. */
+    setLineActions(owner: string, actions: readonly { id: string; at: number; render: (container: HTMLElement) => void }[]): void {
+        if (actions.length === 0) {
+            this.lineActions.delete(owner);
+        } else {
+            this.lineActions.set(owner, [...actions]);
+        }
+        const wanted = new Set([...this.lineActions].flatMap(([name, entries]) => entries.map((entry) => `${name}\0${entry.id}`)));
+        for (const [key, element] of [...this.actionElements]) {
+            if (!wanted.has(key)) {
+                element.remove();
+                this.actionElements.delete(key);
+            }
+        }
+        this.render();
+    }
+
+    private paintLineActions(): void {
+        const lineHeight = this.layout.metrics.lineHeight;
+        const top = this.viewport.scrollTop;
+        for (const [owner, entries] of this.lineActions) {
+            for (const entry of entries) {
+                const key = `${owner}\0${entry.id}`;
+                let element = this.actionElements.get(key);
+                if (element === undefined) {
+                    element = this.document.createElement('div');
+                    element.className = 'se-line-action';
+                    element.addEventListener('pointerdown', (event) => event.stopPropagation());
+                    element.addEventListener('mousedown', (event) => event.stopPropagation());
+                    this.actions.append(element);
+                    this.actionElements.set(key, element);
+                    entry.render(element);
+                }
+                const line = this.model.positionAt(entry.at).line;
+                const row = this.layout.rowForLine(line);
+                const place = row.kind === 'text' && row.line === line ? this.layout.caret(this.model.getLine(line).end) : null;
+                if (place === null || place.y + lineHeight < top - this.viewportHeight || place.y > top + 2 * this.viewportHeight) {
+                    element.hidden = true;
+                    continue;
+                }
+                element.hidden = false;
+                element.style.left = `${Math.round(place.x) + LINE_ACTION_GAP}px`;
+                element.style.top = `${Math.round(place.y)}px`;
+                element.style.height = `${lineHeight}px`;
+            }
         }
     }
 
@@ -2269,6 +2332,8 @@ export class EditorView {
         this.gutterMarkers.clear();
         this.tracked.clear();
         this.remoteCarets = [];
+        this.lineActions.clear();
+        this.actionElements.clear();
         this.attribution.clear();
         this.highlights.clear();
         this.attributionListeners.clear();

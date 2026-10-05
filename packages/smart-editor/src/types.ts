@@ -191,6 +191,10 @@ export interface EditorCodeBlockOptions {
     readonly sign?: string;
     /* Tints the rows and draws the bar beside them, as a highlight and an attribution mark do for lines of the document. */
     readonly color?: EditorMarkColor;
+    /* Per line, the character ranges (UTF-16, end exclusive) drawn with a stronger tint of `color`, such as the words a change replaced. */
+    readonly emphasis?: ReadonlyArray<ReadonlyArray<readonly [number, number]>>;
+    /* Draws the text a little faded, as lines that are gone. */
+    readonly faded?: boolean;
 }
 
 /* The pointer is on the bar of a run. */
@@ -293,6 +297,19 @@ export interface EditorWidget {
     /* The height the row has until it has been measured. */
     readonly height?: number;
     /* Fills the element the row is drawn in, which the editor makes again whenever the row scrolls back into view. */
+    render(container: HTMLElement): void;
+}
+
+/*
+ * The host's own DOM after the last character of a line of the text, such as the buttons of a change
+ * under review. It is not part of the document and not part of the row, so it takes no height and
+ * moves nothing.
+ */
+export interface EditorLineAction {
+    readonly id: string;
+    /* Zero-based; the action stays on its line through edits until its owner sets its actions again. */
+    readonly line: number;
+    /* Fills the element once; it is kept for as long as the action is. */
     render(container: HTMLElement): void;
 }
 
@@ -540,6 +557,8 @@ export interface Editor {
      * set its rows last. An empty list takes the owner's rows away.
      */
     setWidgets(widgets: readonly EditorWidget[], owner?: string): void;
+    /* The actions of one owner (`default` without one), replacing the ones it set before and leaving every other owner's alone. A line that a fold hides has none. */
+    setLineActions(actions: readonly EditorLineAction[], owner?: string): void;
     /* The code vision rows above declarations, replacing the ones set before. Separate from the widgets, which they never displace. */
     setCodeVision(rows: readonly EditorCodeVision[]): void;
     /* Handlers see a press of the primary button before the editor does, the first to take it winning. */

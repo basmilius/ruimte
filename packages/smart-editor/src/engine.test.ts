@@ -1179,11 +1179,66 @@ describe('renderCode', () => {
         expect(rows[0]!.querySelector('.se-code-text span')!.getAttribute('style')).toContain('#112233');
     });
 
+    test('cuts a colored token at an emphasis, marks only that piece and fades the text', async () => {
+        const { editor, host } = setup({ language: 'typescript' }, { tokenizer: async () => tokenizer });
+        await settle();
+        const container = host.ownerDocument.createElement('div');
+        editor.renderCode(container, 'let a = 1;', { color: '--agent-1', faded: true, emphasis: [[[1, 5]]] });
+        const text = container.querySelector('.se-code-text') as HTMLElement;
+        expect(text.dataset.faded).toBe('true');
+        expect(text.textContent).toBe('let a = 1;');
+        expect([...text.querySelectorAll('.se-code-emphasis')].map((piece) => piece.textContent)).toEqual(['et', ' a']);
+        expect((container.querySelector('.se-code-row') as HTMLElement).style.getPropertyValue('--se-emphasis')).toBe('var(--agent-1)');
+    });
+
+    test('marks an emphasis in text that has no colors', () => {
+        const { editor, host } = setup();
+        const container = host.ownerDocument.createElement('div');
+        editor.renderCode(container, 'one two', { color: '#f26065', emphasis: [[[4, 7]]] });
+        expect([...container.querySelectorAll('.se-code-emphasis')].map((piece) => piece.textContent)).toEqual(['two']);
+    });
+
     test('draws plain text without a tokenizer, a gutter and a color', () => {
         const { editor, host } = setup();
         const container = host.ownerDocument.createElement('div');
         editor.renderCode(container, 'one');
         expect(container.querySelector('.se-code-text')!.textContent).toBe('one');
         expect(container.querySelector('.se-code-gutter')!.children).toHaveLength(0);
+    });
+});
+
+describe('line actions', () => {
+    const text = 'one\ntwo\nthree\n';
+
+    test('draws the host element once after the last character of its line and keeps it through an edit above', () => {
+        const { editor, host } = setup({ text });
+        let renders = 0;
+        editor.setLineActions([{ id: 'keep', line: 1, render: (container) => ((container.textContent = 'Keep'), renders++) }], 'review');
+        const element = () => host.querySelector('.se-line-action') as HTMLElement;
+        expect(element().textContent).toBe('Keep');
+        expect(element().hidden).toBe(false);
+        const before = element().style.top;
+        editor.applyEdits([{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, text: 'zero\n' }]);
+        expect(element().style.top).not.toBe(before);
+        expect(renders).toBe(1);
+    });
+
+    test('keeps one owner apart from another and takes the elements of an owner away with an empty set', () => {
+        const { editor, host } = setup({ text });
+        editor.setLineActions([{ id: 'a', line: 0, render: (container) => (container.textContent = 'a') }], 'one');
+        editor.setLineActions([{ id: 'b', line: 1, render: (container) => (container.textContent = 'b') }], 'two');
+        expect([...host.querySelectorAll('.se-line-action')].map((element) => element.textContent)).toEqual(['a', 'b']);
+        editor.setLineActions([], 'one');
+        expect([...host.querySelectorAll('.se-line-action')].map((element) => element.textContent)).toEqual(['b']);
+    });
+
+    test('a press on the element stops at it, so the editor never moves the caret for it', () => {
+        const { editor, host, window } = setup({ text });
+        editor.setLineActions([{ id: 'a', line: 0, render: (container) => container.append(container.ownerDocument.createElement('button')) }]);
+        const reached: string[] = [];
+        host.addEventListener('pointerdown', () => reached.push('host'));
+        const press = new (window as unknown as { Event: typeof Event }).Event('pointerdown', { bubbles: true });
+        host.querySelector('.se-line-action button')!.dispatchEvent(press);
+        expect(reached).toEqual([]);
     });
 });

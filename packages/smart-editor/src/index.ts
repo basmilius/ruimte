@@ -35,6 +35,7 @@ export type {
     EditorHover,
     EditorInlayHint,
     EditorKeyHandler,
+    EditorLineAction,
     EditorLineHighlight,
     EditorMarker,
     EditorMessages,

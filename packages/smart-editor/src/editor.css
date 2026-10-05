@@ -107,6 +107,19 @@
 .se-remote {
     z-index: 3;
 }
+.se-actions {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+}
+.se-line-action {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    pointer-events: auto;
+    font-family: var(--font-sans);
+}
 .se-preview {
     position: absolute;
     z-index: 4;
@@ -325,6 +338,13 @@
 .se-code-text {
     flex: 1;
     padding-right: 16px;
+}
+.se-code-text[data-faded] {
+    opacity: 0.85;
+}
+.se-code-emphasis {
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--se-emphasis) 22%, transparent);
 }
 .se-overview {
     position: absolute;

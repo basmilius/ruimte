@@ -4,6 +4,7 @@ import type {
     EditorAttributionMark,
     EditorBlock,
     EditorCodeBlockOptions,
+    EditorLineAction,
     EditorLineHighlight,
     EditorChangeMark,
     EditorCodeVision,
@@ -360,6 +361,16 @@ export class FakeEditor implements Editor {
             this.widgetsByOwner.delete(owner);
         } else {
             this.widgetsByOwner.set(owner, widgets);
+        }
+    }
+
+    readonly lineActionsByOwner = new Map<string, readonly EditorLineAction[]>();
+
+    setLineActions(actions: readonly EditorLineAction[], owner = 'default'): void {
+        if (actions.length === 0) {
+            this.lineActionsByOwner.delete(owner);
+        } else {
+            this.lineActionsByOwner.set(owner, actions);
         }
     }
 
