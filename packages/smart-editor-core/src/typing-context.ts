@@ -1,6 +1,8 @@
 import {
     hasBlockComments,
+    hasDashComments,
     hasHashComments,
+    hashNeedsWordStart,
     hasMarkupComments,
     hasSlashComments,
     isPhp,
@@ -8,7 +10,8 @@ import {
     isWordCharacter,
     openers,
     startsExpression,
-    startsExpressionAfter
+    startsExpressionAfter,
+    startsWord
 } from './lexical.ts';
 import type { DocumentLine } from './rope.ts';
 
@@ -45,6 +48,8 @@ interface Rules {
     script: boolean;
     php: boolean;
     hash: boolean;
+    hashAtWordStart: boolean;
+    dash: boolean;
     slash: boolean;
     block: boolean;
     markup: boolean;
@@ -62,6 +67,8 @@ function rulesOf(language: string): Rules {
         script: isScript(language),
         php: isPhp(language),
         hash: hasHashComments(language),
+        hashAtWordStart: hashNeedsWordStart(language),
+        dash: hasDashComments(language),
         slash: hasSlashComments(language),
         block: hasBlockComments(language),
         markup: hasMarkupComments(language)
@@ -119,10 +126,15 @@ function scanCode(state: TypingContext, rules: Rules, text: string, at: number, 
         state.commentStart = offset + at;
         return at + 3;
     }
-    if (rules.hash && char === '#' && !(rules.php && next === '[')) {
+    if (rules.hash && char === '#' && !(rules.php && next === '[') && (!rules.hashAtWordStart || startsWord(text, at))) {
         state.mode = 'line-comment';
         state.commentStart = offset + at;
         return at;
+    }
+    if (rules.dash && char === '-' && next === '-') {
+        state.mode = 'line-comment';
+        state.commentStart = offset + at;
+        return at + 1;
     }
     if (rules.slash && char === '/' && next === '/') {
         state.mode = 'line-comment';

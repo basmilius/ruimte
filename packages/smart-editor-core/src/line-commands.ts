@@ -1,7 +1,7 @@
 import type { EditPlan, EditSource } from './edit-source.ts';
 import { commentSyntax } from './languages.ts';
 import { continues } from './enter.ts';
-import { hasSlashComments } from './lexical.ts';
+import { indentsByBrackets } from './lexical.ts';
 import { mapOffset } from './offsets.ts';
 import type { Selection, TextEdit } from './types.ts';
 import type { TypingContext } from './typing-context.ts';
@@ -255,7 +255,7 @@ const caseLabel = /^(?:case\b[^]*|default)\s*:$/;
  * and in languages that are not bracketed, are left alone.
  */
 export function planAutoIndent(source: EditSource, lines: readonly number[], options: LineCommandOptions): EditPlan | null {
-    if (!hasSlashComments(options.language) && !/^css$/i.test(options.language)) {
+    if (!indentsByBrackets(options.language)) {
         return null;
     }
     const indents = new Map<number, string>();

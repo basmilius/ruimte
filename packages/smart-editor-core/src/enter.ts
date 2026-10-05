@@ -1,6 +1,6 @@
 import type { EditSource } from './edit-source.ts';
 import { commentSyntax } from './languages.ts';
-import { hasSlashComments, isPhp } from './lexical.ts';
+import { isBraced, isPhp } from './lexical.ts';
 import type { DocumentLine } from './rope.ts';
 import { indentationColumn } from './structure.ts';
 import type { TypingContext } from './typing-context.ts';
@@ -55,7 +55,7 @@ function escapeForPattern(text: string): string {
  * `if` or `for`, after `else`, `=>` or a binary operator. Languages with braces only.
  */
 export function continues(text: string, context: TypingContext, language: string): boolean {
-    if (!hasSlashComments(language) || context.mode !== 'code') {
+    if (!isBraced(language) || context.mode !== 'code') {
         return false;
     }
     if (context.word === 'control-close' || context.word === 'else' || context.word === 'do') {
@@ -223,7 +223,7 @@ class Enter {
         if (/^(yaml|yml)$/i.test(language)) {
             return /(?::|[|>][+-]?)$/.test(trimmed) && !trimmed.trimStart().startsWith('#');
         }
-        if (hasSlashComments(language) && !/^css$/i.test(language)) {
+        if (isBraced(language)) {
             return (context.bracket === undefined || context.bracket.close === '}') && /^(?:case\b[^]*|default)\s*:$/.test(trimmed.trimStart());
         }
         return false;

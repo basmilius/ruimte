@@ -18,6 +18,7 @@ const html: BlockComment = { open: '<!--', close: '-->' };
 const cLike: CommentSyntax = { line: '//', block: slashStar };
 const hash: CommentSyntax = { line: '#', block: null };
 const markup: CommentSyntax = { line: null, block: html };
+const none: CommentSyntax = { line: null, block: null };
 
 const syntaxes = new Map<string, CommentSyntax>();
 
@@ -28,22 +29,22 @@ function register(ids: string, syntax: CommentSyntax): void {
 }
 
 register(
-    'typescript javascript typescriptreact javascriptreact tsx jsx ts js mjs cjs mts cts java c cpp csharp cs go rust rs swift kotlin scala dart php scss less zig groq json jsonc json5 prisma astro svelte',
+    'typescript javascript typescriptreact javascriptreact tsx jsx ts js mjs cjs mts cts java c cpp c++ csharp cs go rust rs swift kotlin kt scala dart php scss less zig groq json jsonc json5 prisma astro svelte objective-c objc glsl hlsl proto protobuf hcl terraform',
     cLike
 );
 register('css', { line: null, block: slashStar });
 register('html xml svg xsl markdown md mdx vue', markup);
 register(
-    'python py yaml yml shellscript shell sh bash zsh fish toml ruby rb perl r make makefile docker dockerfile dotenv ignore nix graphql powershell ps1 properties',
+    'python py yaml yml shellscript shell sh bash zsh fish toml ruby rb perl r make makefile docker dockerfile dotenv ignore nix graphql powershell ps1 properties julia jl elixir ex exs coffeescript coffee cmake',
     hash
 );
 register('ini', { line: ';', block: null });
 register('sql', { line: '--', block: slashStar });
 register('lua', { line: '--', block: { open: '--[[', close: ']]' } });
 register('haskell hs', { line: '--', block: { open: '{-', close: '-}' } });
-register('plaintext text txt log', { line: null, block: null });
+register('plaintext text txt log', none);
 
-/* An id nothing knows is read as C-like, as the rest of the core does. */
+/* An id nothing knows has no comment syntax, which toggling a comment answers by doing nothing. */
 export function commentSyntax(language: string, region?: VueRegion | null): CommentSyntax {
     const id = language.toLowerCase();
     if (id === 'vue') {
@@ -52,7 +53,7 @@ export function commentSyntax(language: string, region?: VueRegion | null): Comm
         }
         return region === 'style' ? { line: null, block: slashStar } : markup;
     }
-    return syntaxes.get(id) ?? cLike;
+    return syntaxes.get(id) ?? none;
 }
 
 /* Plain text has no structure to pair, indent or comment. */

@@ -40,7 +40,7 @@ The rest is written here: the rope, transactions and history, the commands, sear
 ## Known limits
 
 - The scanners are lexical, not parsers. A `/` after an ambiguous construct can read as a regex or a division, and PHP heredocs, JSX text, Python triple quotes and HTML or XML tag pairs are not modeled. `scanStructure`, behind folding and selection expansion, does not know regex literals or template interpolation.
-- Language is a string id with a short fixed list of rules for the lexer (script, hash comments, markup, CSS) and a table of comment markers. An unknown id is treated as a C-like language. Indentation is worked out from brackets, keywords and the end of the previous line, not by a formatter, so Auto-indent Lines leaves languages without braces alone.
+- Language is a string id (the Shiki ones) with positive lists for the lexer: which languages have `//`, `#` (anywhere, or only at the start of a word in shell, YAML and Dockerfile), `--`, `/* */` and `<!-- -->` comments, which have braces, and a table of comment markers. An unknown id has no comments and no braces, so nothing in it reads as a comment. Indentation is worked out from brackets, keywords and the end of the previous line, not by a formatter, so Auto-indent Lines leaves languages without braces alone.
 - Smart semicolons only cross a trailing chain of `)` and `]`, and only in TypeScript, JavaScript and PHP.
 - Search, folding and selection expansion read the whole document on request, synchronously. A regex has no timeout, so run untrusted patterns in a worker.
 - Word navigation reads what it crosses: a single 4 MiB word takes well over half a second. History keeps the last 200 steps. The rope has no size cap and was measured up to 25 MiB (`bun run benchmark`).

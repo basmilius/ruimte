@@ -1,6 +1,8 @@
 import {
     hasBlockComments,
+    hasDashComments,
     hasHashComments,
+    hashNeedsWordStart,
     hasMarkupComments,
     hasSlashComments,
     isPhp,
@@ -8,7 +10,8 @@ import {
     isWordCharacter,
     openers,
     startsExpression,
-    startsExpressionAfter
+    startsExpressionAfter,
+    startsWord
 } from './lexical.ts';
 
 export interface BracketIndex {
@@ -71,6 +74,8 @@ export function scanBrackets(text: string, language = 'typescript'): BracketInde
     const stack: OpenBracket[] = [];
     const script = isScript(language);
     const hashComments = hasHashComments(language);
+    const hashAtWordStart = hashNeedsWordStart(language);
+    const dashComments = hasDashComments(language);
     const phpAttributes = isPhp(language);
     const slashComments = hasSlashComments(language);
     const blockComments = hasBlockComments(language);
@@ -102,7 +107,11 @@ export function scanBrackets(text: string, language = 'typescript'): BracketInde
 
         if (markupComments && text.startsWith('<!--', at)) {
             at = skipComment(text, at + 4, '-->');
-        } else if ((slashComments && char === '/' && next === '/') || (hashComments && char === '#' && !(phpAttributes && next === '['))) {
+        } else if (
+            (slashComments && char === '/' && next === '/') ||
+            (dashComments && char === '-' && next === '-') ||
+            (hashComments && char === '#' && !(phpAttributes && next === '[') && (!hashAtWordStart || startsWord(text, at)))
+        ) {
             at = skipLine(text, at);
         } else if (blockComments && char === '/' && next === '*') {
             at = skipComment(text, at + 2, '*/');
