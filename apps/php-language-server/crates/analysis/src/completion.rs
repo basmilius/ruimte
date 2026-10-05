@@ -13,6 +13,8 @@ use crate::imports::{ImportPlan, import_edit, plan_import};
 use crate::infer::{Analyzer, Env};
 use crate::render;
 
+mod overrides;
+
 const PLACEHOLDER: &str = "__ph__";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -79,20 +81,34 @@ impl Default for CompletionOptions {
 #[derive(Clone, Debug)]
 enum Context {
     Nothing,
-    Member { object: SyntaxNode },
-    Static { qualifier: SyntaxNode },
+    Member {
+        object: SyntaxNode,
+    },
+    Static {
+        qualifier: SyntaxNode,
+    },
     Variable,
     New,
     Attribute,
     Use(UseKind),
-    Extends { interface: bool },
+    Extends {
+        interface: bool,
+    },
     Implements,
     TraitUse,
     Instanceof,
     Catch,
-    Type { is_return: bool },
+    Type {
+        is_return: bool,
+    },
     ClassBody,
-    Expression { statement_start: bool },
+    /// The name of a method being declared: `function ` and a word.
+    MethodName {
+        declaration: SyntaxNode,
+    },
+    Expression {
+        statement_start: bool,
+    },
 }
 
 struct Word {
@@ -278,11 +294,14 @@ fn classify(token: &SyntaxToken, is_variable: bool) -> Context {
         | TRAIT_DECLARATION
         | ENUM_DECLARATION
         | FUNCTION_DECLARATION
-        | METHOD_DECLARATION
         | ENUM_CASE
         | CONST_ELEMENT
         | NAMESPACE_DECLARATION
         | CLASS_CONST_DECLARATION => Context::Nothing,
+        METHOD_DECLARATION if owner.parent().is_some_and(|body| body.kind() == CLASS_BODY) => {
+            Context::MethodName { declaration: owner }
+        }
+        METHOD_DECLARATION => Context::Nothing,
         ERROR | CLASS_BODY => in_error(&owner),
         PARAMETER_LIST | PARAMETER => Context::Type { is_return: false },
         _ => Context::Expression {
@@ -460,6 +479,7 @@ impl Builder<'_> {
                 self.classes(ClassFilter::Any, false);
                 self.type_keywords(*is_return);
             }
+            Context::MethodName { declaration } => self.overridable_methods(declaration),
             Context::ClassBody => {
                 self.class_body_keywords();
                 if !self.typed().is_empty() {

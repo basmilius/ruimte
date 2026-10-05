@@ -387,3 +387,73 @@ fn limits_the_list_and_says_so() {
     assert_eq!(list.items.len(), 50);
     assert!(list.incomplete);
 }
+
+fn override_project() -> Fixture {
+    Fixture::new(&[(
+        "src/Base.php",
+        "<?php\nnamespace Lib;\n\ninterface Handler {\n    public function handle(Request $request, ?Handler $next = null, int ...$flags): Response|null;\n}\nclass Request {}\nclass Response {}\nabstract class Base implements Handler {\n    public function __construct(protected string $name = 'x') {}\n    public function describe(int $depth = 1): string { return ''; }\n    public static function make(): static { return new static(); }\n    protected function hook(): void {}\n    private function secret(): void {}\n    final public function sealed(): void {}\n    abstract protected function render(array $data): string;\n}\n",
+    )])
+}
+
+#[test]
+fn completes_the_signature_of_a_method_to_override() {
+    let code = "<?php\nnamespace App;\n\nuse Lib\\Base;\n\nclass Page extends Base\n{\n    public function des$0\n}\n";
+    let list = run(override_project(), code);
+    let describe = item(&list, "describe");
+    assert_eq!(describe.kind, ItemKind::Method);
+    assert_eq!(describe.description.as_deref(), Some("Base"));
+    assert_eq!(
+        applied(code, describe),
+        "<?php\nnamespace App;\n\nuse Lib\\Base;\n\nclass Page extends Base\n{\n    public function describe(int $depth = 1): string\n    {\n        return parent::describe($depth);\n    }\n}\n"
+    );
+}
+
+#[test]
+fn offers_what_can_be_overridden_and_nothing_else() {
+    let code = "<?php\nnamespace App;\n\nuse Lib\\Base;\n\nclass Page extends Base\n{\n    public function hook(): void {}\n    public function $0\n}\n";
+    let list = run(override_project(), code);
+    let names = labels(&list);
+    assert!(names.contains(&"describe") && names.contains(&"make") && names.contains(&"__construct"));
+    assert!(names.contains(&"render") && names.contains(&"handle"), "{names:?}");
+    assert!(!names.contains(&"hook"), "already declared");
+    assert!(
+        !names.contains(&"secret") && !names.contains(&"sealed"),
+        "private and final stay"
+    );
+    assert_eq!(names[0], "handle", "what must be implemented comes first: {names:?}");
+    assert_eq!(names[1], "render");
+}
+
+#[test]
+fn imports_the_classes_a_signature_names_and_adds_missing_modifiers() {
+    let code = "<?php\nnamespace App;\n\nuse Lib\\Base;\n\nclass Page extends Base\n{\n    function han$0\n}\n";
+    let list = run(override_project(), code);
+    let handle = item(&list, "handle");
+    assert_eq!(
+        applied(code, handle),
+        "<?php\nnamespace App;\n\nuse Lib\\Base;\nuse Lib\\Handler;\nuse Lib\\Request;\nuse Lib\\Response;\n\nclass Page extends Base\n{\n    public function handle(Request $request, ?Handler $next = null, int ...$flags): ?Response\n    {\n        \n    }\n}\n"
+    );
+}
+
+#[test]
+fn static_and_abstract_modifiers_are_kept_or_added() {
+    let code = "<?php\nnamespace App;\n\nuse Lib\\Base;\n\nclass Page extends Base\n{\n    function mak$0\n}\n";
+    let list = run(override_project(), code);
+    assert!(applied(code, item(&list, "make")).contains("public static function make(): static\n"));
+    let code = "<?php\nnamespace App;\n\nuse Lib\\Base;\n\nabstract class Page extends Base\n{\n    abstract protected function ren$0\n}\n";
+    let list = run(override_project(), code);
+    assert!(applied(code, item(&list, "render")).contains("abstract protected function render(array $data): string;"));
+}
+
+#[test]
+fn only_the_name_is_completed_when_the_parameters_are_already_there() {
+    let code = "<?php\nnamespace App;\n\nuse Lib\\Base;\n\nclass Page extends Base\n{\n    public function des$0(int $a) {}\n}\n";
+    let list = run(override_project(), code);
+    assert!(applied(code, item(&list, "describe")).contains("public function describe(int $a) {}"));
+}
+
+#[test]
+fn a_function_outside_a_class_gets_no_override_suggestions() {
+    let list = run(override_project(), "<?php\nfunction des$0\n");
+    assert!(list.items.is_empty());
+}

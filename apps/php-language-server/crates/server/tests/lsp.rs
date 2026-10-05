@@ -1203,3 +1203,27 @@ fn serves_inlay_hints_and_follows_the_settings() {
     assert_eq!(hints.as_array().map(Vec::len), Some(0));
     client.shutdown();
 }
+
+#[test]
+fn completes_the_methods_a_class_can_override() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Admin.php");
+    client.open(
+        &uri,
+        "<?php\nnamespace App;\n\nuse App\\Models\\User;\n\nclass Admin extends User\n{\n    public function po\n}\n",
+    );
+    let result = client.at("textDocument/completion", &uri, 7, 22);
+    let items = result["items"].as_array().expect("items");
+    let posts = items.iter().find(|item| item["label"] == "posts").expect("posts");
+    assert_eq!(posts["kind"], 2);
+    assert_eq!(
+        posts["textEdit"]["newText"],
+        "posts(): array\n    {\n        return parent::posts();\n    }"
+    );
+    assert_eq!(
+        posts["textEdit"]["range"]["start"],
+        json!({ "line": 7, "character": 20 })
+    );
+    client.shutdown();
+}
