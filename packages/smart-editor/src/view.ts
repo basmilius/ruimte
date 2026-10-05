@@ -1,6 +1,8 @@
 import {
     type DocumentModel,
     type EditorSnapshot,
+    type FoldHints,
+    type FoldRole,
     type FoldingRange,
     replacementText,
     scanBrackets,
@@ -50,6 +52,8 @@ export interface ViewSettings {
     whitespace: boolean;
     /* The column a line is held to, drawn as a line; null for none. */
     rightMargin: number | null;
+    /* When the arrow that folds a block shows in the gutter. */
+    foldOutline: 'off' | 'hover' | 'always';
 }
 
 /* The lines past the visible ones that are colored ahead of the scroll, and how long one slice of that work may take. */
@@ -181,6 +185,12 @@ export class EditorView {
     /* The folds made of a selection, which follow their text through edits. */
     private customFolds: { from: number; to: number }[] = [];
     private collapsed = new Set<number>();
+    /* What a language server said about the folds, in offsets that follow the text through edits. */
+    private foldHints: FoldHints | null = null;
+    /* The roles that fold by themselves while the file is as it was opened; null once a person edited or the file opened with folds of its own. */
+    private defaultRoles: ReadonlySet<FoldRole> | null = null;
+    /* The folds somebody already decided on, a person or the defaults, so a later answer of a server leaves them as they are. */
+    private settled = new Set<number>();
     private foldTimer: ReturnType<typeof setTimeout> | undefined;
     private colorTimer: ReturnType<typeof setTimeout> | undefined;
     private noticeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -286,6 +296,7 @@ export class EditorView {
         this.input.readOnly = this.settings.readOnly;
         this.root.dataset.readonly = String(this.settings.readOnly);
         this.root.dataset.wrap = String(this.settings.wrap);
+        this.root.dataset.foldOutline = this.settings.foldOutline;
         this.layoutVersion++;
         this.layout.configure({ metrics: createMetrics(this.font, this.settings.tabSize, this.document) });
         this.render();
@@ -458,6 +469,7 @@ export class EditorView {
         if (snapshot.revision !== this.revision) {
             this.cancelScroll();
             this.revision = snapshot.revision;
+            this.defaultRoles = null;
             this.rowEndCaret = null;
             this.hoverOffset = null;
             const batches = snapshot.changes ?? [];
@@ -466,6 +478,14 @@ export class EditorView {
                 this.blocks = this.blocks.map((block) => ({ ...block, at: mapOffset(block.at, changes) }));
                 this.lenses = this.lenses.map((lens) => ({ ...lens, at: mapOffset(lens.at, changes) }));
                 this.collapsed = new Set([...this.collapsed].map((anchor) => mapOffset(anchor, changes)));
+                this.settled = new Set([...this.settled].map((anchor) => mapOffset(anchor, changes)));
+                if (this.foldHints !== null) {
+                    this.foldHints = {
+                        symbols:
+                            this.foldHints.symbols?.map((hint) => ({ ...hint, from: mapOffset(hint.from, changes), to: mapOffset(hint.to, changes) })) ?? [],
+                        ranges: this.foldHints.ranges?.map((hint) => ({ ...hint, from: mapOffset(hint.from, changes), to: mapOffset(hint.to, changes) })) ?? []
+                    };
+                }
                 this.customFolds = this.customFolds.map((fold) => ({ from: mapOffset(fold.from, changes), to: mapOffset(fold.to, changes) }));
                 this.find.mapBounds(changes);
                 this.changeMarks = this.changeMarks.map((mark) => ({ ...mark, from: mapOffset(mark.from, changes), to: mapOffset(mark.to, changes) }));
@@ -538,7 +558,8 @@ export class EditorView {
                 : this.model.getFoldingRanges({
                       indentation: /^(python|py|yaml|yml)$/.test(this.settings.language ?? ''),
                       tabSize: this.settings.tabSize,
-                      ...(this.settings.language === undefined ? {} : { language: this.settings.language })
+                      ...(this.settings.language === undefined ? {} : { language: this.settings.language }),
+                      ...(this.foldHints === null ? {} : { hints: this.foldHints })
                   });
         this.foldRanges = this.withCustomFolds(ranges);
         this.outline.setStructure(
@@ -603,6 +624,7 @@ export class EditorView {
     }
 
     private setCollapsed(range: ViewFold, collapse: boolean): void {
+        this.settled.add(range.from);
         if (collapse) {
             this.collapsed.add(range.from);
         } else {
@@ -746,11 +768,12 @@ export class EditorView {
 
     /*
      * Folds the lines a host remembers, those that still start a range of the same lines or else any range
-     * at their first line, after the ranges are read. Without a memory the import list folds, since that is
-     * what a file opens as the first time.
+     * at their first line, after the ranges are read. Without a memory the roles in `defaults` fold, which
+     * is what a file opens as the first time, and again as a language server names more of them.
      */
     restoreFolds(
-        state: { collapsed: readonly { startLine: number; endLine: number }[]; custom: readonly { startLine: number; endLine: number }[] } | null
+        state: { collapsed: readonly { startLine: number; endLine: number }[]; custom: readonly { startLine: number; endLine: number }[] } | null,
+        defaults: readonly FoldRole[] = []
     ): void {
         const last = this.model.getLineCount() - 1;
         if (state !== null) {
@@ -759,17 +782,70 @@ export class EditorView {
                 .map((fold) => ({ from: this.model.getLine(fold.startLine).start, to: this.model.getLine(fold.endLine).end }));
         }
         this.refreshFolds();
-        const wanted = state === null ? this.foldRanges.filter((range) => range.kind === 'imports').slice(0, 1) : [];
+        this.defaultRoles = state === null && defaults.length > 0 ? new Set(defaults) : null;
         for (const remembered of state?.collapsed ?? []) {
             const match =
                 this.foldRanges.find((range) => range.startLine === remembered.startLine && range.endLine === remembered.endLine) ??
                 this.foldRanges.find((range) => range.startLine === remembered.startLine);
             if (match !== undefined) {
-                wanted.push(match);
+                this.setCollapsed(match, true);
             }
         }
-        for (const range of wanted) {
-            this.setCollapsed(range, true);
+        this.applyFoldDefaults();
+        this.refoldLayout();
+    }
+
+    /* Hands over what a language server knows about the folds; null forgets it. The defaults fold what the answer names, once. */
+    setFoldHints(hints: FoldHints | null): void {
+        this.foldHints = hints;
+        this.refreshFolds();
+        this.applyFoldDefaults();
+        this.refoldLayout();
+    }
+
+    /* Folds the ranges whose role is a default, except a range somebody decided on or one that has the caret or a selection in it. */
+    private applyFoldDefaults(): void {
+        const roles = this.defaultRoles;
+        if (roles === null) {
+            return;
+        }
+        const lines = this.model
+            .getSelections()
+            .flatMap((selection) => [this.model.positionAt(selection.anchor).line, this.model.positionAt(selection.head).line]);
+        for (const range of this.foldRanges) {
+            const hidesCaret = lines.some((line) => line > range.startLine && line <= range.endLine);
+            if (range.role !== undefined && roles.has(range.role) && !this.settled.has(range.from) && !hidesCaret) {
+                this.setCollapsed(range, true);
+            }
+        }
+    }
+
+    /* Folds or opens every range of a role, such as the documentation comments. */
+    foldRole(role: FoldRole, collapse: boolean): void {
+        for (const range of this.foldRanges) {
+            if (range.role === role) {
+                this.setCollapsed(range, collapse);
+            }
+        }
+        this.refoldLayout();
+    }
+
+    /*
+     * Opens every range above a depth and folds the ones at it, which leaves what lies deeper as it was.
+     * The outermost ranges are at depth 0, so level 1 shows them open with what they hold folded.
+     */
+    expandAllToLevel(level: number): void {
+        const open: ViewFold[] = [];
+        for (const range of this.foldRanges) {
+            while (open.length > 0 && !(open.at(-1)!.from <= range.from && range.to <= open.at(-1)!.to)) {
+                open.pop();
+            }
+            if (open.length < level) {
+                this.setCollapsed(range, false);
+            } else if (open.length === level) {
+                this.setCollapsed(range, true);
+            }
+            open.push(range);
         }
         this.refoldLayout();
     }
@@ -805,6 +881,7 @@ export class EditorView {
         for (const range of this.foldRanges) {
             if (range.startLine < line && range.endLine >= line) {
                 this.collapsed.delete(range.from);
+                this.settled.add(range.from);
             }
         }
         this.anchorScroll(() => this.layout.configure({ folds: this.foldStates() }));

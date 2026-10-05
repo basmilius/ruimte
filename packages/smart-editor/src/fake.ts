@@ -25,6 +25,8 @@ import type {
     EditorRect,
     EditorRunCommand,
     EditorSelectionRanges,
+    EditorFoldHints,
+    EditorFoldOutline,
     EditorFolds,
     EditorSemanticToken,
     EditorSmartKeys,
@@ -333,6 +335,17 @@ export class FakeEditor implements Editor {
 
     setRightMargin(column: number | null): void {
         this.rightMargin = column;
+    }
+
+    foldOutline: EditorFoldOutline = 'hover';
+    foldHints: EditorFoldHints | null = null;
+
+    setFoldOutline(outline: EditorFoldOutline): void {
+        this.foldOutline = outline;
+    }
+
+    setFoldHints(hints: EditorFoldHints | null): void {
+        this.foldHints = hints;
     }
 
     setSmartKeys(keys: Partial<EditorSmartKeys>): void {

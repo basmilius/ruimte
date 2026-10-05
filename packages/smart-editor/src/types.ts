@@ -1,6 +1,8 @@
-import type { EditorCommand } from '@ruimte/smart-editor-core';
+import type { EditorCommand, FoldRole } from '@ruimte/smart-editor-core';
 
-export type { EditorCommand };
+export type { EditorCommand, FoldRole };
+
+export type EditorFoldOutline = 'off' | 'hover' | 'always';
 
 /* The commands that fold, which the view answers since it knows where the ranges are. */
 export type EditorViewCommand =
@@ -11,6 +13,13 @@ export type EditorViewCommand =
     | 'collapseRegionRecursively'
     | 'expandRegionRecursively'
     | 'foldSelection'
+    | 'collapseDocComments'
+    | 'expandDocComments'
+    | 'expandAllToLevel1'
+    | 'expandAllToLevel2'
+    | 'expandAllToLevel3'
+    | 'expandAllToLevel4'
+    | 'expandAllToLevel5'
     | 'toggleColumnMode';
 
 /* Everything `runCommand` runs. */
@@ -54,12 +63,14 @@ export interface EditorOptions {
     readonly whitespace?: boolean;
     /* The column to draw a line at, such as the `max_line_length` of a project; none by default. */
     readonly rightMargin?: number | null;
+    /* When the arrow that folds a block shows in the gutter; on hover by default. */
+    readonly foldOutline?: EditorFoldOutline;
     /* What the editor says to a person itself, in the host's words. */
     readonly messages?: Partial<EditorMessages>;
     /* The folds a host kept when the file was last open. */
     readonly folds?: EditorFolds;
-    /* Without remembered folds, the import list folds, as it does the first time a file opens. */
-    readonly collapseImports?: boolean;
+    /* Without remembered folds, the folds of these roles fold, as they do the first time a file opens, and again as a language server names more of them. */
+    readonly foldDefaults?: readonly FoldRole[];
     /* One-based, the line the cursor opens on. */
     readonly line?: number;
     /* One-based, where on that line. */
@@ -91,6 +102,18 @@ export interface EditorSmartKeys {
     readonly smartSemicolon: boolean;
     /* Moving by word also stops inside `camelCase` and `snake_case` words. Off. */
     readonly camelHumps: boolean;
+}
+
+/* The range of a symbol and the kind of body it has. */
+export interface EditorFoldSymbol {
+    readonly range: EditorRange;
+    /* `value` is a variable or property, which has a function body when its initializer is a function. */
+    readonly body: 'function' | 'method' | 'class' | 'value';
+}
+
+export interface EditorFoldHints {
+    readonly symbols?: readonly EditorFoldSymbol[];
+    readonly ranges?: readonly (EditorFoldRange & { readonly kind?: string })[];
 }
 
 /* A part of the document with a header line, such as a function, a class or a method. */
@@ -354,6 +377,9 @@ export interface Editor {
     setWhitespace(whitespace: boolean): void;
     /* The column to draw a line at; null takes it away. */
     setRightMargin(column: number | null): void;
+    setFoldOutline(outline: EditorFoldOutline): void;
+    /* What a language server knows about the folds: the bodies of symbols and the ranges it folds. They follow their text through edits until set again; null forgets them. */
+    setFoldHints(hints: EditorFoldHints | null): void;
     /* Marks that follow their lines through edits until the host sets them again. */
     setChangeMarks(marks: readonly EditorChangeMark[]): void;
     /* The blocks sticky scroll and the breadcrumb go by. The editor reads them from brackets and

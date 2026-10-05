@@ -96,6 +96,14 @@ export const KEYMAP = {
     collapseRecursively: bind('Mod+Alt+-'),
     expandRecursively: bind('Mod+Alt+='),
     foldSelection: bind('Mod+.'),
+    // The platform binds the levels to a chord of two strokes, which this table cannot write, so they live in the menu and the palette.
+    collapseDocComments: bind(null),
+    expandDocComments: bind(null),
+    expandAllToLevel1: bind(null),
+    expandAllToLevel2: bind(null),
+    expandAllToLevel3: bind(null),
+    expandAllToLevel4: bind(null),
+    expandAllToLevel5: bind(null),
 
     triggerCompletion: bind('Ctrl+Space'),
     parameterInfo: bind('Mod+P'),

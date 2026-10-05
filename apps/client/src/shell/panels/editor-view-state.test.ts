@@ -13,7 +13,7 @@ describe('where a file editor opens', () => {
     });
 
     test('where the viewer was the first time, with the import list folded', () => {
-        expect(openingPlace(null, undefined, 120)).toEqual({ scrollTop: 120, collapseImports: true });
-        expect(openingPlace({ line: 4, nonce: 1 } as never, undefined, 0)).toEqual({ line: 4, collapseImports: true });
+        expect(openingPlace(null, undefined, 120)).toEqual({ scrollTop: 120, foldDefaults: ['imports'] });
+        expect(openingPlace({ line: 4, nonce: 1 } as never, undefined, 0)).toEqual({ line: 4, foldDefaults: ['imports'] });
     });
 });

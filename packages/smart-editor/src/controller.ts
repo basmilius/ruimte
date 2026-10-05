@@ -60,6 +60,13 @@ const VIEW_COMMANDS = new Set<EditorViewCommand>([
     'collapseRegionRecursively',
     'expandRegionRecursively',
     'foldSelection',
+    'collapseDocComments',
+    'expandDocComments',
+    'expandAllToLevel1',
+    'expandAllToLevel2',
+    'expandAllToLevel3',
+    'expandAllToLevel4',
+    'expandAllToLevel5',
     'toggleColumnMode'
 ]);
 
@@ -300,6 +307,13 @@ export class InputController {
             collapseRegionRecursively: () => view.collapseRecursively(),
             expandRegionRecursively: () => view.expandRecursively(),
             foldSelection: () => view.foldSelection(),
+            collapseDocComments: () => view.foldRole('doc-comment', true),
+            expandDocComments: () => view.foldRole('doc-comment', false),
+            expandAllToLevel1: () => view.expandAllToLevel(1),
+            expandAllToLevel2: () => view.expandAllToLevel(2),
+            expandAllToLevel3: () => view.expandAllToLevel(3),
+            expandAllToLevel4: () => view.expandAllToLevel(4),
+            expandAllToLevel5: () => view.expandAllToLevel(5),
             toggleColumnMode: () => this.toggleColumnMode()
         };
         run[name]();

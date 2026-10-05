@@ -15,7 +15,8 @@ const SETTINGS: ViewSettings = {
     messages: {},
     guides: true,
     whitespace: false,
-    rightMargin: null
+    rightMargin: null,
+    foldOutline: 'hover'
 };
 
 function mount(text: string, settings: Partial<ViewSettings> = {}) {
@@ -206,14 +207,17 @@ describe('fold commands', () => {
         expect(again.view.getFolds().collapsed).toEqual([{ startLine: 1, endLine: 3 }]);
     });
 
-    test('folds the import list the first time a file opens', () => {
+    test('folds the roles a host asks for the first time a file opens, and nothing for a file that has folds of its own', () => {
         const source = "import a from 'a';\nimport b from 'b';\n\nconst x = 1;\nfunction f() {\n    return x;\n}\n";
         const { host, view } = mount(source);
-        view.restoreFolds(null);
+        view.restoreFolds(null, ['imports']);
         expect(rendered(host)).toEqual(['0', '2', '3', '4', '5', '6', '7']);
         const second = mount(source);
-        second.view.restoreFolds({ collapsed: [], custom: [] });
+        second.view.restoreFolds({ collapsed: [], custom: [] }, ['imports']);
         expect(second.host.querySelectorAll('.se-fold-chip')).toHaveLength(0);
+        const third = mount(source);
+        third.view.restoreFolds(null, []);
+        expect(third.host.querySelectorAll('.se-fold-chip')).toHaveLength(0);
     });
 
     test('folds a region between its markers', () => {
@@ -221,6 +225,87 @@ describe('fold commands', () => {
         view.refreshFolds();
         view.toggleFold(0, true);
         expect(rendered(host)).toEqual(['0', '4']);
+    });
+});
+
+describe('fold defaults and hints', () => {
+    const source = '/**\n * Doc.\n */\nclass A {\n    run() {\n        body();\n    }\n    stop() {\n        more();\n    }\n}\n';
+    const runBody = { from: source.indexOf('run()'), to: source.indexOf('    stop') - 1, body: 'method' as const };
+    const stopBody = { from: source.indexOf('stop()'), to: source.lastIndexOf('}') - 1, body: 'method' as const };
+    const folded = (view: EditorView): number[] => view.getFolds().collapsed.map((fold) => fold.startLine);
+
+    test('folds a role the text gives at once, and one a server names when it answers', () => {
+        const { view } = mount(source);
+        view.restoreFolds(null, ['doc-comment', 'method-body']);
+        expect(folded(view)).toEqual([0]);
+        view.setFoldHints({ symbols: [runBody, stopBody] });
+        expect(folded(view)).toEqual([0, 4, 7]);
+    });
+
+    test('leaves a fold a person opened as it is when the answer comes again', () => {
+        const { view } = mount(source);
+        view.restoreFolds(null, ['method-body']);
+        view.setFoldHints({ symbols: [runBody, stopBody] });
+        view.toggleFold(4, false);
+        view.setFoldHints({ symbols: [runBody, stopBody] });
+        expect(folded(view)).toEqual([7]);
+    });
+
+    test('does not fold a range that holds the caret', () => {
+        const { model, view } = mount(source);
+        model.setSelections([{ anchor: source.indexOf('body()'), head: source.indexOf('body()') }]);
+        view.restoreFolds(null, ['method-body']);
+        view.setFoldHints({ symbols: [runBody, stopBody] });
+        expect(folded(view)).toEqual([7]);
+    });
+
+    test('stops folding by itself once the text was edited', () => {
+        const { model, view } = mount(source);
+        view.restoreFolds(null, ['method-body']);
+        model.applyEdits([{ from: 0, to: 0, text: 'x\n' }]);
+        view.setFoldHints({ symbols: [{ ...runBody, from: runBody.from + 2, to: runBody.to + 2 }] });
+        expect(folded(view)).toEqual([]);
+    });
+
+    test('keeps the hints with their text through an edit above them', () => {
+        const { model, view } = mount(source);
+        view.restoreFolds(null, []);
+        view.setFoldHints({ symbols: [runBody] });
+        model.applyEdits([{ from: 0, to: 0, text: 'x\n' }]);
+        view.refreshFolds();
+        expect(view.getFolds().collapsed).toEqual([]);
+        view.foldRole('method-body', true);
+        expect(folded(view)).toEqual([5]);
+    });
+
+    test('folds and opens every documentation comment', () => {
+        const { view } = mount(source + '/** Another.\n */\nfunction g() {\n}\n');
+        view.refreshFolds();
+        view.foldRole('doc-comment', true);
+        expect(folded(view)).toEqual([0, 11]);
+        view.foldRole('doc-comment', false);
+        expect(folded(view)).toEqual([]);
+    });
+
+    test('opens every range above a level and folds the ones at it', () => {
+        const nested = 'class A {\n    method() {\n        if (a) {\n            b();\n        }\n    }\n}\nend();';
+        const { view } = mount(nested);
+        view.refreshFolds();
+        view.foldAll(true);
+        view.expandAllToLevel(1);
+        expect(folded(view)).toEqual([1, 2]);
+        view.expandAllToLevel(2);
+        expect(folded(view)).toEqual([2]);
+        view.expandAllToLevel(3);
+        expect(folded(view)).toEqual([]);
+    });
+
+    test('shows the outline the setting says', () => {
+        const { host, view } = mount(source, { foldOutline: 'always' });
+        expect(host.querySelector('.se-editor')!.getAttribute('data-fold-outline')).toBe('always');
+        view.settings.foldOutline = 'off';
+        view.applySettings();
+        expect(host.querySelector('.se-editor')!.getAttribute('data-fold-outline')).toBe('off');
     });
 });
 

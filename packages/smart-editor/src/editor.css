@@ -187,6 +187,12 @@
 .se-gutter:hover .se-fold-toggle {
     opacity: 1;
 }
+.se-editor[data-fold-outline='always'] .se-fold-toggle {
+    opacity: 1;
+}
+.se-editor[data-fold-outline='off'] .se-fold-toggle {
+    display: none;
+}
 .se-gutter-action {
     position: absolute;
     top: 0;

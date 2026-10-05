@@ -12,6 +12,8 @@ import type {
     EditorContentChange,
     EditorEngine,
     EditorFindQuery,
+    EditorFoldHints,
+    EditorFoldOutline,
     EditorFolds,
     EditorIndentation,
     EditorFindState,
@@ -80,7 +82,8 @@ class SmartEditor implements Editor {
             messages: options.messages ?? {},
             guides: options.guides !== false,
             whitespace: options.whitespace === true,
-            rightMargin: options.rightMargin ?? null
+            rightMargin: options.rightMargin ?? null,
+            foldOutline: options.foldOutline ?? 'hover'
         };
         this.view = new EditorView(element, this.model, this.settings);
         this.controller = new InputController(this.view, {
@@ -104,8 +107,8 @@ class SmartEditor implements Editor {
             }
         });
         this.loadTokenizer();
-        if (options.folds !== undefined || options.collapseImports === true) {
-            this.view.restoreFolds(options.folds ?? null);
+        if (options.folds !== undefined || options.foldDefaults !== undefined) {
+            this.view.restoreFolds(options.folds ?? null, options.foldDefaults);
         }
         this.placeCursor(options);
     }
@@ -571,6 +574,30 @@ class SmartEditor implements Editor {
     setRightMargin(column: number | null): void {
         this.settings.rightMargin = column;
         this.view.applySettings();
+    }
+
+    setFoldOutline(outline: EditorFoldOutline): void {
+        this.settings.foldOutline = outline;
+        this.view.applySettings();
+    }
+
+    setFoldHints(hints: EditorFoldHints | null): void {
+        this.view.setFoldHints(
+            hints === null
+                ? null
+                : {
+                      symbols: (hints.symbols ?? []).map((symbol) => ({
+                          from: this.offsetAt(symbol.range.start),
+                          to: this.offsetAt(symbol.range.end),
+                          body: symbol.body
+                      })),
+                      ranges: (hints.ranges ?? []).map((range) => ({
+                          from: this.model.getLine(Math.min(range.startLine, this.model.getLineCount() - 1)).start,
+                          to: this.model.getLine(Math.min(range.endLine, this.model.getLineCount() - 1)).start,
+                          ...(range.kind === undefined ? {} : { kind: range.kind })
+                      }))
+                  }
+        );
     }
 
     setSmartKeys(keys: Partial<EditorSmartKeys>): void {

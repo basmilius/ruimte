@@ -34,7 +34,8 @@ describe('scrolling the view', () => {
         messages: {},
         guides: true,
         whitespace: false,
-        rightMargin: null
+        rightMargin: null,
+        foldOutline: 'hover'
     };
     const text = Array.from({ length: 400 }, (_, i) => `line ${i}`).join('\n');
 

@@ -40,6 +40,32 @@ describe('mounting', () => {
     });
 });
 
+describe('folding by default', () => {
+    const text = 'class A {\n    run() {\n        body();\n    }\n}\n';
+
+    test('folds a symbol body once the host hands over the symbols, as positions', () => {
+        const { editor } = setup({ text, language: 'typescript', foldDefaults: ['method-body'] });
+        expect(editor.getFolds().collapsed).toEqual([]);
+        editor.setFoldHints({ symbols: [{ range: { start: { line: 1, character: 4 }, end: { line: 3, character: 5 } }, body: 'method' }] });
+        expect(editor.getFolds().collapsed).toEqual([{ startLine: 1, endLine: 3 }]);
+    });
+
+    test('folds what the text gives at mount, and runs the commands that fold by level', () => {
+        const nested = '/**\n * Doc.\n */\nclass A {\n    run() {\n        body();\n    }\n}\n';
+        const { editor } = setup({ text: nested, language: 'typescript', foldDefaults: ['doc-comment'] });
+        expect(editor.getFolds().collapsed).toEqual([{ startLine: 0, endLine: 2 }]);
+        editor.runCommand('expandDocComments');
+        expect(editor.getFolds().collapsed).toEqual([]);
+        editor.runCommand('expandAllToLevel1');
+        expect(editor.getFolds().collapsed).toEqual([{ startLine: 4, endLine: 6 }]);
+        editor.runCommand('collapseDocComments');
+        expect(editor.getFolds().collapsed).toEqual([
+            { startLine: 0, endLine: 2 },
+            { startLine: 4, endLine: 6 }
+        ]);
+    });
+});
+
 describe('indentation', () => {
     test('takes the tab size and style it is given, at mount and later', () => {
         const { editor, press } = setup({ text: 'a', indentation: { tabSize: 2, insertSpaces: true } });

@@ -1,4 +1,4 @@
-import type { EditorFolds } from '@ruimte/smart-editor';
+import type { EditorFolds, FoldRole } from '@ruimte/smart-editor';
 import type { RevealLineRequest } from '@/state/files';
 
 export interface ViewState {
@@ -21,8 +21,8 @@ export function openingPlace(
     reveal: RevealLineRequest | null,
     last: ViewState | undefined,
     placeholderScroll: number
-): { line?: number; column?: number; scrollTop?: number; folds?: EditorFolds; collapseImports?: boolean } {
-    const folds = last === undefined ? { collapseImports: true } : { folds: last.folds };
+): { line?: number; column?: number; scrollTop?: number; folds?: EditorFolds; foldDefaults?: readonly FoldRole[] } {
+    const folds = last === undefined ? { foldDefaults: ['imports' as const] } : { folds: last.folds };
     if (reveal !== null) {
         return { line: reveal.line, ...folds };
     }

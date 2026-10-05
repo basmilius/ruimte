@@ -76,6 +76,13 @@ const ACTIONS: Partial<Record<KeymapId, KeyAction>> = {
     collapseRecursively: { type: 'view', command: 'collapseRegionRecursively' },
     expandRecursively: { type: 'view', command: 'expandRegionRecursively' },
     foldSelection: { type: 'view', command: 'foldSelection' },
+    collapseDocComments: { type: 'view', command: 'collapseDocComments' },
+    expandDocComments: { type: 'view', command: 'expandDocComments' },
+    expandAllToLevel1: { type: 'view', command: 'expandAllToLevel1' },
+    expandAllToLevel2: { type: 'view', command: 'expandAllToLevel2' },
+    expandAllToLevel3: { type: 'view', command: 'expandAllToLevel3' },
+    expandAllToLevel4: { type: 'view', command: 'expandAllToLevel4' },
+    expandAllToLevel5: { type: 'view', command: 'expandAllToLevel5' },
     toggleColumnMode: { type: 'view', command: 'toggleColumnMode' }
 };
 
