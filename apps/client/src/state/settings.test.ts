@@ -140,14 +140,48 @@ describe('the code font size', () => {
         expect(settingsFrom({ codeFontSize: '16' as unknown as number }).codeFontSize).toBe(13);
     });
 
-    test('draws on a line of whole pixels that is 20 at 13, as code read before the setting', () => {
-        expect(codeLineHeight(13)).toBe(20);
-        expect(codeLineHeight(10)).toBe(15);
-        expect(codeLineHeight(14)).toBe(22);
-        expect(codeLineHeight(20)).toBe(31);
+    test('draws the default line height as 20px at the default size and in whole pixels at every size', () => {
+        const { codeLineHeight: ratio } = settingsFrom({});
+        expect(codeLineHeight(13, ratio)).toBe(20);
         for (let size = 10; size <= 20; size += 1) {
-            expect(Number.isInteger(codeLineHeight(size))).toBe(true);
+            expect(Math.abs(codeLineHeight(size, ratio) - Math.round((size * 20) / 13))).toBeLessThanOrEqual(1);
         }
+    });
+
+    test('rounds the code line to whole pixels for any multiplier', () => {
+        expect(codeLineHeight(13, 1.2)).toBe(16);
+        expect(codeLineHeight(13, 2.5)).toBe(33);
+        expect(codeLineHeight(15, 1.3)).toBe(20);
+        for (let size = 10; size <= 20; size += 1) {
+            for (let step = 10; step <= 25; step += 1) {
+                expect(Number.isInteger(codeLineHeight(size, step / 10))).toBe(true);
+            }
+        }
+    });
+
+    test('holds the code line height to 1 through 2.5 in steps of a tenth', () => {
+        expect(settingsFrom({}).codeLineHeight).toBe(1.5);
+        expect(settingsFrom({ codeLineHeight: 0.5 }).codeLineHeight).toBe(1);
+        expect(settingsFrom({ codeLineHeight: 9 }).codeLineHeight).toBe(2.5);
+        expect(settingsFrom({ codeLineHeight: 1.2000000000000002 }).codeLineHeight).toBe(1.2);
+        expect(settingsFrom({ codeLineHeight: 1.54 }).codeLineHeight).toBe(1.5);
+        expect(settingsFrom({ codeLineHeight: Number.NaN }).codeLineHeight).toBe(1.5);
+        expect(settingsFrom({ codeLineHeight: '2' as unknown as number }).codeLineHeight).toBe(1.5);
+    });
+
+    test('holds the terminal line height to 1 through 2 in steps of a tenth', () => {
+        expect(settingsFrom({}).terminalLineHeight).toBe(1);
+        expect(settingsFrom({ terminalLineHeight: 0.8 }).terminalLineHeight).toBe(1);
+        expect(settingsFrom({ terminalLineHeight: 3 }).terminalLineHeight).toBe(2);
+        expect(settingsFrom({ terminalLineHeight: 1.14 }).terminalLineHeight).toBe(1.1);
+        expect(settingsFrom({ terminalLineHeight: Number.POSITIVE_INFINITY }).terminalLineHeight).toBe(1);
+    });
+
+    test('clamps a line height written through update', () => {
+        useSettings.getState().update({ codeLineHeight: 7, terminalLineHeight: 7 });
+        expect(useSettings.getState().codeLineHeight).toBe(2.5);
+        expect(useSettings.getState().terminalLineHeight).toBe(2);
+        useSettings.getState().update({ codeLineHeight: 1.5, terminalLineHeight: 1 });
     });
 });
 

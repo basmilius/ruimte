@@ -4,7 +4,7 @@ import { SettingsRow } from '@basmilius/desktop-ui/settings';
 import { CodeThemePreview } from '@/shell/settings/panes/CodeSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useCodeTheme } from '@/state/code-theme';
-import { FONT_SIZE_RANGE, useSettings } from '@/state/settings';
+import { CODE_LINE_HEIGHT_RANGE, FONT_SIZE_RANGE, useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 
 const CODE_SIZE_PREVIEW = ['export function greet(name: string): string {', '    return `Hello ${name}.`;', '}'].join('\n');
@@ -13,6 +13,7 @@ const CODE_SIZE_PREVIEW = ['export function greet(name: string): string {', '   
 export function EditorGeneralTab() {
     const { t } = useTranslation('settings');
     const codeFontSize = useSettings((s) => s.codeFontSize);
+    const codeLineHeight = useSettings((s) => s.codeLineHeight);
     const codeLigatures = useSettings((s) => s.codeLigatures);
     const codeWrap = useSettings((s) => s.codeWrap);
     const codeIndentGuides = useSettings((s) => s.codeIndentGuides);
@@ -45,6 +46,22 @@ export function EditorGeneralTab() {
                 >
                     <CodeThemePreview theme={codeTheme} mode={side} label={t('editor.general.font.size.preview')} code={CODE_SIZE_PREVIEW} />
                 </SettingsRow>
+                <SettingsRow
+                    searchId="editor.general.font.lineHeight"
+                    label={t('editor.general.font.lineHeight.label')}
+                    description={t('editor.general.font.lineHeight.description')}
+                    control={
+                        <Stepper
+                            value={codeLineHeight}
+                            min={CODE_LINE_HEIGHT_RANGE.min}
+                            max={CODE_LINE_HEIGHT_RANGE.max}
+                            step={CODE_LINE_HEIGHT_RANGE.step}
+                            unit="×"
+                            label={t('editor.general.font.lineHeight.label')}
+                            onValueChange={(value) => update({ codeLineHeight: value })}
+                        />
+                    }
+                />
                 <SettingsRow
                     searchId="editor.general.font.ligatures"
                     label={t('editor.general.font.ligatures.label')}

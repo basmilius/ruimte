@@ -53,6 +53,10 @@
             },
             "terminalSize": {
                 "label": "Terminal font size"
+            },
+            "terminalLineHeight": {
+                "label": "Terminal line height",
+                "description": "As a multiple of the row height the font needs."
             }
         },
         "sidebar": {
@@ -82,6 +86,10 @@
                     "label": "Code font size",
                     "description": "Code and diffs in files, the editor and the git panel. Chats keep their own size. The font itself is under Appearance.",
                     "preview": "Code at the chosen size"
+                },
+                "lineHeight": {
+                    "label": "Code line height",
+                    "description": "As a multiple of the code font size, rounded to whole pixels. Applies wherever code is drawn."
                 },
                 "ligatures": {
                     "label": "Ligatures",

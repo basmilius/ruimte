@@ -111,9 +111,13 @@ export const FONT_SIZE_RANGE = { min: 10, max: 20, step: 1 } as const;
 export const INTERFACE_FONT_SIZE_RANGE = { min: 14, max: 24, step: 1 } as const;
 export const FILES_TAB_LIMIT_RANGE = { min: 1, max: 20, step: 1 } as const;
 
-/* The line a code size draws on, in whole pixels. 20 at 13, the pair the interface's own code token has. */
-export function codeLineHeight(size: number): number {
-    return Math.round((size * 20) / 13);
+/* Multipliers of the font size. The code default gives 20px at the default 13px, the line a client drew before the setting. */
+export const CODE_LINE_HEIGHT_RANGE = { min: 1, max: 2.5, step: 0.1 } as const;
+export const TERMINAL_LINE_HEIGHT_RANGE = { min: 1, max: 2, step: 0.1 } as const;
+
+/* The line a code size draws on, in whole pixels, since a fractional row blurs the text and drifts the editor's rows against the viewer's. */
+export function codeLineHeight(size: number, ratio: number): number {
+    return Math.round(size * ratio);
 }
 
 export interface Settings {
@@ -131,6 +135,10 @@ export interface Settings {
     interfaceFontSize: number;
     /* Code and diffs in the panels and the editor, in px. A chat keeps the interface's own code size. */
     codeFontSize: number;
+    /* Code line height as a multiplier of `codeFontSize`; the line itself is always a whole number of pixels. */
+    codeLineHeight: number;
+    /* Terminal line height as xterm's `lineHeight` multiplier of the cell, 1 being the font's own. */
+    terminalLineHeight: number;
     /* How many files the viewer keeps open before the oldest unpinned tab makes room. */
     filesTabLimit: number;
     /* Whether the files tree shows dotfiles; the panel's eye button writes the same value. */
@@ -242,6 +250,8 @@ const DEFAULT_SETTINGS: Settings = {
     fontSize: 13,
     interfaceFontSize: 15,
     codeFontSize: 13,
+    codeLineHeight: 1.5,
+    terminalLineHeight: 1,
     filesTabLimit: 5,
     filesShowHidden: false,
     browseStartFolder: '',
@@ -287,6 +297,12 @@ function clampSize(value: unknown, range: { min: number; max: number }, fallback
     return Math.min(range.max, Math.max(range.min, size));
 }
 
+// One decimal, the step of the stepper, so a float that drifted in storage reads back as what was shown.
+function clampRatio(value: unknown, range: { min: number; max: number }, fallback: number): number {
+    const ratio = typeof value === 'number' && Number.isFinite(value) ? Math.round(value * 10) / 10 : fallback;
+    return Math.min(range.max, Math.max(range.min, ratio));
+}
+
 /* What a stored blob means, key by key. Everything a client wrote before a setting existed, or wrote
    as something else, reads as what a fresh client gets. */
 export function settingsFrom(stored: Partial<Settings>): Settings {
@@ -298,6 +314,8 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         fontSize: clampSize(stored.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize),
         interfaceFontSize: clampSize(stored.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize),
         codeFontSize: clampSize(stored.codeFontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.codeFontSize),
+        codeLineHeight: clampRatio(stored.codeLineHeight, CODE_LINE_HEIGHT_RANGE, DEFAULT_SETTINGS.codeLineHeight),
+        terminalLineHeight: clampRatio(stored.terminalLineHeight, TERMINAL_LINE_HEIGHT_RANGE, DEFAULT_SETTINGS.terminalLineHeight),
         filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
         // A path is typed by hand and read back as one; anything else in the blob is no folder.
         browseStartFolder: typeof stored.browseStartFolder === 'string' ? stored.browseStartFolder : DEFAULT_SETTINGS.browseStartFolder,
@@ -371,7 +389,7 @@ function apply(settings: Settings): void {
     const root = document.documentElement.style;
     root.setProperty('font-size', `${settings.interfaceFontSize}px`);
     root.setProperty('--code-font-size', `${settings.codeFontSize}px`);
-    root.setProperty('--code-line-height', `${codeLineHeight(settings.codeFontSize)}px`);
+    root.setProperty('--code-line-height', `${codeLineHeight(settings.codeFontSize, settings.codeLineHeight)}px`);
     const accent = accentColor(settings.accent);
     if (accent) {
         root.setProperty('--accent', accent);
@@ -414,6 +432,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 fontSize,
                 interfaceFontSize,
                 codeFontSize,
+                codeLineHeight,
+                terminalLineHeight,
                 filesTabLimit,
                 filesShowHidden,
                 browseStartFolder,
@@ -460,6 +480,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 fontSize,
                 interfaceFontSize,
                 codeFontSize,
+                codeLineHeight,
+                terminalLineHeight,
                 filesTabLimit,
                 filesShowHidden,
                 browseStartFolder,
@@ -501,6 +523,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);
             next.interfaceFontSize = clampSize(next.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize);
             next.codeFontSize = clampSize(next.codeFontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.codeFontSize);
+            next.codeLineHeight = clampRatio(next.codeLineHeight, CODE_LINE_HEIGHT_RANGE, DEFAULT_SETTINGS.codeLineHeight);
+            next.terminalLineHeight = clampRatio(next.terminalLineHeight, TERMINAL_LINE_HEIGHT_RANGE, DEFAULT_SETTINGS.terminalLineHeight);
             next.filesTabLimit = clampSize(next.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit);
             try {
                 localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));

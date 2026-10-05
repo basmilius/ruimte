@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Select, Stepper } from '@basmilius/desktop-ui';
 import { SettingsRow } from '@basmilius/desktop-ui/settings';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, INTERFACE_FONTS, MONO_FONTS, useSettings } from '@/state/settings';
+import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, INTERFACE_FONTS, MONO_FONTS, TERMINAL_LINE_HEIGHT_RANGE, useSettings } from '@/state/settings';
 
 function TerminalPreview({ fontSize }: { fontSize: number }) {
     return (
@@ -25,6 +25,7 @@ export function FontSection() {
     const interfaceFontSize = useSettings((s) => s.interfaceFontSize);
     const font = useSettings((s) => s.font);
     const fontSize = useSettings((s) => s.fontSize);
+    const terminalLineHeight = useSettings((s) => s.terminalLineHeight);
     const update = useSettings((s) => s.update);
 
     return (
@@ -96,6 +97,22 @@ export function FontSection() {
             >
                 <TerminalPreview fontSize={fontSize} />
             </SettingsRow>
+            <SettingsRow
+                searchId="appearance.font.terminalLineHeight"
+                label={t('appearance.font.terminalLineHeight.label')}
+                description={t('appearance.font.terminalLineHeight.description')}
+                control={
+                    <Stepper
+                        value={terminalLineHeight}
+                        min={TERMINAL_LINE_HEIGHT_RANGE.min}
+                        max={TERMINAL_LINE_HEIGHT_RANGE.max}
+                        step={TERMINAL_LINE_HEIGHT_RANGE.step}
+                        unit="×"
+                        label={t('appearance.font.terminalLineHeight.label')}
+                        onValueChange={(value) => update({ terminalLineHeight: value })}
+                    />
+                }
+            />
         </SettingsSection>
     );
 }

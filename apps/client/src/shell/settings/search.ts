@@ -67,6 +67,12 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     { id: 'appearance.font.terminalSize', section: 'appearance', label: 'settings:appearance.font.terminalSize.label' },
     {
+        id: 'appearance.font.terminalLineHeight',
+        section: 'appearance',
+        label: 'settings:appearance.font.terminalLineHeight.label',
+        description: 'settings:appearance.font.terminalLineHeight.description'
+    },
+    {
         id: 'editor.colors.light',
         section: 'editor',
         label: 'settings:editor.colors.light.label',
@@ -83,6 +89,12 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         section: 'editor',
         label: 'settings:editor.general.font.size.label',
         description: 'settings:editor.general.font.size.description'
+    },
+    {
+        id: 'editor.general.font.lineHeight',
+        section: 'editor',
+        label: 'settings:editor.general.font.lineHeight.label',
+        description: 'settings:editor.general.font.lineHeight.description'
     },
     {
         id: 'editor.general.font.ligatures',

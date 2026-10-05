@@ -57,6 +57,7 @@ export function FileEditor({
     const editorRef = useRef<Editor | null>(null);
     const theme = useCodeTheme();
     const codeFontSize = useSettings((s) => s.codeFontSize);
+    const codeLineHeight = useSettings((s) => s.codeLineHeight);
     const font = useSettings((s) => s.font);
     const codeLigatures = useSettings((s) => s.codeLigatures);
     const smartKeys = useSettings((s) => s.smartKeys);
@@ -129,7 +130,7 @@ export function FileEditor({
     // The settings wrote the tokens on the root before the store told anyone, so the editor reads the new face.
     useEffect(() => {
         editorRef.current?.refreshFont();
-    }, [codeFontSize, font, codeLigatures]);
+    }, [codeFontSize, codeLineHeight, font, codeLigatures]);
 
     useEffect(() => {
         editorRef.current?.setWrap(wrap);

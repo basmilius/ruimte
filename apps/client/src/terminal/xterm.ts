@@ -13,6 +13,7 @@ export function createTerminal(): Terminal {
         theme: readTerminalTheme(),
         fontFamily: readTerminalFont(),
         fontSize: useSettings.getState().fontSize,
+        lineHeight: useSettings.getState().terminalLineHeight,
         cursorBlink: true,
         scrollback: 5000,
         macOptionIsMeta: true

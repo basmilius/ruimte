@@ -15,10 +15,9 @@ import { PEEK_HEIGHT } from './peek';
 import { distinguishingFolders, visualColumnOf, type NameRange, type PeekPlace } from './peek-model';
 import type { PeekView } from './popups';
 
-const LINE = 20;
 const TAB_SIZE = 4;
 const CODE =
-    'font-mono text-code [tab-size:4] [&_.line]:block [&_.line]:h-5 [&_.line]:leading-5 [&_pre]:m-0 [&_pre]:bg-transparent! [&_pre]:p-0 [&_pre]:whitespace-pre [&_code]:font-mono';
+    'font-mono text-(length:--code-font-size) [tab-size:4] [&_.line]:block [&_.line]:h-(--code-line-height) [&_.line]:leading-(--code-line-height) [&_pre]:m-0 [&_pre]:bg-transparent! [&_pre]:p-0 [&_pre]:whitespace-pre [&_code]:font-mono';
 
 /* The code around the active reference, drawn like the editor's own rows: its gutter, the line the reference is on and the name marked. */
 function Preview({ view }: { view: PeekView }) {
@@ -54,10 +53,16 @@ function Preview({ view }: { view: PeekView }) {
     return (
         <div ref={scroller} className="relative min-w-0 flex-1 overflow-auto pt-1">
             <div className="relative flex min-w-max">
-                <div className="absolute inset-x-0 bg-surface-hover" style={{ top: preview.active * LINE, height: LINE }} />
-                <div className="sticky left-0 z-10 w-16 shrink-0 pr-4 text-right font-mono text-code text-text-faint select-none">
+                <div
+                    className="absolute inset-x-0 bg-surface-hover"
+                    style={{ top: `calc(${preview.active} * var(--code-line-height))`, height: 'var(--code-line-height)' }}
+                />
+                <div className="sticky left-0 z-10 w-16 shrink-0 pr-4 text-right font-mono text-(length:--code-font-size) text-text-faint select-none">
                     {lines.map((_, index) => (
-                        <div key={index} className={`h-5 leading-5 ${index === preview.active ? 'bg-surface-hover text-text' : 'bg-surface'}`}>
+                        <div
+                            key={index}
+                            className={`h-(--code-line-height) leading-(--code-line-height) ${index === preview.active ? 'bg-surface-hover text-text' : 'bg-surface'}`}
+                        >
                             {preview.startLine + index + 1}
                         </div>
                     ))}
@@ -65,8 +70,13 @@ function Preview({ view }: { view: PeekView }) {
                 <div className="relative">
                     {name !== null && (
                         <div
-                            className="absolute rounded-sm bg-(--editor-occurrence) font-mono text-code"
-                            style={{ top: preview.active * LINE, height: LINE, left: `${name.start}ch`, width: `${name.end - name.start}ch` }}
+                            className="absolute rounded-sm bg-(--editor-occurrence) font-mono text-(length:--code-font-size)"
+                            style={{
+                                top: `calc(${preview.active} * var(--code-line-height))`,
+                                height: 'var(--code-line-height)',
+                                left: `${name.start}ch`,
+                                width: `${name.end - name.start}ch`
+                            }}
                         />
                     )}
                     {html?.key === key ? (

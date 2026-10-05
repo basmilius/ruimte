@@ -309,6 +309,7 @@ function LaunchTerminal({ sessionId }: { sessionId: string }) {
         term.options.theme = readTerminalTheme();
         term.options.fontFamily = readTerminalFont();
         term.options.fontSize = useSettings.getState().fontSize;
+        term.options.lineHeight = useSettings.getState().terminalLineHeight;
         refitRef.current?.();
     }, [resolvedTheme, settingsVersion]);
 

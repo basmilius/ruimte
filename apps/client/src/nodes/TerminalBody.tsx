@@ -223,6 +223,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         term.options.theme = readTerminalTheme();
         term.options.fontFamily = readTerminalFont();
         term.options.fontSize = useSettings.getState().fontSize;
+        term.options.lineHeight = useSettings.getState().terminalLineHeight;
         // A new glyph size changes how many cells fit; the observer only fires on a host resize.
         refitRef.current?.();
     }, [id, resolvedTheme, settingsVersion, builds]);
