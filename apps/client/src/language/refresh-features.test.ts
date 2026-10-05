@@ -36,7 +36,7 @@ describe('inlay hints and semantic tokens', () => {
         await settle();
         expect(calls.sort()).toEqual(['textDocument/inlayHint', 'textDocument/semanticTokens/full']);
         expect(editor.inlayHints).toEqual([{ position: { line: 0, character: 5 }, label: ': number' }]);
-        expect(editor.semanticTokens).toEqual([{ line: 0, character: 10, length: 4, scopes: ['meta.function-call', 'entity.name.function'] }]);
+        expect(editor.semanticTokens).toEqual([{ line: 0, character: 10, length: 4, scopes: ['entity.name.function.call'] }]);
     });
 });
 

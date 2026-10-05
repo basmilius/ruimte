@@ -4,10 +4,12 @@ import type { SemanticTokens, SemanticTokensLegend } from '@ruimte/smart-editor-
 /*
  * The TextMate scopes a classification stands for, so the editor's theme colors it the way its own
  * grammar colors the same thing. Null where the grammar already did better: a keyword, a string, a
- * plain variable. A function being called is a different scope from one being declared, as the
- * theme's own palette tells them apart.
+ * local variable. A function being called, a method, a static member and a declaration are scopes of
+ * their own, as the platform's color scheme tells them apart. `scoped` says the server marks what is
+ * local to a function, so a variable it leaves unmarked lives at the top of a file or comes from a
+ * library, which the scheme draws as a global.
  */
-export function scopesOf(type: string, modifiers: ReadonlySet<string>): string[] | null {
+export function scopesOf(type: string, modifiers: ReadonlySet<string>, scoped = false): string[] | null {
     switch (type) {
         case 'namespace':
             return ['entity.name.namespace'];
@@ -20,23 +22,30 @@ export function scopesOf(type: string, modifiers: ReadonlySet<string>): string[]
         case 'struct':
             return ['entity.name.type.struct'];
         case 'type':
-        case 'typeParameter':
             return ['entity.name.type'];
+        case 'typeParameter':
+            return ['entity.name.type.parameter'];
         case 'parameter':
             return ['variable.parameter'];
         case 'property':
-            return ['variable.other.property'];
+            return [modifiers.has('static') ? 'variable.other.property.static' : 'variable.other.property'];
         case 'enumMember':
             return ['variable.other.enummember'];
         case 'function':
         case 'method':
-            if (modifiers.has('defaultLibrary')) {
-                return ['support.function'];
+            if (modifiers.has('static')) {
+                return ['entity.name.function.static'];
             }
-            return modifiers.has('declaration') ? ['entity.name.function'] : ['meta.function-call', 'entity.name.function'];
+            if (modifiers.has('declaration')) {
+                return ['entity.name.function'];
+            }
+            return [type === 'method' ? 'entity.name.function.method' : 'entity.name.function.call'];
         case 'macro':
             return ['entity.name.function.macro'];
         case 'variable':
+            if (scoped) {
+                return modifiers.has('local') ? null : ['variable.other.constant'];
+            }
             return modifiers.has('readonly') ? ['variable.other.constant'] : null;
         default:
             return null;
@@ -47,6 +56,7 @@ export function scopesOf(type: string, modifiers: ReadonlySet<string>): string[]
 export function decodeSemanticTokens(tokens: SemanticTokens, legend: SemanticTokensLegend): EditorSemanticToken[] {
     const result: EditorSemanticToken[] = [];
     const { data } = tokens;
+    const scoped = legend.tokenModifiers.includes('local');
     let line = 0;
     let character = 0;
     for (let at = 0; at + 4 < data.length; at += 5) {
@@ -59,7 +69,7 @@ export function decodeSemanticTokens(tokens: SemanticTokens, legend: SemanticTok
         }
         const bits = data[at + 4]!;
         const modifiers = new Set(legend.tokenModifiers.filter((_, index) => (bits & (1 << index)) !== 0));
-        const scopes = scopesOf(type, modifiers);
+        const scopes = scopesOf(type, modifiers, scoped);
         if (scopes !== null) {
             result.push({ line, character, length: data[at + 2]!, scopes });
         }

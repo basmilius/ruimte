@@ -107,11 +107,11 @@ const SAMPLES: readonly { lang: string; code: string; expected: Readonly<Record<
             Props: 'type',
             label: 'property',
             '\\n': 'escape',
-            render: 'functionCall',
-            null: 'constant',
+            render: 'call',
+            null: 'keyword',
             div: 'tag',
             className: 'attribute',
-            text: 'variable'
+            text: 'localVariable'
         }
     },
     {
@@ -141,8 +141,38 @@ const SAMPLES: readonly { lang: string; code: string; expected: Readonly<Record<
     },
     {
         lang: 'php',
-        code: ['<?php', 'final class User extends Model {', '    public function greet(string $name): string { return strlen($this->name); }', '}'].join('\n'),
-        expected: { final: 'keyword', User: 'type', greet: 'functionDeclaration', strlen: 'functionCall', this: 'keyword' }
+        code: [
+            '<?php',
+            'final class User extends Model {',
+            '    public const MAX = 10;',
+            '    public function greet(string $greeting = "Hello"): string',
+            '    {',
+            '        return strlen($greeting) . $this->title . self::$total . static::make() . $this->run() . PHP_EOL;',
+            '    }',
+            '}'
+        ].join('\n'),
+        expected: {
+            final: 'keyword',
+            User: 'type',
+            Model: 'type',
+            MAX: 'phpConstant',
+            '10': 'number',
+            string: 'keyword',
+            greet: 'functionDeclaration',
+            greeting: 'phpVariable',
+            strlen: 'call',
+            this: 'phpVariable',
+            title: 'property',
+            total: 'staticProperty',
+            make: 'staticCall',
+            run: 'call',
+            PHP_EOL: 'phpConstant'
+        }
+    },
+    {
+        lang: 'php',
+        code: ['<?php', '/** @param string $id the key */', 'enum Suit { case Hearts; }', '$heredoc = <<<EOT', 'text', 'EOT;'].join('\n'),
+        expected: { '@param': 'docTag', string: 'type', Hearts: 'phpConstant', EOT: 'label' }
     },
     {
         lang: 'swift',
@@ -151,28 +181,44 @@ const SAMPLES: readonly { lang: string; code: string; expected: Readonly<Record<
     },
     {
         lang: 'json',
-        code: '{ "name": "ruimte", "version": 1, "private": true }',
-        expected: { name: 'property', ruimte: 'string', '1': 'number', true: 'constant' }
+        code: '{ "name": "ruimte", "version": 1, "private": true, "empty": null }',
+        expected: { name: 'property', ruimte: 'string', '1': 'number', true: 'keyword', null: 'keyword' }
     },
     {
         lang: 'yaml',
-        code: ['name: ruimte', 'enabled: true'].join('\n'),
-        expected: { name: 'property', ruimte: 'string', true: 'constant' }
+        code: ['# note', 'name: ruimte', 'enabled: true', 'count: 12', 'quoted: "text"', 'base: &shared', 'ref: *shared'].join('\n'),
+        expected: { note: 'docComment', name: 'keyword', ruimte: 'foreground', true: 'foreground', '12': 'foreground', text: 'string', shared: 'anchor' }
     },
     {
         lang: 'markdown',
-        code: ['# Heading', 'Some `code` and a [link](https://ruimte.app).'].join('\n'),
-        expected: { Heading: 'heading', code: 'inlineCode', link: 'link', 'https://ruimte.app': 'link' }
+        code: ['# Heading', 'Some `code` and a [link](https://ruimte.app).', '> quoted', '```ts', 'let x', '```'].join('\n'),
+        expected: { Heading: 'heading', code: 'inlineCode', link: 'link', 'https://ruimte.app': 'linkDestination', quoted: 'string', ts: 'constant' }
     },
     {
         lang: 'css',
-        code: '.btn > div { color: #fff; margin: 4px; background: rgb(0 0 0); }',
-        expected: { btn: 'attribute', div: 'tag', color: 'property', '4': 'number', px: 'number', rgb: 'functionCall' }
+        code: '.btn > div:hover { color: #fff; margin: 4px; background: rgb(0 0 0); display: flex !important; }',
+        expected: {
+            btn: 'tag',
+            div: 'tag',
+            hover: 'tag',
+            color: 'attribute',
+            fff: 'color',
+            '4': 'number',
+            px: 'string',
+            rgb: 'tag',
+            flex: 'string',
+            '!important': 'keyword'
+        }
     },
     {
         lang: 'html',
-        code: '<a href="/x">Link &amp; more</a>',
-        expected: { a: 'tag', href: 'attribute', '/x': 'string', amp: 'entity' }
+        code: '<a href="/x">Link &amp; more</a><my-box></my-box>',
+        expected: { '<': 'tagPunctuation', a: 'tag', href: 'attribute', '/x': 'string', amp: 'entity', 'my-box': 'customTag' }
+    },
+    {
+        lang: 'vue',
+        code: ['<script setup lang="ts">', 'const count = ref(0);', 'function inc(): void { count.value++; }', '</script>'].join('\n'),
+        expected: { count: 'localVariable', ref: 'call', inc: 'functionDeclaration', void: 'keyword', value: 'property' }
     },
     {
         lang: 'shellscript',

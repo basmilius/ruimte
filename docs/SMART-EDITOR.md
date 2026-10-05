@@ -64,6 +64,12 @@ What the editor does that a person notices, and the rule behind it:
 - Selecting text marks its other occurrences (up to 50, one line, not blank), with ticks in the scroll track.
 - Indent guides are on, with the guide of the caret's scope stronger. The right margin is the `max_line_length` of `.editorconfig` and is off without one. Whitespace is a setting, off.
 
+## Code colors
+
+The two code themes (`apps/client/src/shell/panels/code-themes.ts`) carry the colors of the platform's default color schemes, Islands Dark and its light counterpart, resolved with what the language plugins add for PHP, TypeScript and JavaScript, CSS, HTML, YAML and Markdown. A role holds one color per side and a list of TextMate scopes. Where the scheme colors one language apart from the rest (a PHP variable or constant, a static call, a local variable in TypeScript), the scope leads with the root scope of that grammar. What a language server classifies maps onto the same roles through scopes of its own (`apps/client/src/language/semantic-model.ts`). Three colors stand a step off the scheme to keep the contrast floors that `code-themes.test.ts` holds.
+
+Left out: effects a scope cannot carry (the underline under a TypeScript parameter in the light scheme, the ground behind Markdown code) and the `<?php` tag, which Shiki's PHP grammar does not recognize, so it draws as an operator and a constant.
+
 ## Phases
 
 | Phase | What | State |
