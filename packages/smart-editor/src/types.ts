@@ -177,7 +177,7 @@ export interface EditorLineHighlight {
     readonly endLine: number;
     /* The tint is this color at a low alpha, so the code keeps its colors on it in either theme. */
     readonly color: EditorMarkColor;
-    /* A color the rows are filled with as it stands, instead of the low alpha tint of `color`, which keeps naming the sign's color. A custom property name or any CSS color. */
+    /* A color the rows and their gutter are filled with as it stands, instead of the low alpha tint of `color`, which keeps naming the sign's color. A custom property name or any CSS color. */
     readonly fill?: EditorMarkColor;
     /* A character in the gutter of each line, such as `+`, in the same color. */
     readonly sign?: string;

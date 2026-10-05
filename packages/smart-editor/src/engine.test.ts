@@ -1138,6 +1138,8 @@ describe('setLineHighlights', () => {
             { startLine: 4, endLine: 4, color: '--accent' }
         ]);
         expect(tinted(host)).toEqual(['40px:var(--editor-selection)', '60px:color-mix(in srgb, var(--accent) 14%, transparent)']);
+        const numbers = [...host.querySelectorAll('.se-line-number')] as HTMLElement[];
+        expect(numbers.filter((number) => number.style.background !== '').map((number) => number.textContent)).toEqual(['3']);
     });
 
     test('keeps a row of a widget between two tinted lines clear, and puts the sign in the gutter', () => {

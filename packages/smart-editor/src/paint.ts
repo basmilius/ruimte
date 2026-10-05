@@ -357,6 +357,10 @@ export function paintGutter(container: HTMLElement, layout: EditorLayout, rows: 
         item.className = paint.activeLines.has(row.line) ? 'se-line-number se-active-number' : 'se-line-number';
         item.style.top = `${row.top}px`;
         item.style.height = `${layout.metrics.lineHeight}px`;
+        const fill = paint.highlights.get(row.line)?.fill;
+        if (fill !== undefined) {
+            item.style.background = colorValue(fill);
+        }
         const number = document.createElement('span');
         number.textContent = String(row.line + 1);
         item.append(number);
