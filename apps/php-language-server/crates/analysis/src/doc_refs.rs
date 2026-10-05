@@ -381,8 +381,10 @@ impl Cursor<'_> {
         };
         let head = &rest[..open];
         let name_start = head
-            .rfind(|c: char| !(c.is_alphanumeric() || c == '_'))
-            .map_or(0, |at| at + 1);
+            .char_indices()
+            .rev()
+            .find(|(_, c)| !(c.is_alphanumeric() || *c == '_'))
+            .map_or(0, |(at, c)| at + c.len_utf8());
         let name = head[name_start..].to_string();
         let static_keyword = head.starts_with("static") && head[6..].starts_with(char::is_whitespace);
         if name.is_empty() {
@@ -559,6 +561,59 @@ mod tests {
             )));
         assert!(items.contains(&("helper".to_string(), DocItemKind::Function("helper".to_string()))));
         assert_eq!(classes(text), vec!["Foo", "Foo"]);
+    }
+
+    #[test]
+    fn never_slices_inside_a_character() {
+        let pieces = [
+            "@param ",
+            "@method ",
+            "@see ",
+            "@property ",
+            "@template ",
+            "{@see ",
+            "}",
+            "(",
+            ")",
+            "<",
+            ">",
+            "$",
+            "é",
+            "ü",
+            "日本",
+            "\\",
+            "::",
+            " ",
+            "\n * ",
+            "int",
+            "Foo",
+            "|",
+            "&",
+            "...",
+            "'",
+            ",",
+            "{",
+            "x",
+            "of ",
+            "array{",
+            "a: ",
+            "?",
+        ];
+        let mut seed: u64 = 0x9e37_79b9_7f4a_7c15;
+        for _ in 0..4000 {
+            let mut text = String::from("/**\n * ");
+            for _ in 0..24 {
+                seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                text.push_str(pieces[(seed >> 33) as usize % pieces.len()]);
+            }
+            for item in doc_items(&text, 7) {
+                assert!(
+                    text.is_char_boundary(item.start as usize - 7) && text.is_char_boundary(item.end as usize - 7),
+                    "{text:?}"
+                );
+                assert!(item.start <= item.end);
+            }
+        }
     }
 
     #[test]

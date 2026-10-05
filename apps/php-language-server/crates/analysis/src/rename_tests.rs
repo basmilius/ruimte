@@ -323,3 +323,19 @@ fn renames_a_namespace_in_declarations_imports_and_qualified_names() {
         "<?php\nnamespace App\\Entities;\n\nclass Post {}\n"
     );
 }
+
+#[test]
+fn renames_a_class_imported_through_a_group() {
+    let lib = "<?php\nnamespace Lib;\n\nclass Old {}\nclass Keep {}\n";
+    let usage = "<?php\nuse Lib\\{Old, Keep};\nuse Lib\\{Old as Legacy};\n\n$a = new Old();\n$b = new Legacy();\n";
+    let current = "<?php\nuse Lib\\Old;\n$x = new O$0ld();\n";
+    let outcome = run(&[("lib.php", lib), ("usage.php", usage)], current, "Fresh");
+    assert_eq!(
+        outcome.texts["usage.php"],
+        "<?php\nuse Lib\\{Fresh, Keep};\nuse Lib\\{Fresh as Legacy};\n\n$a = new Fresh();\n$b = new Legacy();\n"
+    );
+    assert_eq!(
+        outcome.texts["current.php"],
+        "<?php\nuse Lib\\Fresh;\n$x = new Fresh();\n"
+    );
+}

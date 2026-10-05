@@ -65,3 +65,6 @@ mod semantic_tokens_tests;
 
 #[cfg(test)]
 mod inlay_hints_tests;
+
+#[cfg(test)]
+mod robustness_tests;
