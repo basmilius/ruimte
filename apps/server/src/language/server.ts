@@ -37,6 +37,9 @@ import type { LanguageChild, LanguageExit, LanguageRuntime, SpawnLanguageProcess
 // How long a stopped process may take to go before it is killed.
 export const STOP_GRACE_MS = 3_000;
 
+// How long a process may take to answer its handshake before the kind counts as crashed.
+export const INITIALIZE_TIMEOUT_MS = 30_000;
+
 // How long a process has to have been ready for an end of its own to count as a crash worth one more start; one that ends sooner is a loop.
 export const STABLE_AFTER_MS = 60_000;
 
@@ -392,7 +395,7 @@ export class LanguageServer {
                         component.subscriptions.push(bridgeVueTypeScript(component.session, typescript.session));
                     }
                 }
-                await component.session.initialize();
+                await this.withinHandshake(component.session.initialize(), profile);
             }
             if (generation !== this.generation) {
                 return;
@@ -409,6 +412,21 @@ export class LanguageServer {
                 await this.fail(`The ${this.label} language server did not start: ${errorText(error)}`);
             }
         }
+    }
+
+    /* A server that never answers its handshake would leave the kind starting for good. */
+    private withinHandshake(handshake: Promise<unknown>, profile: ComponentProfile): Promise<unknown> {
+        let cancel = (): void => undefined;
+        const expired = new Promise<never>((_, reject) => {
+            cancel = this.clock.set(
+                () =>
+                    reject(
+                        new Error(`the ${profile.title ?? profile.name} process did not answer its handshake within ${INITIALIZE_TIMEOUT_MS / 1000} seconds`)
+                    ),
+                INITIALIZE_TIMEOUT_MS
+            );
+        });
+        return Promise.race([handshake, expired]).finally(cancel);
     }
 
     private spawnComponent(profile: ComponentProfile, context: LaunchContext, generation: number): Component {

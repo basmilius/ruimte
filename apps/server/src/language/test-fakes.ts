@@ -42,12 +42,13 @@ function nameOf(spec: LanguageProcessSpec): string {
 }
 
 /* Starts no process: every `spawn` is a fake language server on the far end of an in-memory transport. */
-export function fakeSpawner(capabilities: Partial<Record<string, ServerCapabilities>> = {}): FakeSpawner {
+/* The components in `silent` never answer their handshake. */
+export function fakeSpawner(capabilities: Partial<Record<string, ServerCapabilities>> = {}, silent: readonly string[] = []): FakeSpawner {
     const processes: FakeProcess[] = [];
     const spawn: SpawnLanguageProcess = (spec) => {
         const name = nameOf(spec);
         const [clientSide, serverSide] = createMemoryTransportPair();
-        const server = new FakeLanguageServer(serverSide, { capabilities: capabilities[name] ?? FULL_CAPABILITIES });
+        const server = new FakeLanguageServer(serverSide, { capabilities: capabilities[name] ?? FULL_CAPABILITIES, silent: silent.includes(name) });
         const stderrListeners: ((text: string) => void)[] = [];
         let resolveExit: (exit: LanguageExit) => void = () => undefined;
         const exited = new Promise<LanguageExit>((resolve) => {

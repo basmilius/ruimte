@@ -408,6 +408,61 @@ describe('several servers on one document', () => {
         expect(opened.providers['textDocument/completion']).toEqual({ resolveProvider: true, triggerCharacters: ['.', '"'] });
     });
 
+    it('leaves out a server that has not answered a merged call when the deadline passes, and drops its late answer', async () => {
+        const spawner = fakeSpawner({
+            typescript: caps({ completionProvider: { triggerCharacters: ['.'] } }),
+            eslint: caps({ completionProvider: { triggerCharacters: ['"'] } })
+        });
+        const { host, clock } = await installed(['typescript', 'eslint'], { files: eslintFiles, spawner });
+        await open(host);
+        await ready(host);
+        await ready(host, 'eslint');
+        let answerLate: (items: unknown[]) => void = () => undefined;
+        spawner.of('typescript')[0]!.server.handle('textDocument/completion', () => [{ label: 'toFixed' }]);
+        spawner.of('eslint')[0]!.server.handle(
+            'textDocument/completion',
+            () =>
+                new Promise((resolve) => {
+                    answerLate = resolve;
+                })
+        );
+        const asked = host.request({ projectId: 'p1', path: 'src/a.ts', method: 'textDocument/completion', params: { position: { line: 0, character: 0 } } });
+        await settle();
+        clock.fire();
+        const answer = await asked;
+        expect(answer.result).toEqual({ isIncomplete: false, items: [{ label: 'toFixed' }] });
+        expect(answer.itemServers).toEqual(['typescript']);
+        answerLate([{ label: 'late' }]);
+        await settle();
+        expect((await host.log('p1', 'eslint')).some((line) => line.text.includes('Left out of a textDocument/completion'))).toBe(true);
+    });
+
+    it('waits for the first server without a deadline, so a slow server of the language still answers', async () => {
+        const spawner = fakeSpawner({
+            typescript: caps({ hoverProvider: true }),
+            eslint: caps({ hoverProvider: true })
+        });
+        const { host, clock } = await installed(['typescript', 'eslint'], { files: eslintFiles, spawner });
+        await open(host);
+        await ready(host);
+        await ready(host, 'eslint');
+        let answerSlowly: (hover: unknown) => void = () => undefined;
+        spawner.of('typescript')[0]!.server.handle(
+            'textDocument/hover',
+            () =>
+                new Promise((resolve) => {
+                    answerSlowly = resolve;
+                })
+        );
+        spawner.of('eslint')[0]!.server.handle('textDocument/hover', () => ({ contents: { kind: 'markdown', value: 'rule docs' } }));
+        const asked = host.request({ projectId: 'p1', path: 'src/a.ts', method: 'textDocument/hover', params: {} });
+        await settle();
+        clock.fire();
+        await settle();
+        answerSlowly({ contents: { kind: 'markdown', value: 'types' } });
+        expect((await asked).result).toEqual({ contents: ['types', 'rule docs'] });
+    });
+
     it('keeps the answer of the server that answers when the other fails, and gives a feature that does not add up to the first', async () => {
         const spawner = fakeSpawner({ typescript: caps({ definitionProvider: true }), eslint: caps({ definitionProvider: true }) });
         const { host } = await installed(['typescript', 'eslint'], { files: eslintFiles, spawner });

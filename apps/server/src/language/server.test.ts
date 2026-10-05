@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { LanguageServer, STABLE_AFTER_MS, type LanguageServerHooks, type SharedDocument } from './server.ts';
+import { INITIALIZE_TIMEOUT_MS, LanguageServer, STABLE_AFTER_MS, type LanguageServerHooks, type SharedDocument } from './server.ts';
 import { KIND_PROFILES } from './profiles.ts';
 import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
 import type { LanguageServerKind } from '@ruimte/contracts';
@@ -310,6 +310,21 @@ describe('a language server of one kind in one project', () => {
         expect(spawner.of('typescript')).toHaveLength(2);
         expect(spawner.of('vue')).toHaveLength(2);
         expect(spawner.of('typescript')[0].kills).toEqual(['SIGTERM']);
+    });
+
+    it('marks itself crashed, and ends the process, when it never answers its handshake', async () => {
+        const { server, spawner, clock } = rig('typescript', fakeSpawner({}, ['typescript']));
+        server.attach(document('/work/a.ts', 'typescript', 'x'));
+        await settle();
+        expect(server.state).toBe('starting');
+        clock.fire();
+        await settle();
+        expect(server.state).toBe('crashed');
+        expect(server.message).toBe(
+            `The typescript language server did not start: the typescript process did not answer its handshake within ${INITIALIZE_TIMEOUT_MS / 1000} seconds`
+        );
+        expect(spawner.processes[0].kills).toEqual(['SIGTERM']);
+        expect(clock.pending).toBe(0);
     });
 
     it('marks itself crashed when the process dies before the handshake is done', async () => {

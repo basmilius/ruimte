@@ -119,6 +119,9 @@ interface PendingEdit {
     settle(result: ApplyWorkspaceEditResult): void;
 }
 
+/* How long a server beside the first has to answer a request that merges the answers of several, after which it is left out. */
+export const MERGE_DEADLINE_MS = 1_000;
+
 /* How long a client has to say whether it made an edit. */
 const EDIT_ANSWER_MS = 30_000;
 
@@ -359,7 +362,11 @@ export class LanguageHost {
         }
         const able = servers.filter((server) => server.canAnswer(document, method, params));
         if (MERGED_METHODS.has(method) && able.length > 1) {
-            const settled = await Promise.allSettled(able.map((server) => server.request(document, method, params)));
+            const [main, ...others] = able;
+            const settled = await Promise.allSettled([
+                main!.request(document, method, params),
+                ...others.map((server) => this.beforeDeadline(server, method, server.request(document, method, params)))
+            ]);
             const answers = settled.flatMap((outcome) => (outcome.status === 'fulfilled' ? [outcome.value] : []));
             if (answers.length === 0) {
                 throw (settled[0] as PromiseRejectedResult).reason;
@@ -377,6 +384,21 @@ export class LanguageHost {
         }
         // With nothing able to answer, the first server says why not: it is down, or it does not do that.
         return (able[0] ?? servers[0]!).request(document, method, params);
+    }
+
+    /*
+     * A server that has not answered when the deadline passes is left out of a merged answer and its late
+     * one dropped, so a slow ESLint or Tailwind never holds up the server of the language, which has no deadline.
+     */
+    private beforeDeadline<T>(server: LanguageServer, method: string, answer: Promise<T>): Promise<T> {
+        let cancel = (): void => undefined;
+        const expired = new Promise<never>((_, reject) => {
+            cancel = (this.options.clock ?? realLanguageClock).set(() => {
+                server.log.push('host', `Left out of a ${method} answer, which it did not give within ${MERGE_DEADLINE_MS} ms`);
+                reject(new LspError(`The ${server.kind} server did not answer ${method} in time`, ErrorCodes.RequestCancelled));
+            }, MERGE_DEADLINE_MS);
+        });
+        return Promise.race([answer, expired]).finally(cancel);
     }
 
     /* Runs a command of a server for a client, which may be asked to make edits while it runs. */

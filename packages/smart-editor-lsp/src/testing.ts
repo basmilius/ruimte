@@ -8,6 +8,8 @@ export interface FakeLanguageServerOptions {
     capabilities?: ServerCapabilities;
     serverInfo?: InitializeResult['serverInfo'];
     handlers?: Record<string, RequestHandler>;
+    /* Never answers the handshake, like a server that hangs while it starts. */
+    silent?: boolean;
 }
 
 export interface FakeDocument {
@@ -43,7 +45,11 @@ export class FakeLanguageServer {
                 this.received.push({ method, params, id });
             }
         });
-        this.connection.onRequest('initialize', () => ({ capabilities: options.capabilities ?? { textDocumentSync: 2 }, serverInfo: options.serverInfo }));
+        this.connection.onRequest('initialize', () =>
+            options.silent
+                ? new Promise<never>(() => undefined)
+                : { capabilities: options.capabilities ?? { textDocumentSync: 2 }, serverInfo: options.serverInfo }
+        );
         this.connection.onRequest('shutdown', () => {
             this.shutdownRequested = true;
             return null;
