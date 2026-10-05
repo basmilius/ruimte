@@ -172,6 +172,9 @@ pub fn complete(index: &Index, text: &str, offset: u32, options: CompletionOptio
     if let Some(list) = crate::phpunit::complete::complete_string(index, &real, text, offset as u32, options) {
         return list;
     }
+    if let Some(list) = crate::frameworks::complete_key(index, &real, text, offset as u32, options) {
+        return list;
+    }
     if in_dead_zone(&real, offset as u32) {
         return CompletionList::default();
     }

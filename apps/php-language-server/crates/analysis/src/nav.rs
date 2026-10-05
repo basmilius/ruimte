@@ -164,6 +164,7 @@ impl Analyzer<'_> {
                     }),
                 })
                 .collect(),
+            Target::Key { kind, name } => crate::frameworks::keys::describe(self.index, *kind, name),
             Target::Variable { name, ty } => vec![Description {
                 title: format!("${name}"),
                 signature: format!("{} ${name}", ty.display(true)),
@@ -335,7 +336,7 @@ impl Analyzer<'_> {
                         None => continue,
                     }
                 }
-                Target::Constant(_) | Target::Dataset(_) => continue,
+                Target::Constant(_) | Target::Dataset(_) | Target::Key { .. } => continue,
                 Target::Parameter { callee, name } => match self.parameter_type(callee, name) {
                     Some(ty) => ty,
                     None => continue,

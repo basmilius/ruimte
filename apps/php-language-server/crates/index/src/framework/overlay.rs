@@ -81,6 +81,12 @@ fn markers() -> &'static HashMap<String, Vec<Entry>> {
     })
 }
 
+/// Whether a function or method of this name has a marker in some class, as a cheap test before the
+/// call is resolved.
+pub fn is_marked(name: &str) -> bool {
+    markers().contains_key(&name.to_ascii_lowercase())
+}
+
 /// The markers of a function, or of a method declared in `declaring` or a class above it. Without the
 /// framework in the project nothing is marked.
 pub fn markers_for(index: &Index, declaring: Option<&str>, name: &str) -> Vec<Marker> {

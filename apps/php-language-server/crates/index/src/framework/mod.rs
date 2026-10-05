@@ -14,13 +14,21 @@ use std::sync::{Arc, Mutex};
 
 use crate::composer::Composer;
 
+pub mod abilities;
+pub mod config;
 pub mod container;
 pub mod eloquent;
+pub mod env;
 pub mod facade;
 pub mod inflect;
+pub mod keys;
+pub mod keytree;
 pub mod migrations;
 pub mod overlay;
+pub mod routes;
 pub mod source;
+pub mod translations;
+pub mod views;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
@@ -139,6 +147,21 @@ impl FrameworkState {
         files
     }
 
+    /// The files directly in a folder, on disk and among the open documents.
+    pub fn files_in(&self, dir: &Path) -> Vec<PathBuf> {
+        let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_file()))
+            .map(|entry| entry.path())
+            .collect();
+        files.extend(self.open.keys().filter(|path| path.parent() == Some(dir)).cloned());
+        files.sort();
+        files.dedup();
+        files
+    }
+
     /// Whether a file exists on disk or is an open document.
     pub fn file_exists(&self, path: &Path) -> bool {
         self.open.contains_key(path) || path.is_file()
@@ -215,6 +238,11 @@ impl crate::index::Index {
 
     pub fn file_exists(&self, path: &Path) -> bool {
         self.framework.file_exists(path)
+    }
+
+    /// The files directly in a folder of the project, on disk and open.
+    pub fn files_in(&self, dir: &Path) -> Vec<PathBuf> {
+        self.framework.files_in(dir)
     }
 
     /// A section of the framework layer, built the first time it is asked for.

@@ -244,3 +244,29 @@ function app($abstract = null, array $parameters = []) {}
 "#,
     ),
 ];
+
+/// The global helpers that take names a project declares, and the facades with the same methods.
+pub const HELPERS: &[(&str, &str)] = &[
+    (
+        "vendor/laravel/helpers.php",
+        r#"<?php
+function config($key = null, $default = null) {}
+function route($name, $parameters = [], $absolute = true) {}
+function view($view = null, $data = [], $mergeData = []) {}
+function __($key = null, $replace = [], $locale = null) {}
+function env($key, $default = null) {}
+"#,
+    ),
+    (
+        "vendor/laravel/Facades.php",
+        r#"<?php
+namespace Illuminate\Support\Facades;
+/** @method static mixed get(string $key, mixed $default = null) @method static bool has(string $key) */
+class Config {}
+/** @method static bool has(string $name) */
+class Route {}
+/** @method static \Illuminate\Contracts\View\View make(string $view) */
+class View {}
+"#,
+    ),
+];

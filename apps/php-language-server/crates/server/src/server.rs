@@ -51,6 +51,22 @@ use crate::paths::uri_to_path;
 use crate::workspace::{FolderChange, Internal, Workspace};
 
 /// How many files read from the cache file stay in memory, the most recently used ones.
+/// What the server asks the client to watch: the PHP files and Composer's, and the files of the
+/// frameworks that are not PHP and that names in strings are read from.
+const WATCHED_FILES: [&str; 11] = [
+    "**/*.php",
+    "**/composer.json",
+    "**/vendor/composer/installed.json",
+    "**/.env",
+    "**/.env.*",
+    "**/lang/**",
+    "**/translations/**",
+    "**/templates/**",
+    "**/config/**/*.yaml",
+    "**/config/**/*.yml",
+    "**/config/**/*.xml",
+];
+
 const KEEP_LOADED_FILES: usize = 1500;
 const TRIM_INTERVAL: std::time::Duration = std::time::Duration::from_secs(3);
 
@@ -710,7 +726,7 @@ impl<'a> Server<'a> {
     /// The client is ready: ask it to watch files, open the folders and start reading the stubs.
     fn initialized(&mut self) -> Result<(), BoxError> {
         if self.watch_support {
-            let watchers = ["**/*.php", "**/composer.json", "**/vendor/composer/installed.json"]
+            let watchers = WATCHED_FILES
                 .map(|pattern| FileSystemWatcher {
                     glob_pattern: GlobPattern::String(pattern.to_string()),
                     kind: None,
@@ -1002,6 +1018,11 @@ impl<'a> Server<'a> {
                 .extension()
                 .is_none_or(|extension| !extension.eq_ignore_ascii_case("php"))
             {
+                // A `.env`, a translation or a template: what the framework layer read from it is read again.
+                let project = self.workspace.project_for_mut(&path);
+                if project.index.frameworks().any() && project.contains(&path) {
+                    project.index.framework_file_changed(&path);
+                }
                 continue;
             }
             if self.documents.get(&change.uri).is_some() {

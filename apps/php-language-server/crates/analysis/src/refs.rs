@@ -418,7 +418,7 @@ pub fn from_targets(analyzer: &Analyzer<'_>, targets: Vec<Target>) -> Vec<Symbol
                 push(Symbol::Parameter { callee, name });
             }
             Target::Dataset(name) => push(Symbol::Dataset(name)),
-            Target::Variable { .. } => {}
+            Target::Variable { .. } | Target::Key { .. } => {}
         }
     }
     out

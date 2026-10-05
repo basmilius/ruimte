@@ -5,6 +5,7 @@
 mod calls;
 pub(crate) mod classes;
 pub(crate) mod flow;
+mod frameworks;
 mod members;
 mod names;
 mod phpdoc;
@@ -237,6 +238,25 @@ pub const INSPECTIONS: &[InspectionInfo] = &[
         Warning,
         true,
         "A value `willReturn()` gives that the method cannot return",
+    ),
+    info(
+        "unknown-config-key",
+        Warning,
+        true,
+        "A config key that is not in the project's config files",
+    ),
+    info(
+        "unknown-route",
+        Warning,
+        true,
+        "A route name that no route file declares",
+    ),
+    info("unknown-view", Warning, true, "A view that has no template"),
+    info(
+        "unknown-translation",
+        Warning,
+        true,
+        "A translation key of a language file that does not have it",
     ),
     info(
         "missing-strict-types",
@@ -489,6 +509,7 @@ pub fn inspect(env: &InspectionEnv) -> Vec<Finding> {
     classes::run(&cx);
     phpdoc::run(&cx);
     phpunit::run(&cx);
+    frameworks::run(&cx);
     let mut found = cx.found.into_inner();
     found.sort_by_key(|finding| (finding.diagnostic.range.start(), finding.diagnostic.range.end()));
     found.dedup_by(|later, earlier| {

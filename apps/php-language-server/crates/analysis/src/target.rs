@@ -38,6 +38,11 @@ pub enum Target {
     },
     /// A Pest dataset, by the name it is declared and used under.
     Dataset(String),
+    /// A string that names a config key, a route, a view and the like.
+    Key {
+        kind: php_index::framework::keys::KeyKind,
+        name: String,
+    },
 }
 
 /// A function or method as the declaration that owns it names it: a method by the class that
@@ -83,6 +88,15 @@ impl Analyzer<'_> {
     pub fn targets_at(&self, offset: u32) -> Vec<Found> {
         if let Some(found) = self.test_string_target(offset) {
             return vec![found];
+        }
+        if let Some(key) = crate::frameworks::keys::key_at(self, offset) {
+            return vec![Found {
+                target: Target::Key {
+                    kind: key.kind,
+                    name: key.value,
+                },
+                range: key.range,
+            }];
         }
         let Some(token) = token_at(&self.root, offset) else {
             return Vec::new();

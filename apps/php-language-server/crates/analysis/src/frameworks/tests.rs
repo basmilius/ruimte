@@ -132,3 +132,163 @@ fn make_on_the_application_resolves_names_too() {
     let code = "<?php\nfunction f(\\Illuminate\\Foundation\\Application $app) { $cache = $app->make('cache'); $0 }";
     assert_eq!(container_var(code, "cache"), "CacheManager");
 }
+
+mod keys {
+    use php_index::framework::testing::HELPERS;
+
+    use crate::completion::{CompletionOptions, complete};
+    use crate::infer::Analyzer;
+    use crate::inspections::{Externals, InspectionEnv, InspectionSettings, inspect};
+    use crate::testing::{CURSOR, Fixture, split_cursor};
+
+    const CONFIG_APP: &str = "<?php\nreturn [\n    'name' => env('APP_NAME', 'Laravel'),\n    'locale' => 'en',\n    'nested' => ['a' => 1],\n];\n";
+
+    fn project() -> Fixture {
+        let mut files = HELPERS.to_vec();
+        files.extend_from_slice(&[
+            ("config/app.php", CONFIG_APP),
+            (
+                "routes/web.php",
+                "<?php\nRoute::get('/', fn () => 1)->name('home');\nRoute::get('/about', fn () => 1)->name('about');\n",
+            ),
+            ("resources/views/welcome.blade.php", "<h1>hi</h1>"),
+            ("resources/views/mail/invoice.blade.php", "x"),
+            ("lang/en/messages.php", "<?php return ['welcome' => 'Welcome'];"),
+            (".env", "APP_NAME=Laravel\nAPP_DEBUG=true\n"),
+        ]);
+        Fixture::framework(&files)
+    }
+
+    fn completions(code: &str) -> Vec<String> {
+        let fixture = project().with_current(code);
+        let offset = code.find(CURSOR).expect("a cursor marker") as u32;
+        let text = code.replacen(CURSOR, "", 1);
+        complete(&fixture.index, &text, offset, CompletionOptions::default())
+            .items
+            .into_iter()
+            .map(|item| item.label)
+            .collect()
+    }
+
+    fn definitions(code: &str) -> Vec<(String, String)> {
+        let fixture = project().with_current(code);
+        let (text, root, offset) = split_cursor(code);
+        let analyzer = Analyzer::new(&fixture.index, &root, offset);
+        let _ = text;
+        analyzer
+            .definitions(offset)
+            .into_iter()
+            .map(|place| {
+                let path = place.path.expect("a file");
+                let source = fixture.sources.get(&path).cloned().unwrap_or_default();
+                let found = source
+                    .get(place.span.start as usize..place.span.end as usize)
+                    .unwrap_or("")
+                    .to_string();
+                (
+                    path.strip_prefix("/project")
+                        .unwrap_or(&path)
+                        .to_string_lossy()
+                        .into_owned(),
+                    found,
+                )
+            })
+            .collect()
+    }
+
+    fn findings(code: &str) -> Vec<(&'static str, String)> {
+        let fixture = project().with_current(code);
+        let root = php_syntax::parse(code).syntax();
+        let externals = Externals::none();
+        let settings = InspectionSettings::default();
+        let env = InspectionEnv {
+            index: &fixture.index,
+            text: code,
+            root: &root,
+            settings: &settings,
+            ready: true,
+            externals: &externals,
+        };
+        inspect(&env)
+            .into_iter()
+            .map(|finding| {
+                (
+                    finding.diagnostic.code,
+                    code[usize::from(finding.diagnostic.range.start())..usize::from(finding.diagnostic.range.end())]
+                        .to_string(),
+                )
+            })
+            .filter(|(code, _)| code.starts_with("unknown-"))
+            .collect()
+    }
+
+    #[test]
+    fn completes_the_names_of_every_kind() {
+        assert_eq!(
+            completions("<?php config('app.$0');"),
+            ["app.locale", "app.name", "app.nested", "app.nested.a"]
+        );
+        assert_eq!(completions("<?php route('$0');"), ["about", "home"]);
+        assert_eq!(completions("<?php view('mail.$0');"), ["mail.invoice"]);
+        assert_eq!(completions("<?php __('messages.$0');"), ["messages.welcome"]);
+        assert_eq!(completions("<?php env('APP_$0');"), ["APP_DEBUG", "APP_NAME"]);
+        assert_eq!(
+            completions("<?php Illuminate\\Support\\Facades\\Config::get('app.na$0');"),
+            ["app.name"]
+        );
+        assert_eq!(
+            completions("<?php Illuminate\\Support\\Facades\\View::make('wel$0');"),
+            ["welcome"]
+        );
+    }
+
+    #[test]
+    fn a_string_that_names_nothing_completes_nothing() {
+        assert!(completions("<?php strlen('app.$0');").is_empty());
+        assert!(completions("<?php $x = ['app.$0'];").is_empty());
+    }
+
+    #[test]
+    fn goes_to_where_the_name_is_declared() {
+        assert_eq!(
+            definitions("<?php config('app.na$0me');"),
+            [("config/app.php".to_string(), "name".to_string())]
+        );
+        assert_eq!(
+            definitions("<?php route('ho$0me');"),
+            [("routes/web.php".to_string(), "home".to_string())]
+        );
+        assert_eq!(
+            definitions("<?php view('mail.inv$0oice');"),
+            [("resources/views/mail/invoice.blade.php".to_string(), String::new())]
+        );
+        assert_eq!(
+            definitions("<?php env('APP_DE$0BUG');"),
+            [(".env".to_string(), "APP_DEBUG".to_string())]
+        );
+    }
+
+    #[test]
+    fn reports_the_names_the_project_certainly_lacks() {
+        let found = findings(
+            "<?php config('app.nam'); route('hom'); view('welcom'); __('messages.welcom'); config('app.name'); route('home'); view('mail.invoice'); __('Hello world.');",
+        );
+        assert_eq!(
+            found,
+            [
+                ("unknown-config-key", "app.nam".to_string()),
+                ("unknown-route", "hom".to_string()),
+                ("unknown-view", "welcom".to_string()),
+                ("unknown-translation", "messages.welcom".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn stays_silent_where_the_name_may_be_missing_on_purpose() {
+        let found = findings(
+            "<?php config('app.nope', 'fallback'); Illuminate\\Support\\Facades\\Config::has('app.nope'); Illuminate\\Support\\Facades\\Route::has('nope'); view('pkg::thing'); config('other.key'); $key = 'app.nope'; config($key); config('app.name' . 'x'); strlen('app.nam');",
+        );
+        assert_eq!(found, []);
+    }
+}
