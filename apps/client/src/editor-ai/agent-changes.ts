@@ -4,7 +4,7 @@ import type { Editor, EditorRect } from '@ruimte/smart-editor';
 import type { Timers } from '@/language/timers';
 import { realTimers } from '@/language/timers';
 import type { AgentChangesMode } from '@/state/ai-settings';
-import { colorOfChat, drawnRuns, lastWritten, type DrawnRun } from './agent-runs';
+import { colorOfChat, drawnRuns, lastWritten, removalRuns, type DrawnRun, type RemovalRun } from './agent-runs';
 
 /* A pause in typing this long before the bars are worked out again, since that reads both texts. */
 const REMAP_DELAY_MS = 200;
@@ -34,6 +34,14 @@ export interface AgentChangesState {
     hover: AgentHover | null;
 }
 
+/* What was drawn last, for a review that puts its rows on the same runs. */
+export interface DrawFrame {
+    mode: AgentChangesMode;
+    live: LiveWriter | null;
+    pieces: readonly DrawnRun[];
+    removals: readonly RemovalRun[];
+}
+
 export interface AgentChangesSettings {
     mode: AgentChangesMode;
     /* Whether the gutter marks the lines an agent wrote; the chip and the cursor of a live turn show without it. */
@@ -42,7 +50,7 @@ export interface AgentChangesSettings {
 
 export interface AgentChangesSource {
     read(): Promise<ProvenanceReadResult>;
-    /* What is on disk as far as this client knows, which is the text the daemon's runs are mapped onto when the mtimes agree. */
+    /* What is on disk as far as this client knows, or what moved under an unsaved draft, which is the text the daemon's runs are mapped onto when the mtimes agree. */
     disk(): { text: string; mtime: number } | null;
     /* What the cursor of a turn says. */
     nameOf(provider: AgentKind | undefined): string;
@@ -59,12 +67,14 @@ export class AgentChanges {
     private readonly source: AgentChangesSource;
     private readonly timers: Timers;
     private readonly listeners = new Set<() => void>();
+    private readonly frameListeners = new Set<(frame: DrawFrame) => void>();
     private readonly stopHover: () => void;
     private readonly stopChange: () => void;
     private settings: AgentChangesSettings = { mode: 'off', attribution: false };
     private state: AgentChangesState = { live: null, hover: null };
     private result: ProvenanceReadResult | null = null;
     private drawn = new Map<string, DrawnRun>();
+    private frame: DrawFrame | null = null;
     private request = 0;
     private remapTimer: unknown = null;
     private hideTimer: unknown = null;
@@ -95,6 +105,17 @@ export class AgentChanges {
             this.listeners.delete(listener);
         };
     };
+
+    /* Calls back with every drawing of the runs, and once now when there already is one. */
+    onDraw(listener: (frame: DrawFrame) => void): () => void {
+        this.frameListeners.add(listener);
+        if (this.frame !== null) {
+            listener(this.frame);
+        }
+        return () => {
+            this.frameListeners.delete(listener);
+        };
+    }
 
     configure(settings: AgentChangesSettings): void {
         const was = this.settings;
@@ -156,6 +177,7 @@ export class AgentChanges {
         this.disposed = true;
         this.stopHover();
         this.stopChange();
+        this.frameListeners.clear();
         this.timers.clear(this.remapTimer);
         this.timers.clear(this.hideTimer);
         this.editor.setAttributionMarks([]);
@@ -180,6 +202,7 @@ export class AgentChanges {
             this.drawn = new Map();
             this.editor.setAttributionMarks([]);
             this.editor.setRemoteCursors([]);
+            this.emit({ mode, live: this.state.live, pieces: [], removals: [] });
             return;
         }
         if (this.state.live === null) {
@@ -189,8 +212,10 @@ export class AgentChanges {
         if (this.result.mtime !== disk.mtime || this.result.lines !== diskLines.length) {
             return;
         }
-        const drawn = drawnRuns(this.result.runs, diskLines, splitLines(this.editor.getText()));
+        const textLines = splitLines(this.editor.getText());
+        const drawn = drawnRuns(this.result.runs, diskLines, textLines);
         this.drawn = new Map(drawn.map((piece) => [piece.markId, piece]));
+        this.emit({ mode, live: this.state.live, pieces: drawn, removals: removalRuns(this.result.runs, diskLines, textLines) });
         this.editor.setAttributionMarks(
             attribution
                 ? drawn.map((piece) => ({ id: piece.markId, startLine: piece.startLine, endLine: piece.endLine, color: colorOfChat(piece.run.chatId) }))
@@ -213,6 +238,13 @@ export class AgentChanges {
         const hover = this.state.hover;
         if (hover !== null && !drawn.some((piece) => piece.run.id === hover.run.id)) {
             this.set({ ...this.state, hover: null });
+        }
+    }
+
+    private emit(frame: DrawFrame): void {
+        this.frame = frame;
+        for (const listener of [...this.frameListeners]) {
+            listener(frame);
         }
     }
 

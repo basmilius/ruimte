@@ -13,11 +13,11 @@ export interface DrawnRun {
 }
 
 /*
- * Where the runs the daemon mapped onto the text on disk stand in the text of the editor. A line the
- * editor still has from the disk keeps its run and a line typed or replaced since has none, as for
- * the blame of code vision (`mapBlame`); a run an edit cut through draws as the pieces that are left.
+ * Where each line of the text on disk stands in the text of the editor, or -1 for a line typed over or
+ * removed since. A line the editor still has from the disk keeps its place, as for the blame of code
+ * vision (`mapBlame`).
  */
-export function drawnRuns(runs: readonly ProvenanceRun[], disk: readonly string[], text: readonly string[]): DrawnRun[] {
+export function lineMap(disk: readonly string[], text: readonly string[]): Int32Array {
     const changes = diffLines(disk, text);
     const where = new Int32Array(disk.length);
     let shift = 0;
@@ -34,6 +34,15 @@ export function drawnRuns(runs: readonly ProvenanceRun[], disk: readonly string[
     for (; index < disk.length; index++) {
         where[index] = index + shift;
     }
+    return where;
+}
+
+/*
+ * Where the runs the daemon mapped onto the text on disk stand in the text of the editor. A line typed
+ * or replaced since has no run; a run an edit cut through draws as the pieces that are left.
+ */
+export function drawnRuns(runs: readonly ProvenanceRun[], disk: readonly string[], text: readonly string[]): DrawnRun[] {
+    const where = lineMap(disk, text);
     const drawn: DrawnRun[] = [];
     for (const run of runs) {
         let piece: DrawnRun | null = null;
@@ -52,6 +61,30 @@ export function drawnRuns(runs: readonly ProvenanceRun[], disk: readonly string[
         }
     }
     return drawn;
+}
+
+/* A run that only removed lines, and the line of the editor it stood in front of. */
+export interface RemovalRun {
+    run: ProvenanceRun;
+    /* Zero-based; the number of lines of the editor when the removal was at the very end. */
+    line: number;
+}
+
+/* Where the removals stand in the editor, which have no lines of their own to draw a bar on. */
+export function removalRuns(runs: readonly ProvenanceRun[], disk: readonly string[], text: readonly string[]): RemovalRun[] {
+    const where = lineMap(disk, text);
+    const found: RemovalRun[] = [];
+    for (const run of runs) {
+        if (run.end >= run.start) {
+            continue;
+        }
+        const next = run.start - 1;
+        const place = next >= disk.length ? text.length : where[next]!;
+        if (place >= 0) {
+            found.push({ run, line: place });
+        }
+    }
+    return found;
 }
 
 /* The same color for a chat every time and in every file, spread over the palette by a hash of its id. */

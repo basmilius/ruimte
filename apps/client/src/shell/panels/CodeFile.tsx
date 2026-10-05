@@ -24,7 +24,10 @@ import { useEditorLanguage } from '@/shell/panels/use-editor-language';
 import { useChangeMarks } from '@/shell/panels/use-change-marks';
 import { AgentEditingChip } from '@/editor-ai/AgentEditingChip';
 import { ProvenanceCard } from '@/editor-ai/ProvenanceCard';
+import { ConflictLayer } from '@/editor-ai/ConflictLayer';
+import { ReviewBar, ReviewLayer } from '@/editor-ai/ReviewLayer';
 import { useAgentChanges } from '@/editor-ai/use-agent-changes';
+import { useConflictResolution } from '@/editor-ai/use-conflict-resolution';
 import { useCodeVision } from '@/shell/panels/use-code-vision';
 import { useGitBlame } from '@/shell/panels/use-git-blame';
 import { useEditorScope } from '@/shell/panels/use-editor-scope';
@@ -242,7 +245,8 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
         editorLanguage?.selectionChat.bindNode(nodeId);
     }, [editorLanguage, nodeId]);
     useChangeMarks(editor, useGitBase(path, read.text));
-    const agentChanges = useAgentChanges(editor, path);
+    const agentChanges = useAgentChanges(editor, path, plain ? undefined : read.language);
+    const conflict = useConflictResolution(editor, path);
     const folder = useProject((s) => s.current?.folder ?? null);
 
     return (
@@ -269,6 +273,7 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                 {toolbarExtra}
             </FileToolbar>
             <DraftBar endpointId={editing.endpointId} path={path} />
+            {agentChanges.review !== null && <ReviewBar review={agentChanges.review} />}
             {!editing.viewer && editing.loadFailed && (
                 <EditorNotice message={t('file.edit.loadFailed')}>
                     <Button variant="secondary" size="sm" onClick={editing.retryLoad}>
@@ -330,6 +335,12 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
             {agentChanges.hover !== null && (
                 <ErrorBoundary label={t('file.edit.failed')} resetKeys={[agentChanges.hover.run.id]}>
                     <ProvenanceCard hover={agentChanges.hover} onHold={agentChanges.holdCard} />
+                </ErrorBoundary>
+            )}
+            {editor !== null && (conflict !== null || agentChanges.review !== null) && (
+                <ErrorBoundary label={t('file.edit.failed')} resetKeys={[editor]}>
+                    {conflict !== null && <ConflictLayer conflict={conflict} editor={editor} />}
+                    {agentChanges.review !== null && <ReviewLayer review={agentChanges.review} editor={editor} />}
                 </ErrorBoundary>
             )}
             {editorLanguage !== null && (
