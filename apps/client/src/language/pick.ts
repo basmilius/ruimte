@@ -12,6 +12,11 @@ export interface PickSpec {
     /* The row the list opens on; the first one without it. */
     readonly active?: string;
     accept(id: string): void;
+    /*
+     * Asked before the list closes on a row. A reason it cannot be taken keeps the list open with the reason
+     * under it, the way a rename keeps its input; null lets the list close and `accept` run.
+     */
+    attempt?(id: string): Promise<string | null>;
     /* What the active row would change, asked a moment after it became active. */
     preview?(id: string, signal: AbortSignal): Promise<PickPreview | null>;
 }
@@ -29,6 +34,9 @@ export class PickFeature {
     private active = '';
     private previewTimer: unknown;
     private controller: AbortController | null = null;
+    /* The rows that said why they cannot be taken, by id. */
+    private refusals = new Map<string, string>();
+    private attempting = false;
 
     constructor(language: EditorLanguage, timers: Timers = realTimers) {
         this.language = language;
@@ -59,6 +67,7 @@ export class PickFeature {
             return;
         }
         this.spec = spec;
+        this.refusals = new Map();
         this.ids = ids;
         this.active = spec.active !== undefined && ids.includes(spec.active) ? spec.active : ids[0]!;
         this.publish(null);
@@ -84,11 +93,31 @@ export class PickFeature {
     /* Takes a row, by a click or Enter. */
     choose(id: string): void {
         const spec = this.spec;
-        if (spec === null || !this.ids.includes(id)) {
+        if (spec === null || !this.ids.includes(id) || this.attempting) {
             return;
         }
-        this.close();
-        spec.accept(id);
+        if (spec.attempt === undefined) {
+            this.close();
+            spec.accept(id);
+            return;
+        }
+        this.attempting = true;
+        void spec
+            .attempt(id)
+            .catch(() => null)
+            .then((reason) => {
+                this.attempting = false;
+                if (this.spec !== spec) {
+                    return;
+                }
+                if (reason === null) {
+                    this.close();
+                    spec.accept(id);
+                    return;
+                }
+                this.refusals.set(id, reason);
+                this.publish(null);
+            });
     }
 
     private activate(id: string): void {
@@ -161,6 +190,8 @@ export class PickFeature {
         if (spec === null) {
             return;
         }
-        this.language.popups.setState({ pick: { anchor: spec.anchor, groups: spec.groups, active: this.active, preview, title: spec.title ?? null } });
+        const refusal = this.refusals.get(this.active);
+        const shown = refusal === undefined ? preview : { removed: [], added: [], note: null, refusal };
+        this.language.popups.setState({ pick: { anchor: spec.anchor, groups: spec.groups, active: this.active, preview: shown, title: spec.title ?? null } });
     }
 }

@@ -17,6 +17,7 @@ const TABLE = {
     'parameter-info': { menu: 'code', key: 'parameterInfo', shortcut: CANVAS_SHORTCUTS.parameterInfo },
     'quick-info': { menu: 'code', key: 'quickInfo', shortcut: CANVAS_SHORTCUTS.quickInfo },
     'code-actions': { menu: 'code', key: 'codeActions', shortcut: CANVAS_SHORTCUTS.codeActions },
+    'refactor-this': { menu: 'code', key: 'refactorThis', shortcut: CANVAS_SHORTCUTS.refactorThis },
     'rename-symbol': { menu: 'code', key: 'renameSymbol', shortcut: CANVAS_SHORTCUTS.rename },
     'organize-imports': { menu: 'code', key: 'organizeImports', shortcut: CANVAS_SHORTCUTS.organizeImports },
     'format-document': { menu: 'code', key: 'formatDocument', shortcut: CANVAS_SHORTCUTS.formatDocument },

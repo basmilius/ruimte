@@ -1,4 +1,5 @@
 import i18next from 'i18next';
+import { moveFile } from '@/state/file-moves';
 import { endpointKey } from '@/state/keys';
 import { textDrafts } from '@/state/text-drafts';
 import { useToasts } from '@/state/toasts';
@@ -13,7 +14,7 @@ function nameOf(path: string): string {
 }
 
 /* The files of one machine as the editors keep their text: a draft where there is one, and otherwise what the machine has. */
-export function draftFiles(endpointId: string, transport: Transport): ProjectFiles {
+export function draftFiles(endpointId: string, transport: Transport, projectId: string | null = null): ProjectFiles {
     return {
         read: async (path) => {
             const draft = textDrafts.draft(endpointId, path);
@@ -25,6 +26,23 @@ export function draftFiles(endpointId: string, transport: Transport): ProjectFil
                 return read.kind === 'text' ? { text: read.text, mtime: read.mtime } : null;
             } catch {
                 return null;
+            }
+        },
+        save: async (files) => {
+            for (const file of files) {
+                textDrafts.stage(endpointId, file.path, file.disk, file.text);
+                if (!(await textDrafts.save(endpointId, file.path))) {
+                    return i18next.t('panels:language.edit.notSaved', { name: nameOf(file.path) });
+                }
+            }
+            return null;
+        },
+        rename: async (from, to) => {
+            try {
+                await moveFile(transport, endpointId, projectId, from, to, { edits: false, focus: true });
+                return null;
+            } catch (error) {
+                return error instanceof Error ? error.message : String(error);
             }
         },
         stage: (files: readonly StagedFile[]) => {

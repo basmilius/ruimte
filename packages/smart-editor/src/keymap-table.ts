@@ -109,6 +109,7 @@ export const KEYMAP = {
     parameterInfo: bind('Mod+P'),
     quickInfo: bind('Ctrl+J', 'Ctrl+Q'),
     codeActions: bind('Alt+Enter'),
+    refactorThis: bind('Ctrl+T', 'Ctrl+Alt+Shift+T'),
     renameSymbol: bind('Shift+F6'),
     organizeImports: bind('Ctrl+Alt+O'),
     formatDocument: bind('Mod+Alt+L'),

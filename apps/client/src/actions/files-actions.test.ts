@@ -4,6 +4,7 @@ import type { FsEntry, RequestMap, RequestType } from '@ruimte/contracts';
 import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import type { FilesMachine } from './files-actions';
 import { useDocument } from '@/state/document';
+import { TransportError } from '@/transport/transport';
 
 type Answers = { [Type in RequestType]?: (payload: RequestMap[Type]['payload']) => RequestMap[Type]['result'] };
 
@@ -18,6 +19,7 @@ function fakes(answers: Answers = {}, overrides: Partial<FilesMachine> = {}) {
     const copied: string[] = [];
     const revealed: string[] = [];
     const forgotten: string[] = [];
+    const moved: Array<[string, string]> = [];
     const machine: Partial<FilesMachine> = {
         transport: () =>
             ({
@@ -36,10 +38,11 @@ function fakes(answers: Answers = {}, overrides: Partial<FilesMachine> = {}) {
         open: (path, line) => void open.set(path, line),
         close: (path) => void open.delete(path),
         forget: (path) => void forgotten.push(path),
+        move: async (from, to) => void moved.push([from, to]),
         reveal: (path) => void revealed.push(path),
         ...overrides
     };
-    return { asked, open, copied, revealed, forgotten, registry: createClientActionRegistry(useDocument, { files: machine }) };
+    return { asked, open, copied, revealed, forgotten, moved, registry: createClientActionRegistry(useDocument, { files: machine }) };
 }
 
 function completed<Result extends ActionResult>(result: Result): Extract<Result, { status: 'completed' }> {
@@ -150,6 +153,25 @@ describe('file actions', () => {
             { type: 'fs.delete', payload: { path: '/repo/docs/b.md' } }
         ]);
         expect(forgotten).toEqual(['/repo/src', '/repo/docs/b.md']);
+    });
+
+    test('only a person renames or moves, by the absolute paths, and a refusal of the machine comes back as one', async () => {
+        const { registry, moved } = fakes();
+        expect(await registry.execute('file.rename', { path: 'src/a.ts', to: 'src/b.ts' }, VOICE_ACTION_CALL)).toMatchObject({
+            error: { code: 'forbidden-action' }
+        });
+        expect(moved).toEqual([]);
+        completed(await registry.execute('file.rename', { path: 'src/a.ts', to: 'lib/a.ts' }, PERSON_ACTION_CALL));
+        expect(moved).toEqual([['/repo/src/a.ts', '/repo/lib/a.ts']]);
+        const refusing = fakes(
+            {},
+            {
+                move: async () => {
+                    throw new TransportError('exists', 'That name is taken');
+                }
+            }
+        );
+        expect(await refusing.registry.execute('file.rename', { path: 'a', to: 'b' }, PERSON_ACTION_CALL)).toMatchObject({ error: { code: 'exists' } });
     });
 
     test('only a person creates, by asking the machine for the absolute path', async () => {

@@ -1,13 +1,5 @@
 import type { Editor, EditorContentChange } from '@ruimte/smart-editor';
-import {
-    fileUriToPath,
-    minimalChange,
-    planWorkspaceEdit,
-    type ApplyWorkspaceEditResult,
-    type DocumentSnapshot,
-    type TextEdit,
-    type WorkspaceEdit
-} from '@ruimte/smart-editor-lsp';
+import { applyTextEdits, fileUriToPath, type ApplyWorkspaceEditResult, type RenameFile, type TextEdit, type WorkspaceEdit } from '@ruimte/smart-editor-lsp';
 import type { DiskText } from '@/state/text-drafts';
 
 /* A file that changed without an editor of this project holding it: its new text waits as an unsaved draft. */
@@ -22,6 +14,10 @@ export interface ProjectFiles {
     read(path: string): Promise<DiskText | null>;
     /* Puts the new texts in the files' drafts and tells the person. Nothing is written to disk. */
     stage(files: readonly StagedFile[]): void;
+    /* Writes the new texts through the machine; the reason of the first file that could not be saved, or null. */
+    save(files: readonly StagedFile[]): Promise<string | null>;
+    /* Moves a file or folder on the machine, with what is open on it, and tells the servers it moved; the reason it could not, or null. */
+    rename(from: string, to: string): Promise<string | null>;
 }
 
 export interface WorkspaceEditHost {
@@ -34,94 +30,165 @@ function refused(failureReason: string): ApplyWorkspaceEditResult {
     return { applied: false, failureReason };
 }
 
-/* The text edits of an edit per document, as the entries a document has in it; null when it creates, renames or deletes a file. */
-export function entriesOf(edit: WorkspaceEdit): Map<string, TextEdit[][]> | null {
-    const entries = new Map<string, TextEdit[][]>();
-    const add = (uri: string, edits: TextEdit[]): void => {
-        entries.set(uri, [...(entries.get(uri) ?? []), edits]);
-    };
+/* One thing an edit does, in the order it says: text edits of a document, or a file that moves. */
+type Step =
+    | { readonly kind: 'edits'; readonly uri: string; readonly edits: TextEdit[] }
+    | { readonly kind: 'rename'; readonly oldUri: string; readonly newUri: string };
+
+/* The steps of an edit; null when it creates or deletes a file, which an edit is not applied with. */
+function stepsOf(edit: WorkspaceEdit): Step[] | null {
+    const steps: Step[] = [];
     for (const change of edit.documentChanges ?? []) {
-        if ('kind' in change) {
+        if ('textDocument' in change) {
+            steps.push({ kind: 'edits', uri: change.textDocument.uri, edits: change.edits });
+        } else if (change.kind === 'rename') {
+            steps.push({ kind: 'rename', oldUri: change.oldUri, newUri: change.newUri });
+        } else {
             return null;
         }
-        add(change.textDocument.uri, change.edits as TextEdit[]);
     }
     if (edit.documentChanges === undefined) {
         for (const [uri, edits] of Object.entries(edit.changes ?? {})) {
-            add(uri, edits);
+            steps.push({ kind: 'edits', uri, edits });
+        }
+    }
+    return steps;
+}
+
+/* The text edits of an edit per document, as the entries a document has in it; null when it creates or deletes a file. */
+export function entriesOf(edit: WorkspaceEdit): Map<string, TextEdit[][]> | null {
+    const steps = stepsOf(edit);
+    if (steps === null) {
+        return null;
+    }
+    const entries = new Map<string, TextEdit[][]>();
+    for (const step of steps) {
+        if (step.kind === 'edits') {
+            entries.set(step.uri, [...(entries.get(step.uri) ?? []), step.edits]);
         }
     }
     return entries;
+}
+
+/* The files an edit moves, which a preview of lines cannot show. */
+export function renamesOf(edit: WorkspaceEdit): RenameFile[] {
+    return (edit.documentChanges ?? []).filter((change): change is RenameFile => 'kind' in change && change.kind === 'rename');
 }
 
 function contentChangeOf(edit: TextEdit): EditorContentChange {
     return { range: edit.range, text: edit.newText };
 }
 
-function spanChange(before: string, after: string): EditorContentChange {
-    const change = minimalChange(before, after);
-    return { range: change.range!, text: change.text };
+/* What a step of text edits does to one document, worked out before anything changes. */
+interface PlannedEdits {
+    readonly kind: 'edits';
+    readonly uri: string;
+    readonly edits: TextEdit[];
+    readonly before: string;
+    readonly after: string;
+    /* Set when no editor holds the document: what the machine has, which the new text is a draft of. */
+    readonly disk: DiskText | null;
 }
 
+type Planned = PlannedEdits | { readonly kind: 'rename'; readonly oldPath: string; readonly newPath: string };
+
 /*
- * Applies an LSP workspace edit on the client. A file an editor holds takes its edits as one undo step,
- * and any other file gets its new text as an unsaved draft that a person saves: nothing is written to
- * disk here. Creating, renaming and deleting files are refused for now. The edit is checked against
- * every text first, so one that does not fit changes nothing.
+ * Applies an LSP workspace edit on the client, step by step in the order it says. A file an editor holds takes
+ * its edits as one undo step. Any other file gets its new text as an unsaved draft that a person saves, and
+ * nothing is written to disk on a server's word alone, unless the edit also moves a file: the edits and the
+ * move are then one change, so every file is saved through the machine and the move is made there. The
+ * edit is checked against every text first, so one that does not fit changes nothing.
  */
 export async function applyWorkspaceEdit(edit: WorkspaceEdit, host: WorkspaceEditHost): Promise<ApplyWorkspaceEditResult> {
-    const entries = entriesOf(edit);
-    if (entries === null) {
-        return refused('Creating, renaming and deleting files is not supported yet');
+    const steps = stepsOf(edit);
+    if (steps === null) {
+        return refused('Creating and deleting files is not supported yet');
     }
-    const snapshots = new Map<string, DocumentSnapshot>();
-    const disks = new Map<string, DiskText>();
-    for (const uri of entries.keys()) {
-        const editor = host.editorOf(uri);
-        if (editor) {
-            snapshots.set(uri, { text: editor.getText(), version: null });
-            continue;
-        }
-        const path = fileUriToPath(uri);
-        const disk = path === null || host.files === null ? null : await host.files.read(path);
-        if (disk === null) {
-            return refused(`${uri} cannot be read as text`);
-        }
-        disks.set(uri, disk);
-        snapshots.set(uri, { text: disk.text, version: null });
+    const planned = await plan(steps, host);
+    if (typeof planned === 'string') {
+        return refused(planned);
     }
-    let planned;
-    try {
-        planned = planWorkspaceEdit(
-            { documentChanges: [...entries].flatMap(([uri, list]) => list.map((edits) => ({ textDocument: { uri, version: null }, edits }))) },
-            snapshots
-        );
-    } catch (error) {
-        return refused(error instanceof Error ? error.message : String(error));
-    }
+    const moving = planned.some((item) => item.kind === 'rename');
     const staged: StagedFile[] = [];
-    for (const plan of planned) {
-        if (plan.text === plan.before) {
-            continue;
-        }
-        const editor = host.editorOf(plan.uri);
-        if (editor) {
-            const list = entries.get(plan.uri) ?? [];
-            // One entry keeps the edits apart, so the caret and what is drawn over the text stay where they were between them.
-            const changes = list.length === 1 ? list[0]!.map(contentChangeOf) : [spanChange(plan.before, plan.text)];
-            if (!editor.applyEdits(changes)) {
-                return refused(`${plan.uri} is read only`);
+    for (const item of planned) {
+        if (item.kind === 'rename') {
+            const reason = await host.files!.rename(item.oldPath, item.newPath);
+            if (reason !== null) {
+                return refused(reason);
             }
             continue;
         }
-        const path = fileUriToPath(plan.uri);
-        const disk = disks.get(plan.uri);
-        if (path !== null && disk !== undefined) {
-            staged.push({ path, disk, text: plan.text });
+        if (item.after === item.before) {
+            continue;
+        }
+        const editor = host.editorOf(item.uri);
+        if (editor) {
+            // The edits stay apart, so the caret and what is drawn over the text stay where they were between them.
+            if (!editor.applyEdits(item.edits.map(contentChangeOf))) {
+                return refused(`${item.uri} is read only`);
+            }
+            continue;
+        }
+        const path = fileUriToPath(item.uri);
+        if (path === null || item.disk === null) {
+            continue;
+        }
+        const file = { path, disk: item.disk, text: item.after };
+        if (!moving) {
+            staged.push(file);
+            continue;
+        }
+        const reason = await host.files!.save([file]);
+        if (reason !== null) {
+            return refused(reason);
         }
     }
     if (staged.length > 0) {
         host.files?.stage(staged);
     }
     return { applied: true };
+}
+
+/* Reads every text the edit needs and works out what each step leaves, or says why it does not fit. */
+async function plan(steps: readonly Step[], host: WorkspaceEditHost): Promise<Planned[] | string> {
+    const texts = new Map<string, { text: string; disk: DiskText | null }>();
+    // A file that has moved is read where it still stands: nothing moves until the plan is made.
+    const origins = new Map<string, string>();
+    const planned: Planned[] = [];
+    for (const step of steps) {
+        if (step.kind === 'rename') {
+            const oldPath = fileUriToPath(step.oldUri);
+            const newPath = fileUriToPath(step.newUri);
+            if (oldPath === null || newPath === null || host.files === null) {
+                return `${step.oldUri} cannot be moved from here`;
+            }
+            origins.set(step.newUri, origins.get(step.oldUri) ?? step.oldUri);
+            planned.push({ kind: 'rename', oldPath, newPath });
+            continue;
+        }
+        const source = origins.get(step.uri) ?? step.uri;
+        if (!texts.has(source)) {
+            const editor = host.editorOf(source);
+            if (editor) {
+                texts.set(source, { text: editor.getText(), disk: null });
+            } else {
+                const path = fileUriToPath(source);
+                const disk = path === null || host.files === null ? null : await host.files.read(path);
+                if (disk === null) {
+                    return `${source} cannot be read as text`;
+                }
+                texts.set(source, { text: disk.text, disk });
+            }
+        }
+        const held = texts.get(source)!;
+        let after: string;
+        try {
+            after = applyTextEdits(held.text, step.edits);
+        } catch (error) {
+            return error instanceof Error ? error.message : String(error);
+        }
+        planned.push({ kind: 'edits', uri: step.uri, edits: step.edits, before: held.text, after, disk: held.disk });
+        texts.set(source, { text: after, disk: held.disk });
+    }
+    return planned;
 }

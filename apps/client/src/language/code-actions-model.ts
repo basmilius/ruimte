@@ -1,10 +1,14 @@
 import { applyTextEdits, type CodeAction, type Command, type Diagnostic, type Range, type WorkspaceEdit } from '@ruimte/smart-editor-lsp';
 import { comparePositions } from './diagnostics-model';
-import { entriesOf } from './workspace-edit';
+import { entriesOf, renamesOf } from './workspace-edit';
 
-export type ActionGroup = 'quickfix' | 'refactor' | 'source' | 'other';
+export type ActionGroup = 'quickfix' | 'rewrite' | 'extract' | 'inline' | 'move' | 'refactor' | 'source' | 'other';
 
-export const ACTION_GROUPS: readonly ActionGroup[] = ['quickfix', 'refactor', 'source', 'other'];
+/* The order of the list under the caret: the fixes and the rewrites that are one keystroke away first, the refactorings after them. */
+export const ACTION_GROUPS: readonly ActionGroup[] = ['quickfix', 'rewrite', 'extract', 'inline', 'move', 'refactor', 'source', 'other'];
+
+/* The order of Refactor This: what changes the structure of the code first, the rewrites after it. */
+export const REFACTOR_GROUPS: readonly ActionGroup[] = ['extract', 'inline', 'move', 'rewrite', 'refactor'];
 
 /* An action of a server with the id its row has in the list. */
 export interface ActionEntry {
@@ -13,10 +17,15 @@ export interface ActionEntry {
     readonly group: ActionGroup;
 }
 
-/* The kinds nest by dots: `refactor.extract` is a refactor and `source.organizeImports` a source action. */
+/* The kinds nest by dots: `refactor.extract.function` is an extraction and `source.organizeImports` a source action. */
 export function groupOf(kind: string | undefined): ActionGroup {
     if (kind === 'quickfix' || kind?.startsWith('quickfix.')) {
         return 'quickfix';
+    }
+    for (const group of ['extract', 'inline', 'move', 'rewrite'] as const) {
+        if (kind === `refactor.${group}` || kind?.startsWith(`refactor.${group}.`)) {
+            return group;
+        }
     }
     if (kind === 'refactor' || kind?.startsWith('refactor.')) {
         return 'refactor';
@@ -31,12 +40,12 @@ export function groupOf(kind: string | undefined): ActionGroup {
  * What a server answered, as the rows of a list. A bare command becomes an action of its own, one a server
  * marked disabled is left out, and each group lists the preferred actions first, in the order the server gave.
  */
-export function actionsOf(result: readonly (CodeAction | Command)[] | null): ActionEntry[] {
+export function actionsOf(result: readonly (CodeAction | Command)[] | null, order: readonly ActionGroup[] = ACTION_GROUPS): ActionEntry[] {
     const entries = (result ?? [])
         .map((item) => (typeof item.command === 'string' ? ({ title: item.title, command: item as Command } satisfies CodeAction) : (item as CodeAction)))
         .filter((action) => action.disabled === undefined)
         .map((action, index) => ({ id: String(index), action, group: groupOf(action.kind) }));
-    return ACTION_GROUPS.flatMap((group) => {
+    return order.flatMap((group) => {
         const own = entries.filter((entry) => entry.group === group);
         return [...own.filter((entry) => entry.action.isPreferred === true), ...own.filter((entry) => entry.action.isPreferred !== true)];
     });
@@ -88,6 +97,8 @@ export interface EditPreview {
     readonly hiddenLines: number;
     /* The other files the edit reaches. */
     readonly otherFiles: number;
+    /* The files it moves. */
+    readonly moves: number;
 }
 
 const PREVIEW_LINES = 3;
@@ -96,13 +107,14 @@ function linesOf(text: string): string[] {
     return text.split(/\r\n|\r|\n/);
 }
 
-/* Null when the edit changes nothing, or creates, renames or deletes a file, which a preview of lines cannot show. */
+/* Null when the edit changes nothing, or creates or deletes a file, which a preview of lines cannot show. */
 export function previewOf(text: string, edit: WorkspaceEdit, uri: string): EditPreview | null {
     const entries = entriesOf(edit);
     if (entries === null) {
         return null;
     }
     const own = entries.get(uri);
+    const moves = renamesOf(edit).length;
     const otherFiles = [...entries.keys()].filter((key) => key !== uri).length;
     let removed: string[] = [];
     let added: string[] = [];
@@ -126,9 +138,9 @@ export function previewOf(text: string, edit: WorkspaceEdit, uri: string): EditP
         removed = before.slice(head, before.length - tail);
         added = next.slice(head, next.length - tail);
     }
-    if (removed.length === 0 && added.length === 0 && otherFiles === 0) {
+    if (removed.length === 0 && added.length === 0 && otherFiles === 0 && moves === 0) {
         return null;
     }
     const hiddenLines = Math.max(0, removed.length - PREVIEW_LINES) + Math.max(0, added.length - PREVIEW_LINES);
-    return { removed: removed.slice(0, PREVIEW_LINES), added: added.slice(0, PREVIEW_LINES), hiddenLines, otherFiles };
+    return { removed: removed.slice(0, PREVIEW_LINES), added: added.slice(0, PREVIEW_LINES), hiddenLines, otherFiles, moves };
 }

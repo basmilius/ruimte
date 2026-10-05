@@ -50,7 +50,9 @@ async function setup(options: { providers?: Record<string, unknown>; prepare?: u
     });
     const project = new ProjectLanguage(transport, 'p1', '/work/app', {
         read: async (path) => (path === '/work/app/src/b.ts' ? { text: 'a\nb\nweights', mtime: 3 } : null),
-        stage: () => undefined
+        stage: () => undefined,
+        save: async () => null,
+        rename: async () => null
     });
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: TEXT, theme: 'light' });
     const language = new EditorLanguage(project, editor, uri, 'typescript');

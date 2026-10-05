@@ -14,6 +14,7 @@ const RUNNERS: Record<LanguageCommandId, (language: EditorLanguage) => void> = {
     'recent-locations': (language) => language.history.recent(),
     'peek-definition': (language) => void language.peek.openDefinition(),
     'code-actions': (language) => void language.codeActions.open(),
+    'refactor-this': (language) => void language.codeActions.refactorThis(),
     'rename-symbol': (language) => void language.rename.start(),
     'go-to-symbol': (language) => void language.symbolPicker.open(),
     'go-to-definition': (language) => void language.navigation.go('definition'),

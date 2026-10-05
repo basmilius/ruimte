@@ -42,6 +42,7 @@ export const CANVAS_SHORTCUTS = {
     nextHighlight: requiredShortcut('nextHighlight'),
     previousHighlight: requiredShortcut('previousHighlight'),
     codeActions: requiredShortcut('codeActions'),
+    refactorThis: requiredShortcut('refactorThis'),
     quickInfo: requiredShortcut('quickInfo'),
     triggerCompletion: requiredShortcut('triggerCompletion'),
     parameterInfo: requiredShortcut('parameterInfo'),

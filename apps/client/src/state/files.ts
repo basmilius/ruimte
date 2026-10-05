@@ -100,6 +100,21 @@ export function pinTab(state: TabState, key: string, pinned: boolean): TabState 
     };
 }
 
+/* The tabs of a file or folder that moved follow it, a diff of the file too since its key names the path. A commit or a whole checkout is no file. */
+export function moveTabs(state: TabState, from: string, to: string): TabState {
+    const renamed = new Map<string, string>();
+    const tabs = state.tabs.map((tab) => {
+        const path = tab.path === from ? to : tab.path.startsWith(`${from}/`) ? `${to}${tab.path.slice(from.length)}` : null;
+        if (path === null || tab.view?.commit !== undefined || isCheckoutDiff(tab.path, tab.view)) {
+            return tab;
+        }
+        const key = tabKey(path, tab.view);
+        renamed.set(tab.key, key);
+        return { ...tab, path, key };
+    });
+    return { tabs, active: (state.active !== null ? renamed.get(state.active) : undefined) ?? state.active };
+}
+
 export interface RevealLineRequest {
     /* The tab this is about; a file that is not the one up ignores it. */
     key: string;
@@ -165,6 +180,8 @@ interface FilesStore extends TabState {
     open(path: string, limit: number, view?: FileTabView, line?: number, options?: OpenOptions): void;
     /* The tab without the cell, for a caller that puts the files on the grid itself, such as a drop. */
     openHidden(path: string, limit: number, view?: FileTabView, line?: number, options?: OpenOptions): void;
+    /* A file or folder moved on the machine; its tabs go with it. */
+    moved(from: string, to: string): void;
     close(key: string): void;
     closeOthers(key: string): void;
     closeAll(): void;
@@ -221,6 +238,9 @@ export const useFiles = create<FilesStore>((set, get) => ({
         const unsaved = (tab: FileTab): boolean => tab.view === undefined && textDrafts.isUnsaved(endpointId, tab.path);
         const focusRequest = options?.focus === false ? get().focusRequest : get().focusRequest + 1;
         set({ ...openTab(get(), path, limit, view, unsaved), focusRequest, revealLine: reveal });
+    },
+    moved(from, to) {
+        set(moveTabs(get(), from, to));
     },
     /* A file with unsaved changes is saved first, and closes once it is (`unsaved-close.ts`). */
     close(key) {

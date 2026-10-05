@@ -95,6 +95,8 @@ export interface PickPreview {
     readonly added: readonly string[];
     /* Other places the change reaches, such as the files besides this one. */
     readonly note: string | null;
+    /* Why the action cannot be taken here, which the server said; nothing would change. */
+    readonly refusal?: string;
 }
 
 /* A list under a character of the editor; Enter takes the active row, Escape closes it. */

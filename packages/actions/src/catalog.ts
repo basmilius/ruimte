@@ -2964,6 +2964,19 @@ export const ACTION_DEFINITIONS = {
         // What was trashed: a folder stands for what was selected inside it too.
         output: z.object({ paths: z.array(z.string()) })
     },
+    'file.rename': {
+        title: 'Rename or move a file or folder',
+        description:
+            'Renames or moves a file or folder of the project. The language servers of the project first say what the move changes, such as the namespace and the imports of a PHP class, and those edits are made before the file moves. A name that is taken is refused.',
+        effect: 'shared',
+        domain: 'files',
+        actors: PERSON,
+        input: z.object({
+            path: filePath.describe('The file or folder, relative to the project folder or absolute'),
+            to: filePath.describe('Where it goes, relative to the project folder or absolute')
+        }),
+        output: z.object({ path: z.string().describe('Where it is now'), to: z.string() })
+    },
     'file.copyPath': {
         title: 'Copy a path',
         description: 'Copies the path of a file to the clipboard, whole or relative to the project folder.',

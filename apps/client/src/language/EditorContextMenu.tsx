@@ -103,10 +103,11 @@ export function EditorContextMenu({ language, view }: { language: EditorLanguage
                                     <Icon icon={Wand2} size={14} /> {panels('language.context.refactor')}
                                 </ContextMenu.SubmenuTrigger>
                                 <ContextMenu.Popup className="min-w-48">
-                                    {view.refactors.map((entry) => (
-                                        <ContextMenu.Item key={entry.id} onClick={() => void language.codeActions.apply(entry)}>
-                                            {entry.action.title}
-                                        </ContextMenu.Item>
+                                    {view.refactors.map((entry, position) => (
+                                        <Fragment key={entry.id}>
+                                            {position > 0 && view.refactors[position - 1]!.group !== entry.group && <ContextMenu.Separator />}
+                                            <ContextMenu.Item onClick={() => void language.codeActions.apply(entry)}>{entry.action.title}</ContextMenu.Item>
+                                        </Fragment>
                                     ))}
                                 </ContextMenu.Popup>
                             </ContextMenu.SubmenuRoot>

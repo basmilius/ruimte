@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { actionsOf, diagnosticsAt, fixableOnLine, groupOf, isHint, mergeEntries, previewOf } from './code-actions-model';
+import { REFACTOR_GROUPS, actionsOf, diagnosticsAt, fixableOnLine, groupOf, isHint, mergeEntries, previewOf } from './code-actions-model';
 
 const range = (line: number, start: number, end: number) => ({ start: { line, character: start }, end: { line, character: end } });
 const uri = 'file:///work/a.ts';
@@ -7,7 +7,13 @@ const uri = 'file:///work/a.ts';
 describe('code action groups', () => {
     test('files the kinds that nest by dots under their parent', () => {
         expect(groupOf('quickfix')).toBe('quickfix');
-        expect(groupOf('refactor.extract.function')).toBe('refactor');
+        expect(groupOf('refactor.extract.function')).toBe('extract');
+        expect(groupOf('refactor.inline')).toBe('inline');
+        expect(groupOf('refactor.move')).toBe('move');
+        expect(groupOf('refactor.rewrite.arrow')).toBe('rewrite');
+        expect(groupOf('refactor')).toBe('refactor');
+        expect(groupOf('refactor.surround')).toBe('refactor');
+        expect(groupOf('refactor.extraction')).toBe('refactor');
         expect(groupOf('source.organizeImports')).toBe('source');
         expect(groupOf('sourceish')).toBe('other');
         expect(groupOf(undefined)).toBe('other');
@@ -22,9 +28,21 @@ describe('code action groups', () => {
             { title: 'Run', command: 'x.run' }
         ]);
         expect(entries.map((entry) => entry.action.title)).toEqual(['Best fix', 'Second fix', 'Extract', 'Run']);
-        expect(entries.map((entry) => entry.group)).toEqual(['quickfix', 'quickfix', 'refactor', 'other']);
+        expect(entries.map((entry) => entry.group)).toEqual(['quickfix', 'quickfix', 'extract', 'other']);
         expect(entries[3]!.action.command).toEqual({ title: 'Run', command: 'x.run' });
         expect(new Set(entries.map((entry) => entry.id)).size).toBe(4);
+    });
+
+    test('lists the rewrites after the fixes and the refactorings after them, and Refactor This puts the structure first', () => {
+        const answer = [
+            { title: 'Rewrite', kind: 'refactor.rewrite' },
+            { title: 'Move', kind: 'refactor.move' },
+            { title: 'Fix', kind: 'quickfix' },
+            { title: 'Inline', kind: 'refactor.inline' },
+            { title: 'Extract', kind: 'refactor.extract' }
+        ];
+        expect(actionsOf(answer).map((entry) => entry.action.title)).toEqual(['Fix', 'Rewrite', 'Extract', 'Inline', 'Move']);
+        expect(actionsOf(answer, REFACTOR_GROUPS).map((entry) => entry.action.title)).toEqual(['Extract', 'Inline', 'Move', 'Rewrite']);
     });
 
     test('merges lists in the order of one answer, drops an action with the same kind and title, and numbers the rows again', () => {
@@ -77,7 +95,13 @@ describe('preview of an edit', () => {
 
     test('shows the lines an edit replaces and the lines that replace them', () => {
         const edit = { changes: { [uri]: [{ range: range(1, 15, 18), newText: 'fresh' }] } };
-        expect(previewOf(text, edit, uri)).toEqual({ removed: ['const salary = old(x);'], added: ['const salary = fresh(x);'], hiddenLines: 0, otherFiles: 0 });
+        expect(previewOf(text, edit, uri)).toEqual({
+            removed: ['const salary = old(x);'],
+            added: ['const salary = fresh(x);'],
+            hiddenLines: 0,
+            otherFiles: 0,
+            moves: 0
+        });
     });
 
     test('cuts a long change short and counts the files it reaches besides this one', () => {
@@ -92,6 +116,11 @@ describe('preview of an edit', () => {
         expect(preview.added).toHaveLength(3);
         expect(preview.hiddenLines).toBe(3);
         expect(preview.otherFiles).toBe(1);
+    });
+
+    test('counts the files an edit moves, and shows them even when no line changes', () => {
+        const edit = { documentChanges: [{ kind: 'rename' as const, oldUri: uri, newUri: 'file:///work/b.ts' }] };
+        expect(previewOf(text, edit, uri)).toEqual({ removed: [], added: [], hiddenLines: 0, otherFiles: 0, moves: 1 });
     });
 
     test('has none for an edit that changes nothing or one that cannot be shown', () => {

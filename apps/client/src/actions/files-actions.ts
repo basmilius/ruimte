@@ -5,6 +5,7 @@ import { desktop } from '@/desktop/bridge';
 import { canCopyFilesOn } from '@/shell/panels/file-copy';
 import { absoluteOf, basenameOf, isAbsolutePath, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
 import { useFiles } from '@/state/files';
+import { moveFile } from '@/state/file-moves';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
@@ -27,6 +28,8 @@ export interface FilesMachine {
     close(path: string): void;
     /* Closes the tabs of a path that is gone, folder contents included, dropping drafts nobody can save any more. */
     forget(path: string): void;
+    /* Moves a file or folder on the machine, with what is open on it and what the language servers change for it. */
+    move(from: string, to: string): Promise<void>;
     reveal(path: string): void;
 }
 
@@ -60,6 +63,14 @@ const LIVE_MACHINE: FilesMachine = {
                 useFiles.getState().close(tab.key);
             }
         }
+    },
+    move: async (from, to) => {
+        const endpointId = currentEndpointId();
+        const transport = machineFor(endpointId)?.transport;
+        if (transport === undefined) {
+            throw new ActionRefusal('no-machine', 'The machine this project runs on is not connected.');
+        }
+        await moveFile(transport, endpointId, useProject.getState().current?.projectId ?? null, from, to, { edits: true });
     },
     reveal: (path) => useFiles.getState().revealInFiles(path)
 };
@@ -101,8 +112,8 @@ function outermostPaths(machine: FilesMachine, paths: readonly string[], actor: 
 
 /*
  * What a person does with the files of a project, as actions: the files panel, its search, find in
- * files and the menus a file has on a tab, a node and a view of its own. None of them writes over or
- * renames a file; only a person creates one or deletes one, to the trash. Revealing a file in the machine's file manager
+ * files and the menus a file has on a tab, a node and a view of its own. None of them writes over a
+ * file; only a person creates one, renames or moves one, or deletes one, to the trash. Revealing a file in the machine's file manager
  * stays the menu's own: it acts on the screen of whichever machine the project runs on.
  */
 export function filesActions(overrides: Partial<FilesMachine> = {}): ActionHandlers<void> {
@@ -218,6 +229,16 @@ export function filesActions(overrides: Partial<FilesMachine> = {}): ActionHandl
                 machine.forget(target);
             }
             return { output: { paths: targets } };
+        },
+        'file.rename': async ({ path, to }, { actor }) => {
+            const from = resolvedPath(machine, path, actor.kind);
+            const target = resolvedPath(machine, to, actor.kind);
+            try {
+                await machine.move(from, target);
+            } catch (error: unknown) {
+                throw asRefusal(error);
+            }
+            return { output: { path: target, to: target } };
         },
         'file.copyPath': async ({ path, relative }, { actor }) => {
             const absolute = resolvedPath(machine, path, actor.kind);

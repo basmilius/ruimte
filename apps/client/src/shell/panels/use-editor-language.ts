@@ -46,7 +46,7 @@ function useOwnLanguageId(enabled: boolean, path: string, language: string | und
         if (!enabled || projectId === null || folder === null) {
             return;
         }
-        const held = acquireProjectLanguage(transport, projectId, folder, draftFiles(endpointId, transport));
+        const held = acquireProjectLanguage(transport, projectId, folder, draftFiles(endpointId, transport, projectId));
         const stored = storedPathOf(folder, path);
         const read = (): void => holder.set(customLanguageIdOf(held.language.status.getSnapshot(), language, stored));
         read();
@@ -80,7 +80,7 @@ export function useEditorLanguage(editor: Editor | null, path: string, language:
         if (editor === null || projectId === null || folder === null || languageId === null) {
             return;
         }
-        const held = acquireProjectLanguage(transport, projectId, folder, draftFiles(endpointId, transport));
+        const held = acquireProjectLanguage(transport, projectId, folder, draftFiles(endpointId, transport, projectId));
         const editorLanguage = new EditorLanguage(held.language, editor, pathToFileUri(path), languageId);
         holder.set(editorLanguage);
         return () => {

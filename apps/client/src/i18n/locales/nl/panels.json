@@ -284,6 +284,32 @@
         "noMatch": "Geen bestanden die aan het filter voldoen.",
         "onlyHidden": "Alles in deze map is verborgen of genegeerd. Zet Verborgen en genegeerde bestanden tonen aan in het menu Meer.",
         "reading": "{{name}} lezen.",
+        "rename": {
+            "confirm": "Hernoemen",
+            "description": "Typ een nieuwe naam, of een pad in het project om het te verplaatsen. De language servers van het project passen eerst aan wat de verplaatsing raakt, zoals de namespace en de imports van een PHP-klasse.",
+            "failed": "Verplaatsen mislukt",
+            "fallback": "Dit hernoemen?",
+            "fileTitle": "{{name}} hernoemen",
+            "folderTitle": "De map {{name}} hernoemen",
+            "menu": "Hernoemen…",
+            "name": "Naam",
+            "refused": {
+                "bad-path": "Dat is geen pad dat de machine kan gebruiken.",
+                "exists": "Die naam is al in gebruik.",
+                "git-state": "Git bewaart zijn eigen staat daar, dus er verplaatst niets in of uit.",
+                "into-itself": "Een map kan niet in zichzelf.",
+                "language-failed": "Een language server kon de wijzigingen van de verplaatsing niet maken, dus er is niets verplaatst.",
+                "machine-state": "Dat hoort bij de machine en wordt niet vanaf hier verplaatst.",
+                "no-machine": "De machine waarop dit project draait is niet verbonden.",
+                "not-a-directory": "Een deel van dat pad is een bestand, geen map.",
+                "not-found": "Dat is er niet meer.",
+                "not-writable": "De machine kan daar niet schrijven.",
+                "outside-project": "Dat valt buiten dit project.",
+                "project-root": "De projectmap verplaats je buiten Ruimte.",
+                "ruimte-state": "Ruimte bewaart zijn eigen staat daar, dus er verplaatst niets in of uit."
+            },
+            "unsaved": "{{name}} heeft wijzigingen die niet konden worden opgeslagen, dus er is niets verplaatst."
+        },
         "showHidden": "Verborgen en genegeerde bestanden tonen",
         "searching": "Bestanden zoeken…",
         "searchFailed": "Bestanden zoeken is mislukt: {{reason}}"
@@ -618,7 +644,8 @@
             "staged_one": "{{count}} bestand gewijzigd en nog niet opgeslagen",
             "staged_other": "{{count}} bestanden gewijzigd en nog niet opgeslagen",
             "stagedMore": "{{names}} en nog {{count}}",
-            "saveAll": "Alles opslaan"
+            "saveAll": "Alles opslaan",
+            "notSaved": "{{name}} kon niet worden opgeslagen"
         },
         "actions": {
             "show": "Toon code actions",
@@ -632,8 +659,14 @@
             "moreLines": "nog {{count}} regels",
             "otherFiles_one": "en nog {{count}} bestand",
             "otherFiles_other": "en nog {{count}} bestanden",
+            "moves_one": "verplaatst {{count}} bestand",
+            "moves_other": "verplaatst {{count}} bestanden",
             "groups": {
                 "quickfix": "Quick fix",
+                "rewrite": "Herschrijven",
+                "extract": "Extraheren",
+                "inline": "Inline",
+                "move": "Verplaatsen",
                 "refactor": "Refactor",
                 "source": "Source",
                 "other": "Overig"

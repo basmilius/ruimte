@@ -13,6 +13,7 @@ import {
     type ReactNode
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { FileTreeDropResult } from '@pierre/trees';
 import { FileTree, useFileTree } from '@pierre/trees/react';
 import {
     ChevronsDownUp,
@@ -27,6 +28,7 @@ import {
     FolderPlus,
     Frame,
     MoreHorizontal,
+    Pencil,
     RefreshCw,
     Search,
     Trash2
@@ -48,6 +50,7 @@ import {
     type NameFault,
     type NewEntryKind
 } from '@/shell/panels/file-create';
+import { dropMovesOf } from '@/shell/panels/file-rename';
 import { NewEntryRow } from '@/shell/panels/NewEntryRow';
 import type { CopyTarget } from '@/shell/panels/file-copy';
 import {
@@ -57,6 +60,7 @@ import {
     basenameOf,
     buildTreeInput,
     compareRows,
+    dirnameOf,
     gitStatusEntries,
     isDirectoryPath,
     mergeExpanded,
@@ -160,6 +164,10 @@ export function FilesPanel() {
     const [menuTargets, setMenuTargets] = useState<string[]>([]);
     const [deleting, setDeleting] = useState<{ absolutes: string[]; directory: boolean } | null>(null);
     const [deleteBusy, setDeleteBusy] = useState(false);
+    /* The entry whose name is being changed. */
+    const [renaming, setRenaming] = useState<{ absolute: string; directory: boolean } | null>(null);
+    /* The tree takes its options once, so a drop reaches the panel's current state through this. */
+    const dropRef = useRef<(event: FileTreeDropResult) => void>(() => undefined);
     /* The entry being named: where it is made and what kind it is. The tree holds a row open for it. */
     const [creation, setCreation] = useState<Creation | null>(null);
     const [entryName, setEntryName] = useState('');
@@ -183,7 +191,8 @@ export function FilesPanel() {
         composition: { contextMenu: { enabled: false } },
         density: 'compact',
         itemHeight: PANEL_TREE_ROW_HEIGHT,
-        dragAndDrop: { canDrag: () => true, canDrop: () => false },
+        // A row dropped on a folder is a move, which the machine makes; the tree's own move is put right by the listing that follows.
+        dragAndDrop: { canDrag: () => true, canDrop: () => true, onDropComplete: (event) => dropRef.current(event) },
         flattenEmptyDirectories: false,
         icons: FILE_TREE_ICONS,
         initialExpansion: 'closed',
@@ -616,6 +625,70 @@ export function FilesPanel() {
         }
     };
 
+    const failureOf = (error: unknown): string =>
+        error instanceof ActionRefusal
+            ? t(`files.rename.refused.${error.code}`, { defaultValue: error.message })
+            : error instanceof Error
+              ? error.message
+              : t('error.generic');
+
+    /* What the name or the machine says against a try is thrown, which the dialog shows under its field and stays open for another. */
+    const confirmRename = async (typed: string): Promise<void> => {
+        if (!folder || renaming === null) {
+            return;
+        }
+        const name = typed.trim();
+        const parent = dirnameOf(renaming.absolute);
+        const kind = renaming.directory ? 'directory' : 'file';
+        if (name === basenameOf(renaming.absolute)) {
+            setRenaming(null);
+            return;
+        }
+        const problem = validateNewEntry(name, kind, {
+            parent,
+            atRoot: parent === folder,
+            windows: platform === 'win32',
+            children: (directory) => cache.get(directory)
+        });
+        if (problem !== null) {
+            throw new Error(t(`files.create.problem.${problem.problem}`, { name: problem.name }));
+        }
+        try {
+            await performAsPerson('file.rename', { path: renaming.absolute, to: newEntryPathOf(parent, name, kind) });
+        } catch (error: unknown) {
+            throw new Error(failureOf(error));
+        }
+        setRenaming(null);
+        // The machine's change report settles for a moment; asking now keeps the old name from lingering.
+        for (const directory of cacheRef.current.keys()) {
+            void load(directory);
+        }
+    };
+
+    /* A drop moves the rows one after the other and stops at the first the machine refuses; the listing after it says where everything is. */
+    const onDrop = (event: FileTreeDropResult): void => {
+        if (!folder) {
+            return;
+        }
+        const moves = dropMovesOf(folder, event.draggedPaths, event.target.directoryPath);
+        void (async () => {
+            try {
+                for (const move of moves) {
+                    await performAsPerson('file.rename', { path: move.from, to: move.to });
+                }
+            } catch (error: unknown) {
+                const message = failureOf(error);
+                useToasts.getState().show({ title: t('files.rename.failed'), description: message, kind: 'error', output: message });
+            }
+            for (const directory of cacheRef.current.keys()) {
+                void load(directory);
+            }
+        })();
+    };
+    useEffect(() => {
+        dropRef.current = onDrop;
+    });
+
     const confirmDelete = (): void => {
         if (deleting === null) {
             return;
@@ -848,6 +921,13 @@ export function FilesPanel() {
                                             <ContextMenu.Separator />
                                             <ContextMenu.Item
                                                 onClick={onMenuPath((absolute, treePath) =>
+                                                    setRenaming({ absolute: absolute.replace(/\/+$/, ''), directory: isDirectoryPath(treePath) })
+                                                )}
+                                            >
+                                                <Icon icon={Pencil} size={14} /> {t('files.rename.menu')}
+                                            </ContextMenu.Item>
+                                            <ContextMenu.Item
+                                                onClick={onMenuPath((absolute, treePath) =>
                                                     setDeleting({ absolutes: [absolute.replace(/\/+$/, '')], directory: isDirectoryPath(treePath) })
                                                 )}
                                             >
@@ -879,6 +959,19 @@ export function FilesPanel() {
                     )}
                 </div>
             )}
+            <PromptDialog
+                open={renaming !== null}
+                title={
+                    renaming === null
+                        ? t('files.rename.fallback')
+                        : t(renaming.directory ? 'files.rename.folderTitle' : 'files.rename.fileTitle', { name: basenameOf(renaming.absolute) })
+                }
+                description={t('files.rename.description')}
+                field={{ mono: true, label: t('files.rename.name'), initial: renaming === null ? '' : basenameOf(renaming.absolute) }}
+                confirmLabel={t('files.rename.confirm')}
+                onConfirm={confirmRename}
+                onOpenChange={() => setRenaming(null)}
+            />
             <PromptDialog
                 open={deleting !== null}
                 title={

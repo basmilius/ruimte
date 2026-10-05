@@ -30,7 +30,7 @@ function useWindowProjectLanguage(): ProjectLanguage | null {
             return;
         }
         const { transport, endpointId } = workspace.connection;
-        const held = acquireProjectLanguage(transport, projectId, folder, draftFiles(endpointId, transport));
+        const held = acquireProjectLanguage(transport, projectId, folder, draftFiles(endpointId, transport, projectId));
         holder.set(held.language);
         return () => {
             holder.set(null);

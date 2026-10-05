@@ -25,6 +25,11 @@ function PreviewLines({ preview }: { preview: PickPreview }) {
                 </div>
             ))}
             {preview.note !== null && <div className="px-1.5 font-sans text-xs text-text-muted">{preview.note}</div>}
+            {preview.refusal !== undefined && (
+                <div role="alert" className="px-1.5 py-0.5 font-sans text-xs text-status-error">
+                    {preview.refusal}
+                </div>
+            )}
         </div>
     );
 }

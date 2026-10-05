@@ -6,7 +6,7 @@ import { useCodeTheme } from '@/state/code-theme';
 import type { RevealLineRequest } from '@/state/files';
 import { foldRolesFor } from '@/state/code-folding';
 import { useSettings } from '@/state/settings';
-import { openingPlace, viewStates } from '@/shell/panels/editor-view-state';
+import { forgetMovesFrom, openingPlace, viewStateKey, viewStates } from '@/shell/panels/editor-view-state';
 import { endpointKey } from '@/state/keys';
 import { type DiskText, textDrafts } from '@/state/text-drafts';
 
@@ -91,6 +91,7 @@ export function FileEditor({
         }
         const first = initial.current;
         const key = endpointKey(endpointId, path);
+        forgetMovesFrom(key);
         const { editor, unmount } = mountDraftEditor(
             engine,
             element,
@@ -116,7 +117,12 @@ export function FileEditor({
         onEditor?.(editor);
         return () => {
             const caret = editor.getCaret();
-            viewStates.set(key, { scrollTop: editor.getScrollTop(), line: caret.line + 1, column: caret.character + 1, folds: editor.getFolds() });
+            viewStates.set(viewStateKey(key), {
+                scrollTop: editor.getScrollTop(),
+                line: caret.line + 1,
+                column: caret.character + 1,
+                folds: editor.getFolds()
+            });
             editorRef.current = null;
             onEditor?.(null);
             unmount();

@@ -19,7 +19,9 @@ async function setup(answer: unknown) {
     transport.answers.set('language.request', () => ({ result: answer, server: 'typescript', version: 1 }));
     const project = new ProjectLanguage(transport, 'p1', '/work/app', {
         read: async (path) => (path === '/work/app/src/b.ts' ? { text: 'x\ny\nuse(value);', mtime: 1 } : null),
-        stage: () => undefined
+        stage: () => undefined,
+        save: async () => null,
+        rename: async () => null
     });
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'let value = 1;\nvalue + 1;\n', theme: 'light' });
     const language = new EditorLanguage(project, editor, uri, 'typescript');
@@ -141,7 +143,9 @@ describe('peek definition', () => {
         transport.answers.set('language.request', () => ({ result: [link], server: 'typescript', version: 1 }));
         const project = new ProjectLanguage(transport, 'p1', '/work/app', {
             read: async (path) => (path === '/work/app/src/b.ts' ? { text: 'function use() {\n  return 1;\n}\nother();', mtime: 1 } : null),
-            stage: () => undefined
+            stage: () => undefined,
+            save: async () => null,
+            rename: async () => null
         });
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'use();', theme: 'light' });
         const language = new EditorLanguage(project, editor, uri, 'typescript');

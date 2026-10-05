@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { closeTab, openTab, pinTab, RECENT_FILES_LIMIT, rememberClosed, useFiles, type FileTab, type TabState } from './files.ts';
+import { closeTab, moveTabs, openTab, pinTab, RECENT_FILES_LIMIT, rememberClosed, tabKey, useFiles, type FileTab, type TabState } from './files.ts';
 import { FILES_VIEW_ID } from '@/shell/files-view';
 import { viewIdsIn } from '@/shell/split';
 import { useDocument } from './document.ts';
@@ -197,5 +197,34 @@ describe('the files closed a moment ago', () => {
     test('a diff is not a file to go back to', () => {
         expect(rememberClosed(['/a'], closed('/b', { kind: 'diff', cwd: '/', scope: 'worktree', staged: false }))).toEqual(['/a']);
         expect(rememberClosed(['/a'], undefined)).toEqual(['/a']);
+    });
+});
+
+describe('moveTabs', () => {
+    test('a tab follows its file, and so does the active one', () => {
+        const next = moveTabs(state(['/p/a.ts', '/p/b.ts'], '/p/a.ts'), '/p/a.ts', '/p/c.ts');
+        expect(next.tabs.map((entry) => [entry.key, entry.path])).toEqual([
+            ['/p/c.ts', '/p/c.ts'],
+            ['/p/b.ts', '/p/b.ts']
+        ]);
+        expect(next.active).toBe('/p/c.ts');
+    });
+
+    test('the files of a folder that moved follow it, and a name that only starts alike stays', () => {
+        const next = moveTabs(state(['/p/src/a.ts', '/p/src2/b.ts', '/p/src'], '/p/src2/b.ts'), '/p/src', '/p/lib');
+        expect(next.tabs.map((entry) => entry.path)).toEqual(['/p/lib/a.ts', '/p/src2/b.ts', '/p/lib']);
+        expect(next.active).toBe('/p/src2/b.ts');
+    });
+
+    test('a diff of the file follows by the path in its key, and a commit stays', () => {
+        const view = { kind: 'diff', scope: 'worktree', cwd: '/p', staged: false } as const;
+        const diff: FileTab = { key: tabKey('/p/a.ts', view), path: '/p/a.ts', view, pinned: false };
+        const commit: FileTab = { key: 'commit:abc', path: '/p/a.ts', view: { ...view, commit: 'abc' }, pinned: false };
+        const next = moveTabs({ tabs: [diff, commit], active: diff.key }, '/p/a.ts', '/p/b.ts');
+        expect(next.tabs.map((entry) => [entry.key, entry.path])).toEqual([
+            ['diff:/p/b.ts', '/p/b.ts'],
+            ['commit:abc', '/p/a.ts']
+        ]);
+        expect(next.active).toBe('diff:/p/b.ts');
     });
 });

@@ -1,9 +1,20 @@
 import i18next from 'i18next';
-import { StaleResultError, type CodeAction, type Diagnostic } from '@ruimte/smart-editor-lsp';
+import { ErrorCodes, LspError, StaleResultError, type CodeAction, type Command, type Diagnostic, type Position } from '@ruimte/smart-editor-lsp';
 import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useToasts } from '@/state/toasts';
-import { ACTION_GROUPS, actionsOf, diagnosticsAt, fixableOnLine, isHint, mergeEntries, previewOf, type ActionEntry } from './code-actions-model';
+import {
+    ACTION_GROUPS,
+    REFACTOR_GROUPS,
+    actionsOf,
+    diagnosticsAt,
+    fixableOnLine,
+    isHint,
+    mergeEntries,
+    previewOf,
+    type ActionEntry,
+    type ActionGroup
+} from './code-actions-model';
 import type { Problem } from './diagnostics-model';
 import type { EditorLanguage } from './editor-language';
 import type { PickGroup, PickPreview } from './popups';
@@ -18,6 +29,15 @@ const AUTOMATIC = 2;
 const TOAST_ID = 'language-action';
 /* How many problems of the line are asked for their fixes besides the caret's own request. */
 const LINE_PROBLEMS = 3;
+/* The command of the PHP server that asks the client to rename the name a refactor just wrote; the server answers it with nothing. */
+const INLINE_RENAME_COMMAND = 'php.rename';
+
+/* A server that would not make the action, with its reason. */
+class ActionRefused extends Error {}
+
+function isRefusal(error: unknown): boolean {
+    return error instanceof LspError && error.code === ErrorCodes.InternalError;
+}
 
 interface AskOptions {
     readonly range: EditorRange;
@@ -27,6 +47,8 @@ interface AskOptions {
     readonly diagnostics?: readonly Diagnostic[];
     /* Also the fixes of a problem on the line when none touches the range. */
     readonly withLine?: boolean;
+    /* The groups the list shows, in order; the quick fix list's own by default. */
+    readonly groups?: readonly ActionGroup[];
 }
 
 function say(key: string, options?: Record<string, unknown>): string {
@@ -67,11 +89,15 @@ export class CodeActionsFeature {
             editor.onTextChange(() => editor.setGutterAction(null)),
             editor.onGutterAction(() => void this.open()),
             editor.onKeyDown((event) => {
-                if (!isShortcut(CANVAS_SHORTCUTS.codeActions, event)) {
-                    return false;
+                if (isShortcut(CANVAS_SHORTCUTS.codeActions, event)) {
+                    void this.open();
+                    return true;
                 }
-                void this.open();
-                return true;
+                if (isShortcut(CANVAS_SHORTCUTS.refactorThis, event)) {
+                    void this.refactorThis();
+                    return true;
+                }
+                return false;
             }),
             language.diagnostics.onChange(() => this.refresher.later()),
             () => providers.dispose()
@@ -93,6 +119,12 @@ export class CodeActionsFeature {
     open(): Promise<void> {
         const range = this.language.editor.getSelection();
         return this.ask({ range, anchor: range.start, withLine: true });
+    }
+
+    /* Refactor This: only the refactorings, grouped by what they do, under the caret or the selection. */
+    refactorThis(): Promise<void> {
+        const range = this.language.editor.getSelection();
+        return this.ask({ range, only: ['refactor'], anchor: range.start, groups: REFACTOR_GROUPS });
     }
 
     /* The quick fixes of one problem, under it, as the Quick fix button of its card asks. */
@@ -131,7 +163,16 @@ export class CodeActionsFeature {
 
     /* The actions of one kind for the selection, as entries a menu can list and `apply` runs. */
     list(only: readonly string[]): Promise<ActionEntry[] | null> {
-        return this.supported ? this.request(this.language.editor.getSelection(), only, AUTOMATIC) : Promise.resolve(null);
+        return this.supported
+            ? this.request(
+                  this.language.editor.getSelection(),
+                  only,
+                  AUTOMATIC,
+                  undefined,
+                  undefined,
+                  only.includes('refactor') ? REFACTOR_GROUPS : ACTION_GROUPS
+              )
+            : Promise.resolve(null);
     }
 
     private async ask(options: AskOptions): Promise<void> {
@@ -146,7 +187,7 @@ export class CodeActionsFeature {
         try {
             entries = options.withLine
                 ? await this.requestWithLine(options.range, INVOKED)
-                : await this.request(options.range, options.only, INVOKED, undefined, options.diagnostics);
+                : await this.request(options.range, options.only, INVOKED, undefined, options.diagnostics, options.groups);
         } finally {
             this.asking = false;
         }
@@ -158,7 +199,7 @@ export class CodeActionsFeature {
             return;
         }
         const byId = new Map(entries.map((entry) => [entry.id, entry]));
-        const groups: PickGroup[] = ACTION_GROUPS.flatMap((group): PickGroup[] => {
+        const groups: PickGroup[] = (options.groups ?? ACTION_GROUPS).flatMap((group): PickGroup[] => {
             const rows = entries.filter((entry) => entry.group === group).map((entry) => ({ id: entry.id, label: entry.action.title, detail: '' }));
             return rows.length === 0 ? [] : [{ title: say(`groups.${group}`), rows }];
         });
@@ -172,6 +213,7 @@ export class CodeActionsFeature {
                     void this.apply(entry);
                 }
             },
+            attempt: (id) => this.refusalOf(byId.get(id)),
             preview: (id, signal) => this.preview(byId.get(id), signal)
         });
     }
@@ -182,7 +224,8 @@ export class CodeActionsFeature {
         only: readonly string[] | undefined,
         triggerKind: number,
         signal?: AbortSignal,
-        about?: readonly Diagnostic[]
+        about?: readonly Diagnostic[],
+        order?: readonly ActionGroup[]
     ): Promise<ActionEntry[] | null> {
         const { project, uri, diagnostics } = this.language;
         try {
@@ -197,7 +240,7 @@ export class CodeActionsFeature {
                 ...(only ? { only: [...only] } : {}),
                 triggerKind: triggerKind as 1 | 2
             };
-            const entries = actionsOf(await project.service.codeActions(uri, range, context, { signal }));
+            const entries = actionsOf(await project.service.codeActions(uri, range, context, { signal }), order);
             // A server may answer with more than the kinds asked for.
             return only ? entries.filter((entry) => only.some((kind) => entry.action.kind === kind || entry.action.kind?.startsWith(`${kind}.`))) : entries;
         } catch (error) {
@@ -252,6 +295,9 @@ export class CodeActionsFeature {
             try {
                 result = await project.service.resolveCodeAction(uri, action, { signal });
             } catch (error) {
+                if (isRefusal(error)) {
+                    throw new ActionRefused((error as Error).message);
+                }
                 // An action the server cannot resolve is still tried as it is, unless the text moved under it.
                 if (error instanceof StaleResultError) {
                     throw error;
@@ -266,7 +312,15 @@ export class CodeActionsFeature {
         if (entry === undefined) {
             return null;
         }
-        const action = await this.resolve(entry, signal);
+        let action: CodeAction;
+        try {
+            action = await this.resolve(entry, signal);
+        } catch (error) {
+            if (error instanceof ActionRefused) {
+                return { removed: [], added: [], note: null, refusal: error.message };
+            }
+            throw error;
+        }
         const { editor, uri } = this.language;
         const found = action.edit === undefined ? null : previewOf(editor.getText(), action.edit, uri);
         if (found === null) {
@@ -274,9 +328,23 @@ export class CodeActionsFeature {
         }
         const notes = [
             ...(found.hiddenLines > 0 ? [say('moreLines', { count: found.hiddenLines })] : []),
-            ...(found.otherFiles > 0 ? [say('otherFiles', { count: found.otherFiles })] : [])
+            ...(found.otherFiles > 0 ? [say('otherFiles', { count: found.otherFiles })] : []),
+            ...(found.moves > 0 ? [say('moves', { count: found.moves })] : [])
         ];
         return { removed: found.removed, added: found.added, note: notes.length === 0 ? null : notes.join(' · ') };
+    }
+
+    /* Why a server would not make the action, or null when it will, which resolves it for `apply` to use. */
+    private async refusalOf(entry: ActionEntry | undefined): Promise<string | null> {
+        if (entry === undefined) {
+            return null;
+        }
+        try {
+            await this.resolve(entry);
+            return null;
+        } catch (error) {
+            return error instanceof ActionRefused ? error.message : null;
+        }
     }
 
     /* Resolves the action, makes its edit as one undo step, and then runs its command. */
@@ -291,7 +359,9 @@ export class CodeActionsFeature {
                     return;
                 }
             }
-            if (action.command !== undefined) {
+            if (action.command?.command === INLINE_RENAME_COMMAND) {
+                await this.startRename(action.command);
+            } else if (action.command !== undefined) {
                 await project.service.executeCommand(uri, action.command);
             }
         } catch (error) {
@@ -299,6 +369,15 @@ export class CodeActionsFeature {
         } finally {
             this.resolved.delete(entry);
             editor.focus();
+        }
+    }
+
+    /* The name a refactor wrote is offered for a rename right where it stands, the way the platform does after an extraction. */
+    private async startRename(command: Command): Promise<void> {
+        const target = (command.arguments?.[0] ?? null) as { textDocument?: { uri?: string }; position?: Position } | null;
+        if (target?.position !== undefined && target.textDocument?.uri === this.language.uri) {
+            this.language.editor.setCaret(target.position);
+            await this.language.rename.start();
         }
     }
 

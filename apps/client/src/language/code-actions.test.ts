@@ -4,6 +4,8 @@ import { useToasts } from '@/state/toasts';
 import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './project-language';
+import type { ProjectFiles } from './workspace-edit';
+import { TransportError } from '@/transport/transport';
 import { ManualTimers } from './timers';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { eventOf } from './key-events';
@@ -27,18 +29,33 @@ const FIX = {
 const EXTRACT = { title: 'Extract to constant', kind: 'refactor.extract', data: 'extract' };
 const ORGANIZE = { title: 'Organize imports', kind: 'source.organizeImports', command: { title: 'Organize', command: 'ts.organize' } };
 
-async function setup(options: { actions?: unknown[]; providers?: Record<string, unknown> } = {}) {
+async function setup(
+    options: {
+        actions?: unknown[];
+        providers?: Record<string, unknown>;
+        /* What a resolve answers for an action; a refusal throws a `language-failed` error. */
+        resolve?: (action: Record<string, unknown>) => unknown;
+        files?: ProjectFiles;
+    } = {}
+) {
     const transport = new FakeLanguageTransport();
-    transport.providers = options.providers ?? { 'textDocument/codeAction': { resolveProvider: true }, 'textDocument/formatting': {} };
+    transport.providers = options.providers ?? {
+        'textDocument/codeAction': { resolveProvider: true },
+        'textDocument/formatting': {},
+        'textDocument/rename': { prepareProvider: true }
+    };
     const requests: { method: string; params: Record<string, unknown> }[] = [];
     transport.answers.set('language.request', (payload: { method: string; params: Record<string, unknown> }) => {
         requests.push({ method: payload.method, params: payload.params });
         if (payload.method === 'codeAction/resolve') {
             return {
-                result: { ...payload.params, edit: { changes: { [uri]: [{ range: range(0, 0, 3), newText: 'const' }] } } },
+                result: options.resolve?.(payload.params) ?? { ...payload.params, edit: { changes: { [uri]: [{ range: range(0, 0, 3), newText: 'const' }] } } },
                 server: 'typescript',
                 version: 1
             };
+        }
+        if (payload.method === 'textDocument/prepareRename') {
+            return { result: { range: range(0, 6, 12), placeholder: 'salary' }, server: 'typescript', version: 1 };
         }
         if (payload.method === 'textDocument/formatting') {
             return { result: [{ range: range(0, 0, 0), newText: '    ' }], server: 'typescript', version: 1 };
@@ -47,7 +64,7 @@ async function setup(options: { actions?: unknown[]; providers?: Record<string, 
     });
     transport.answers.set('language.command', () => ({ result: null, server: 'typescript' }));
     const timers = new ManualTimers();
-    const project = new ProjectLanguage(transport, 'p1', '/work/app');
+    const project = new ProjectLanguage(transport, 'p1', '/work/app', options.files ?? null);
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'let salary = 1;', theme: 'light' });
     const language = new EditorLanguage(project, editor, uri, 'typescript', timers);
     await language.document.ready;
@@ -152,7 +169,7 @@ describe('the list', () => {
         const view = language.popups.getState().pick!;
         expect(view.groups.map((group) => [group.title, group.rows.map((row) => row.label)])).toEqual([
             ['Quick fix', ["Change spelling to 'salaryMin'"]],
-            ['Refactor', ['Extract to constant']],
+            ['Extract', ['Extract to constant']],
             ['Source', ['Organize imports']]
         ]);
         expect(view.active).toBe(view.groups[0]!.rows[0]!.id);
@@ -228,5 +245,162 @@ describe('the commands', () => {
         await language.codeActions.formatDocument();
         expect(requests[0]).toMatchObject({ method: 'textDocument/formatting', params: { options: { tabSize: 4, insertSpaces: true } } });
         expect(editor.getText()).toBe('    let salary = 1;');
+    });
+});
+
+const REWRITE = { title: 'Convert to a ternary', kind: 'refactor.rewrite', data: 'rewrite' };
+const INLINE = { title: 'Inline variable', kind: 'refactor.inline', data: 'inline' };
+const MOVE = { title: 'Move class to namespace App\\Domain', kind: 'refactor.move', data: 'move' };
+
+describe('Refactor This', () => {
+    const everything = [FIX, REWRITE, MOVE, EXTRACT, ORGANIZE, INLINE];
+
+    test('lists only the refactorings, grouped by what they do, structure first', async () => {
+        const { editor, language, requests } = await setup({ actions: everything });
+        editor.moveCaret(at(0, 8));
+        expect(editor.press(eventOf(CANVAS_SHORTCUTS.refactorThis))).toBe(true);
+        await settle();
+        expect(requests[0]!.params).toMatchObject({ context: { only: ['refactor'] } });
+        expect(language.popups.getState().pick!.groups.map((group) => [group.title, group.rows.map((row) => row.label)])).toEqual([
+            ['Extract', ['Extract to constant']],
+            ['Inline', ['Inline variable']],
+            ['Move', ['Move class to namespace App\\Domain']],
+            ['Rewrite', ['Convert to a ternary']]
+        ]);
+    });
+
+    test('is also the command of the menu and the palette', async () => {
+        const { language } = await setup({ actions: everything });
+        await language.codeActions.refactorThis();
+        expect(language.popups.getState().pick?.groups).toHaveLength(4);
+    });
+
+    test('the list under the caret puts the fixes first, then the rewrites, then the refactorings', async () => {
+        const { editor, language } = await setup({ actions: everything });
+        editor.moveCaret(at(0, 8));
+        editor.press(eventOf(CANVAS_SHORTCUTS.codeActions));
+        await settle();
+        expect(language.popups.getState().pick!.groups.map((group) => group.title)).toEqual(['Quick fix', 'Rewrite', 'Extract', 'Inline', 'Move', 'Source']);
+    });
+
+    test('the menu lists the refactorings in the same order', async () => {
+        const { language } = await setup({ actions: everything });
+        const entries = await language.codeActions.list(['refactor']);
+        expect(entries!.map((entry) => entry.group)).toEqual(['extract', 'inline', 'move', 'rewrite']);
+    });
+});
+
+describe('a refactor the server refuses', () => {
+    const REASON = 'The expression only runs when the left side allows it';
+    const refusing = () => {
+        throw new TransportError('language-failed', REASON);
+    };
+
+    test('says why under the list when its row is reached, and applies nothing', async () => {
+        const { editor, language, timers } = await setup({ actions: [EXTRACT], resolve: refusing });
+        await language.codeActions.open();
+        timers.advance(120);
+        await settle();
+        expect(language.popups.getState().pick?.preview).toEqual({ removed: [], added: [], note: null, refusal: REASON });
+        expect(editor.getText()).toBe('let salary = 1;');
+        expect(useToasts.getState().toasts).toHaveLength(0);
+    });
+
+    test('keeps the list open with the reason when the row is taken before the preview asked', async () => {
+        const { editor, language } = await setup({ actions: [EXTRACT], resolve: refusing });
+        await language.codeActions.open();
+        editor.press({ key: 'Enter' });
+        await settle();
+        expect(language.popups.getState().pick?.preview?.refusal).toBe(REASON);
+        expect(editor.getText()).toBe('let salary = 1;');
+        expect(useToasts.getState().toasts).toHaveLength(0);
+        // The list answers Escape as ever.
+        editor.press({ key: 'Escape' });
+        expect(language.popups.getState().pick).toBeNull();
+    });
+
+    test('is a toast, brief, when it is asked for from a menu that has no list to stay in', async () => {
+        const { language } = await setup({ actions: [EXTRACT], resolve: refusing });
+        const [entry] = (await language.codeActions.list(['refactor']))!;
+        await language.codeActions.apply(entry!);
+        expect(useToasts.getState().toasts[0]).toMatchObject({ kind: 'error', title: `Could not apply the action: ${REASON}` });
+    });
+
+    test('a server that cannot resolve at all is tried as it is', async () => {
+        const { language, editor } = await setup({
+            actions: [{ ...EXTRACT, edit: { changes: { [uri]: [{ range: range(0, 0, 3), newText: 'const' }] } } }],
+            resolve: () => {
+                throw new TransportError('language-unsupported', 'No resolve');
+            }
+        });
+        await language.codeActions.open();
+        editor.press({ key: 'Enter' });
+        await settle();
+        expect(editor.getText()).toBe('const salary = 1;');
+    });
+});
+
+describe('the rename after an extraction', () => {
+    test('starts the editor rename on the name the refactor wrote, instead of asking the server to run its command', async () => {
+        const rename = { title: 'Rename', command: 'php.rename', arguments: [{ textDocument: { uri }, position: at(0, 8) }] };
+        const { editor, language, transport } = await setup({ actions: [{ ...EXTRACT, command: rename }] });
+        await language.codeActions.open();
+        editor.press({ key: 'Enter' });
+        await settle();
+        expect(editor.getText()).toBe('const salary = 1;');
+        expect(transport.callsOf('language.command')).toHaveLength(0);
+        expect(editor.getCaret()).toEqual(at(0, 8));
+        expect(language.popups.getState().rename).toMatchObject({ phase: 'input', original: 'salary', placeholder: 'salary', range: range(0, 6, 12) });
+    });
+
+    test('leaves a command for another document alone', async () => {
+        const rename = { title: 'Rename', command: 'php.rename', arguments: [{ textDocument: { uri: 'file:///work/app/src/other.ts' }, position: at(0, 8) }] };
+        const { editor, language } = await setup({ actions: [{ ...EXTRACT, command: rename }] });
+        await language.codeActions.open();
+        editor.press({ key: 'Enter' });
+        await settle();
+        expect(language.popups.getState().rename).toBeNull();
+    });
+});
+
+describe('an action that moves a file', () => {
+    const edit = {
+        documentChanges: [
+            { textDocument: { uri, version: null }, edits: [{ range: range(0, 4, 10), newText: 'pay' }] },
+            { kind: 'rename', oldUri: uri, newUri: 'file:///work/app/src/b.ts' }
+        ]
+    };
+
+    function filesOf(moves: Array<[string, string]>, reason: string | null = null): ProjectFiles {
+        return {
+            read: async () => null,
+            stage: () => undefined,
+            save: async () => null,
+            rename: async (from, to) => {
+                moves.push([from, to]);
+                return reason;
+            }
+        };
+    }
+
+    test('edits the open file and then moves it through the machine', async () => {
+        const moves: Array<[string, string]> = [];
+        const { editor, language } = await setup({ actions: [{ ...MOVE, edit }], files: filesOf(moves) });
+        await language.codeActions.open();
+        editor.press({ key: 'Enter' });
+        await settle();
+        expect(editor.getText()).toBe('let pay = 1;');
+        expect(moves).toEqual([['/work/app/src/a.ts', '/work/app/src/b.ts']]);
+    });
+
+    test('says what it moves in its preview, and why when the machine refuses the move', async () => {
+        const { language, timers } = await setup({ actions: [{ ...MOVE, edit }], files: filesOf([], 'b.ts is taken') });
+        await language.codeActions.open();
+        timers.advance(120);
+        await settle();
+        expect(language.popups.getState().pick?.preview).toMatchObject({ note: 'moves 1 file' });
+        const [entry] = (await language.codeActions.list(['refactor']))!;
+        await language.codeActions.apply(entry!);
+        expect(useToasts.getState().toasts.at(-1)?.title).toBe('Could not apply the action: b.ts is taken');
     });
 });

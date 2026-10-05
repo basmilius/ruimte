@@ -39,7 +39,9 @@ async function setup(options: { available?: boolean } = {}) {
     });
     const project = new ProjectLanguage(transport, 'p1', '/work/app', {
         read: async (path) => (path === '/work/app/src/b.ts' ? { text: 'log(hits);', mtime: 1 } : null),
-        stage: () => undefined
+        stage: () => undefined,
+        save: async () => null,
+        rename: async () => null
     });
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: TEXT, theme: 'light' });
     const language = new EditorLanguage(project, editor, uri, 'typescript');

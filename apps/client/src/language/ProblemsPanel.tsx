@@ -35,7 +35,7 @@ function useProjectLanguage(): ProjectLanguage | null {
         if (projectId === null || folder === null) {
             return;
         }
-        const held = acquireProjectLanguage(transport, projectId, folder, draftFiles(endpointId, transport));
+        const held = acquireProjectLanguage(transport, projectId, folder, draftFiles(endpointId, transport, projectId));
         holder.set(held.language);
         return () => {
             holder.set(null);

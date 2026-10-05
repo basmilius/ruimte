@@ -284,6 +284,32 @@
         "noMatch": "No files match the filter.",
         "onlyHidden": "Everything in this folder is hidden or ignored. Turn on Show hidden and ignored files in the More menu.",
         "reading": "Reading {{name}}.",
+        "rename": {
+            "confirm": "Rename",
+            "description": "Type a new name, or a path in the project to move it. The language servers of the project change what the move touches first, such as the namespace and the imports of a PHP class.",
+            "failed": "Could not move",
+            "fallback": "Rename this?",
+            "fileTitle": "Rename {{name}}",
+            "folderTitle": "Rename the folder {{name}}",
+            "menu": "Rename…",
+            "name": "Name",
+            "refused": {
+                "bad-path": "That is not a path the machine can use.",
+                "exists": "That name is already taken.",
+                "git-state": "Git keeps its own state in there, so nothing moves in or out of it.",
+                "into-itself": "A folder cannot go inside itself.",
+                "language-failed": "A language server could not make the edits the move brings, so nothing moved.",
+                "machine-state": "That belongs to the machine and cannot be moved from here.",
+                "no-machine": "The machine this project runs on is not connected.",
+                "not-a-directory": "A part of that path is a file, not a folder.",
+                "not-found": "That is not there any more.",
+                "not-writable": "The machine cannot write there.",
+                "outside-project": "That is outside this project.",
+                "project-root": "The project folder is moved outside Ruimte.",
+                "ruimte-state": "Ruimte keeps its own state in there, so nothing moves in or out of it."
+            },
+            "unsaved": "{{name}} has changes that could not be saved, so nothing moved."
+        },
         "showHidden": "Show hidden and ignored files",
         "searching": "Searching files…",
         "searchFailed": "Could not search files: {{reason}}"
@@ -618,7 +644,8 @@
             "staged_one": "{{count}} file changed and not saved yet",
             "staged_other": "{{count}} files changed and not saved yet",
             "stagedMore": "{{names}} and {{count}} more",
-            "saveAll": "Save all"
+            "saveAll": "Save all",
+            "notSaved": "{{name}} could not be saved"
         },
         "actions": {
             "show": "Show code actions",
@@ -632,8 +659,14 @@
             "moreLines": "{{count}} more lines",
             "otherFiles_one": "and {{count}} other file",
             "otherFiles_other": "and {{count}} other files",
+            "moves_one": "moves {{count}} file",
+            "moves_other": "moves {{count}} files",
             "groups": {
                 "quickfix": "Quick fix",
+                "rewrite": "Rewrite",
+                "extract": "Extract",
+                "inline": "Inline",
+                "move": "Move",
                 "refactor": "Refactor",
                 "source": "Source",
                 "other": "Other"
