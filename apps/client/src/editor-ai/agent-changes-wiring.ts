@@ -5,6 +5,7 @@ import { type TextDraft, useTextDrafts } from '@/state/text-drafts';
 import type { Transport } from '@/transport/transport';
 import { AgentChanges } from './agent-changes';
 import { AgentReview, type ReviewSource } from './agent-review';
+import { joinReviewGroup } from './review-group';
 import { providerNameOf } from './use-chat-identity';
 
 export interface AgentChangesFile {
@@ -47,19 +48,26 @@ export function mountAgentChanges(
         },
         nameOf: (provider: AgentKind | undefined) => providerNameOf(providers(), provider)
     });
+    // One review per file and window: every editor on the file answers through the same group.
+    const membership = app === undefined ? null : joinReviewGroup(key);
     const review =
-        app === undefined
+        app === undefined || membership === null
             ? null
-            : new AgentReview(editor, changes, {
-                  mark: async (runIds, state) => {
-                      await transport.request('provenance.review', { projectId: file.projectId, path: file.path, runIds: [...runIds], state });
+            : new AgentReview(
+                  editor,
+                  changes,
+                  {
+                      mark: async (runIds, state) => {
+                          await transport.request('provenance.review', { projectId: file.projectId, path: file.path, runIds: [...runIds], state });
+                      },
+                      offer: app.offer,
+                      focusChat: app.focusChat,
+                      chatExists: app.chatExists,
+                      label: () => projectRelative(file.path, app.folder()),
+                      language: app.language
                   },
-                  offer: app.offer,
-                  focusChat: app.focusChat,
-                  chatExists: app.chatExists,
-                  label: () => projectRelative(file.path, app.folder()),
-                  language: app.language
-              });
+                  membership.group
+              );
     const stopEvents = transport.on('provenance.changed', (event) => {
         if (event.projectId === file.projectId && event.path === file.path) {
             changes.changed(event);
@@ -81,6 +89,7 @@ export function mountAgentChanges(
             stopEvents();
             stopDrafts();
             review?.dispose();
+            membership?.leave();
             changes.dispose();
         }
     };

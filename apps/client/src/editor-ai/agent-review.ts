@@ -7,14 +7,23 @@ import type { AgentChanges, DrawFrame } from './agent-changes';
 import { registerAgentReview } from './agent-review-registry';
 import { highlightLayers } from './highlight-layers';
 import { replaceAllLines, type LineReplacement } from './line-edits';
-import { RowHost, type HostedRow } from './row-host';
+import { ReviewGroup, type ReviewMember } from './review-group';
+import { LineActionHost, RowHost, type HostedAction, type HostedRow } from './row-host';
+import { replacedWords } from './word-diff';
 
 const ROW_OWNER = 'review';
+const ACTION_OWNER = 'review';
 const LAYER_OWNER = 'review';
 
-/* The code line height and the strip of buttons a row is given until the editor has measured it. */
+/* What a row is given until the editor has measured it: a code line, the strip a removal with no lines of its own has, and the comment card. */
 const LINE_PX = 20;
-const STRIP_PX = 28;
+const STRIP_PX = 24;
+const COMMENT_PX = 112;
+
+/* The row of a run's comment card, which stands apart from the row of its removed lines. */
+export function commentRowId(runId: string): string {
+    return `${runId}:comment`;
+}
 
 export interface ReviewSource {
     /* Marks runs reviewed on the machine; a failure leaves them as they were. */
@@ -39,6 +48,8 @@ export interface ReviewItem {
     spans: ReadonlyArray<{ startLine: number; endLine: number }>;
     /* Whether Undo can put the lines back: the run is whole, and the machine kept the lines it replaced. */
     undoable: boolean;
+    /* Per removed line, the words the added lines replaced; empty where no line stands for another. */
+    replaced: Array<Array<[number, number]>>;
 }
 
 export interface ReviewState {
@@ -60,9 +71,13 @@ export function revertNote(ranges: readonly string[]): string {
  * back as one edit of the editor and tells the chat in its draft, and a comment goes to that draft with
  * the file and the lines. Nothing is sent: the draft is the person's own message.
  */
-export class AgentReview {
+export class AgentReview implements ReviewMember {
     readonly store: StoreApi<ReviewState>;
+    /* The rows of removed lines and of comment cards; the buttons of a change stand after its first line, in `actions`. */
     readonly rows: RowHost;
+    readonly actions: LineActionHost;
+    private readonly group: ReviewGroup;
+    private readonly leaveGroup: () => void;
     private readonly editor: Editor;
     private readonly changes: AgentChanges;
     private readonly source: ReviewSource;
@@ -71,11 +86,15 @@ export class AgentReview {
     private readonly settling = new Set<string>();
     private frame: DrawFrame | null = null;
 
-    constructor(editor: Editor, changes: AgentChanges, source: ReviewSource) {
+    /* The group is the other editors on the same file in this window; one on its own has a group of one. */
+    constructor(editor: Editor, changes: AgentChanges, source: ReviewSource, group: ReviewGroup = new ReviewGroup()) {
         this.editor = editor;
         this.changes = changes;
         this.source = source;
+        this.group = group;
+        this.leaveGroup = group.join(this);
         this.rows = new RowHost(editor, ROW_OWNER);
+        this.actions = new LineActionHost(editor, ACTION_OWNER);
         this.store = createStore<ReviewState>(() => ({ items: [], current: null, commenting: null }));
         registerAgentReview(editor, this);
         this.stopDraw = changes.onDraw((frame) => this.sync(frame));
@@ -105,6 +124,7 @@ export class AgentReview {
 
     openComment(runId: string): void {
         this.store.setState({ commenting: { runId, text: '' } });
+        this.draw(this.store.getState().items);
     }
 
     setComment(text: string): void {
@@ -116,6 +136,29 @@ export class AgentReview {
 
     closeComment(): void {
         this.store.setState({ commenting: null });
+        this.draw(this.store.getState().items);
+    }
+
+    hide(runIds: readonly string[]): void {
+        for (const id of runIds) {
+            this.settling.add(id);
+        }
+        if (this.frame !== null) {
+            this.sync(this.frame);
+        }
+    }
+
+    show(runIds: readonly string[]): void {
+        for (const id of runIds) {
+            this.settling.delete(id);
+        }
+        if (this.frame !== null) {
+            this.sync(this.frame);
+        }
+    }
+
+    refresh(): void {
+        this.changes.refresh();
     }
 
     /* The comment goes to the chat's draft with the file and the lines, and the chat comes into view to be sent from. */
@@ -151,8 +194,10 @@ export class AgentReview {
 
     dispose(): void {
         this.stopDraw();
+        this.leaveGroup();
         registerAgentReview(this.editor, null);
         this.rows.clear();
+        this.actions.clear();
         highlightLayers(this.editor).set(LAYER_OWNER, null);
     }
 
@@ -196,7 +241,7 @@ export class AgentReview {
             const found = items.get(piece.run.id);
             const span = { startLine: piece.startLine, endLine: piece.endLine };
             if (found === undefined) {
-                items.set(piece.run.id, { run: piece.run, startLine: span.startLine, endLine: span.endLine, spans: [span], undoable: false });
+                items.set(piece.run.id, { run: piece.run, startLine: span.startLine, endLine: span.endLine, spans: [span], undoable: false, replaced: [] });
             } else {
                 items.set(piece.run.id, {
                     ...found,
@@ -213,12 +258,21 @@ export class AgentReview {
                     startLine: removal.line + 1,
                     endLine: removal.line,
                     spans: [],
-                    undoable: removal.run.before !== undefined
+                    undoable: removal.run.before !== undefined,
+                    replaced: []
                 });
             }
         }
+        const lines = splitLines(this.editor.getText());
         return [...items.values()]
-            .map((item) => (item.spans.length === 1 ? { ...item, undoable: item.run.before !== undefined && this.whole(item) } : item))
+            .map((item) => {
+                if (item.spans.length !== 1) {
+                    return item;
+                }
+                const whole = item.run.before !== undefined && this.whole(item);
+                const replaced = whole ? replacedWords(item.run.before!, lines.slice(item.startLine - 1, item.endLine)) : [];
+                return { ...item, undoable: whole, replaced };
+            })
             .sort((left, right) => left.startLine - right.startLine);
     }
 
@@ -229,43 +283,56 @@ export class AgentReview {
 
     private draw(items: readonly ReviewItem[]): void {
         const raw = this.editor.getText().split('\n').length;
-        const rows: HostedRow[] = items.map((item) => {
+        const commenting = this.store.getState().commenting;
+        const rows: HostedRow[] = [];
+        const actions: HostedAction[] = [];
+        for (const item of items) {
+            const added = item.endLine >= item.startLine;
             const removed = item.run.before?.length ?? 0;
-            const height = removed * LINE_PX + STRIP_PX;
-            if (item.endLine >= item.startLine) {
-                return { id: item.run.id, line: item.startLine - 1, placement: 'above', height };
+            if (added) {
+                actions.push({ id: item.run.id, line: item.startLine - 1 });
             }
-            const line = item.startLine - 1;
-            return line < raw ? { id: item.run.id, line, placement: 'above', height } : { id: item.run.id, line: raw - 1, placement: 'below', height };
-        });
+            // A removal with nothing added has no line to carry its buttons, so its row carries them.
+            if (removed > 0 || !added) {
+                const height = removed > 0 ? removed * LINE_PX : STRIP_PX;
+                rows.push(
+                    added
+                        ? { id: item.run.id, line: item.startLine - 1, placement: 'above', height }
+                        : this.behind(item.run.id, item.startLine - 1, raw, height)
+                );
+            }
+            if (commenting?.runId === item.run.id) {
+                rows.push(
+                    added
+                        ? { id: commentRowId(item.run.id), line: item.endLine - 1, placement: 'below', height: COMMENT_PX }
+                        : this.behind(commentRowId(item.run.id), item.startLine - 1, raw, COMMENT_PX)
+                );
+            }
+        }
         this.rows.set(rows);
+        this.actions.set(actions);
         highlightLayers(this.editor).set(LAYER_OWNER, () =>
             this.store.getState().items.flatMap((item) => item.spans.map((span) => ({ ...span, color: '--editor-added', sign: '+' })))
         );
+    }
+
+    /* A row in front of the line a removal stood before, or under the last line when that was the end of the file. */
+    private behind(id: string, line: number, count: number, height: number): HostedRow {
+        return line < count ? { id, line, placement: 'above', height } : { id, line: count - 1, placement: 'below', height };
     }
 
     private async settle(runIds: readonly string[], state: ProvenanceReviewState): Promise<boolean> {
         if (runIds.length === 0) {
             return false;
         }
-        for (const id of runIds) {
-            this.settling.add(id);
-        }
-        if (this.frame !== null) {
-            this.sync(this.frame);
-        }
+        this.group.hide(runIds);
         try {
             await this.source.mark(runIds, state);
         } catch {
-            for (const id of runIds) {
-                this.settling.delete(id);
-            }
-            if (this.frame !== null) {
-                this.sync(this.frame);
-            }
+            this.group.show(runIds);
             return false;
         }
-        this.changes.refresh();
+        this.group.refresh();
         return true;
     }
 

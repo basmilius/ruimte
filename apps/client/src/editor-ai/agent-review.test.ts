@@ -3,8 +3,9 @@ import type { ProvenanceReadResult, ProvenanceReviewState, ProvenanceRun } from 
 import { type FakeEditor, FakeEditorEngine } from '@ruimte/smart-editor/fake';
 import { ManualTimers } from '@/language/timers';
 import { AgentChanges } from './agent-changes';
-import { AgentReview, revertNote } from './agent-review';
+import { AgentReview, commentRowId, revertNote } from './agent-review';
 import { agentReviewOf } from './agent-review-registry';
+import { ReviewGroup } from './review-group';
 
 const DISK = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'].join('\n') + '\n';
 
@@ -42,13 +43,24 @@ interface Setup {
     focused: string[];
     daemon: { runs: ProvenanceRun[] };
     failMark: { value: boolean };
+    /* While set, the machine does not answer a mark until it resolves. */
+    holdMark: { gate: Promise<void> | null };
 }
 
-function setup(runs: ProvenanceRun[], mode: 'review' | 'gutter' | 'off' = 'review', chats: readonly string[] = ['chat-a']): Setup {
+/* What editors on one file share: the machine's runs and the group an answer in one reaches the others through. */
+interface Shared {
+    daemon: { runs: ProvenanceRun[] };
+    group: ReviewGroup;
+    holdMark: Setup['holdMark'];
+    marked: Setup['marked'];
+}
+
+function setup(runs: ProvenanceRun[], mode: 'review' | 'gutter' | 'off' = 'review', chats: readonly string[] = ['chat-a'], shared?: Shared): Setup {
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: DISK, theme: 'light' });
     const timers = new ManualTimers();
-    const daemon = { runs };
-    const marked: Setup['marked'] = [];
+    const daemon = shared?.daemon ?? { runs };
+    const holdMark = shared?.holdMark ?? { gate: null };
+    const marked: Setup['marked'] = shared?.marked ?? [];
     const offered: Setup['offered'] = [];
     const focused: string[] = [];
     const failMark = { value: false };
@@ -61,26 +73,33 @@ function setup(runs: ProvenanceRun[], mode: 'review' | 'gutter' | 'off' = 'revie
         },
         timers
     );
-    const review = new AgentReview(editor, changes, {
-        mark: async (ids, state) => {
-            if (failMark.value) {
-                throw new Error('refused');
-            }
-            marked.push({ ids, state });
-            // The machine takes the state; its runs come back without them.
-            daemon.runs = daemon.runs.map((candidate) => (ids.includes(candidate.id) ? { ...candidate, review: state } : candidate));
+    const review = new AgentReview(
+        editor,
+        changes,
+        {
+            mark: async (ids, state) => {
+                await holdMark.gate;
+                if (failMark.value) {
+                    throw new Error('refused');
+                }
+                marked.push({ ids, state });
+                // The machine takes the state; its runs come back without them.
+                daemon.runs = daemon.runs.map((candidate) => (ids.includes(candidate.id) ? { ...candidate, review: state } : candidate));
+            },
+            offer: (chatId, text) => offered.push({ chatId, text }),
+            focusChat: (chatId) => focused.push(chatId),
+            chatExists: (chatId) => chats.includes(chatId),
+            label: () => 'src/score.ts',
+            language: () => 'typescript'
         },
-        offer: (chatId, text) => offered.push({ chatId, text }),
-        focusChat: (chatId) => focused.push(chatId),
-        chatExists: (chatId) => chats.includes(chatId),
-        label: () => 'src/score.ts',
-        language: () => 'typescript'
-    });
+        shared?.group
+    );
     changes.configure({ mode, attribution: true });
-    return { editor, changes, review, timers, marked, offered, focused, daemon, failMark };
+    return { editor, changes, review, timers, marked, offered, focused, daemon, failMark, holdMark };
 }
 
 const rowIds = (editor: FakeEditor): string[] => (editor.widgetsByOwner.get('review') ?? []).map((row) => row.id);
+const actionLines = (editor: FakeEditor): Array<[string, number]> => (editor.lineActionsByOwner.get('review') ?? []).map((action) => [action.id, action.line]);
 
 describe('the rows of a review', () => {
     test('a settled turn gets a row per run, with its lines tinted as added', async () => {
@@ -134,6 +153,39 @@ describe('the rows of a review', () => {
         expect((editor.widgetsByOwner.get('review') ?? []).map((row) => [row.id, row.line, row.placement])).toEqual([['r1', 3, 'above']]);
         expect(editor.lineHighlights).toEqual([]);
         expect(review.store.getState().items[0]).toMatchObject({ undoable: true, startLine: 4 });
+    });
+});
+
+describe('where the buttons stand', () => {
+    test('the buttons of a run stand after its first added line, and its removed lines get a row of their own above it', async () => {
+        const { editor } = setup([run('r1', 2, 3), run('r2', 6, 6, { before: undefined })]);
+        await flush();
+        expect(actionLines(editor)).toEqual([
+            ['r1', 1],
+            ['r2', 5]
+        ]);
+        // A run that replaced nothing the machine kept has no lines to show, so no row.
+        expect(rowIds(editor)).toEqual(['r1']);
+    });
+
+    test('a removal with nothing added has the buttons in its own row and none after a line', async () => {
+        const { editor } = setup([run('r1', 4, 3, { before: ['gone'] })]);
+        await flush();
+        expect(actionLines(editor)).toEqual([]);
+        expect(rowIds(editor)).toEqual(['r1']);
+    });
+
+    test('the removed lines carry the words the added lines replaced', async () => {
+        const { review } = setup([run('r1', 2, 2, { before: ['two old'] })]);
+        await flush();
+        expect(review.store.getState().items[0]!.replaced).toEqual([[[4, 7]]]);
+    });
+
+    test('the buttons go with the run when it is kept', async () => {
+        const { editor, review } = setup([run('r1', 2, 3), run('r2', 6, 6)]);
+        await flush();
+        review.keep('r1');
+        expect(actionLines(editor)).toEqual([['r2', 5]]);
     });
 });
 
@@ -264,6 +316,18 @@ describe('Comment', () => {
         expect(review.store.getState().commenting).toBeNull();
     });
 
+    test('the card is a row of its own under the last line of the change, and gone with the comment', async () => {
+        const { editor, review } = setup([run('r1', 2, 3)]);
+        await flush();
+        review.openComment('r1');
+        expect((editor.widgetsByOwner.get('review') ?? []).map((row) => [row.id, row.line, row.placement])).toEqual([
+            ['r1', 1, 'above'],
+            [commentRowId('r1'), 2, 'below']
+        ]);
+        review.closeComment();
+        expect(rowIds(editor)).toEqual(['r1']);
+    });
+
     test('an empty comment goes nowhere', async () => {
         const { review, offered } = setup([run('r1', 2, 3)]);
         await flush();
@@ -298,5 +362,60 @@ describe('stepping through the changes', () => {
         expect(agentReviewOf(editor)).toBe(review);
         review.dispose();
         expect(agentReviewOf(editor)).toBeNull();
+    });
+});
+
+describe('two editors on one file', () => {
+    function pair(runs: ProvenanceRun[]): { first: Setup; second: Setup; shared: Shared } {
+        const shared: Shared = { daemon: { runs }, group: new ReviewGroup(), holdMark: { gate: null }, marked: [] };
+        return { first: setup(runs, 'review', ['chat-a'], shared), second: setup(runs, 'review', ['chat-a'], shared), shared };
+    }
+
+    test('Keep in one takes the row out of the other at once, before the machine has answered', async () => {
+        const { first, second, shared } = pair([run('r1', 2, 3), run('r2', 6, 6)]);
+        await flush();
+        let answer: () => void = () => undefined;
+        shared.holdMark.gate = new Promise<void>((resolve) => (answer = resolve));
+
+        first.review.keep('r1');
+        expect(rowIds(first.editor)).toEqual(['r2']);
+        expect(rowIds(second.editor)).toEqual(['r2']);
+        expect(actionLines(second.editor)).toEqual([['r2', 5]]);
+        expect(shared.marked).toEqual([]);
+
+        answer();
+        await flush();
+        expect(shared.marked).toEqual([{ ids: ['r1'], state: 'kept' }]);
+        expect(second.review.store.getState().items.map((item) => item.run.id)).toEqual(['r2']);
+    });
+
+    test('Undo in one puts the lines back there and takes the change out of the other', async () => {
+        const { first, second, shared } = pair([run('r1', 2, 3, { before: ['was two'] })]);
+        await flush();
+        first.review.undo('r1');
+        await flush();
+        expect(first.editor.getText()).toBe(DISK.replace('two\nthree', 'was two'));
+        expect(second.review.store.getState().items).toEqual([]);
+        expect(shared.marked).toEqual([{ ids: ['r1'], state: 'undone' }]);
+    });
+
+    test('a refusal brings the row back in both', async () => {
+        const { first, second } = pair([run('r1', 2, 3)]);
+        await flush();
+        first.failMark.value = true;
+        first.review.keep('r1');
+        await flush();
+        expect(rowIds(first.editor)).toEqual(['r1']);
+        expect(rowIds(second.editor)).toEqual(['r1']);
+    });
+
+    test('an editor that is gone no longer hears the others', () => {
+        const group = new ReviewGroup();
+        const heard: string[] = [];
+        const leave = group.join({ hide: (ids) => heard.push(...ids), show: () => undefined, refresh: () => undefined });
+        group.hide(['r1']);
+        leave();
+        group.hide(['r2']);
+        expect(heard).toEqual(['r1']);
     });
 });

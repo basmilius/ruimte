@@ -135,3 +135,33 @@ describe('the other side of a draft', () => {
         mounted.unmount();
     });
 });
+
+describe('two editors on one file in Review mode', () => {
+    test('Keep in one editor takes the change out of the other, and the machine is told once', async () => {
+        const transport = new FakeLanguageTransport();
+        const answer = { ...result(1, 2, 2) };
+        transport.answers.set('provenance.read', () => answer);
+        transport.answers.set('provenance.review', (payload: { state: 'kept' | 'undone' }) => {
+            answer.runs = answer.runs.map((run) => ({ ...run, review: payload.state }));
+            return { updated: 1 };
+        });
+        useTextDrafts.setState({ rows: { [KEY]: { disk: TEXT, mtime: 1, text: TEXT, saving: false, problem: null } } });
+        const app = { offer: () => undefined, focusChat: () => undefined, chatExists: () => true, language: () => 'typescript', folder: () => '/work/app' };
+        const editors = [0, 1].map(() => new FakeEditorEngine().mount({} as HTMLElement, { text: TEXT, theme: 'light' }));
+        const mounted = editors.map((editor) => {
+            const one = mountAgentChanges(editor, transport, FILE, () => [], app);
+            one.changes.configure({ mode: 'review', attribution: true });
+            return one;
+        });
+        await flush();
+        expect(editors.map((editor) => editor.lineActionsByOwner.get('review')?.length)).toEqual([1, 1]);
+
+        mounted[0]!.review!.keep('r1');
+        expect(editors.map((editor) => editor.lineActionsByOwner.get('review')?.length)).toEqual([undefined, undefined]);
+        await flush();
+        expect(transport.callsOf('provenance.review')).toHaveLength(1);
+
+        mounted[0]!.unmount();
+        mounted[1]!.unmount();
+    });
+});
