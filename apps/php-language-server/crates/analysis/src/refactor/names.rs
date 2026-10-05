@@ -266,7 +266,6 @@ pub(crate) fn fully_qualified(
                 | "mixed"
                 | "void"
                 | "never"
-                | "false"
                 | "numeric"
         )
     {
