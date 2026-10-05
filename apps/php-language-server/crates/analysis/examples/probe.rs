@@ -79,7 +79,7 @@ fn main() {
             let root = parse(&text).syntax();
             let analyzer = Analyzer::new(&project.index, &root, offset as u32);
             if mode == "hover" {
-                match analyzer.hover(offset as u32, Some(&project.root)) {
+                match analyzer.hover(offset as u32) {
                     Some(hover) => println!("{}", hover.markdown),
                     None => println!("nothing"),
                 }

@@ -1334,7 +1334,7 @@ impl ClassFilter {
 }
 
 /// The documentation for an item, from the `data` its completion carried.
-pub fn resolve_documentation(index: &Index, data: &str, root: Option<&std::path::Path>) -> Option<String> {
+pub fn resolve_documentation(index: &Index, data: &str) -> Option<String> {
     use crate::target::Target;
     let (kind, rest) = data.split_once(':')?;
     let tree = parse("<?php").syntax();
@@ -1363,6 +1363,6 @@ pub fn resolve_documentation(index: &Index, data: &str, root: Option<&std::path:
         }
         _ => return None,
     };
-    let description = analyzer.describe(&target, root).into_iter().next()?;
+    let description = analyzer.describe(&target).into_iter().next()?;
     Some(crate::nav::hover_markdown(&description))
 }

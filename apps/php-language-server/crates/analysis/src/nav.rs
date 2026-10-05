@@ -1,9 +1,9 @@
 //! Hover, go to definition, go to type definition and go to implementation, all over the targets
 //! that [`Analyzer::targets_at`] finds.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use php_index::{Class, Doc, FileEntry, Origin, Span, Type};
+use php_index::{Class, Doc, FileEntry, Span, Type};
 use php_syntax::SyntaxKind::*;
 use php_syntax::TextRange;
 
@@ -30,7 +30,6 @@ pub struct Description {
     pub signature: String,
     pub doc: Option<Doc>,
     pub place: Option<Place>,
-    pub defined_in: Option<String>,
 }
 
 fn place_of(file: &FileEntry, span: Span) -> Place {
@@ -44,26 +43,9 @@ fn class_place(class: Class<'_>) -> Place {
     place_of(class.file, class.decl.name_span)
 }
 
-/// Where a file lives, as a line of text: a path inside the project, or the extension a stub is from.
-pub fn defined_in(file: &FileEntry, root: Option<&Path>) -> String {
-    if file.origin == Origin::Stub {
-        let extension = file
-            .path
-            .parent()
-            .and_then(|parent| parent.file_name())
-            .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        return format!("PHP standard library ({extension})");
-    }
-    match root.and_then(|root| file.path.strip_prefix(root).ok()) {
-        Some(relative) => relative.to_string_lossy().into_owned(),
-        None => file.path.to_string_lossy().into_owned(),
-    }
-}
-
 impl Analyzer<'_> {
     /// Everything the targets under an offset stand for, ready to show.
-    pub fn describe(&self, target: &Target, root: Option<&Path>) -> Vec<Description> {
+    pub fn describe(&self, target: &Target) -> Vec<Description> {
         let level = self.level();
         match target {
             Target::Class(name) => self
@@ -74,7 +56,6 @@ impl Analyzer<'_> {
                     signature: render::class_signature(class.decl),
                     doc: class.decl.doc.as_deref().cloned(),
                     place: Some(class_place(class)),
-                    defined_in: Some(defined_in(class.file, root)),
                 })
                 .into_iter()
                 .collect(),
@@ -90,7 +71,6 @@ impl Analyzer<'_> {
                     ),
                     doc: function.decl.doc.as_deref().cloned(),
                     place: Some(place_of(function.file, function.decl.name_span)),
-                    defined_in: Some(defined_in(function.file, root)),
                 })
                 .into_iter()
                 .collect(),
@@ -107,7 +87,6 @@ impl Analyzer<'_> {
                         signature,
                         doc: constant.decl.doc.as_deref().cloned(),
                         place: Some(place_of(constant.file, constant.decl.name_span)),
-                        defined_in: Some(defined_in(constant.file, root)),
                     }
                 })
                 .into_iter()
@@ -129,7 +108,6 @@ impl Analyzer<'_> {
                         signature: render::method_signature(&found.member, level),
                         doc,
                         place: Some(place_of(found.class.file, found.member.name_span)),
-                        defined_in: Some(defined_in(found.class.file, root)),
                     })
                 })
                 .collect(),
@@ -143,7 +121,6 @@ impl Analyzer<'_> {
                         signature: render::property_signature(&found.member, level),
                         doc: found.member.doc.as_deref().cloned(),
                         place: Some(place_of(found.class.file, found.member.name_span)),
-                        defined_in: Some(defined_in(found.class.file, root)),
                     })
                 })
                 .collect(),
@@ -157,17 +134,15 @@ impl Analyzer<'_> {
                         signature: render::constant_signature(&found.member, level),
                         doc: found.member.doc.as_deref().cloned(),
                         place: Some(place_of(found.class.file, found.member.name_span)),
-                        defined_in: Some(defined_in(found.class.file, root)),
                     })
                 })
                 .collect(),
-            Target::Parameter { callee, name } => self.describe_parameter(callee, name, root),
+            Target::Parameter { callee, name } => self.describe_parameter(callee, name),
             Target::Variable { name, ty } => vec![Description {
                 title: format!("${name}"),
                 signature: format!("{} ${name}", ty.display(true)),
                 doc: None,
                 place: None,
-                defined_in: None,
             }],
         }
     }
@@ -182,7 +157,7 @@ impl Analyzer<'_> {
         param.effective_type(level).cloned()
     }
 
-    fn describe_parameter(&self, callee: &Callee, name: &str, root: Option<&Path>) -> Vec<Description> {
+    fn describe_parameter(&self, callee: &Callee, name: &str) -> Vec<Description> {
         let level = self.level();
         let (file, callable) = match callee {
             Callee::Function(function) => {
@@ -213,7 +188,6 @@ impl Analyzer<'_> {
             signature: render::param_text(param, level),
             doc,
             place: Some(place_of(file, param.span)),
-            defined_in: Some(defined_in(file, root)),
         }]
     }
 
@@ -234,12 +208,12 @@ impl Analyzer<'_> {
         None
     }
 
-    pub fn hover(&self, offset: u32, root: Option<&Path>) -> Option<HoverResult> {
+    pub fn hover(&self, offset: u32) -> Option<HoverResult> {
         let found = self.targets_at(offset);
         let range = found.first()?.range;
         let mut sections = Vec::new();
         for item in &found {
-            for description in self.describe(&item.target, root) {
+            for description in self.describe(&item.target) {
                 sections.push(hover_markdown(&description));
             }
         }
@@ -262,7 +236,7 @@ impl Analyzer<'_> {
                 }
                 continue;
             }
-            for description in self.describe(&found.target, None) {
+            for description in self.describe(&found.target) {
                 places.extend(description.place);
             }
         }
@@ -292,7 +266,7 @@ impl Analyzer<'_> {
         for found in self.targets_at(offset) {
             let ty = match &found.target {
                 Target::Class(_) => {
-                    for description in self.describe(&found.target, None) {
+                    for description in self.describe(&found.target) {
                         places.extend(description.place);
                     }
                     continue;
@@ -386,7 +360,7 @@ fn class_names_in_args(ty: &Type) -> Vec<String> {
     out
 }
 
-/// A title line, the signature in a `php` block, the doc and where it is defined.
+/// A title line, the signature in a `php` block and the doc.
 pub fn hover_markdown(description: &Description) -> String {
     let mut out = format!("**{}**\n\n```php\n{}\n```", description.title, description.signature);
     if let Some(doc) = &description.doc {
@@ -395,9 +369,6 @@ pub fn hover_markdown(description: &Description) -> String {
             out.push_str("\n\n");
             out.push_str(&text);
         }
-    }
-    if let Some(defined_in) = &description.defined_in {
-        out.push_str(&format!("\n\n_Defined in `{defined_in}`_"));
     }
     out
 }

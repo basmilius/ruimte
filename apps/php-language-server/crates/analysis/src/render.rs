@@ -395,7 +395,10 @@ fn fenced_block(text: &str) -> Option<(usize, usize, Segment<'_>)> {
 fn dedent(code: &str) -> String {
     let lines: Vec<&str> = code.lines().map(str::trim_end).collect();
     let first = lines.iter().position(|line| !line.is_empty()).unwrap_or(lines.len());
-    let last = lines.iter().rposition(|line| !line.is_empty()).map_or(first, |last| last + 1);
+    let last = lines
+        .iter()
+        .rposition(|line| !line.is_empty())
+        .map_or(first, |last| last + 1);
     let lines = &lines[first..last];
     let indent = lines
         .iter()

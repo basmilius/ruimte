@@ -47,7 +47,7 @@ fn hover(code: &str) -> String {
     let (_, root, offset) = split_cursor(code);
     let analyzer = Analyzer::new(&fixture.index, &root, offset);
     analyzer
-        .hover(offset, Some(std::path::Path::new("/project")))
+        .hover(offset)
         .map_or_else(|| "<none>".to_string(), |hover| hover.markdown)
 }
 
@@ -90,9 +90,7 @@ fn hover_on_a_class_shows_its_signature_and_doc() {
 
         A person who can log in.
 
-        _@template_ `T`
-
-        _Defined in `src/User.php`_"#]]
+        _@template_ `T`"#]]
     .assert_eq(&hover("<?php\nuse App\\User;\nnew Us$0er();\n"));
 }
 
@@ -109,9 +107,7 @@ fn hover_on_a_method_shows_params_return_and_throws() {
 
         _@param_ `int $id` The id  
         _@return_ `?static` The user  
-        _@throws_ `RuntimeException` when the database is gone
-
-        _Defined in `src/User.php`_"#]]
+        _@throws_ `RuntimeException` when the database is gone"#]]
     .assert_eq(&hover("<?php\nuse App\\User;\nUser::fi$0nd(1);\n"));
 }
 

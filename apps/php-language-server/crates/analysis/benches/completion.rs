@@ -44,11 +44,7 @@ fn bench(criterion: &mut Criterion) {
     let tree = parse(text).syntax();
     let hover_offset = text.find("modify").expect("a marker") as u32 + 2;
     criterion.bench_function("hover on a method", |bencher| {
-        bencher.iter(|| {
-            Analyzer::new(&index, &tree, hover_offset)
-                .hover(hover_offset, None)
-                .is_some()
-        });
+        bencher.iter(|| Analyzer::new(&index, &tree, hover_offset).hover(hover_offset).is_some());
     });
 }
 

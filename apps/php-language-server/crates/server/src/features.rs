@@ -205,9 +205,8 @@ impl Server<'_> {
         self.with_analyzer(
             &position.text_document.uri,
             position.position,
-            |analyzer, offset, project, mapper| {
-                let root = (!project.root.as_os_str().is_empty()).then_some(project.root.as_path());
-                let hover = analyzer.hover(offset, root)?;
+            |analyzer, offset, _, mapper| {
+                let hover = analyzer.hover(offset)?;
                 Some(Hover {
                     contents: HoverContents::Markup(markdown(hover.markdown)),
                     range: Some(mapper.range(hover.range)),
@@ -368,8 +367,7 @@ impl Server<'_> {
             .iter()
             .find(|project| project.root == Path::new(root))
             .unwrap_or(&self.workspace.loose);
-        let root = (!project.root.as_os_str().is_empty()).then_some(project.root.as_path());
-        if let Some(text) = resolve_documentation(&project.index, key, root) {
+        if let Some(text) = resolve_documentation(&project.index, key) {
             item.documentation = Some(Documentation::MarkupContent(markdown(text)));
         }
         Some(item)
