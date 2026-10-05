@@ -9,8 +9,9 @@ mod expr;
 mod flow;
 mod unify;
 
-use std::cell::Cell;
-use std::collections::BTreeMap;
+use std::cell::{Cell, RefCell};
+use std::collections::{BTreeMap, HashMap};
+use std::rc::Rc;
 
 use php_index::extract::resolver_at;
 use php_index::{ClassKind, Index, Name, NameResolver, Type};
@@ -53,6 +54,8 @@ pub struct Analyzer<'a> {
     pub resolver: NameResolver,
     pub class: Option<ClassContext>,
     depth: Cell<u32>,
+    /// The variables at the start of a statement, by the offset of that start.
+    envs: RefCell<HashMap<u32, Rc<Env>>>,
 }
 
 const MAX_DEPTH: u32 = 48;
@@ -67,7 +70,20 @@ impl<'a> Analyzer<'a> {
             resolver,
             class,
             depth: Cell::new(0),
+            envs: RefCell::new(HashMap::new()),
         }
+    }
+
+    /// The variables in scope where the statement around a node begins. Everything in one statement
+    /// shares the answer, so a pass over a whole file follows each function body once per statement.
+    pub fn env_around(&self, node: &SyntaxNode) -> Rc<Env> {
+        let anchor = ast::statement_anchor(node);
+        if let Some(env) = self.envs.borrow().get(&anchor) {
+            return env.clone();
+        }
+        let env = Rc::new(self.env_at(anchor));
+        self.envs.borrow_mut().insert(anchor, env.clone());
+        env
     }
 
     pub fn level(&self) -> php_syntax::PhpVersion {

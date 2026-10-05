@@ -584,6 +584,7 @@ dependencies = [
  "expect-test",
  "php-index",
  "php-syntax",
+ "rayon",
 ]
 
 [[package]]

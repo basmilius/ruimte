@@ -13,6 +13,7 @@ pub mod project;
 pub mod resolve;
 pub mod stubs;
 pub mod types;
+pub mod words;
 
 pub use hierarchy::{Ancestor, Found};
 pub use index::{Class, ConstRef, FileEntry, FileId, FunctionRef, Index, Origin, StubFile};

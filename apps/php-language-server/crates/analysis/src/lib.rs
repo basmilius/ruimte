@@ -5,12 +5,18 @@
 
 mod ast;
 pub mod completion;
+pub mod context;
+pub mod decl;
 mod diagnostics;
+pub mod doc_refs;
 mod folding;
 mod imports;
 pub mod infer;
 mod line_index;
 pub mod nav;
+pub mod references;
+pub mod refs;
+pub mod rename;
 pub mod render;
 mod selection;
 mod symbols;
@@ -37,3 +43,9 @@ mod completion_tests;
 
 #[cfg(test)]
 mod nav_tests;
+
+#[cfg(test)]
+mod references_tests;
+
+#[cfg(test)]
+mod rename_tests;

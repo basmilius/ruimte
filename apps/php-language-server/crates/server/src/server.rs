@@ -10,10 +10,10 @@ use lsp_types::notification::{
     PublishDiagnostics,
 };
 use lsp_types::request::{
-    Completion, DocumentDiagnosticRequest, DocumentSymbolRequest, FoldingRangeRequest, GotoDefinition,
-    GotoImplementation, GotoTypeDefinition, HoverRequest, RegisterCapability, Request as _, ResolveCompletionItem,
-    SelectionRangeRequest, WorkDoneProgressCreate, WorkspaceConfiguration, WorkspaceDiagnosticRefresh,
-    WorkspaceSymbolRequest,
+    Completion, DocumentDiagnosticRequest, DocumentHighlightRequest, DocumentSymbolRequest, FoldingRangeRequest,
+    GotoDefinition, GotoImplementation, GotoTypeDefinition, HoverRequest, PrepareRenameRequest, References,
+    RegisterCapability, Rename, Request as _, ResolveCompletionItem, SelectionRangeRequest, WorkDoneProgressCreate,
+    WorkspaceConfiguration, WorkspaceDiagnosticRefresh, WorkspaceSymbolRequest,
 };
 use lsp_types::{
     CompletionOptions, ConfigurationItem, ConfigurationParams, DiagnosticOptions, DiagnosticServerCapabilities,
@@ -89,6 +89,10 @@ pub(crate) struct Server<'a> {
     configuration_support: bool,
     diagnostic_refresh_support: bool,
     watch_support: bool,
+    /// The client takes `documentChanges` in a workspace edit.
+    pub(crate) document_changes: bool,
+    /// The client can rename files as part of a workspace edit.
+    pub(crate) rename_files: bool,
     /// Documents whose diagnostics are out of date, published once the queue of messages is empty.
     dirty: Vec<Uri>,
     /// Questions asked of the client: which document each `workspace/configuration` answer is for.
@@ -126,6 +130,10 @@ impl<'a> Server<'a> {
             .map(Settings::from_value)
             .unwrap_or_default();
         let text_document = capabilities.text_document.as_ref();
+        let workspace_edit = capabilities
+            .workspace
+            .as_ref()
+            .and_then(|workspace| workspace.workspace_edit.as_ref());
         let (internal_sender, internal_receiver) = crossbeam_channel::unbounded();
         let workspace = Workspace::new(
             settings.storage_path.clone(),
@@ -164,6 +172,10 @@ impl<'a> Server<'a> {
                 .and_then(|workspace| workspace.did_change_watched_files.as_ref())
                 .and_then(|watched| watched.dynamic_registration)
                 .unwrap_or(false),
+            document_changes: workspace_edit.and_then(|edit| edit.document_changes).unwrap_or(false),
+            rename_files: workspace_edit
+                .and_then(|edit| edit.resource_operations.as_ref())
+                .is_some_and(|operations| operations.contains(&lsp_types::ResourceOperationKind::Rename)),
             dirty: Vec::new(),
             pending_configuration: HashMap::new(),
             next_request_id: 0,
@@ -198,6 +210,12 @@ impl<'a> Server<'a> {
             type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
             implementation_provider: Some(ImplementationProviderCapability::Simple(true)),
             workspace_symbol_provider: Some(OneOf::Left(true)),
+            references_provider: Some(OneOf::Left(true)),
+            rename_provider: Some(OneOf::Right(lsp_types::RenameOptions {
+                prepare_provider: Some(true),
+                work_done_progress_options: WorkDoneProgressOptions::default(),
+            })),
+            document_highlight_provider: Some(OneOf::Left(true)),
             completion_provider: Some(CompletionOptions {
                 resolve_provider: Some(true),
                 trigger_characters: Some(["$", ">", ":", "\\", "#", "["].map(String::from).to_vec()),
@@ -284,6 +302,10 @@ impl<'a> Server<'a> {
             GotoTypeDefinition::METHOD => self.answer(id, request.params, Self::type_definition),
             GotoImplementation::METHOD => self.answer(id, request.params, Self::implementation),
             WorkspaceSymbolRequest::METHOD => self.answer(id, request.params, Self::workspace_symbols),
+            References::METHOD => self.answer(id, request.params, Self::references),
+            PrepareRenameRequest::METHOD => self.answer_checked(id, request.params, Self::prepare_rename),
+            Rename::METHOD => self.answer_checked(id, request.params, Self::rename),
+            DocumentHighlightRequest::METHOD => self.answer(id, request.params, Self::document_highlight),
             Completion::METHOD => self.answer(id, request.params, Self::completion),
             ResolveCompletionItem::METHOD => self.answer(id, request.params, Self::resolve_completion),
             method => Response::new_err(
@@ -306,6 +328,26 @@ impl<'a> Server<'a> {
                 let result = handler(self, params);
                 Response::new_ok(id, result)
             }
+            Err(error) => Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string()),
+        }
+    }
+
+    /// Like [`Self::answer`] for a handler that can refuse with a message the client shows.
+    fn answer_checked<P, R>(
+        &mut self,
+        id: RequestId,
+        params: Value,
+        handler: fn(&mut Self, P) -> Result<Option<R>, String>,
+    ) -> Response
+    where
+        P: DeserializeOwned,
+        R: serde::Serialize,
+    {
+        match serde_json::from_value::<P>(params) {
+            Ok(params) => match handler(self, params) {
+                Ok(result) => Response::new_ok(id, result),
+                Err(message) => Response::new_err(id, ErrorCode::RequestFailed as i32, message),
+            },
             Err(error) => Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string()),
         }
     }
@@ -562,7 +604,7 @@ impl<'a> Server<'a> {
         self.progress.last_percent = 0;
     }
 
-    fn log(&self, kind: MessageType, message: String) {
+    pub(crate) fn log(&self, kind: MessageType, message: String) {
         let _ = self.send(Notification::new(
             LogMessage::METHOD.to_string(),
             LogMessageParams { typ: kind, message },
@@ -661,6 +703,9 @@ impl<'a> Server<'a> {
         document.indexed_version = Some(document.version);
         let project = self.workspace.project_for_mut(&path);
         let origin = project.origin_of(&path);
+        if origin == php_index::Origin::Project {
+            project.words.update(&path, &document.text);
+        }
         project.index.set_file(path, origin, std::sync::Arc::new(symbols));
     }
 
@@ -671,6 +716,9 @@ impl<'a> Server<'a> {
         };
         let project = self.workspace.project_for_mut(&path);
         let origin = project.origin_of(&path);
+        if origin == php_index::Origin::Project {
+            project.words.update_from_disk(&path);
+        }
         match index_file(&path, origin) {
             Some(symbols) => project.index.set_file(path, origin, std::sync::Arc::new(symbols)),
             None => project.index.remove_file(&path),
@@ -707,6 +755,9 @@ impl<'a> Server<'a> {
             }
             let project = self.workspace.project_for_mut(&path);
             let origin = project.origin_of(&path);
+            if origin == php_index::Origin::Project {
+                project.words.update_from_disk(&path);
+            }
             if change.typ == FileChangeType::DELETED {
                 project.index.remove_file(&path);
             } else if let Some(symbols) = index_file(&path, origin) {
@@ -727,6 +778,7 @@ impl<'a> Server<'a> {
         if let Some(project) = self.workspace.project_by_root(root) {
             project.reload_composer(default_level);
             project.index = php_index::Index::new(project.level);
+            project.words = php_index::words::WordIndex::default();
             if stubs_loaded {
                 let extensions = project.extensions();
                 project.index.set_stubs(&stubs, &extensions);

@@ -47,6 +47,26 @@ impl Client {
             .expect("the server is listening");
     }
 
+    /// The message of the error a request answers with.
+    fn request_error(&mut self, method: &str, params: Value) -> String {
+        self.next_id += 1;
+        let id = RequestId::from(self.next_id);
+        self.send(Request::new(id.clone(), method.to_string(), params));
+        loop {
+            match self
+                .connection
+                .receiver
+                .recv_timeout(TIMEOUT)
+                .expect("the server answers")
+            {
+                Message::Response(response) if response.id == id => {
+                    return response.response_result.expect_err("the request fails").message;
+                }
+                other => self.backlog.push(other),
+            }
+        }
+    }
+
     fn notify(&self, method: &str, params: Value) {
         self.send(Notification::new(method.to_string(), params));
     }
@@ -397,7 +417,7 @@ fn rejects_what_it_does_not_know() {
     let (client, _) = Client::start(json!({}), Value::Null);
     client.send(Request::new(
         RequestId::from(99),
-        "textDocument/rename".to_string(),
+        "textDocument/linkedEditingRange".to_string(),
         json!({}),
     ));
     let response = client.connection.receiver.recv_timeout(TIMEOUT).expect("an answer");
@@ -826,5 +846,165 @@ fn reads_a_class_that_composer_points_at_but_the_index_skipped() {
     assert!(text.contains("Found through the autoload map."), "{text}");
     let definition = client.at("textDocument/definition", &uri, 1, 12);
     assert_eq!(definition[0]["uri"], disk.uri("project/.hidden/src/Thing.php"));
+    client.shutdown();
+}
+
+#[test]
+fn finds_usages_and_highlights_across_the_project() {
+    let disk = Disk::new();
+    disk.write(
+        "project/src/Controller.php",
+        "<?php\nnamespace App;\n\nuse App\\Models\\User;\n\nclass Controller\n{\n    public function show(int $id): ?User\n    {\n        $user = User::find($id);\n        return $user;\n    }\n}\n",
+    );
+    let mut client = indexed_server(&disk);
+    let page = disk.uri("project/src/Page.php");
+    client.open(
+        &page,
+        "<?php\nuse App\\Models\\User;\nfunction f(User $u) { return $u->name; }\n",
+    );
+    let found = client.request(
+        "textDocument/references",
+        json!({
+            "textDocument": { "uri": page },
+            "position": { "line": 2, "character": 12 },
+            "context": { "includeDeclaration": true }
+        }),
+    );
+    let mut places: Vec<String> = found
+        .as_array()
+        .expect("locations")
+        .iter()
+        .map(|location| {
+            format!(
+                "{}:{}",
+                location["uri"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .rsplit('/')
+                    .next()
+                    .unwrap_or_default(),
+                location["range"]["start"]["line"]
+            )
+        })
+        .collect();
+    places.sort();
+    assert_eq!(
+        places,
+        [
+            "Controller.php:3",
+            "Controller.php:7",
+            "Controller.php:9",
+            "Page.php:1",
+            "Page.php:2",
+            "User.php:4"
+        ]
+    );
+    let without = client.request(
+        "textDocument/references",
+        json!({
+            "textDocument": { "uri": page },
+            "position": { "line": 2, "character": 12 },
+            "context": { "includeDeclaration": false }
+        }),
+    );
+    assert_eq!(without.as_array().map(Vec::len), Some(5));
+
+    let highlights = client.at("textDocument/documentHighlight", &page, 2, 12);
+    let kinds: Vec<(i64, i64)> = highlights
+        .as_array()
+        .expect("highlights")
+        .iter()
+        .map(|item| {
+            (
+                item["range"]["start"]["line"].as_i64().unwrap_or(-1),
+                item["kind"].as_i64().unwrap_or(-1),
+            )
+        })
+        .collect();
+    assert_eq!(kinds, [(1, 1), (2, 1)]);
+    let variable = client.at("textDocument/documentHighlight", &page, 2, 14);
+    assert_eq!(variable.as_array().map(Vec::len), Some(2));
+    client.shutdown();
+}
+
+#[test]
+fn renames_a_class_and_moves_its_file() {
+    let disk = Disk::new();
+    let mut client = {
+        let capabilities = json!({
+            "window": { "workDoneProgress": true },
+            "workspace": { "workspaceEdit": { "documentChanges": true, "resourceOperations": ["rename"] } }
+        });
+        let (mut client, _) = Client::start_in(capabilities, disk.options(), json!(disk.uri("project")));
+        client.wait_for_indexing();
+        client
+    };
+    let page = disk.uri("project/src/Page.php");
+    client.open(&page, "<?php\nuse App\\Models\\User;\nfunction f(User $u) {}\n");
+    let prepared = client.at("textDocument/prepareRename", &page, 2, 12);
+    assert_eq!(prepared["placeholder"], "User");
+    let edit = client.request(
+        "textDocument/rename",
+        json!({ "textDocument": { "uri": page }, "position": { "line": 2, "character": 12 }, "newName": "Member" }),
+    );
+    let changes = edit["documentChanges"].as_array().expect("document changes");
+    let rename = changes
+        .iter()
+        .find(|change| change["kind"] == "rename")
+        .expect("a file rename");
+    assert_eq!(rename["oldUri"], disk.uri("project/src/Models/User.php"));
+    assert_eq!(rename["newUri"], disk.uri("project/src/Models/Member.php"));
+    let page_edit = changes
+        .iter()
+        .find(|change| change["textDocument"]["uri"] == page)
+        .expect("edits of the open page");
+    assert_eq!(page_edit["textDocument"]["version"], 1);
+    assert_eq!(page_edit["edits"].as_array().map(Vec::len), Some(2));
+    assert_eq!(page_edit["edits"][0]["newText"], "Member");
+    let user_edit = changes
+        .iter()
+        .find(|change| change["textDocument"]["uri"] == disk.uri("project/src/Models/User.php"))
+        .expect("edits of the declaring file");
+    assert!(user_edit["textDocument"]["version"].is_null());
+    assert_eq!(rename_order(changes), "edits first");
+
+    let refused = client.request_error(
+        "textDocument/rename",
+        json!({ "textDocument": { "uri": page }, "position": { "line": 2, "character": 12 }, "newName": "class" }),
+    );
+    assert_eq!(refused, "'class' is a reserved word");
+    client.shutdown();
+}
+
+fn rename_order(changes: &[Value]) -> &'static str {
+    let last_edit = changes.iter().rposition(|change| change.get("textDocument").is_some());
+    let rename = changes.iter().position(|change| change["kind"] == "rename");
+    match (last_edit, rename) {
+        (Some(edit), Some(rename)) if edit < rename => "edits first",
+        _ => "wrong order",
+    }
+}
+
+#[test]
+fn a_client_without_documentchanges_gets_plain_changes() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let page = disk.uri("project/src/Page.php");
+    client.open(
+        &page,
+        "<?php\nuse App\\Models\\User;\nfunction f(User $u) { return $u->name; }\n",
+    );
+    let edit = client.request(
+        "textDocument/rename",
+        json!({ "textDocument": { "uri": page }, "position": { "line": 2, "character": 34 }, "newName": "length" }),
+    );
+    assert!(edit["documentChanges"].is_null());
+    let changes = edit["changes"].as_object().expect("changes");
+    assert_eq!(changes.len(), 2);
+    assert_eq!(
+        changes[&disk.uri("project/src/Models/User.php")][0]["newText"],
+        "$length"
+    );
+    assert_eq!(changes[&page][0]["newText"], "length");
     client.shutdown();
 }

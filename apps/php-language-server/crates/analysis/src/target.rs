@@ -31,6 +31,19 @@ pub enum Target {
         name: String,
         ty: Type,
     },
+    /// A parameter named by an argument of a call.
+    Parameter {
+        callee: Callee,
+        name: String,
+    },
+}
+
+/// A function or method as the declaration that owns it names it: a method by the class that
+/// declares it, not the class it was called on.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Callee {
+    Function(Name),
+    Method { class: Name, name: String },
 }
 
 /// A target with the range of the token it was found on.
@@ -70,12 +83,58 @@ impl Analyzer<'_> {
             return Vec::new();
         };
         let range = token.text_range();
-        let targets = if token.kind() == VARIABLE {
-            self.variable_targets(&token)
+        self.targets_of_token(&token)
+            .into_iter()
+            .map(|target| Found { target, range })
+            .collect()
+    }
+
+    /// The targets a token stands for.
+    pub fn targets_of_token(&self, token: &SyntaxToken) -> Vec<Target> {
+        if token.kind() == VARIABLE {
+            self.variable_targets(token)
+        } else if token.kind() == IDENT && token.parent().is_some_and(|parent| parent.kind() == ARGUMENT) {
+            self.named_argument_targets(token)
         } else {
-            self.name_targets(&token)
+            self.name_targets(token)
+        }
+    }
+
+    fn named_argument_targets(&self, token: &SyntaxToken) -> Vec<Target> {
+        let Some(argument) = token.parent() else {
+            return Vec::new();
         };
-        targets.into_iter().map(|target| Found { target, range }).collect()
+        let named = crate::ast::tokens(&argument)
+            .find(|candidate| !candidate.kind().is_trivia())
+            .is_some_and(|first| &first == token)
+            && has_token(&argument, COLON);
+        let Some(call) = argument.parent().and_then(|list| list.parent()) else {
+            return Vec::new();
+        };
+        if !named || !matches!(call.kind(), CALL_EXPR | NEW_EXPR) {
+            return Vec::new();
+        }
+        let env = self.env_around(&call);
+        let name = token.text().to_string();
+        let mut out: Vec<Target> = Vec::new();
+        for callee in self.callees(&call, &env) {
+            let callee = match callee.name.rsplit_once("::") {
+                Some((class, method)) => Callee::Method {
+                    class: class.to_string(),
+                    name: method.to_string(),
+                },
+                None if callee.name == "closure" => continue,
+                None => Callee::Function(callee.name.clone()),
+            };
+            let target = Target::Parameter {
+                callee,
+                name: name.clone(),
+            };
+            if !out.contains(&target) {
+                out.push(target);
+            }
+        }
+        out
     }
 
     fn variable_targets(&self, token: &SyntaxToken) -> Vec<Target> {
@@ -89,7 +148,7 @@ impl Analyzer<'_> {
                     let qualifier = grand.children().next();
                     if qualifier.as_ref() != Some(&parent) {
                         if let Some(qualifier) = qualifier {
-                            let env = self.env_at(start(&grand));
+                            let env = self.env_around(&grand);
                             return vec![Target::Property {
                                 receiver: self.receiver_type(&self.qualifier_type(&qualifier, &env)),
                                 name,
@@ -105,7 +164,7 @@ impl Analyzer<'_> {
                         .into_iter()
                         .collect();
                 }
-                let env = self.env_at(start(&parent));
+                let env = self.env_around(&parent);
                 let ty = env.get(&name).cloned().unwrap_or(Type::Unknown);
                 vec![Target::Variable { name, ty }]
             }
@@ -157,7 +216,8 @@ impl Analyzer<'_> {
                     vec![Target::Constant(self.resolver.qualify(&text))]
                 }
             }
-            NAMED_TYPE | NEW_EXPR | ATTRIBUTE | TRAIT_USE | TRAIT_PRECEDENCE | TRAIT_ALIAS => self.class_targets(&text),
+            NAMED_TYPE | NEW_EXPR | ATTRIBUTE | TRAIT_USE => self.class_targets(&text),
+            TRAIT_PRECEDENCE | TRAIT_ALIAS => self.adaptation_targets(&name_node, &text),
             BINARY_EXPR => self.class_targets(&text),
             PROPERTY_FETCH_EXPR => {
                 if is_first_child {
@@ -166,7 +226,7 @@ impl Analyzer<'_> {
                 let Some(object) = parent.children().next() else {
                     return Vec::new();
                 };
-                let env = self.env_at(start(&parent));
+                let env = self.env_around(&parent);
                 let receiver = self.receiver_type(&self.type_of(&object, &env));
                 let is_call = parent.parent().is_some_and(|grand| {
                     grand.kind() == CALL_EXPR && grand.children().next().as_ref() == Some(&parent)
@@ -184,7 +244,7 @@ impl Analyzer<'_> {
                 let Some(qualifier) = parent.children().next() else {
                     return Vec::new();
                 };
-                let env = self.env_at(start(&parent));
+                let env = self.env_around(&parent);
                 let receiver = self.receiver_type(&self.qualifier_type(&qualifier, &env));
                 let is_call = parent.parent().is_some_and(|grand| {
                     grand.kind() == CALL_EXPR && grand.children().next().as_ref() == Some(&parent)
@@ -198,8 +258,13 @@ impl Analyzer<'_> {
                 }
             }
             STATIC_PROPERTY_EXPR => self.class_targets(&text),
-            USE_CLAUSE => self.use_targets(&parent, &text),
-            USE_GROUP => self.class_targets(&text),
+            USE_CLAUSE => {
+                if is_alias_name(&name_node) {
+                    return Vec::new();
+                }
+                self.use_targets(&parent, &text)
+            }
+            USE_GROUP => Vec::new(),
             CALL_EXPR => {
                 if is_first_child {
                     let candidates = self.resolver.function_candidates(&text);
@@ -212,6 +277,40 @@ impl Analyzer<'_> {
             }
             EXTENDS_CLAUSE | IMPLEMENTS_CLAUSE => self.class_targets(&text),
             _ => self.expression_name_targets(&text),
+        }
+    }
+
+    /// A name inside `use T { a as b; T::a insteadof U; }`: the trait and the class it takes a method
+    /// from are classes, the method before `as` or after `::` is a method of the trait.
+    fn adaptation_targets(&self, name: &SyntaxNode, text: &str) -> Vec<Target> {
+        let previous = significant_sibling(name, true);
+        let next = significant_sibling(name, false);
+        if next == Some(DOUBLE_COLON) {
+            return self.class_targets(text);
+        }
+        if previous == Some(DOUBLE_COLON) {
+            let qualifier = name
+                .prev_sibling()
+                .filter(|node| node.kind() == NAME)
+                .map(|node| text_of(&node));
+            let receiver = match qualifier {
+                Some(qualifier) => self.class_type(&qualifier),
+                None => self.this_type(),
+            };
+            return vec![Target::Method {
+                receiver,
+                name: text.to_string(),
+            }];
+        }
+        if follows_token(name, AS_KW) {
+            return Vec::new();
+        }
+        match previous {
+            Some(INSTEADOF_KW | COMMA) => self.class_targets(text),
+            _ => vec![Target::Method {
+                receiver: self.this_type(),
+                name: text.to_string(),
+            }],
         }
     }
 
@@ -263,4 +362,40 @@ impl Analyzer<'_> {
             _ => vec![Target::Class(full)],
         }
     }
+}
+
+/// The kind of the token or node right before or after one, skipping trivia.
+fn significant_sibling(node: &SyntaxNode, before: bool) -> Option<php_syntax::SyntaxKind> {
+    let mut current = if before {
+        node.prev_sibling_or_token()
+    } else {
+        node.next_sibling_or_token()
+    };
+    while let Some(element) = current {
+        if !element.kind().is_trivia() {
+            return Some(element.kind());
+        }
+        current = if before {
+            element.prev_sibling_or_token()
+        } else {
+            element.next_sibling_or_token()
+        };
+    }
+    None
+}
+
+fn follows_token(node: &SyntaxNode, kind: php_syntax::SyntaxKind) -> bool {
+    let mut current = node.prev_sibling_or_token();
+    while let Some(element) = current {
+        if element.kind() == kind {
+            return true;
+        }
+        current = element.prev_sibling_or_token();
+    }
+    false
+}
+
+/// The second name of `use Foo\Bar as Baz`, which declares an alias and refers to nothing.
+fn is_alias_name(name: &SyntaxNode) -> bool {
+    significant_sibling(name, true) == Some(AS_KW)
 }

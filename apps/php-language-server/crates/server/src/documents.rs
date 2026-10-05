@@ -95,6 +95,14 @@ impl Documents {
         self.open.get_mut(uri)
     }
 
+    /// The text of every open document by path, for searches that must see unsaved changes.
+    pub fn texts(&self) -> std::collections::HashMap<std::path::PathBuf, String> {
+        self.open
+            .iter()
+            .filter_map(|(uri, document)| Some((crate::paths::uri_to_path(uri)?, document.text.clone())))
+            .collect()
+    }
+
     pub fn uris(&self) -> Vec<Uri> {
         self.open.keys().cloned().collect()
     }

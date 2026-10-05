@@ -9,7 +9,7 @@ use php_syntax::TextRange;
 
 use crate::infer::Analyzer;
 use crate::render;
-use crate::target::Target;
+use crate::target::{Callee, Target};
 
 /// A place in a file. `path` is `None` for the file the question was asked about.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -161,6 +161,7 @@ impl Analyzer<'_> {
                     })
                 })
                 .collect(),
+            Target::Parameter { callee, name } => self.describe_parameter(callee, name, root),
             Target::Variable { name, ty } => vec![Description {
                 title: format!("${name}"),
                 signature: format!("{} ${name}", ty.display(true)),
@@ -169,6 +170,51 @@ impl Analyzer<'_> {
                 defined_in: None,
             }],
         }
+    }
+
+    fn parameter_type(&self, callee: &Callee, name: &str) -> Option<Type> {
+        let level = self.level();
+        let callable = match callee {
+            Callee::Function(function) => self.index.function(function)?.decl.callable.clone(),
+            Callee::Method { class, name: method } => self.index.class(class)?.decl.method(method)?.callable.clone(),
+        };
+        let param = callable.params_at(level).find(|param| param.name == name)?;
+        param.effective_type(level).cloned()
+    }
+
+    fn describe_parameter(&self, callee: &Callee, name: &str, root: Option<&Path>) -> Vec<Description> {
+        let level = self.level();
+        let (file, callable) = match callee {
+            Callee::Function(function) => {
+                let Some(found) = self.index.function(function) else {
+                    return Vec::new();
+                };
+                (found.file, &found.decl.callable)
+            }
+            Callee::Method { class, name: method } => {
+                let Some(class) = self.index.class(class) else {
+                    return Vec::new();
+                };
+                let Some(found) = class.decl.method(method) else {
+                    return Vec::new();
+                };
+                (class.file, &found.callable)
+            }
+        };
+        let Some(param) = callable.params_at(level).find(|param| param.name == name) else {
+            return Vec::new();
+        };
+        let doc = (!param.description.is_empty()).then(|| Doc {
+            summary: param.description.clone(),
+            ..Doc::default()
+        });
+        vec![Description {
+            title: format!("${name}"),
+            signature: render::param_text(param, level),
+            doc,
+            place: Some(place_of(file, param.span)),
+            defined_in: Some(defined_in(file, root)),
+        }]
     }
 
     /// The doc of a method with the same name further up, for a method that has none of its own.
@@ -283,6 +329,10 @@ impl Analyzer<'_> {
                     }
                 }
                 Target::Constant(_) => continue,
+                Target::Parameter { callee, name } => match self.parameter_type(callee, name) {
+                    Some(ty) => ty,
+                    None => continue,
+                },
             };
             let receiver = self.receiver_type(&ty);
             let mut names: Vec<String> = receiver.class_names().into_iter().map(str::to_string).collect();

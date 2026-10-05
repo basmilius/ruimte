@@ -8,6 +8,7 @@ use php_syntax::PhpVersion;
 use crate::composer::Composer;
 use crate::index::{Index, Origin};
 use crate::indexer::IndexedFile;
+use crate::words::WordIndex;
 
 pub struct Project {
     pub root: PathBuf,
@@ -16,6 +17,8 @@ pub struct Project {
     /// The level came from `composer.json` and not from the settings.
     pub level_from_composer: bool,
     pub index: Index,
+    /// The words of the project's own files, for searches. Built when the first one asks.
+    pub words: WordIndex,
 }
 
 impl Project {
@@ -28,6 +31,7 @@ impl Project {
             level,
             level_from_composer,
             index: Index::new(level),
+            words: WordIndex::default(),
         }
     }
 
@@ -39,6 +43,7 @@ impl Project {
             level: default_level,
             level_from_composer: false,
             index: Index::new(default_level),
+            words: WordIndex::default(),
         }
     }
 

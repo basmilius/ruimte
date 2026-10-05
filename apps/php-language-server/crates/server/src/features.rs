@@ -28,32 +28,32 @@ fn range_of(start: u32, end: u32) -> TextRange {
 }
 
 /// The text of files that results point into, read once per request.
-struct Sources<'a> {
+pub(crate) struct TextCache<'a> {
     server: &'a Server<'a>,
-    current: &'a Uri,
+    current: Option<&'a Uri>,
     read: HashMap<PathBuf, Option<(String, LineIndex)>>,
 }
 
-impl<'a> Sources<'a> {
-    fn new(server: &'a Server<'a>, current: &'a Uri) -> Sources<'a> {
-        Sources {
+impl<'a> TextCache<'a> {
+    pub(crate) fn new(server: &'a Server<'a>, current: Option<&'a Uri>) -> TextCache<'a> {
+        TextCache {
             server,
             current,
             read: HashMap::new(),
         }
     }
 
-    fn location(&mut self, place: &Place) -> Option<Location> {
+    pub(crate) fn location(&mut self, place: &Place) -> Option<Location> {
         let (uri, range) = match &place.path {
             None => {
-                let document = self.server.documents.get(self.current)?;
+                let document = self.server.documents.get(self.current?)?;
                 let mapper = Mapper {
                     text: &document.text,
                     index: &document.index,
                     encoding: self.server.encoding,
                 };
                 (
-                    self.current.clone(),
+                    self.current?.clone(),
                     mapper.range(range_of(place.span.start, place.span.end)),
                 )
             }
@@ -226,7 +226,7 @@ impl Server<'_> {
         let places = self.with_analyzer(&uri, position.position, |analyzer, offset, _, _| {
             query(analyzer, offset)
         })?;
-        let mut sources = Sources::new(self, &uri);
+        let mut sources = TextCache::new(self, Some(&uri));
         let locations: Vec<Location> = places.iter().filter_map(|place| sources.location(place)).collect();
         (!locations.is_empty()).then_some(GotoDefinitionResponse::Array(locations))
     }

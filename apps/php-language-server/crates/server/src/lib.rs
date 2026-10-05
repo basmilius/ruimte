@@ -8,6 +8,7 @@ mod documents;
 mod features;
 mod paths;
 mod server;
+mod usages;
 mod workspace;
 
 pub use server::run;
