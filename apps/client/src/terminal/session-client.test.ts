@@ -226,6 +226,16 @@ describe('SessionClient', () => {
         expect(sink.attached.get('a')).toBe(true);
     });
 
+    test('a node resized while its create is on the wire attaches at its new grid', async () => {
+        const { transport, client } = setup();
+        transport.gated.add('session.create');
+        const opened = client.open('a', {}, 100, 40);
+        client.resize('a', 100, 36);
+        transport.answer('session.create');
+        await opened;
+        expect(transport.of('session.attach')[0]?.payload).toEqual({ sessionId: 'a', cols: 100, rows: 36 });
+    });
+
     test('a followed session is attached to and never created, also after a reconnect', async () => {
         const { transport, client } = setup();
         const result = await client.open('launch', { follow: true }, 80, 24);

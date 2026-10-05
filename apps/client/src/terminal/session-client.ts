@@ -107,7 +107,8 @@ export class SessionClient {
             if (this.mounted.get(nodeId) !== registered) {
                 return null;
             }
-            return await this.attach(nodeId, cols, rows);
+            // A resize meanwhile updated the entry; the attach claims the PTY, so the grid of the mount would undo it.
+            return await this.attach(nodeId, registered.cols, registered.rows);
         } catch (e) {
             if (isConnectionError(e)) {
                 return null;
