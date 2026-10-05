@@ -19,4 +19,4 @@ export type {
     Selection,
     TextEdit
 } from './types.ts';
-export { changedSpan, type TextSpan } from './text-span.ts';
+export { changedSpan, changedSpans, type TextSpan } from './text-span.ts';

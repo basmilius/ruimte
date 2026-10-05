@@ -1,4 +1,4 @@
-import { changedSpan, DocumentModel, type EditorSnapshot, replacementText } from '@ruimte/smart-editor-core';
+import { changedSpans, DocumentModel, type EditorSnapshot, replacementText } from '@ruimte/smart-editor-core';
 import { InputController } from './controller.ts';
 import { resolveSmartKeys } from './smart-keys.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
@@ -157,14 +157,17 @@ class SmartEditor implements Editor {
     }
 
     setText(text: string): void {
-        const span = changedSpan(this.model.getText(), text);
-        if (span === null) {
+        const spans = changedSpans(this.model.getText(), text);
+        if (spans.length === 0) {
             return;
         }
         this.settingText = true;
         try {
-            // An edit and not a reset, which would drop the undo history and put the cursor on line one.
-            this.model.applyEdits([{ from: span.start, to: span.end, text: span.text }], { source: 'external' });
+            // Edits and not a reset, which would drop the undo history and put the cursor on line one.
+            this.model.applyEdits(
+                spans.map((span) => ({ from: span.start, to: span.end, text: span.text })),
+                { source: 'external' }
+            );
         } finally {
             this.settingText = false;
         }

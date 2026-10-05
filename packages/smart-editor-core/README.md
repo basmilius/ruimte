@@ -23,6 +23,7 @@ Everything comes from the package root.
 - Comment toggles use a table of markers per language (`commentSyntax`), with the region of a Vue file picked by the caret's line. Line comments go in at the smallest indentation of the lines, and a lone caret moves down a line. A language with block comments only wraps each line.
 - Backspace at the start of a line also takes the whitespace that trails the line above. Tab inserts up to the next tab stop, or steps over a closer the editor added.
 - `scanBrackets` pairs brackets lexically, for code that does not parse yet.
+- `changedSpan` is the one stretch that differs between two texts and `changedSpans` the stretches of a bounded line diff (Myers on interned lines, then trimmed to the characters), which `applyEdits` takes as one batch. A diff past 4 million steps of work, 1,000 edited lines or 16 MiB between the first and last change is the one span. On 100,000 lines (6 MB) with three changes it takes about 20 ms.
 - `findMatches` and `replacementText` are the search the model uses.
 - `isWordBoundary`, `isHumpBoundary` and `wordBoundary` are the word predicates and the navigation on top of them.
 - Types for selections, edits, changes, snapshots, commands and options.

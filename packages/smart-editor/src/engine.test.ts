@@ -137,6 +137,57 @@ describe('setText', () => {
         expect(host.querySelector('.se-active-number')!.textContent).toBe('5');
     });
 
+    test('keeps carets, scroll and folds wherever the text around them stayed, between two far apart changes', () => {
+        const blocks = Array.from({ length: 30 }, (_, block) => [
+            `function f${block}() {`,
+            ...Array.from({ length: 8 }, (_, row) => `    body(${block}, ${row});`),
+            '}'
+        ]);
+        const lines = blocks.flat();
+        const text = lines.join('\n');
+        const { editor, viewport, window } = setup({
+            text,
+            language: 'typescript',
+            folds: {
+                collapsed: [
+                    { startLine: 100, endLine: 109 },
+                    { startLine: 200, endLine: 209 }
+                ],
+                custom: []
+            },
+            line: 151,
+            column: 5
+        });
+        editor.setSelection({ start: { line: 150, character: 4 }, end: { line: 150, character: 4 } });
+        editor.runCommand('addCaretBelow');
+        editor.runCommand('addCaretBelow');
+        viewport.scrollTop = 124 * 20;
+        viewport.dispatchEvent(new (window as unknown as { Event: typeof Event }).Event('scroll'));
+        const caretLines = (): number[] => editor.getSelections().map((range) => range.start.line);
+        const before = { carets: caretLines(), top: editor.getVisibleRange().start.line };
+        expect(before.carets).toEqual([150, 151, 152]);
+        const changed = [...lines];
+        changed[5] = '    changed();\n    inserted();';
+        changed[290] = '    rewritten();';
+        editor.setText(changed.join('\n'));
+        expect(caretLines()).toEqual([151, 152, 153]);
+        expect(editor.getFolds().collapsed).toEqual([
+            { startLine: 101, endLine: 110 },
+            { startLine: 201, endLine: 210 }
+        ]);
+        expect(editor.getVisibleRange().start.line).toBe(before.top + 1);
+    });
+
+    test('is one undo step and an external change, however many stretches it replaces', () => {
+        const { editor, press: key } = setup({ text: 'a\nb\nc\nd\ne' });
+        const sources: string[] = [];
+        editor.onTextChange((change) => sources.push(change.source));
+        editor.setText('A\nb\nc\nd\nE');
+        expect(sources).toEqual(['external']);
+        key('z', { ctrlKey: true });
+        expect(editor.getText()).toBe('a\nb\nc\nd\ne');
+    });
+
     test('does nothing for the text it already has', () => {
         const { editor, host } = setup();
         const before = host.innerHTML;
