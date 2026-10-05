@@ -12,6 +12,7 @@ import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type Layout
 import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
 import { mapOffset } from './offsets.ts';
 import { type ScrollKind, scrollPosition } from './scroll.ts';
+import { easeOut, scrollDuration } from './scroll-animation.ts';
 import { Outline, scopeChain, type StickyPlacement, stickyCover, stickyPlacements, structuralEntries } from './outline.ts';
 import { type OverviewSpan, overviewTicks, paintOverview } from './overview.ts';
 import { paintCarets, paintGutter, paintOver, paintOverlays, paintSigns, paintSticky, RowPainter, type StickyEntry, type WrapSign } from './paint.ts';
@@ -173,6 +174,8 @@ export class EditorView {
     private dropCaret: number | null = null;
     /* Column mode: a drag or Shift with the arrows selects a box of columns, as Alt does for a drag. */
     columnMode = false;
+    /* A scroll on its way: where it started and ends, when, and the frame that moves it. */
+    private scrollRun: { frame: number; from: { x: number; y: number }; to: { x: number; y: number }; start: number | null; duration: number } | null = null;
     private selectionOccurrenceCache: { key: string; ranges: readonly { from: number; to: number }[] } = { key: '', ranges: [] };
     private link: { from: number; to: number } | null = null;
     private composition: string | undefined;
@@ -444,6 +447,7 @@ export class EditorView {
 
     private modelChanged(snapshot: EditorSnapshot): void {
         if (snapshot.revision !== this.revision) {
+            this.cancelScroll();
             this.revision = snapshot.revision;
             this.rowEndCaret = null;
             this.hoverOffset = null;
@@ -1175,8 +1179,60 @@ export class EditorView {
         return this.layout.caret(head, 'after', head === this.rowEndCaret);
     }
 
+    /* Where the view is, or where a scroll on its way will leave it, which is what the next scroll goes by. */
+    get scrollPlace(): { x: number; y: number } {
+        return this.scrollRun?.to ?? { x: this.viewport.scrollLeft, y: this.viewport.scrollTop };
+    }
+
+    /* Stops a scroll on its way where it is. */
+    cancelScroll(): void {
+        if (this.scrollRun !== null) {
+            this.document.defaultView?.cancelAnimationFrame?.(this.scrollRun.frame);
+            this.scrollRun = null;
+        }
+    }
+
+    /* Whether a person asked their system for less motion. */
+    private reducedMotion(): boolean {
+        return this.document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+    }
+
+    /*
+     * Takes the view to a place: at once when it is no more than a line away, there is no frame to move it
+     * in or motion is reduced, and over a moment otherwise. Another scroll, the wheel or a touch ends it.
+     */
+    scrollTo(x: number, y: number, animate = true): void {
+        this.cancelScroll();
+        const view = this.document.defaultView;
+        const distance = Math.hypot(x - this.viewport.scrollLeft, y - this.viewport.scrollTop);
+        const duration = scrollDuration(distance, this.layout.metrics.lineHeight);
+        if (!animate || duration === 0 || view?.requestAnimationFrame === undefined || this.reducedMotion()) {
+            this.viewport.scrollTop = y;
+            this.viewport.scrollLeft = x;
+            return;
+        }
+        const run = { frame: 0, from: { x: this.viewport.scrollLeft, y: this.viewport.scrollTop }, to: { x, y }, start: null as number | null, duration };
+        const step = (time: number): void => {
+            if (this.scrollRun !== run || this.disposed) {
+                return;
+            }
+            run.start ??= time;
+            const fraction = Math.min(1, (time - run.start) / run.duration);
+            const eased = easeOut(fraction);
+            this.viewport.scrollTop = Math.round(run.from.y + (run.to.y - run.from.y) * eased);
+            this.viewport.scrollLeft = Math.round(run.from.x + (run.to.x - run.from.x) * eased);
+            if (fraction >= 1) {
+                this.scrollRun = null;
+                return;
+            }
+            run.frame = view.requestAnimationFrame(step);
+        };
+        this.scrollRun = run;
+        run.frame = view.requestAnimationFrame(step);
+    }
+
     /* Scrolls an offset into view the way `kind` asks; the pinned headers at the top count as not being view. */
-    revealOffset(offset: number, kind: ScrollKind = 'relative'): void {
+    revealOffset(offset: number, kind: ScrollKind = 'relative', animate = true): void {
         this.ensureVisible(offset);
         this.syncWrap();
         const caret = this.layout.caret(offset);
@@ -1186,13 +1242,14 @@ export class EditorView {
         this.content.style.height = `${this.layout.height}px`;
         this.content.style.width = `${Math.max(this.layout.width, width)}px`;
         // The headers pinned at the top change with the scroll, so the position is worked out again where it lands.
-        let cover = this.stickyHeightAt(this.viewport.scrollTop);
-        let position = { x: this.viewport.scrollLeft, y: this.viewport.scrollTop };
+        const place = this.scrollPlace;
+        let cover = this.stickyHeightAt(place.y);
+        let position = place;
         for (let attempt = 0; attempt < 3; attempt++) {
             position = scrollPosition(
                 {
                     target: { x: caret.x, y: caret.y },
-                    view: { x: this.viewport.scrollLeft, y: this.viewport.scrollTop + cover, width, height: this.viewportHeight - cover },
+                    view: { x: place.x, y: place.y + cover, width, height: this.viewportHeight - cover },
                     content: { width: Math.max(this.layout.width, width), height: this.layout.height },
                     lineHeight: this.layout.metrics.lineHeight,
                     charWidth: this.layout.metrics.charWidth,
@@ -1210,8 +1267,7 @@ export class EditorView {
             }
             cover = next;
         }
-        this.viewport.scrollTop = position.y;
-        this.viewport.scrollLeft = position.x;
+        this.scrollTo(position.x, position.y, animate);
         this.requestRender();
     }
 
@@ -1768,6 +1824,7 @@ export class EditorView {
             return;
         }
         this.disposed = true;
+        this.cancelScroll();
         this.subscription.dispose();
         this.resizeObserver?.disconnect();
         this.blockObserver?.disconnect();

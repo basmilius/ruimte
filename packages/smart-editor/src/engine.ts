@@ -113,7 +113,8 @@ class SmartEditor implements Editor {
             const offset = Math.min(bounds.end, bounds.start + Math.max(0, (options.column ?? 1) - 1));
             this.model.setSelections([{ anchor: offset, head: offset }]);
             if (options.scrollTop === undefined) {
-                this.view.revealOffset(offset, 'center');
+                // A file opens where it is told to, without travelling there.
+                this.view.revealOffset(offset, 'center', false);
             }
         }
         if (options.scrollTop !== undefined) {
@@ -201,7 +202,7 @@ class SmartEditor implements Editor {
     }
 
     getScrollTop(): number {
-        return this.view.viewport.scrollTop;
+        return this.view.scrollPlace.y;
     }
 
     getSelection(): EditorRange {

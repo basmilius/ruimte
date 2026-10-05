@@ -179,6 +179,8 @@ export class InputController {
         this.listen(input, 'copy', (event) => this.copy(event, false));
         this.listen(input, 'cut', (event) => this.copy(event, true));
         this.listen(viewport, 'scroll', () => this.view.scrolled());
+        this.listen(viewport, 'wheel', () => this.view.cancelScroll());
+        this.listen(viewport, 'touchstart', () => this.view.cancelScroll());
         this.listen(viewport, 'pointermove', (event) => this.view.hoverMoved(event));
         this.listen(viewport, 'pointerleave', () => this.view.setHover(null));
         this.listen(viewport, 'pointerdown', (event) => this.pointerDown(event));
@@ -356,12 +358,13 @@ export class InputController {
 
     /* A page scrolls whole lines, and every caret goes as far, so each stays on its row of the screen. */
     private movePages(direction: -1 | 1, extend: boolean): void {
-        const { model, layout, viewport } = this.view;
+        const { model, layout } = this.view;
         const { lineHeight } = layout.metrics;
         const height = this.view.viewportHeight;
         const page = Math.trunc(height / lineHeight) * lineHeight;
-        const scrollTop = direction < 0 ? viewport.scrollTop - page : Math.min(layout.height - height, viewport.scrollTop + page);
-        viewport.scrollTop = Math.max(0, layout.lineBase(scrollTop));
+        const from = this.view.scrollPlace;
+        const scrollTop = direction < 0 ? from.y - page : Math.min(layout.height - height, from.y + page);
+        this.view.scrollTo(from.x, Math.max(0, layout.lineBase(scrollTop)));
         const distance = direction < 0 ? height : height + lineHeight - 1;
         const selections = model.getSelections().map((selection, index) => {
             this.desiredXs[index] ??= layout.caret(selection.head).x;
@@ -674,6 +677,7 @@ export class InputController {
     }
 
     private pointerDown(event: PointerEvent): void {
+        this.view.cancelScroll();
         const target = event.target as HTMLElement;
         if (event.button !== 0 || target.closest('button, a, input, textarea, [contenteditable], .se-block, .se-gutter, .se-sticky')) {
             return;
