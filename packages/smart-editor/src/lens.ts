@@ -6,9 +6,8 @@ export function lensSignature(entries: readonly EditorCodeVisionEntry[]): string
 }
 
 /*
- * The entries of a row as buttons, which a press reaches through `lookup` so an entry set after the
- * row was drawn is the one that answers. The press goes on the button's own element and not on the
- * editor's, which a press on a button never starts a selection through.
+ * The entries of a row as buttons. A press looks its entry up when it happens, so an entry the host set
+ * after the row was drawn is the one that answers.
  */
 export function fillLens(container: HTMLElement, entries: readonly EditorCodeVisionEntry[], lookup: (id: string) => EditorCodeVisionEntry | undefined): void {
     const document = container.ownerDocument;

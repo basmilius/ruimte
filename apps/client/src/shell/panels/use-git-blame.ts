@@ -14,7 +14,6 @@ import { useGitRoot } from '@/shell/panels/use-git-root';
 export function useGitBlame(language: EditorLanguage | null, path: string, disk: string): void {
     const transport = useTransport();
     const authors = useSettings((s) => s.codeVisionAuthors);
-    const tabLimit = useSettings((s) => s.filesTabLimit);
     const root = useGitRoot(path);
     // Goes up when the checkout moved; the head tells whether that moved the blame.
     const signal = useGitSignal(root ?? null);
@@ -61,11 +60,14 @@ export function useGitBlame(language: EditorLanguage | null, path: string, disk:
                 kind: 'ready',
                 blame,
                 base: disk,
-                openCommit: (hash) => useFiles.getState().open(root, tabLimit, { kind: 'diff', cwd: root, scope: 'commit', staged: false, commit: hash })
+                openCommit: (hash) =>
+                    useFiles
+                        .getState()
+                        .open(root, useSettings.getState().filesTabLimit, { kind: 'diff', cwd: root, scope: 'commit', staged: false, commit: hash })
             });
         })();
         return () => {
             alive = false;
         };
-    }, [language, authors, transport, root, path, signal, disk, tabLimit]);
+    }, [language, authors, transport, root, path, signal, disk]);
 }
