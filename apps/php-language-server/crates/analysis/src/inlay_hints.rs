@@ -225,7 +225,7 @@ fn closure_hints(
             continue;
         };
         let expected = expected.substitute(&bound, callee.receiver.as_ref(), callee.self_name.as_deref());
-        let signature = expected.members().into_iter().find_map(|member| match member {
+        let signature = expected.members().iter().find_map(|member| match member {
             Type::Callable(Some(signature)) => Some(signature.clone()),
             _ => None,
         });
