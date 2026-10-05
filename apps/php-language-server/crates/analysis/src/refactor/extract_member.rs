@@ -24,6 +24,7 @@ use crate::actions::type_text::native_type_text;
 use crate::ast::{self, child_of, end, first_token, has_token, start, text_of, tokens};
 use crate::completion::TextEdit;
 use crate::inspections::Cx;
+use crate::inspections::types::sure_type;
 
 fn class_of(node: &SyntaxNode) -> Option<SyntaxNode> {
     node.ancestors().find(|ancestor| ast::is_class_like(ancestor.kind()))
@@ -369,7 +370,7 @@ fn native_type_of(rcx: &Rcx<'_>, class: &SyntaxNode, expr: &SyntaxNode) -> Optio
     let cx = &rcx.cx;
     let analyzer = cx.file.analyzer(expr);
     let env = analyzer.env_around(expr);
-    let ty = analyzer.type_of(expr, &env);
+    let ty = sure_type(cx, &analyzer, &env, expr)?;
     if ty.is_unknown() || matches!(ty, Type::Void | Type::Never | Type::Null | Type::Mixed) {
         return None;
     }
@@ -668,7 +669,7 @@ fn extract_parameter(rcx: &Rcx<'_>, expr: &SyntaxNode) -> Result<Change, String>
 fn expression_type(rcx: &Rcx<'_>, expr: &SyntaxNode) -> Option<Type> {
     let analyzer = rcx.cx.file.analyzer(expr);
     let env = analyzer.env_around(expr);
-    let ty = analyzer.type_of(expr, &env);
+    let ty = sure_type(&rcx.cx, &analyzer, &env, expr)?;
     (!ty.is_unknown() && !matches!(ty, Type::Void | Type::Never | Type::Null | Type::Mixed)).then_some(ty)
 }
 

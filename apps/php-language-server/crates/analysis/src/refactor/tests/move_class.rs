@@ -261,3 +261,31 @@ fn a_class_moving_to_the_global_namespace_loses_its_namespace_and_the_names_it_u
     assert!(!moved.contains("namespace"), "{moved}");
     assert!(moved.contains("use function Models\\helper;"), "{moved}");
 }
+
+#[test]
+fn refuses_a_name_another_class_has() {
+    let user = "<?php\nnamespace App\\Models;\n\nclass User {}\n";
+    let taken = "<?php\nnamespace App\\Domain;\n\nclass User {}\n";
+    let reason = files_moved(
+        setup("src/Models/User.php"),
+        &[("src/Models/User.php", user), ("src/Domain/User.php", taken)],
+        &[("src/Models/User.php", "src/Domain/User.php")],
+    )
+    .expect_err("refused");
+    assert_eq!(reason, "A class named 'App\\Domain\\User' already exists");
+}
+
+#[test]
+fn refuses_a_file_with_two_classes() {
+    let user = "<?php\nnamespace App\\Models;\n\nclass User {}\nclass Other {}\n";
+    let result = files_moved(
+        setup("src/Models/User.php"),
+        &[("src/Models/User.php", user)],
+        &[("src/Models/User.php", "src/Domain/User.php")],
+    );
+    assert!(
+        matches!(result, Ok(None)),
+        "a file that is not one class is not followed: {:?}",
+        result.map(|done| done.map(|done| done.files))
+    );
+}

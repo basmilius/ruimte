@@ -201,3 +201,32 @@ fn keeps_comments_and_neighbors_as_they_are() {
         "{found}"
     );
 }
+
+#[test]
+fn keeps_the_line_endings_the_file_has() {
+    let source = method("        return («$a + $b») * 2;\n").replace('\n', "\r\n");
+    let found = applied(&[], &source, "Extract variable");
+    assert!(
+        found.contains("$int = $a + $b;\r\n        return ($int) * 2;"),
+        "{found:?}"
+    );
+    assert!(
+        !found.replace("\r\n", "").contains('\n'),
+        "a bare line feed came in: {found:?}"
+    );
+}
+
+#[test]
+fn writes_with_the_indent_of_the_options_and_leaves_multibyte_text_alone() {
+    let source = "<?php\nfunction f($a)\n{\n\treturn strlen(«'héllo ' . $a») + 1;\n}\n";
+    let tabs = php_format::FormatOptions {
+        indent: php_format::Indent::Tab,
+        ..php_format::FormatOptions::default()
+    };
+    let outcome = super::run_with(super::Setup::PLAIN, &[], source, "Extract variable", &tabs);
+    let done = outcome.result.expect("offered").expect("done");
+    assert_eq!(
+        done.text,
+        "<?php\nfunction f($a)\n{\n\t$string = 'héllo ' . $a;\n\treturn strlen($string) + 1;\n}\n"
+    );
+}

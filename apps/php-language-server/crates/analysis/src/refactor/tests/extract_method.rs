@@ -101,7 +101,7 @@ fn a_bare_return_stays_a_return() {
 fn a_static_method_gets_a_static_method() {
     let found = extract("    public static function run(int $a): int\n    {\n        return «$a * 2» + 1;\n    }\n");
     assert!(found.contains("return self::getInt($a) + 1;"), "{found}");
-    assert!(found.contains("private static function getInt(int $a): int"), "{found}");
+    assert!(found.contains("private static function getInt(int $a)"), "{found}");
 }
 
 #[test]

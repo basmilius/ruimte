@@ -1,7 +1,7 @@
 //! Applies every refactor at a sample of positions of a real project and holds each result to two
 //! promises: it parses as well as before, and the inspections report nothing they did not report
 //! before. `cargo run --release -p php-analysis --example refactor_smoke -- <project> <stubs>
-//! [--every <n>] [--per-file <n>] [--max-files <n>] [--title <prefix>] [--show <n>]`.
+//! [--every <n>] [--per-file <n>] [--max-files <n>] [--title <prefix>[,<prefix>...]] [--show <n>]`.
 
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
@@ -170,6 +170,26 @@ fn findings(
     out
 }
 
+/// A finding with the namespaces left out of the class names in its message, which a move changes.
+fn shorten_names(text: &str) -> String {
+    let mut out = String::new();
+    let mut word = String::new();
+    let flush = |word: &mut String, out: &mut String| {
+        out.push_str(word.rsplit('\\').next().unwrap_or(""));
+        word.clear();
+    };
+    for c in text.chars() {
+        if c.is_alphanumeric() || c == '_' || c == '\\' {
+            word.push(c);
+        } else {
+            flush(&mut word, &mut out);
+            out.push(c);
+        }
+    }
+    flush(&mut word, &mut out);
+    out
+}
+
 fn new_ones(before: &[String], after: &[String]) -> Vec<String> {
     let mut remaining: Vec<&String> = before.iter().collect();
     let mut new = Vec::new();
@@ -208,7 +228,7 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.len() < 2 {
         eprintln!(
-            "usage: refactor_smoke <project> <stubs> [--every <n>] [--per-file <n>] [--max-files <n>] [--title <prefix>] [--show <n>]"
+            "usage: refactor_smoke <project> <stubs> [--every <n>] [--per-file <n>] [--max-files <n>] [--title <prefix>[,<prefix>...]] [--show <n>]"
         );
         std::process::exit(2);
     }
@@ -315,9 +335,9 @@ fn main() {
                 with_refactors(&renv, range, |list| {
                     list.iter()
                         .filter(|refactor| {
-                            only_title
-                                .as_ref()
-                                .is_none_or(|prefix| refactor.title.starts_with(prefix))
+                            only_title.as_ref().is_none_or(|prefixes| {
+                                prefixes.split(',').any(|prefix| refactor.title.starts_with(prefix))
+                            })
                         })
                         .map(|refactor| (refactor.title.clone(), refactor.run()))
                         .collect()
@@ -397,6 +417,15 @@ fn main() {
                         .map_or(file.clone(), |(_, to)| to.clone());
                     let after_findings = findings(&project.index, after, &settings, &externals);
                     let before = before_cache.get(file).cloned().unwrap_or_default();
+                    let moves_names = title.starts_with("Move class") || title.starts_with("Change the class");
+                    let (before, after_findings) = if moves_names {
+                        (
+                            before.iter().map(|item| shorten_names(item)).collect(),
+                            after_findings.iter().map(|item| shorten_names(item)).collect(),
+                        )
+                    } else {
+                        (before, after_findings)
+                    };
                     for item in new_ones(&before, &after_findings) {
                         if title == "Add parameter" && item.starts_with("unused-parameter Parameter '$parameter'") {
                             continue;

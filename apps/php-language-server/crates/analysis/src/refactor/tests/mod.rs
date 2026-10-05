@@ -67,6 +67,7 @@ impl Setup {
 }
 
 /// What a refactor did, by file name relative to the project.
+#[derive(Debug)]
 pub(super) struct Done {
     pub text: String,
     pub files: BTreeMap<String, String>,

@@ -16,6 +16,7 @@ use crate::actions::imports::ClassWriter;
 use crate::actions::type_text::native_type_text;
 use crate::ast::{self, child_of, end, first_token, has_token, start, text_of};
 use crate::inspections::flow::{statements_complete, statements_leave};
+use crate::inspections::types::sure_type;
 use crate::refs::{Access, Hit, HitKind, binding_scope, variable_hits};
 
 const SUPERGLOBALS: &[&str] = &[
@@ -308,6 +309,10 @@ fn flows(rcx: &Rcx<'_>, piece: &Piece, function: &SyntaxNode) -> Result<Vec<Flow
             })
             .last()
     });
+    let bound = bound_names(function);
+    if let Some(name) = names.iter().find(|name| bound.contains(name)) {
+        return Err(format!("The selection uses ${name}, which `global` or `static` binds"));
+    }
     let by_reference_params = by_reference_parameters(function);
     let taken_by_calls = super::scope::by_reference_variables(cx, function);
     let mut out = Vec::new();
@@ -387,6 +392,24 @@ fn is_update(root: &SyntaxNode, hit: &Hit) -> bool {
             _ => return false,
         }
     }
+}
+
+/// The variables a function ties to something that outlives a call with `global` or `static`.
+fn bound_names(function: &SyntaxNode) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for node in function.descendants() {
+        if !matches!(node.kind(), GLOBAL_STATEMENT | STATIC_VARIABLE_STATEMENT)
+            || ast::enclosing_function(&node).as_ref() != Some(function)
+        {
+            continue;
+        }
+        for token in node.descendants_with_tokens().filter_map(SyntaxElement::into_token) {
+            if token.kind() == VARIABLE {
+                out.push(token.text().trim_start_matches('$').to_string());
+            }
+        }
+    }
+    out
 }
 
 fn by_reference_parameters(function: &SyntaxNode) -> Vec<String> {
@@ -596,7 +619,7 @@ fn extract(rcx: &Rcx<'_>) -> Result<Change, String> {
             return Some(text_slice(cx.text, &declared).to_string());
         }
         let ty = env.get(name)?;
-        if matches!(ty, Type::Never | Type::Void) {
+        if !is_plain_type(ty) {
             return None;
         }
         type_text(ty, level, written, false)
@@ -637,10 +660,10 @@ fn extract(rcx: &Rcx<'_>) -> Result<Change, String> {
             (_, Exit::Returns { with_value: true }) => declared_return(&function),
             (Piece::Expression(expr), _) => {
                 let ty = analyzer.type_of(expr, &env);
-                if ty == Type::Never {
-                    None
+                if ty == Type::Void {
+                    type_text(&Type::Void, level, &mut written, true)
                 } else {
-                    type_text(&ty, level, &mut written, true)
+                    sure_type(cx, &analyzer, &env, expr).and_then(|ty| type_text(&ty, level, &mut written, true))
                 }
             }
             (Piece::Statements(_), Exit::Falls) => match outputs.as_slice() {
@@ -649,6 +672,7 @@ fn extract(rcx: &Rcx<'_>) -> Result<Change, String> {
                 [] => type_text(&Type::Void, level, &mut written, true),
                 [only] => after_env
                     .get(&only.name)
+                    .filter(|ty| is_plain_type(ty))
                     .and_then(|ty| type_text(ty, level, &mut written, true)),
                 _ => Some("array".to_string()),
             },
@@ -883,6 +907,33 @@ fn doc_type(ty: &Type, class: &mut dyn FnMut(&str) -> String) -> Option<String> 
     } else {
         flatten_union(&text)?
     })
+}
+
+/// A type that code can be trusted to have: a scalar or an array, or either or `null`. What the type
+/// layer reads from a doc block or from the way objects flow is not enough for a declaration, which
+/// PHP checks.
+fn is_plain_type(ty: &Type) -> bool {
+    match ty {
+        Type::Int
+        | Type::Float
+        | Type::String
+        | Type::Bool
+        | Type::True
+        | Type::False
+        | Type::IntLiteral(_)
+        | Type::StringLiteral(_)
+        | Type::Array(..)
+        | Type::List(_)
+        | Type::Shape(_) => true,
+        Type::Union(members) => {
+            members.len() == 2
+                && members.contains(&Type::Null)
+                && members
+                    .iter()
+                    .all(|member| *member == Type::Null || is_plain_type(member))
+        }
+        _ => false,
+    }
 }
 
 /// The names of the methods or functions that the new name must not take.
