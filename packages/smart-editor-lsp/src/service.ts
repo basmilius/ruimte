@@ -40,6 +40,8 @@ export interface LanguageDocument {
 
 export interface LanguageRequestOptions {
     signal?: AbortSignal;
+    /* Runs beside others of its feature, which a newer request would otherwise take over from; for a feature that asks many questions at once. */
+    parallel?: boolean;
 }
 
 /* What one language server reported for a document. A new report replaces the earlier one of the same `source`. */

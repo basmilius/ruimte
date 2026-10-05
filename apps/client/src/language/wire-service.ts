@@ -426,9 +426,11 @@ export class WireLanguageService implements LanguageService {
         }
         const version = document.version;
         const key = `${uri}\0${method}`;
-        this.latest.get(key)?.abort();
         const controller = new AbortController();
-        this.latest.set(key, controller);
+        if (!options.parallel) {
+            this.latest.get(key)?.abort();
+            this.latest.set(key, controller);
+        }
         const abort = (): void => controller.abort();
         options.signal?.addEventListener('abort', abort, { once: true });
         if (options.signal?.aborted) {

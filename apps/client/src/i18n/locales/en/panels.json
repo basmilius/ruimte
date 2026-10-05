@@ -619,6 +619,11 @@
             "noDefinition": "No definition found",
             "unavailableDefinition": "No language server finds definitions in this file"
         },
+        "codeVision": {
+            "usagesNone": "No usages",
+            "usages_one": "{{formatted}} usage",
+            "usages_other": "{{formatted}} usages"
+        },
         "symbols": {
             "unavailable": "No language server knows the symbols of this file",
             "failed": "Could not read the symbols: {{message}}",

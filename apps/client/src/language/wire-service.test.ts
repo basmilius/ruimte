@@ -158,6 +158,24 @@ describe('requests', () => {
         transport.release();
     });
 
+    test('lets requests that ask to run in parallel finish side by side, and still supersede the ones that do not', async () => {
+        const { transport, language } = service();
+        await language.openDocument({ uri, languageId: 'typescript', text: 'let a = 1;' });
+        transport.holdNextReply();
+        const first = language.references(uri, origin, false, { parallel: true }).catch((error: unknown) => error);
+        await settle();
+        const second = language.references(uri, { line: 0, character: 1 }, false, { parallel: true });
+        await second;
+        transport.release();
+        expect(await first).not.toBeInstanceOf(Error);
+        transport.holdNextReply();
+        const old = language.references(uri, origin).catch((error: unknown) => error);
+        await settle();
+        void language.references(uri, { line: 0, character: 1 });
+        expect(((await old) as { code: number }).code).toBe(-32800);
+        transport.release();
+    });
+
     test('says why the daemon could not answer, in the codes of LSP', async () => {
         const { transport, language } = service();
         await language.openDocument({ uri, languageId: 'typescript', text: 'let a = 1;' });

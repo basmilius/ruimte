@@ -1,6 +1,7 @@
 import type { Editor, EditorPosition } from '@ruimte/smart-editor';
 import type { Location } from '@ruimte/smart-editor-lsp';
 import { CodeActionsFeature } from './code-actions';
+import { CodeVisionFeature } from './code-vision';
 import { CompletionFeature } from './completion';
 import { ContextMenuFeature } from './context-menu';
 import { DefinitionLinkFeature } from './definition-link';
@@ -50,6 +51,8 @@ export class EditorLanguage {
     readonly contextMenu: ContextMenuFeature;
     readonly history: HistoryFeature;
     readonly definitionLink: DefinitionLinkFeature;
+    readonly symbols: SymbolsFeature;
+    readonly codeVision: CodeVisionFeature;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -65,7 +68,7 @@ export class EditorLanguage {
         this.snippets = new SnippetFeature(this);
         this.signature = new SignatureFeature(this, timers);
         this.highlights = new HighlightsFeature(this, timers);
-        new SymbolsFeature(this, timers);
+        this.symbols = new SymbolsFeature(this, timers);
         new SelectionRangesFeature(this);
         new SemanticTokensFeature(this, timers);
         new InlayHintsFeature(this, timers);
@@ -77,6 +80,7 @@ export class EditorLanguage {
         this.contextMenu = new ContextMenuFeature(this);
         this.history = new HistoryFeature(this);
         this.definitionLink = new DefinitionLinkFeature(this);
+        this.codeVision = new CodeVisionFeature(this, (listener) => this.symbols.onResult(listener), timers);
         this.placeOpenedCaret(editor.getCaret());
         this.onDispose(editor.onCaret((position) => this.placeOpenedCaret(position)));
     }

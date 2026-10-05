@@ -68,6 +68,7 @@ export function blocksOf(result: DocumentSymbolResult): EditorBlock[] {
  */
 export class SymbolsFeature {
     private readonly refresher: Refresher;
+    private readonly listeners = new Set<(result: DocumentSymbolResult) => void>();
 
     constructor(language: EditorLanguage, timers: Timers = realTimers) {
         const { editor, project, uri } = language;
@@ -79,6 +80,9 @@ export class SymbolsFeature {
                 const result = await project.service.documentSymbols(uri, { signal });
                 if (!signal.aborted) {
                     editor.setBlocks(result === null ? null : blocksOf(result));
+                    for (const listener of [...this.listeners]) {
+                        listener(result);
+                    }
                 }
             },
             PAUSE_MS,
@@ -96,5 +100,13 @@ export class SymbolsFeature {
             this.refresher.dispose();
             editor.setBlocks(null);
         });
+    }
+
+    /* Called with every answer that was not replaced before it came. */
+    onResult(listener: (result: DocumentSymbolResult) => void): () => void {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
     }
 }

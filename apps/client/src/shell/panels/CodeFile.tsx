@@ -22,6 +22,7 @@ import { lineEndingOf } from '@/shell/panels/status-bar-model';
 import { editorSeed, useEditorFind } from '@/shell/panels/use-editor-find';
 import { useEditorLanguage } from '@/shell/panels/use-editor-language';
 import { useChangeMarks } from '@/shell/panels/use-change-marks';
+import { useCodeVision } from '@/shell/panels/use-code-vision';
 import { useEditorScope } from '@/shell/panels/use-editor-scope';
 import { useFileEditing } from '@/shell/panels/use-file-editing';
 import { useGitBase } from '@/shell/panels/use-git-base';
@@ -225,6 +226,7 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
         return editor === null || element === null ? undefined : registerFocusedEditor(editor, element);
     }, [editor]);
     const editorLanguage = useEditorLanguage(editor, path, plain ? undefined : read.language);
+    useCodeVision(editorLanguage);
     useEffect(() => {
         const element = surface.current;
         return editorLanguage === null || element === null ? undefined : registerFocusedLanguage(editorLanguage, element);
