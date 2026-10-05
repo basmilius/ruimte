@@ -22,3 +22,17 @@ export function useContextSources(id: string): ContextSource[] {
     const edges = useCanvas((s) => s.edges);
     return useMemo(() => contextSourcesOf(nodes, texts, edges).get(id) ?? NONE, [nodes, texts, edges, id]);
 }
+
+/*
+ * The chats a line connects to a node, whichever way it was drawn, in canvas order. A frame counts: a
+ * node inside a group is linked to what the group is linked to. It is the inverse of what a chat
+ * reads, so a chat is linked when the node is among its sources, or when the node is an agent that reads the chat.
+ */
+export function chatsLinkedTo(nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>, edges: Edge[], nodeId: string): string[] {
+    const sources = contextSourcesOf(nodes, texts, edges);
+    const readByNode = new Set((sources.get(nodeId) ?? NONE).map((source) => source.id));
+    return Object.values(nodes)
+        .filter((node) => node.kind === 'chat' && node.id !== nodeId)
+        .filter((chat) => readByNode.has(chat.id) || (sources.get(chat.id) ?? NONE).some((source) => source.id === nodeId))
+        .map((chat) => chat.id);
+}
