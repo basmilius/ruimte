@@ -16,3 +16,6 @@ rowan = "0.17.0"
 criterion = "0.7.0"
 expect-test = "1.5.1"
 
+[[bench]]
+name = "parse"
+harness = false
