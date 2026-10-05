@@ -129,6 +129,42 @@ export function jumpToTimelineItem(key: string, itemId: string): boolean {
     return true;
 }
 
+/*
+ * A jump to the turn of a chat, for a card that says which turn wrote something: the message that opened
+ * it, or the files it changed. Kept like the jump to an item, so a chat that is not on screen yet gets it
+ * when its thread registers.
+ */
+export type TurnTarget = 'prompt' | 'changes';
+
+type TurnJump = (turnId: string, target: TurnTarget) => void;
+const turnJumpers = new Map<string, TurnJump>();
+const waitingTurnJumps = new Map<string, { turnId: string; target: TurnTarget }>();
+
+export function registerTurnJumper(key: string, jump: TurnJump): () => void {
+    turnJumpers.set(key, jump);
+    const waiting = waitingTurnJumps.get(key);
+    if (waiting !== undefined) {
+        waitingTurnJumps.delete(key);
+        jump(waiting.turnId, waiting.target);
+    }
+    return () => {
+        if (turnJumpers.get(key) === jump) {
+            turnJumpers.delete(key);
+        }
+    };
+}
+
+/* False when that chat has no thread on screen; the jump then waits for the next one that registers. */
+export function jumpToTimelineTurn(key: string, turnId: string, target: TurnTarget): boolean {
+    const jump = turnJumpers.get(key);
+    if (jump === undefined) {
+        waitingTurnJumps.set(key, { turnId, target });
+        return false;
+    }
+    jump(turnId, target);
+    return true;
+}
+
 /* How near the top, in screens, the page before is asked for, so it is there before a reader reaches the edge. */
 const EARLIER_SCREENS = 1.5;
 

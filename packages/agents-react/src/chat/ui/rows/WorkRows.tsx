@@ -9,7 +9,9 @@ import { useOpenForFind } from '../find-reveal';
 import { chatHost } from '../../../host';
 import { lazyNamed } from '../../../lazy';
 import { useChatActions } from '../../actions';
+import { useChatScope } from '../../../scope';
 import { useCurrentItem } from '../../../state/chats';
+import { useTimelineFlash } from '../../timeline-flash';
 import { formatClockDuration, formatElapsedShort } from '@basmilius/desktop-ui/format';
 import { Icon, Spinner, useTickingText } from '@basmilius/desktop-ui';
 import { ROW_GUTTER, toolIcon } from '../icons';
@@ -235,16 +237,25 @@ function ChangedFilesCard({
     truncated,
     added,
     deleted,
+    revealNonce = 0,
     children
 }: {
     count: number;
     truncated?: boolean;
     added?: number;
     deleted?: number;
+    /* A jump from outside the chat that asked for this card; each new one opens it. */
+    revealNonce?: number;
     children: React.ReactNode;
 }) {
     const { t } = useTranslation('agent-chat');
     const [expanded, setExpanded] = useState(false);
+    // A jump from outside opens the card, also when the jump put the row on screen and so mounted it; the flash is gone by the time the row is scrolled to again.
+    const [seenReveal, setSeenReveal] = useState(0);
+    if (revealNonce > 0 && revealNonce !== seenReveal) {
+        setSeenReveal(revealNonce);
+        setExpanded(true);
+    }
     return (
         <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
             <button
@@ -305,10 +316,14 @@ export function ChangedFilesRow({
         };
     }, [actions, chatId, turnId, diff, checkpoint]);
     const checkpointDiff = diff ?? fetched;
+    const { keyOf } = useChatScope();
+    const flash = useTimelineFlash((s) => s.target);
+    const revealNonce = flash !== null && flash.opens && flash.key === keyOf(chatId) && flash.rowId === `files-${turnId}` ? flash.nonce : 0;
     if (checkpointDiff !== null && checkpointDiff.files.length > 0) {
         const files = checkpointDiff.files;
         return (
             <ChangedFilesCard
+                revealNonce={revealNonce}
                 count={files.length}
                 truncated={checkpointDiff.truncated}
                 added={files.reduce((sum, file) => sum + file.added, 0)}
@@ -341,17 +356,19 @@ export function ChangedFilesRow({
             </ChangedFilesCard>
         );
     }
-    return <ProviderChangedFiles tools={tools} open={open} setOpen={setOpen} />;
+    return <ProviderChangedFiles tools={tools} open={open} setOpen={setOpen} revealNonce={revealNonce} />;
 }
 
 /* The fallback card, built from what the CLI itself reported about its edits. */
 function ProviderChangedFiles({
     tools,
     open,
-    setOpen
+    setOpen,
+    revealNonce
 }: {
     tools: ChatToolItem[];
     open: Record<string, boolean>;
+    revealNonce: number;
     setOpen: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
 }) {
     const { t } = useTranslation('agent-chat');
@@ -378,7 +395,7 @@ function ProviderChangedFiles({
         }
     }
     return (
-        <ChangedFilesCard count={byPath.size}>
+        <ChangedFilesCard count={byPath.size} revealNonce={revealNonce}>
             {[...byPath].map(([path, entry]) => {
                 const count = entry.edits.length + entry.patches.length;
                 return (

@@ -9,7 +9,17 @@ import { bookmarkRows } from '../logic/bookmarks';
 import { deriveTimelineRows, findSubagentBranch, type TimelineRow } from '../logic/timeline';
 import { withThreadCards } from '../logic/thread-cards';
 import { openFromMain, useSubagentTrail, type SubagentStep } from '../subagent-view';
-import { registerItemJumper, registerMessageStepper, registerTimeline, setTimelineAtEnd, wantsEarlier, type ReadingAnchor } from '../timeline-scroll';
+import {
+    registerItemJumper,
+    registerMessageStepper,
+    registerTimeline,
+    registerTurnJumper,
+    setTimelineAtEnd,
+    wantsEarlier,
+    type ReadingAnchor,
+    type TurnTarget
+} from '../timeline-scroll';
+import { useTimelineFlash } from '../timeline-flash';
 import {
     SCRUBBER_MIN_TICKS,
     STRIP_INSET_PX,
@@ -188,6 +198,9 @@ export function Timeline({ chatId, composer, overlay }: { chatId: string; compos
     const ticks = useMemo(() => ticksOf(rows, marks), [rows, marks]);
     // A message a jump is on its way to; it may first have to open the turn its reply folded into.
     const [seeking, setSeeking] = useState<string | null>(null);
+    // A turn a jump is on its way to, which waits for the page its messages are on to come in.
+    const [revealing, setRevealing] = useState<{ turnId: string; target: TurnTarget } | null>(null);
+    const flash = useTimelineFlash((s) => s.target);
 
     // Whether the thread's text clears the strip depends on the width of the view, which only the thread's own frame tells.
     useEffect(() => {
@@ -397,6 +410,30 @@ export function Timeline({ chatId, composer, overlay }: { chatId: string; compos
         setSeeking(null);
     }, [seeking, rows, items, turns, virtualizer, cursor, loadEarlier]);
     useEffect(() => registerItemJumper(keyOf(chatId), setSeeking), [keyOf, chatId]);
+
+    useLayoutEffect(() => {
+        if (revealing === null) {
+            return;
+        }
+        const { turnId, target } = revealing;
+        const changes = target === 'changes' ? rows.findIndex((row) => row.kind === 'changed-files' && row.turnId === turnId) : -1;
+        const opening = order?.map((id) => items?.[id]).find((item) => item?.kind === 'user' && item.turnId === turnId);
+        const found = changes !== -1 ? changes : rows.findIndex((row) => row.id === opening?.id || row.id === `start-${turnId}` || row.id === `fold-${turnId}`);
+        if (found !== -1) {
+            setRevealing(null);
+            followRef.current = false;
+            virtualizer.scrollToIndex(found, { align: 'start' });
+            useTimelineFlash.getState().flash(keyOf(chatId), rows[found]!.id, changes !== -1);
+            return;
+        }
+        // The turn is before the page this thread holds; a thread that holds it all has no such turn.
+        if (cursor === null) {
+            setRevealing(null);
+            return;
+        }
+        loadEarlier();
+    }, [revealing, rows, order, items, virtualizer, cursor, loadEarlier, keyOf, chatId]);
+    useEffect(() => registerTurnJumper(keyOf(chatId), (turnId, target) => setRevealing({ turnId, target })), [keyOf, chatId]);
     // The strip is memoized and draws on every scroll, so it gets one callback for its life.
     const jumpRef = useRef(jumpTo);
     jumpRef.current = jumpTo;
@@ -516,6 +553,13 @@ export function Timeline({ chatId, composer, overlay }: { chatId: string; compos
                                                     )}
                                                     style={{ transform: `translateY(${virtualRow.start}px)` }}
                                                 >
+                                                    {flash !== null && flash.key === keyOf(chatId) && flash.rowId === row.id && (
+                                                        <span
+                                                            key={flash.nonce}
+                                                            className="chat-flash pointer-events-none absolute inset-0 rounded-lg"
+                                                            aria-hidden
+                                                        />
+                                                    )}
                                                     {header !== null && <ReplyHeader chatId={chatId} at={header.at} />}
                                                     <FindRevealContext.Provider value={chatFind.reveal}>
                                                         <MarkableRow row={row} chatId={chatId} bookmark={marks.get(row.id) ?? null}>

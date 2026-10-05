@@ -55,6 +55,7 @@
     "./chat/subagent-support": "./src/chat/subagent-support.ts",
     "./chat/subagent-view": "./src/chat/subagent-view.ts",
     "./chat/thumbnails": "./src/chat/thumbnails.ts",
+    "./chat/timeline-flash": "./src/chat/timeline-flash.ts",
     "./chat/timeline-scroll": "./src/chat/timeline-scroll.ts",
     "./chat/ui/AccountPill": "./src/chat/ui/AccountPill.tsx",
     "./chat/ui/AnsiOutput": "./src/chat/ui/AnsiOutput.tsx",

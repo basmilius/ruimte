@@ -98,6 +98,13 @@
         @starting-style { opacity: 0; }
     }
     @keyframes chat-fade { from { opacity: 0; } to { opacity: 1; } }
+
+    /* The row a jump from outside the chat (the card of a change in a file) landed on. */
+    .chat-flash { animation: chat-flash 1600ms ease-out both; }
+    @keyframes chat-flash {
+        from { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+        to { background: transparent; }
+    }
 }
 
 /*
