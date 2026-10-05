@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { codeFoldingFrom, DEFAULT_CODE_FOLDING, foldRolesFor } from './code-folding';
+import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING, foldRolesFor } from './code-folding';
 
 describe('code folding settings', () => {
     test('read as the platform defaults for a client that stored nothing', () => {
@@ -30,7 +30,10 @@ describe('the roles that fold for a language', () => {
     });
 
     test('add only what a language has', () => {
-        const everything = Object.fromEntries(Object.keys(DEFAULT_CODE_FOLDING).map((name) => [name, true])) as typeof DEFAULT_CODE_FOLDING;
+        const everything = { ...DEFAULT_CODE_FOLDING };
+        for (const name of Object.keys(everything) as (keyof CodeFolding)[]) {
+            everything[name] = true;
+        }
         expect(foldRolesFor('tsx', everything)).toEqual([
             'file-header',
             'imports',

@@ -50,6 +50,13 @@ describe('folding by default', () => {
         expect(editor.getFolds().collapsed).toEqual([{ startLine: 1, endLine: 3 }]);
     });
 
+    test('keeps a fold open that hides the line the file opens on', () => {
+        const nested = '/**\n * Doc.\n */\nclass A {\n}\n';
+        const { editor } = setup({ text: nested, language: 'typescript', foldDefaults: ['doc-comment'], line: 2, column: 1 });
+        expect(editor.getFolds().collapsed).toEqual([]);
+        expect(editor.getCaret()).toEqual({ line: 1, character: 0 });
+    });
+
     test('folds what the text gives at mount, and runs the commands that fold by level', () => {
         const nested = '/**\n * Doc.\n */\nclass A {\n    run() {\n        body();\n    }\n}\n';
         const { editor } = setup({ text: nested, language: 'typescript', foldDefaults: ['doc-comment'] });
