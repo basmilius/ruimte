@@ -314,7 +314,7 @@ impl Analyzer<'_> {
         }
         let callees = self.callees(node, env);
         if callees.is_empty() {
-            return Type::Unknown;
+            return self.custom_expectation_type(&callee_node, env);
         }
         let args = arguments(node);
         let mut results = Vec::new();
@@ -330,6 +330,21 @@ impl Analyzer<'_> {
             }
         }
         result
+    }
+
+    /// A call of an expectation the project added: it gives the expectation back.
+    fn custom_expectation_type(&self, callee: &SyntaxNode, env: &Env) -> Type {
+        if callee.kind() != PROPERTY_FETCH_EXPR {
+            return Type::Unknown;
+        }
+        let (Some(object), Some(name)) = (callee.children().next(), child_of(callee, NAME)) else {
+            return Type::Unknown;
+        };
+        let receiver = self.type_of(&object, env);
+        if crate::pest::is_expectation(&receiver) && self.custom_expectation(&text_of(&name)).is_some() {
+            return receiver;
+        }
+        Type::Unknown
     }
 
     /// Binds the templates of a callable from the arguments of a call, and collects what is known
@@ -397,6 +412,9 @@ impl Analyzer<'_> {
     }
 
     fn compute_hints(&self, closure: &SyntaxNode, outer: &Env) -> Vec<Type> {
+        if let Some(hints) = crate::pest::dataset_hints(self, closure) {
+            return hints;
+        }
         let Some(call) = closure
             .parent()
             .filter(|parent| parent.kind() == ARGUMENT)

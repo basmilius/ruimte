@@ -204,7 +204,14 @@ namespace PHPUnit\Framework\Attributes {
 /// A stand-in for the functions and classes of Pest that tests are written with.
 pub const PEST: &str = r#"<?php
 namespace Pest {
-    /** @template TValue */
+    /**
+     * @template TValue
+     *
+     * @property OppositeExpectation $not
+     * @property \Pest\Expectations\EachExpectation $each
+     *
+     * @mixin \Pest\Mixins\Expectation<TValue>
+     */
     final class Expectation {
         /**
          * @param TValue $value
@@ -216,7 +223,20 @@ namespace Pest {
          * @return self<TAndValue>
          */
         public function and(mixed $value): Expectation {}
-        public function not(): OppositeExpectation {}
+        /** @return self<TValue> */
+        public function sequence(mixed ...$callbacks): self {}
+        public function __call(string $method, array $parameters) {}
+    }
+    final class OppositeExpectation {
+        public function toBe(mixed $expected): Expectation {}
+    }
+}
+namespace Pest\Mixins {
+    /**
+     * @template TValue
+     * @mixin \Pest\Expectation<TValue>
+     */
+    final class Expectation {
         /** @return self<TValue> */
         public function toBe(mixed $expected): self {}
         /** @return self<TValue> */
@@ -225,13 +245,19 @@ namespace Pest {
         public function toBeNull(): self {}
         /** @return self<TValue> */
         public function toHaveCount(int $count): self {}
+    }
+}
+namespace Pest\Expectations {
+    /**
+     * @template TValue
+     * @mixin \Pest\Expectation<TValue>
+     */
+    final class EachExpectation {
         /** @return self<TValue> */
-        public function sequence(mixed ...$callbacks): self {}
-        public function __call(string $method, array $parameters) {}
+        public function toBeInt(): self {}
     }
-    final class OppositeExpectation {
-        public function toBe(mixed $expected): Expectation {}
-    }
+}
+namespace Pest {
     final class TestCall {
         public function with(\Closure|iterable|string ...$data): self {}
         public function group(string ...$groups): self {}

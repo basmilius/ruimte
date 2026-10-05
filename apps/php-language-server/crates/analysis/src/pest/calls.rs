@@ -18,12 +18,17 @@ pub enum Dsl {
     Arch,
     Todo,
     Uses,
+    /// `expect()->extend('name', fn)`, whose closure runs with the expectation as `$this`.
+    ExtendExpectation,
 }
 
 impl Dsl {
     /// The closure of this call runs with a test case as `$this`.
     pub fn binds_test_case(self) -> bool {
-        matches!(self, Dsl::Test | Dsl::It | Dsl::BeforeEach | Dsl::AfterEach | Dsl::Arch)
+        matches!(
+            self,
+            Dsl::Test | Dsl::It | Dsl::BeforeEach | Dsl::AfterEach | Dsl::Arch | Dsl::ExtendExpectation
+        )
     }
 
     /// The call declares a test that can be run.
@@ -69,6 +74,12 @@ pub fn closure_owner(closure: &SyntaxNode) -> Option<(Dsl, SyntaxNode)> {
         PROPERTY_FETCH_EXPR => callee.children().find(|child| child.kind() == NAME)?.text().to_string(),
         _ => return None,
     };
+    if callee.kind() == PROPERTY_FETCH_EXPR && name.eq_ignore_ascii_case("extend") {
+        let chain = flatten_chain(&call)?;
+        if chain[0].name.trim_start_matches('\\').eq_ignore_ascii_case("expect") {
+            return Some((Dsl::ExtendExpectation, call));
+        }
+    }
     Some((dsl_of(&name)?, call))
 }
 
@@ -144,6 +155,19 @@ pub fn statements_in(container: &SyntaxNode) -> Vec<Statement> {
                     node: child,
                 });
             }
+            _ => {}
+        }
+    }
+    out
+}
+
+/// The expression statements of a file that are not inside anything else.
+pub fn top_statements(container: &SyntaxNode) -> Vec<SyntaxNode> {
+    let mut out = Vec::new();
+    for child in container.children() {
+        match child.kind() {
+            NAMESPACE_DECLARATION | STATEMENT_LIST | BLOCK => out.extend(top_statements(&child)),
+            EXPR_STATEMENT => out.push(child),
             _ => {}
         }
     }

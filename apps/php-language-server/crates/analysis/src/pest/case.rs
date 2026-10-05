@@ -8,7 +8,7 @@ use php_index::{ClassKind, Index, Name, Type};
 use php_syntax::SyntaxKind::*;
 use php_syntax::SyntaxNode;
 
-use super::calls::{Dsl, body_of, closure_owner, enclosing_test_closure, statements_in};
+use super::calls::{Dsl, body_of, closure_owner, enclosing_test_closure, statements_in, top_statements};
 use crate::infer::{Analyzer, ClassContext};
 
 /// The class a test runs in and the traits mixed into it.
@@ -23,11 +23,19 @@ pub struct TestCaseBinding {
 pub struct PestScope {
     pub closure: SyntaxNode,
     pub binding: TestCaseBinding,
+    /// The closure is the body of a custom expectation, where `$this` is the expectation.
+    pub expectation: bool,
 }
 
 impl PestScope {
     /// The type `$this` has: the case class, with the traits bound to it.
     pub fn this_type(&self) -> Type {
+        if self.expectation {
+            return Type::Class {
+                name: self.binding.class.clone(),
+                args: vec![Type::Mixed],
+            };
+        }
         if self.binding.traits.is_empty() {
             return Type::class(self.binding.class.clone());
         }
@@ -56,6 +64,17 @@ pub fn scope_at(
 ) -> Option<PestScope> {
     let node = crate::ast::node_at(root, offset);
     let closure = enclosing_test_closure(&node)?;
+    if matches!(closure_owner(&closure), Some((Dsl::ExtendExpectation, _))) {
+        let class = index.class("Pest\\Expectation")?.decl.name.clone();
+        return Some(PestScope {
+            closure,
+            binding: TestCaseBinding {
+                class,
+                traits: Vec::new(),
+            },
+            expectation: true,
+        });
+    }
     let cached = shared.pest_case.borrow().clone();
     let binding = match cached {
         Some(binding) => binding,
@@ -65,7 +84,11 @@ pub fn scope_at(
             binding
         }
     }?;
-    Some(PestScope { closure, binding })
+    Some(PestScope {
+        closure,
+        binding,
+        expectation: false,
+    })
 }
 
 /// What binds the test case to a file: `uses()` calls in the file itself and the ones in other files
@@ -117,19 +140,6 @@ pub fn bound_case(index: &Index, root: &SyntaxNode, path: Option<&Path>) -> Opti
             .map(|found| found.decl.name.clone())
     })?;
     Some(TestCaseBinding { class, traits })
-}
-
-/// The expression statements of a file that are not inside anything else.
-fn top_statements(container: &SyntaxNode) -> Vec<SyntaxNode> {
-    let mut out = Vec::new();
-    for child in container.children() {
-        match child.kind() {
-            NAMESPACE_DECLARATION | STATEMENT_LIST | BLOCK => out.extend(top_statements(&child)),
-            EXPR_STATEMENT => out.push(child),
-            _ => {}
-        }
-    }
-    out
 }
 
 fn matches_folder(binding: &TestBinding, base: &Path, path: &Path) -> bool {

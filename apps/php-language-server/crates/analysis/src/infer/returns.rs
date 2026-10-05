@@ -41,22 +41,27 @@ impl Analyzer<'_> {
         result
     }
 
+    /// The tree of a file on disk, read once for every analyzer working on the same file.
+    pub(crate) fn parse_file(&self, path: &std::path::Path) -> Option<SyntaxNode> {
+        let cached = self.shared.trees.borrow().get(path).cloned();
+        match cached {
+            Some(root) => root,
+            None => {
+                let bytes = std::fs::read(path).ok();
+                let root = bytes.map(|bytes| parse(&String::from_utf8_lossy(&bytes)).syntax());
+                self.shared.trees.borrow_mut().insert(path.to_path_buf(), root.clone());
+                root
+            }
+        }
+    }
+
     /// The declaration node at a place: in the tree this analyzer works on when the name is there,
     /// else in the file on disk.
     pub(crate) fn read_declaration(&self, decl: &DeclRef) -> Option<(SyntaxNode, SyntaxNode)> {
         if let Some(function) = declaration_at(&self.root, decl.name_start) {
             return Some((self.root.clone(), function));
         }
-        let cached = self.shared.trees.borrow().get(&decl.path).cloned();
-        let root = match cached {
-            Some(root) => root,
-            None => {
-                let bytes = std::fs::read(&decl.path).ok();
-                let root = bytes.map(|bytes| parse(&String::from_utf8_lossy(&bytes)).syntax());
-                self.shared.trees.borrow_mut().insert(decl.path.clone(), root.clone());
-                root
-            }
-        }?;
+        let root = self.parse_file(&decl.path)?;
         let function = declaration_at(&root, decl.name_start)?;
         Some((root, function))
     }

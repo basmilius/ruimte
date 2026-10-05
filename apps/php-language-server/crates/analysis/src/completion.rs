@@ -463,6 +463,7 @@ impl Builder<'_> {
             Context::Member { object } => {
                 self.members(object);
                 self.pest_members(object);
+                self.custom_expectations(object);
             }
             Context::Static { qualifier } => self.static_members(qualifier),
             Context::Variable => self.variables(),
@@ -600,6 +601,34 @@ impl Builder<'_> {
                 };
                 self.push(score, item);
             }
+        }
+    }
+
+    /// The expectations the project adds with `extend()`, after `expect(...)->`.
+    fn custom_expectations(&mut self, object: &SyntaxNode) {
+        let ty = self.analyzer.type_of(object, self.env);
+        if !crate::pest::is_expectation(&ty) {
+            return;
+        }
+        let typed = self.typed().to_string();
+        for expectation in crate::pest::custom_expectations(self.index, &self.analyzer.root) {
+            let Some(score) = match_score(&expectation.name, &typed) else {
+                continue;
+            };
+            let name = expectation.name;
+            let item = CompletionItem {
+                label: name.clone(),
+                kind: ItemKind::Method,
+                detail: Some("custom expectation".to_string()),
+                description: None,
+                edit: self.range_edit(name.clone()),
+                additional_edits: Vec::new(),
+                sort_text: format!("0{:02}{:02}{}", 0, 0, name.to_ascii_lowercase()),
+                filter_text: Some(name.clone()),
+                deprecated: false,
+                data: None,
+            };
+            self.push(score, item);
         }
     }
 

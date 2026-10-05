@@ -91,6 +91,26 @@ impl Analyzer<'_> {
                 })
                 .into_iter()
                 .collect(),
+            Target::Method { receiver, name }
+                if crate::pest::is_expectation(receiver)
+                    && receiver
+                        .members()
+                        .iter()
+                        .all(|member| self.index.find_method(member, name).is_none()) =>
+            {
+                self.custom_expectation(name)
+                    .map(|expectation| Description {
+                        title: format!("expect()->{name}()"),
+                        signature: format!("expect()->extend('{name}', ...)"),
+                        doc: None,
+                        place: Some(Place {
+                            path: expectation.path,
+                            span: expectation.span,
+                        }),
+                    })
+                    .into_iter()
+                    .collect()
+            }
             Target::Method { receiver, name } => receiver
                 .members()
                 .iter()
@@ -138,6 +158,18 @@ impl Analyzer<'_> {
                 })
                 .collect(),
             Target::Parameter { callee, name } => self.describe_parameter(callee, name),
+            Target::Dataset(name) => crate::pest::dataset_declarations(self.index, name)
+                .into_iter()
+                .map(|declaration| Description {
+                    title: format!("dataset '{name}'"),
+                    signature: format!("dataset('{name}', ...)"),
+                    doc: None,
+                    place: Some(Place {
+                        path: Some(declaration.path),
+                        span: declaration.name_span,
+                    }),
+                })
+                .collect(),
             Target::Variable { name, ty } => vec![Description {
                 title: format!("${name}"),
                 signature: format!("{} ${name}", ty.display(true)),
@@ -302,7 +334,7 @@ impl Analyzer<'_> {
                         None => continue,
                     }
                 }
-                Target::Constant(_) => continue,
+                Target::Constant(_) | Target::Dataset(_) => continue,
                 Target::Parameter { callee, name } => match self.parameter_type(callee, name) {
                     Some(ty) => ty,
                     None => continue,

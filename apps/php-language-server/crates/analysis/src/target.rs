@@ -36,6 +36,8 @@ pub enum Target {
         callee: Callee,
         name: String,
     },
+    /// A Pest dataset, by the name it is declared and used under.
+    Dataset(String),
 }
 
 /// A function or method as the declaration that owns it names it: a method by the class that
@@ -108,9 +110,8 @@ impl Analyzer<'_> {
                 let candidates = self.resolver.function_candidates(&string.value);
                 Target::Function(self.index.first_function(&candidates)?.decl.name.clone())
             }
-            crate::phpunit::strings::StringTarget::Group | crate::phpunit::strings::StringTarget::Dataset => {
-                return crate::pest::string_target(self, &string);
-            }
+            crate::phpunit::strings::StringTarget::Dataset => Target::Dataset(string.value.clone()),
+            crate::phpunit::strings::StringTarget::Group => return None,
         };
         Some(Found {
             target,

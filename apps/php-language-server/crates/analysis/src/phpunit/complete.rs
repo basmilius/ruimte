@@ -92,6 +92,7 @@ fn candidates(analyzer: &Analyzer<'_>, root: &SyntaxNode, string: &TestString) -
                 rank: 0,
             })
             .collect(),
+        StringTarget::Dataset if string.declaration => Vec::new(),
         StringTarget::Dataset => crate::pest::dataset_candidates(index, root),
     }
 }
