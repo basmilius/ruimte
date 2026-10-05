@@ -137,7 +137,7 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
                     style={{ maxHeight: ROW_HEIGHT * VISIBLE_ROWS + 8 }}
                     onScroll={(event) => setListTop(event.currentTarget.scrollTop)}
                 >
-                    <div style={{ height: first * ROW_HEIGHT }} />
+                    <div aria-hidden style={{ height: first * ROW_HEIGHT }} />
                     {view.rows.slice(first, last).map((row, offset) => {
                         const index = first + offset;
                         return (
@@ -147,6 +147,8 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
                                 type="button"
                                 role="option"
                                 aria-selected={index === view.active}
+                                aria-setsize={total}
+                                aria-posinset={index + 1}
                                 data-active={index === view.active}
                                 className="flex h-6 w-full items-center gap-2 overflow-hidden rounded-md px-1.5 text-left text-xs cursor-row"
                                 onClick={() => void language.completion.accept(false, index)}
@@ -164,7 +166,7 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
                             </button>
                         );
                     })}
-                    <div style={{ height: (total - last) * ROW_HEIGHT }} />
+                    <div aria-hidden style={{ height: (total - last) * ROW_HEIGHT }} />
                 </div>
                 <div className="flex items-center gap-3 border-t border-border px-2 py-1 text-xs whitespace-nowrap text-text-faint">
                     <span>↵ {t('language.completion.insert')}</span>
