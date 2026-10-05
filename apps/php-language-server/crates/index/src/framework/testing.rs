@@ -188,6 +188,14 @@ class BelongsTo extends Relation { /** @inheritDoc */ public function getResults
         "<?php namespace Illuminate\\Database\\Eloquent;\n/** @method static \\Illuminate\\Database\\Eloquent\\Builder<static> withTrashed(bool $withTrashed = true) */\ntrait SoftDeletes {}",
     ),
     (
+        "vendor/laravel/Factory.php",
+        "<?php namespace Illuminate\\Database\\Eloquent\\Factories;\n/** @template TModel of \\Illuminate\\Database\\Eloquent\\Model */\nabstract class Factory {\n    /** @return \\Illuminate\\Database\\Eloquent\\Collection<int, TModel>|TModel */\n    public function create($attributes = [], $parent = null) {}\n    /** @return TModel */\n    public function makeOne($attributes = []) {}\n}",
+    ),
+    (
+        "vendor/laravel/HasFactory.php",
+        "<?php namespace Illuminate\\Database\\Eloquent\\Factories; /** @template TFactory of Factory */ trait HasFactory { /** @return TFactory */ public static function factory($count = null, $state = []) {} }",
+    ),
+    (
         "vendor/laravel/ScopeAttribute.php",
         "<?php namespace Illuminate\\Database\\Eloquent\\Attributes; #[\\Attribute] class Scope {}",
     ),

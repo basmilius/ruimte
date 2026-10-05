@@ -59,6 +59,7 @@ impl Section for Tables {
             .filter(|path| path.extension().is_some_and(|ext| ext == "php"))
             .collect();
         let mut tables = Tables::default();
+        tables.read_schema_dump(index);
         for path in files {
             if let Some(text) = index.read_text(&path) {
                 tables.read(&path, &text);
@@ -68,11 +69,68 @@ impl Section for Tables {
     }
 
     fn depends_on(root: &Path, path: &Path) -> bool {
-        super::is_below(root, path, "database/migrations")
+        super::is_below(root, path, "database/migrations") || super::is_below(root, path, "database/schema")
     }
 }
 
 impl Tables {
+    /// The schema dump `schema:dump` writes, which stands for the migrations before it.
+    fn read_schema_dump(&mut self, index: &Index) {
+        let dir = index.framework_root().join("database").join("schema");
+        let mut dumps: Vec<PathBuf> = index
+            .files_in(&dir)
+            .into_iter()
+            .filter(|path| path.extension().is_some_and(|ext| ext == "sql"))
+            .collect();
+        dumps.sort_by_key(|path| {
+            !path
+                .file_name()
+                .is_some_and(|name| name.to_string_lossy().starts_with("mysql"))
+        });
+        let Some(path) = dumps.first() else {
+            return;
+        };
+        let Some(text) = index.read_text(path) else {
+            return;
+        };
+        let mut table: Option<String> = None;
+        let mut offset = 0usize;
+        for line in text.split_inclusive('\n') {
+            let trimmed = line.trim();
+            if let Some(rest) = trimmed.strip_prefix("CREATE TABLE") {
+                let name = rest
+                    .trim_start()
+                    .trim_start_matches("IF NOT EXISTS")
+                    .trim_start()
+                    .split('(')
+                    .next()
+                    .unwrap_or("")
+                    .trim()
+                    .trim_matches(['`', '"', '[', ']']);
+                let name = name.rsplit('.').next().unwrap_or(name).trim_matches(['`', '"']);
+                table = Some(name.to_string());
+                self.tables.insert(name.to_string(), Table::default());
+            } else if trimmed.starts_with(')') {
+                table = None;
+            } else if let Some(table) = &table {
+                if let Some(column) = dump_column(trimmed) {
+                    let start = offset + line.find(column.name.as_str()).unwrap_or(0);
+                    if let Some(found) = self.tables.get_mut(table) {
+                        found.columns.push(Column {
+                            span: Span {
+                                start: start as u32,
+                                end: (start + column.name.len()) as u32,
+                            },
+                            path: path.clone(),
+                            ..column
+                        });
+                    }
+                }
+            }
+            offset += line.len();
+        }
+    }
+
     fn read(&mut self, path: &Path, text: &str) {
         let tree = parse(text).syntax();
         for node in tree.descendants() {
@@ -259,6 +317,50 @@ impl Tables {
     }
 }
 
+/// A column line of a `CREATE TABLE` in a schema dump, in the quoting of MySQL, PostgreSQL and SQLite.
+fn dump_column(line: &str) -> Option<Column> {
+    let first = line.chars().next()?;
+    if !matches!(first, '`' | '"' | '[') {
+        return None;
+    }
+    let close = match first {
+        '[' => ']',
+        quote => quote,
+    };
+    let rest = &line[1..];
+    let end = rest.find(close)?;
+    let name = &rest[..end];
+    let after = rest[end + 1..].trim_start();
+    let word = after
+        .split(|c: char| c.is_whitespace() || c == '(' || c == ',')
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let tiny_bool = word == "tinyint" && after.to_ascii_lowercase().starts_with("tinyint(1)");
+    let ty = match word.as_str() {
+        "tinyint" if tiny_bool => ColumnType::Bool,
+        "bool" | "boolean" => ColumnType::Bool,
+        "tinyint" | "smallint" | "mediumint" | "int" | "integer" | "bigint" | "year" | "serial" | "bigserial" => {
+            ColumnType::Int
+        }
+        "float" | "double" | "real" | "float4" | "float8" => ColumnType::Float,
+        "json" | "jsonb" => ColumnType::Array,
+        "date" | "datetime" | "timestamp" | "timestamptz" => ColumnType::Datetime,
+        "varchar" | "char" | "text" | "tinytext" | "mediumtext" | "longtext" | "decimal" | "numeric" | "enum"
+        | "set" | "uuid" | "blob" | "binary" | "varbinary" | "time" | "character" => ColumnType::String,
+        _ => ColumnType::Mixed,
+    };
+    let upper = after.to_ascii_uppercase();
+    let nullable = !upper.contains("NOT NULL") && !upper.contains("PRIMARY KEY") && !upper.contains("AUTO_INCREMENT");
+    Some(Column {
+        name: name.to_string(),
+        ty,
+        nullable,
+        path: PathBuf::new(),
+        span: Span::default(),
+    })
+}
+
 fn argument_array_strings(array: &SyntaxNode) -> Vec<String> {
     array
         .children()
@@ -380,6 +482,51 @@ return new class extends Migration {
             Some(ColumnType::Array)
         );
         assert!(users.column("email").is_some_and(|column| column.nullable));
+    }
+
+    #[test]
+    fn a_schema_dump_stands_for_the_migrations_before_it() {
+        let tables = tables(&[
+            (
+                "database/schema/mysql-schema.sql",
+                "DROP TABLE IF EXISTS `threads`;\nCREATE TABLE `threads` (\n  `id` bigint unsigned NOT NULL AUTO_INCREMENT,\n  `subject` varchar(255) NOT NULL,\n  `solution_reply_id` bigint unsigned DEFAULT NULL,\n  `is_open` tinyint(1) NOT NULL DEFAULT '1',\n  `meta` json DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `x` (`subject`)\n) ENGINE=InnoDB;\n",
+            ),
+            (
+                "database/migrations/2025_01_01_000000_add_slug.php",
+                "<?php Schema::table('threads', function (Blueprint $table) { $table->string('slug')->nullable(); });",
+            ),
+        ]);
+        let threads = tables.table("threads").expect("a table");
+        let names: Vec<&str> = threads.columns.iter().map(|column| column.name.as_str()).collect();
+        assert_eq!(
+            names,
+            [
+                "id",
+                "subject",
+                "solution_reply_id",
+                "is_open",
+                "meta",
+                "created_at",
+                "slug"
+            ]
+        );
+        assert_eq!(
+            threads.column("id").map(|column| (column.ty, column.nullable)),
+            Some((ColumnType::Int, false))
+        );
+        assert_eq!(
+            threads.column("solution_reply_id").map(|column| column.nullable),
+            Some(true)
+        );
+        assert_eq!(
+            threads.column("is_open").map(|column| column.ty),
+            Some(ColumnType::Bool)
+        );
+        assert_eq!(threads.column("meta").map(|column| column.ty), Some(ColumnType::Array));
+        assert_eq!(
+            threads.column("created_at").map(|column| column.ty),
+            Some(ColumnType::Datetime)
+        );
     }
 
     #[test]

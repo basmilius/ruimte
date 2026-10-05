@@ -135,6 +135,35 @@ fn markers() -> &'static HashMap<String, Vec<Entry>> {
     })
 }
 
+/// The class that receives what a class does not declare, from the `@forwards` of its overlay entry:
+/// the calls the framework passes on through `__call`.
+pub fn forwards_of(index: &Index, class: &str) -> Option<String> {
+    let frameworks = index.frameworks();
+    if !(frameworks.laravel || frameworks.facades) {
+        return None;
+    }
+    static FORWARDS: OnceLock<HashMap<String, String>> = OnceLock::new();
+    FORWARDS
+        .get_or_init(|| {
+            let mut out = HashMap::new();
+            for class in &laravel().classes {
+                if let Some(tag) = class
+                    .doc
+                    .as_ref()
+                    .and_then(|doc| doc.tags.iter().find(|tag| tag.name == "forwards"))
+                {
+                    out.insert(
+                        class.name.to_ascii_lowercase(),
+                        tag.text.trim().trim_start_matches('\\').to_string(),
+                    );
+                }
+            }
+            out
+        })
+        .get(&class.to_ascii_lowercase())
+        .cloned()
+}
+
 /// The class whose methods name the directives of a Blade template.
 pub const BLADE_COMPILER: &str = "Illuminate\\View\\Compilers\\BladeCompiler";
 

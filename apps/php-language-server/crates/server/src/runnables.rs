@@ -88,6 +88,8 @@ fn runnable_json(runnable: &Runnable, mapper: &Mapper<'_>, file: &Path, config: 
         "kind": match runnable.kind {
             RunnableKind::PhpUnit => "phpunit",
             RunnableKind::Pest => "pest",
+            RunnableKind::Artisan => "artisan",
+            RunnableKind::Console => "console",
         },
         "scope": match runnable.scope {
             RunnableScope::Class => "class",
@@ -95,6 +97,7 @@ fn runnable_json(runnable: &Runnable, mapper: &Mapper<'_>, file: &Path, config: 
             RunnableScope::Test => "test",
             RunnableScope::Describe => "describe",
             RunnableScope::Arch => "arch",
+            RunnableScope::Command => "command",
         },
         "label": runnable.label,
         "range": mapper.range(runnable.range),
@@ -108,6 +111,7 @@ fn lens_title(runnable: &Value) -> String {
     match runnable["scope"].as_str() {
         Some("class") => "Run tests in class",
         Some("describe") => "Run group",
+        Some("command") => "Run command",
         _ => "Run test",
     }
     .to_string()

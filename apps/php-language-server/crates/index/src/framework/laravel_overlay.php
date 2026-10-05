@@ -19,6 +19,7 @@
 //   @container [position]   the argument names a binding of the service container
 //   @user                   the call gives the user that is logged in, an instance of the model
 //                           `config/auth.php` names
+//   @forwards <class>       on a class: what it does not declare it passes on to this class
 // A method is matched by the class that declares it or any class below it.
 
 namespace Illuminate\Database\Schema {
@@ -543,6 +544,11 @@ interface Guard
 {
     /** @user */
     public function user() {}
+}
+
+/** @forwards Illuminate\Contracts\Auth\Guard */
+interface Factory
+{
 }
 
 }

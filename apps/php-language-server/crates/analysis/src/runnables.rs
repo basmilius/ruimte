@@ -1,6 +1,7 @@
-//! What a test file can run: PHPUnit classes and test methods, and Pest tests, describe blocks and
-//! architecture tests. The filter of each is what `--filter` takes, so a client can run one without
-//! reading the file. The server runs nothing itself.
+//! What a file can run: PHPUnit classes and test methods, Pest tests, describe blocks and
+//! architecture tests, and the console commands of Laravel and Symfony. The filter of a test is what
+//! `--filter` takes, so a client can run one without reading the file; the filter of a command is its
+//! name. The server runs nothing itself.
 
 use php_index::Index;
 use php_syntax::SyntaxKind::*;
@@ -15,6 +16,10 @@ use crate::phpunit::{ATTRIBUTES, is_test_class};
 pub enum RunnableKind {
     PhpUnit,
     Pest,
+    /// A command of `php artisan`.
+    Artisan,
+    /// A command of `bin/console`.
+    Console,
 }
 
 /// What a runnable stands for.
@@ -25,6 +30,7 @@ pub enum RunnableScope {
     Test,
     Describe,
     Arch,
+    Command,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -44,8 +50,73 @@ pub fn runnables(index: &Index, root: &SyntaxNode) -> Vec<Runnable> {
     let mut out = Vec::new();
     phpunit_runnables(&ctx, &mut out);
     pest_runnables(root, &[], &mut out);
+    command_runnables(&ctx, &mut out);
     out.sort_by_key(|runnable| runnable.range.start());
     out
+}
+
+const LARAVEL_COMMAND: &str = "Illuminate\\Console\\Command";
+const SYMFONY_COMMAND: &str = "Symfony\\Component\\Console\\Command\\Command";
+
+/// The console commands a file declares: the name of an `#[AsCommand]`, the first word of a Laravel
+/// `$signature` or its `$name`.
+fn command_runnables(ctx: &FileContext<'_>, out: &mut Vec<Runnable>) {
+    let frameworks = ctx.index.frameworks();
+    if !(frameworks.laravel || frameworks.symfony) {
+        return;
+    }
+    for class in ctx.root.descendants().filter(|node| node.kind() == CLASS_DECLARATION) {
+        let analyzer = ctx.analyzer(&class);
+        let Some(context) = &analyzer.class else {
+            continue;
+        };
+        let is_abstract = child_of(&class, MODIFIER_LIST).is_some_and(|list| has_token(&list, ABSTRACT_KW));
+        let (kind, base) = if frameworks.laravel {
+            (RunnableKind::Artisan, LARAVEL_COMMAND)
+        } else {
+            (RunnableKind::Console, SYMFONY_COMMAND)
+        };
+        if is_abstract || !ctx.index.is_subclass_of(&context.name, base) || context.name.eq_ignore_ascii_case(base) {
+            continue;
+        }
+        let (Some(found), Some(name)) = (ctx.index.class(&context.name), child_of(&class, NAME)) else {
+            continue;
+        };
+        let unquote = |text: &str| text.trim().trim_matches(['\'', '"']).to_string();
+        let from_attribute = found.decl.attributes.iter().find_map(|attribute| {
+            attribute.name.ends_with("\\AsCommand").then(|| {
+                attribute
+                    .args
+                    .iter()
+                    .find(|arg| arg.name.as_deref() == Some("name"))
+                    .or_else(|| attribute.args.first().filter(|arg| arg.name.is_none()))
+                    .map(|arg| unquote(&arg.value))
+            })?
+        });
+        let from_property = |property: &str| {
+            found
+                .decl
+                .property(property)
+                .and_then(|found| found.default.as_ref())
+                .map(|default| unquote(default))
+        };
+        let command = from_attribute
+            .or_else(|| {
+                from_property("signature").and_then(|signature| signature.split_whitespace().next().map(str::to_string))
+            })
+            .or_else(|| from_property("name"))
+            .or_else(|| from_property("defaultName"))
+            .filter(|command| !command.is_empty());
+        if let Some(command) = command {
+            out.push(Runnable {
+                kind,
+                scope: RunnableScope::Command,
+                label: command.clone(),
+                range: name.text_range(),
+                filter: command,
+            });
+        }
+    }
 }
 
 fn phpunit_runnables(ctx: &FileContext<'_>, out: &mut Vec<Runnable>) {

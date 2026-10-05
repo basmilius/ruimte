@@ -363,3 +363,138 @@ fn doctrine_repositories_and_the_container_are_typed() {
     assert!(mailer.contains("Mailer"), "{mailer}");
     client.shutdown();
 }
+
+#[test]
+fn a_facade_leads_to_the_class_behind_it_and_abilities_complete() {
+    let disk = laravel();
+    disk.write(
+        "project/vendor/laravel/Facade.php",
+        "<?php\nnamespace Illuminate\\Support\\Facades;\n\nabstract class Facade\n{\n    public static function __callStatic($method, $arguments) {}\n}\n\n/** @method static bool allows(string $ability, mixed $arguments = []) */\nclass Gate extends Facade {}\n",
+    );
+    disk.write(
+        "project/vendor/laravel/ServiceProvider.php",
+        "<?php\nnamespace Illuminate\\Support;\n\nabstract class ServiceProvider {}\n",
+    );
+    disk.write(
+        "project/app/Services/Billing.php",
+        "<?php\nnamespace App\\Services;\n\nclass Billing\n{\n    public function charge(int $cents): bool {}\n}\n",
+    );
+    disk.write(
+        "project/app/Facades/Billing.php",
+        "<?php\nnamespace App\\Facades;\n\nuse App\\Services\\Billing as Real;\nuse Illuminate\\Support\\Facades\\Facade;\n\nclass Billing extends Facade\n{\n    protected static function getFacadeAccessor(): string\n    {\n        return Real::class;\n    }\n}\n",
+    );
+    disk.write(
+        "project/app/Providers/AuthServiceProvider.php",
+        "<?php\nnamespace App\\Providers;\n\nuse Illuminate\\Support\\Facades\\Gate;\nuse Illuminate\\Support\\ServiceProvider;\n\nclass AuthServiceProvider extends ServiceProvider\n{\n    public function boot(): void\n    {\n        Gate::define('edit-settings', fn ($user) => true);\n    }\n}\n",
+    );
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/app/Http/Page.php");
+    client.open(
+        &uri,
+        "<?php\nuse App\\Facades\\Billing;\nuse Illuminate\\Support\\Facades\\Gate;\nBilling::charge(100);\nGate::allows('edit-settings');\nGate::allows('ed');\n",
+    );
+    let definition = client.at("textDocument/definition", &uri, 3, 11);
+    assert_eq!(definition[0]["uri"], disk.uri("project/app/Services/Billing.php"));
+    let hover = client.at("textDocument/hover", &uri, 3, 11);
+    assert!(
+        hover["contents"]["value"]
+            .as_str()
+            .is_some_and(|text| text.contains("bool")),
+        "{hover}"
+    );
+    let ability = client.at("textDocument/definition", &uri, 4, 20);
+    assert_eq!(
+        ability[0]["uri"],
+        disk.uri("project/app/Providers/AuthServiceProvider.php")
+    );
+    assert_eq!(complete_at(&mut client, &uri, 5, 15), ["edit-settings"]);
+    let diagnostics = client.diagnostics(&uri);
+    assert!(
+        diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic["code"] != "undefined-method"),
+        "{diagnostics:?}"
+    );
+    client.shutdown();
+}
+
+#[test]
+fn console_commands_are_runnable() {
+    let disk = laravel();
+    disk.write(
+        "project/vendor/laravel/Command.php",
+        "<?php\nnamespace Illuminate\\Console;\n\nclass Command {}\n",
+    );
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/app/Console/Commands/SendEmails.php");
+    client.open(
+        &uri,
+        "<?php\nnamespace App\\Console\\Commands;\n\nuse Illuminate\\Console\\Command;\n\nclass SendEmails extends Command\n{\n    protected $signature = 'mail:send {user}';\n}\n",
+    );
+    let listed = client.request("php/runnables", json!({ "uri": uri }));
+    let listed = listed.as_array().expect("a list");
+    assert_eq!(listed.len(), 1, "{listed:?}");
+    assert_eq!(listed[0]["kind"], "artisan");
+    assert_eq!(listed[0]["scope"], "command");
+    assert_eq!(listed[0]["filter"], "mail:send");
+    let lenses = client.request("textDocument/codeLens", json!({ "textDocument": { "uri": uri } }));
+    assert_eq!(lenses[0]["command"]["title"], "Run command");
+    client.shutdown();
+}
+
+#[test]
+fn symfony_attributes_events_and_form_types_complete() {
+    let disk = symfony();
+    disk.write(
+        "project/vendor/symfony/Extra.php",
+        "<?php\nnamespace Symfony\\Component\\HttpKernel;\n\nfinal class KernelEvents\n{\n    /**\n     * @Event(\"Symfony\\Component\\HttpKernel\\Event\\RequestEvent\")\n     */\n    public const REQUEST = 'kernel.request';\n}\n\nnamespace Symfony\\Component\\EventDispatcher\\Attribute;\n\n#[\\Attribute]\nclass AsEventListener\n{\n    public function __construct(public ?string $event = null) {}\n}\n\nnamespace Symfony\\Component\\Form;\n\ninterface FormTypeInterface {}\n\ninterface FormBuilderInterface\n{\n    public function add($child, ?string $type = null, array $options = []): static;\n}\n\nnamespace Symfony\\Component\\Form\\Extension\\Core\\Type;\n\nclass TextType implements \\Symfony\\Component\\Form\\FormTypeInterface {}\n",
+    );
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Service/Listener.php");
+    let code = "<?php\nnamespace App\\Service;\n\nuse Symfony\\Component\\DependencyInjection\\Attribute\\Autowire;\nuse Symfony\\Component\\EventDispatcher\\Attribute\\AsEventListener;\nuse Symfony\\Component\\Form\\FormBuilderInterface;\n\n#[AsEventListener(event: 'kernel.re')]\nclass Listener\n{\n    public function __construct(#[Autowire('%app.admin%')] string $admin, #[Autowire(service: 'app.mailer')] $mailer)\n    {\n    }\n\n    public function form(FormBuilderInterface $builder)\n    {\n        $builder->add('name', Te);\n    }\n}\n";
+    client.open(&uri, code);
+    let at = |needle: &str, shift: usize| {
+        let offset = code.find(needle).expect("in the text") + shift;
+        let line = code[..offset].matches('\n').count() as u32;
+        let column = (offset - code[..offset].rfind('\n').map_or(0, |newline| newline + 1)) as u32;
+        (line, column)
+    };
+    let (line, column) = at("kernel.re", 9);
+    assert_eq!(complete_at(&mut client, &uri, line, column), ["kernel.request"]);
+    let (line, column) = at("app.admin", 4);
+    let parameter = client.at("textDocument/definition", &uri, line, column);
+    assert_eq!(parameter[0]["uri"], disk.uri("project/config/services.yaml"));
+    let (line, column) = at("app.mailer", 4);
+    let service = client.at("textDocument/definition", &uri, line, column);
+    assert_eq!(service[0]["uri"], disk.uri("project/config/services.yaml"));
+    let (line, column) = at("Te);", 2);
+    let types = complete_at(&mut client, &uri, line, column);
+    assert!(types.contains(&"TextType".to_string()), "{types:?}");
+    client.shutdown();
+}
+
+#[test]
+fn the_fields_of_a_form_request_complete() {
+    let disk = laravel();
+    disk.write(
+        "project/vendor/laravel/FormRequest.php",
+        "<?php\nnamespace Illuminate\\Foundation\\Http;\n\nclass FormRequest\n{\n    public function input($key = null, $default = null) {}\n    public function rules() {}\n}\n",
+    );
+    disk.write(
+        "project/app/Http/Requests/StoreUserRequest.php",
+        "<?php\nnamespace App\\Http\\Requests;\n\nuse Illuminate\\Foundation\\Http\\FormRequest;\n\nclass StoreUserRequest extends FormRequest\n{\n    public function rules(): array\n    {\n        return ['name' => 'required', 'email' => 'email'];\n    }\n}\n",
+    );
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/app/Http/Page.php");
+    client.open(
+        &uri,
+        "<?php\nuse App\\Http\\Requests\\StoreUserRequest;\nfunction store(StoreUserRequest $request) {\n    $request->input('em');\n    $request->input('email');\n}\n",
+    );
+    assert_eq!(complete_at(&mut client, &uri, 3, 22), ["email"]);
+    let definition = client.at("textDocument/definition", &uri, 4, 23);
+    assert_eq!(
+        definition[0]["uri"],
+        disk.uri("project/app/Http/Requests/StoreUserRequest.php")
+    );
+    client.shutdown();
+}

@@ -88,6 +88,9 @@ impl Index {
         for ancestor in &mut out[first_mixin..] {
             ancestor.mixin = true;
         }
+        if self.framework.frameworks.eloquent {
+            crate::framework::eloquent::bind_factory_model(self, &mut out);
+        }
         out
     }
 

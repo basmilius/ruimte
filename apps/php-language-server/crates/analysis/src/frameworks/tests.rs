@@ -350,7 +350,11 @@ fn the_logged_in_user_is_the_model_the_configuration_names() {
         ),
         (
             "vendor/laravel/Authenticatable.php",
-            "<?php namespace Illuminate\\Contracts\\Auth; interface Authenticatable {}",
+            "<?php namespace Illuminate\\Contracts\\Auth; interface Authenticatable {} interface Guard { /** @return \\Illuminate\\Contracts\\Auth\\Authenticatable|null */ public function user(); } interface Factory { public function guard($name = null); }",
+        ),
+        (
+            "vendor/laravel/auth-helper.php",
+            "<?php /** @return ($guard is null ? \\Illuminate\\Contracts\\Auth\\Factory : \\Illuminate\\Contracts\\Auth\\Guard) */ function auth($guard = null) {}",
         ),
         ("app/Models/User.php", USER),
         (
@@ -358,7 +362,7 @@ fn the_logged_in_user_is_the_model_the_configuration_names() {
             "<?php use App\\Models\\User; return ['providers' => ['users' => ['model' => env('AUTH_MODEL', User::class)]]];",
         ),
     ]);
-    let code = "<?php use Illuminate\\Support\\Facades\\Auth;\nfunction f(\\Illuminate\\Http\\Request $request) { $a = Auth::user(); $b = $request->user(); $posts = $a->posts; $0 }";
+    let code = "<?php use Illuminate\\Support\\Facades\\Auth;\nfunction f(\\Illuminate\\Http\\Request $request) { $a = Auth::user(); $b = $request->user(); $posts = $a->posts; $c = auth()->user(); $0 }";
     let fixture = Fixture::framework(&files).with_current(code);
     let (_, root, offset) = split_cursor(code);
     let analyzer = Analyzer::new(&fixture.index, &root, offset);
@@ -367,6 +371,7 @@ fn the_logged_in_user_is_the_model_the_configuration_names() {
     assert_eq!(shown("a"), "?User");
     assert_eq!(shown("b"), "?User");
     assert_eq!(shown("posts"), "Collection<int, Post>");
+    assert_eq!(shown("c"), "?User");
 }
 
 #[test]
@@ -375,6 +380,38 @@ fn the_builder_of_a_scope_is_typed_whatever_the_method_writes() {
     assert_eq!(var(scope, "query"), "Builder<Thing>");
     let other = "<?php namespace App\\Models; class Thing extends \\Illuminate\\Database\\Eloquent\\Model { public function bigger($query, int $size) { $0 } }";
     assert_ne!(var(other, "query"), "Builder<Thing>");
+}
+
+#[test]
+fn a_factory_makes_the_model_it_is_named_after() {
+    let mut files = ELOQUENT.to_vec();
+    files.extend_from_slice(&[
+        (
+            "app/Models/Widget.php",
+            "<?php namespace App\\Models; use Illuminate\\Database\\Eloquent\\Factories\\HasFactory; use Illuminate\\Database\\Eloquent\\Model; class Widget extends Model { use HasFactory; }",
+        ),
+        (
+            "app/Models/Gadget.php",
+            "<?php namespace App\\Models; use Illuminate\\Database\\Eloquent\\Factories\\HasFactory; use Illuminate\\Database\\Eloquent\\Model; class Gadget extends Model { use HasFactory; }",
+        ),
+        (
+            "database/factories/WidgetFactory.php",
+            "<?php namespace Database\\Factories; use Illuminate\\Database\\Eloquent\\Factories\\Factory; class WidgetFactory extends Factory {}",
+        ),
+        (
+            "database/factories/GadgetMaker.php",
+            "<?php namespace Database\\Factories; use App\\Models\\Gadget; use Illuminate\\Database\\Eloquent\\Factories\\Factory; class GadgetFactory extends Factory { protected $model = Gadget::class; }",
+        ),
+    ]);
+    let code = "<?php use App\\Models\\{Widget, Gadget};\n$a = Widget::factory()->create(); $b = Widget::factory()->makeOne(); $c = Gadget::factory()->makeOne(); $0";
+    let fixture = Fixture::framework(&files).with_current(code);
+    let (_, root, offset) = split_cursor(code);
+    let analyzer = Analyzer::new(&fixture.index, &root, offset);
+    let env = analyzer.env_at(offset);
+    let shown = |name: &str| env.get(name).map(|ty| ty.display(true)).unwrap_or_default();
+    assert_eq!(shown("a"), "Collection<int, Widget>|Widget");
+    assert_eq!(shown("b"), "Widget");
+    assert_eq!(shown("c"), "Gadget");
 }
 
 #[test]

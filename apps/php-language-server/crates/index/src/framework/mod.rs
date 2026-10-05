@@ -288,6 +288,9 @@ pub(crate) fn extend_methods<'a>(
     if index.framework.frameworks.eloquent {
         eloquent::extend_methods(index, ancestors, only, out, names);
     }
+    if index.framework.frameworks.laravel || index.framework.frameworks.facades {
+        forward_calls(index, ancestors, only, out, names);
+    }
     if index.framework.frameworks.doctrine {
         symfony::doctrine::extend_methods(index, ancestors, only, out, names);
     }
@@ -306,5 +309,38 @@ pub(crate) fn extend_properties<'a>(
     }
     if index.framework.frameworks.doctrine {
         symfony::doctrine::extend_properties(index, ancestors, only, out);
+    }
+}
+
+/// What a class passes on through `__call` to another class, which the overlay names.
+fn forward_calls<'a>(
+    index: &'a crate::index::Index,
+    ancestors: &[crate::hierarchy::Ancestor<'a>],
+    only: Option<&str>,
+    out: &mut Vec<crate::hierarchy::Found<'a, crate::model::Method>>,
+    names: &mut std::collections::HashSet<String>,
+) {
+    for ancestor in ancestors {
+        let Some(target) = overlay::forwards_of(index, &ancestor.class.decl.name) else {
+            continue;
+        };
+        let target_type = crate::types::Type::class(target);
+        let forwarded = match only {
+            Some(name) => index.find_method(&target_type, name).into_iter().collect(),
+            None => index.methods(&target_type),
+        };
+        for found in forwarded {
+            if found.member.visibility != crate::model::Visibility::Public
+                || found.member.name.starts_with("__")
+                || !names.insert(found.member.name.to_ascii_lowercase())
+            {
+                continue;
+            }
+            out.push(crate::hierarchy::Found {
+                mixin: true,
+                static_as: found.static_as.clone().or_else(|| Some(target_type.clone())),
+                ..found
+            });
+        }
     }
 }

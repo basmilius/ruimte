@@ -18,7 +18,9 @@ use super::Section;
 use super::inflect::{snake, studly, table_of};
 use super::migrations::Tables;
 use super::overlay::ColumnType;
-use super::source::{Literal, array_items, literal_of, method_at, resolver_for, returned_expression, tree_of};
+use super::source::{
+    Literal, array_items, class_in_attribute, literal_of, method_at, resolver_for, returned_expression, tree_of,
+};
 use crate::hierarchy::{Ancestor, Found};
 use crate::index::{Class, Index, Origin};
 use crate::model::{Attribute, Availability, Callable, ClassDecl, Doc, Method, Param, Property, Span, Visibility};
@@ -137,7 +139,9 @@ fn build_info(index: &Index, model: &Class<'_>) -> Option<ModelInfo> {
             read_class_attribute(attribute, &mut table, &mut info);
         }
         if let Some(value) = property_default(decl, "table") {
-            table.get_or_insert_with(|| unquote(&value));
+            if let Some(name) = literal_string(index, ancestor.class, &value) {
+                table.get_or_insert(name);
+            }
         }
         if property_default(decl, "timestamps").is_some_and(|value| value.trim() == "false") {
             info.timestamps = false;
@@ -199,6 +203,26 @@ fn read_class_attribute(attribute: &Attribute, table: &mut Option<String>, info:
 
 fn property_default(decl: &ClassDecl, name: &str) -> Option<String> {
     decl.property(name)?.default.clone()
+}
+
+/// A string written as a literal or as a constant of a class: `'users'` and `self::TABLE`.
+fn literal_string(index: &Index, class: Class<'_>, text: &str) -> Option<String> {
+    let text = text.trim();
+    if text.starts_with(['\'', '"']) {
+        return Some(unquote(text));
+    }
+    let (owner, constant) = text.split_once("::")?;
+    let constant = constant.trim();
+    let value = match owner.trim() {
+        "self" | "static" => class.decl.constant(constant)?.value.clone()?,
+        other => {
+            let tree = tree_of(index, &class.file.path)?;
+            let resolver = crate::extract::resolver_at(&tree, class.decl.span.start);
+            let found = index.class(&resolver.resolve_class(other))?;
+            found.decl.constant(constant)?.value.clone()?
+        }
+    };
+    Some(unquote(&value))
 }
 
 fn unquote(text: &str) -> String {
@@ -956,6 +980,50 @@ fn bind_relation<'a>(index: &'a Index, ancestors: &[Ancestor<'a>], out: &mut [Fo
         refined.callable.doc_ret = Some(bound);
         found.member = Cow::Owned(refined);
     }
+}
+
+const FACTORY: &str = "Illuminate\\Database\\Eloquent\\Factories\\Factory";
+
+/// A factory that names no model in a `@extends Factory<Model>` has the one its `$model` property
+/// names, else the one its name stands for, which is how `Factory` finds it at run time.
+pub(crate) fn bind_factory_model(index: &Index, ancestors: &mut [Ancestor<'_>]) {
+    let Some(position) = ancestors
+        .iter()
+        .position(|ancestor| is_named(ancestor.class.decl, FACTORY))
+    else {
+        return;
+    };
+    if position == 0 || matches!(ancestors[position].subst.get("TModel"), Some(Type::Class { .. })) {
+        return;
+    }
+    let factory = ancestors[0].class;
+    let Some(model) = factory_model(index, factory) else {
+        return;
+    };
+    let mut subst = ancestors[position].subst.as_ref().clone();
+    subst.insert("TModel".to_string(), Type::class(model));
+    ancestors[position].subst = Arc::new(subst);
+}
+
+fn factory_model(index: &Index, factory: Class<'_>) -> Option<Name> {
+    if let Some(default) = factory
+        .decl
+        .property("model")
+        .and_then(|property| property.default.as_ref())
+    {
+        if let Some(model) = class_in_attribute(index, factory, default) {
+            return Some(model);
+        }
+    }
+    let rest = factory
+        .decl
+        .name
+        .strip_prefix("Database\\Factories\\")?
+        .strip_suffix("Factory")?;
+    ["App\\Models\\", "App\\"]
+        .iter()
+        .map(|namespace| format!("{namespace}{rest}"))
+        .find(|candidate| index.class(candidate).is_some())
 }
 
 const USE_FACTORY: &str = "Illuminate\\Database\\Eloquent\\Attributes\\UseFactory";

@@ -109,3 +109,45 @@ fn descriptions_become_method_names_the_way_pest_writes_them() {
     );
     assert_eq!(evaluable("`d` → it x"), "__pest_evaluable__d__→_it_x");
 }
+
+#[test]
+fn console_commands_are_runnable_in_laravel_and_symfony_projects() {
+    use crate::testing::Fixture;
+    use php_syntax::parse;
+
+    let mut files = php_index::framework::testing::SYMFONY.to_vec();
+    files.extend_from_slice(&[
+        (
+            "vendor/symfony/Command.php",
+            "<?php namespace Symfony\\Component\\Console\\Command; class Command {} namespace Symfony\\Component\\Console\\Attribute; #[\\Attribute] class AsCommand { public function __construct(public string $name) {} }",
+        ),
+        (
+            "vendor/laravel/Command.php",
+            "<?php namespace Illuminate\\Console; class Command extends \\Symfony\\Component\\Console\\Command\\Command {}",
+        ),
+    ]);
+    let symfony = "<?php namespace App\\Command; use Symfony\\Component\\Console\\Attribute\\AsCommand; use Symfony\\Component\\Console\\Command\\Command;\n#[AsCommand(name: 'app:report')]\nclass ReportCommand extends Command {}\nabstract class Base extends Command {}";
+    let laravel = "<?php namespace App\\Console; use Illuminate\\Console\\Command;\nclass SendEmails extends Command { protected $signature = 'mail:send {user} {--queue}'; }";
+    for (code, flavor, expected) in [(symfony, "symfony", "app:report"), (laravel, "laravel", "mail:send")] {
+        let mut project = files.clone();
+        project.push(("src/Current.php", code));
+        let mut fixture = Fixture::framework(&project);
+        let index = &mut fixture.index;
+        let mut frameworks = index.frameworks();
+        frameworks.laravel = flavor == "laravel";
+        frameworks.symfony = flavor == "symfony";
+        index.set_frameworks(std::path::Path::new("/project"), frameworks);
+        let found = runnables(index, &parse(code).syntax());
+        assert_eq!(found.len(), 1, "{flavor}: {found:?}");
+        assert_eq!(found[0].filter, expected);
+        assert_eq!(found[0].scope, RunnableScope::Command);
+        assert_eq!(
+            found[0].kind,
+            if flavor == "laravel" {
+                RunnableKind::Artisan
+            } else {
+                RunnableKind::Console
+            }
+        );
+    }
+}
