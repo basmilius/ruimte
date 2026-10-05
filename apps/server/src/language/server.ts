@@ -37,6 +37,9 @@ import type { LanguageChild, LanguageExit, LanguageRuntime, SpawnLanguageProcess
 // How long a stopped process may take to go before it is killed.
 export const STOP_GRACE_MS = 3_000;
 
+// How long a process has to have been ready for an end of its own to count as a crash worth one more start; one that ends sooner is a loop.
+export const STABLE_AFTER_MS = 60_000;
+
 // How long typing pauses before a server that is asked for its diagnostics is asked again.
 export const PULL_DELAY_MS = 200;
 
@@ -88,6 +91,8 @@ export interface LanguageServerOptions {
     runtime: LanguageRuntime;
     spawn: SpawnLanguageProcess;
     clock?: LanguageClock;
+    /* The time in milliseconds, which only the decision to start a crashed process again reads. */
+    now?: () => number;
     exists(path: string): Promise<boolean>;
     /* The text of a file, or null when it cannot be read. */
     readText?: (path: string) => Promise<string | null>;
@@ -110,8 +115,9 @@ type Phase = 'stopped' | 'starting' | 'ready' | 'crashed';
 
 /*
  * The servers of one kind in one project: one process, or two for Vue. It starts when a document
- * needs it and an install exists, and goes when asked to stop. A process that ends by itself marks
- * the kind crashed, and only `restart` brings it back, since nothing here retries on a clock.
+ * needs it and an install exists, and goes when asked to stop. A process that ends by itself after
+ * the kind had been ready for `STABLE_AFTER_MS` is started once more at once; any other end marks the
+ * kind crashed, and only `restart` brings it back. The decision is made on the exit and never on a timer.
  */
 export class LanguageServer {
     readonly kind: LanguageServerId;
@@ -124,6 +130,7 @@ export class LanguageServer {
     private phase: Phase = 'stopped';
     private failure: string | undefined;
     private generation = 0;
+    private readyAt: number | null = null;
     private startPromise: Promise<void> | undefined;
 
     constructor(options: LanguageServerOptions) {
@@ -131,6 +138,10 @@ export class LanguageServer {
         this.kind = options.kind;
         this.projectId = options.projectId;
         this.clock = options.clock ?? realLanguageClock;
+    }
+
+    private now(): number {
+        return (this.options.now ?? Date.now)();
     }
 
     get state(): LanguageServerState {
@@ -387,6 +398,7 @@ export class LanguageServer {
                 return;
             }
             this.phase = 'ready';
+            this.readyAt = this.now();
             this.notify();
             for (const document of this.documents.values()) {
                 this.openInComponents(document);
@@ -573,23 +585,42 @@ export class LanguageServer {
               ? `was stopped by ${exit.signal}`
               : `exited with code ${exit.code ?? 'unknown'}`;
         const said = this.log.last('server');
-        void this.fail(`The ${component.profile.title ?? component.profile.name} language server ${reason}${said ? `: ${said}` : ''}`);
+        const message = `The ${component.profile.title ?? component.profile.name} language server ${reason}${said ? `: ${said}` : ''}`;
+        if (this.phase === 'ready' && this.readyAt !== null && this.now() - this.readyAt >= STABLE_AFTER_MS) {
+            void this.recover(message);
+        } else {
+            void this.fail(message);
+        }
+    }
+
+    /* A process that ran for a while and then ended: its kind starts again with the documents it holds, and a second end soon after is a crash. */
+    private async recover(message: string): Promise<void> {
+        this.teardown();
+        this.phase = 'stopped';
+        this.log.push('host', `${message}; starting it again`);
+        await this.ensureStarted();
     }
 
     private async fail(message: string): Promise<void> {
-        const components = this.components;
-        this.components = [];
-        this.generation++;
+        this.teardown();
         this.phase = 'crashed';
         this.failure = message;
         this.log.push('host', message);
+        this.notify();
+    }
+
+    /* Lets go of the processes of a run that ended, and of what they reported. */
+    private teardown(): void {
+        const components = this.components;
+        this.components = [];
+        this.generation++;
+        this.readyAt = null;
         for (const component of components) {
             this.clearReports(component);
             component.documents.clear();
             this.release(component);
             component.child.kill('SIGTERM');
         }
-        this.notify();
         this.options.hooks.watching(this);
         for (const document of this.documents.values()) {
             this.options.hooks.providers(document);

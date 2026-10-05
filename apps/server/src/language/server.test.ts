@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { LanguageServer, type LanguageServerHooks, type SharedDocument } from './server.ts';
+import { LanguageServer, STABLE_AFTER_MS, type LanguageServerHooks, type SharedDocument } from './server.ts';
 import { KIND_PROFILES } from './profiles.ts';
 import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
 import type { LanguageServerKind } from '@ruimte/contracts';
@@ -28,6 +28,8 @@ interface Rig {
     diagnostics: { path: string; component: string; params: PublishDiagnosticsParams }[];
     providers: string[];
     install: { installed: boolean };
+    /* The time the server reads, which moves only when a test says so. */
+    time: { now: number };
 }
 
 function rig(kind: LanguageServerKind, spawner = fakeSpawner()): Rig {
@@ -36,6 +38,7 @@ function rig(kind: LanguageServerKind, spawner = fakeSpawner()): Rig {
     const diagnostics: Rig['diagnostics'] = [];
     const providers: string[] = [];
     const install = { installed: true };
+    const time = { now: 1_000 };
     const hooks: LanguageServerHooks = {
         status: (server) => states.push(server.state),
         diagnostics: (doc, component, params) => diagnostics.push({ path: doc.storedPath, component, params }),
@@ -53,12 +56,13 @@ function rig(kind: LanguageServerKind, spawner = fakeSpawner()): Rig {
         runtime,
         spawn: spawner.spawn,
         clock,
+        now: () => time.now,
         exists: async () => false,
         readText: async () => null,
         realPath: async (path) => path,
         hooks
     });
-    return { server, spawner, clock, states, diagnostics, providers, install };
+    return { server, spawner, clock, states, diagnostics, providers, install, time };
 }
 
 describe('a language server of one kind in one project', () => {
@@ -242,6 +246,70 @@ describe('a language server of one kind in one project', () => {
         await server.stop();
         expect(diagnostics.length).toBeGreaterThan(0);
         expect(diagnostics.every((report) => report.path === 'a.ts' && report.params.diagnostics.length === 0)).toBe(true);
+    });
+
+    it('starts a process again at once when it ends after it ran for a while, with the documents as they are now', async () => {
+        const { server, spawner, states, time } = rig('typescript');
+        const main = document('/work/a.ts', 'typescript', 'old');
+        server.attach(main);
+        await settle();
+        time.now += STABLE_AFTER_MS;
+        main.text = 'newer';
+        main.version = 3;
+        states.length = 0;
+        spawner.processes[0].say('RangeError: out of memory');
+        await spawner.processes[0].crash(137);
+        await settle();
+        expect(server.state).toBe('ready');
+        expect(server.message).toBeUndefined();
+        expect(states).toEqual(['starting', 'ready']);
+        expect(spawner.processes).toHaveLength(2);
+        expect(spawner.processes[1].server.documents.get('file:///work/a.ts')).toEqual({ languageId: 'typescript', text: 'newer', version: 3 });
+        expect(
+            server.log.tail().some((line) => line.stream === 'host' && line.text.includes('exited with code 137') && line.text.includes('starting it again'))
+        ).toBe(true);
+    });
+
+    it('stays crashed when the process it started again ends within the same time', async () => {
+        const { server, spawner, time } = rig('typescript');
+        server.attach(document('/work/a.ts', 'typescript', 'x'));
+        await settle();
+        time.now += STABLE_AFTER_MS;
+        await spawner.processes[0].crash();
+        await settle();
+        expect(server.state).toBe('ready');
+        time.now += STABLE_AFTER_MS - 1;
+        await spawner.processes[1].crash(2);
+        await settle();
+        expect(server.state).toBe('crashed');
+        expect(server.message).toBe('The typescript language server exited with code 2');
+        expect(spawner.processes).toHaveLength(2);
+    });
+
+    it('starts a process again once more when the one it started ran for a while too', async () => {
+        const { server, spawner, time } = rig('typescript');
+        server.attach(document('/work/a.ts', 'typescript', 'x'));
+        await settle();
+        for (const index of [0, 1]) {
+            time.now += STABLE_AFTER_MS;
+            await spawner.processes[index].crash();
+            await settle();
+        }
+        expect(server.state).toBe('ready');
+        expect(spawner.processes).toHaveLength(3);
+    });
+
+    it('restarts both processes of a pair when one of them ends after it ran for a while', async () => {
+        const { server, spawner, time } = rig('vue');
+        server.attach(document('/work/App.vue', 'vue', '<template />'));
+        await settle();
+        time.now += STABLE_AFTER_MS;
+        await spawner.of('vue')[0].crash();
+        await settle();
+        expect(server.state).toBe('ready');
+        expect(spawner.of('typescript')).toHaveLength(2);
+        expect(spawner.of('vue')).toHaveLength(2);
+        expect(spawner.of('typescript')[0].kills).toEqual(['SIGTERM']);
     });
 
     it('marks itself crashed when the process dies before the handshake is done', async () => {

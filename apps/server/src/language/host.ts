@@ -578,6 +578,7 @@ export class LanguageHost {
                 runtime: this.options.runtime ?? bunRuntime(),
                 spawn: this.options.spawn ?? spawnLanguageProcess,
                 clock: this.options.clock ?? realLanguageClock,
+                now: this.options.now,
                 exists: this.options.exists ?? fileExists,
                 readText: this.options.readText,
                 hooks: this.hooks
