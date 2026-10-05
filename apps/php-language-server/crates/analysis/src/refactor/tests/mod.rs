@@ -20,6 +20,7 @@ mod extract_variable;
 mod inline_method;
 mod inline_variable;
 mod move_class;
+mod pull_push;
 mod signature;
 
 pub(super) const CURSOR: &str = "$0";
@@ -110,6 +111,14 @@ fn index_for(files: &[(String, String)], current: &str, current_text: &str) -> p
         php_index::extract::ExtractOptions::default(),
     );
     index.set_file(current_path, php_index::Origin::Project, std::sync::Arc::new(symbols));
+    for (path, text) in files.iter().filter(|(path, _)| path.starts_with("vendor/")) {
+        let symbols = php_index::extract::extract(&parse(text).syntax(), php_index::extract::ExtractOptions::default());
+        index.set_file(
+            PathBuf::from(format!("/project/{path}")),
+            php_index::Origin::Vendor,
+            std::sync::Arc::new(symbols),
+        );
+    }
     index
 }
 

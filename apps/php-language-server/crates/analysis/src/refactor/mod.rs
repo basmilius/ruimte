@@ -15,6 +15,7 @@ mod inline_method;
 mod inline_variable;
 mod move_class;
 mod names;
+mod pull_push;
 mod scope;
 mod signature;
 #[cfg(test)]
@@ -154,5 +155,6 @@ pub fn with_refactors<R>(renv: &RefactorEnv<'_>, range: TextRange, run: impl FnO
     inline_method::offer(&rcx, &mut out);
     signature::offer(&rcx, &mut out);
     move_class::offer(&rcx, &mut out);
+    pull_push::offer(&rcx, &mut out);
     run(out)
 }

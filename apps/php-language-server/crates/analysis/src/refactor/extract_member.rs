@@ -195,7 +195,7 @@ fn extract_constant(rcx: &Rcx<'_>, expr: &SyntaxNode, all: bool) -> Result<Chang
 // Members ---------------------------------------------------------------------------------------
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum MemberGroup {
+pub(super) enum MemberGroup {
     TraitUse,
     Case,
     Constant,
@@ -203,7 +203,7 @@ enum MemberGroup {
     Method,
 }
 
-fn group_of(member: &SyntaxNode) -> MemberGroup {
+pub(super) fn group_of(member: &SyntaxNode) -> MemberGroup {
     match member.kind() {
         TRAIT_USE => MemberGroup::TraitUse,
         ENUM_CASE => MemberGroup::Case,
@@ -214,7 +214,13 @@ fn group_of(member: &SyntaxNode) -> MemberGroup {
 }
 
 /// The edit that puts a member among the ones of its kind, with the blank lines the groups keep.
-fn member_insertion(cx: &Cx, class: &SyntaxNode, block: &str, group: MemberGroup, set_apart: bool) -> TextEdit {
+pub(super) fn member_insertion(
+    cx: &Cx,
+    class: &SyntaxNode,
+    block: &str,
+    group: MemberGroup,
+    set_apart: bool,
+) -> TextEdit {
     let style = style_of(cx, class);
     let eol = if cx.text.contains("\r\n") { "\r\n" } else { "\n" };
     let body = child_of(class, CLASS_BODY);
@@ -257,11 +263,27 @@ fn member_insertion(cx: &Cx, class: &SyntaxNode, block: &str, group: MemberGroup
                 format!("{indented}{eol}{eol}"),
             ),
             None => {
-                let at = body
+                let open = body
                     .as_ref()
-                    .and_then(|body| tokens(body).find(|token| token.kind() == LBRACE))
-                    .map_or(end(class), |token| u32::from(token.text_range().end()));
-                insert(at, format!("{eol}{indented}{eol}"))
+                    .and_then(|body| tokens(body).find(|token| token.kind() == LBRACE));
+                let close = body
+                    .as_ref()
+                    .and_then(|body| tokens(body).find(|token| token.kind() == RBRACE));
+                let (Some(open), Some(close)) = (open, close) else {
+                    return insert(end(class), format!("{eol}{indented}{eol}"));
+                };
+                let after_open = u32::from(open.text_range().end()) as usize;
+                let line_after = line_end(cx.text, after_open);
+                if cx.text[after_open..line_after].trim().is_empty()
+                    && after_open <= u32::from(close.text_range().start()) as usize
+                {
+                    insert(line_after as u32, format!("{indented}{eol}"))
+                } else {
+                    replace(
+                        TextRange::new(open.text_range().end(), close.text_range().start()),
+                        format!("{eol}{indented}{eol}{}", indent_of(cx.text, start(class) as usize)),
+                    )
+                }
             }
         },
     }
@@ -277,7 +299,7 @@ fn is_static_method(method: &SyntaxNode) -> bool {
     child_of(method, MODIFIER_LIST).is_some_and(|list| has_token(&list, STATIC_KW))
 }
 
-fn is_constructor(method: &SyntaxNode) -> bool {
+pub(super) fn is_constructor(method: &SyntaxNode) -> bool {
     child_of(method, NAME).is_some_and(|name| text_of(&name).eq_ignore_ascii_case("__construct"))
 }
 

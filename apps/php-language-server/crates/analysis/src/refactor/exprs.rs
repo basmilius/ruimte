@@ -498,3 +498,20 @@ pub(crate) fn replaceable(expr: &SyntaxNode) -> Result<(), String> {
     }
     Ok(())
 }
+
+/// Takes a member out with its lines, and the blank line that set it apart from the next one when
+/// it was the first.
+pub(crate) fn remove_member(text: &str, range: TextRange) -> crate::completion::TextEdit {
+    let mut edit = crate::actions::edits::remove_with_lines(text, range);
+    let before = text[..edit.start as usize].trim_end_matches([' ', '\t']);
+    let opens_body = before.ends_with("{\n") || before.ends_with("{\r\n");
+    let rest = &text[edit.end as usize..];
+    if opens_body {
+        if rest.starts_with("\r\n") {
+            edit.end += 2;
+        } else if rest.starts_with('\n') {
+            edit.end += 1;
+        }
+    }
+    edit
+}

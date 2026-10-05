@@ -17,7 +17,7 @@ use super::signature::{
     parameters,
 };
 use super::{Change, Rcx, Refactor, RefactorKind};
-use crate::actions::edits::{indent_of, line_start, remove_with_lines, replace};
+use crate::actions::edits::{indent_of, line_start, replace};
 use crate::ast::{self, child_of, end, first_token, has_token, range_of, start, text_of};
 use crate::decl::declarations;
 use crate::references::symbols_at;
@@ -315,7 +315,7 @@ fn inline_all(rcx: &Rcx<'_>, callee: &Callee) -> Result<Change, String> {
     let declared_in = &family.files[family.declarations[0].file];
     draft.edit(
         &declared_in.path,
-        remove_member(&declared_in.text, callee.function.text_range()),
+        super::exprs::remove_member(&declared_in.text, callee.function.text_range()),
     );
     draft.finish()
 }
@@ -838,20 +838,3 @@ fn written_statements(
 
 #[allow(dead_code)]
 fn unused(_: &SyntaxNode) {}
-
-/// Takes a member out with its lines, and the blank line that set it apart from the next one when
-/// it was the first.
-fn remove_member(text: &str, range: TextRange) -> crate::completion::TextEdit {
-    let mut edit = remove_with_lines(text, range);
-    let before = text[..edit.start as usize].trim_end_matches([' ', '\t']);
-    let opens_body = before.ends_with("{\n") || before.ends_with("{\r\n");
-    let rest = &text[edit.end as usize..];
-    if opens_body {
-        if rest.starts_with("\r\n") {
-            edit.end += 2;
-        } else if rest.starts_with('\n') {
-            edit.end += 1;
-        }
-    }
-    edit
-}
