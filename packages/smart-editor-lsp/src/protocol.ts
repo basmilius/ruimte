@@ -267,6 +267,17 @@ export interface WorkspaceEdit {
     changeAnnotations?: Record<string, { label: string; needsConfirmation?: boolean; description?: string }>;
 }
 
+/* One entry of `workspace/willRenameFiles` and `didRenameFiles`. */
+export interface FileRename {
+    oldUri: string;
+    newUri: string;
+}
+
+export interface FileOperationFilter {
+    scheme?: string;
+    pattern: { glob: string; matches?: 'file' | 'folder'; options?: { ignoreCase?: boolean } };
+}
+
 export interface ApplyWorkspaceEditParams {
     label?: string;
     edit: WorkspaceEdit;
@@ -397,6 +408,8 @@ export interface ProviderOptions {
     watchers?: FileSystemWatcher[];
     codeActionKinds?: string[];
     legend?: SemanticTokensLegend;
+    /* Of a file operation registration. */
+    filters?: FileOperationFilter[];
     range?: boolean | object;
     full?: boolean | { delta?: boolean };
     [option: string]: unknown;

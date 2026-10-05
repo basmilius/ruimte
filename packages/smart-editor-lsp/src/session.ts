@@ -1,5 +1,6 @@
 import { ErrorCodes, JsonRpcConnection, LspError, type RequestHandler } from './connection.ts';
 import { LspDocument } from './document.ts';
+import { renamesTaken, type RenamedFile } from './file-operations.ts';
 import { globMatch } from './glob.ts';
 import type {
     ApplyWorkspaceEditParams,
@@ -9,6 +10,8 @@ import type {
     Disposable,
     DocumentItem,
     FileEvent,
+    FileOperationFilter,
+    FileRename,
     FileSystemWatcher,
     InitializeResult,
     LspTransport,
@@ -19,6 +22,7 @@ import type {
     RequestOptions,
     ServerCapabilities,
     TextDocumentSyncOptions,
+    WorkspaceEdit,
     WorkspaceFolder,
     WorkspaceSymbol,
     WorkspaceSymbolResult
@@ -358,6 +362,32 @@ export class LspSession {
         return this.notify('workspace/didChangeWatchedFiles', { changes });
     }
 
+    /* The files a server asked to hear about when they are renamed, from its capabilities and its registrations. */
+    fileOperationFilters(operation: 'willRename' | 'didRename'): FileOperationFilter[] {
+        const fileOperations = (this.serverCapabilities.workspace as { fileOperations?: Record<string, ProviderOptions> } | undefined)?.fileOperations;
+        const method = `workspace/${operation}Files`;
+        return [
+            ...(fileOperations?.[operation]?.filters ?? []),
+            ...[...this.registrations.values()]
+                .filter((registration) => registration.method === method)
+                .flatMap((registration) => registration.registerOptions?.filters ?? [])
+        ];
+    }
+
+    /* What the server would change before these files move, or null when it takes none of them or has nothing to say. */
+    async willRenameFiles(files: readonly RenamedFile[], options?: RequestOptions): Promise<WorkspaceEdit | null> {
+        const taken = renamesTaken(this.fileOperationFilters('willRename'), files);
+        return taken.length === 0 || this.phase !== 'ready' ? null : this.request<WorkspaceEdit | null>('workspace/willRenameFiles', { files: taken }, options);
+    }
+
+    /* Tells the server which of these files moved, those its filters take. */
+    async didRenameFiles(files: readonly RenamedFile[]): Promise<void> {
+        const taken: FileRename[] = renamesTaken(this.fileOperationFilters('didRename'), files);
+        if (taken.length > 0 && this.phase === 'ready') {
+            await this.notify('workspace/didRenameFiles', { files: taken });
+        }
+    }
+
     /* Registrations and the refresh requests of the server both land here, since each can change what a document may ask. */
     onCapabilitiesChanged(listener: () => void): Disposable {
         this.capabilityListeners.add(listener);
@@ -450,7 +480,8 @@ function clientCapabilities(options: LspSessionOptions): object {
         general: { positionEncodings: ['utf-16'] },
         workspace: {
             applyEdit: !!options.onApplyEdit,
-            workspaceEdit: { documentChanges: true, failureHandling: 'abort' },
+            workspaceEdit: { documentChanges: true, resourceOperations: ['rename'], failureHandling: 'abort' },
+            fileOperations: { dynamicRegistration: true, willRename: true, didRename: true },
             configuration: true,
             workspaceFolders: true,
             executeCommand: dynamic,
@@ -517,6 +548,7 @@ function clientCapabilities(options: LspSessionOptions): object {
                             'refactor.extract',
                             'refactor.inline',
                             'refactor.rewrite',
+                            'refactor.move',
                             'source',
                             'source.organizeImports',
                             'source.fixAll'

@@ -11,6 +11,7 @@ export {
     type DocumentSnapshot,
     type PlannedDocumentEdit
 } from './edits.ts';
+export { renamesTaken, type RenamedFile } from './file-operations.ts';
 export { watchesFile, type FileChangeType } from './watched-files.ts';
 export { LspSession, type LspSessionOptions, type SessionState } from './session.ts';
 export type { DiagnosticsReport, LanguageDocument, LanguageRequestOptions, LanguageService } from './service.ts';

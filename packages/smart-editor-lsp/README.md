@@ -13,6 +13,7 @@ Everything comes from the package root; `@ruimte/smart-editor-lsp/testing` holds
 - `JsonRpcConnection`: correlation, `$/cancelRequest`, a request timeout (30 seconds, `0` turns it off) and the requests a server sends. `LspError` carries a JSON-RPC code; `ErrorCodes` names the ones used here.
 - Transports: `createStreamTransport` over a `ByteStream` (a child's stdin and stdout, which the host adapts), `ContentLengthDecoder` and `encodeMessage` for the framing, `createMemoryTransportPair` and `connectWebSocket`.
 - Edits: `applyTextEdits` and `planWorkspaceEdit` (simultaneous edits and a multi-file plan, which refuses file operations), `applyContentChanges` (sequential), `minimalChange`, `offsetAt`, `positionAt` and `endPosition`.
+- File renames: `willRenameFiles` and `didRenameFiles` of `LspSession` take the files that move (`RenamedFile`, which says whether each is a folder) and pass on only those that the filters of the server take, from its capabilities and its registrations (`fileOperationFilters`, `renamesTaken`: scheme, glob on the path the file leaves, `matches`, `ignoreCase`). The session declares `resourceOperations: ['rename']`, `workspace.fileOperations` and the `refactor.move` kind in `initialize`.
 - `bridgeVueTypeScript` relays Vue's `tsserver/request` to the TypeScript server, and `vueServerOrder` says which of the two servers of a `.vue` document to ask first.
 - `pathToFileUri` and `fileUriToPath`.
 - `LanguageService`: what the editor asks of the language side (open, change and close a document, every feature above, `executeCommand`, `supports`, `providerOptions`, `onProvidersChanged` and `onDiagnostics`). Results stay in LSP shapes. A request takes `signal` and `parallel`, which lets many requests of one feature run side by side instead of each taking over from the one before. The daemon's host and the client's wire adapter (`apps/server/src/language`, `apps/client/src/language`) are what stand behind it.
@@ -21,6 +22,6 @@ Everything comes from the package root; `@ruimte/smart-editor-lsp/testing` holds
 ## Known limits
 
 - Unversioned diagnostics cannot be proven fresh and are accepted while their document is open.
-- The package applies no workspace edit and touches no file. File creates, renames and deletes in a `WorkspaceEdit` are the host's.
+- The package applies no workspace edit and touches no file. File creates, renames and deletes in a `WorkspaceEdit` are the host's, and the host only declares renames.
 - Only UTF-16 position encoding is negotiated; a server that insists on another one fails to initialize.
 - Servers that negotiated no document changes (`change: 0`) cannot follow an edit.
