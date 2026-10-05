@@ -106,7 +106,7 @@ fn closing_paren(text: &str, open: usize) -> Option<usize> {
                 b'\'' | b'"' => quote = Some(byte),
                 b'(' => depth += 1,
                 b')' => {
-                    depth -= 1;
+                    depth = depth.saturating_sub(1);
                     if depth == 0 {
                         return Some(position);
                     }
@@ -128,6 +128,10 @@ fn pieces(index: &Index, text: &str) -> Vec<Piece> {
     let mut out = Vec::new();
     let mut position = 0;
     while position < bytes.len() {
+        if !text.is_char_boundary(position) {
+            position += 1;
+            continue;
+        }
         let rest = &text[position..];
         if rest.starts_with("{{--") {
             position += rest.find("--}}").map_or(rest.len(), |end| end + 4);
@@ -469,6 +473,26 @@ mod tests {
         assert_eq!(completions("<x-al$0 />"), ["alert"]);
         assert_eq!(completions("{{ config('app.$0') }}"), ["app.name"]);
         assert!(completions("{{ \\App\\Models\\User::co$0 }}").contains(&"count".to_string()));
+    }
+
+    #[test]
+    fn a_template_in_words_with_accents_is_read() {
+        assert_eq!(places("<p>Dé prijs: {{ config('app.na$0me') }} €5</p>"), ["config/app.php"]);
+        assert_eq!(places("<p>één</p> @include('wel$0come')"), ["resources/views/welcome.blade.php"]);
+    }
+
+    #[test]
+    fn no_prefix_of_a_template_breaks_the_reading() {
+        let template = "@extends('layouts.app')\n@section('c')\n<x-alert type=\"é\">{{ $a->b(config('app.name'), \"x\") }}{!! __('m.w') !!}</x-alert>\n@foreach ($xs as $x) @if ($x->y) {{-- c --}} @endif @endforeach\n@php $t = \\App\\Models\\User::count(); @endphp @can('x', $y) {{ é }} @endcan @@x {{{ $z }}}";
+        let fixture = fixture();
+        for end in (0..=template.len()).filter(|end| template.is_char_boundary(*end)) {
+            let text = &template[..end];
+            for offset in (0..=text.len()).filter(|offset| text.is_char_boundary(*offset)) {
+                let _ = definitions_at(&fixture.index, text, offset as u32);
+                let _ = hover_at(&fixture.index, text, offset as u32);
+                let _ = complete_at(&fixture.index, text, offset as u32, CompletionOptions::default());
+            }
+        }
     }
 
     #[test]
