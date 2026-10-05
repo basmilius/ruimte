@@ -806,3 +806,25 @@ fn open_documents_win_over_the_disk() {
     assert!(labels.contains(&"brandNew") && !labels.contains(&"posts"), "{labels:?}");
     client.shutdown();
 }
+
+#[test]
+fn reads_a_class_that_composer_points_at_but_the_index_skipped() {
+    let disk = Disk::new();
+    disk.write(
+        "project/composer.json",
+        r#"{"autoload":{"psr-4":{"App\\":"src/","Hidden\\":".hidden/src/"}}}"#,
+    );
+    disk.write(
+        "project/.hidden/src/Thing.php",
+        "<?php\nnamespace Hidden;\n/** Found through the autoload map. */\nclass Thing {}\n",
+    );
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Page.php");
+    client.open(&uri, "<?php\nnew \\Hidden\\Thing();\n");
+    let hover = client.at("textDocument/hover", &uri, 1, 12);
+    let text = hover["contents"]["value"].as_str().expect("markdown");
+    assert!(text.contains("Found through the autoload map."), "{text}");
+    let definition = client.at("textDocument/definition", &uri, 1, 12);
+    assert_eq!(definition[0]["uri"], disk.uri("project/.hidden/src/Thing.php"));
+    client.shutdown();
+}

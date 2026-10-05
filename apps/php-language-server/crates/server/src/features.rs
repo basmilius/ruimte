@@ -11,9 +11,11 @@ use lsp_types::{
 };
 use php_analysis::completion::{CompletionOptions, ItemKind, complete, resolve_documentation};
 use php_analysis::nav::Place;
+use php_analysis::target::Target;
 use php_analysis::workspace_symbols::workspace_symbols;
 use php_analysis::{Analyzer, LineIndex};
 use php_index::Project;
+use php_index::indexer::index_file;
 use php_syntax::{TextRange, TextSize};
 use serde_json::{Value, json};
 
@@ -157,8 +159,49 @@ impl Server<'_> {
         Some(run(&analyzer, offset, project, &mapper))
     }
 
+    /// A class the index has not seen may still be one Composer's autoload maps point at: read that
+    /// file now. Returns whether anything was added.
+    fn load_missing_classes(&mut self, uri: &Uri, position: lsp_types::Position) -> bool {
+        let missing: Vec<String> = self
+            .with_analyzer(uri, position, |analyzer, offset, _, _| {
+                analyzer
+                    .targets_at(offset)
+                    .into_iter()
+                    .filter_map(|found| match found.target {
+                        Target::Class(name) if analyzer.index.class(&name).is_none() => Some(name),
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        let Some(path) = uri_to_path(uri) else {
+            return false;
+        };
+        let project = self.workspace.project_for_mut(&path);
+        let mut loaded = false;
+        for name in missing {
+            let candidates = project
+                .composer
+                .as_ref()
+                .map(|composer| composer.class_candidates(&name))
+                .unwrap_or_default();
+            for candidate in candidates {
+                if !candidate.is_file() || project.index.contains_file(&candidate) {
+                    continue;
+                }
+                let origin = project.origin_of(&candidate);
+                if let Some(symbols) = index_file(&candidate, origin) {
+                    project.index.set_file(candidate, origin, std::sync::Arc::new(symbols));
+                    loaded = true;
+                }
+            }
+        }
+        loaded
+    }
+
     pub(crate) fn hover(&mut self, params: HoverParams) -> Option<Hover> {
         let position = params.text_document_position_params;
+        self.load_missing_classes(&position.text_document.uri, position.position);
         self.with_analyzer(
             &position.text_document.uri,
             position.position,

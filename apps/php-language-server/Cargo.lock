@@ -580,6 +580,7 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 name = "php-analysis"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "expect-test",
  "php-index",
  "php-syntax",
@@ -589,6 +590,7 @@ dependencies = [
 name = "php-index"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "expect-test",
  "flate2",
  "php-syntax",

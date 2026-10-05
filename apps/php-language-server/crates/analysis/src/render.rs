@@ -299,8 +299,81 @@ fn tag_line(name: &str, code: Option<&str>, text: &str) -> String {
     out
 }
 
-/// `{@see Foo}` and `{@link url}` as inline code, which is how a client shows a reference.
+/// The HTML some doc comments are written in, as markdown. Tags that are not HTML stay as they are,
+/// since `array<int>` is a type and not a tag.
+fn html_to_markdown(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(open) = rest.find('<') {
+        out.push_str(&rest[..open]);
+        let after = &rest[open + 1..];
+        let Some(close) = after.find('>').filter(|close| *close <= 80) else {
+            out.push('<');
+            rest = after;
+            continue;
+        };
+        let tag = after[..close].trim().trim_end_matches('/').trim().to_ascii_lowercase();
+        let name = tag.split_whitespace().next().unwrap_or("");
+        let replacement = match name {
+            "p" | "/p" | "/ul" | "/ol" | "/pre" | "pre" | "/h1" | "/h2" | "/h3" | "/h4" | "/table" | "table" => {
+                Some("\n\n")
+            }
+            "br" | "/li" | "/tr" | "/div" | "div" | "tr" => Some("\n"),
+            "ul" | "ol" => Some("\n"),
+            "li" => Some("\n- "),
+            "b" | "/b" | "strong" | "/strong" => Some("**"),
+            "i" | "/i" | "em" | "/em" => Some("_"),
+            "code" | "/code" | "tt" | "/tt" | "kbd" | "/kbd" => Some("`"),
+            "a" | "/a" | "span" | "/span" | "h1" | "h2" | "h3" | "h4" | "td" | "/td" | "th" | "/th" | "thead"
+            | "/thead" | "tbody" | "/tbody" | "font" | "/font" | "sup" | "/sup" | "sub" | "/sub" | "u" | "/u" => {
+                Some("")
+            }
+            _ => None,
+        };
+        match replacement {
+            Some(text) => {
+                out.push_str(text);
+                rest = &after[close + 1..];
+            }
+            None => {
+                out.push('<');
+                rest = after;
+            }
+        }
+    }
+    out.push_str(rest);
+    let decoded = out
+        .replace("&nbsp;", " ")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
+        .replace("&amp;", "&");
+    let mut collapsed = String::with_capacity(decoded.len());
+    let mut blank_run = 0;
+    for line in decoded.lines() {
+        let line = line.trim_end();
+        if line.trim().is_empty() {
+            blank_run += 1;
+            if blank_run > 1 {
+                continue;
+            }
+        } else {
+            blank_run = 0;
+        }
+        collapsed.push_str(line.trim_start_matches(' '));
+        collapsed.push('\n');
+    }
+    collapsed.trim().to_string()
+}
+
+/// `{@see Foo}` and `{@link url}` as inline code or a link, which is how a client shows a reference.
 fn inline_tags(text: &str) -> String {
+    html_to_markdown(&inline_tags_raw(text))
+}
+
+fn inline_tags_raw(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(open) = rest.find("{@") {
@@ -313,6 +386,13 @@ fn inline_tags(text: &str) -> String {
         let inner = &after[..close];
         let (tag, argument) = inner.split_once(char::is_whitespace).unwrap_or((inner, ""));
         match tag {
+            "link" if argument.trim_start().starts_with("http") => {
+                let argument = argument.trim();
+                match argument.split_once(char::is_whitespace) {
+                    Some((url, label)) => out.push_str(&format!("[{}]({url})", label.trim())),
+                    None => out.push_str(&format!("<{argument}>")),
+                }
+            }
             "see" | "link" | "uses" | "inheritdoc" | "internal" => {
                 let argument = argument.trim();
                 if argument.is_empty() {
@@ -374,6 +454,20 @@ function &helper(string $x): void {}
             &file.functions[0].callable,
             level,
         ));
+    }
+
+    #[test]
+    fn turns_the_html_of_the_stubs_into_markdown() {
+        assert_eq!(
+            html_to_markdown(
+                "(PHP 5 &gt;=5.5.0)<br/>\nReturns <b>FALSE</b> or an <i>int</i>.<p>Next, a list of array<int> values</p>"
+            ),
+            "(PHP 5 >=5.5.0)\n\nReturns **FALSE** or an _int_.\n\nNext, a list of array<int> values"
+        );
+        assert_eq!(
+            inline_tags("Formats like {@link https://php.net/date date()} does"),
+            "Formats like [date()](https://php.net/date) does"
+        );
     }
 
     #[test]
