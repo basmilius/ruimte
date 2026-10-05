@@ -46,6 +46,7 @@ export class Harness {
             this.add(chatId, { id: turnId, kind: 'turn', createdAt: this.clock, turnId, state: 'running', endedAt: null, costUsd: 0 } as ChatItem);
             return turnId;
         },
+        stopChat: async (chatId) => void this.calls.push(`stop ${chatId}`),
         releaseChat: (chatId) => void this.calls.push(`release ${chatId}`),
         removeChat: async (_projectId, viewId) => {
             this.calls.push(`remove ${viewId}`);

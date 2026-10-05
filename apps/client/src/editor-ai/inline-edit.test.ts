@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
 import type { Editor } from '@ruimte/smart-editor';
+import { useProviderAccountsStore } from '@ruimte/agents-react/state/provider-accounts';
 import { useProvidersStore } from '@ruimte/agents-react/state/providers';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { EditorLanguage } from '@/language/editor-language';
@@ -13,7 +14,8 @@ import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { InlineEditFeature, inlineAgentNow } from './inline-edit';
-import { saveInlineEdit } from './inline-edit-record';
+import { highlightLayers } from './highlight-layers';
+import { forgetInlineEdit, saveInlineEdit } from './inline-edit-record';
 import { forgetInlineSessions, inlineSessionOf } from './inline-edit-session';
 import { Harness, RANGE, SELECTED, TEXT, at } from './inline-edit-test-helpers';
 
@@ -34,6 +36,14 @@ async function open(text = TEXT): Promise<{ editor: FakeEditor; language: Editor
     await language.document.ready;
     // The one the language made takes the key and the commands; this one answers to the test's own deps.
     const feature = new InlineEditFeature(language, () => harness.deps);
+    return { editor, language, feature };
+}
+
+/* The feature the language made for itself, which takes the key and the gutter, answering to the test's deps. */
+async function openOwn(text = TEXT): Promise<{ editor: FakeEditor; language: EditorLanguage; feature: InlineEditFeature }> {
+    const { editor, language } = await open(text);
+    const feature = language.inlineEdit;
+    (feature as unknown as { depsFor: unknown }).depsFor = () => harness.deps;
     return { editor, language, feature };
 }
 
@@ -202,6 +212,191 @@ describe('an edit under the selection', () => {
     });
 });
 
+describe('the question over the selected lines', () => {
+    test('stands in a row above the first selected line, with the lines tinted and the selection folded, and Escape gives the selection back with the keyboard', async () => {
+        const { editor, feature } = await openOwn();
+        editor.setSelection(RANGE);
+
+        feature.start();
+
+        expect(promptRowsOf(editor)).toEqual([{ id: 'prompt', line: 1, placement: 'above' }]);
+        expect(editor.lineHighlights).toEqual([{ startLine: 2, endLine: 3, color: '--accent', fill: '--editor-selection' }]);
+        expect(editor.getSelection()).toEqual({ start: at(0, 0), end: at(0, 0) });
+        expect(editor.focused).toBe(false);
+
+        expect(editor.press(eventOf(shortcutOf('Escape')))).toBe(true);
+
+        expect(editor.getSelection()).toEqual(RANGE);
+        expect(editor.focused).toBe(true);
+        expect(promptRowsOf(editor)).toBeUndefined();
+        expect(editor.lineHighlights).toEqual([]);
+    });
+
+    test('leaves the caret where it is when nothing was selected', async () => {
+        const { editor, feature } = await openOwn();
+        editor.moveCaret(at(1, 5));
+
+        feature.start();
+        feature.cancel();
+
+        expect(editor.getSelection()).toEqual({ start: at(1, 5), end: at(1, 5) });
+        expect(editor.focused).toBe(true);
+    });
+
+    test('a press in the text puts the question away and leaves the caret where the press put it', async () => {
+        const { editor, feature } = await openOwn();
+        editor.setSelection(RANGE);
+        feature.start();
+        editor.moveCaret(at(3, 0));
+
+        feature.cancel(false);
+        feature.returnToEditor();
+
+        expect(editor.getSelection()).toEqual({ start: at(3, 0), end: at(3, 0) });
+    });
+
+    test('keeps its tint beside the tint of a review, and takes only its own away', async () => {
+        const { editor, feature } = await openOwn();
+        highlightLayers(editor).set('review', () => [{ startLine: 4, endLine: 4, color: '--editor-added' }]);
+        editor.setSelection(RANGE);
+
+        feature.start();
+        expect(editor.lineHighlights.map((highlight) => highlight.color)).toEqual(['--editor-added', '--accent']);
+
+        feature.cancel();
+        expect(editor.lineHighlights).toEqual([{ startLine: 4, endLine: 4, color: '--editor-added' }]);
+    });
+
+    test('moves to the card on Run: the row of the question goes, the lines stay tinted while the card is shown and are free once it is closed', async () => {
+        const { editor, feature } = await openOwn();
+        editor.setSelection(RANGE);
+        feature.start();
+        feature.setInstruction('simplify');
+
+        feature.run();
+        await turnsDone();
+
+        expect(promptRowsOf(editor)).toBeUndefined();
+        expect(editor.lineHighlights).toEqual([{ startLine: 2, endLine: 3, color: '--accent', fill: '--editor-selection' }]);
+        const session = inlineSessionOf(currentEndpointId(), path)!;
+
+        feature.returnToEditor();
+        session.hide();
+
+        expect(editor.getSelection()).toEqual(RANGE);
+        expect(editor.lineHighlights).toEqual([]);
+    });
+
+    test('follows an edit above it with its tint', async () => {
+        const { editor, feature } = await openOwn();
+        editor.setSelection(RANGE);
+        feature.start();
+        feature.setInstruction('simplify');
+        feature.run();
+        await turnsDone();
+
+        editor.applyEdits([{ range: { start: at(0, 0), end: at(0, 0) }, text: '// new\n' }]);
+        highlightLayers(editor).set('review', null);
+
+        expect(editor.lineHighlights).toEqual([{ startLine: 3, endLine: 4, color: '--accent', fill: '--editor-selection' }]);
+    });
+
+    test('carries the account of the setting to the chat it starts, while the machine has it', async () => {
+        useProvidersStore
+            .getState()
+            .setProviders('local', [
+                { kind: 'claude', name: 'Claude Code', installed: true, capabilities: { chat: true }, models: [], defaultModel: 'm' } as never
+            ]);
+        useProviderAccountsStore.getState().set('local', { accounts: { claude: { kind: 'claude' }, claude_work: { kind: 'claude' } }, statuses: [] } as never);
+        useSettings.setState({ aiInlineAgent: { provider: 'claude', model: null, account: 'claude_work' } });
+        const { editor, feature } = await openOwn();
+        editor.setSelection(RANGE);
+
+        feature.start();
+        expect(feature.store.getState().prompt).toMatchObject({ provider: 'claude', account: 'claude_work' });
+        feature.setAgent('claude', 'opus');
+        expect(feature.store.getState().prompt?.account).toBeUndefined();
+        feature.setAgent('claude', 'opus', 'claude_work');
+        feature.setInstruction('x');
+        feature.run();
+
+        expect(harness.created[0]).toMatchObject({ provider: 'claude', model: 'opus', account: 'claude_work' });
+        useProviderAccountsStore.setState({ byScope: {} });
+        useSettings.setState({ aiInlineAgent: { provider: 'claude', model: null } });
+    });
+});
+
+describe('the mark in the gutter', () => {
+    const record = {
+        chatId: 'chat-1',
+        viewId: 'chat-1',
+        projectId: 'p1',
+        path,
+        range: RANGE,
+        selectedText: SELECTED,
+        instruction: 'simplify',
+        provider: 'claude' as const,
+        model: null,
+        createdAt: 10
+    };
+
+    test('stands on the first line of a saved edit, follows the text, and opens the card when pressed', async () => {
+        saveInlineEdit(currentEndpointId(), record);
+        const { editor, feature } = await openOwn();
+
+        expect(markersOf(editor)).toEqual([{ id: 'inline-edit', line: 1, label: 'Show the inline edit of these lines' }]);
+
+        editor.applyEdits([{ range: { start: at(0, 0), end: at(0, 0) }, text: '// new\n' }]);
+        expect(markersOf(editor)?.[0]?.line).toBe(2);
+
+        editor.pressGutterMarker('inline-edit');
+        await turnsDone();
+
+        expect(feature.store.getState().session?.store.getState().shown).toBe(true);
+        expect(markersOf(editor)).toBeUndefined();
+    });
+
+    test('is not there for a file without a saved edit, nor while its card is shown', async () => {
+        const { editor, feature } = await openOwn();
+        expect(markersOf(editor)).toBeUndefined();
+
+        editor.setSelection(RANGE);
+        feature.start();
+        feature.setInstruction('x');
+        feature.run();
+        await turnsDone();
+
+        expect(markersOf(editor)).toBeUndefined();
+    });
+
+    test('comes back when the card is closed, and goes with the edit even while its record is still being removed', async () => {
+        const { editor, feature } = await openOwn();
+        editor.setSelection(RANGE);
+        feature.start();
+        feature.setInstruction('x');
+        feature.run();
+        await turnsDone();
+        saveInlineEdit(currentEndpointId(), record);
+        const session = inlineSessionOf(currentEndpointId(), path)!;
+
+        session.hide();
+        expect(markersOf(editor)).toEqual([{ id: 'inline-edit', line: 1, label: 'Show the inline edit of these lines' }]);
+
+        await session.discard();
+        expect(markersOf(editor)).toBeUndefined();
+    });
+
+    test('goes when the record is forgotten', async () => {
+        saveInlineEdit(currentEndpointId(), record);
+        const { editor } = await openOwn();
+        expect(markersOf(editor)).toHaveLength(1);
+
+        forgetInlineEdit(currentEndpointId(), path, 'chat-1');
+
+        expect(markersOf(editor)).toBeUndefined();
+    });
+});
+
 describe('the agent of an inline edit', () => {
     function installed(...kinds: string[]): void {
         useProvidersStore.getState().setProviders(
@@ -222,6 +417,21 @@ describe('the agent of an inline edit', () => {
         expect(inlineAgentNow('e1')).toEqual({ provider: 'codex', model: 'gpt-x' });
     });
 });
+
+/* The row of the question, which the fake editor keeps under its own owner. */
+function promptRowsOf(editor: Editor): readonly { id: string; line: number; placement?: string }[] | undefined {
+    const rows = (editor as unknown as { widgetsByOwner: Map<string, readonly { id: string; line: number; placement?: string }[]> }).widgetsByOwner.get(
+        'inline-edit-prompt'
+    );
+    return rows?.map(({ id, line, placement }) => ({ id, line, ...(placement === undefined ? {} : { placement }) }));
+}
+
+/* The markers the inline edit gave the fake editor. */
+function markersOf(editor: Editor): readonly { id: string; line: number; label: string }[] | undefined {
+    return (editor as unknown as { gutterMarkersByOwner: Map<string, readonly { id: string; line: number; label: string }[]> }).gutterMarkersByOwner.get(
+        'inline-edit'
+    );
+}
 
 /* The rows the inline edit gave the fake editor, which keeps them by owner. */
 function cardsOf(editor: Editor): readonly { id: string; line: number }[] | undefined {

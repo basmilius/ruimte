@@ -46,6 +46,9 @@ export function inlineEditDeps(endpointId: string): InlineEditDeps {
                 }
             });
         },
+        stopChat: async (chatId) => {
+            await transportOf(endpointId).request('chat.cancel', { chatId });
+        },
         send: async (chatId, text, mentions) => (await clientOf(endpointId).send(chatId, text, { mentions })).turnId ?? null,
         releaseChat: (chatId) => {
             void clientOf(endpointId).detach(chatId);

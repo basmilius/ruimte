@@ -16,7 +16,7 @@ import {
 } from './inline-edit-model';
 import type { InlineEditRecord } from './inline-edit-record';
 
-export type InlinePhase = 'running' | 'proposal' | 'answer' | 'failed';
+export type InlinePhase = 'running' | 'proposal' | 'answer' | 'failed' | 'stopped';
 
 export interface InlineEditState {
     phase: InlinePhase;
@@ -39,6 +39,8 @@ export interface InlineEditState {
     error: string | null;
     /* Whether the card is drawn; a closed card keeps its session, which the Code menu shows again. */
     shown: boolean;
+    /* Counts the times the card was asked to take the keyboard: shown again, or a new turn. */
+    focusRequest: number;
     /* Whether an editor draws this session, as opposed to one whose tab was closed. */
     attached: boolean;
     /* Set once the session is over, which is when whatever draws it lets go. */
@@ -56,6 +58,8 @@ export interface InlineEditDeps {
     watchChat(chatId: string, listener: (chat: ChatState | undefined) => void): () => void;
     /* Answers the id of the turn the message opened, or null when the host did not say. */
     send(chatId: string, text: string, mentions: string[]): Promise<string | null>;
+    /* Stops the turn that runs; the chat stays. */
+    stopChat(chatId: string): Promise<void>;
     /* Lets go of the chat without a word to the machine, since it is about to be removed. */
     releaseChat(chatId: string): void;
     removeChat(projectId: string, viewId: string): Promise<void>;
@@ -164,6 +168,7 @@ export class InlineEditSession {
     private editor: Editor | null = null;
     private tracked: EditorTrackedRange | null = null;
     private createdAt: number;
+    private starting: Promise<void> | null = null;
 
     constructor(endpointId: string, deps: InlineEditDeps, init: InlineEditInit) {
         this.endpointId = endpointId;
@@ -185,6 +190,7 @@ export class InlineEditSession {
             needsYou: false,
             error: null,
             shown: true,
+            focusRequest: 1,
             attached: false,
             closed: false
         }));
@@ -243,7 +249,7 @@ export class InlineEditSession {
     }
 
     show(): void {
-        this.store.setState({ shown: true });
+        this.store.setState({ shown: true, focusRequest: this.store.getState().focusRequest + 1 });
     }
 
     hide(): void {
@@ -273,7 +279,32 @@ export class InlineEditSession {
     }
 
     /* The first run: makes the chat and sends the instruction with the selection. */
-    async start(text: string): Promise<void> {
+    start(text: string): Promise<void> {
+        this.starting = this.begin(text);
+        return this.starting;
+    }
+
+    /* Stops the turn that runs; what the agent said so far stays on the card, and the same instruction can run again. */
+    async stop(): Promise<void> {
+        // A stop pressed while the chat is still being made waits for it, since there is nothing to stop before.
+        await this.starting;
+        const chatId = this.chatId;
+        if (chatId === null || this.store.getState().phase !== 'running') {
+            return;
+        }
+        try {
+            await this.deps.stopChat(chatId);
+        } catch (e) {
+            this.deps.notify({ kind: 'error', title: i18next.t('inline-edit:error.stop'), description: e instanceof Error ? e.message : String(e) });
+        }
+    }
+
+    /* Sends the last instruction again, in the chat that already holds the selection. */
+    rerun(): Promise<void> {
+        return this.followUp(this.store.getState().instruction);
+    }
+
+    private async begin(text: string): Promise<void> {
         const instruction = text.trim();
         const { provider, model } = this.store.getState();
         this.beginTurn(instruction);
@@ -454,7 +485,8 @@ export class InlineEditSession {
             endedAt: null,
             needsYou: false,
             error: null,
-            shown: true
+            shown: true,
+            focusRequest: this.store.getState().focusRequest + 1
         });
     }
 
@@ -490,11 +522,15 @@ export class InlineEditSession {
         this.settledTurn = turnId;
         const endedAt = outcome.endedAt ?? this.deps.now();
         const began = outcome.startedAt ?? this.store.getState().startedAt;
+        if (outcome.state === 'aborted') {
+            this.store.setState({ phase: 'stopped', needsYou: false, error: null, answer: outcome.text, startedAt: began, endedAt });
+            return;
+        }
         if (outcome.state !== 'done') {
             this.store.setState({
                 phase: 'failed',
                 needsYou: false,
-                error: outcome.error ?? i18next.t(outcome.state === 'aborted' ? 'inline-edit:error.stopped' : 'inline-edit:error.failed'),
+                error: outcome.error ?? i18next.t('inline-edit:error.failed'),
                 startedAt: began,
                 endedAt
             });

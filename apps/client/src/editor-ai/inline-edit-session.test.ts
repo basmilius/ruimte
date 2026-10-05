@@ -43,6 +43,77 @@ beforeEach(() => {
     editor = mounted();
 });
 
+describe('stopping an inline edit', () => {
+    test('asks the chat to stop the turn, and the card keeps what the agent said so far', async () => {
+        const made = session();
+        await made.start('simplify');
+
+        await made.stop();
+        harness.answer('chat-1', 'turn-1', 'Let me look at the guard first.', 'aborted');
+
+        expect(harness.calls).toContain('stop chat-1');
+        expect(made.store.getState()).toMatchObject({ phase: 'stopped', answer: 'Let me look at the guard first.', error: null, proposal: null });
+        expect(made.store.getState().endedAt).not.toBeNull();
+    });
+
+    test('runs the same instruction again in the chat that already holds the selection', async () => {
+        const made = session();
+        await made.start('simplify the guard');
+        harness.answer('chat-1', 'turn-1', '', 'aborted');
+
+        await made.rerun();
+
+        expect(harness.created).toHaveLength(1);
+        expect(harness.sent[1]).toEqual({ chatId: 'chat-1', text: 'simplify the guard', mentions: [] });
+        expect(made.store.getState()).toMatchObject({ phase: 'running', proposal: null });
+        harness.answer('chat-1', 'turn-2', BLOCK);
+        expect(made.store.getState().phase).toBe('proposal');
+    });
+
+    test('waits for the chat that is still being made, since there is nothing to stop before it', async () => {
+        const made = session();
+
+        const started = made.start('simplify');
+        const stopped = made.stop();
+        await Promise.all([started, stopped]);
+
+        expect(harness.calls).toEqual(['newChat', 'open chat-1', 'stop chat-1']);
+    });
+
+    test('leaves a turn that already settled alone', async () => {
+        const made = session();
+        await made.start('simplify');
+        harness.answer('chat-1', 'turn-1', BLOCK);
+
+        await made.stop();
+
+        expect(harness.calls).not.toContain('stop chat-1');
+        expect(made.store.getState().phase).toBe('proposal');
+    });
+
+    test('says so when the chat could not be stopped, and goes on running', async () => {
+        const made = session();
+        await made.start('simplify');
+        harness.deps.stopChat = async () => {
+            throw new Error('not connected');
+        };
+
+        await made.stop();
+
+        expect(harness.toasts).toEqual([{ title: 'The turn could not be stopped.' }]);
+        expect(made.store.getState().phase).toBe('running');
+    });
+
+    test('a failed turn is not a stopped one', async () => {
+        const made = session();
+        await made.start('simplify');
+
+        harness.answer('chat-1', 'turn-1', '', 'error');
+
+        expect(made.store.getState().phase).toBe('failed');
+    });
+});
+
 describe('running an inline edit', () => {
     test('makes the chat once, sends the instruction with the file, the lines and the problems, and waits for the turn', async () => {
         const made = session();

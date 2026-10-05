@@ -75,12 +75,25 @@ export function readInlineEdits(endpointId: string, storage: LastProjectStorage 
     }
 }
 
+const listeners = new Set<() => void>();
+
+/* Whoever draws a mark for a saved edit hears when one is kept or forgotten, since that happens while no editor looks. */
+export function onInlineEditsChange(listener: () => void): () => void {
+    listeners.add(listener);
+    return () => {
+        listeners.delete(listener);
+    };
+}
+
 function writeInlineEdits(endpointId: string, records: Record<string, InlineEditRecord>, storage: LastProjectStorage | null): void {
     if (Object.keys(records).length === 0) {
         storage?.removeItem(keyOf(endpointId));
-        return;
+    } else {
+        storage?.setItem(keyOf(endpointId), JSON.stringify(records));
     }
-    storage?.setItem(keyOf(endpointId), JSON.stringify(records));
+    for (const listener of [...listeners]) {
+        listener();
+    }
 }
 
 export function inlineEditFor(endpointId: string, path: string, storage: LastProjectStorage | null = browserStorage()): InlineEditRecord | null {

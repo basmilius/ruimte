@@ -2,7 +2,8 @@ import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
 import { storedPathOf, type AgentKind } from '@ruimte/contracts';
 import { fileUriToPath } from '@ruimte/smart-editor-lsp';
-import type { EditorRange } from '@ruimte/smart-editor';
+import type { EditorRange, EditorTrackedRange } from '@ruimte/smart-editor';
+import { knownAccounts, providerAccountsOf } from '@ruimte/agents-react/state/provider-accounts';
 import { providersOf } from '@ruimte/agents-react/state/providers';
 import { availableAgents } from '@/agents/creation';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
@@ -12,18 +13,25 @@ import { shikiLanguageOf } from '@/language/language-ids';
 import { isShortcut } from '@/language/shortcut-keys';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { inlineEditAccountOn } from '@/state/ai-settings';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
+import { highlightLayers } from './highlight-layers';
 import { inlineEditDeps } from './inline-edit-deps';
-import { inlineRangeOf, lineSpanOf, problemsOnLines, type InlineProblem, type LineSpan } from './inline-edit-model';
-import { inlineEditFor } from './inline-edit-record';
+import { inlineRangeOf, isEmptyRange, lineSpanOf, locateSelection, problemsOnLines, type InlineProblem, type LineSpan } from './inline-edit-model';
+import { inlineEditFor, onInlineEditsChange } from './inline-edit-record';
 import { sweepInlineEdits } from './inline-edit-prune';
 import { InlineEditSession, inlineSessionOf, type InlineEditDeps } from './inline-edit-session';
 
 const PLAIN_IDS = new Set(['plaintext', 'text']);
 const WIDGET_OWNER = 'inline-edit';
+const PROMPT_OWNER = 'inline-edit-prompt';
+const MARKER_ID = 'inline-edit';
+const TINT_OWNER = 'inline-edit';
 /* The card as it first draws, until the editor has measured it: the header, a few lines of code and the follow-up row. */
 const WIDGET_HEIGHT = 200;
+/* The same for the question: the input, the row of chips and the padding around the card. */
+const PROMPT_HEIGHT = 100;
 
 /* The card that asks what to change, before there is anything to run. */
 export interface InlinePrompt {
@@ -33,22 +41,27 @@ export interface InlinePrompt {
     readonly problems: readonly InlineProblem[];
     readonly provider: AgentKind;
     readonly model: string | null;
+    /* Absent is the CLI's default account. */
+    readonly account?: string;
     readonly instruction: string;
 }
 
 export interface InlineEditView {
     readonly prompt: InlinePrompt | null;
+    /* The row above the selected lines the editor draws the question in; null until it has made one. */
+    readonly promptContainer: HTMLElement | null;
     readonly session: InlineEditSession | null;
     /* The row the editor draws the proposal in; null until it has made one. */
     readonly container: HTMLElement | null;
 }
 
 /* The agent the setting names, or the first one installed when that one is not. */
-export function inlineAgentNow(endpointId: string): { provider: AgentKind; model: string | null } {
+export function inlineAgentNow(endpointId: string): { provider: AgentKind; model: string | null; account?: string } {
     const wanted = useSettings.getState().aiInlineAgent;
     const offered = availableAgents(providersOf(endpointId).providers, 'chat');
     if (offered.length === 0 || offered.some((provider) => provider.kind === wanted.provider)) {
-        return wanted;
+        const account = inlineEditAccountOn(knownAccounts(providerAccountsOf(endpointId)), wanted.provider, wanted.account);
+        return { provider: wanted.provider, model: wanted.model, ...(account === undefined ? {} : { account }) };
     }
     return { provider: offered[0]!.kind, model: null };
 }
@@ -59,10 +72,16 @@ export function inlineAgentNow(endpointId: string): { provider: AgentKind; model
  * (`inline-edit-session.ts`) outlives this editor; this class draws it while an editor holds the file.
  */
 export class InlineEditFeature {
-    readonly store: StoreApi<InlineEditView> = createStore<InlineEditView>(() => ({ prompt: null, session: null, container: null }));
+    readonly store: StoreApi<InlineEditView> = createStore<InlineEditView>(() => ({ prompt: null, promptContainer: null, session: null, container: null }));
     private readonly language: EditorLanguage;
     private readonly depsFor: (endpointId: string) => InlineEditDeps;
     private stopSession: (() => void) | null = null;
+    /* The saved edit's lines while no session holds them, so the mark in the gutter follows the text; `line` is where they last stood. */
+    private recordTracked: { chatId: string; range: EditorTrackedRange | null; line: number } | null = null;
+    /* Chats of sessions that ended here, whose record is still being removed and no longer earns a mark. */
+    private readonly ended = new Set<string>();
+    /* The selection was folded to a caret so the tint is the only mark on the lines, and goes back with the keyboard. */
+    private selectionFolded = false;
 
     constructor(language: EditorLanguage, depsFor: (endpointId: string) => InlineEditDeps = inlineEditDeps) {
         this.language = language;
@@ -87,13 +106,23 @@ export class InlineEditFeature {
                 }
                 return false;
             }),
-            editor.onTextChange(() => this.store.getState().session?.checkSelection())
+            editor.onTextChange(() => {
+                this.store.getState().session?.checkSelection();
+                this.refreshMarker();
+            }),
+            editor.onGutterMarker((id) => {
+                if (id === MARKER_ID) {
+                    void this.show();
+                }
+            }),
+            onInlineEditsChange(() => this.refreshMarker())
         ];
         language.onDispose(() => {
             for (const off of offs) {
                 off();
             }
             this.release();
+            this.forgetRecordRange();
         });
         sweepInlineEdits(this.endpointId, {
             now: () => Date.now(),
@@ -103,6 +132,7 @@ export class InlineEditFeature {
         if (existing !== null) {
             this.adopt(existing);
         }
+        this.refreshMarker();
     }
 
     get path(): string {
@@ -129,10 +159,15 @@ export class InlineEditFeature {
             span,
             (diagnostic) => ({ severity: severityOf(diagnostic), message: diagnostic.message, code: codeLabelOf(diagnostic) })
         );
-        this.store.setState({
-            prompt: { range, selectedText: editor.textInRange(range), span, problems, ...inlineAgentNow(this.endpointId), instruction: '' },
-            session: null
-        });
+        this.store.setState({ session: null });
+        this.setPrompt({ range, selectedText: editor.textInRange(range), span, problems, ...inlineAgentNow(this.endpointId), instruction: '' });
+        // The selection and the tint would draw the lines twice over, so the selection steps aside while the card is up: the caret waits on the line above, which no tint covers.
+        const selection = editor.getSelection();
+        this.selectionFolded = !isEmptyRange(selection);
+        if (this.selectionFolded) {
+            const caret = { line: Math.max(0, selection.start.line - 1), character: 0 };
+            editor.setSelection({ start: caret, end: caret });
+        }
     }
 
     setInstruction(instruction: string): void {
@@ -142,10 +177,11 @@ export class InlineEditFeature {
         }
     }
 
-    setAgent(provider: AgentKind, model: string): void {
+    setAgent(provider: AgentKind, model: string | null, account?: string): void {
         const { prompt } = this.store.getState();
         if (prompt !== null) {
-            this.store.setState({ prompt: { ...prompt, provider, model } });
+            const { account: _previous, ...rest } = prompt;
+            this.store.setState({ prompt: { ...rest, provider, model, ...(account === undefined ? {} : { account }) } });
         }
     }
 
@@ -153,10 +189,24 @@ export class InlineEditFeature {
         if (this.store.getState().prompt === null) {
             return;
         }
-        this.store.setState({ prompt: null });
         if (focus) {
-            this.language.editor.focus();
+            this.returnToEditor();
+        } else {
+            this.selectionFolded = false;
         }
+        this.setPrompt(null);
+    }
+
+    /* Gives the keyboard back to the text, with the lines selected again when the card had folded the selection. */
+    returnToEditor(): void {
+        const { editor } = this.language;
+        const { prompt, session } = this.store.getState();
+        const range = prompt?.range ?? session?.currentRange() ?? null;
+        if (this.selectionFolded && range !== null && isEmptyRange(editor.getSelection())) {
+            editor.setSelection(range);
+        }
+        this.selectionFolded = false;
+        editor.focus();
     }
 
     /* Starts the chat for the question that is open. */
@@ -178,9 +228,10 @@ export class InlineEditFeature {
             span: prompt.span,
             problems: prompt.problems,
             provider: prompt.provider,
-            model: prompt.model
+            model: prompt.model,
+            ...(prompt.account === undefined ? {} : { account: prompt.account })
         });
-        this.store.setState({ prompt: null });
+        this.setPrompt(null);
         this.adopt(session);
         void session.start(prompt.instruction);
     }
@@ -223,10 +274,84 @@ export class InlineEditFeature {
         this.store.setState({ container });
     }
 
+    /* Puts the question above its lines, or takes it away. */
+    private setPrompt(prompt: InlinePrompt | null): void {
+        this.store.setState({ prompt, ...(prompt === null ? { promptContainer: null } : {}) });
+        this.language.editor.setWidgets(
+            prompt === null
+                ? []
+                : [
+                      {
+                          id: 'prompt',
+                          line: prompt.range.start.line,
+                          placement: 'above',
+                          height: PROMPT_HEIGHT,
+                          render: (container) => this.store.setState({ promptContainer: container })
+                      }
+                  ],
+            PROMPT_OWNER
+        );
+        this.updateTint();
+    }
+
+    /* The lines the question or the card is about, in the one set of tinted lines the editor has. */
+    private updateTint(): void {
+        const { prompt, session } = this.store.getState();
+        const layers = highlightLayers(this.language.editor);
+        if (prompt !== null) {
+            const { span } = prompt;
+            layers.set(TINT_OWNER, () => [tintOf(span)]);
+        } else if (session !== null && session.store.getState().shown) {
+            layers.set(TINT_OWNER, () => {
+                const range = session.currentRange();
+                return range === null ? [] : [tintOf(lineSpanOf(range))];
+            });
+        } else {
+            layers.set(TINT_OWNER, null);
+        }
+    }
+
+    /* The mark in the gutter for an edit that is saved and not on screen, on the first line of its range. */
+    private refreshMarker(): void {
+        const line = this.markerLine();
+        this.language.editor.setGutterMarkers(line === null ? [] : [{ id: MARKER_ID, line, label: i18next.t('inline-edit:marker.show') }], WIDGET_OWNER);
+    }
+
+    private markerLine(): number | null {
+        const { session } = this.store.getState();
+        if (session !== null) {
+            const state = session.store.getState();
+            this.forgetRecordRange();
+            return state.shown || state.closed ? null : (session.currentRange() ?? state.range).start.line;
+        }
+        const record = inlineEditFor(this.endpointId, this.path);
+        if (record === null || this.ended.has(record.chatId)) {
+            this.forgetRecordRange();
+            return null;
+        }
+        const { editor } = this.language;
+        if (this.recordTracked?.chatId !== record.chatId) {
+            this.forgetRecordRange();
+            const found = locateSelection(editor.getText(), record.range, record.selectedText);
+            this.recordTracked = { chatId: record.chatId, range: found === null ? null : editor.trackRange(found), line: (found ?? record.range).start.line };
+        }
+        const now = this.recordTracked.range?.get() ?? null;
+        if (now !== null) {
+            this.recordTracked.line = now.start.line;
+        }
+        return this.recordTracked.line;
+    }
+
+    private forgetRecordRange(): void {
+        this.recordTracked?.range?.dispose();
+        this.recordTracked = null;
+    }
+
     private adopt(session: InlineEditSession): void {
         this.release();
         session.attach(this.language.editor);
-        this.store.setState({ session, prompt: null });
+        this.setPrompt(null);
+        this.store.setState({ session });
         const sync = (): void => this.sync(session);
         this.stopSession = session.store.subscribe((state, previous) => {
             if (state.shown !== previous.shown || state.closed !== previous.closed) {
@@ -242,16 +367,25 @@ export class InlineEditFeature {
         const state = session.store.getState();
         if (state.closed) {
             editor.setWidgets([], WIDGET_OWNER);
+            if (session.chat !== null) {
+                this.ended.add(session.chat);
+            }
             this.store.setState({ session: null, container: null });
             this.stopSession?.();
             this.stopSession = null;
+            this.updateTint();
+            this.refreshMarker();
             return;
         }
         if (!state.shown) {
             editor.setWidgets([], WIDGET_OWNER);
             this.store.setState({ container: null });
+            this.updateTint();
+            this.refreshMarker();
             return;
         }
+        this.updateTint();
+        this.refreshMarker();
         const { range } = state;
         // A selection that ends at the start of a line did not take that line, so the card goes under the one before it.
         const line = range.end.character === 0 && range.end.line > range.start.line ? range.end.line - 1 : range.end.line;
@@ -267,6 +401,11 @@ export class InlineEditFeature {
             this.language.editor.setWidgets([], WIDGET_OWNER);
             session.detach();
             this.store.setState({ session: null, container: null });
+            this.updateTint();
         }
     }
+}
+
+function tintOf(span: LineSpan) {
+    return { startLine: span.startLine, endLine: span.endLine, color: '--accent', fill: '--editor-selection' };
 }
