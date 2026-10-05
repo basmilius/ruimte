@@ -236,15 +236,10 @@ describe('TypeScript', () => {
         expect(Array.isArray(formatted.result)).toBe(true);
     }, 60_000);
 
-    test('ends the server with its last document', async () => {
-        const before = exits.length;
+    test('keeps the server running after its last document closes', async () => {
         await host.closeDocument('c1', { projectId: 'p2', path: 'src/a.ts' });
-        await eventually(
-            'the server stopping',
-            async () => (await host.status('p2')).find((status) => status.server === 'typescript'),
-            (status) => status?.state === 'stopped'
-        );
-        await Promise.all(exits.slice(0, before));
+        const status = (await host.status('p2')).find((candidate) => candidate.server === 'typescript');
+        expect(status?.state).toBe('ready');
     }, 60_000);
 });
 
@@ -364,9 +359,12 @@ describe('PHP', () => {
 
 describe('the project closing', () => {
     test('ends every server and leaves no process behind', async () => {
-        await host.end('p1');
+        // Both projects, since a server outlives its last document and only its project's end stops it.
+        await Promise.all([host.end('p1'), host.end('p2')]);
         const results = await Promise.all(exits);
         expect(results.length).toBeGreaterThanOrEqual(4);
-        expect((await host.status('p1')).every((status) => status.state === 'stopped')).toBe(true);
+        for (const projectId of ['p1', 'p2']) {
+            expect((await host.status(projectId)).every((status) => status.state === 'stopped')).toBe(true);
+        }
     }, 60_000);
 });

@@ -210,7 +210,7 @@ describe('documents', () => {
         expect(spawner.processes[0].server.documents.has('file:///work/src/a.ts')).toBe(true);
         await host.closeDocument('client-2', { projectId: 'p1', path: 'src/a.ts' });
         await settle();
-        expect(spawner.processes[0].server.exited).toBe(true);
+        expect(spawner.processes[0].server.documents.has('file:///work/src/a.ts')).toBe(false);
         await expect(host.change({ projectId: 'p1', path: 'src/a.ts', baseVersion: 2, changes: [{ text: '' }] })).rejects.toMatchObject({
             code: LANGUAGE_ERROR_CODES.documentNotOpen
         });
@@ -224,30 +224,25 @@ describe('documents', () => {
         expect(spawner.processes[0].server.documents.size).toBe(1);
     });
 
-    it('stops the server with its last document and starts a new one with the next', async () => {
+    it('keeps the server when its last document closes, so the next file finds it running', async () => {
         const { host, spawner } = await installed();
         await openReady(host);
-        await open(host, 'src/b.ts');
-        await settle();
         await host.closeDocument('client-1', { projectId: 'p1', path: 'src/a.ts' });
         await settle();
         expect(spawner.processes[0].server.exited).toBe(false);
-        await host.closeDocument('client-1', { projectId: 'p1', path: 'src/b.ts' });
-        await settle();
-        expect(spawner.processes[0].server.exited).toBe(true);
-        expect((await host.status('p1')).find((status) => status.server === 'typescript')?.state).toBe('stopped');
+        expect((await host.status('p1')).find((status) => status.server === 'typescript')?.state).toBe('ready');
         await open(host, 'src/c.ts');
-        await until(() => spawner.processes.length === 2);
-        await ready(host);
+        await settle();
+        expect(spawner.processes).toHaveLength(1);
     });
 
-    it('closes the documents of a client whose socket went', async () => {
+    it('closes the documents of a client whose socket went, and keeps the server', async () => {
         const { host, spawner } = await installed();
         const unsubscribe = host.subscribe('client-3', () => undefined);
         await openReady(host, 'src/a.ts', 'let a = 1;\n', 'client-3');
         unsubscribe();
         await settle();
-        expect(spawner.processes[0].server.exited).toBe(true);
+        expect(spawner.processes[0].server.exited).toBe(false);
     });
 
     it('holds a document of a language no server serves, so a client calls it the same way', async () => {

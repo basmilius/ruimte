@@ -118,7 +118,7 @@ function translated(error: unknown): unknown {
  * The language side of the daemon. It is the LSP client of every server, one per project per kind,
  * and the one owner of each document's text and version, so any number of clients share what a
  * server sees. A server starts when a document that needs it opens (and it is installed), and ends
- * when its last document closes or its project does. Installing happens only through `install`, which
+ * only when its project closes, since starting one again for every file opened costs seconds of indexing. Installing happens only through `install`, which
  * a person's request calls, so no verb and no agent reaches it.
  */
 export class LanguageHost {
@@ -423,7 +423,7 @@ export class LanguageHost {
         return server;
     }
 
-    /* One client lets go of a document; the last one closes it and, with the last document, the server. */
+    /* One client lets go of a document and the last one closes it. The server stays, so switching between files never starts it again. */
     private async release(project: ProjectLanguage, document: SharedDocument, clientId: string): Promise<void> {
         document.clients.delete(clientId);
         if (document.clients.size > 0) {
@@ -442,10 +442,6 @@ export class LanguageHost {
             return;
         }
         await server.detach(document);
-        // A crashed kind keeps saying so until a person restarts it.
-        if (server.documentCount === 0 && server.state !== 'crashed') {
-            await server.stop();
-        }
     }
 
     private dropClient(clientId: string): void {
