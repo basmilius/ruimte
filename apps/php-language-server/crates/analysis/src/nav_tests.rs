@@ -139,6 +139,49 @@ fn a_method_without_a_doc_inherits_the_one_above_it() {
 }
 
 #[test]
+fn an_inheritdoc_takes_the_doc_above_it_under_its_own_tags() {
+    let code = r#"<?php
+interface Visible {
+    /**
+     * Makes the keys visible.
+     *
+     * Hidden keys stay hidden.
+     *
+     * @param string[] $keys The keys
+     * @since 1.0.0
+     */
+    public function show(array $keys): static;
+}
+class Items implements Visible {
+    /**
+     * {@inheritdoc}
+     *
+     * @since 1.0.17
+     */
+    public function show(array $keys): static { return $this; }
+    /** Before {@inheritDoc} after. */
+    public function other(): void {}
+}
+function f(Items $items) { $items->sh$0ow([]); }
+"#;
+    let fixture = Fixture::new(&[]).with_current(code);
+    let (_, root, offset) = split_cursor(code);
+    let text = Analyzer::new(&fixture.index, &root, offset)
+        .hover(offset)
+        .map(|hover| hover.markdown)
+        .unwrap_or_default();
+    assert!(
+        text.contains("Makes the keys visible.\n\nHidden keys stay hidden."),
+        "{text}"
+    );
+    assert!(text.contains("_@param_ `list<string> $keys` The keys"), "{text}");
+    assert!(
+        text.contains("1.0.17") && !text.contains("1.0.0") && !text.contains("inheritdoc"),
+        "{text}"
+    );
+}
+
+#[test]
 fn definitions_point_at_declaration_names() {
     let found = places("<?php\nuse App\\User;\nUser::fi$0nd(1);\n", |analyzer, offset| {
         analyzer.definitions(offset)

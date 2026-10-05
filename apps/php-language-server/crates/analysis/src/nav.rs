@@ -3,7 +3,7 @@
 
 use std::path::PathBuf;
 
-use php_index::{Class, Doc, FileEntry, Span, Type};
+use php_index::{Class, Doc, FileEntry, Name, Span, Type};
 use php_syntax::SyntaxKind::*;
 use php_syntax::TextRange;
 
@@ -116,13 +116,7 @@ impl Analyzer<'_> {
                 .iter()
                 .filter_map(|member| {
                     let found = self.index.find_method(member, name)?;
-                    let doc = found
-                        .member
-                        .doc
-                        .as_deref()
-                        .filter(|doc| !doc.summary.is_empty() || !doc.params.is_empty() || doc.ret.is_some())
-                        .cloned()
-                        .or_else(|| self.inherited_method_doc(member, name));
+                    let doc = self.method_doc(&found.class.decl.name, found.member.doc.as_deref(), name);
                     Some(Description {
                         title: format!("{}::{}", found.class.decl.name, found.member.name),
                         signature: render::method_signature(&found.member, level),
@@ -224,20 +218,27 @@ impl Analyzer<'_> {
     }
 
     /// The doc of a method with the same name further up, for a method that has none of its own.
-    fn inherited_method_doc(&self, receiver: &Type, name: &str) -> Option<Doc> {
-        for ancestor in self.index.ancestors(receiver) {
-            let Some(method) = ancestor.class.decl.method(name) else {
-                continue;
-            };
-            if let Some(doc) = method
-                .doc
-                .as_deref()
-                .filter(|doc| !doc.summary.is_empty() || doc.ret.is_some())
-            {
-                return Some(doc.clone());
-            }
+    /// A method's doc with what it leaves to the method it overrides filled in: all of it when it
+    /// says nothing of its own, and in place of `{@inheritdoc}` or with `@inheritDoc`.
+    fn method_doc(&self, owner: &Name, own: Option<&Doc>, name: &str) -> Option<Doc> {
+        let Some(own) = own else {
+            return self.inherited_method_doc(owner, name);
+        };
+        if !inherits(own) {
+            return Some(own.clone());
         }
-        None
+        let parent = self.inherited_method_doc(owner, name).unwrap_or_default();
+        Some(merge_inherited(own, &parent))
+    }
+
+    /// The first doc above `owner` that says something of its own, through parents and interfaces.
+    fn inherited_method_doc(&self, owner: &Name, name: &str) -> Option<Doc> {
+        self.index
+            .ancestors(&Type::class(owner.clone()))
+            .into_iter()
+            .filter(|ancestor| ancestor.class.decl.name != *owner)
+            .filter_map(|ancestor| ancestor.class.decl.method(name)?.doc.as_deref().cloned())
+            .find(|doc| !inherits(doc))
     }
 
     pub fn hover(&self, offset: u32) -> Option<HoverResult> {
@@ -390,6 +391,82 @@ fn class_names_in_args(ty: &Type) -> Vec<String> {
         }
     }
     out
+}
+
+const INHERIT_MARKER: &str = "{@inheritdoc}";
+
+/// Whether a doc hands its text to the method it overrides: it says so, or it says nothing.
+fn inherits(doc: &Doc) -> bool {
+    let marked = |text: &str| text.to_ascii_lowercase().contains(INHERIT_MARKER);
+    marked(&doc.summary)
+        || marked(&doc.description)
+        || doc.tags.iter().any(|tag| tag.name.eq_ignore_ascii_case("inheritdoc"))
+        || (doc.summary.is_empty() && doc.description.is_empty() && doc.params.is_empty() && doc.ret.is_none())
+}
+
+/// `text` with `{@inheritdoc}`, in any case, replaced by `inherited`.
+fn replace_marker(text: &str, inherited: &str) -> Option<String> {
+    let at = text.to_ascii_lowercase().find(INHERIT_MARKER)?;
+    Some(format!(
+        "{}{inherited}{}",
+        &text[..at],
+        &text[at + INHERIT_MARKER.len()..]
+    ))
+}
+
+fn join_prose(first: &str, second: &str) -> String {
+    [first.trim(), second.trim()]
+        .into_iter()
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+/// The parent's doc under what the method's own doc says: its own words, parameters, return and
+/// tags win, and the parent fills in the rest.
+fn merge_inherited(own: &Doc, parent: &Doc) -> Doc {
+    let mut doc = parent.clone();
+    let summary_marked = replace_marker(&own.summary, &parent.summary);
+    let description_marked = replace_marker(&own.description, &parent.description);
+    doc.summary = match &summary_marked {
+        Some(summary) if !summary.trim().is_empty() => summary.trim().to_string(),
+        Some(_) => parent.summary.clone(),
+        None if own.summary.is_empty() => parent.summary.clone(),
+        None => own.summary.clone(),
+    };
+    doc.description = match (&summary_marked, description_marked) {
+        (_, Some(description)) => description.trim().to_string(),
+        (Some(_), None) => join_prose(&parent.description, &own.description),
+        (None, None) if own.description.is_empty() => parent.description.clone(),
+        (None, None) => own.description.clone(),
+    };
+    for param in &own.params {
+        match doc.params.iter_mut().find(|known| known.name == param.name) {
+            Some(known) => *known = param.clone(),
+            None => doc.params.push(param.clone()),
+        }
+    }
+    if own.ret.is_some() {
+        doc.ret = own.ret.clone();
+    }
+    if !own.throws.is_empty() {
+        doc.throws = own.throws.clone();
+    }
+    if !own.see.is_empty() {
+        doc.see = own.see.clone();
+    }
+    doc.deprecated = own.deprecated.clone();
+    doc.since = own.since;
+    doc.removed = own.removed;
+    doc.tags
+        .retain(|tag| !own.tags.iter().any(|mine| mine.name.eq_ignore_ascii_case(&tag.name)));
+    doc.tags.extend(
+        own.tags
+            .iter()
+            .filter(|tag| !tag.name.eq_ignore_ascii_case("inheritdoc"))
+            .cloned(),
+    );
+    doc
 }
 
 /// A title line, the signature in a `php` block and the doc.
