@@ -56,15 +56,22 @@ impl KeyTree {
     /// Whether the key is certainly not there: its file is, and every array on the way to it is
     /// written out and does not have it.
     pub fn is_missing(&self, key: &str) -> bool {
-        let mut segments = key.split('.');
-        let Some(root) = segments.next() else {
+        // A file in a folder is named with the folder: `nested/more.php` is `nested.more`.
+        let Some(root) = self
+            .roots
+            .iter()
+            .filter(|root| {
+                key == root.as_str()
+                    || key
+                        .strip_prefix(root.as_str())
+                        .is_some_and(|rest| rest.starts_with('.'))
+            })
+            .max_by_key(|root| root.len())
+        else {
             return false;
         };
-        if !self.roots.contains(root) {
-            return false;
-        }
         let mut prefix = root.to_string();
-        for segment in segments {
+        for segment in key[root.len()..].split('.').filter(|segment| !segment.is_empty()) {
             if self.open.contains(&prefix) {
                 return false;
             }

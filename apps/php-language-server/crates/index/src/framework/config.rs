@@ -27,7 +27,9 @@ impl ConfigKeys {
     /// merges into is never certain.
     pub fn is_missing(&self, index: &Index, key: &str) -> bool {
         let root = key.split('.').next().unwrap_or("");
-        self.tree.is_missing(key) && !index.section::<MergedConfigs>().merges(root)
+        self.tree.is_missing(key)
+            && !index.section::<MergedConfigs>().merges(root)
+            && !index.section::<RuntimeConfig>().sets(root)
     }
 
     /// Every key, files and groups included.
@@ -116,6 +118,91 @@ impl MergedConfigs {
     }
 }
 
+/// The config roots the project writes while it runs: `config(['x.y' => 1])` and `Config::set()`.
+#[derive(Default)]
+pub struct RuntimeConfig {
+    roots: HashSet<String>,
+    /// A write whose key is not written out.
+    unknown: bool,
+}
+
+impl RuntimeConfig {
+    pub fn sets(&self, root: &str) -> bool {
+        self.unknown || self.roots.contains(root)
+    }
+}
+
+impl Section for RuntimeConfig {
+    fn build(index: &Index) -> Self {
+        let mut found = RuntimeConfig::default();
+        let paths: Vec<std::path::PathBuf> = index
+            .files()
+            .filter(|file| file.origin == Origin::Project)
+            .map(|file| file.path.clone())
+            .collect();
+        for path in paths {
+            let Some(text) = index.read_text(&path) else {
+                continue;
+            };
+            if !(text.contains("config([") || text.contains("Config::set(") || text.contains("config()->set(")) {
+                continue;
+            }
+            let tree = php_syntax::parse(&text).syntax();
+            for call in tree
+                .descendants()
+                .filter(|node| node.kind() == php_syntax::SyntaxKind::CALL_EXPR)
+            {
+                found.read(&call);
+            }
+        }
+        found
+    }
+
+    fn depends_on(root: &Path, path: &Path) -> bool {
+        super::is_project_php(root, path)
+    }
+}
+
+impl RuntimeConfig {
+    fn read(&mut self, call: &php_syntax::SyntaxNode) {
+        use php_syntax::SyntaxKind::*;
+        let Some(callee) = call.children().next() else {
+            return;
+        };
+        let text = callee.text().to_string().replace(char::is_whitespace, "");
+        let writes = text == "config" || text.ends_with("Config::set") || text.ends_with("config()->set");
+        if !writes {
+            return;
+        }
+        let Some(first) = crate::test_facts::argument_expressions(call).into_iter().next() else {
+            return;
+        };
+        let note = |roots: &mut HashSet<String>, unknown: &mut bool, node: &php_syntax::SyntaxNode| {
+            match super::source::literal_of(node) {
+                Some(super::source::Literal::Text(key, _)) => {
+                    roots.insert(key.split('.').next().unwrap_or("").to_string());
+                }
+                _ => *unknown = true,
+            }
+        };
+        if first.kind() == ARRAY_EXPR {
+            match super::source::array_items(&first) {
+                Some(items) => {
+                    for (key, _) in items {
+                        match key {
+                            Some(key) => note(&mut self.roots, &mut self.unknown, &key),
+                            None => self.unknown = true,
+                        }
+                    }
+                }
+                None => self.unknown = true,
+            }
+        } else if text != "config" {
+            note(&mut self.roots, &mut self.unknown, &first);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -187,6 +274,25 @@ return [
             "a file that is not there may come from a package"
         );
         assert!(!keys.is_missing(&index, "app"));
+    }
+
+    #[test]
+    fn a_file_the_project_writes_while_it_runs_is_never_certain() {
+        let (index, keys) = keys(&[
+            (
+                "vendor/laravel/ServiceProvider.php",
+                "<?php namespace Illuminate\\Support; abstract class ServiceProvider {}",
+            ),
+            (
+                "app/Boot.php",
+                "<?php class Boot { public function run() { config(['app.extra' => 1]); } }",
+            ),
+        ]);
+        assert!(!keys.is_missing(&index, "app.nam"), "the project writes into app");
+        assert!(
+            keys.is_missing(&index, "nested.more.nope"),
+            "nothing writes into the nested file"
+        );
     }
 
     #[test]

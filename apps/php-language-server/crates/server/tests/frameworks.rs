@@ -167,7 +167,7 @@ fn strings_that_name_things_complete_navigate_and_are_checked() {
         .iter()
         .map(|diagnostic| &diagnostic["range"]["start"]["line"])
         .collect();
-    assert_eq!(lines, [2, 7], "{diagnostics:?}");
+    assert_eq!(lines, [2], "a key still being typed is not reported: {diagnostics:?}");
     assert!(
         unknown
             .iter()

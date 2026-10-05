@@ -113,6 +113,25 @@ impl Section for SfRoutes {
     }
 }
 
+/// The name Symfony gives a route that has none: the class and the method, in lower case, without
+/// `controller_`, `bundle_` and a trailing `action`.
+fn default_name(class: &str, method: &str) -> String {
+    let mut name = format!("{}_{method}", class.replace('\\', "_")).to_lowercase();
+    for word in ["bundle_", "controller_"] {
+        name = name.replace(word, "_");
+    }
+    if let Some(at) = name.rfind("action") {
+        let rest = &name[at + "action".len()..];
+        let digits = rest
+            .strip_prefix('_')
+            .is_some_and(|digits| !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit()));
+        if rest.is_empty() || digits {
+            name = format!("{}{rest}", &name[..at]);
+        }
+    }
+    name.replace("__", "_")
+}
+
 fn is_route_file(root: &Path, path: &Path) -> bool {
     let relative = path.strip_prefix(root).unwrap_or(path);
     relative.starts_with("config/routes")
@@ -154,9 +173,7 @@ impl SfRoutes {
                     if dynamic {
                         self.incomplete = true;
                     }
-                    let Some(name) = name else {
-                        continue;
-                    };
+                    let name = name.unwrap_or_else(|| default_name(&decl.name, &method.name));
                     let full_path = match (&class_path, path) {
                         (Some(prefix), Some(path)) => Some(format!("{prefix}{path}")),
                         (None, path) => path,
@@ -434,9 +451,29 @@ class HealthController { public function __invoke() {} }
             Some("/blog/{slug}")
         );
         assert!(routes.find("health").is_some());
-        assert!(routes.find("blog_unnamed").is_none());
+        assert!(
+            routes.find("blog_app_blog_unnamed").is_some(),
+            "{:?}",
+            routes.routes.iter().map(|route| &route.name).collect::<Vec<_>>()
+        );
         assert!(!routes.incomplete);
         assert!(routes.is_missing("nope"));
+    }
+
+    #[test]
+    fn a_route_without_a_name_gets_the_one_symfony_makes_up() {
+        assert_eq!(
+            default_name("App\\Controller\\BlogController", "index"),
+            "app_blog_index"
+        );
+        assert_eq!(
+            default_name("App\\Controller\\Admin\\UserController", "editAction"),
+            "app_admin_user_edit"
+        );
+        assert_eq!(
+            default_name("Acme\\DemoBundle\\Controller\\PostController", "show"),
+            "acme_demo_post_show"
+        );
     }
 
     #[test]
