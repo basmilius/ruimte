@@ -26,6 +26,8 @@ pub struct Ancestor<'a> {
     /// What `self` is in its members: the class itself, or the class using a trait.
     pub self_name: Name,
     pub via_trait: bool,
+    /// Reached through a `@mixin` of a doc comment, which lends members without being inherited.
+    pub mixin: bool,
     /// Lowercase names of methods that `insteadof` takes away from this trait.
     pub excluded: Vec<String>,
     pub aliases: Vec<AliasRule>,
@@ -73,8 +75,12 @@ impl Index {
                 }
             }
         }
+        let first_mixin = out.len();
         for mixin in mixins {
             self.walk(&mixin, false, None, Vec::new(), Vec::new(), &mut out, &mut seen, 0);
+        }
+        for ancestor in &mut out[first_mixin..] {
+            ancestor.mixin = true;
         }
         out
     }
@@ -115,6 +121,7 @@ impl Index {
             subst: subst.clone(),
             self_name: self_name.clone(),
             via_trait,
+            mixin: false,
             excluded,
             aliases,
         });

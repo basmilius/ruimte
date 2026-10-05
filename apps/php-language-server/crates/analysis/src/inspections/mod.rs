@@ -3,8 +3,11 @@
 //! stays silent, so what is reported is something to look at and not a guess.
 
 mod calls;
+mod classes;
+mod flow;
 mod members;
 mod names;
+mod phpdoc;
 mod scopes;
 mod types;
 mod unused;
@@ -451,6 +454,9 @@ pub fn inspect(env: &InspectionEnv) -> Vec<Finding> {
     scopes::run(&cx);
     unused::run(&cx);
     calls::run(&cx);
+    flow::run(&cx);
+    classes::run(&cx);
+    phpdoc::run(&cx);
     let mut found = cx.found.into_inner();
     found.sort_by_key(|finding| (finding.diagnostic.range.start(), finding.diagnostic.range.end()));
     found.dedup_by(|later, earlier| {

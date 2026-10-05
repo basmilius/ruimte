@@ -525,3 +525,158 @@ fn strict_files_do_not_convert_scalars() {
     let source = "<?php\ndeclare(strict_types=1);\ntakesString(5);\ntakesFloat(5);\n";
     assert_eq!(only_in(&files, "argument-type-mismatch", source), ["5"]);
 }
+
+#[test]
+fn reports_code_after_a_statement_that_always_leaves() {
+    let source = "<?php\nfunction a() {\n    return 1;\n    echo 'never';\n}\nfunction b($x) {\n    if ($x) { return 1; } else { throw new Exception(); }\n    echo 'never';\n}\nfunction c($x) {\n    if ($x) { return 1; }\n    echo 'fine';\n}\nfunction d($x) {\n    switch ($x) {\n        case 1:\n            return 1;\n            break;\n        default:\n            return 2;\n    }\n}\nfunction e() {\n    while (true) { }\n    echo 'never';\n}\nfunction f($items) {\n    foreach ($items as $item) { continue; echo 'never'; }\n}\nfunction g() {\n    return 1;\n    function hoisted() {}\n}\nfunction h() {\n    exit(1);\n    echo 'never';\n}\n";
+    assert_eq!(
+        only("unreachable-code", source),
+        [
+            "echo 'never';",
+            "echo 'never';",
+            "break;",
+            "echo 'never';",
+            "echo 'never';",
+            "echo 'never';"
+        ]
+    );
+}
+
+#[test]
+fn code_around_a_goto_is_left_alone() {
+    none("<?php\nfunction a() {\n    goto end;\n    echo 1;\n    end:\n    echo 2;\n}\n");
+}
+
+#[test]
+fn reports_functions_that_can_end_without_their_value() {
+    let source = "<?php\nfunction a(int $x): int {\n    if ($x) { return 1; }\n}\nfunction b(int $x): int {\n    if ($x) { return 1; } else { return 2; }\n}\nfunction c(int $x): int {\n    switch ($x) { case 1: return 1; default: throw new Exception(); }\n}\nfunction d(int $x): int {\n    switch ($x) { case 1: return 1; }\n}\nfunction e(): int {\n    while (true) { if (rand()) { return 1; } }\n}\nfunction f(): ?int {\n    try { return 1; } catch (Exception $e) { }\n}\nfunction g(): void {\n    echo 1;\n}\nfunction h(): iterable {\n    yield 1;\n}\nfunction i(): int {\n    throw new Exception();\n}\nfunction j(): int {\n    try { return 1; } finally { echo 1; }\n}\nabstract class A { abstract public function m(): int; }\nfunction k(): never { exit(); }\nfunction l(): int {\n    for ($i = 0; ; ++$i) { if ($i > 3) { return $i; } }\n}\n";
+    assert_eq!(only("missing-return", source), ["a", "d", "f"]);
+}
+
+#[test]
+fn a_never_function_ends_the_flow() {
+    let source = "<?php\nfunction fail(): never { throw new Exception(); }\nfunction a(int $x): int {\n    if ($x) { return 1; }\n    fail();\n}\nfunction b() {\n    fail();\n    echo 'never';\n}\n";
+    assert_eq!(only("missing-return", source), Vec::<String>::new());
+    assert_eq!(only("unreachable-code", source), ["echo 'never';"]);
+}
+
+#[test]
+fn reports_returns_the_declared_type_cannot_take() {
+    let source = "<?php\nfinal class Box {}\nfunction a(): int { return []; }\nfunction b(): void { return 1; }\nfunction c(): int { return; }\nfunction d(): string { return new Box(); }\nfunction e(): ?int { return null; }\nfunction f(): int { return null; }\nfunction g(): float { return 1; }\nfunction h(): Box { return 1; }\nfunction i(): int { $x = 5; return fn() => 1; }\nfunction j(): iterable { yield 1; return 5; }\n";
+    assert_eq!(
+        only("return-type-mismatch", source),
+        ["[]", "1", "return;", "new Box()", "null", "1", "fn() => 1"]
+    );
+}
+
+#[test]
+fn constants_assigned_in_conditions_are_reported() {
+    let source = "<?php\nfunction f($a) {\n    if ($b = 5) {}\n    if (($c = 5)) {}\n    while ($row = next_row()) {}\n    if ($d = $a) {}\n    if (!$e = null) {}\n    echo $a ? $f = true : 0;\n}\n";
+    assert_eq!(only("assignment-in-condition", source), ["$b = 5", "$e = null"]);
+}
+
+#[test]
+fn strict_comparisons_of_kinds_that_never_match_are_reported() {
+    let files = [("A.php", "<?php\nfinal class Box {}\n")];
+    let source = "<?php\nfunction f(int $a, ?string $b, array $c, float $d, Box $e, int|string $g) {\n    $a === 'x';\n    $a === null;\n    $b === null;\n    $a === true;\n    $c !== 'x';\n    $d === 1;\n    $e === 1;\n    $g === 5;\n    $a == 'x';\n    $a === $a;\n    $a === 1;\n}\n";
+    let found: Vec<_> = check_with(&files, source)
+        .into_iter()
+        .filter(|(code, _)| *code == "incompatible-comparison")
+        .map(|(_, text)| text)
+        .collect();
+    assert_eq!(
+        found,
+        ["$a === 'x'", "$a === true", "$c !== 'x'", "$d === 1", "$e === 1"]
+    );
+}
+
+#[test]
+fn concrete_classes_must_implement_what_they_inherit_as_abstract() {
+    let files = [(
+        "A.php",
+        "<?php\ninterface Shape { public function area(): float; public function name(): string; }\nabstract class Base implements Shape { abstract protected function hook(): void; public function name(): string { return ''; } }\ntrait Needs { abstract public function need(): int; }\n",
+    )];
+    let source = "<?php\nfinal class Square extends Base {}\nfinal class Circle extends Base { protected function hook(): void {} public function area(): float { return 1.0; } }\nabstract class Half extends Base {}\nclass UsesTrait { use Needs; }\nclass Counted implements Countable { public function count(): int { return 0; } }\nclass Plain implements Countable {}\nenum E: int implements Shape { case A = 1; public function area(): float { return 1.0; } public function name(): string { return ''; } }\n";
+    let found: Vec<_> = check_with(&files, source)
+        .into_iter()
+        .filter(|(code, _)| code.ends_with("not-implemented"))
+        .collect();
+    assert_eq!(
+        found,
+        [
+            ("abstract-method-not-implemented", "Square".to_string()),
+            ("interface-method-not-implemented", "Square".to_string()),
+            ("abstract-method-not-implemented", "UsesTrait".to_string()),
+            ("interface-method-not-implemented", "Plain".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn an_incomplete_hierarchy_hides_missing_methods() {
+    let files = [(
+        "A.php",
+        "<?php\nabstract class Base extends Gone { abstract public function m(): void; }\n",
+    )];
+    assert_eq!(check_with(&files, "<?php\nclass C extends Base {}\n"), []);
+}
+
+#[test]
+fn overrides_must_be_able_to_stand_in_for_the_original() {
+    let files = [(
+        "A.php",
+        "<?php\nclass Animal {}\nclass Dog extends Animal {}\nclass P {\n    public function run(int $a, string $b = ''): int { return 1; }\n    final public function locked(): void {}\n    public function stat(): void {}\n    public static function shared(): void {}\n    protected function guarded(): void {}\n    public function fetch(): Animal { return new Animal(); }\n    public function take(Dog $d): void {}\n    private function hidden(int $x): void {}\n    public function untyped($x) {}\n}\n",
+    )];
+    let source = "<?php\nclass C extends P {\n    public function run(int $a, string $b = '', $c): int { return 1; }\n    public function locked(): void {}\n    public function stat(): void {}\n    public function shared(): void {}\n    private function guarded(): void {}\n    public function fetch(): Dog { return new Dog(); }\n    public function take(Animal $d): void {}\n    public function hidden(string $x, int $more): void {}\n    public function untyped(int $x) {}\n}\nclass D extends P {\n    public function run(int $a): int { return 1; }\n    public function fetch(): int { return 1; }\n    public function take(string $d): void {}\n}\n";
+    let found: Vec<_> = check_with(&files, source)
+        .into_iter()
+        .filter(|(code, _)| *code == "incompatible-override")
+        .map(|(_, text)| text)
+        .collect();
+    assert_eq!(
+        found,
+        ["run", "locked", "shared", "guarded", "untyped", "run", "fetch", "take"]
+    );
+}
+
+#[test]
+fn strict_types_is_asked_for_only_when_switched_on() {
+    let source = "<?php\nnamespace A;\n\nclass B {}\n";
+    assert_eq!(only("missing-strict-types", source), Vec::<String>::new());
+    let mut settings = InspectionSettings::default();
+    settings.set(
+        "missing-strict-types",
+        Override {
+            enabled: Some(true),
+            severity: None,
+        },
+    );
+    let found = run_with(&[], source, &settings);
+    assert_eq!(
+        found.iter().map(|found| found.text.as_str()).collect::<Vec<_>>(),
+        ["<?php\n"]
+    );
+    let strict = "<?php\ndeclare(strict_types=1);\nclass B {}\n";
+    assert!(run_with(&[], strict, &settings).is_empty());
+}
+
+#[test]
+fn doc_comments_must_describe_parameters_the_function_has() {
+    let source = "<?php\n/**\n * @param int $a\n * @param string $gone\n * @param $b\n */\nfunction f(int $a, $b) {}\n\n/** @param int $x */\nfunction g() {}\n\n/**\n * @param int $x\n */\nfunction h() { return func_get_args(); }\n";
+    assert_eq!(only("phpdoc-unknown-parameter", source), ["$gone", "$x"]);
+}
+
+#[test]
+fn doc_types_may_not_contradict_the_declared_ones() {
+    let files = [(
+        "A.php",
+        "<?php\nclass Dog {}\nclass Cat {}\nclass Animal {}\nclass Puppy extends Dog {}\n",
+    )];
+    let source = "<?php\n/**\n * @param string $a\n * @param int $b\n * @param Cat $c\n * @param Puppy $d\n * @param int|string $e\n * @param positive-int $f\n * @param int $g\n * @param array<string> $h\n * @return string\n */\nfunction f(int $a, string $b, Dog $c, Dog $d, int $e, int $f, float $g, array $h): int {}\n";
+    let found: Vec<_> = check_with(&files, source)
+        .into_iter()
+        .filter(|(code, _)| *code == "phpdoc-type-mismatch")
+        .map(|(_, text)| text)
+        .collect();
+    assert_eq!(found, ["$a", "$b", "$c", "@return"]);
+}

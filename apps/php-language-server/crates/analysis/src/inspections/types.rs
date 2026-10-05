@@ -215,6 +215,28 @@ impl Cx<'_> {
         true
     }
 
+    /// Whether the classes of two types can never be the same object, when both are all classes.
+    pub fn classes_cannot_overlap(&self, left: &Type, right: &Type) -> bool {
+        let names = |ty: &'_ Type| -> Option<Vec<String>> {
+            ty.members()
+                .iter()
+                .filter(|member| !matches!(member, Type::Null))
+                .map(|member| match member {
+                    Type::Class { name, .. } => Some(name.clone()),
+                    _ => None,
+                })
+                .collect()
+        };
+        let (Some(left), Some(right)) = (names(left), names(right)) else {
+            return false;
+        };
+        !left.is_empty()
+            && !right.is_empty()
+            && left
+                .iter()
+                .all(|left| right.iter().all(|right| self.disjoint(left, right)))
+    }
+
     /// Whether no object can be an instance of both classes.
     fn disjoint(&self, left: &str, right: &str) -> bool {
         const IMPLICIT: &[&str] = &[
@@ -277,10 +299,21 @@ pub(super) fn sure_type(cx: &Cx, analyzer: &Analyzer<'_>, env: &Env, expr: &Synt
         }
         PREFIX_EXPR if ast::tokens(expr).any(|token| token.kind() == BANG) => Some(Type::Bool),
         VARIABLE_EXPR => sure_parameter_type(cx, analyzer, expr),
-        PROPERTY_FETCH_EXPR => sure_property_type(cx, analyzer, env, expr),
-        CALL_EXPR => sure_return_type(cx, analyzer, env, expr),
+        PROPERTY_FETCH_EXPR => sure_property_type(cx, analyzer, env, expr).map(|ty| with_nullsafe(expr, ty)),
+        CALL_EXPR => sure_return_type(cx, analyzer, env, expr).map(|ty| with_nullsafe(expr, ty)),
         _ => None,
     }
+}
+
+/// The signature of a function as it is written, with the types read from the code and no PHPDoc.
+pub(super) fn callable_of(analyzer: &Analyzer<'_>, function: &SyntaxNode) -> php_index::Callable {
+    let class_scope = analyzer.class.as_ref().map(|class| php_index::extract::ClassScope {
+        name: class.name.clone(),
+        parent: class.parent.clone(),
+        is_trait: class.kind == php_index::ClassKind::Trait,
+        templates: Vec::new(),
+    });
+    php_index::extract::callable_at(function, &analyzer.resolver, class_scope.as_ref()).0
 }
 
 fn sure_parameter_type(cx: &Cx, analyzer: &Analyzer<'_>, variable: &SyntaxNode) -> Option<Type> {
@@ -298,13 +331,7 @@ fn sure_parameter_type(cx: &Cx, analyzer: &Analyzer<'_>, variable: &SyntaxNode) 
     if assigns_variable(&function, &name) {
         return None;
     }
-    let class_scope = analyzer.class.as_ref().map(|class| php_index::extract::ClassScope {
-        name: class.name.clone(),
-        parent: class.parent.clone(),
-        is_trait: class.kind == php_index::ClassKind::Trait,
-        templates: Vec::new(),
-    });
-    let (callable, _) = php_index::extract::callable_at(&function, &analyzer.resolver, class_scope.as_ref());
+    let callable = callable_of(analyzer, &function);
     let param: &Param = callable
         .params
         .iter()
@@ -354,6 +381,22 @@ fn sure_return_type(cx: &Cx, analyzer: &Analyzer<'_>, env: &Env, call: &SyntaxNo
         return None;
     }
     concrete(callee.callable.native_return(cx.index.level)?)
+}
+
+/// `$a?->b` is null when `$a` is, anywhere along the chain.
+fn with_nullsafe(expr: &SyntaxNode, ty: Type) -> Type {
+    let mut current = Some(expr.clone());
+    while let Some(node) = current {
+        if matches!(node.kind(), PROPERTY_FETCH_EXPR) && ast::tokens(&node).any(|token| token.kind() == NULLSAFE_ARROW)
+        {
+            return ty.nullable();
+        }
+        current = match node.kind() {
+            PROPERTY_FETCH_EXPR | CALL_EXPR | INDEX_EXPR | PAREN_EXPR => node.children().next(),
+            _ => None,
+        };
+    }
+    ty
 }
 
 /// A type with nothing in it that depends on where it is read: no `static`, `self` or template.
