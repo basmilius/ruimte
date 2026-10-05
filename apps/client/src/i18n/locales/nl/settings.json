@@ -112,6 +112,17 @@
                     "label": "Camel humps",
                     "description": "Woord voor woord bewegen stopt ook binnen camelCase- en snake_case-woorden."
                 }
+            },
+            "codeVision": {
+                "title": "Code vision",
+                "usages": {
+                    "label": "Gebruik",
+                    "description": "Toont boven een klasse, functie of methode hoe vaak hij wordt gebruikt. Klik erop om te zien waar."
+                },
+                "authors": {
+                    "label": "Auteurs",
+                    "description": "Toont boven een klasse, functie of methode wie hem volgens git schreef, met een plus voor andere auteurs. Klik erop voor de commits."
+                }
             }
         },
         "smartKeys": {

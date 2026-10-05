@@ -147,6 +147,10 @@ export interface Settings {
     codeIndentGuides: boolean;
     /* Whether the editor draws spaces as dots and tabs as arrows. */
     codeWhitespace: boolean;
+    /* Whether the editor says above a declaration how many times it is used. */
+    codeVisionUsages: boolean;
+    /* Whether the editor says above a declaration who wrote it, by git. */
+    codeVisionAuthors: boolean;
     /* Whether a font draws `=>` or `!==` as one glyph. Off sets the whole document, since the diffs draw in a shadow root that only inheritance reaches. */
     codeLigatures: boolean;
     /* What the editor does by itself as you type. The defaults are the editor's own: all on, except the camel humps. */
@@ -240,6 +244,8 @@ const DEFAULT_SETTINGS: Settings = {
     codeWrap: false,
     codeIndentGuides: true,
     codeWhitespace: false,
+    codeVisionUsages: true,
+    codeVisionAuthors: true,
     codeLigatures: true,
     smartKeys: { ...DEFAULT_SMART_KEYS },
     diffLayout: 'stacked',
@@ -292,6 +298,8 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         codeWrap: stored.codeWrap === true,
         codeIndentGuides: stored.codeIndentGuides !== false,
         codeWhitespace: stored.codeWhitespace === true,
+        codeVisionUsages: stored.codeVisionUsages !== false,
+        codeVisionAuthors: stored.codeVisionAuthors !== false,
         codeLigatures: stored.codeLigatures !== false,
         smartKeys: smartKeysFrom(stored.smartKeys),
         // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
@@ -404,6 +412,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 codeWrap,
                 codeIndentGuides,
                 codeWhitespace,
+                codeVisionUsages,
+                codeVisionAuthors,
                 codeLigatures,
                 smartKeys,
                 diffLayout,
@@ -446,6 +456,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 codeWrap,
                 codeIndentGuides,
                 codeWhitespace,
+                codeVisionUsages,
+                codeVisionAuthors,
                 codeLigatures,
                 smartKeys,
                 diffLayout,

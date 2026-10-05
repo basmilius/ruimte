@@ -232,6 +232,16 @@ describe('what the editor draws', () => {
     });
 });
 
+describe('code vision', () => {
+    test('shows usages and authors until a person turns one off', () => {
+        expect(settingsFrom({}).codeVisionUsages).toBe(true);
+        expect(settingsFrom({}).codeVisionAuthors).toBe(true);
+        expect(settingsFrom({ codeVisionUsages: false }).codeVisionUsages).toBe(false);
+        expect(settingsFrom({ codeVisionAuthors: false }).codeVisionAuthors).toBe(false);
+        expect(settingsFrom({ codeVisionAuthors: 'no' as unknown as boolean }).codeVisionAuthors).toBe(true);
+    });
+});
+
 describe('wrapping long lines of code', () => {
     test('is off until a person turns it on', () => {
         expect(settingsFrom({}).codeWrap).toBe(false);

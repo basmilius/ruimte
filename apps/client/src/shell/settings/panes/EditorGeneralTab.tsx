@@ -18,6 +18,8 @@ export function EditorGeneralTab() {
     const codeIndentGuides = useSettings((s) => s.codeIndentGuides);
     const codeWhitespace = useSettings((s) => s.codeWhitespace);
     const smartKeys = useSettings((s) => s.smartKeys);
+    const codeVisionUsages = useSettings((s) => s.codeVisionUsages);
+    const codeVisionAuthors = useSettings((s) => s.codeVisionAuthors);
     const update = useSettings((s) => s.update);
     const codeTheme = useCodeTheme();
     const side = useTheme((s) => s.resolved);
@@ -110,6 +112,32 @@ export function EditorGeneralTab() {
                             checked={smartKeys.camelHumps}
                             onCheckedChange={(checked) => update({ smartKeys: { ...smartKeys, camelHumps: checked } })}
                             label={t('editor.general.navigation.camelHumps.label')}
+                        />
+                    }
+                />
+            </SettingsSection>
+            <SettingsSection title={t('editor.general.codeVision.title')}>
+                <SettingsRow
+                    searchId="editor.general.codeVision.usages"
+                    label={t('editor.general.codeVision.usages.label')}
+                    description={t('editor.general.codeVision.usages.description')}
+                    control={
+                        <Switch
+                            checked={codeVisionUsages}
+                            onCheckedChange={(checked) => update({ codeVisionUsages: checked })}
+                            label={t('editor.general.codeVision.usages.label')}
+                        />
+                    }
+                />
+                <SettingsRow
+                    searchId="editor.general.codeVision.authors"
+                    label={t('editor.general.codeVision.authors.label')}
+                    description={t('editor.general.codeVision.authors.description')}
+                    control={
+                        <Switch
+                            checked={codeVisionAuthors}
+                            onCheckedChange={(checked) => update({ codeVisionAuthors: checked })}
+                            label={t('editor.general.codeVision.authors.label')}
                         />
                     }
                 />

@@ -112,6 +112,17 @@
                     "label": "Camel humps",
                     "description": "Moving by word also stops inside camelCase and snake_case words."
                 }
+            },
+            "codeVision": {
+                "title": "Code vision",
+                "usages": {
+                    "label": "Usages",
+                    "description": "Shows how many times a class, function or method is used, above its declaration. Press it to see where."
+                },
+                "authors": {
+                    "label": "Authors",
+                    "description": "Shows above a class, function or method who wrote it according to git, with a plus for other authors. Press it for the commits."
+                }
             }
         },
         "smartKeys": {
