@@ -3,8 +3,6 @@
 //! everything it leaves alone survive. The edits can reach other files and move files, and the
 //! lines they touch are laid out by the formatter.
 
-#![allow(dead_code)]
-
 mod diff;
 mod draft;
 mod exprs;
@@ -16,6 +14,7 @@ mod inline_variable;
 mod move_class;
 mod names;
 mod pull_push;
+mod rewrite;
 mod scope;
 mod signature;
 #[cfg(test)]
@@ -156,5 +155,6 @@ pub fn with_refactors<R>(renv: &RefactorEnv<'_>, range: TextRange, run: impl FnO
     signature::offer(&rcx, &mut out);
     move_class::offer(&rcx, &mut out);
     pull_push::offer(&rcx, &mut out);
+    rewrite::offer(&rcx, &mut out);
     run(out)
 }

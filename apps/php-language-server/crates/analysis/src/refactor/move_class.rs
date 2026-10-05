@@ -331,16 +331,7 @@ fn edit_moved_file(
     };
     let mut imports: Vec<(String, UseKind)> = Vec::new();
     for used in names_in(&file.root) {
-        if let Some(edit) = respell(
-            renv,
-            file,
-            &old_resolver,
-            &new_resolver,
-            &spelling,
-            &used,
-            target_of,
-            &mut imports,
-        ) {
+        if let Some(edit) = respell(renv, file, &new_resolver, &spelling, &used, target_of, &mut imports) {
             edits.push(edit);
         }
     }
@@ -382,7 +373,6 @@ fn namespace_offset(file: &Loaded) -> u32 {
 fn respell(
     renv: &RefactorEnv<'_>,
     file: &Loaded,
-    old_resolver: &NameResolver,
     new_resolver: &NameResolver,
     spelling: &Spelling<'_>,
     used: &NameUse,
@@ -393,7 +383,6 @@ fn respell(
     let written = used.written.as_str();
     let range = TextRange::new(used.start.into(), used.end.into());
     let resolver_here = php_index::extract::resolver_at(&file.root, used.start);
-    let _ = (old_resolver, &resolver_here);
     match used.kind {
         UseKind::Class => {
             let old_target = resolver_here.resolve_class(written);
@@ -499,12 +488,12 @@ fn edit_references(
                 continue;
             }
             let renamed = !short_of(&moved.old).eq(short_of(&moved.new));
-            let (old_namespace, new_namespace) = (namespace_of(&moved.old), namespace_of(&moved.new));
+            let new_namespace = namespace_of(&moved.new);
             let left = written_start(&file.text, hit_start);
             let written = &file.text[left as usize..hit_end as usize];
             let whole = TextRange::new(left.into(), hit_end.into());
             if hit.kind == HitKind::Import {
-                if let Some(edit) = import_edits(&file, hit.range, moved, &mut imports, written) {
+                if let Some(edit) = import_edits(&file, hit.range, moved, &mut imports) {
                     edits.extend(edit);
                 }
                 continue;
@@ -529,7 +518,6 @@ fn edit_references(
                 }
                 continue;
             }
-            let _ = old_namespace;
             let spelling = Spelling {
                 renv,
                 resolver: &resolver,
@@ -591,7 +579,6 @@ fn import_edits(
     range: TextRange,
     moved: &ClassMove,
     imports: &mut Vec<(String, Option<String>)>,
-    written: &str,
 ) -> Option<Vec<TextEdit>> {
     let name = file
         .root
@@ -615,7 +602,6 @@ fn import_edits(
                 .map(|token| token.text().to_string())
         })
         .flatten();
-    let _ = written;
     match group {
         None => {
             let leading = if text_of(&name).starts_with('\\') { "\\" } else { "" };

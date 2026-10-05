@@ -120,22 +120,6 @@ pub(crate) fn is_statement_position(node: &SyntaxNode) -> bool {
     })
 }
 
-/// The statement of a list a node is in, and the node that holds the list.
-pub(crate) fn statement_of(node: &SyntaxNode) -> Option<(SyntaxNode, SyntaxNode)> {
-    let mut current = node.clone();
-    loop {
-        let parent = current.parent()?;
-        if matches!(
-            parent.kind(),
-            BLOCK | STATEMENT_LIST | SOURCE_FILE | CASE_CLAUSE | DEFAULT_CLAUSE
-        ) && !matches!(current.kind(), ERROR)
-        {
-            return Some((current, parent));
-        }
-        current = parent;
-    }
-}
-
 /// Whether an expression changes something or can be seen to run: a call, an assignment, `new`.
 pub(crate) fn has_side_effects(node: &SyntaxNode) -> bool {
     node.descendants().any(|descendant| match descendant.kind() {
@@ -430,11 +414,6 @@ pub(crate) fn insertion_before(text: &str, statement: &SyntaxNode, code: &str) -
     }
 }
 
-/// Whether the node is the target of a write or the base of one.
-pub(crate) fn is_assignment_target(node: &SyntaxNode) -> bool {
-    is_write_target(node)
-}
-
 pub(crate) fn text_slice<'a>(text: &'a str, node: &SyntaxNode) -> &'a str {
     &text[start(node) as usize..end(node) as usize]
 }
@@ -453,6 +432,17 @@ pub(crate) fn name_of(node: &SyntaxNode) -> Option<String> {
 pub(crate) fn replaceable(expr: &SyntaxNode) -> Result<(), String> {
     if is_write_target(expr) {
         return Err("The expression is written to".to_string());
+    }
+    if matches!(expr.kind(), THROW_EXPR | EXIT_EXPR | YIELD_EXPR | YIELD_FROM_EXPR) {
+        return Err("The expression leaves or hands back, which a value cannot".to_string());
+    }
+    if let Some(parent) = expr.parent() {
+        if expr.kind() == VARIABLE_EXPR
+            && parent.kind() == STATIC_PROPERTY_EXPR
+            && parent.children().next().as_ref() != Some(expr)
+        {
+            return Err("The expression is the name of a static property".to_string());
+        }
     }
     let mut child = expr.clone();
     while let Some(parent) = child.parent() {

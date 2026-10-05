@@ -7,8 +7,9 @@ use php_syntax::SyntaxKind::*;
 use php_syntax::{SyntaxElement, SyntaxNode, SyntaxToken, TextRange};
 
 use super::draft::{Draft, focus};
-use super::exprs::{expression_of_selection, is_statement_position, trim_range};
+use super::exprs::{expression_of_selection, is_statement_position, text_slice, trim_range};
 use super::names::{camel, variable_name};
+use super::signature::{parameter_name, parameters};
 use super::{Change, Rcx, Refactor, RefactorKind};
 use crate::actions::edits::{indent_of, insert, replace};
 use crate::actions::imports::ClassWriter;
@@ -31,10 +32,9 @@ pub(super) fn offer<'a>(rcx: &'a Rcx<'a>, out: &mut Vec<Refactor<'a>>) {
     if rcx.range.is_empty() {
         return;
     }
-    let Some((piece, function)) = piece_of(rcx) else {
+    if piece_of(rcx).is_none() {
         return;
-    };
-    let _ = (&piece, &function);
+    }
     let range = rcx.range;
     out.push(Refactor::new(
         format!("extract-method@{}-{}", u32::from(range.start()), u32::from(range.end())),
@@ -111,6 +111,8 @@ struct Flow {
     input: bool,
     output: bool,
     by_reference: bool,
+    /// The function's own parameter, as nothing has changed it before the code: what it declares is the truth.
+    untouched_parameter: bool,
 }
 
 fn is_superglobal(name: &str) -> bool {
@@ -150,7 +152,7 @@ fn span_of(piece: &Piece) -> (u32, u32) {
 }
 
 /// Everything in the way of cutting the code out, found before any edit is written.
-fn check_cuttable(piece: &Piece, function: &SyntaxNode) -> Result<(), String> {
+fn check_cuttable(piece: &Piece) -> Result<(), String> {
     for node in nodes_of(piece) {
         for descendant in node.descendants() {
             match descendant.kind() {
@@ -210,7 +212,6 @@ fn check_cuttable(piece: &Piece, function: &SyntaxNode) -> Result<(), String> {
             }
         }
     }
-    let _ = function;
     Ok(())
 }
 
@@ -338,7 +339,12 @@ fn flows(rcx: &Rcx<'_>, piece: &Piece, function: &SyntaxNode) -> Result<Vec<Flow
                 })
             });
         let by_reference = by_reference_params.contains(&name) && written;
+        let is_parameter = hits.iter().any(|hit| hit.kind == HitKind::Declaration);
+        let changed_before = hits.iter().any(|hit| {
+            hit.kind != HitKind::Declaration && hit.access == Access::Write && u32::from(hit.range.end()) <= from
+        });
         out.push(Flow {
+            untouched_parameter: is_parameter && !changed_before,
             name,
             input: input || by_reference,
             output: written && live_after && !by_reference,
@@ -518,7 +524,7 @@ fn extract(rcx: &Rcx<'_>) -> Result<Change, String> {
             return Err("An interface has no bodies".to_string());
         }
     }
-    check_cuttable(&piece, &function)?;
+    check_cuttable(&piece)?;
     let yields = !own_nodes(&piece, &function, &[YIELD_EXPR, YIELD_FROM_EXPR]).is_empty();
     let exit = exit_of(rcx, &piece, &function)?;
     let flows = flows(rcx, &piece, &function)?;
@@ -578,6 +584,16 @@ fn extract(rcx: &Rcx<'_>) -> Result<Change, String> {
     let param_type = |name: &str, written: &mut dyn FnMut(&str) -> String| -> Option<String> {
         if !typed_style {
             return None;
+        }
+        if inputs.iter().any(|flow| flow.name == name && flow.untouched_parameter) {
+            let own = parameters(&function)
+                .into_iter()
+                .find(|parameter| parameter_name(parameter) == name)?;
+            if super::signature::is_variadic(&own) {
+                return Some("array".to_string());
+            }
+            let declared = own.children().find(|child| ast::is_type_node(child.kind()))?;
+            return Some(text_slice(cx.text, &declared).to_string());
         }
         let ty = env.get(name)?;
         if matches!(ty, Type::Never | Type::Void) {
@@ -737,10 +753,9 @@ fn extract(rcx: &Rcx<'_>) -> Result<Change, String> {
     let brace_on_next_line = child_of(&function, BLOCK).is_none_or(|block| {
         let header_end = start(&block) as usize;
         let before = &cx.text[start(&function) as usize..header_end];
-        before.trim_end_matches([' ', '\t']).ends_with('\n') || !is_method && !before.contains('\n') && true
+        before.trim_end_matches([' ', '\t']).ends_with('\n')
     });
     let doc = documentation(
-        rcx,
         &function,
         class.as_ref(),
         &member_indent,
@@ -830,8 +845,6 @@ fn type_text(
     }
     let probe = flatten_union(&native_type_text(ty, &mut |name: &str| name.to_string())?)?;
     let at_least = |version: php_syntax::PhpVersion| level >= version;
-    let by_name = |text: &str| text.split(['|', '&', '?']).any(|part| part == text);
-    let _ = by_name;
     if probe.contains('|') && !probe.ends_with("|null") && !at_least(php_syntax::PhpVersion::V8_0) {
         return None;
     }
@@ -960,7 +973,6 @@ fn reindent(cx: &crate::inspections::Cx, from_offset: usize, to_offset: usize, f
 }
 
 fn documentation(
-    rcx: &Rcx<'_>,
     function: &SyntaxNode,
     class: Option<&SyntaxNode>,
     indent: &str,
@@ -968,7 +980,7 @@ fn documentation(
     return_type: &Option<String>,
     returned: &Option<String>,
 ) -> String {
-    if !project_writes_docs(rcx, function, class) {
+    if !project_writes_docs(function, class) {
         return String::new();
     }
     let mut lines: Vec<String> = Vec::new();
@@ -993,7 +1005,7 @@ fn documentation(
 
 /// Whether the doc blocks of this project's methods are worth carrying on: the function has one,
 /// or more than half of the methods of its class do.
-fn project_writes_docs(rcx: &Rcx<'_>, function: &SyntaxNode, class: Option<&SyntaxNode>) -> bool {
+fn project_writes_docs(function: &SyntaxNode, class: Option<&SyntaxNode>) -> bool {
     let has_doc = |node: &SyntaxNode| {
         ast::tokens(node)
             .take_while(|token| token.kind() != FUNCTION_KW)
@@ -1002,7 +1014,6 @@ fn project_writes_docs(rcx: &Rcx<'_>, function: &SyntaxNode, class: Option<&Synt
     if has_doc(function) {
         return true;
     }
-    let _ = rcx;
     let Some(body) = class.and_then(|class| child_of(class, CLASS_BODY)) else {
         return false;
     };

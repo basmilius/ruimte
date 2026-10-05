@@ -32,7 +32,6 @@ pub(crate) struct Draft<'a> {
     renv: &'a RefactorEnv<'a>,
     files: BTreeMap<PathBuf, Vec<TextEdit>>,
     moves: Vec<FileMove>,
-    format: bool,
 }
 
 impl<'a> Draft<'a> {
@@ -41,18 +40,7 @@ impl<'a> Draft<'a> {
             renv,
             files: BTreeMap::new(),
             moves: Vec::new(),
-            format: true,
         }
-    }
-
-    /// Leaves the layout of the touched lines as the refactor wrote it.
-    pub(crate) fn without_formatting(mut self) -> Draft<'a> {
-        self.format = false;
-        self
-    }
-
-    pub(crate) fn renv(&self) -> &'a RefactorEnv<'a> {
-        self.renv
     }
 
     pub(crate) fn edit(&mut self, path: &Path, edit: TextEdit) {
@@ -78,10 +66,6 @@ impl<'a> Draft<'a> {
         self.moves.push(FileMove { from, to });
     }
 
-    pub(crate) fn is_empty(&self) -> bool {
-        self.files.values().all(Vec::is_empty) && self.moves.is_empty()
-    }
-
     fn text_of(renv: &RefactorEnv<'_>, path: &Path) -> Option<String> {
         if path == renv.path {
             return Some(renv.env.text.to_string());
@@ -95,7 +79,6 @@ impl<'a> Draft<'a> {
             renv,
             files: drafted,
             moves,
-            format,
         } = self;
         let mut files = Vec::new();
         let mut found_focus = None;
@@ -119,14 +102,14 @@ impl<'a> Draft<'a> {
             let mut final_text = written.text;
             let mut mark = mark;
             let mut formatted = false;
-            if format && !touched.is_empty() {
+            if !touched.is_empty() {
                 if let Some((laid_out, moved)) = lay_out(&original, &final_text, &touched, &renv.format, mark) {
                     final_text = laid_out;
                     mark = moved;
                     formatted = true;
                 }
             }
-            if format {
+            {
                 if let Some((tidied, moved)) = tidy_imports(renv, &original, &final_text, mark) {
                     final_text = tidied;
                     mark = moved;

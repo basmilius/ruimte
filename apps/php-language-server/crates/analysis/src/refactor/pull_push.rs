@@ -463,15 +463,11 @@ fn already_has(cx: &Cx, class: &str, member: &Member) -> bool {
 fn pull_up(rcx: &Rcx<'_>, class_name: &str, target: &str, how: Pull) -> Result<Change, String> {
     let cx = &rcx.cx;
     let member = member_at(rcx).ok_or("There is no member here")?;
-    let (own, own_class) = (
-        Loaded {
-            path: rcx.renv.path.to_path_buf(),
-            text: cx.text.to_string(),
-            root: cx.root.clone(),
-        },
-        member.class.clone(),
-    );
-    let _ = own_class;
+    let own = Loaded {
+        path: rcx.renv.path.to_path_buf(),
+        text: cx.text.to_string(),
+        root: cx.root.clone(),
+    };
     let (to, to_class) = declaration_in(rcx, target)?;
     if already_has(cx, target, &member) {
         return Err(format!("{} has a member of this name already", crate::short(target)));
@@ -479,7 +475,6 @@ fn pull_up(rcx: &Rcx<'_>, class_name: &str, target: &str, how: Pull) -> Result<C
     let vis = visibility_of(&member.node);
     let target_kind = cx.index.class(target).map(|found| found.decl.kind);
     let mut draft = Draft::new(rcx.renv);
-    let eol = if to.text.contains("\r\n") { "\r\n" } else { "\n" };
     match how {
         Pull::Move => {
             if uses_parent(&member.node) {
@@ -547,7 +542,6 @@ fn pull_up(rcx: &Rcx<'_>, class_name: &str, target: &str, how: Pull) -> Result<C
             });
             draft.edit(&to.path, edit);
             draft.edits(&to.path, signature.0);
-            let _ = eol;
         }
     }
     draft.finish()
@@ -566,9 +560,6 @@ fn signature_of(
     let resolver = php_index::extract::resolver_at(&to.root, start(to_class));
     let mut writer = ClassWriter::new(cx.index, &resolver, &to.text, &to.root, start(to_class));
     let method = &member.node;
-    let body = child_of(method, BLOCK);
-    let header_end = body.as_ref().map_or(end(method), start);
-    let _ = header_end;
     let modifiers = child_of(method, MODIFIER_LIST);
     let is_static = modifiers.as_ref().is_some_and(|list| has_token(list, STATIC_KW));
     let vis = visibility_of(method);
@@ -732,12 +723,11 @@ fn check_uses(rcx: &Rcx<'_>, member: &Member, class_name: &str, own: &Loaded) ->
         root: &cx.root,
     };
     for file_hits in hits_of_symbols(cx.index, rcx.renv.sources, &current, std::slice::from_ref(&symbol)) {
-        let (text, root) = if file_hits.path == rcx.renv.path {
-            (own.text.clone(), own.root.clone())
+        let root = if file_hits.path == rcx.renv.path {
+            own.root.clone()
         } else {
             let text = rcx.renv.sources.text(&file_hits.path).ok_or("A file cannot be read")?;
-            let root = parse(&text).syntax();
-            (text, root)
+            parse(&text).syntax()
         };
         for hit in &file_hits.hits {
             if hit.kind == crate::refs::HitKind::Declaration {
@@ -764,7 +754,6 @@ fn check_uses(rcx: &Rcx<'_>, member: &Member, class_name: &str, own: &Loaded) ->
                 .map(|node| text_of(&node).to_ascii_lowercase());
             let own_receiver = matches!(receiver.as_deref(), Some("$this" | "self" | "static"));
             if !inside_below || !own_receiver {
-                let _ = text;
                 return Err(format!(
                     "The member is used in {}, which would lose it",
                     file_hits.path.display()

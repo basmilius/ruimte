@@ -96,14 +96,6 @@ fn noun_of(name: &str) -> String {
     camelled
 }
 
-fn lower_first(text: &str) -> String {
-    let mut characters = text.chars();
-    match characters.next() {
-        Some(first) => first.to_lowercase().chain(characters).collect(),
-        None => String::new(),
-    }
-}
-
 fn from_type(ty: &Type) -> Option<String> {
     let ty = ty.without_null();
     Some(match &ty {
@@ -231,10 +223,6 @@ pub(crate) fn constant_name(expr: &SyntaxNode) -> String {
             ARRAY_EXPR => "ITEMS".to_string(),
             _ => "VALUE".to_string(),
         })
-}
-
-pub(crate) fn lowercase_first(text: &str) -> String {
-    lower_first(text)
 }
 
 /// The fully qualified name a written name stands for where the resolver reads it, with the

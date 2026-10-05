@@ -14,7 +14,6 @@ use crate::refs::{Access, Hit, HitKind, is_write_target, variable_hits};
 
 /// The assignment of a variable and where it is read.
 struct Plan {
-    name: String,
     statement: SyntaxNode,
     value: SyntaxNode,
     uses: Vec<SyntaxNode>,
@@ -132,12 +131,7 @@ fn plan_of(rcx: &Rcx<'_>, token: &SyntaxToken) -> Result<Plan, String> {
             return Err("The variable is changed through a read".to_string());
         }
     }
-    Ok(Plan {
-        name,
-        statement,
-        value,
-        uses,
-    })
+    Ok(Plan { statement, value, uses })
 }
 
 fn is_dynamic(node: &SyntaxNode) -> bool {
@@ -292,7 +286,7 @@ fn is_atomic(kind: php_syntax::SyntaxKind) -> bool {
 }
 
 /// How tightly an expression binds: higher goes first. `None` for what stands on its own.
-fn rank_of(node: &SyntaxNode) -> Option<i32> {
+pub(super) fn rank_of(node: &SyntaxNode) -> Option<i32> {
     match node.kind() {
         BINARY_EXPR => Some(match super::exprs::binary_operator(node)? {
             POW => 13,

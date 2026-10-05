@@ -17,7 +17,7 @@ use super::signature::{
     parameters,
 };
 use super::{Change, Rcx, Refactor, RefactorKind};
-use crate::actions::edits::{indent_of, line_start, replace};
+use crate::actions::edits::{indent_of, replace};
 use crate::ast::{self, child_of, end, first_token, has_token, range_of, start, text_of};
 use crate::decl::declarations;
 use crate::references::symbols_at;
@@ -62,7 +62,7 @@ pub(super) fn offer<'a>(rcx: &'a Rcx<'a>, out: &mut Vec<Refactor<'a>>) {
     let (callee, call) = match on_declaration {
         Some(function) => {
             let file = loaded_here(rcx);
-            match prepare(rcx, &file, &function) {
+            match prepare(&file, &function) {
                 Ok(callee) => (callee, None),
                 Err(_) => return,
             }
@@ -149,11 +149,11 @@ fn callee_of_call(rcx: &Rcx<'_>, offset: u32) -> Option<Callee> {
         .into_token()?
         .parent()?;
     let function = name.parent().filter(is_callable_declaration)?;
-    prepare(rcx, &file, &function).ok()
+    prepare(&file, &function).ok()
 }
 
 /// Checks that a function can be copied to its calls and reads what its body is.
-fn prepare(rcx: &Rcx<'_>, file: &Loaded, function: &SyntaxNode) -> Result<Callee, String> {
+fn prepare(file: &Loaded, function: &SyntaxNode) -> Result<Callee, String> {
     let body = child_of(function, BLOCK).ok_or("The function has no body")?;
     if has_modifier(function, ABSTRACT_KW) {
         return Err("An abstract method has no body".to_string());
@@ -272,7 +272,6 @@ fn prepare(rcx: &Rcx<'_>, file: &Loaded, function: &SyntaxNode) -> Result<Callee
     {
         return Err("An interface has no bodies".to_string());
     }
-    let _ = rcx;
     Ok(Callee {
         file: file.clone(),
         function: function.clone(),
@@ -460,7 +459,7 @@ fn inline_site(
     caller: &Loaded,
     call: &SyntaxNode,
 ) -> Result<Vec<crate::completion::TextEdit>, String> {
-    check_receiver(rcx, callee, caller, call)?;
+    check_receiver(callee, caller, call)?;
     let bindings = bind(callee, caller, call)?;
     let caller_scope = ast::enclosing_function(call).unwrap_or_else(|| caller.root.clone());
     let taken = super::names::taken_variables(&caller_scope);
@@ -527,7 +526,7 @@ fn inline_site(
             }
             text.push_str(body.trim_start());
             if let Some(result) = result {
-                let value = written_in_statements(callee, names.as_ref(), result, &substitutions, &renames)?;
+                let value = written_in_statements(names.as_ref(), result, &substitutions, &renames)?;
                 let line = match &place {
                     Place::Statement(_) => {
                         if has_side_effects(result) {
@@ -557,7 +556,7 @@ fn inline_site(
 }
 
 /// Whether the call may be copied into: a body that uses its object only goes to calls on it.
-fn check_receiver(rcx: &Rcx<'_>, callee: &Callee, caller: &Loaded, call: &SyntaxNode) -> Result<(), String> {
+fn check_receiver(callee: &Callee, caller: &Loaded, call: &SyntaxNode) -> Result<(), String> {
     let uses_class = match &callee.form {
         Form::Expression(expr) => uses_class_context(expr),
         Form::Statements { statements, result } => {
@@ -577,8 +576,6 @@ fn check_receiver(rcx: &Rcx<'_>, callee: &Callee, caller: &Loaded, call: &Syntax
             .find(|node| ast::is_class_like(node.kind()))
             .is_some_and(|class| {
                 callee.class.as_ref().is_some_and(|declaring| {
-                    let here = rcx.cx.file.analyzer(&class);
-                    let _ = here;
                     let name_of = |node: &SyntaxNode, file: &Loaded| {
                         child_of(node, NAME).map(|name| {
                             let resolver = php_index::extract::resolver_at(&file.root, start(node));
@@ -675,7 +672,6 @@ struct Names<'a> {
 
 /// A body node's text with the parameters replaced.
 fn rewrite(
-    callee: &Callee,
     names: Option<&Names<'_>>,
     node: &SyntaxNode,
     substitutions: &HashMap<String, (String, Option<SyntaxNode>)>,
@@ -722,7 +718,6 @@ fn rewrite(
             _ => out.push_str(text),
         }
     }
-    let _ = callee;
     Ok(out)
 }
 
@@ -764,17 +759,16 @@ fn written_in_expression(
     if effectful_uses.iter().map(|(_, name)| name).collect::<Vec<_>>() != order {
         return Err("The arguments are read in another order than they are given".to_string());
     }
-    rewrite(callee, names, expr, &substitutions, &HashMap::new())
+    rewrite(names, expr, &substitutions, &HashMap::new())
 }
 
 fn written_in_statements(
-    callee: &Callee,
     names: Option<&Names<'_>>,
     node: &SyntaxNode,
     substitutions: &HashMap<String, (String, Option<SyntaxNode>)>,
     renames: &HashMap<String, String>,
 ) -> Result<String, String> {
-    rewrite(callee, names, node, substitutions, renames)
+    rewrite(names, node, substitutions, renames)
 }
 
 /// The statements of a body written at the indentation of the call, with comments and the
@@ -796,10 +790,9 @@ fn written_statements(
     let mut previous_end = start(first);
     for statement in statements {
         out.push_str(&text[previous_end as usize..start(statement) as usize]);
-        out.push_str(&rewrite(callee, names, statement, substitutions, renames)?);
+        out.push_str(&rewrite(names, statement, substitutions, renames)?);
         previous_end = end(statement);
     }
-    let _ = last;
     let protected: Vec<TextRange> = first
         .parent()
         .into_iter()
@@ -832,9 +825,5 @@ fn written_statements(
             lines.push(format!("{indent}{}", line.trim_start_matches([' ', '\t'])));
         }
     }
-    let _ = line_start;
     Ok(lines.concat())
 }
-
-#[allow(dead_code)]
-fn unused(_: &SyntaxNode) {}

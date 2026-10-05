@@ -3,11 +3,10 @@
 //! one thing with it (overrides, implementations) and every call that is found is changed
 //! together, or nothing is.
 
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 use php_syntax::SyntaxKind::*;
-use php_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, TextRange, parse};
+use php_syntax::{SyntaxKind, SyntaxNode, TextRange, parse};
 
 use super::draft::{Draft, focus};
 use super::exprs::{has_side_effects, token_near};
@@ -19,7 +18,7 @@ use crate::completion::TextEdit;
 use crate::decl::declarations;
 use crate::inspections::Cx;
 use crate::references::{Current, hits_of_symbols};
-use crate::refs::{Access, HitKind, Query, Symbol, variable_hits};
+use crate::refs::{HitKind, Query, Symbol, variable_hits};
 
 /// A file as the refactor reads it.
 #[derive(Clone)]
@@ -304,7 +303,6 @@ pub(crate) fn remove_item(list: &SyntaxNode, position: usize, item_kind: SyntaxK
             let trailing = tokens(list)
                 .find(|token| token.kind() == COMMA && token.text_range().start() >= item.text_range().end());
             let to = trailing.map_or(end(item), |comma| u32::from(comma.text_range().end()));
-            let _ = trailing;
             delete(TextRange::new(
                 previous.text_range().end(),
                 to.min(end(item)).max(end(item)).into(),
@@ -475,12 +473,7 @@ pub(crate) fn document_parameter(text: &str, function: &SyntaxNode, name: &str, 
     let mut offset = base;
     for (index, line) in body.split_inclusive('\n').enumerate() {
         if index == line_index {
-            let indent: String = line.chars().take_while(|c| c.is_whitespace() || *c == '*').collect();
-            let indent = indent.trim_end_matches(char::is_whitespace);
-            let lead = line.len() - line.trim_start().len();
-            let _ = lead;
             let prefix: String = line.chars().take_while(|c| *c == ' ' || *c == '\t').collect();
-            let _ = indent;
             let at = (offset + line.trim_end_matches(['\n', '\r']).len()) as u32;
             let eol = if text.contains("\r\n") { "\r\n" } else { "\n" };
             return Some(insert(
@@ -525,10 +518,7 @@ fn remove_parameter(rcx: &Rcx<'_>, function: &SyntaxNode, position: usize) -> Re
         }
         let list = child_of(&declared.function, PARAMETER_LIST).ok_or("The declaration has no parameter list")?;
         draft.edits(&file.path, remove_item(&list, position, PARAMETER));
-        draft.edits(
-            &file.path,
-            doc_line_of(&file.text, &declared.function, &parameter_name(target)),
-        );
+        draft.edits(&file.path, doc_line_of(&declared.function, &parameter_name(target)));
     }
     for site in &family.calls {
         let file = &family.files[site.file];
@@ -557,7 +547,7 @@ fn remove_parameter(rcx: &Rcx<'_>, function: &SyntaxNode, position: usize) -> Re
 }
 
 /// The deletion of the `@param` line of a parameter.
-fn doc_line_of(text: &str, function: &SyntaxNode, name: &str) -> Option<TextEdit> {
+fn doc_line_of(function: &SyntaxNode, name: &str) -> Option<TextEdit> {
     let doc = tokens(function)
         .take_while(|token| token.kind() != FUNCTION_KW)
         .find(|token| token.kind() == DOC_COMMENT)?;
@@ -567,7 +557,6 @@ fn doc_line_of(text: &str, function: &SyntaxNode, name: &str) -> Option<TextEdit
     for line in doc.text().split_inclusive('\n') {
         let words: Vec<&str> = line.split(|c: char| c.is_whitespace()).collect();
         if line.contains("@param") && words.iter().any(|word| word.trim_end_matches(',') == wanted) {
-            let _ = text;
             return Some(delete(TextRange::new(
                 (offset as u32).into(),
                 ((offset + line.len()) as u32).into(),
@@ -672,6 +661,3 @@ fn move_parameter(rcx: &Rcx<'_>, function: &SyntaxNode, from: usize, to: usize) 
     }
     draft.finish()
 }
-
-#[allow(dead_code)]
-fn unused(_: HashMap<u8, u8>, _: Access, _: SyntaxElement) {}

@@ -68,7 +68,7 @@ pub(super) fn offer<'a>(rcx: &'a Rcx<'a>, out: &mut Vec<Refactor<'a>>) {
         return;
     }
     out.push(single(rcx, &outermost, "Extract variable".to_string(), false));
-    let count = occurrences(rcx, &outermost).map_or(0, |found| found.len());
+    let count = occurrences(&outermost).map_or(0, |found| found.len());
     if count > 1 {
         out.push(single(
             rcx,
@@ -113,7 +113,7 @@ fn single<'a>(rcx: &'a Rcx<'a>, expr: &SyntaxNode, title: String, all: bool) -> 
 
 /// The expressions equal to this one that a variable assigned before the first of them can stand
 /// for, in the order of the file.
-fn occurrences(rcx: &Rcx<'_>, expr: &SyntaxNode) -> Result<Vec<SyntaxNode>, String> {
+fn occurrences(expr: &SyntaxNode) -> Result<Vec<SyntaxNode>, String> {
     if has_side_effects(expr) {
         return Err("An expression that does something cannot be run once for all its places".to_string());
     }
@@ -148,7 +148,7 @@ fn occurrences(rcx: &Rcx<'_>, expr: &SyntaxNode) -> Result<Vec<SyntaxNode>, Stri
     kept.retain(|node| {
         container.text_range().contains_range(node.text_range())
             && start(node) >= from
-            && !invalidated_before(rcx, &scope, node, from, &reads, stateful)
+            && !invalidated_before(&scope, node, from, &reads, stateful)
     });
     Ok(kept)
 }
@@ -158,14 +158,7 @@ fn same_function(node: &SyntaxNode, expr: &SyntaxNode) -> bool {
 }
 
 /// Whether the value of the expression may differ between where the variable is assigned and a place.
-fn invalidated_before(
-    rcx: &Rcx<'_>,
-    scope: &SyntaxNode,
-    place: &SyntaxNode,
-    from: u32,
-    reads: &[String],
-    stateful: bool,
-) -> bool {
+fn invalidated_before(scope: &SyntaxNode, place: &SyntaxNode, from: u32, reads: &[String], stateful: bool) -> bool {
     let mut to = start(place);
     let loops = place.ancestors().filter(|node| {
         matches!(
@@ -178,7 +171,6 @@ fn invalidated_before(
         origin = start(&outer);
         to = to.max(end(&outer));
     }
-    let _ = rcx;
     scope.descendants().any(|node| {
         let at = start(&node);
         if at < origin || at >= to || at < from && at < origin {
@@ -210,11 +202,7 @@ fn reads_by_reference(call: &SyntaxNode, reads: &[String]) -> bool {
 fn extract(rcx: &Rcx<'_>, expr: &SyntaxNode, all: bool) -> Result<Change, String> {
     let cx = &rcx.cx;
     replaceable(expr)?;
-    let places = if all {
-        occurrences(rcx, expr)?
-    } else {
-        vec![expr.clone()]
-    };
+    let places = if all { occurrences(expr)? } else { vec![expr.clone()] };
     let Some(first) = places.first() else {
         return Err("There is nothing to replace".to_string());
     };

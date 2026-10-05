@@ -21,6 +21,7 @@ mod inline_method;
 mod inline_variable;
 mod move_class;
 mod pull_push;
+mod rewrite;
 mod signature;
 
 pub(super) const CURSOR: &str = "$0";
@@ -155,10 +156,6 @@ fn findings_of(files: &[(String, String)], current: &str, current_text: &str) ->
 }
 
 /// Runs the refactor with this title at the marker of `source`, or returns what was offered.
-pub(super) fn run(files: &[(&str, &str)], source: &str, title: &str) -> Outcome {
-    run_with(Setup::PLAIN, files, source, title, &FormatOptions::default())
-}
-
 pub(super) fn run_with(
     setup: Setup,
     files: &[(&str, &str)],

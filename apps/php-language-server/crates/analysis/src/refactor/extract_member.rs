@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use php_index::Type;
 use php_syntax::SyntaxKind::*;
-use php_syntax::{SyntaxKind, SyntaxNode, TextRange};
+use php_syntax::{SyntaxNode, TextRange};
 
 use super::draft::{Draft, focus};
 use super::exprs::{
@@ -729,6 +729,3 @@ fn add_arguments(
     }
     Ok(())
 }
-
-#[allow(dead_code)]
-fn unused(_: SyntaxKind) {}
