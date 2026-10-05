@@ -340,8 +340,11 @@ impl Analyzer<'_> {
         let (Some(object), Some(name)) = (callee.children().next(), child_of(callee, NAME)) else {
             return Type::Unknown;
         };
+        if self.custom_expectation(&text_of(&name)).is_none() {
+            return Type::Unknown;
+        }
         let receiver = self.type_of(&object, env);
-        if crate::pest::is_expectation(&receiver) && self.custom_expectation(&text_of(&name)).is_some() {
+        if crate::pest::is_expectation(&receiver) {
             return receiver;
         }
         Type::Unknown

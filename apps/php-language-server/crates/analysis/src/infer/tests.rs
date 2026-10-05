@@ -408,3 +408,11 @@ function f(array $posts, array $ids, User $user) {
     assert_eq!(var(&fixture, code, "byUser"), "array<string, list<Post>>");
     assert_eq!(var(&fixture, code, "item"), "Post");
 }
+
+#[test]
+fn a_long_chain_of_unknown_calls_is_typed_in_one_pass() {
+    let fixture = models();
+    let chain = "->step()".repeat(40);
+    let code = format!("<?php\nnamespace App;\nfunction f() {{\n    $x = unknown(){chain};\n    $0\n}}\n");
+    assert_eq!(var(&fixture, &code, "x"), "mixed");
+}

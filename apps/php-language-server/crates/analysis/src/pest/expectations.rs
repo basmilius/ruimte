@@ -60,8 +60,15 @@ pub fn is_expectation(ty: &Type) -> bool {
 impl Analyzer<'_> {
     /// The custom expectation a method name stands for.
     pub(crate) fn custom_expectation(&self, name: &str) -> Option<CustomExpectation> {
-        custom_expectations(self.index, &self.root)
-            .into_iter()
-            .find(|expectation| expectation.name == name)
+        let cached = self.shared.expectations.borrow().clone();
+        let list = match cached {
+            Some((root, list)) if root == self.root => list,
+            _ => {
+                let list = std::rc::Rc::new(custom_expectations(self.index, &self.root));
+                *self.shared.expectations.borrow_mut() = Some((self.root.clone(), list.clone()));
+                list
+            }
+        };
+        list.iter().find(|expectation| expectation.name == name).cloned()
     }
 }

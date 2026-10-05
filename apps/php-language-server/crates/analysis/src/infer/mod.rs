@@ -69,6 +69,8 @@ pub struct SharedCache {
     pub(crate) pest_case: RefCell<Option<Option<crate::pest::case::TestCaseBinding>>>,
     /// What `beforeEach` gives a property, by the describe blocks around the test and the name.
     pub(crate) pest_types: RefCell<HashMap<(Vec<u32>, String), Type>>,
+    /// The expectations the project adds, for the tree they were read with.
+    pub(crate) expectations: RefCell<Option<(SyntaxNode, Rc<Vec<crate::pest::CustomExpectation>>)>>,
 }
 
 pub struct Analyzer<'a> {
