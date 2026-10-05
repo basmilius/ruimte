@@ -121,6 +121,18 @@ describe('FakeEditor.setWidgets', () => {
         editor.setWidgets([], 'review');
         expect([...editor.widgetsByOwner.keys()]).toEqual(['default']);
     });
+
+    test('draws a row once per id, like the editor, and again when it comes back', () => {
+        const editor = new FakeEditorEngine().mount(element, { text: 'a', theme: 'light' });
+        const drawn: string[] = [];
+        const row = (id: string) => ({ id, line: 0, render: () => void drawn.push(id) });
+        editor.setWidgets([row('a')]);
+        editor.setWidgets([row('a'), row('b')]);
+        expect(drawn).toEqual(['a', 'b']);
+        editor.setWidgets([]);
+        editor.setWidgets([row('a')]);
+        expect(drawn).toEqual(['a', 'b', 'a']);
+    });
 });
 
 describe('FakeEditor.setGhostText', () => {

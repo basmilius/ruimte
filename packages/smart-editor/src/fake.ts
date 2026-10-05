@@ -358,12 +358,23 @@ export class FakeEditor implements Editor {
         return this.widgetsByOwner.get('default') ?? [];
     }
 
+    /* The row ids each owner has drawn, since the editor draws a row once and keeps it for as long as its id stays. */
+    private readonly drawnWidgets = new Map<string, Set<string>>();
+
     setWidgets(widgets: readonly EditorWidget[], owner = 'default'): void {
         if (widgets.length === 0) {
             this.widgetsByOwner.delete(owner);
-        } else {
-            this.widgetsByOwner.set(owner, widgets);
+            this.drawnWidgets.delete(owner);
+            return;
         }
+        this.widgetsByOwner.set(owner, widgets);
+        const before = this.drawnWidgets.get(owner) ?? new Set<string>();
+        for (const widget of widgets) {
+            if (!before.has(widget.id)) {
+                widget.render({} as HTMLElement);
+            }
+        }
+        this.drawnWidgets.set(owner, new Set(widgets.map((widget) => widget.id)));
     }
 
     readonly lineActionsByOwner = new Map<string, readonly EditorLineAction[]>();

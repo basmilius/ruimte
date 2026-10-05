@@ -41,7 +41,7 @@ describe('peek references', () => {
         expect(view.files.map((file) => file.places.map((entry) => entry.text))).toEqual([['let value = 1;', 'value + 1;'], ['use(value);']]);
         expect(view.active).toBe('0:1');
         expect(view.preview).toMatchObject({ uri, startLine: 0, active: 1 });
-        expect(editor.widgets).toMatchObject([{ id: 'peek', line: 0 }]);
+        expect(editor.widgets).toMatchObject([{ line: 0 }]);
     });
 
     test('follows the arrows and shows the code of another file, and Enter goes to the place', async () => {
@@ -108,6 +108,21 @@ describe('peek references', () => {
         const none = await setup(null);
         await none.language.peek.open();
         expect(useToasts.getState().toasts.at(-1)?.title).toBe('No references found');
+    });
+});
+
+describe('peek again while open', () => {
+    test('draws the block of a second peek in a row of its own, so its panel has a place to render', async () => {
+        const { editor, language } = await setup([place(uri, 0), place(uri, 1), place(otherUri, 2)]);
+        await language.peek.open(at(0, 5));
+        expect(language.popups.getState().peek!.container).not.toBeNull();
+        await language.peek.open(at(1, 1));
+        const view = language.popups.getState().peek!;
+        expect(view.container).not.toBeNull();
+        expect(editor.widgets).toMatchObject([{ line: 1 }]);
+        editor.press({ key: 'Escape' });
+        await language.peek.open(at(0, 5));
+        expect(language.popups.getState().peek!.container).not.toBeNull();
     });
 });
 

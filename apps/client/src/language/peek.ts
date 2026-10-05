@@ -134,7 +134,8 @@ export class PeekFeature {
         this.line = position.line;
         this.language.popups.setState({ peek: { kind, container: null, files, active: first.id, collapsed: [], count: unique.length, preview: null } });
         this.select(first.id);
-        editor.setWidgets([{ id: 'peek', line: this.line, height: PEEK_HEIGHT, render: (container) => this.mounted(container) }]);
+        // The editor draws a row once per id, so a peek opened over another needs an id of its own to get a container.
+        editor.setWidgets([{ id: `peek-${token}`, line: this.line, height: PEEK_HEIGHT, render: (container) => this.mounted(container) }]);
         // The keys come through the editor, which a click on the hover's link or a menu command has taken the focus from.
         editor.focus();
     }
