@@ -25,6 +25,8 @@ export interface TextDraft {
     text: string;
     saving: boolean;
     problem: DraftProblem | null;
+    /* What the file holds now when it moved under unsaved text; `disk` stays the version the text started from, which is the base of the three-way merge. */
+    incoming?: DiskText;
 }
 
 export interface DiskText {
@@ -43,7 +45,7 @@ export function isUnsavedDraft(draft: TextDraft | undefined): boolean {
     return draft !== undefined && draft.text !== draft.disk;
 }
 
-/* A problem only a person can answer: saving waits for Reload or Overwrite. */
+/* A problem only a person can answer: saving waits for Reload, Overwrite or the last answer of a review. */
 function waitsForPerson(draft: TextDraft): boolean {
     return draft.problem?.kind === 'stale' || draft.problem?.kind === 'changed';
 }
@@ -223,6 +225,21 @@ export class TextDrafts {
         return saving;
     }
 
+    /*
+     * The last block of a review is answered: the text is what the person ended up with, and it now stands
+     * over the incoming version, so the save that follows is an ordinary one. False when nothing is incoming.
+     */
+    resolveIncoming(endpointId: string, path: string, merged: string): Promise<boolean> {
+        const key = endpointKey(endpointId, path);
+        const draft = useTextDrafts.getState().rows[key];
+        if (draft?.incoming === undefined) {
+            return Promise.resolve(false);
+        }
+        this.clearTimer(key);
+        this.patch(key, { disk: draft.incoming.text, mtime: draft.incoming.mtime, text: merged, problem: null, incoming: undefined });
+        return this.save(endpointId, path);
+    }
+
     /* Takes what is on disk now and drops the draft. */
     async reload(endpointId: string, path: string): Promise<void> {
         const key = endpointKey(endpointId, path);
@@ -231,7 +248,7 @@ export class TextDrafts {
             return;
         }
         this.clearTimer(key);
-        this.patch(key, { disk: disk.text, mtime: disk.mtime, text: disk.text, problem: null });
+        this.patch(key, { disk: disk.text, mtime: disk.mtime, text: disk.text, problem: null, incoming: undefined });
     }
 
     /* Writes the draft over whatever is on disk now, at the mtime it has now. */
@@ -241,7 +258,7 @@ export class TextDrafts {
         if (disk === null || useTextDrafts.getState().rows[key] === undefined) {
             return false;
         }
-        this.patch(key, { disk: disk.text, mtime: disk.mtime, problem: null });
+        this.patch(key, { disk: disk.text, mtime: disk.mtime, problem: null, incoming: undefined });
         return this.save(endpointId, path);
     }
 
@@ -253,7 +270,7 @@ export class TextDrafts {
             return;
         }
         this.clearTimer(key);
-        this.patch(key, { text: draft.disk, problem: null });
+        this.patch(key, { text: draft.disk, problem: null, incoming: undefined });
         this.dropIfIdle(key);
     }
 
@@ -279,7 +296,7 @@ export class TextDrafts {
         if (useTextDrafts.getState().rows[key] === undefined) {
             return saved;
         }
-        this.patch(key, written === null ? { saving: false, problem } : { saving: false, problem: null, disk: text, mtime: written });
+        this.patch(key, written === null ? { saving: false, problem } : { saving: false, problem: null, disk: text, mtime: written, incoming: undefined });
         const held = pending.heldRead;
         pending.heldRead = null;
         // A read taken before the write landed says nothing new; one taken after it may be our own write coming back.
@@ -287,7 +304,26 @@ export class TextDrafts {
             this.weigh(key, held);
         }
         this.dropIfIdle(key);
+        if (problem?.kind === 'stale') {
+            await this.captureIncoming(endpointId, path);
+        }
         return saved;
+    }
+
+    /* A refused save says the file moved, not to what: the read that follows is the other side of the review. */
+    private async captureIncoming(endpointId: string, path: string): Promise<void> {
+        const link = this.linkFor(endpointId);
+        if (link === null) {
+            return;
+        }
+        try {
+            const read = await link.read(path);
+            if (read.kind === 'text') {
+                this.weigh(endpointKey(endpointId, path), { text: read.text, mtime: read.mtime });
+            }
+        } catch {
+            // The file stays a choice between Reload and Overwrite.
+        }
     }
 
     /* The project hold is per socket and comes back with the client's resume, so a refusal right after a reconnect gets one more try. */
@@ -330,22 +366,21 @@ export class TextDrafts {
         if (draft === undefined || disk.mtime === draft.mtime) {
             return;
         }
-        // Disk caught up with the draft, or the file was only touched: nothing to decide either way.
+        // Disk caught up with the draft, or the file went back to where the draft started: nothing to decide either way.
         if (disk.text === draft.text || disk.text === draft.disk) {
             if (disk.text === draft.text) {
                 this.clearTimer(key);
             }
-            this.patch(key, { disk: disk.text, mtime: disk.mtime, ...(disk.text === draft.text ? { problem: null } : {}) });
+            const settled = disk.text === draft.text || waitsForPerson(draft);
+            this.patch(key, { disk: disk.text, mtime: disk.mtime, ...(settled ? { problem: null, incoming: undefined } : {}) });
             return;
         }
         if (!isUnsavedDraft(draft)) {
-            this.patch(key, { disk: disk.text, mtime: disk.mtime, text: disk.text, problem: null });
+            this.patch(key, { disk: disk.text, mtime: disk.mtime, text: disk.text, problem: null, incoming: undefined });
             return;
         }
         this.clearTimer(key);
-        if (draft.problem?.kind !== 'stale') {
-            this.patch(key, { problem: { kind: 'changed' } });
-        }
+        this.patch(key, { incoming: { text: disk.text, mtime: disk.mtime }, ...(draft.problem?.kind === 'stale' ? {} : { problem: { kind: 'changed' } }) });
     }
 
     private put(key: string, draft: TextDraft): void {

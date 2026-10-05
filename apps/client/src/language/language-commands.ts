@@ -22,7 +22,9 @@ const RUNNERS: Record<LanguageCommandId, (language: EditorLanguage) => void> = {
     'peek-references': (language) => void language.peek.open(),
     'organize-imports': (language) => void language.codeActions.organizeImports(),
     'format-document': (language) => void language.codeActions.formatDocument(),
-    'selection-to-chat': (language) => language.selectionChat.choose()
+    'selection-to-chat': (language) => language.selectionChat.choose(),
+    'inline-edit': (language) => language.inlineEdit.start(),
+    'show-inline-edit': (language) => void language.inlineEdit.show()
 };
 
 export interface LanguageCommandRow {

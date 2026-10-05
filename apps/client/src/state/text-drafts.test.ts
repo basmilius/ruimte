@@ -400,3 +400,73 @@ describe('surfaces', () => {
         expect(editor.getText()).toBe('theirs');
     });
 });
+
+describe('the version that moved under unsaved text', () => {
+    test('a read that moved keeps its text next to the draft, over the version the draft started from', () => {
+        drafts.edit(MACHINE, PATH, 'mine');
+        drafts.received(MACHINE, PATH, { text: 'theirs', mtime: 7 });
+        expect(draft()).toMatchObject({ disk: 'one', mtime: 1, text: 'mine', incoming: { text: 'theirs', mtime: 7 }, problem: { kind: 'changed' } });
+
+        drafts.received(MACHINE, PATH, { text: 'theirs again', mtime: 8 });
+        expect(draft()?.incoming).toEqual({ text: 'theirs again', mtime: 8 });
+    });
+
+    test('resolving takes the incoming version as the disk, the merged text as the draft, and saves over it', async () => {
+        drafts.edit(MACHINE, PATH, 'mine');
+        drafts.received(MACHINE, PATH, { text: 'theirs', mtime: 7 });
+
+        const saved = drafts.resolveIncoming(MACHINE, PATH, 'merged');
+        await flush();
+        expect(draft()).toMatchObject({ disk: 'theirs', mtime: 7, text: 'merged', problem: null });
+        expect(draft()?.incoming).toBeUndefined();
+        expect(link.writes.at(-1)).toMatchObject({ text: 'merged', expectedMtime: 7 });
+        await link.land(8);
+        expect(await saved).toBe(true);
+        expect(draft()).toMatchObject({ disk: 'merged', mtime: 8 });
+    });
+
+    test('a merge that came out as the incoming version has nothing left to save', async () => {
+        drafts.edit(MACHINE, PATH, 'mine');
+        drafts.received(MACHINE, PATH, { text: 'theirs', mtime: 7 });
+        expect(await drafts.resolveIncoming(MACHINE, PATH, 'theirs')).toBe(true);
+        expect(link.writes).toHaveLength(0);
+        expect(draft()).toMatchObject({ disk: 'theirs', text: 'theirs', problem: null });
+    });
+
+    test('without an incoming version there is nothing to resolve', async () => {
+        drafts.edit(MACHINE, PATH, 'mine');
+        expect(await drafts.resolveIncoming(MACHINE, PATH, 'merged')).toBe(false);
+        expect(draft()?.text).toBe('mine');
+    });
+
+    test('a refused save reads the file, so the other side is known', async () => {
+        drafts.edit(MACHINE, PATH, 'mine');
+        const saved = drafts.save(MACHINE, PATH);
+        await flush();
+        link.disk = { text: 'theirs', mtime: 7 };
+        await link.refuse('stale');
+        expect(await saved).toBe(false);
+        expect(draft()).toMatchObject({ problem: { kind: 'stale' }, incoming: { text: 'theirs', mtime: 7 } });
+    });
+
+    test('the file going back to where the draft started leaves nothing to decide', () => {
+        drafts.edit(MACHINE, PATH, 'mine');
+        drafts.received(MACHINE, PATH, { text: 'theirs', mtime: 7 });
+        drafts.received(MACHINE, PATH, { text: 'one', mtime: 8 });
+        expect(draft()).toMatchObject({ mtime: 8, problem: null });
+        expect(draft()?.incoming).toBeUndefined();
+    });
+
+    test('Reload, Overwrite and closing without saving let the incoming version go', async () => {
+        drafts.edit(MACHINE, PATH, 'mine');
+        drafts.received(MACHINE, PATH, { text: 'theirs', mtime: 7 });
+        link.disk = { text: 'theirs', mtime: 7 };
+        await drafts.reload(MACHINE, PATH);
+        expect(draft()?.incoming).toBeUndefined();
+
+        drafts.edit(MACHINE, PATH, 'mine');
+        drafts.received(MACHINE, PATH, { text: 'theirs 2', mtime: 9 });
+        drafts.discard(MACHINE, PATH);
+        expect(draft()?.incoming).toBeUndefined();
+    });
+});

@@ -1,6 +1,7 @@
 import type { AgentKind } from '@ruimte/contracts';
 import {
     Activity,
+    Sparkles,
     Book,
     BookOpen,
     ArrowDownToLine,
@@ -224,6 +225,8 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     'organize-imports': ListOrdered,
     'format-document': AlignLeft,
     'selection-to-chat': MessageSquarePlus,
+    'inline-edit': Sparkles,
+    'show-inline-edit': ScanSearch,
     'next-highlight': ArrowDown,
     'previous-highlight': ArrowUp,
     'find-in-files': Search,
