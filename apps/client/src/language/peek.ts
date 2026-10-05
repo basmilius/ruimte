@@ -148,7 +148,8 @@ export class PeekFeature {
     private async fetch(kind: PeekKind, position: EditorPosition): Promise<{ locations: Location[]; targets: Map<string, Range> }> {
         const { project, uri } = this.language;
         if (kind === 'references') {
-            return { locations: (await project.service.references(uri, position, true)) ?? [], targets: new Map() };
+            // Without the declaration, so the list holds what the usages count above a declaration counts.
+            return { locations: (await project.service.references(uri, position, false)) ?? [], targets: new Map() };
         }
         const places = uniquePlaces(await project.service.definition(uri, position));
         const targets = new Map(places.flatMap(({ location, target }) => (target === null ? [] : [[placeKey(location), target] as const])));

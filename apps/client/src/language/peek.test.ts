@@ -24,7 +24,7 @@ async function setup(answer: unknown) {
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'let value = 1;\nvalue + 1;\n', theme: 'light' });
     const language = new EditorLanguage(project, editor, uri, 'typescript');
     await language.document.ready;
-    return { editor, language };
+    return { editor, language, transport };
 }
 
 beforeEach(() => {
@@ -42,6 +42,13 @@ describe('peek references', () => {
         expect(view.active).toBe('0:1');
         expect(view.preview).toMatchObject({ uri, startLine: 0, active: 1 });
         expect(editor.widgets).toMatchObject([{ line: 0 }]);
+    });
+
+    test('asks for the usages without the declaration, as the count above a declaration does', async () => {
+        const { language, transport } = await setup([place(uri, 1)]);
+        await language.peek.open();
+        const request = transport.callsOf('language.request').find((call) => (call.payload as { method: string }).method === 'textDocument/references');
+        expect((request!.payload as { params: { context: unknown } }).params.context).toEqual({ includeDeclaration: false });
     });
 
     test('follows the arrows and shows the code of another file, and Enter goes to the place', async () => {
