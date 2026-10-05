@@ -112,6 +112,11 @@ export class TokenCache {
         if (tokenizer === null) {
             return null;
         }
+        if (tokenizer.stale?.() === true) {
+            this.frontier = 0;
+            this.reusableFrom = Number.POSITIVE_INFINITY;
+            this.pivotLine = -1;
+        }
         const count = this.source.getLineCount();
         const limit = Math.min(until, count - 1);
         const deadline = now() + budget;

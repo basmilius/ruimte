@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./editor.css": "./src/editor.css",
     "./fake": "./src/fake.ts",
+    "./shiki": "./src/shiki.ts",
     "./keymap": "./src/keymap-table.ts"
   },
   "scripts": {

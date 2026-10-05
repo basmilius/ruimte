@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 import { fileUriToPath } from '@ruimte/smart-editor-lsp';
 import { IconButton, Tooltip } from '@basmilius/desktop-ui';
 import { formatNumber } from '@basmilius/desktop-ui/format';
-import { highlightCode } from '@/shell/panels/highlight';
+import { highlightDocument } from '@/shell/panels/highlight';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useCodeTheme } from '@/state/code-theme';
 import type { EditorLanguage } from './editor-language';
@@ -32,7 +32,7 @@ function Preview({ view }: { view: PeekView }) {
             return;
         }
         let alive = true;
-        highlightCode(preview.text, shikiLanguageOfPath(path ?? preview.uri), theme)
+        highlightDocument(preview.text, shikiLanguageOfPath(path ?? preview.uri), theme)
             .then((result) => alive && setHtml({ key, html: result }))
             .catch(() => undefined);
         return () => {

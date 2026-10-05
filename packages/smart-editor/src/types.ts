@@ -431,10 +431,12 @@ export interface LineTokenizer {
     /* A null state starts the document. */
     tokenizeLine(text: string, state: unknown): TokenizedLine;
     sameState(a: unknown, b: unknown): boolean;
+    /* True once, when the grammar was rebuilt and the states handed out before it are void. */
+    stale?(): boolean;
 }
 
-/* A tokenizer for a language in a theme, or null when there is no grammar for it. May load the grammar, so it is async. */
-export type TokenizerSource = (language: string | undefined, theme: EditorTheme) => Promise<LineTokenizer | null>;
+/* A tokenizer for a language in a theme, or null when there is no grammar for it. May load the grammar, so it is async; `text` is the document, for the embedded languages it names. */
+export type TokenizerSource = (language: string | undefined, theme: EditorTheme, text?: string) => Promise<LineTokenizer | null>;
 
 export interface SmartEditorEngineOptions {
     readonly tokenizer: TokenizerSource;

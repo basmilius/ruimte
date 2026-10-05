@@ -17,7 +17,7 @@ import { FileEditor } from '@/shell/panels/FileEditor';
 import { FileScroll } from '@/shell/panels/FileScroll';
 import { FileToolbar } from '@/shell/panels/FileToolbar';
 import { FileBreadcrumb } from '@/shell/panels/FileBreadcrumb';
-import { highlightCode } from '@/shell/panels/highlight';
+import { highlightDocument } from '@/shell/panels/highlight';
 import { lineEndingOf } from '@/shell/panels/status-bar-model';
 import { editorSeed, useEditorFind } from '@/shell/panels/use-editor-find';
 import { useEditorLanguage } from '@/shell/panels/use-editor-language';
@@ -119,7 +119,7 @@ function CodeChunk({ code, lines, start, language, theme, reveal, revealNonce }:
             return;
         }
         let cancelled = false;
-        highlightCode(code, language, theme)
+        highlightDocument(code, language, theme)
             .then((result) => {
                 if (!cancelled) {
                     setHtml(result);

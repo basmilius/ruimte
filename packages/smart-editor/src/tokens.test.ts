@@ -68,6 +68,26 @@ describe('TokenCache', () => {
         expect(colors(cache, 5)).toEqual(['code', 'comment', 'comment', 'comment', 'code']);
     });
 
+    test('starts over from the top once the tokenizer says its states are void', () => {
+        const { cache, counter, edit } = setup('a\nb\nc\nd');
+        let stale = false;
+        const inner = commentTokenizer(counter);
+        cache.setTokenizer({
+            ...inner,
+            stale: () => {
+                const answer = stale;
+                stale = false;
+                return answer;
+            }
+        });
+        cache.advance(10, 1000);
+        counter.lines = 0;
+        stale = true;
+        edit(6, 7, 'dd');
+        cache.advance(10, 1000);
+        expect(counter.lines).toBe(4);
+    });
+
     test('recolors from the changed line and stops where the state is what it was', () => {
         const { cache, counter, edit } = setup('a\nb\nc\nd\ne\nf');
         cache.advance(10, 1000);

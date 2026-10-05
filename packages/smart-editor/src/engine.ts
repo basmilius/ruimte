@@ -135,7 +135,7 @@ class SmartEditor implements Editor {
                 }
             });
         void this.engine
-            .tokenizer(this.language, this.theme)
+            .tokenizer(this.language, this.theme, this.model.getText())
             .catch(() => null)
             .then((tokenizer) => {
                 if (!this.disposed && request === this.tokenizerRequest) {
