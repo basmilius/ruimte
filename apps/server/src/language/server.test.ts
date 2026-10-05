@@ -3,7 +3,7 @@ import { INITIALIZE_TIMEOUT_MS, LanguageServer, STABLE_AFTER_MS, type LanguageSe
 import { KIND_PROFILES } from './profiles.ts';
 import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
 import type { LanguageServerKind } from '@ruimte/contracts';
-import type { Diagnostic, PublishDiagnosticsParams, ServerCapabilities } from '@ruimte/smart-editor-lsp';
+import type { Diagnostic, PublishDiagnosticsParams, RequestHandler, ServerCapabilities } from '@ruimte/smart-editor-lsp';
 
 const runtime = { command: '/ruimte', args: [], env: { BUN_BE_BUN: '1' } };
 
@@ -610,5 +610,190 @@ describe('the Vue pair', () => {
         expect(server.state).toBe('crashed');
         expect(server.message).toContain('typescript language server exited');
         expect(spawner.processes[1].kills).toEqual(['SIGTERM']);
+    });
+});
+
+describe('the sidecar of code actions beside the native TypeScript server', () => {
+    const range = { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } };
+    const capabilities: Partial<Record<string, ServerCapabilities>> = {
+        typescript: {
+            textDocumentSync: 2,
+            codeActionProvider: { resolveProvider: false },
+            executeCommandProvider: { commands: ['native.fix'] },
+            hoverProvider: true
+        },
+        'typescript-actions': {
+            textDocumentSync: 2,
+            codeActionProvider: { resolveProvider: true },
+            executeCommandProvider: { commands: ['_typescript.applyRefactoring'] },
+            documentFormattingProvider: true
+        }
+    };
+    const params = { range, context: { diagnostics: [] } };
+    type Handlers = Record<string, RequestHandler>;
+
+    /* A kind with one document open, whose two processes answer with the handlers they are given. */
+    async function started(native: Handlers = {}, sidecar: Handlers = {}) {
+        const result = rig('typescript', fakeSpawner(capabilities, [], { typescript: native, 'typescript-actions': sidecar }));
+        const main = document('/work/src/a.ts', 'typescript', 'let a = 1;\n');
+        result.server.attach(main);
+        await settle();
+        return { ...result, main };
+    }
+
+    it('does not start with the kind, only with the first code action asked for', async () => {
+        const { server, spawner, main } = await started({ 'textDocument/codeAction': () => [], 'textDocument/hover': () => ({ contents: 'native' }) });
+        expect(spawner.processes.map((process) => process.name)).toEqual(['typescript']);
+        expect(server.sidecars).toEqual([{ name: 'typescript-actions', title: 'TypeScript 6', state: 'idle' }]);
+        await server.request(main, 'textDocument/hover', { position: range.start });
+        expect(spawner.processes).toHaveLength(1);
+
+        await server.request(main, 'textDocument/codeAction', params);
+        expect(spawner.processes.map((process) => process.name)).toEqual(['typescript', 'typescript-actions']);
+        const [sidecar] = spawner.of('typescript-actions');
+        expect(sidecar!.spec.args.slice(1)).toEqual(['--stdio']);
+        expect(sidecar!.spec.args[0]).toBe('/home/language-servers/typescript/node_modules/typescript-language-server/lib/cli.mjs');
+        expect(sidecar!.server.documents.get('file:///work/src/a.ts')).toEqual({ languageId: 'typescript', text: 'let a = 1;\n', version: 1 });
+        expect(server.state).toBe('ready');
+        expect(server.sidecars[0]!.state).toBe('ready');
+    });
+
+    it('merges its actions with the native ones, the native first, and drops one with the same title and kind', async () => {
+        const native = [
+            { title: 'Add missing import', kind: 'quickfix' },
+            { title: 'Organize Imports', kind: 'source.organizeImports' }
+        ];
+        const extra = [
+            { title: 'Add missing import', kind: 'quickfix' },
+            { title: 'Remove unused declaration', kind: 'quickfix' },
+            { title: 'Extract to function in module scope', kind: 'refactor.extract.function' },
+            { title: 'Organize imports', kind: 'source.organizeImports' }
+        ];
+        const { server, main } = await started({ 'textDocument/codeAction': () => native }, { 'textDocument/codeAction': () => extra });
+        const answer = await server.request(main, 'textDocument/codeAction', params);
+        expect(answer.result).toEqual([...native, extra[1], extra[2]]);
+        expect(answer.itemServers).toEqual(['typescript', 'typescript', 'typescript-actions', 'typescript-actions']);
+        expect(answer.server).toBe('typescript');
+    });
+
+    it('serves the actions of the sidecar alone when the native server fails', async () => {
+        const { server, main } = await started(
+            {
+                'textDocument/codeAction': () => {
+                    throw new Error('broke');
+                }
+            },
+            { 'textDocument/codeAction': () => [{ title: 'Extract', kind: 'refactor.extract' }] }
+        );
+        const answer = await server.request(main, 'textDocument/codeAction', params);
+        expect(answer).toMatchObject({ result: [{ title: 'Extract', kind: 'refactor.extract' }], server: 'typescript-actions' });
+    });
+
+    it('resolves and runs commands on the process that made the action, and nowhere else', async () => {
+        const { server, spawner, main } = await started(
+            { 'textDocument/codeAction': () => [], 'codeAction/resolve': () => ({ title: 'native' }), 'workspace/executeCommand': () => 'native ran' },
+            {
+                'textDocument/codeAction': () => [],
+                'codeAction/resolve': (item) => ({ ...(item as object), edit: { changes: {} } }),
+                'workspace/executeCommand': () => 'sidecar ran'
+            }
+        );
+        await server.request(main, 'textDocument/codeAction', params);
+        const [sidecar] = spawner.of('typescript-actions');
+        const resolved = await server.request(main, 'codeAction/resolve', { title: 'Extract' }, 'typescript-actions');
+        expect(resolved).toMatchObject({ result: { title: 'Extract', edit: { changes: {} } }, server: 'typescript-actions' });
+        expect(await server.executeCommand(main, '_typescript.applyRefactoring', [], 'typescript-actions')).toEqual({
+            result: 'sidecar ran',
+            server: 'typescript-actions'
+        });
+        expect(await server.executeCommand(main, 'native.fix', [], 'typescript')).toEqual({ result: 'native ran', server: 'typescript' });
+        expect(sidecar!.server.paramsOf('workspace/executeCommand')).toHaveLength(1);
+        // Nothing but code actions goes to it unless it is asked by name.
+        await expect(server.request(main, 'textDocument/formatting', {})).rejects.toMatchObject({ code: -32601 });
+        expect(sidecar!.server.paramsOf('textDocument/formatting')).toEqual([]);
+    });
+
+    it('keeps it in step with the documents after it started, and shows none of its diagnostics', async () => {
+        const { server, spawner, main, diagnostics } = await started({ 'textDocument/codeAction': () => [] }, { 'textDocument/codeAction': () => [] });
+        await server.request(main, 'textDocument/codeAction', params);
+        const [sidecar] = spawner.of('typescript-actions');
+        main.text = 'let a = 12;\n';
+        main.version = 2;
+        await server.change(main, [{ range: { start: { line: 0, character: 9 }, end: { line: 0, character: 9 } }, text: '2' }]);
+        const second = document('/work/src/b.ts', 'typescript', 'let b = 1;\n');
+        server.attach(second);
+        await settle();
+        expect(sidecar!.server.documents.get('file:///work/src/a.ts')).toEqual({ languageId: 'typescript', text: 'let a = 12;\n', version: 2 });
+        expect(sidecar!.server.documents.get('file:///work/src/b.ts')?.text).toBe('let b = 1;\n');
+        diagnostics.length = 0;
+        await sidecar!.server.publishDiagnostics('file:///work/src/a.ts', [{ range, message: 'from the sidecar' }], 2);
+        await settle();
+        expect(diagnostics).toEqual([]);
+        await server.detach(second);
+        expect(sidecar!.server.documents.has('file:///work/src/b.ts')).toBe(false);
+    });
+
+    it("is not started for organize imports, which are the native server's own", async () => {
+        const { server, spawner, main } = await started(
+            { 'textDocument/codeAction': () => [{ title: 'Organize Imports', kind: 'source.organizeImports' }] },
+            { 'textDocument/codeAction': () => [] }
+        );
+        await server.request(main, 'textDocument/codeAction', { ...params, context: { diagnostics: [], only: ['source.organizeImports'] } });
+        expect(spawner.processes).toHaveLength(1);
+        await server.request(main, 'textDocument/codeAction', { ...params, context: { diagnostics: [], only: ['refactor.extract'] } });
+        expect(spawner.processes).toHaveLength(2);
+    });
+
+    it('offers resolving and the refactor kinds before it has started', async () => {
+        const { server, main } = await started();
+        const providers = server.providers(main, ['textDocument/codeAction']);
+        expect(providers['textDocument/codeAction']).toMatchObject({
+            resolveProvider: true,
+            codeActionKinds: expect.arrayContaining(['quickfix', 'refactor.extract'])
+        });
+        expect(server.canAnswer(main, 'textDocument/codeAction', params)).toBe(true);
+        expect(server.providers(document('/work/a.py', 'python', ''), ['textDocument/codeAction'])).toEqual({});
+    });
+
+    it('is left out when it does not answer in time, even the first call that waited for its start, and its late answer is dropped', async () => {
+        const { server, main, clock } = await started(
+            { 'textDocument/codeAction': () => [{ title: 'Native', kind: 'quickfix' }] },
+            { 'textDocument/codeAction': () => new Promise(() => undefined) }
+        );
+        const asked = server.request(main, 'textDocument/codeAction', params);
+        await settle();
+        clock.fire();
+        const answer = await asked;
+        expect(answer.result).toEqual([{ title: 'Native', kind: 'quickfix' }]);
+        expect(answer.itemServers).toBeUndefined();
+        expect(server.log.tail().some((line) => line.text.includes('did not answer textDocument/codeAction'))).toBe(true);
+    });
+
+    it('does not crash the kind when it ends, and stays away until the kind starts again', async () => {
+        const { server, spawner, main } = await started(
+            { 'textDocument/codeAction': () => [{ title: 'Native', kind: 'quickfix' }] },
+            { 'textDocument/codeAction': () => [] }
+        );
+        await server.request(main, 'textDocument/codeAction', params);
+        spawner.of('typescript-actions')[0]!.say('out of memory');
+        await spawner.of('typescript-actions')[0]!.crash(137);
+        await settle();
+        expect(server.state).toBe('ready');
+        expect(server.sidecars[0]).toMatchObject({ state: 'crashed', message: 'The TypeScript 6 language server exited with code 137: out of memory' });
+        const answer = await server.request(main, 'textDocument/codeAction', params);
+        expect(answer.result).toEqual([{ title: 'Native', kind: 'quickfix' }]);
+        expect(spawner.of('typescript-actions')).toHaveLength(1);
+        expect(server.providers(main, ['textDocument/codeAction'])['textDocument/codeAction']).toEqual({ resolveProvider: false });
+        await server.restart();
+        expect(server.sidecars[0]!.state).toBe('idle');
+    });
+
+    it('is ended with the kind', async () => {
+        const { server, spawner, main } = await started({ 'textDocument/codeAction': () => [] }, { 'textDocument/codeAction': () => [] });
+        await server.request(main, 'textDocument/codeAction', params);
+        await server.stop();
+        const [sidecar] = spawner.of('typescript-actions');
+        expect(sidecar!.kills).toEqual(['SIGTERM']);
+        expect(sidecar!.server.shutdownRequested).toBe(true);
     });
 });

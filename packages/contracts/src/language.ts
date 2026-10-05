@@ -53,7 +53,11 @@ export const LanguageServerStatusSchema = z.object({
     name: z.string().optional(),
     // What the server serves, as LSP language ids and file patterns. Only for a server of a person's own.
     languages: z.array(z.string()).optional(),
-    patterns: z.array(z.string()).optional()
+    patterns: z.array(z.string()).optional(),
+    // Processes of the kind that start when they are first needed and answer one feature only, such as TypeScript 6 for the code actions TypeScript 7 lacks. `idle` means not started yet.
+    sidecars: z
+        .array(z.object({ name: z.string(), title: z.string(), state: z.enum(['idle', 'starting', 'ready', 'crashed']), message: z.string().optional() }))
+        .optional()
 });
 export type LanguageServerStatus = z.infer<typeof LanguageServerStatusSchema>;
 

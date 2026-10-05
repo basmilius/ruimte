@@ -1,5 +1,5 @@
 import { createMemoryTransportPair, FakeLanguageServer } from '@ruimte/smart-editor-lsp/testing';
-import type { ServerCapabilities } from '@ruimte/smart-editor-lsp';
+import type { RequestHandler, ServerCapabilities } from '@ruimte/smart-editor-lsp';
 import type { LanguageChild, LanguageExit, LanguageProcessSpec, SpawnLanguageProcess } from './runtime.ts';
 import { KIND_PROFILES } from './profiles.ts';
 import type { LanguageClock } from './server.ts';
@@ -34,21 +34,33 @@ export interface FakeSpawner {
 }
 
 function nameOf(spec: LanguageProcessSpec): string {
-    const components = Object.values(KIND_PROFILES).flatMap((profile) => profile.components);
+    // The install directory names the kind, which tells apart processes that run the same script, like the sidecar of TypeScript and the TypeScript server of Vue.
+    const kind = spec.args.map((arg) => /\/([^/]+)\/node_modules\//.exec(arg)?.[1]).find((name) => name !== undefined);
+    const profiles = kind !== undefined && kind in KIND_PROFILES ? [KIND_PROFILES[kind as keyof typeof KIND_PROFILES]] : Object.values(KIND_PROFILES);
     // A native server is its own command, and a server of a person's own is named by it.
     return (
-        components.find((component) => spec.command.endsWith(component.entry) || spec.args.some((arg) => arg.endsWith(component.entry)))?.name ?? spec.command
+        profiles
+            .flatMap((profile) => profile.components)
+            .find((component) => spec.command.endsWith(component.entry) || spec.args.some((arg) => arg.endsWith(component.entry)))?.name ?? spec.command
     );
 }
 
 /* Starts no process: every `spawn` is a fake language server on the far end of an in-memory transport. */
-/* The components in `silent` never answer their handshake. */
-export function fakeSpawner(capabilities: Partial<Record<string, ServerCapabilities>> = {}, silent: readonly string[] = []): FakeSpawner {
+/* The components in `silent` never answer their handshake, and `handlers` answer requests from the first one on. */
+export function fakeSpawner(
+    capabilities: Partial<Record<string, ServerCapabilities>> = {},
+    silent: readonly string[] = [],
+    handlers: Partial<Record<string, Record<string, RequestHandler>>> = {}
+): FakeSpawner {
     const processes: FakeProcess[] = [];
     const spawn: SpawnLanguageProcess = (spec) => {
         const name = nameOf(spec);
         const [clientSide, serverSide] = createMemoryTransportPair();
-        const server = new FakeLanguageServer(serverSide, { capabilities: capabilities[name] ?? FULL_CAPABILITIES, silent: silent.includes(name) });
+        const server = new FakeLanguageServer(serverSide, {
+            capabilities: capabilities[name] ?? FULL_CAPABILITIES,
+            silent: silent.includes(name),
+            handlers: handlers[name]
+        });
         const stderrListeners: ((text: string) => void)[] = [];
         let resolveExit: (exit: LanguageExit) => void = () => undefined;
         const exited = new Promise<LanguageExit>((resolve) => {

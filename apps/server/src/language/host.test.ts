@@ -408,6 +408,47 @@ describe('several servers on one document', () => {
         expect(opened.providers['textDocument/completion']).toEqual({ resolveProvider: true, triggerCharacters: ['.', '"'] });
     });
 
+    it('names the process of every code action across the native server, its sidecar and ESLint, and sends a resolve back to the sidecar', async () => {
+        const spawner = fakeSpawner(
+            {
+                typescript: caps({ codeActionProvider: {} }),
+                'typescript-actions': caps({ codeActionProvider: { resolveProvider: true } }),
+                eslint: caps({ codeActionProvider: {} })
+            },
+            [],
+            {
+                typescript: { 'textDocument/codeAction': () => [{ title: 'Add import', kind: 'quickfix' }] },
+                'typescript-actions': {
+                    'textDocument/codeAction': () => [{ title: 'Extract function', kind: 'refactor.extract' }],
+                    'codeAction/resolve': (item) => ({ ...(item as object), edit: { changes: {} } })
+                },
+                eslint: { 'textDocument/codeAction': () => [{ title: 'Fix semi', kind: 'quickfix' }] }
+            }
+        );
+        const { host } = await installed(['typescript', 'eslint'], { files: eslintFiles, spawner });
+        await open(host);
+        await ready(host);
+        await ready(host, 'eslint');
+        const base = { projectId: 'p1', path: 'src/a.ts' };
+        const answer = await host.request({
+            ...base,
+            method: 'textDocument/codeAction',
+            params: { range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } }, context: { diagnostics: [] } }
+        });
+        expect(answer.result).toEqual([
+            { title: 'Add import', kind: 'quickfix' },
+            { title: 'Extract function', kind: 'refactor.extract' },
+            { title: 'Fix semi', kind: 'quickfix' }
+        ]);
+        expect(answer.itemServers).toEqual(['typescript', 'typescript-actions', 'eslint']);
+        const resolved = await host.request({ ...base, method: 'codeAction/resolve', params: { title: 'Extract function' }, server: 'typescript-actions' });
+        expect(resolved).toMatchObject({ server: 'typescript-actions', result: { edit: { changes: {} } } });
+        const statuses = await host.status('p1');
+        expect(statuses.find((status) => status.server === 'typescript')?.sidecars).toEqual([
+            { name: 'typescript-actions', title: 'TypeScript 6', state: 'ready' }
+        ]);
+    });
+
     it('leaves out a server that has not answered a merged call when the deadline passes, and drops its late answer', async () => {
         const spawner = fakeSpawner({
             typescript: caps({ completionProvider: { triggerCharacters: ['.'] } }),

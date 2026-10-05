@@ -9,6 +9,8 @@ export const MERGED_METHODS: ReadonlySet<string> = new Set(['textDocument/comple
 export interface ServerAnswer {
     server: string;
     result: unknown;
+    /* When the answer is a list that already merges several processes: the one that made each item. */
+    itemServers?: readonly string[];
 }
 
 export interface MergedAnswer {
@@ -63,15 +65,45 @@ export function mergeAnswers(method: string, answers: readonly ServerAnswer[]): 
     for (const answer of answers) {
         const part = completionPart(answer.result);
         isIncomplete ||= part.isIncomplete;
-        for (const item of part.items) {
+        part.items.forEach((item, index) => {
             items.push(item);
-            itemServers.push(answer.server);
-        }
+            itemServers.push(answer.itemServers?.[index] ?? answer.server);
+        });
     }
     if (method === 'textDocument/completion') {
         return { result: { isIncomplete, items }, itemServers };
     }
     return { result: items.length === 0 && answers.every((answer) => answer.result === null) ? null : items, itemServers };
+}
+
+function actionKind(action: unknown): string | undefined {
+    return isRecord(action) && typeof action.kind === 'string' ? action.kind : undefined;
+}
+
+function actionKey(action: unknown): string {
+    return `${actionKind(action) ?? ''}\0${isRecord(action) && typeof action.title === 'string' ? action.title : ''}`;
+}
+
+/*
+ * The code actions of the server of the language and of its sidecar as one list, the server's own first.
+ * An action the sidecar offers under the same title and kind is the server's, and a `source.*` kind the
+ * server offers at all is left to it (organize imports, remove unused imports and the like exist in both under other titles).
+ */
+export function mergeCodeActions(primary: ServerAnswer, extra: ServerAnswer): MergedAnswer {
+    const own = completionPart(primary.result).items;
+    const items = [...own];
+    const itemServers = own.map(() => primary.server);
+    const taken = new Set(own.map(actionKey));
+    const ownKinds = new Set(own.map(actionKind));
+    for (const action of completionPart(extra.result).items) {
+        const kind = actionKind(action);
+        if (taken.has(actionKey(action)) || (kind?.startsWith('source.') === true && ownKinds.has(kind))) {
+            continue;
+        }
+        items.push(action);
+        itemServers.push(extra.server);
+    }
+    return { result: items.length === 0 && primary.result === null && extra.result === null ? null : items, itemServers };
 }
 
 /* Options a union serves better than the first server's: what triggers a feature and which kinds of action it offers. */

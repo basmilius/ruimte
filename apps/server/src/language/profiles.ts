@@ -35,6 +35,10 @@ export interface ComponentProfile {
     env?: Record<string, string>;
     /* A server told that the client pulls diagnostics stops pushing them, so the daemon asks for them (`textDocument/diagnostic`). */
     pullDiagnostics?: boolean;
+    /* Starts the first time code actions are asked for a document it serves, and is asked for code actions only; its diagnostics are never shown. */
+    sidecar?: boolean;
+    /* The package under the install's `node_modules` whose `lib/tsserver.js` the process drives when the project has none of its own; `typescript` when absent. */
+    sdkPackage?: string;
 }
 
 /* What a project has to hold for an addition to serve it: any of the files, or a dependency, or a field of its `package.json`. */
@@ -51,6 +55,9 @@ export interface KindProfile {
     /* Set for a kind that serves beside the kind of the language, in the projects that call for it, rather than instead of it. */
     activation?: Activation;
 }
+
+/* Where the TypeScript 6 SDK of the `typescript` kind sits beside its TypeScript 7 package, under an alias of the same npm package. */
+const SIDECAR_SDK_PACKAGE = 'typescript-6';
 
 const SCRIPT_LANGUAGES = ['typescript', 'typescriptreact', 'javascript', 'javascriptreact'] as const;
 
@@ -95,6 +102,28 @@ function nativeTypescriptComponent(): ComponentProfile {
         initializationOptions: () => ({ disablePushDiagnostics: true, logVerbosity: LOG_VERBOSITY_WARNING }),
         configuration: NATIVE_TYPESCRIPT_SETTINGS,
         pullDiagnostics: true
+    };
+}
+
+/*
+ * TypeScript 7 has most quick fixes missing and no refactors, so a second process of TypeScript 6 behind
+ * typescript-language-server answers the code actions it lacks. It starts with the first code action asked for.
+ */
+function typescriptActionsComponent(): ComponentProfile {
+    return {
+        name: 'typescript-actions',
+        title: 'TypeScript 6',
+        languages: SCRIPT_LANGUAGES,
+        entry: 'typescript-language-server/lib/cli.mjs',
+        sidecar: true,
+        sdkPackage: SIDECAR_SDK_PACKAGE,
+        args: () => ['--stdio'],
+        initializationOptions: (context) => ({
+            hostInfo: 'ruimte',
+            disableAutomaticTypingAcquisition: true,
+            tsserver: { path: join(context.typescriptLib, 'tsserver.js'), useSyntaxServer: 'never' },
+            preferences: TYPESCRIPT_PREFERENCES
+        })
     };
 }
 
@@ -196,7 +225,7 @@ const TAILWIND_SETTINGS = {
 };
 
 export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
-    typescript: { kind: 'typescript', components: [nativeTypescriptComponent()] },
+    typescript: { kind: 'typescript', components: [nativeTypescriptComponent(), typescriptActionsComponent()] },
     vue: {
         kind: 'vue',
         components: [
@@ -468,12 +497,17 @@ export async function activates(profile: KindProfile, facts: ProjectFacts): Prom
  * with a tsserver in it, since that is the version its code is written against. TypeScript 7 ships no
  * tsserver.js, so a project on it falls back to the pinned one.
  */
-export async function resolveTypescriptLib(projectFolder: string, installDirectory: string, exists: (path: string) => Promise<boolean>): Promise<string> {
+export async function resolveTypescriptLib(
+    projectFolder: string,
+    installDirectory: string,
+    exists: (path: string) => Promise<boolean>,
+    sdkPackage = 'typescript'
+): Promise<string> {
     const own = join(projectFolder, 'node_modules', 'typescript', 'lib');
     if (await exists(join(own, 'tsserver.js'))) {
         return own;
     }
-    return join(installDirectory, 'node_modules', 'typescript', 'lib');
+    return join(installDirectory, 'node_modules', sdkPackage, 'lib');
 }
 
 /* What the lookup of a project's own TypeScript reads from the file system. */

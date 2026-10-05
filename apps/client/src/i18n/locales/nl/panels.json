@@ -547,6 +547,12 @@
         "failed": "De language server is niet bereikbaar: {{message}}",
         "none": "Geen language server voor dit bestand",
         "logs": "Logs",
+        "sidecar": {
+            "idle": "{{title}}, voor meer code actions, start wanneer nodig",
+            "starting": "{{title}}, voor meer code actions, start op",
+            "ready": "{{title}}, voor meer code actions",
+            "crashed": "{{title}}, voor meer code actions, is gestopt: {{message}}"
+        },
         "hover": {
             "quickFix": "Quick fix…",
             "quickFixNone": "Deze language server biedt geen quick fixes",

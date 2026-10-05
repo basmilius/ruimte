@@ -45,6 +45,7 @@ exports[`no vocabulary a daemon sends gains or loses a value 1`] = `
   "clear, tinted",
   "composer-json, package-json, run-xml",
   "conflicted, staged, unstaged, untracked",
+  "crashed, idle, ready, starting",
   "crashed, indexing, installing, not-installed, ready, starting, stopped",
   "cylinder, diamond, pill, rect, round",
   "dark, light",

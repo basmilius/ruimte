@@ -547,6 +547,12 @@
         "failed": "Could not reach the language server: {{message}}",
         "none": "No language server serves this file",
         "logs": "Logs",
+        "sidecar": {
+            "idle": "{{title}}, for more code actions, starts when needed",
+            "starting": "{{title}}, for more code actions, is starting",
+            "ready": "{{title}}, for more code actions",
+            "crashed": "{{title}}, for more code actions, stopped: {{message}}"
+        },
         "hover": {
             "quickFix": "Quick fix…",
             "quickFixNone": "This language server offers no quick fixes",

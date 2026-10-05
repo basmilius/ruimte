@@ -227,7 +227,11 @@ describe('pinned versions', () => {
         expect(pinnedVersionsOf('php')).toEqual({ intelephense: '1.18.5' });
         expect(Object.keys(pinnedVersionsOf('vue'))).toEqual(['typescript-language-server', 'typescript', '@vue/language-server', '@vue/typescript-plugin']);
         expect(pinnedVersionsOf('vue').typescript).toBe('6.0.3');
-        expect(pinnedVersionsOf('typescript')).toEqual({ typescript: '7.0.2' });
+        expect(pinnedVersionsOf('typescript')).toEqual({
+            typescript: '7.0.2',
+            'typescript-language-server': '6.0.1',
+            'typescript-6': 'npm:typescript@6.0.3'
+        });
         expect(versionOf('typescript')).toBe('7.0.2');
         expect(versionOf('vue')).toBe('3.3.12');
         expect(pinnedVersionsOf('css')).toEqual(pinnedVersionsOf('json'));

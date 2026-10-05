@@ -33690,6 +33690,37 @@
               "items": {
                 "type": "string"
               }
+            },
+            "sidecars": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "idle",
+                      "starting",
+                      "ready",
+                      "crashed"
+                    ]
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "title",
+                  "state"
+                ]
+              }
             }
           },
           "required": [
@@ -33785,6 +33816,37 @@
             "items": {
               "type": "string"
             }
+          },
+          "sidecars": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "idle",
+                    "starting",
+                    "ready",
+                    "crashed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "title",
+                "state"
+              ]
+            }
           }
         },
         "required": [
@@ -33869,6 +33931,37 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "sidecars": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "idle",
+                    "starting",
+                    "ready",
+                    "crashed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "title",
+                "state"
+              ]
             }
           }
         },
@@ -52859,6 +52952,37 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "sidecars": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "idle",
+                    "starting",
+                    "ready",
+                    "crashed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "title",
+                "state"
+              ]
             }
           }
         },

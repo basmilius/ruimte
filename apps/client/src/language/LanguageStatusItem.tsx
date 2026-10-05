@@ -4,7 +4,7 @@ import type { LanguageServerStatus } from '@ruimte/contracts';
 import { Button, Popover, Spinner, Tooltip } from '@basmilius/desktop-ui';
 import type { EditorLanguage } from './editor-language';
 import { Dot, LogDialog } from './ServerParts';
-import { report, serverDetail, useStatuses } from './server-status';
+import { report, serverDetail, sidecarDetails, useStatuses } from './server-status';
 import type { LanguageStatusTracker } from './status';
 import { actionsOf, chipServer, kindOf, listedServers, nameOf, packageOf, toneOf } from './status-view';
 import { useServingKinds } from './use-serving-kinds';
@@ -103,6 +103,11 @@ function ServerRow({
             </div>
             <div className="pl-4 text-xs break-words text-text-faint">{packageOf(status.server, statuses)}</div>
             {detail !== '' && <div className="pl-4 text-xs break-words text-text-muted">{detail}</div>}
+            {sidecarDetails(status, t).map((line) => (
+                <div key={line} className="pl-4 text-xs break-words text-text-faint">
+                    {line}
+                </div>
+            ))}
             {(actions.install || actions.restart || actions.log) && (
                 <div className="flex gap-2 pl-4">
                     {kind !== null && actions.install && (

@@ -23,6 +23,7 @@ import {
 import { errorText } from '../error-text.ts';
 import type { FileChange } from './file-watch.ts';
 import { LanguageLog } from './log.ts';
+import { mergeCodeActions, mergeProviders } from './merge.ts';
 import {
     componentServes,
     lspLanguageId,
@@ -36,6 +37,12 @@ import type { LanguageChild, LanguageExit, LanguageRuntime, SpawnLanguageProcess
 
 // How long a stopped process may take to go before it is killed.
 export const STOP_GRACE_MS = 3_000;
+
+// How long a server beside the first has to answer a request that merges the answers of several, after which it is left out.
+export const MERGE_DEADLINE_MS = 1_000;
+
+// How long the first code action request waits for a sidecar that has to start, which loads the project before it answers.
+export const SIDECAR_START_DEADLINE_MS = 10_000;
 
 // How long a process may take to answer its handshake before the kind counts as crashed.
 export const INITIALIZE_TIMEOUT_MS = 30_000;
@@ -114,6 +121,23 @@ interface Component {
     pulls: Map<string, () => void>;
 }
 
+/* A merged answer: items of several processes, each with the one that made it. */
+export interface ServerReply {
+    result: unknown;
+    server: string;
+    version: number;
+    /* Set when the result is a list of items from more than one process. */
+    itemServers?: string[];
+}
+
+type Expired = 'expired';
+
+/* What a sidecar of code actions will offer, which is known before it starts. */
+const SIDECAR_ACTION_OPTIONS = {
+    resolveProvider: true,
+    codeActionKinds: ['quickfix', 'refactor', 'refactor.extract', 'refactor.inline', 'refactor.rewrite', 'refactor.move']
+};
+
 type Phase = 'stopped' | 'starting' | 'ready' | 'crashed';
 
 /*
@@ -135,6 +159,9 @@ export class LanguageServer {
     private generation = 0;
     private readyAt: number | null = null;
     private startPromise: Promise<void> | undefined;
+    private sidecarPromise: Promise<Component | null> | undefined;
+    /* Why a sidecar did not start or ended, which keeps it from starting again until the kind does. */
+    private sidecarFailure: string | undefined;
 
     constructor(options: LanguageServerOptions) {
         this.options = options;
@@ -148,7 +175,7 @@ export class LanguageServer {
     }
 
     get state(): LanguageServerState {
-        if (this.phase === 'ready' && this.components.some((component) => component.progress.size > 0)) {
+        if (this.phase === 'ready' && this.components.some((component) => component.profile.sidecar !== true && component.progress.size > 0)) {
             return 'indexing';
         }
         return this.phase;
@@ -161,6 +188,20 @@ export class LanguageServer {
 
     get message(): string | undefined {
         return this.failure;
+    }
+
+    /* The sidecars of the kind and how they are doing, for a status. */
+    get sidecars(): Array<{ name: string; title: string; state: 'idle' | 'starting' | 'ready' | 'crashed'; message?: string }> {
+        return this.options.profile.components
+            .filter((profile) => profile.sidecar === true)
+            .map((profile) => {
+                const component = this.components.find((candidate) => candidate.profile === profile);
+                const title = profile.title ?? profile.name;
+                if (this.sidecarFailure !== undefined) {
+                    return { name: profile.name, title, state: 'crashed', message: this.sidecarFailure };
+                }
+                return { name: profile.name, title, state: component === undefined ? 'idle' : component.session.state === 'ready' ? 'ready' : 'starting' };
+            });
     }
 
     get documentCount(): number {
@@ -276,10 +317,11 @@ export class LanguageServer {
         if (this.phase !== 'ready') {
             return false;
         }
-        return this.orderFor(document, method, params ?? {}, hint).some((component) => {
+        const answers = this.orderFor(document, method, params ?? {}, hint).some((component) => {
             const open = component.documents.get(document.absolutePath);
             return open !== undefined && component.session.supports(method, open);
         });
+        return answers || (hint === undefined && this.sidecarFor(document, method, params ?? {}) !== undefined);
     }
 
     /* Whether one of the processes of this server goes by this name. */
@@ -302,6 +344,10 @@ export class LanguageServer {
                 }
             }
         }
+        // The sidecar has not started yet when it is first asked, so what it will offer is known from what it is for.
+        if (methods.includes('textDocument/codeAction') && this.sidecarFor(document, 'textDocument/codeAction', {}) !== undefined) {
+            return mergeProviders([result, { 'textDocument/codeAction': SIDECAR_ACTION_OPTIONS }]);
+        }
         return result;
     }
 
@@ -310,10 +356,32 @@ export class LanguageServer {
      * first of the Vue pair that supports it. Concurrent clients never cancel each other, so
      * superseding is the client's.
      */
-    async request(document: SharedDocument, method: string, params: object, hint?: string): Promise<{ result: unknown; server: string; version: number }> {
+    async request(document: SharedDocument, method: string, params: object, hint?: string): Promise<ServerReply> {
         if (this.phase !== 'ready') {
             throw new LspError(`The ${this.label} language server is ${this.state}`, ErrorCodes.ServerNotInitialized);
         }
+        const sidecar = hint === undefined ? this.sidecarFor(document, method, params) : undefined;
+        if (sidecar === undefined) {
+            return this.requestProcess(document, method, params, hint);
+        }
+        const [main, extra] = await Promise.allSettled([this.requestProcess(document, method, params), this.askSidecar(sidecar, document, method, params)]);
+        if (extra.status === 'rejected') {
+            this.log.push('host', `The sidecar failed ${method}: ${errorText(extra.reason)}`);
+        }
+        if (extra.status === 'rejected' || extra.value === null) {
+            if (main.status === 'rejected') {
+                throw main.reason;
+            }
+            return main.value;
+        }
+        if (main.status === 'rejected') {
+            return extra.value;
+        }
+        const merged = mergeCodeActions({ server: main.value.server, result: main.value.result }, { server: extra.value.server, result: extra.value.result });
+        return { ...main.value, result: merged.result, itemServers: merged.itemServers };
+    }
+
+    private async requestProcess(document: SharedDocument, method: string, params: object, hint?: string): Promise<ServerReply> {
         for (const component of this.orderFor(document, method, params, hint)) {
             const open = component.documents.get(document.absolutePath);
             if (open && component.session.supports(method, open)) {
@@ -322,6 +390,62 @@ export class LanguageServer {
             }
         }
         throw new LspError(`No ${this.label} server answers ${method} for this document`, ErrorCodes.MethodNotFound);
+    }
+
+    /* The sidecar that should be asked for this: code actions for a document it serves, when a person is after fixes or refactors and it has not failed. */
+    private sidecarFor(document: SharedDocument, method: string, params: object): ComponentProfile | undefined {
+        if (method !== 'textDocument/codeAction' || this.sidecarFailure !== undefined || this.phase !== 'ready') {
+            return undefined;
+        }
+        const only = (params as { context?: { only?: string[] } }).context?.only ?? [];
+        // Organize imports and the like are the native server's own, and not worth starting a second process for.
+        if (only.length > 0 && !only.some((kind) => kind === '' || kind.startsWith('quickfix') || kind.startsWith('refactor'))) {
+            return undefined;
+        }
+        return this.options.profile.components.find(
+            (profile) => profile.sidecar === true && componentServes(profile, document.languageId, document.storedPath)
+        );
+    }
+
+    /*
+     * The answer of the sidecar, started with the first call and kept in step with the documents after
+     * that. Null when it did not answer in time (the first call allows for the start), failed or could
+     * not start; the others' answer then stands alone.
+     */
+    private async askSidecar(profile: ComponentProfile, document: SharedDocument, method: string, params: object): Promise<ServerReply | null> {
+        const cold = !this.components.some((component) => component.profile === profile && component.session.state === 'ready');
+        const answer = (async (): Promise<ServerReply | null> => {
+            const component = await this.ensureSidecar(profile);
+            const open = component?.documents.get(document.absolutePath);
+            if (!component || !open || !component.session.supports(method, open)) {
+                return null;
+            }
+            const result = await open.request(method, params, { cancelPrevious: false, timeoutMs: 0 });
+            return { result, server: profile.name, version: open.version };
+        })();
+        const outcome = await this.beforeDeadline(answer, cold ? SIDECAR_START_DEADLINE_MS : MERGE_DEADLINE_MS);
+        if (outcome === 'expired') {
+            this.log.push(
+                'host',
+                `${profile.title ?? profile.name} did not answer ${method} within ${(cold ? SIDECAR_START_DEADLINE_MS : MERGE_DEADLINE_MS) / 1000} seconds and was left out`
+            );
+            // A late answer is dropped, and a failure of it is the log's.
+            answer.catch((error) => this.log.push('host', errorText(error)));
+            return null;
+        }
+        return outcome;
+    }
+
+    private async beforeDeadline<T>(answer: Promise<T>, ms: number): Promise<T | Expired> {
+        let cancel = (): void => undefined;
+        const expired = new Promise<Expired>((resolve) => {
+            cancel = this.clock.set(() => resolve('expired'), ms);
+        });
+        try {
+            return await Promise.race([answer, expired]);
+        } finally {
+            cancel();
+        }
     }
 
     /* Runs a server command for this document, on the process that offered it (`hint`) or the first that supports commands. */
@@ -350,6 +474,7 @@ export class LanguageServer {
     /* Ends the processes and leaves the documents attached, for a restart or for the project going. */
     async stop(): Promise<void> {
         this.generation++;
+        this.sidecarPromise = undefined;
         const components = this.components;
         this.components = [];
         this.phase = 'stopped';
@@ -369,6 +494,7 @@ export class LanguageServer {
         this.phase = 'starting';
         this.failure = undefined;
         this.notify();
+        this.sidecarFailure = undefined;
         const { installDirectory, folder, exists } = this.options;
         const context: LaunchContext = {
             installDirectory,
@@ -383,7 +509,7 @@ export class LanguageServer {
                 : ''
         };
         try {
-            for (const profile of this.options.profile.components) {
+            for (const profile of this.options.profile.components.filter((candidate) => candidate.sidecar !== true)) {
                 if (generation !== this.generation) {
                     return;
                 }
@@ -429,6 +555,74 @@ export class LanguageServer {
         return Promise.race([handshake, expired]).finally(cancel);
     }
 
+    /* Starts the sidecar, or joins the start under way. Null when it cannot start, which is remembered until the kind starts again. */
+    private ensureSidecar(profile: ComponentProfile): Promise<Component | null> {
+        const running = this.components.find((component) => component.profile === profile && component.session.state === 'ready');
+        if (running) {
+            return Promise.resolve(running);
+        }
+        if (this.sidecarPromise === undefined) {
+            const starting: Promise<Component | null> = this.startSidecar(profile).finally(() => {
+                if (this.sidecarPromise === starting) {
+                    this.sidecarPromise = undefined;
+                }
+            });
+            this.sidecarPromise = starting;
+        }
+        return this.sidecarPromise;
+    }
+
+    private async startSidecar(profile: ComponentProfile): Promise<Component | null> {
+        const generation = this.generation;
+        if (this.phase !== 'ready' || this.sidecarFailure !== undefined) {
+            return null;
+        }
+        const { installDirectory, folder, exists } = this.options;
+        const context: LaunchContext = {
+            installDirectory,
+            projectFolder: folder,
+            typescriptLib: await resolveTypescriptLib(folder, installDirectory, exists, profile.sdkPackage),
+            typescriptExecutable: ''
+        };
+        if (generation !== this.generation) {
+            return null;
+        }
+        this.notify();
+        const component = this.spawnComponent(profile, context, generation);
+        this.components.push(component);
+        this.notify();
+        try {
+            await this.withinHandshake(component.session.initialize(), profile);
+        } catch (error) {
+            if (generation === this.generation) {
+                this.dropSidecar(component, `The ${profile.title ?? profile.name} process did not start: ${errorText(error)}`);
+            }
+            return null;
+        }
+        if (generation !== this.generation) {
+            return null;
+        }
+        for (const document of this.documents.values()) {
+            this.openInComponents(document, [component]);
+        }
+        this.notify();
+        return component;
+    }
+
+    /* A sidecar that failed or ended is let go of, and stays away until the kind starts again; the kind itself carries on. */
+    private dropSidecar(component: Component, message: string): void {
+        if (!this.components.includes(component)) {
+            return;
+        }
+        this.components = this.components.filter((candidate) => candidate !== component);
+        component.documents.clear();
+        this.release(component);
+        component.child.kill('SIGTERM');
+        this.sidecarFailure = message;
+        this.log.push('host', message);
+        this.notify();
+    }
+
     private spawnComponent(profile: ComponentProfile, context: LaunchContext, generation: number): Component {
         const { runtime } = this.options;
         const own = profile.native ? context.typescriptExecutable : profile.command;
@@ -461,7 +655,8 @@ export class LanguageServer {
             session.onProgress((params) => this.progressed(component, params)),
             session.onDiagnostics((params) => {
                 const document = this.documentByUri(params.uri);
-                if (document) {
+                // The diagnostics of the native server are the ones shown, so a sidecar's would only repeat or contradict them.
+                if (document && profile.sidecar !== true) {
                     this.options.hooks.diagnostics(document, profile.name, params);
                 }
             }),
@@ -471,9 +666,14 @@ export class LanguageServer {
         return component;
     }
 
-    private openInComponents(document: SharedDocument): void {
-        for (const component of this.components) {
-            if (!componentServes(component.profile, document.languageId, document.storedPath) || component.documents.has(document.absolutePath)) {
+    private openInComponents(document: SharedDocument, only: readonly Component[] = this.components): void {
+        for (const component of only) {
+            // A sidecar that is still starting opens every document once it is up.
+            if (
+                component.session.state !== 'ready' ||
+                !componentServes(component.profile, document.languageId, document.storedPath) ||
+                component.documents.has(document.absolutePath)
+            ) {
                 continue;
             }
             try {
@@ -502,7 +702,8 @@ export class LanguageServer {
         if (this.kind === 'vue') {
             return vueServerOrder(method, document.text, params).flatMap(named);
         }
-        return this.components;
+        // A sidecar answers only for what it was asked, by name, or through `askSidecar`.
+        return this.components.filter((component) => component.profile.sidecar !== true);
     }
 
     private documentByUri(uri: string): SharedDocument | undefined {
@@ -604,7 +805,9 @@ export class LanguageServer {
               : `exited with code ${exit.code ?? 'unknown'}`;
         const said = this.log.last('server');
         const message = `The ${component.profile.title ?? component.profile.name} language server ${reason}${said ? `: ${said}` : ''}`;
-        if (this.phase === 'ready' && this.readyAt !== null && this.now() - this.readyAt >= STABLE_AFTER_MS) {
+        if (component.profile.sidecar === true) {
+            this.dropSidecar(component, message);
+        } else if (this.phase === 'ready' && this.readyAt !== null && this.now() - this.readyAt >= STABLE_AFTER_MS) {
             void this.recover(message);
         } else {
             void this.fail(message);
@@ -633,6 +836,7 @@ export class LanguageServer {
         this.components = [];
         this.generation++;
         this.readyAt = null;
+        this.sidecarPromise = undefined;
         for (const component of components) {
             this.clearReports(component);
             component.documents.clear();

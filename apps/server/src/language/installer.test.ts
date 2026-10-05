@@ -119,7 +119,11 @@ describe('language installer', () => {
         expect(await installer.state('typescript')).toBe('installed');
         expect(calls.map((call) => call.args)).toEqual([['install', '--ignore-scripts'], ['--version']]);
         expect(calls[1]!.command).toBe(join(root, 'typescript', 'node_modules', KIND_PROFILES.typescript.components[0]!.entry));
-        expect(JSON.parse(await readFile(join(root, 'typescript', 'package.json'), 'utf8')).dependencies).toEqual({ typescript: '7.0.2' });
+        expect(JSON.parse(await readFile(join(root, 'typescript', 'package.json'), 'utf8')).dependencies).toEqual({
+            typescript: '7.0.2',
+            'typescript-language-server': '6.0.1',
+            'typescript-6': 'npm:typescript@6.0.3'
+        });
     });
 
     it('does not count a native server that reports another version or fails as installed', async () => {

@@ -56,7 +56,7 @@ import {
     type ProjectFacts
 } from './profiles.ts';
 import { bunRuntime, runCommand, spawnLanguageProcess, type LanguageRuntime, type RunCommand, type SpawnLanguageProcess } from './runtime.ts';
-import { LanguageServer, realLanguageClock, type LanguageClock, type LanguageServerHooks, type SharedDocument } from './server.ts';
+import { LanguageServer, MERGE_DEADLINE_MS, realLanguageClock, type LanguageClock, type LanguageServerHooks, type SharedDocument } from './server.ts';
 import { versionOf } from './versions.ts';
 
 export class LanguageError extends CodedError<LanguageErrorCode> {}
@@ -118,9 +118,6 @@ interface PendingEdit {
     clientId: string;
     settle(result: ApplyWorkspaceEditResult): void;
 }
-
-/* How long a server beside the first has to answer a request that merges the answers of several, after which it is left out. */
-export const MERGE_DEADLINE_MS = 1_000;
 
 /* How long a client has to say whether it made an edit. */
 const EDIT_ANSWER_MS = 30_000;
@@ -373,7 +370,7 @@ export class LanguageHost {
             }
             const merged = mergeAnswers(
                 method,
-                answers.map((answer) => ({ server: answer.server, result: answer.result }))
+                answers.map((answer) => ({ server: answer.server, result: answer.result, itemServers: answer.itemServers }))
             );
             return {
                 result: merged.result,
@@ -626,7 +623,11 @@ export class LanguageHost {
 
     /* The server of a kind is gone from the document, so what it reported is too. */
     private clearDiagnostics(project: ProjectLanguage, document: SharedDocument, kind: LanguageServerId): void {
-        for (const component of (isCatalogKind(kind) ? KIND_PROFILES[kind].components : [{ name: kind }]) as readonly { name: string }[]) {
+        for (const component of (isCatalogKind(kind)
+            ? KIND_PROFILES[kind].components.filter((candidate) => candidate.sidecar !== true)
+            : [{ name: kind }]) as readonly {
+            name: string;
+        }[]) {
             this.toHolders(project.projectId, {
                 event: 'language.diagnostics',
                 payload: { projectId: project.projectId, path: document.storedPath, server: component.name, diagnostics: [] }
@@ -752,12 +753,14 @@ export class LanguageHost {
 
     private serverStatus(server: LanguageServer): LanguageServerStatus {
         const capabilities = server.capabilities;
+        const { sidecars } = server;
         return {
             ...this.identityOf(server.kind),
             state: server.state,
             documents: server.documentCount,
             ...(server.message ? { message: server.message } : {}),
-            ...(capabilities ? { capabilities } : {})
+            ...(capabilities ? { capabilities } : {}),
+            ...(sidecars.length > 0 ? { sidecars } : {})
         };
     }
 

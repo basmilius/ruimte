@@ -8,7 +8,7 @@ import { CustomServerDialog } from '@/language/CustomServerDialog';
 import { draftOf, emptyDraft, type CustomDraft } from '@/language/custom-draft';
 import { CustomServersTracker, useCustomServers } from '@/language/custom-servers';
 import { Dot, LogDialog } from '@/language/ServerParts';
-import { report, serverDetail, useStatuses } from '@/language/server-status';
+import { report, serverDetail, sidecarDetails, useStatuses } from '@/language/server-status';
 import { draftFiles } from '@/language/project-files';
 import { acquireProjectLanguage, type ProjectLanguage } from '@/language/project-language';
 import { actionsOf, groupedStatuses, isOwn, kindOf, nameOf, packageOf, toneOf } from '@/language/status-view';
@@ -95,6 +95,11 @@ function ServerRow({ status, statuses, tracker, searchId, onLog }: ServerRowProp
                 <>
                     {packageOf(status.server, statuses)}
                     {detail !== '' && <span className="block break-words">{detail}</span>}
+                    {sidecarDetails(status, t).map((line) => (
+                        <span key={line} className="block break-words">
+                            {line}
+                        </span>
+                    ))}
                 </>
             }
             control={

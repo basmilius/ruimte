@@ -304,6 +304,80 @@ describe('TypeScript, on the native server of TypeScript 7', () => {
         expect(chain.at(-1)!.range.start).toEqual({ line: 0, character: 0 });
     }, 60_000);
 
+    test('offers the refactors and fixes TypeScript 7 lacks from the TypeScript 6 sidecar, and runs them there', async () => {
+        const text = [
+            'export function total(values: number[]): number {',
+            '    const unused = 1;',
+            '    let sum = 0;',
+            '    for (const value of values) {',
+            '        sum += value * 2;',
+            '    }',
+            '    return sum;',
+            '}',
+            ''
+        ].join('\n');
+        await install('typescript');
+        await writeFile(join(plain, 'src', 'actions.ts'), text);
+        await host.open('c1', { projectId: 'p2', path: 'src/actions.ts', languageId: 'typescript', text });
+        await waitReady('typescript', 'p2');
+        const started = specs.length;
+        const loop = positionOf(text, 'for (const value');
+        const body = { start: loop, end: { line: loop.line + 2, character: 5 } };
+        const refactors = await eventually(
+            'the extract function refactor',
+            () => ask('src/actions.ts', 'textDocument/codeAction', { range: body, context: { diagnostics: [], only: ['refactor'] } }, 'p2'),
+            (reply) => (reply.result as { title: string }[]).some((action) => /Extract to function/.test(action.title)),
+            120_000
+        );
+        const actions = refactors.result as { title: string; kind?: string; edit?: unknown; command?: { command: string; arguments: unknown[] } }[];
+        const index = actions.findIndex((action) => /Extract to function/.test(action.title));
+        expect(refactors.itemServers?.[index]).toBe('typescript-actions');
+        // The second process is the sidecar: a TypeScript 6 behind typescript-language-server, driving its own SDK.
+        const sidecar = specs.slice(started).find((spec) => spec.args.some((arg) => arg.endsWith('typescript-language-server/lib/cli.mjs')));
+        expect(sidecar).toBeDefined();
+        expect(JSON.stringify(sidecar!.args)).not.toContain('--lsp');
+        const extract = actions[index]!;
+        // Its edit is made by a command the sidecar runs, which ends in an edit that goes to the client.
+        const resolved = await ask('src/actions.ts', 'codeAction/resolve', extract, 'p2').catch(() => null);
+        const command = (resolved?.result as typeof extract | undefined)?.command ?? extract.command;
+        expect(resolved?.result !== undefined || command !== undefined).toBe(true);
+        if (command) {
+            events.length = 0;
+            const pending = host.command('c1', {
+                projectId: 'p2',
+                path: 'src/actions.ts',
+                command: command.command,
+                arguments: command.arguments,
+                server: 'typescript-actions'
+            });
+            const edit = await eventually('the edit of the refactor', () => events.find((event) => event.event === 'language.edit'));
+            expect(edit).toBeDefined();
+            host.answerEdit('c1', { projectId: 'p2', editId: (edit!.payload as { editId: string }).editId, applied: true });
+            await pending.catch(() => undefined);
+        }
+
+        const unused = { start: { line: 1, character: 10 }, end: { line: 1, character: 16 } };
+        const fixes = await ask(
+            'src/actions.ts',
+            'textDocument/codeAction',
+            {
+                range: unused,
+                context: {
+                    diagnostics: [{ range: unused, severity: 4, code: 6133, source: 'ts', message: "'unused' is declared but its value is never read." }],
+                    only: ['quickfix']
+                }
+            },
+            'p2'
+        );
+        const titles = (fixes.result as { title: string }[]).map((action) => action.title);
+        expect(titles.some((title) => /unused/i.test(title))).toBe(true);
+        const fixIndex = titles.findIndex((title) => /unused/i.test(title));
+        expect(fixes.itemServers?.[fixIndex]).toBe('typescript-actions');
+        const status = (await host.status('p2')).find((candidate) => candidate.server === 'typescript');
+        expect(status?.sidecars).toEqual([{ name: 'typescript-actions', title: 'TypeScript 6', state: 'ready' }]);
+        await host.closeDocument('c1', { projectId: 'p2', path: 'src/actions.ts' });
+    }, 240_000);
+
     test('keeps the server running after its last document closes', async () => {
         await host.closeDocument('c1', { projectId: 'p2', path: 'src/a.ts' });
         const status = (await host.status('p2')).find((candidate) => candidate.server === 'typescript');
