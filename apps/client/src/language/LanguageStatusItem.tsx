@@ -29,10 +29,7 @@ export function LanguageStatusItem({ language, name }: { language: EditorLanguag
     const running = listed.filter((status) => actionsOf(status).restart);
     const restartAll = (): void => {
         for (const status of running) {
-            const kind = kindOf(status.server);
-            if (kind !== null) {
-                void tracker.restart(kind).catch((error: unknown) => report(error, t));
-            }
+            void tracker.restart(status.server).catch((error: unknown) => report(error, t));
         }
     };
 
@@ -50,7 +47,7 @@ export function LanguageStatusItem({ language, name }: { language: EditorLanguag
                             <>
                                 <Spinner size={12} />
                                 <span className="text-text-faint">
-                                    {nameOf(busy.server)} {t(`language.state.${busy.state}`).toLowerCase()}
+                                    {nameOf(busy.server, statuses)} {t(`language.state.${busy.state}`).toLowerCase()}
                                 </span>
                             </>
                         )}
@@ -60,7 +57,7 @@ export function LanguageStatusItem({ language, name }: { language: EditorLanguag
                     <Popover.Title className="px-2 pt-1 pb-1 text-xs font-medium text-text">{t('language.title')}</Popover.Title>
                     {listed.length === 0 && <div className="px-2 py-1.5 text-xs text-text-muted">{t('language.none')}</div>}
                     {listed.map((status) => (
-                        <ServerRow key={status.server} status={status} tracker={tracker} onLog={() => setLogOf(status.server)} />
+                        <ServerRow key={status.server} status={status} statuses={statuses} tracker={tracker} onLog={() => setLogOf(status.server)} />
                     ))}
                     {listed.length > 0 && (
                         <div className="flex items-center gap-2 border-t border-border pt-2">
@@ -79,7 +76,17 @@ export function LanguageStatusItem({ language, name }: { language: EditorLanguag
     );
 }
 
-function ServerRow({ status, tracker, onLog }: { status: LanguageServerStatus; tracker: LanguageStatusTracker; onLog(): void }) {
+function ServerRow({
+    status,
+    statuses,
+    tracker,
+    onLog
+}: {
+    status: LanguageServerStatus;
+    statuses: readonly LanguageServerStatus[];
+    tracker: LanguageStatusTracker;
+    onLog(): void;
+}) {
     const { t } = useTranslation('panels');
     const kind = kindOf(status.server);
     const actions = actionsOf(status);
@@ -90,11 +97,11 @@ function ServerRow({ status, tracker, onLog }: { status: LanguageServerStatus; t
         <div className="flex flex-col gap-1 rounded-md px-2 py-1.5">
             <div className="flex items-center gap-2 text-xs">
                 {status.state === 'installing' ? <Spinner size={12} /> : <Dot tone={toneOf(status.state)} />}
-                <span className="font-medium text-text">{nameOf(status.server)}</span>
+                <span className="font-medium text-text">{nameOf(status.server, statuses)}</span>
                 <span className="font-mono text-text-faint">{status.version}</span>
                 <span className="ml-auto text-text-muted">{t(`language.state.${status.state}`)}</span>
             </div>
-            <div className="pl-4 text-xs text-text-faint">{packageOf(status.server)}</div>
+            <div className="pl-4 text-xs break-words text-text-faint">{packageOf(status.server, statuses)}</div>
             {detail !== '' && <div className="pl-4 text-xs break-words text-text-muted">{detail}</div>}
             {(actions.install || actions.restart || actions.log) && (
                 <div className="flex gap-2 pl-4">
@@ -103,8 +110,8 @@ function ServerRow({ status, tracker, onLog }: { status: LanguageServerStatus; t
                             {t('language.install')}
                         </Button>
                     )}
-                    {kind !== null && actions.restart && (
-                        <Button size="xs" variant="secondary" onClick={() => void tracker.restart(kind).catch(fail)}>
+                    {actions.restart && (
+                        <Button size="xs" variant="secondary" onClick={() => void tracker.restart(status.server).catch(fail)}>
                             {t('language.restart')}
                         </Button>
                     )}

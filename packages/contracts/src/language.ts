@@ -16,13 +16,11 @@ export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
 /* The id a server of a person's own goes by: this prefix and an id the daemon made. */
 export const CUSTOM_SERVER_PREFIX = 'custom:';
 
-/* A kind of the catalog, or a server of a person's own. */
-export type LanguageServerId = LanguageServerKind | `${typeof CUSTOM_SERVER_PREFIX}${string}`;
+/* A kind of the catalog, or a server of a person's own. A string on the wire, since a newer daemon may add kinds. */
+export type LanguageServerId = string;
 export const LanguageServerIdSchema = z
     .string()
-    .refine((id): id is LanguageServerId => LanguageServerKindSchema.safeParse(id).success || id.startsWith(CUSTOM_SERVER_PREFIX), {
-        message: 'Not a language server'
-    });
+    .refine((id) => LanguageServerKindSchema.safeParse(id).success || id.startsWith(CUSTOM_SERVER_PREFIX), { message: 'Not a language server' });
 
 export const LanguageServerStateSchema = z.enum([
     // Nothing is on this machine yet; a person presses Install.

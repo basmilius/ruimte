@@ -26,7 +26,7 @@ export function serverDetail(status: LanguageServerStatus, t: TFunction<'panels'
         return status.message ?? '';
     }
     if (status.state === 'not-installed') {
-        return t('language.installDetail', { name: nameOf(status.server), version: status.version });
+        return t('language.installDetail', { name: nameOf(status.server, [status]), version: status.version });
     }
     return status.documents > 0 ? t('language.documents', { count: status.documents, formatted: formatNumber(status.documents) }) : '';
 }

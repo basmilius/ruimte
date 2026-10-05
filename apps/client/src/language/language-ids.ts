@@ -1,4 +1,4 @@
-import type { LanguageServerKind } from '@ruimte/contracts';
+import { matchesFilePattern, type LanguageServerKind, type LanguageServerStatus } from '@ruimte/contracts';
 
 /* The highlighter ids `fs.read` answers with, by the id LSP names the same language. */
 const LSP_IDS: Record<string, string> = {
@@ -42,6 +42,26 @@ const SERVER_KINDS: Record<string, LanguageServerKind> = {
 /* The LSP language id of a file, or null when no language server here knows its language. */
 export function lspLanguageIdOf(language: string | undefined): string | null {
     return language === undefined ? null : (LSP_IDS[language] ?? null);
+}
+
+/*
+ * The language id a file opens with when no catalog server knows its language but a server of a person's
+ * own serves it, by the language or by a file pattern; null when none does. A file that matches by its
+ * path alone opens as its own language, or as plain text when that is unknown.
+ */
+export function customLanguageIdOf(statuses: readonly LanguageServerStatus[], language: string | undefined, storedPath: string): string | null {
+    for (const status of statuses) {
+        if (status.languages === undefined || status.patterns === undefined) {
+            continue;
+        }
+        if (language !== undefined && status.languages.includes(language.toLowerCase())) {
+            return language.toLowerCase();
+        }
+        if (status.patterns.some((pattern) => matchesFilePattern(pattern, storedPath))) {
+            return language?.toLowerCase() ?? 'plaintext';
+        }
+    }
+    return null;
 }
 
 /*

@@ -19,6 +19,10 @@ export class LanguageStatusTracker {
         this.projectId = projectId;
         this.linkWasDown = transport.status !== 'open';
         this.subscriptions.push(
+            // A server of a person's own was saved or removed, so which servers a project has changed with it.
+            transport.on('language.custom.changed', () => {
+                void this.refresh().catch(() => undefined);
+            }),
             transport.on('language.status', (event) => {
                 if (event.projectId === this.projectId) {
                     this.set(event.status);
@@ -60,12 +64,12 @@ export class LanguageStatusTracker {
         this.machineChanged(status);
     }
 
-    async restart(server: LanguageServerKind): Promise<void> {
+    async restart(server: string): Promise<void> {
         const { status } = await this.transport.request('language.restart', { projectId: this.projectId, server });
         this.set(status);
     }
 
-    async log(server: LanguageServerKind): Promise<LanguageLogLine[]> {
+    async log(server: string): Promise<LanguageLogLine[]> {
         return (await this.transport.request('language.log', { projectId: this.projectId, server })).lines;
     }
 

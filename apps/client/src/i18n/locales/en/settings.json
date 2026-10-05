@@ -149,7 +149,62 @@
             "title": "Language servers",
             "needsProject": "Open a project to manage its language servers. A server is installed once per machine and runs per project.",
             "description": "Installed once on the machine, started per project when a file needs it.",
-            "failed": "The language servers failed to render"
+            "failed": "The language servers failed to render",
+            "groups": {
+                "scripts": "JavaScript and TypeScript",
+                "web": "Web",
+                "data": "Data files",
+                "other": "Other languages"
+            },
+            "own": {
+                "title": "Your own servers",
+                "description": "A language server you run yourself. Ruimte starts exactly the command you save, for the files it serves.",
+                "empty": "No servers of your own yet.",
+                "add": "Add server",
+                "edit": "Edit",
+                "remove": "Remove",
+                "elsewhere": "Other projects",
+                "serves": "Serves {{what}}",
+                "someProjects_one": "Runs in {{count}} project",
+                "someProjects_other": "Runs in {{count}} projects",
+                "removeTitle": "Remove {{name}}?",
+                "removeDescription": "Ruimte stops it wherever it runs. The program itself stays on this machine.",
+                "dialog": {
+                    "titleAdd": "Add a language server",
+                    "titleEdit": "Edit {{name}}",
+                    "description": "Saving starts exactly this command on this machine for the files it serves, and again whenever a project needs it. Change the command and you save it again.",
+                    "name": "Name",
+                    "command": "Command",
+                    "commandHint": "An absolute path, or a program that is on the PATH of this machine.",
+                    "commandFound": "Found at {{path}}",
+                    "commandMissing": "Not found on this machine. Give an absolute path.",
+                    "args": "Arguments",
+                    "argsHint": "One per line. The server talks over stdio.",
+                    "languages": "Languages",
+                    "languagesHint": "Language ids, such as zig or toml, separated by commas.",
+                    "patterns": "File patterns",
+                    "patternsHint": "One per line, such as *.zig or templates/**. Without a slash it matches the file name anywhere.",
+                    "env": "Environment",
+                    "envHint": "One NAME=value per line.",
+                    "options": "Options",
+                    "optionsHint": "Initialization options as JSON. Leave empty for none.",
+                    "scope": "Runs for",
+                    "scopeAll": "Every project",
+                    "scopeSome": "Some projects",
+                    "cancel": "Cancel",
+                    "save": "Save",
+                    "failed": "The server could not be saved",
+                    "problem": {
+                        "name": "Give the server a name.",
+                        "command": "Say which command starts it.",
+                        "serves": "Name a language or a file pattern it serves.",
+                        "pattern": "One of the file patterns is not valid. Check its braces.",
+                        "env": "Write each variable as NAME=value.",
+                        "options": "The options are not valid JSON.",
+                        "projects": "Pick at least one project."
+                    }
+                }
+            }
         },
         "colors": {
             "light": {

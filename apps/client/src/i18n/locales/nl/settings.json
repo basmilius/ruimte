@@ -149,7 +149,62 @@
             "title": "Language servers",
             "needsProject": "Open een project om de language servers ervan te beheren. Een server installeer je eenmalig per machine en hij draait per project.",
             "description": "Eenmalig geïnstalleerd op de machine, per project gestart als een bestand het nodig heeft.",
-            "failed": "De language servers konden niet worden getoond"
+            "failed": "De language servers konden niet worden getoond",
+            "groups": {
+                "scripts": "JavaScript en TypeScript",
+                "web": "Web",
+                "data": "Databestanden",
+                "other": "Andere talen"
+            },
+            "own": {
+                "title": "Je eigen servers",
+                "description": "Een language server die je zelf draait. Ruimte start precies het commando dat je opslaat, voor de bestanden die hij bedient.",
+                "empty": "Je hebt nog geen eigen servers.",
+                "add": "Server toevoegen",
+                "edit": "Bewerken",
+                "remove": "Verwijderen",
+                "elsewhere": "Andere projecten",
+                "serves": "Bedient {{what}}",
+                "someProjects_one": "Draait in {{count}} project",
+                "someProjects_other": "Draait in {{count}} projecten",
+                "removeTitle": "{{name}} verwijderen?",
+                "removeDescription": "Ruimte stopt hem overal waar hij draait. Het programma zelf blijft op deze machine staan.",
+                "dialog": {
+                    "titleAdd": "Language server toevoegen",
+                    "titleEdit": "{{name}} bewerken",
+                    "description": "Opslaan start precies dit commando op deze machine voor de bestanden die hij bedient, en opnieuw zodra een project hem nodig heeft. Verander je het commando, dan sla je het opnieuw op.",
+                    "name": "Naam",
+                    "command": "Commando",
+                    "commandHint": "Een absoluut pad, of een programma dat op het PATH van deze machine staat.",
+                    "commandFound": "Gevonden op {{path}}",
+                    "commandMissing": "Niet gevonden op deze machine. Geef een absoluut pad.",
+                    "args": "Argumenten",
+                    "argsHint": "Eén per regel. De server praat via stdio.",
+                    "languages": "Talen",
+                    "languagesHint": "Taal-id's, zoals zig of toml, gescheiden door komma's.",
+                    "patterns": "Bestandspatronen",
+                    "patternsHint": "Eén per regel, zoals *.zig of templates/**. Zonder slash past het op de bestandsnaam, waar dan ook.",
+                    "env": "Omgeving",
+                    "envHint": "Eén NAAM=waarde per regel.",
+                    "options": "Opties",
+                    "optionsHint": "Initialisatie-opties als JSON. Laat leeg voor geen.",
+                    "scope": "Draait voor",
+                    "scopeAll": "Elk project",
+                    "scopeSome": "Sommige projecten",
+                    "cancel": "Annuleren",
+                    "save": "Opslaan",
+                    "failed": "De server kon niet worden opgeslagen",
+                    "problem": {
+                        "name": "Geef de server een naam.",
+                        "command": "Zeg welk commando hem start.",
+                        "serves": "Noem een taal of een bestandspatroon dat hij bedient.",
+                        "pattern": "Een van de bestandspatronen klopt niet. Kijk naar de accolades.",
+                        "env": "Schrijf elke variabele als NAAM=waarde.",
+                        "options": "De opties zijn geen geldige JSON.",
+                        "projects": "Kies minstens één project."
+                    }
+                }
+            }
         },
         "colors": {
             "light": {

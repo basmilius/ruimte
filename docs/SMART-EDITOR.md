@@ -20,6 +20,10 @@ The plan for the code editor that replaces the previous engine (`packages/editor
 - The daemon is the brain. A client never talks to a language server itself.
 - Language servers are installed only when a person asks, pinned, under `$RUIMTE_HOME/language-servers`, and run on the daemon's own Bun. A project's own `typescript` comes first.
 - A Vue project runs one TypeScript server with the Vue plugin for every script, so a `.ts` file sees the types of a `.vue` file.
+- The catalog of servers (TypeScript, Vue, PHP, CSS, HTML, JSON, YAML, Python, Bash, Dockerfile, plus ESLint and Tailwind CSS beside the server of the language) is `apps/server/src/language/profiles.ts`; `apps/server/README.md` has what each serves and how it is configured.
+- A document can have several servers. Completion, code actions and hover are merged across them; any other feature is the first server's that offers it. ESLint and Tailwind CSS only serve a project that has an ESLint config or uses Tailwind.
+- A person can add servers of their own (a command, its arguments and environment, the languages and file patterns it serves, optionally the projects it runs for) in Settings, Editor, Language servers. They live under `$RUIMTE_HOME`, only the local secret saves them, and a save approves exactly that command.
+- Schemas for JSON and YAML are fetched from their hosts when a matching file opens. The YAML schema store is off, since it downloads its whole catalog when the server starts.
 - Completion follows design 1c (documentation beside the list), diagnostics follow 1e (calm: squiggles, the message in the hover and in Problems).
 - Tabs (1a) and a file per view (1b) both exist in Ruimte, so the editor carries both the breadcrumb and sticky scroll.
 - An edit across files lands as unsaved drafts; nothing is written to disk on a server's word alone.
@@ -121,6 +125,16 @@ On-device model (Apple Foundation Models), code never leaves the Mac:
 ### Open questions
 
 - Formatting follows the language server's own style, with only the tab size and indent style from `.editorconfig`. Options: configure the servers' formatter settings, run the project's own formatter (oxfmt, prettier, php-cs-fixer) with the repository's config, or a code style setting of Ruimte translated for each server. The second looks most worth it, since projects already record their style.
+
+### Servers that need a native binary
+
+Not in the catalog yet, since the catalog installs npm packages on the daemon's own Bun. Worth adding, with how each would arrive:
+
+- Rust (`rust-analyzer`), TOML (`taplo`), Lua (`lua-language-server`), Zig (`zls`): a download pinned by version and checksum under `$RUIMTE_HOME/language-servers/<kind>`, verified before it runs, only on a person's Install. `rust-analyzer` and `taplo` publish release archives per platform that fit this.
+- Go (`gopls`), Swift (`sourcekit-lsp`, which comes with Xcode): found on the PATH of the machine (`xcrun --find sourcekit-lsp` for Swift), since both are tied to the toolchain a person already has. A kind whose command is found counts as installed and has no Install button.
+- Markdown: `vscode-markdown-languageserver` starts under Bun but needs the client to answer `markdown/parse` with markdown-it tokens and its `markdown/fs/*` requests, so it waits for a client that does; Marksman is a native binary and fits the download way.
+
+Until then a person can add any of these as a server of their own.
 
 ### Cleanup
 
