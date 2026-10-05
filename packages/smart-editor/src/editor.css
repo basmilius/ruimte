@@ -156,6 +156,11 @@
     justify-content: flex-end;
     padding-right: 16px;
 }
+/* A step below the code, as the platform draws them, centered on the row rather than on the code's baseline. */
+.se-line-number > span {
+    font-size: max(12px, calc(var(--code-font-size, 13px) - 2px));
+    line-height: 1;
+}
 .se-active-number {
     color: var(--text-muted);
 }
