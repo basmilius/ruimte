@@ -67,6 +67,7 @@ export interface ConnectionServices {
     tasks?: Subscribable;
     worktrees?: Subscribable;
     plans?: Subscribable;
+    provenance?: Subscribable;
     computer?: Subscribable;
     snoozes?: Subscribable;
 }
@@ -141,6 +142,7 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
             services.tasks?.subscribe(clientId, sink) ?? (() => undefined),
             services.worktrees?.subscribe(clientId, sink) ?? (() => undefined),
             services.plans?.subscribe(clientId, sink) ?? (() => undefined),
+            services.provenance?.subscribe(clientId, sink) ?? (() => undefined),
             services.computer?.subscribe(clientId, sink) ?? (() => undefined),
             services.snoozes?.subscribe(clientId, sink) ?? (() => undefined)
         ];

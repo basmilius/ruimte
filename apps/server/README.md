@@ -134,6 +134,8 @@ $RUIMTE_HOME/
     <chatId>/<id>.<ext>            one file someone attached to a message in that chat
   checkpoints/                     mode 0700
     <repo>-<hash>.index            the private git index a turn's checkpoint is written through
+  provenance/                      mode 0700
+    <projectId>/<hash>.json        who wrote which lines of one file: its line hashes and the runs (chat, turn, prompt excerpt, lines, what they replaced, review state), named by a hash of the file's path
   computer-use/                    mode 0700, shared with the computer use helper
     settings.json                  whether a person turned computer use on for this machine, and the interface language it speaks
     grants.json                    the apps a person let every agent into for always, and the apps once seen running shells
@@ -405,6 +407,16 @@ A client the machine does not know yet gets in on a statement from the address b
 - On no account yet, a v2 statement of any account lets a client in, since its machine key says that account lists this machine, which only a registration the machine signed does; one without the v2 fields is refused (`account-required`). A statement never puts the machine on an account.
 
 Each client a statement let in keeps the account it came through. Going on an account cuts off a client another account let in; leaving the account cuts off every client a statement let in, and closes their channels at once.
+
+## Provenance
+
+Which chat wrote which lines of a file, for the editor's bar in the gutter and the card on it (`src/provenance/`, invariants in its `CLAUDE.md`). It is an observer of `ChatCore` and only notes, in `$RUIMTE_HOME/provenance/<projectId>/<hash of the path>.json`: the line hashes of the file as the daemon last read it, and per run the chat, the turn (its place in the chat), the provider, when, the first 400 characters of the prompt, the lines (`start` and `end`, one-based and inclusive; `end` one below `start` for lines that were only removed), the lines it replaced (`before`, left out above 200 lines or 16 KB), a review state (`pending`, `kept`, `undone`) and `via`.
+
+A write is noted when its tool call completes. Claude's `Edit`, `Write` and `MultiEdit` (the Apple backend uses the same names) name the file in `input.file_path` and carry the text they wrote; Codex's `ApplyPatch` lists its `changes`, each with a unified diff. The daemon reads the file again and diffs it against the tree the turn's checkpoint took when the turn began (the file's own record when there is no checkpoint), keeping the hunks the call explains by the lines it says it added and removed, so a person's edit saved in the meantime is not taken for the agent's. Without either version the lines are looked up in the file by what the call added. A turn that changed files only its checkpoint shows (a shell command, a formatter) gets runs with `via: 'checkpoint'` once the checkpoint settles, for the lines no run covers: there the author is a likelier guess than a fact. Only files inside the project's folder count, so a chat in a worktree marks the files of its own checkout and none of the main folder.
+
+Every read and every record maps the runs through what changed in the file (a line diff of the hashes): lines move with the text, a run whose lines were all rewritten is dropped, and one cut by an edit stays as pieces that share its id. Provenance ends where git blame takes over: a line the file at HEAD holds unchanged is given up, checked at the next record or read, so a commit costs a run its lines at the next look. Runs older than 30 days go too, a file that is gone loses its record, and a project keeps at most 300 records and a file at most 500 runs.
+
+`provenance.read { projectId, path }` answers `{ mtime, lines, runs }`, the runs mapped onto the text on disk now (a client holding another version asks again), and `provenance.review { projectId, path, runIds, state }` answers `{ updated }` and covers every piece of a run. Both refuse a path outside the project and under `$RUIMTE_HOME` like a file request does. `provenance.changed { projectId, path, chatId, turnId, live }` goes to every client that holds the project when a tool call starts or finishes writing a file (`live` while the turn runs), when a review changes and, with `live: false`, when the turn ends. No verb reaches this, and no setting turns it off: it is only written.
 
 ## Git status, diffs and staging
 

@@ -36,6 +36,7 @@ import { registerTaskHandlers } from './handlers/tasks.ts';
 import { registerPlanHandlers } from './handlers/plan.ts';
 import { registerProvenanceHandlers } from './handlers/provenance.ts';
 import { isPlanFileName, PlanStore } from './plans/plan-store.ts';
+import { provenanceChat } from './provenance/chat-facts.ts';
 import { ProvenanceService } from './provenance/provenance-service.ts';
 import type { AgentStart, WorktreeWant } from './canvas/verb.ts';
 import { addWanted } from './canvas/worktree.ts';
