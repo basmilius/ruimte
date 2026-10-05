@@ -34,6 +34,8 @@ pub struct ResolvedCallable {
     pub is_constructor: bool,
     /// The class the constructor belongs to, with its template names.
     pub constructed: Option<Name>,
+    /// Lent by a `@mixin`: the call reaches it through `__call`, which takes anything.
+    pub via_mixin: bool,
 }
 
 /// The arguments of a call or `new` node.
@@ -108,6 +110,7 @@ impl Analyzer<'_> {
             receiver: Some(class.clone()),
             is_constructor: true,
             constructed: Some(name.clone()),
+            via_mixin: false,
         };
         let (map, _) = self.bind_call(&callable, &arguments(node), env);
         let args = templates
@@ -171,6 +174,7 @@ impl Analyzer<'_> {
                     receiver: Some(member.clone()),
                     is_constructor: true,
                     constructed: Some(found.class.decl.name.clone()),
+                    via_mixin: false,
                 });
             }
         }
@@ -191,6 +195,7 @@ impl Analyzer<'_> {
                         receiver: None,
                         is_constructor: false,
                         constructed: None,
+                        via_mixin: false,
                     }],
                     None => Vec::new(),
                 }
@@ -245,6 +250,7 @@ impl Analyzer<'_> {
                             receiver: None,
                             is_constructor: false,
                             constructed: None,
+                            via_mixin: false,
                         }),
                         Type::Class { .. } => out.extend(self.methods_named(member, "__invoke")),
                         _ => {}
@@ -271,6 +277,7 @@ impl Analyzer<'_> {
                     receiver: Some(member.clone()),
                     is_constructor: false,
                     constructed: None,
+                    via_mixin: found.mixin,
                 });
             }
         }

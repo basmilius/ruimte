@@ -129,9 +129,16 @@ impl Composer {
     }
 
     /// The directories and files of the packages that Composer would load: where the declarations
-    /// of `vendor/` are. The project's own files are not among them.
+    /// of `vendor/` are, and the two classes Composer writes there itself. The project's own files
+    /// are not among them.
     pub fn vendor_roots(&self) -> Vec<PathBuf> {
         let mut roots: BTreeSet<PathBuf> = BTreeSet::new();
+        for generated in ["InstalledVersions.php", "ClassLoader.php"] {
+            let path = self.vendor_dir.join("composer").join(generated);
+            if path.is_file() {
+                roots.insert(path);
+            }
+        }
         for package in &self.packages {
             let autoload = &package.autoload;
             roots.extend(autoload.psr4.iter().map(|(_, dir)| dir.clone()));
@@ -401,6 +408,21 @@ mod tests {
             composer.class_candidates("Old_Thing_Here"),
             vec![PathBuf::from("/p/vendor/old/lib/src/Old/Thing/Here.php")]
         );
+    }
+
+    #[test]
+    fn the_classes_composer_writes_into_vendor_are_loaded() {
+        let dir = tempfile::tempdir().expect("a temp dir");
+        let vendor = dir.path().join("vendor/composer");
+        std::fs::create_dir_all(&vendor).expect("created");
+        std::fs::write(
+            vendor.join("InstalledVersions.php"),
+            "<?php namespace Composer; class InstalledVersions {}",
+        )
+        .expect("written");
+        std::fs::write(dir.path().join("composer.json"), "{}").expect("written");
+        let composer = Composer::load(dir.path()).expect("composer.json is there");
+        assert_eq!(composer.vendor_roots(), vec![vendor.join("InstalledVersions.php")]);
     }
 
     #[test]

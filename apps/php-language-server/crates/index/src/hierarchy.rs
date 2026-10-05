@@ -40,6 +40,8 @@ pub struct Found<'a, T: Clone> {
     pub member: Cow<'a, T>,
     pub subst: Arc<HashMap<String, Type>>,
     pub self_name: Name,
+    /// Found through a `@mixin`, so a call to it goes through the receiver's magic methods.
+    pub mixin: bool,
 }
 
 impl<T: Clone> Found<'_, T> {
@@ -339,6 +341,7 @@ fn found_in<'a, T: Clone>(ancestor: &Ancestor<'a>, member: Cow<'a, T>) -> Found<
         member,
         subst: ancestor.subst.clone(),
         self_name: ancestor.self_name.clone(),
+        mixin: ancestor.mixin,
     }
 }
 
@@ -354,6 +357,7 @@ fn push_method<'a>(
             member: method,
             subst: ancestor.subst.clone(),
             self_name: ancestor.self_name.clone(),
+            mixin: ancestor.mixin,
         });
     }
 }

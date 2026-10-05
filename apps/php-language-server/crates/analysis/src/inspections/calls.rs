@@ -65,7 +65,7 @@ fn check_call(cx: &Cx, call: &SyntaxNode) {
     let [callee] = callees.as_slice() else {
         return;
     };
-    if callee.name == "closure" {
+    if callee.name == "closure" || callee.via_mixin {
         return;
     }
     let candidates = candidates_of(cx, callee);

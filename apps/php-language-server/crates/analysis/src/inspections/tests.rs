@@ -517,6 +517,18 @@ fn only_in(files: &[(&str, &str)], code: &str, source: &str) -> Vec<String> {
 }
 
 #[test]
+fn a_method_lent_by_a_mixin_is_not_checked_because_the_call_goes_through_call() {
+    let files = [(
+        "A.php",
+        "<?php\nclass Helper { public function say(string $text, int $times = 1) {} }\n/** @mixin Helper */\nclass Facade { public function __call(string $name, array $arguments) {} }\n",
+    )];
+    let source =
+        "<?php\ndeclare(strict_types=1);\n$facade = new Facade();\n$facade->say(5, 'x', 3);\n(new Helper())->say(5);\n";
+    assert_eq!(only_in(&files, "argument-type-mismatch", source), ["5"]);
+    assert!(only_in(&files, "wrong-argument-count", source).is_empty());
+}
+
+#[test]
 fn strict_files_do_not_convert_scalars() {
     let files = [(
         "A.php",
