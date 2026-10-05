@@ -24,6 +24,7 @@ import type {
     Position,
     PrepareRenameResult,
     Range,
+    SelectionRange,
     SemanticTokens,
     SemanticTokensDelta,
     SignatureHelp,
@@ -211,6 +212,10 @@ export class LspDocument {
 
     foldingRanges(options?: DocumentRequestOptions): Promise<FoldingRange[] | null> {
         return this.feature('textDocument/foldingRange', {}, options);
+    }
+
+    selectionRanges(positions: readonly Position[], options?: DocumentRequestOptions): Promise<SelectionRange[] | null> {
+        return this.feature('textDocument/selectionRange', { positions }, options);
     }
 
     semanticTokens(options?: DocumentRequestOptions): Promise<SemanticTokens | null> {

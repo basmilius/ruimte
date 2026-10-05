@@ -226,6 +226,29 @@ describe('selection expansion and line blocks', () => {
         expect(model.getRevision()).toBe(0);
     });
 
+    it('grows to the ranges it is given, keeps the direction, falls back to the lexical rule for a selection without a usable one and shrinks the same way', () => {
+        const model = new DocumentModel('one two three four');
+        model.setSelections([
+            { anchor: 1, head: 1 },
+            { anchor: 15, head: 14 }
+        ]);
+        const before = model.getSelections();
+        // A range that is no larger than the selection is not taken for it.
+        expect(
+            model.expandSelectionTo([
+                { from: 0, to: 7 },
+                { from: 14, to: 15 }
+            ])
+        ).toBe(true);
+        expect(model.getSelections()).toEqual([
+            { anchor: 0, head: 7 },
+            { anchor: 18, head: 14 }
+        ]);
+        expect(model.execute('shrinkSelection')).toBe(true);
+        expect(model.getSelections()).toEqual(before);
+        expect(model.execute('shrinkSelection')).toBe(false);
+    });
+
     it('restores multiple reversed selections and invalidates expansion history after an edit or explicit selection', () => {
         const model = new DocumentModel('fn(one, two)');
         model.setSelections([

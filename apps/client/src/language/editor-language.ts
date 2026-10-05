@@ -16,6 +16,7 @@ import { RenameFeature } from './rename';
 import { createPopupStore } from './popups';
 import { realTimers, type Timers } from './timers';
 import { InlayHintsFeature } from './inlay-hints';
+import { SelectionRangesFeature } from './selection-ranges';
 import { SemanticTokensFeature } from './semantic-tokens';
 import { SignatureFeature } from './signature';
 import { SnippetFeature } from './snippet-session';
@@ -65,6 +66,7 @@ export class EditorLanguage {
         this.signature = new SignatureFeature(this, timers);
         this.highlights = new HighlightsFeature(this, timers);
         new SymbolsFeature(this, timers);
+        new SelectionRangesFeature(this);
         new SemanticTokensFeature(this, timers);
         new InlayHintsFeature(this, timers);
         this.codeActions = new CodeActionsFeature(this, timers);

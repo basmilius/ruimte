@@ -62,6 +62,7 @@ const PROVIDERS: Record<string, keyof ServerCapabilities> = {
     'textDocument/formatting': 'documentFormattingProvider',
     'textDocument/rangeFormatting': 'documentRangeFormattingProvider',
     'textDocument/foldingRange': 'foldingRangeProvider',
+    'textDocument/selectionRange': 'selectionRangeProvider',
     'textDocument/semanticTokens/full': 'semanticTokensProvider',
     'textDocument/semanticTokens/full/delta': 'semanticTokensProvider',
     'textDocument/semanticTokens/range': 'semanticTokensProvider',
@@ -420,7 +421,7 @@ export class LspSession {
             if (this.phase === 'ready') {
                 this.phase = 'closing';
                 await Promise.all([...this.documents.values()].map((document) => document.close()));
-                await this.connection.request('shutdown', null, { timeoutMs: 5_000 });
+                await this.connection.request('shutdown', undefined, { timeoutMs: 5_000 });
                 await this.connection.notify('exit');
             }
         } finally {
@@ -552,6 +553,7 @@ function clientCapabilities(options: LspSessionOptions): object {
             formatting: dynamic,
             rangeFormatting: dynamic,
             foldingRange: { ...dynamic, lineFoldingOnly: false, foldingRange: { collapsedText: false } },
+            selectionRange: dynamic,
             semanticTokens: {
                 ...dynamic,
                 requests: { range: true, full: { delta: true } },

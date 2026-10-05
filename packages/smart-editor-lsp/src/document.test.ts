@@ -232,6 +232,22 @@ describe('versioned language documents', () => {
         expect(await resolved).toMatchObject({ command: { title: '1 reference' } });
         await session.shutdown();
     });
+    it('asks for the selection ranges around positions and refuses when the server has none', async () => {
+        const { session, transport } = await sessionWith({ selectionRangeProvider: true });
+        const document = session.openDocument({ uri: 'file:///main.ts', languageId: 'typescript', text: 'x' });
+        const ranges = document.selectionRanges([origin]);
+        await flush();
+        expect(transport.request('textDocument/selectionRange').params).toEqual({ textDocument: { uri: document.uri }, positions: [origin] });
+        const chain = { range: { start: origin, end: origin }, parent: { range: { start: origin, end: { line: 0, character: 1 } } } };
+        transport.respond('textDocument/selectionRange', [chain]);
+        expect(await ranges).toEqual([chain]);
+        await session.shutdown();
+        const { session: bare } = await sessionWith({});
+        const other = bare.openDocument({ uri: 'file:///main.ts', languageId: 'typescript', text: 'x' });
+        await expect(other.selectionRanges([origin])).rejects.toMatchObject({ code: -32601 });
+        await bare.shutdown();
+    });
+
     it('runs a feature by its method name, resolve methods included', async () => {
         const { session, transport } = await sessionWith({ hoverProvider: true, completionProvider: { resolveProvider: true } });
         const document = session.openDocument({ uri: 'file:///main.ts', languageId: 'typescript', text: 'x' });

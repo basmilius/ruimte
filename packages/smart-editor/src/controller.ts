@@ -12,6 +12,7 @@ import type {
     EditorKeyHandler,
     EditorPosition,
     EditorRunCommand,
+    EditorSelectionRanges,
     EditorViewCommand,
     KeyChord
 } from './types.ts';
@@ -84,6 +85,9 @@ export class InputController {
     private lineClip: string | null = null;
     /* The two corners of a box being grown with the keys, and the selections it made, which say whether it is still the one on screen. */
     private block: { anchor: { x: number; y: number }; head: { x: number; y: number }; signature: string } | null = null;
+    private selectionRanges: EditorSelectionRanges | null = null;
+    /* The Extend Selection presses that wait for a server's ranges, which are answered one after the other. */
+    private expansions: Promise<void> = Promise.resolve();
     private lastInputAt = 0;
     private desiredXs: number[] = [];
     private keepDesiredXs = false;
@@ -307,7 +311,48 @@ export class InputController {
         if (VIEW_COMMANDS.has(name as EditorViewCommand)) {
             return this.viewCommand(name as EditorViewCommand);
         }
+        if (name === 'expandSelection' && this.selectionRanges !== null) {
+            const provider = this.selectionRanges;
+            this.expansions = this.expansions.then(() => this.expandThrough(provider));
+            return true;
+        }
         return this.modelCommand(name as EditorCommand);
+    }
+
+    setSelectionRanges(provider: EditorSelectionRanges | null): void {
+        this.selectionRanges = provider;
+    }
+
+    /* Extend Selection through the ranges of a language server, the editor's own rule where it has none. */
+    private async expandThrough(provider: EditorSelectionRanges): Promise<void> {
+        const { model } = this.view;
+        const selections = model.getSelections();
+        const revision = model.getRevision();
+        const stretches = selections.map(({ anchor, head }) => ({ from: Math.min(anchor, head), to: Math.max(anchor, head) }));
+        const asked = stretches.map(({ from }) => {
+            const { line, column } = model.positionAt(from);
+            return { line, character: column };
+        });
+        const chains = await provider(asked).catch(() => null);
+        if (model.getRevision() !== revision || JSON.stringify(model.getSelections()) !== JSON.stringify(selections)) {
+            return;
+        }
+        if (chains === null) {
+            this.modelCommand('expandSelection');
+            return;
+        }
+        const ranges = stretches.map(
+            ({ from, to }, index) =>
+                (chains[index] ?? [])
+                    .map((range) => ({
+                        from: model.offsetAt({ line: range.start.line, column: range.start.character }),
+                        to: model.offsetAt({ line: range.end.line, column: range.end.character })
+                    }))
+                    .find((range) => range.from <= from && range.to >= to && (range.from < from || range.to > to)) ?? null
+        );
+        this.historyGroup++;
+        model.expandSelectionTo(ranges);
+        this.view.revealCaret();
     }
 
     private modelCommand(name: EditorCommand): boolean {

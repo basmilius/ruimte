@@ -213,6 +213,12 @@ export interface EditorWidget {
 /* Returns true when the key was taken; the editor then prevents its default and does nothing else with it. */
 export type EditorKeyHandler = (event: KeyboardEvent) => boolean;
 
+/*
+ * The ranges a language server knows around each position asked, the smallest first and each larger than
+ * the one before; null when it has none to give, which sends Extend Selection to the editor's own rule.
+ */
+export type EditorSelectionRanges = (positions: readonly EditorPosition[]) => Promise<readonly (readonly EditorRange[])[] | null>;
+
 /* A range of text the language servers classified, by the TextMate scopes the editor's theme colors it by. */
 export interface EditorSemanticToken {
     readonly line: number;
@@ -380,6 +386,8 @@ export interface Editor {
     onContextMenu(listener: (menu: EditorContextMenu) => void): () => void;
     /* Handlers see a key before the editor does, the first to take it winning. */
     onKeyDown(handler: EditorKeyHandler): () => void;
+    /* Extend Selection grows through these ranges, where the host has them, and Shrink Selection walks back; null returns to the editor's own rule. */
+    setSelectionRanges(provider: EditorSelectionRanges | null): void;
     /* Replaces ranges of the current text at once, as one step of the undo history. */
     applyEdits(edits: readonly EditorContentChange[]): boolean;
     setTheme(theme: EditorTheme): void;

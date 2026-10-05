@@ -35,6 +35,7 @@ export type {
     EditorRange,
     EditorTextChange,
     EditorRunCommand,
+    EditorSelectionRanges,
     EditorTheme,
     EditorViewCommand,
     EditorWidget,

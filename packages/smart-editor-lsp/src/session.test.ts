@@ -17,6 +17,13 @@ describe('capabilities and server requests', () => {
         await session.shutdown();
     });
 
+    it('asks a server to shut down without params, which some refuse as a null', async () => {
+        const { session, transport } = await sessionWith({});
+        await session.shutdown();
+        const shutdown = transport.sent.find((message) => (message as { method?: string }).method === 'shutdown') as { params?: unknown };
+        expect(shutdown.params).toBeUndefined();
+    });
+
     it('negotiates semantic occurrence kinds, hierarchical symbols, folding and code lenses', async () => {
         const { session, transport } = await sessionWith({ documentHighlightProvider: true, documentSymbolProvider: true });
         const initialize = transport.request('initialize').params as {

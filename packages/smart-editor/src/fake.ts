@@ -23,6 +23,7 @@ import type {
     EditorReveal,
     EditorRect,
     EditorRunCommand,
+    EditorSelectionRanges,
     EditorFolds,
     EditorSemanticToken,
     EditorSmartKeys,
@@ -478,6 +479,13 @@ export class FakeEditor implements Editor {
             this.visibleRange = range;
         }
         emit(this.views);
+    }
+
+    /* What `setSelectionRanges` was last given. */
+    selectionRanges: EditorSelectionRanges | null = null;
+
+    setSelectionRanges(provider: EditorSelectionRanges | null): void {
+        this.selectionRanges = provider;
     }
 
     onKeyDown(handler: EditorKeyHandler): () => void {

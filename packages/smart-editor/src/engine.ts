@@ -27,6 +27,7 @@ import type {
     EditorReveal,
     EditorRect,
     EditorRunCommand,
+    EditorSelectionRanges,
     EditorSemanticToken,
     EditorSmartKeys,
     EditorTextChange,
@@ -265,6 +266,10 @@ class SmartEditor implements Editor {
 
     onKeyDown(handler: EditorKeyHandler): () => void {
         return this.controller.onKeyDown(handler);
+    }
+
+    setSelectionRanges(provider: EditorSelectionRanges | null): void {
+        this.controller.setSelectionRanges(provider);
     }
 
     applyEdits(edits: readonly EditorContentChange[]): boolean {

@@ -223,6 +223,7 @@ export const LANGUAGE_METHODS = [
     'textDocument/formatting',
     'textDocument/rangeFormatting',
     'textDocument/foldingRange',
+    'textDocument/selectionRange',
     'textDocument/semanticTokens/full',
     'textDocument/semanticTokens/full/delta',
     'textDocument/semanticTokens/range',

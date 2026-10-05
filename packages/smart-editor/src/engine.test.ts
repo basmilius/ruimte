@@ -701,6 +701,81 @@ describe('the clipboard', () => {
     });
 });
 
+describe('Extend Selection through the ranges of a language server', () => {
+    const range = (startLine: number, startCharacter: number, endLine: number, endCharacter: number) => ({
+        start: { line: startLine, character: startCharacter },
+        end: { line: endLine, character: endCharacter }
+    });
+
+    /* A server answer takes a few turns of the event loop to get through the queue of presses. */
+    const flush = async (): Promise<void> => {
+        for (let i = 0; i < 20; i++) {
+            await Promise.resolve();
+        }
+    };
+
+    test('grows through the ranges it is given, one press after the other, and Shrink Selection walks back', async () => {
+        const { editor, press: key } = setup({ text: 'call(one, two)\nnext' });
+        const asked: unknown[] = [];
+        editor.setSelectionRanges(async (positions) => {
+            asked.push(positions);
+            return [[range(0, 5, 0, 8), range(0, 5, 0, 13), range(0, 0, 1, 4)]];
+        });
+        editor.setCaret({ line: 0, character: 6 });
+        key('ArrowUp', { altKey: true });
+        key('ArrowUp', { altKey: true });
+        await flush();
+        // A quick second press grows from what the first made, and the first range that holds it and more is the next.
+        expect(editor.getSelection()).toEqual(range(0, 5, 0, 13));
+        expect(asked).toEqual([[{ line: 0, character: 6 }], [{ line: 0, character: 5 }]]);
+        key('ArrowDown', { altKey: true });
+        expect(editor.getSelection()).toEqual(range(0, 5, 0, 8));
+    });
+
+    test('grows by its own rule where the server has no ranges, and where it fails', async () => {
+        const { editor, press: key } = setup({ text: 'one two', language: 'typescript' });
+        editor.setSelectionRanges(async () => null);
+        editor.setCaret({ line: 0, character: 5 });
+        key('ArrowUp', { altKey: true });
+        await flush();
+        expect(editor.getSelection()).toEqual(range(0, 4, 0, 7));
+        editor.setSelectionRanges(async () => {
+            throw new Error('The server went away');
+        });
+        key('ArrowUp', { altKey: true });
+        await flush();
+        expect(editor.getSelection()).toEqual(range(0, 0, 0, 7));
+    });
+
+    test('leaves a selection alone when the text changed while the server answered', async () => {
+        const { editor, press: key, type } = setup({ text: 'one two', language: 'typescript' });
+        let answer: () => void = () => undefined;
+        editor.setSelectionRanges(
+            () =>
+                new Promise((resolve) => {
+                    answer = () => resolve([[range(0, 0, 0, 7)]]);
+                })
+        );
+        editor.setCaret({ line: 0, character: 1 });
+        key('ArrowUp', { altKey: true });
+        await flush();
+        type('X');
+        answer();
+        await flush();
+        expect(editor.getText()).toBe('oXne two');
+        expect(editor.getSelection()).toEqual(range(0, 2, 0, 2));
+    });
+
+    test("is the editor's own rule again once the provider is taken away", async () => {
+        const { editor, press: key } = setup({ text: 'one two', language: 'typescript' });
+        editor.setSelectionRanges(async () => [[range(0, 0, 0, 7)]]);
+        editor.setSelectionRanges(null);
+        editor.setCaret({ line: 0, character: 5 });
+        key('ArrowUp', { altKey: true });
+        expect(editor.getSelection()).toEqual(range(0, 4, 0, 7));
+    });
+});
+
 describe('line commands', () => {
     test('runs a command on the editor by name', () => {
         const { editor } = setup({ text: 'a\nb', language: 'typescript' });

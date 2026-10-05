@@ -21,6 +21,7 @@ import type {
     PrepareRenameResult,
     ProviderOptions,
     Range,
+    SelectionRange,
     SemanticTokens,
     SemanticTokensDelta,
     SignatureHelp,
@@ -99,6 +100,8 @@ export interface LanguageService {
     /* The symbols of the whole project that answer to a query, asked of the server that serves the document. */
     workspaceSymbols(uri: string, query: string, options?: LanguageRequestOptions): Promise<WorkspaceSymbolResult>;
     foldingRanges(uri: string, options?: LanguageRequestOptions): Promise<FoldingRange[] | null>;
+    /* One chain per position, the smallest range first, each in its `parent`. */
+    selectionRanges(uri: string, positions: readonly Position[], options?: LanguageRequestOptions): Promise<SelectionRange[] | null>;
     codeLenses(uri: string, options?: LanguageRequestOptions): Promise<CodeLens[] | null>;
     resolveCodeLens(uri: string, lens: CodeLens, options?: LanguageRequestOptions): Promise<CodeLens>;
 }

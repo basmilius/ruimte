@@ -1,5 +1,5 @@
 export { DocumentModel } from './document.ts';
-export type { DocumentEditOptions, DocumentLine, ReplaceAllOptions, ReplaceOptions, TypeTextOptions } from './document.ts';
+export type { DocumentEditOptions, DocumentLine, OffsetRange, ReplaceAllOptions, ReplaceOptions, TypeTextOptions } from './document.ts';
 export { scanBrackets, type BracketIndex } from './brackets.ts';
 export { replaceWithCaseRespect } from './preserve-case.ts';
 export { findMatches, replacementText, type FindMatch, type FindNextOptions, type FindOptions } from './search.ts';

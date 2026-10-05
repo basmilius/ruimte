@@ -36,6 +36,12 @@ import { isHumpBoundary, isWordBoundary } from './words.ts';
 
 export type { DocumentLine, FindMatch, FindNextOptions, FindOptions, FoldingOptions, FoldingRange };
 
+/* A stretch of the text by offsets. */
+export interface OffsetRange {
+    readonly from: number;
+    readonly to: number;
+}
+
 export interface DocumentEditOptions extends EditOptions {
     /* The edit is refused, with nothing changed, unless the document is still at this revision. */
     expectedRevision?: number;
@@ -1712,26 +1718,10 @@ export class DocumentModel {
     }
 
     /* Grows each selection to the smallest word, line, bracket or string around it that is larger than it. */
-    private expandSelection(): boolean {
-        const selections = this.selections.map((selection) => {
+    private expandSelection(given: readonly (OffsetRange | null)[] = []): boolean {
+        const selections = this.selections.map((selection, index) => {
             const { from, to } = rangeOf(selection);
-            const first = this.getLine(this.rope.lineAt(from));
-            const last = this.getLine(this.rope.lineAt(to));
-            const candidates = [
-                this.wordRange(selection.head),
-                { from: first.start, to: last.end },
-                { from: first.start, to: last.next },
-                { from: 0, to: this.rope.length }
-            ];
-            if (first.start === last.start) {
-                candidates.push({ from: first.start + indentLength(first.text), to: first.end - trailingBlankLength(first.text) });
-            }
-            for (const range of this.structure()) {
-                candidates.push({ from: range.innerFrom, to: range.innerTo }, range);
-            }
-            const candidate = candidates
-                .filter((range) => range.from <= from && range.to >= to && (range.from < from || range.to > to))
-                .sort((left, right) => left.to - left.from - (right.to - right.from))[0];
+            const candidate = this.largerRange(given[index] ?? null, from, to) ?? this.lexicalExpansion(selection, from, to);
             if (!candidate) {
                 return selection;
             }
@@ -1746,6 +1736,40 @@ export class DocumentModel {
         this.groupOpen = false;
         this.emit();
         return true;
+    }
+
+    /*
+     * Grows each selection to the range a language server gave for it, by offsets in the text, and Shrink
+     * Selection walks back. A selection without a range, or one that does not hold it and more, grows
+     * by the same rule as `expandSelection`.
+     */
+    expandSelectionTo(ranges: readonly (OffsetRange | null)[]): boolean {
+        return this.expandSelection(ranges);
+    }
+
+    /* The range when it holds the stretch and is larger than it, else null. */
+    private largerRange(range: OffsetRange | null, from: number, to: number): OffsetRange | null {
+        return range !== null && range.from <= from && range.to >= to && (range.from < from || range.to > to) ? range : null;
+    }
+
+    private lexicalExpansion(selection: Selection, from: number, to: number): OffsetRange | undefined {
+        const first = this.getLine(this.rope.lineAt(from));
+        const last = this.getLine(this.rope.lineAt(to));
+        const candidates = [
+            this.wordRange(selection.head),
+            { from: first.start, to: last.end },
+            { from: first.start, to: last.next },
+            { from: 0, to: this.rope.length }
+        ];
+        if (first.start === last.start) {
+            candidates.push({ from: first.start + indentLength(first.text), to: first.end - trailingBlankLength(first.text) });
+        }
+        for (const range of this.structure()) {
+            candidates.push({ from: range.innerFrom, to: range.innerTo }, range);
+        }
+        return candidates
+            .filter((range) => range.from <= from && range.to >= to && (range.from < from || range.to > to))
+            .sort((left, right) => left.to - left.from - (right.to - right.from))[0];
     }
 
     private shrinkSelection(): boolean {

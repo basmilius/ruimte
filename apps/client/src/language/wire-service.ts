@@ -32,6 +32,7 @@ import {
     type PrepareRenameResult,
     type ProviderOptions,
     type Range,
+    type SelectionRange,
     type SemanticTokens,
     type SemanticTokensDelta,
     type SignatureHelp,
@@ -388,6 +389,10 @@ export class WireLanguageService implements LanguageService {
 
     foldingRanges(uri: string, options?: LanguageRequestOptions): Promise<FoldingRange[] | null> {
         return this.call(uri, 'textDocument/foldingRange', {}, options);
+    }
+
+    selectionRanges(uri: string, positions: readonly Position[], options?: LanguageRequestOptions): Promise<SelectionRange[] | null> {
+        return this.call(uri, 'textDocument/selectionRange', { positions }, options);
     }
 
     codeLenses(uri: string, options?: LanguageRequestOptions): Promise<CodeLens[] | null> {

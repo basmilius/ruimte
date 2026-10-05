@@ -348,6 +348,12 @@ export interface FoldingRange {
     collapsedText?: string;
 }
 
+/* One link of a chain that grows from the smallest range around a position to the whole document. */
+export interface SelectionRange {
+    range: Range;
+    parent?: SelectionRange;
+}
+
 export interface CodeLens {
     range: Range;
     command?: Command;
@@ -413,6 +419,7 @@ export interface ServerCapabilities {
     documentFormattingProvider?: boolean | ProviderOptions;
     documentRangeFormattingProvider?: boolean | ProviderOptions;
     foldingRangeProvider?: boolean | ProviderOptions;
+    selectionRangeProvider?: boolean | ProviderOptions;
     semanticTokensProvider?: ProviderOptions & { legend: SemanticTokensLegend };
     inlayHintProvider?: boolean | ProviderOptions;
     diagnosticProvider?: ProviderOptions;
