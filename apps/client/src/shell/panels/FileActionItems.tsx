@@ -11,7 +11,7 @@ import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { Icon, Menu } from '@basmilius/desktop-ui';
+import { Icon, Menu } from '@adecore/ui';
 
 /* Which of the three surfaces these items are on, since a file already on one does not offer to go
    there again: a node is not shown on the canvas twice and a view is not opened as one. */

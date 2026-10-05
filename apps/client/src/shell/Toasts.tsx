@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy } from 'lucide-react';
 import { useToasts, type Toast } from '@/state/toasts';
-import { Button, Icon, Toasts as ToastStack } from '@basmilius/desktop-ui';
+import { Button, Icon, Toasts as ToastStack } from '@adecore/ui';
 
 /* Keep copy feedback on this button rather than opening another toast. */
 function CopyOutput({ output }: { output: string }) {

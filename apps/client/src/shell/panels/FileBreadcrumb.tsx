@@ -2,7 +2,7 @@ import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Braces, ChevronRight, Hash, SquareFunction, Variable, type LucideIcon } from 'lucide-react';
 import type { EditorBlock } from '@ruimte/smart-editor';
-import { FileIcon, Icon } from '@basmilius/desktop-ui';
+import { FileIcon, Icon } from '@adecore/ui';
 import { pathCrumbs } from '@/shell/panels/file-breadcrumb';
 
 const KIND_ICONS: Record<string, LucideIcon> = {

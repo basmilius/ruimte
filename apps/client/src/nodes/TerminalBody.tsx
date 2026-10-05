@@ -1,30 +1,26 @@
 import { TerminalDictation } from '@/dictation/TerminalDictation';
 import { clearTerminalAction, restartTerminalAction, resumeTerminalAgentAction } from '@/actions/client-actions';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import i18next from 'i18next';
 import clsx from 'clsx';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import type { Terminal } from '@xterm/xterm';
+import { TerminalView, type TerminalViewHandle } from '@adecore/terminal';
 import { ClipboardPaste, Copy, Play, RotateCw, Scan } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useEndpointId } from '@/state/keys';
 import { useSessionRestarts, useSessionRow } from '@/state/sessions';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
-import { useTheme } from '@/state/theme';
 import { osc52Text } from '@/terminal/osc52';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
-import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
-import { bindTerminalKeys, createTerminal, fitToHost, followAncestorScale } from '@/terminal/xterm';
-import { webglBudget } from '@/terminal/webgl-budget';
+import { bindTerminalKeys } from '@/terminal/xterm';
 import { sessionClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { closeHost, readNodeHost, useSuggestedTitle } from '@/nodes/node-host';
-import { Button, copyText, readClipboardText, Icon, ContextMenu } from '@basmilius/desktop-ui';
+import { Button, copyText, readClipboardText, Icon, ContextMenu, prefetcher } from '@adecore/ui';
 
-const RESIZE_DEBOUNCE_MS = 50;
+// A terminal loads the WebGL addon on its first context; prefetched, it is there by then.
+prefetcher.register(() => import('@xterm/addon-webgl'));
 
 /* What the placeholder for an offscreen terminal shows: the text of its last screen. */
 export function TerminalPlate({ id }: { id: string }) {
@@ -40,7 +36,7 @@ export function TerminalPlate({ id }: { id: string }) {
     return (
         <div
             ref={ref}
-            className="term-host overflow-hidden whitespace-pre pt-1.5 bg-term-bg font-mono text-code leading-[1.2] text-term-dim"
+            className="absolute inset-0 overflow-hidden whitespace-pre pt-1.5 pl-2 bg-term-bg font-mono text-code leading-[1.2] text-term-dim"
             aria-hidden="true"
         />
     );
@@ -49,10 +45,8 @@ export function TerminalPlate({ id }: { id: string }) {
 /* The body of a terminal, the same on a canvas inside a frame and filling a view of its own. */
 export function TerminalBody({ id, focused }: { id: string; focused: boolean }) {
     const { t } = useTranslation(['canvas', 'common']);
-    const hostRef = useRef<HTMLDivElement>(null);
+    const viewRef = useRef<TerminalViewHandle>(null);
     const dictationRoot = useRef<HTMLDivElement>(null);
-    const termRef = useRef<Terminal | null>(null);
-    const refitRef = useRef<(() => void) | null>(null);
     /* Bumped by a retry after a failure; a restart through the actions counts in the sessions store. */
     const [generation, setGeneration] = useState(0);
     // Either one rebuilds the whole terminal around a fresh session, and both only ever go up.
@@ -67,166 +61,14 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const heldCommand = useSessionRow(id, (row) => row?.heldCommand);
     // Claude Code and Codex write a name down; the daemon sends none for Gemini or Copilot.
     useSuggestedTitle(id, agentRecord?.kind === 'claude' || agentRecord?.kind === 'codex' ? agentRecord.suggestedTitle : undefined);
-    const resolvedTheme = useTheme((t) => t.resolved);
-    const settingsVersion = useSettings((s) => s.version);
 
     useEffect(() => {
-        const host = hostRef.current;
-        // Taken once, so a node that leaves after the window moved to another machine still detaches from its own.
-        const sessions = sessionClientFor(endpointId);
-        if (!host || !sessions) {
-            return;
-        }
-        const term = createTerminal();
-        const fit = new FitAddon();
-        term.loadAddon(fit);
-        term.loadAddon(new WebLinksAddon());
-        term.open(host);
-        followAncestorScale(term);
-        // Every client attached to a session sees the sequence; only the node a person works in writes this machine's clipboard.
-        term.parser.registerOscHandler(52, (data) => {
-            const text = osc52Text(data);
-            if (text !== null && document.hasFocus() && host.contains(document.activeElement)) {
-                copyText(text);
-            }
-            return true;
-        });
-        fitToHost(term, fit);
-        termRef.current = term;
-
-        /*
-         * The grid this node fits and asks the PTY for, and the grid the PTY has. They part while a client
-         * elsewhere types into the same terminal; this one then draws that grid, clipped or with room to
-         * spare, until a key or a resize here makes it the active one again.
-         */
-        let claimed = { cols: term.cols, rows: term.rows };
-        let shared = claimed;
-        const drawShared = (): void => {
-            if (term.cols !== shared.cols || term.rows !== shared.rows) {
-                term.resize(shared.cols, shared.rows);
-            }
-        };
-        // A node resize, a font change and the renderer swaps of the WebGL budget all land here: WebGL and
-        // the DOM measure a glyph differently, so a swap can change how many cells fit.
-        const refit = (): void => {
-            fitToHost(term, fit);
-            if (term.cols !== claimed.cols || term.rows !== claimed.rows) {
-                claimed = { cols: term.cols, rows: term.rows };
-                shared = claimed;
-                sessions.resize(id, claimed.cols, claimed.rows);
-            }
-            drawShared();
-        };
-        refitRef.current = refit;
-        const releaseWebgl = webglBudget.register(id, term, refit);
-
-        bindTerminalKeys(term, { write: (data) => sessions.write(id, data), clear: () => clearTerminalAction(id), leaves: true });
-        term.onData((data) => sessions.write(id, data));
-
-        let cancelled = false;
-        const unregister = registerTerminal(endpointId, id, term);
-        const offOutput = sessions.onOutput(id, (data) => {
-            term.write(data);
-            // A terminal that is being written to outranks an idle one when contexts are scarce.
-            webglBudget.touch(id);
-        });
-        const offSize = sessions.onSize(id, (size) => {
-            shared = size;
-            drawShared();
-        });
-        const offScreen = sessions.onScreen(id, ({ screen }) => {
-            // A reset through the parser (RIS), since `term.reset()` runs at once and output still queued would land on the fresh screen.
-            term.write(`\x1bc${screen}`);
-        });
-
-        const spec = readNodeHost(id);
-        // A terminal without its own directory starts in the project folder, like one opened from the repo.
-        const cwd = spec?.cwd ?? useProject.getState().current?.folder ?? undefined;
-        // An agent says which CLI and how; the daemon turns that into the line the shell gets.
-        const agent = spec?.provider ? { kind: spec.provider, runtimeMode: spec.runtimeMode, resume: spec.resume, account: spec.account } : undefined;
-        sessions
-            .open(id, { cwd, command: spec?.command, agent }, term.cols, term.rows)
-            .then((result) => {
-                if (!cancelled && result) {
-                    shared = { cols: result.cols, rows: result.rows };
-                    drawShared();
-                    term.write(result.screen);
-                }
-            })
-            .catch((e: unknown) => {
-                if (!cancelled) {
-                    // Not the hook's `t`: the effect would then depend on it and rebuild the terminal on a language change.
-                    setFailure(e instanceof Error ? e.message : i18next.t('canvas:terminal.startFailed'));
-                }
-            });
-
-        // The host is sized in world units, so a camera zoom (a CSS transform on an ancestor)
-        // never reaches this observer: only a real node resize changes cols and rows.
-        let timer: number | null = null;
-        const observer = new ResizeObserver(() => {
-            if (timer !== null) {
-                window.clearTimeout(timer);
-            }
-            timer = window.setTimeout(() => {
-                timer = null;
-                refit();
-            }, RESIZE_DEBOUNCE_MS);
-        });
-        observer.observe(host);
-
-        // Selecting copies; the platform's paste shortcut lands in xterm's own textarea.
-        const copySelection = (): void => {
-            if (term.hasSelection()) {
-                void navigator.clipboard?.writeText(term.getSelection()).catch(() => undefined);
-            }
-        };
-        host.addEventListener('pointerup', copySelection);
-
-        return () => {
-            cancelled = true;
-            if (timer !== null) {
-                window.clearTimeout(timer);
-            }
-            observer.disconnect();
-            host.removeEventListener('pointerup', copySelection);
-            offOutput();
-            offSize();
-            offScreen();
-            unregister();
-            releaseWebgl();
-            void sessions.detach(id);
-            term.dispose();
-            termRef.current = null;
-            refitRef.current = null;
-        };
-    }, [endpointId, id, builds]);
-
-    useEffect(() => {
-        const term = termRef.current;
-        if (!term) {
-            return;
-        }
         if (focused) {
-            term.focus();
-            webglBudget.focus(id);
+            viewRef.current?.focus();
         } else {
-            term.blur();
-            webglBudget.blur(id);
+            viewRef.current?.blur();
         }
-    }, [id, focused, builds]);
-
-    useEffect(() => {
-        const term = termRef.current;
-        if (!term) {
-            return;
-        }
-        term.options.theme = readTerminalTheme();
-        term.options.fontFamily = readTerminalFont();
-        term.options.fontSize = useSettings.getState().fontSize;
-        term.options.lineHeight = useSettings.getState().terminalLineHeight;
-        // A new glyph size changes how many cells fit; the observer only fires on a host resize.
-        refitRef.current?.();
-    }, [id, resolvedTheme, settingsVersion, builds]);
+    }, [endpointId, id, focused, builds]);
 
     const rebuild = (): void => {
         setFailure(null);
@@ -241,16 +83,16 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const paste = async (): Promise<void> => {
         const text = await readClipboardText();
         if (text !== '') {
-            termRef.current?.paste(text);
+            viewRef.current?.paste(text);
         }
     };
 
     return (
-        <ContextMenu.Root onOpenChange={(open) => setSelected(open && (termRef.current?.hasSelection() ?? false))}>
+        <ContextMenu.Root onOpenChange={(open) => setSelected(open && (viewRef.current?.selection() ?? '') !== '')}>
             <ContextMenu.Trigger className="absolute inset-0 bg-term-bg">
                 <div ref={dictationRoot} className="absolute inset-0 flex min-h-0 flex-col">
                     <div className="relative min-h-0 flex-1">
-                        <div ref={hostRef} className="term-host" />
+                        <TerminalSession key={`${endpointId}:${id}:${builds}`} id={id} endpointId={endpointId} viewRef={viewRef} onFailure={setFailure} />
                         {status !== 'open' && <NodeNotice>{status === 'closed' ? t('notice.reconnecting') : t('notice.connecting')}</NodeNotice>}
                         {failure && (
                             <NodeNotice tone="error" onRetry={rebuild}>
@@ -300,25 +142,124 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                         targetRef={dictationRoot}
                         disabled={status !== 'open' || exited !== undefined || failure !== null}
                         paste={(text) => {
-                            termRef.current?.paste(text);
-                            termRef.current?.focus();
+                            viewRef.current?.paste(text);
+                            viewRef.current?.focus();
                         }}
                     />
                 </div>
             </ContextMenu.Trigger>
             <ContextMenu.Popup>
                 {/* xterm keeps its selection to itself, so this asks the terminal instead of the document. */}
-                <ContextMenu.Item disabled={!selected} onClick={() => copyText(termRef.current?.getSelection() ?? '')}>
+                <ContextMenu.Item disabled={!selected} onClick={() => copyText(viewRef.current?.selection() ?? '')}>
                     <Icon icon={Copy} size={14} /> {t('common:action.copy')}
                 </ContextMenu.Item>
                 <ContextMenu.Item onClick={() => void paste()}>
                     <Icon icon={ClipboardPaste} size={14} /> {t('edit.paste')}
                 </ContextMenu.Item>
                 <ContextMenu.Separator />
-                <ContextMenu.Item onClick={() => termRef.current?.selectAll()}>
+                <ContextMenu.Item onClick={() => viewRef.current?.selectAll()}>
                     <Icon icon={Scan} size={14} /> {t('common:action.selectAll')}
                 </ContextMenu.Item>
             </ContextMenu.Popup>
         </ContextMenu.Root>
+    );
+}
+
+interface TerminalSessionProps {
+    id: string;
+    endpointId: string;
+    viewRef: RefObject<TerminalViewHandle | null>;
+    onFailure(message: string): void;
+}
+
+/* The terminal and its session, keyed as one: React cleans a removed tree up from the top, so the screen is read before the terminal is disposed. */
+function TerminalSession({ id, endpointId, viewRef, onFailure }: TerminalSessionProps) {
+    // Taken once, so a node that leaves after the window moved to another machine still detaches from its own.
+    const [sessions] = useState(() => sessionClientFor(endpointId));
+    const fontSize = useSettings((s) => s.fontSize);
+    const lineHeight = useSettings((s) => s.terminalLineHeight);
+
+    useEffect(() => {
+        const view = viewRef.current;
+        const term = view?.terminal;
+        if (!view || !term || !sessions) {
+            return;
+        }
+        const element = term.element;
+        // Every client attached to a session sees the sequence; only the node a person works in writes this machine's clipboard.
+        term.parser.registerOscHandler(52, (data) => {
+            const text = osc52Text(data);
+            if (text !== null && document.hasFocus() && element?.contains(document.activeElement)) {
+                copyText(text);
+            }
+            return true;
+        });
+        bindTerminalKeys(term, { write: (data) => sessions.write(id, data), clear: () => clearTerminalAction(id), leaves: true });
+
+        let cancelled = false;
+        const unregister = registerTerminal(endpointId, id, term);
+        const offOutput = sessions.onOutput(id, (data) => view.write(data));
+        // A client elsewhere that types into the same terminal sizes the PTY; this one draws that grid until a resize here claims it back.
+        const offSize = sessions.onSize(id, (size) => view.followGrid(size));
+        const offScreen = sessions.onScreen(id, ({ screen }) => {
+            view.reset();
+            view.write(screen);
+        });
+
+        const spec = readNodeHost(id);
+        // A terminal without its own directory starts in the project folder, like one opened from the repo.
+        const cwd = spec?.cwd ?? useProject.getState().current?.folder ?? undefined;
+        // An agent says which CLI and how; the daemon turns that into the line the shell gets.
+        const agent = spec?.provider ? { kind: spec.provider, runtimeMode: spec.runtimeMode, resume: spec.resume, account: spec.account } : undefined;
+        const { cols, rows } = view.size();
+        sessions
+            .open(id, { cwd, command: spec?.command, agent }, cols, rows)
+            .then((result) => {
+                if (!cancelled && result) {
+                    view.followGrid({ cols: result.cols, rows: result.rows });
+                    view.write(result.screen);
+                }
+            })
+            .catch((e: unknown) => {
+                if (!cancelled) {
+                    // Not the hook's `t`: the effect would then depend on it and rebuild the terminal on a language change.
+                    onFailure(e instanceof Error ? e.message : i18next.t('canvas:terminal.startFailed'));
+                }
+            });
+
+        // Selecting copies; the platform's paste shortcut lands in xterm's own textarea.
+        const copySelection = (): void => {
+            if (term.hasSelection()) {
+                void navigator.clipboard?.writeText(term.getSelection()).catch(() => undefined);
+            }
+        };
+        element?.addEventListener('pointerup', copySelection);
+
+        return () => {
+            cancelled = true;
+            element?.removeEventListener('pointerup', copySelection);
+            offOutput();
+            offSize();
+            offScreen();
+            unregister();
+            void sessions.detach(id);
+        };
+    }, [sessions, endpointId, id, viewRef, onFailure]);
+
+    if (!sessions) {
+        return null;
+    }
+    // A camera zoom is a transform on an ancestor, so it never changes the grid: the body is sized in world units.
+    return (
+        <TerminalView
+            ref={viewRef}
+            className="absolute inset-0"
+            fontSize={fontSize}
+            lineHeight={lineHeight}
+            webgl
+            scaledByAncestor
+            onData={(data) => sessions.write(id, data)}
+            onResize={(cols, rows) => sessions.resize(id, cols, rows)}
+        />
     );
 }

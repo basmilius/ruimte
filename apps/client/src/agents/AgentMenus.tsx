@@ -9,7 +9,7 @@ import { useChatPreferences } from '@ruimte/agents-react/chat/preferences';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { availableAgents } from './creation';
 import { useUi } from '@/state/ui';
-import { Icon, Menu } from '@basmilius/desktop-ui';
+import { Icon, Menu } from '@adecore/ui';
 
 function Submenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
     return (

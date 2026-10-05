@@ -1,4 +1,4 @@
-import { AccentSwatches } from '@basmilius/desktop-ui';
+import { AccentSwatches } from '@adecore/ui';
 import { chatHost } from '../host';
 
 /* The colors an account may wear, the host's palette. */

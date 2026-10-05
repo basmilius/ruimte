@@ -1,4 +1,4 @@
-import type { Shortcut } from '@basmilius/desktop-ui';
+import type { Shortcut } from '@adecore/ui';
 import { isApplePlatform } from '@/desktop/bridge';
 
 const CODES: Record<string, string> = {

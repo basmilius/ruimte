@@ -18,7 +18,7 @@ import { FileSurface } from '@/shell/panels/FileSurface';
 import { useDocument } from '@/state/document';
 import { isScratchProject, useProject } from '@/state/project';
 import { useFiles } from '@/state/files';
-import { ErrorBoundary, lazyNamed } from '@basmilius/desktop-ui';
+import { ErrorBoundary, lazyNamed } from '@adecore/ui';
 
 const DrawingView = lazyNamed(() => import('@/drawing/DrawingView'), 'DrawingView');
 const DiagramView = lazyNamed(() => import('@/diagram/DiagramView'), 'DiagramView');

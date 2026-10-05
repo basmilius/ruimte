@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { CircleX, GitBranch, TriangleAlert } from 'lucide-react';
 import type { Editor, EditorBlock, EditorIndentation } from '@ruimte/smart-editor';
-import { ErrorBoundary, Icon, Tooltip } from '@basmilius/desktop-ui';
-import { formatNumber } from '@basmilius/desktop-ui/format';
+import { ErrorBoundary, Icon, Tooltip } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
 import type { EditorLanguage } from '@/language/editor-language';
 import { LanguageStatusItem } from '@/language/LanguageStatusItem';
 import { useProblemCounts } from '@/language/use-problem-counts';

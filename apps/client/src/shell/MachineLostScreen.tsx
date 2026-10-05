@@ -11,7 +11,7 @@ import { nameOf } from '@/shell/settings/machine-list';
 import { useEndpointId } from '@/state/keys';
 import { pool } from '@/transport';
 import { useEndpointConnection, useLastSeenAt } from '@/transport/status';
-import { Button, useNow } from '@basmilius/desktop-ui';
+import { Button, useNow } from '@adecore/ui';
 
 const MINUTE_MS = 60_000;
 

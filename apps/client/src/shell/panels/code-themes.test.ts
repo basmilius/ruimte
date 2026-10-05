@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { join } from 'node:path';
 import { createHighlighter } from 'shiki';
 import { CODE_PALETTES, CODE_THEMES, type CodeRole } from './code-themes';
 
@@ -34,14 +33,14 @@ async function tokenIn(path: string, mode: 'light' | 'dark', token: string): Pro
     return new RegExp(`\\[data-theme="${mode}"\\]\\s*\\{[^}]*?${token}:\\s*(#[0-9a-f]{6})`, 'i').exec(css)?.[1]?.toLowerCase();
 }
 
-/* Where a chat draws code: the terminal ground of the client's own stylesheet. */
+/* Where a chat draws code: the terminal ground, which the terminal's stylesheet declares. */
 function chatGround(mode: 'light' | 'dark'): Promise<string | undefined> {
-    return tokenIn(join(HERE, '..', '..', 'styles.css'), mode, '--term-bg');
+    return tokenIn(Bun.resolveSync('@adecore/terminal/terminal.css', HERE), mode, '--term-bg');
 }
 
 /* Where a panel draws code: the surface the library's theme gives every panel. */
 function panelGround(mode: 'light' | 'dark'): Promise<string | undefined> {
-    return tokenIn(Bun.resolveSync('@basmilius/desktop-ui/theme.css', HERE), mode, '--surface');
+    return tokenIn(Bun.resolveSync('@adecore/ui/theme.css', HERE), mode, '--surface');
 }
 
 describe('the colors of our code themes', () => {

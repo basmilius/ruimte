@@ -7,7 +7,7 @@ import { bookmarkLabel, bookmarksInThreadOrder } from '../logic/bookmarks';
 import { chatHost } from '../../host';
 import { useChatScope } from '../../scope';
 import { useChatRow } from '../../state/chats';
-import { Icon, Menu } from '@basmilius/desktop-ui';
+import { Icon, Menu } from '@adecore/ui';
 
 /*
  * "Bookmarks" in the menu of a chat node or a chat view: the chat's bookmarks in the order of the

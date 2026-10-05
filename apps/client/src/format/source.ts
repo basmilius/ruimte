@@ -1,4 +1,4 @@
-import { setFormatSource, type FormatSource } from '@basmilius/desktop-ui/format';
+import { setFormatSource, type FormatSource } from '@adecore/ui/format';
 import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';
 import { useSettings } from '@/state/settings';

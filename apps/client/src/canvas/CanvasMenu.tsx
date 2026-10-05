@@ -6,7 +6,7 @@ import type { Point } from '@/canvas/math';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { Icon, Kbd, ContextMenu } from '@basmilius/desktop-ui';
+import { Icon, Kbd, ContextMenu } from '@adecore/ui';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 /* The menu for a right-click on empty canvas; everything it adds lands where the click was. */

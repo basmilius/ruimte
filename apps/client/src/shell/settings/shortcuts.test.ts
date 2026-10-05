@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { shortcut } from '@basmilius/desktop-ui';
+import { shortcut } from '@adecore/ui';
 import { commandShortcuts, filterShortcuts, shortcutGroupOf, shortcutGroups, shortcutRowId } from './shortcuts.ts';
 
 describe('commandShortcuts', () => {

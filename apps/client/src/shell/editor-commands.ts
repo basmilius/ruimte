@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { Shortcut } from '@basmilius/desktop-ui';
+import type { Shortcut } from '@adecore/ui';
 import type { EditorRunCommand } from '@ruimte/smart-editor';
 import { editorShortcut } from '@/shell/editor-keymap';
 import { focusedEditor } from '@/shell/panels/focused-editor';

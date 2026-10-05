@@ -5,7 +5,7 @@ import { hasLocalMachine, listedEndpoints } from '@/state/local-machine';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
 import { transportFor } from '@/transport';
-import { messageOf } from '@basmilius/desktop-ui';
+import { messageOf } from '@adecore/ui';
 import { accountRefusalText } from './account-refusal';
 import { usePulsarAccount, withAccessToken } from './account';
 

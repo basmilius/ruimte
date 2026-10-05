@@ -9,7 +9,7 @@ import { localEndpointLabel, useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
-import { Icon, IconButton, Menu } from '@basmilius/desktop-ui';
+import { Icon, IconButton, Menu } from '@adecore/ui';
 
 const ACTION_ICONS: Record<ComputerControlAction, LucideIcon> = {
     pause: Pause,

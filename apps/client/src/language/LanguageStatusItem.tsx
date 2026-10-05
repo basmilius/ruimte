@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LanguageServerStatus } from '@ruimte/contracts';
-import { Button, Popover, Spinner, Tooltip } from '@basmilius/desktop-ui';
+import { Button, Popover, Spinner, Tooltip } from '@adecore/ui';
 import type { EditorLanguage } from './editor-language';
 import { Dot, LogDialog } from './ServerParts';
 import { report, serverDetail, sidecarDetails, useStatuses } from './server-status';

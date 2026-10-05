@@ -32,20 +32,7 @@ import {
     type AlertAction
 } from '@/processes/format';
 import { performAsPerson, performConfirmedAsPerson, runAsPerson } from '@/actions/client-actions';
-import {
-    messageOf,
-    Segmented,
-    Button,
-    Icon,
-    IconButton,
-    ListRow,
-    Menu,
-    Tooltip,
-    PanelEmpty,
-    PromptDialog,
-    SectionLabel,
-    ContextMenu
-} from '@basmilius/desktop-ui';
+import { messageOf, Segmented, Button, Icon, IconButton, ListRow, Menu, Tooltip, PanelEmpty, PromptDialog, SectionLabel, ContextMenu } from '@adecore/ui';
 import { projectNodes, revealNode } from '@/project/views';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { ProcessChart } from '@/shell/panels/ProcessChart';

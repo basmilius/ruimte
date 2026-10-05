@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { AtSign, Hash } from 'lucide-react';
-import { Icon } from '@basmilius/desktop-ui';
-import { formatShortcut } from '@basmilius/desktop-ui';
-import { formatNumber } from '@basmilius/desktop-ui/format';
+import { Icon } from '@adecore/ui';
+import { formatShortcut } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
 import { basenameOf } from '@/shell/panels/files-tree';

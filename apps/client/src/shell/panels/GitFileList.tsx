@@ -63,7 +63,7 @@ import type { GitCheckout } from '@/state/git-repos';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { FILE_TREE_ICONS, Icon, PanelEmpty, ContextMenu } from '@basmilius/desktop-ui';
+import { FILE_TREE_ICONS, Icon, PanelEmpty, ContextMenu } from '@adecore/ui';
 
 /* The marks of a checkbox, drawn in the color of its part. */
 function svgMask(path: string): string {

@@ -1,4 +1,4 @@
-import { isInFloatingLayer } from '@basmilius/desktop-ui';
+import { isInFloatingLayer } from '@adecore/ui';
 
 /* What a space press works rather than pans: a control it presses or toggles. */
 const SPACE_CONTROLS = [

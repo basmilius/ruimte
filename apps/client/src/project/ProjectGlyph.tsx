@@ -4,7 +4,7 @@ import { MessagesSquare } from 'lucide-react';
 import { projectIconGlyphOf } from '@/project/project-icons';
 import { useTheme } from '@/state/theme';
 import { useMachineUrl } from '@/transport/machine-url';
-import { Icon } from '@basmilius/desktop-ui';
+import { Icon } from '@adecore/ui';
 
 interface ProjectGlyphProps {
     projectId: string;

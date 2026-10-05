@@ -51,7 +51,7 @@ const KEY_LISTENERS: Record<string, string> = {
     'language/definition-link.ts': 'no shortcut: whether the modifier is down, which underlines the name under a resting pointer and no key acts on'
 };
 
-/* Where the app may build on `Intl` itself rather than on `@basmilius/desktop-ui/format`, and why there. */
+/* Where the app may build on `Intl` itself rather than on `@adecore/ui/format`, and why there. */
 const INTL_OUTSIDE_FORMAT: Record<string, string> = {
     'voice/controller.ts': 'the date told to the speech model, fixed to en-GB so the model always reads one format; no person reads it'
 };
@@ -428,7 +428,7 @@ describe('the conventions of the client', () => {
         expect(between).toEqual([]);
     });
 
-    test('only @basmilius/desktop-ui/format builds a formatter out of Intl', () => {
+    test('only @adecore/ui/format builds a formatter out of Intl', () => {
         const building = sources()
             .filter(({ path }) => !(path in INTL_OUTSIDE_FORMAT))
             .flatMap(({ path, text }) => {

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { ProcessPoint } from '@ruimte/contracts';
 import { formatClock } from '@ruimte/agents-react/usage/format';
-import { SectionLabel, useMeasuredWidth } from '@basmilius/desktop-ui';
+import { SectionLabel, useMeasuredWidth } from '@adecore/ui';
 
 const HEIGHT = 44;
 

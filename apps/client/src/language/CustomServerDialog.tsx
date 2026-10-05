@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LanguageCustomCheckResult } from '@ruimte/contracts';
-import { Button, Checkbox, Dialog, Field, FormError, Input, Segmented, TextArea } from '@basmilius/desktop-ui';
+import { Button, Checkbox, Dialog, Field, FormError, Input, Segmented, TextArea } from '@adecore/ui';
 import { useProjectList } from '@/state/project-list';
 import { inputOf, problemOf, type CustomDraft, type DraftProblem } from './custom-draft';
 import type { CustomServersTracker } from './custom-servers';

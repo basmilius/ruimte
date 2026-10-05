@@ -7,8 +7,8 @@ import { textLimitFor } from '@/shell/panels/large-text';
 import { useEndpointId } from '@/state/keys';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { Button, EmptyState, Icon } from '@basmilius/desktop-ui';
-import { formatBytes } from '@basmilius/desktop-ui/format';
+import { Button, EmptyState, Icon } from '@adecore/ui';
+import { formatBytes } from '@adecore/ui/format';
 
 /* What is left when there is nothing to draw: what the file is, how large, and the way to open it. */
 export function UnsupportedFile({ path, name, read }: { path: string; name: string; read: FsReadBinary | FsReadTooLarge }) {

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
-import type { IconPickerGroup } from '@basmilius/desktop-ui';
+import type { IconPickerGroup } from '@adecore/ui';
 import { PROJECT_ICON_GROUPS } from '@/project/project-icons';
 
 /* The icon groups as the picker takes them, each under its label in the reader's language. */

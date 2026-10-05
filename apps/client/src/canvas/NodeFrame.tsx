@@ -51,7 +51,7 @@ import { useEndpointId } from '@/state/keys';
 import { useCellHasFocus } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
-import { ButtonGroup, ErrorBoundary, Pill, Tooltip, FileIcon, Icon, IconButton, Input, ContextMenu } from '@basmilius/desktop-ui';
+import { ButtonGroup, ErrorBoundary, Pill, Tooltip, FileIcon, Icon, IconButton, Input, ContextMenu } from '@adecore/ui';
 import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canvas/culling';
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';

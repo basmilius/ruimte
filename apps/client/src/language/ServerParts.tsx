@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LanguageLogLine } from '@ruimte/contracts';
-import { Dialog } from '@basmilius/desktop-ui';
+import { Dialog } from '@adecore/ui';
 import type { LanguageStatusTracker } from './status';
 import { nameOf, type ServerTone } from './status-view';
 

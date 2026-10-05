@@ -7,7 +7,7 @@ import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
 import { DevicesPanel } from '@/shell/panels/DevicesPanel';
-import { clampColumnSize, ErrorBoundary, CloseButton, SlidingColumn, lazyNamed, PanelHeader, SectionLabel } from '@basmilius/desktop-ui';
+import { clampColumnSize, ErrorBoundary, CloseButton, SlidingColumn, lazyNamed, PanelHeader, SectionLabel } from '@adecore/ui';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useShownPanel, useUi, type PanelKind } from '@/state/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';

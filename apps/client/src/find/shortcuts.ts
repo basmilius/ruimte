@@ -1,4 +1,4 @@
-import { shortcut } from '@basmilius/desktop-ui';
+import { shortcut } from '@adecore/ui';
 
 /* The keys of the find field; they only act while it has the keyboard, like the arrows in a list. */
 export const FIND_SHORTCUTS = {

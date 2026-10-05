@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { CircleHelp, Folder, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { UsageModel, UsageProject, UsageProvider, UsageSummaryResult } from '@ruimte/agent-contracts';
-import { EmptyState, Icon, SectionLabel, Segmented, Tooltip } from '@basmilius/desktop-ui';
+import { EmptyState, Icon, SectionLabel, Segmented, Tooltip } from '@adecore/ui';
 import { useChatScope } from '../scope';
 import { chatHost } from '../host';
 import type { UsageMetric } from '../state/usage';

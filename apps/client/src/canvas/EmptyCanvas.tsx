@@ -13,8 +13,8 @@ import { useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { useUi } from '@/state/ui';
-import { Icon, Kbd, SectionLabel, Tile } from '@basmilius/desktop-ui';
-import type { Shortcut } from '@basmilius/desktop-ui';
+import { Icon, Kbd, SectionLabel, Tile } from '@adecore/ui';
+import type { Shortcut } from '@adecore/ui';
 
 interface TileLook {
     icon: ReactNode;

@@ -7,7 +7,7 @@ import { useDeviceList, useResolvedDevice } from '@/devices/state';
 import { DeviceStream } from '@/devices/DeviceStream';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
-import { Button, ButtonGroup, Icon, IconButton, PanelEmpty, Menu } from '@basmilius/desktop-ui';
+import { Button, ButtonGroup, Icon, IconButton, PanelEmpty, Menu } from '@adecore/ui';
 
 const GESTURES: ReadonlyArray<{ button: DeviceButton; icon: LucideIcon }> = [
     { button: 'swipeHome', icon: Hand },

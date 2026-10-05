@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Copy, ExternalLink } from 'lucide-react';
 import { fileManagerName, useServers } from '@/state/server';
 import { transportFor } from '@/transport';
-import { copyText, Icon, ContextMenu } from '@basmilius/desktop-ui';
+import { copyText, Icon, ContextMenu } from '@adecore/ui';
 
 /* A project's folder, from any row that names the project: reveal it on its machine, or take the path along. */
 export function FolderMenuItems({ endpointId, folder, connected }: { endpointId: string; folder: string; connected: boolean }) {

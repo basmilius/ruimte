@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { useStore } from 'zustand';
 import { ArrowDown, ArrowUp } from 'lucide-react';
-import { Button, ButtonGroup, IconButton } from '@basmilius/desktop-ui';
+import { Button, ButtonGroup, IconButton } from '@adecore/ui';
 import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
 import type { Editor } from '@ruimte/smart-editor';
 import { focusChat } from '@/plan/plan-actions';

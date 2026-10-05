@@ -5,8 +5,8 @@ import type { ProviderAccount } from '@ruimte/agent-contracts';
 import { useChatScope } from '../scope';
 import { saveAccount } from './account-actions';
 import { draftsOf, emptyDraft, variablesChanged, variablesOf, variablesProblem, type VariableDraft } from './variables';
-import { SettingsRow, SettingsSection } from '@basmilius/desktop-ui/settings';
-import { Button, FormError, Icon, IconButton, Input, Tooltip } from '@basmilius/desktop-ui';
+import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
+import { Button, FormError, Icon, IconButton, Input, Tooltip } from '@adecore/ui';
 
 interface AccountVariablesProps {
     id: string;

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SettingsRow } from '@basmilius/desktop-ui/settings';
-import { Switch } from '@basmilius/desktop-ui';
+import { SettingsRow } from '@adecore/ui/settings';
+import { Switch } from '@adecore/ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';

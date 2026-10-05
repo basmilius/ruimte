@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Bookmark, Copy, GitFork, type LucideIcon } from 'lucide-react';
 import { layoutTicks, messageAt, slotInView, slotOf, tickWidth, TICK_HEIGHT_PX, type ScrubberTick } from '../logic/scrubber';
 import { BookmarkMenuItems } from './TimelineMenu';
-import { formatMoment } from '@basmilius/desktop-ui/format';
-import { cameThroughPortal, ContextMenu, copyText, Icon, Menu, PreviewCard } from '@basmilius/desktop-ui';
+import { formatMoment } from '@adecore/ui/format';
+import { cameThroughPortal, ContextMenu, copyText, Icon, Menu, PreviewCard } from '@adecore/ui';
 
 const PREVIEW_CHARS = 280;
 

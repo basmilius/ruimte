@@ -1,4 +1,4 @@
-import { matchesShortcut, shortcut, type KeyLike } from '@basmilius/desktop-ui';
+import { matchesShortcut, shortcut, type KeyLike } from '@adecore/ui';
 
 /*
  * The keys inside a prompt card. Bare keys are allowed here and nowhere else on a canvas because a card

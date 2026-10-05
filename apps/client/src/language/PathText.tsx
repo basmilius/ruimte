@@ -1,4 +1,4 @@
-import { Tooltip } from '@basmilius/desktop-ui';
+import { Tooltip } from '@adecore/ui';
 
 /*
  * A path that gives way from its start, so the end of it, which names the place, stays readable. The

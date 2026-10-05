@@ -64,7 +64,7 @@ import { ResumeCompactionDock } from './ResumeCompactionDock';
 import { StashPicker } from './Pickers';
 import { RunSettings } from './RunSettings';
 import { UploadThumb } from './UploadThumb';
-import { formatNumber } from '@basmilius/desktop-ui/format';
+import { formatNumber } from '@adecore/ui/format';
 import {
     ButtonGroup,
     ContextMenu,
@@ -81,7 +81,7 @@ import {
     Surface,
     Tooltip,
     useNow
-} from '@basmilius/desktop-ui';
+} from '@adecore/ui';
 import { useChatRow, waitingRequestsOf } from '../../state/chats';
 import { useProviders } from '../../state/providers';
 

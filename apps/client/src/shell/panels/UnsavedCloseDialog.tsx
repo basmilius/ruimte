@@ -5,7 +5,7 @@ import { DraftBar } from './DraftBar';
 import { currentEndpointId } from '@/state/keys';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
-import { Button, Dialog } from '@basmilius/desktop-ui';
+import { Button, Dialog } from '@adecore/ui';
 
 export function UnsavedCloseDialog() {
     const { t } = useTranslation('panels');

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Stepper, Switch } from '@basmilius/desktop-ui';
-import { SettingsRow } from '@basmilius/desktop-ui/settings';
+import { Stepper, Switch } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
 import { CodeThemePreview } from '@/shell/settings/panes/CodeSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useCodeTheme } from '@/state/code-theme';

@@ -4,7 +4,7 @@ import { FileNodeGateContext } from '@/shell/panels/edit-gate';
 import { FileSurface } from '@/shell/panels/FileSurface';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useCanvas } from '@/state/canvas';
-import { FileIcon } from '@basmilius/desktop-ui';
+import { FileIcon } from '@adecore/ui';
 
 /*
  * What a file node is while it is out of sight or too small to read: its mark and its name, with no

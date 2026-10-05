@@ -1,5 +1,5 @@
 /*
- * The editor's surface, drawn only in the app's tokens (`@basmilius/desktop-ui/theme.css` and the
+ * The editor's surface, drawn only in the app's tokens (`@adecore/ui/theme.css` and the
  * client's `styles.css`), so it follows the theme, the code face and the accent without a color of its
  * own. The syntax colors are not here: they come from the Shiki theme the viewer draws with.
  */

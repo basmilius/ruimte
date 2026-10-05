@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { formatShortcut, Segmented, Switch } from '@basmilius/desktop-ui';
-import { SettingsRow } from '@basmilius/desktop-ui/settings';
+import { formatShortcut, Segmented, Switch } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
 import { InlineAgentPicker } from '@/editor-ai/InlineAgentPicker';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';

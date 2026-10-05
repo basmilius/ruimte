@@ -21,7 +21,7 @@ import {
     Select,
     TextArea,
     Tooltip
-} from '@basmilius/desktop-ui';
+} from '@adecore/ui';
 import {
     draftOf,
     draftProblem,

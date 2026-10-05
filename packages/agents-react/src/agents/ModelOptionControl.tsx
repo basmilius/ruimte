@@ -1,5 +1,5 @@
 import type { ModelOptionDescriptor, ModelSelection } from '@ruimte/agent-contracts';
-import { Segmented, Switch, Select } from '@basmilius/desktop-ui';
+import { Segmented, Switch, Select } from '@adecore/ui';
 import { optionValue } from './model-options';
 
 // Up to this many choices read at a glance side by side; more go into a menu.

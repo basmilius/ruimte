@@ -5,7 +5,7 @@ import { newChat } from '@/project/new-chat';
 import { canOpenWindows, openNewWindow } from '@/project/windows';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useUi } from '@/state/ui';
-import { matchesShortcut, type KeyLike } from '@basmilius/desktop-ui';
+import { matchesShortcut, type KeyLike } from '@adecore/ui';
 
 // Window shortcuts also work on the start screen; project shortcuts are bound by the workspace.
 export type AppShortcut = 'palette' | 'find-in-files' | 'settings' | 'settings-search' | 'sidebar' | 'new-window' | 'new-chat';

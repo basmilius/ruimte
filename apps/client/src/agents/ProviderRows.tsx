@@ -5,7 +5,7 @@ import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { modelName } from '@ruimte/agents-react/agents/model-name';
 import { startingSelection, useChatPreferences } from '@ruimte/agents-react/chat/preferences';
 import { useProviders } from '@ruimte/agents-react/state/providers';
-import { Icon, SectionLabel } from '@basmilius/desktop-ui';
+import { Icon, SectionLabel } from '@adecore/ui';
 import { availableAgents } from './creation';
 import { useUi } from '@/state/ui';
 

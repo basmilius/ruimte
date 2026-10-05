@@ -13,7 +13,7 @@ import { rehypeFadeWords } from './rehype-fade';
 import { remarkHtmlAsText } from './remark-html-as-text';
 import type { FileRef } from '../../host';
 import { openFileLink, useFileLinkCwd, useFileLinkTarget } from './file-links';
-import { FileIcon, Icon } from '@basmilius/desktop-ui';
+import { FileIcon, Icon } from '@adecore/ui';
 
 function languageOf(className: string | undefined): string {
     return /language-([\w-]+)/.exec(className ?? '')?.[1] ?? 'text';

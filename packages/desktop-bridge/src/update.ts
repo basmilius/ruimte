@@ -1,4 +1,4 @@
-export type { UpdateState } from '@basmilius/desktop-shell/bridge';
+export type { UpdateState } from '@adecore/shell/bridge';
 
 /* What the agents of one window add up to. The client counts it; the shell badges the dock and asks before quitting. */
 export interface AgentActivity {

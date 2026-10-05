@@ -1,5 +1,5 @@
 import { CircleCheck, Sparkles, TriangleAlert } from 'lucide-react';
-import { Icon } from '@basmilius/desktop-ui';
+import { Icon } from '@adecore/ui';
 import type { Baseline, BaselineLevel } from './hover-content';
 
 const BASELINE_MARKS: Record<BaselineLevel, { icon: typeof CircleCheck; color: string }> = {

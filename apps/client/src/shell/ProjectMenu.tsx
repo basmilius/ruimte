@@ -20,7 +20,7 @@ import { fileManagerName, useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { useMachineHold, useOpenEndpoints } from '@/transport/status';
-import { Icon, Tooltip, PromptDialog, Menu, ProjectSwitcher, type ProjectSwitcherItem } from '@basmilius/desktop-ui';
+import { Icon, Tooltip, PromptDialog, Menu, ProjectSwitcher, type ProjectSwitcherItem } from '@adecore/ui';
 
 interface SwitcherItem extends ProjectSwitcherItem {
     row: ProjectMenuRow;

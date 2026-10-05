@@ -12,7 +12,7 @@ import { CommitBox } from '@/shell/panels/CommitBox';
 import { CommitLog, type LogSource } from '@/shell/panels/CommitLog';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { GitChoice, GitDiverged, type Choice } from '@/shell/panels/GitDialogs';
-import { PromptDialog, useColumnResize, Button, ButtonGroup, FormError, Icon, IconButton, Pill, Separator, PanelEmpty, Menu } from '@basmilius/desktop-ui';
+import { PromptDialog, useColumnResize, Button, ButtonGroup, FormError, Icon, IconButton, Pill, Separator, PanelEmpty, Menu } from '@adecore/ui';
 import { GitFileList, type GitWork } from '@/shell/panels/GitFileList';
 import { isUnmergedRefusal, popStashStep, pushButton, pushable, pushEntries, type CommitCandidate } from '@/shell/panels/git-actions';
 import { PushMenu } from '@/shell/panels/PushMenu';

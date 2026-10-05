@@ -8,7 +8,7 @@ import {
     type ChatAttachment,
     type ChatAttachmentUpload
 } from '@ruimte/agent-contracts';
-import { formatBytes as bytesOf } from '@basmilius/desktop-ui/format';
+import { formatBytes as bytesOf } from '@adecore/ui/format';
 
 interface IncomingFile {
     name: string;

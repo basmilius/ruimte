@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Spinner, Tooltip } from '@basmilius/desktop-ui';
+import { Spinner, Tooltip } from '@adecore/ui';
 
 /* An agent in the middle of a turn, or in gray one between turns whose sub-agents go on. `plain` drops the tooltip for a row that already names itself. */
 export function WorkingMark({ delegating = false, plain = false }: { delegating?: boolean; plain?: boolean }) {

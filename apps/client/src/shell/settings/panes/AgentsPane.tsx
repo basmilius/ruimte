@@ -13,9 +13,9 @@ import {
     useMachineKeepsAwake
 } from '@/state/keep-awake';
 import { MachineSwitchSections } from '@/shell/settings/MachineSwitchSection';
-import { SettingsRow } from '@basmilius/desktop-ui/settings';
-import { Button, FormError, Switch, Select, type SelectItem } from '@basmilius/desktop-ui';
-import { formatPercent } from '@basmilius/desktop-ui/format';
+import { SettingsRow } from '@adecore/ui/settings';
+import { Button, FormError, Switch, Select, type SelectItem } from '@adecore/ui';
+import { formatPercent } from '@adecore/ui/format';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';

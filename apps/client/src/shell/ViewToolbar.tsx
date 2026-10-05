@@ -14,7 +14,7 @@ import { useNodeHost } from '@/nodes/node-host';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useEndpointId } from '@/state/keys';
 import { useHasPlans } from '@/state/plans';
-import { Pill, Tooltip } from '@basmilius/desktop-ui';
+import { Pill, Tooltip } from '@adecore/ui';
 import { hostIdOf, KINDS_WITH_TOOLBAR, modeOf, useIsFork, useShowsSubagents } from '@/shell/view-toolbar';
 
 export function ViewToolbar({ view, focused }: { view: CellView | null; focused: boolean }) {

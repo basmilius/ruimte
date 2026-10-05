@@ -18,7 +18,7 @@ import { toolbarPanels } from '@/shell/panels';
 import { isScratchProject, useProject } from '@/state/project';
 import { useShownPanel, useUi } from '@/state/ui';
 import { hasUpdate, useUpdates } from '@/state/updates';
-import { ButtonGroup, IconButton, Separator } from '@basmilius/desktop-ui';
+import { ButtonGroup, IconButton, Separator } from '@adecore/ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { VoiceButton } from '@/voice/VoiceButton';
 import { useVoice } from '@/voice/state';

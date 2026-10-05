@@ -4,7 +4,7 @@ import { performAsPerson } from '@/actions/client-actions';
 import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { PromptDialog } from '@basmilius/desktop-ui';
+import { PromptDialog } from '@adecore/ui';
 
 // A group's title, as a branch name git accepts.
 function branchFromTitle(title: string): string {

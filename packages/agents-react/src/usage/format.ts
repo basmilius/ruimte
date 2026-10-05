@@ -1,6 +1,6 @@
 import type { UsageProvider, UsageRate } from '@ruimte/agent-contracts';
-import { formatDay, formatHour, formatWeekdayDay, formatMoney, formatNumber, formatTokens } from '@basmilius/desktop-ui/format';
-export { formatClock } from '@basmilius/desktop-ui/format';
+import { formatDay, formatHour, formatWeekdayDay, formatMoney, formatNumber, formatTokens } from '@adecore/ui/format';
+export { formatClock } from '@adecore/ui/format';
 
 /* Dollars are what a price table is in; euros are what the page can be set to. */
 export type UsageCurrency = 'USD' | 'EUR';

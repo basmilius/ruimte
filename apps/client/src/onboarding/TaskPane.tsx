@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Info, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { CloseButton, Icon } from '@basmilius/desktop-ui';
+import { CloseButton, Icon } from '@adecore/ui';
 
 interface TaskPaneProps {
     icon: LucideIcon;

@@ -6,7 +6,7 @@ import { lastFindQuery, type FindSeed, type FindState } from '@/find/use-find';
 import { requiredShortcut } from '@/shell/editor-keymap';
 import { focusedEditor } from '@/shell/panels/focused-editor';
 import { isApplePlatform } from '@/desktop/bridge';
-import { matchesShortcut } from '@basmilius/desktop-ui';
+import { matchesShortcut } from '@adecore/ui';
 
 const NOTHING: EditorFindState = { count: 0, current: null };
 

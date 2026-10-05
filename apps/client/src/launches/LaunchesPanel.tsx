@@ -2,12 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import type { Terminal } from '@xterm/xterm';
+import { TerminalView, type TerminalViewHandle } from '@adecore/terminal';
 import { ChevronDown, ExternalLink, Play, Plus, Rocket } from 'lucide-react';
-import { Button, ButtonGroup, Icon, Menu, PanelEmpty, useNow } from '@basmilius/desktop-ui';
-import { formatAgo, formatDuration } from '@basmilius/desktop-ui/format';
+import { Button, ButtonGroup, Icon, Menu, PanelEmpty, useNow } from '@adecore/ui';
+import { formatAgo, formatDuration } from '@adecore/ui/format';
 import { isApplePlatform } from '@/desktop/bridge';
 import { openLaunchAddress, startLaunch } from '@/launches/actions';
 import { LaunchMenu } from '@/launches/LaunchChip';
@@ -19,14 +17,9 @@ import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { useProjectRepos } from '@/state/git-repos';
 import { useEndpointId } from '@/state/keys';
 import { useSettings } from '@/state/settings';
-import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
 import { isAppShortcut, isTerminalPaste, macMotionSequence } from '@/terminal/keymap';
-import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
-import { createTerminal, fitToHost } from '@/terminal/xterm';
 import { sessionClientFor } from '@/transport/connections';
-
-const RESIZE_DEBOUNCE_MS = 50;
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -185,47 +178,20 @@ function LaunchOutput({ view }: { view: LaunchView }) {
 }
 
 function LaunchTerminal({ sessionId }: { sessionId: string }) {
-    const hostRef = useRef<HTMLDivElement>(null);
-    const termRef = useRef<Terminal | null>(null);
-    const refitRef = useRef<(() => void) | null>(null);
+    const viewRef = useRef<TerminalViewHandle>(null);
     const [failure, setFailure] = useState<string | null>(null);
-    const resolvedTheme = useTheme((s) => s.resolved);
-    const settingsVersion = useSettings((s) => s.version);
+    const fontSize = useSettings((s) => s.fontSize);
+    const lineHeight = useSettings((s) => s.terminalLineHeight);
     const endpointId = useEndpointId();
+    // Taken once, so a panel that closes after the window moved to another machine still detaches from its own.
+    const [sessions] = useState(() => sessionClientFor(endpointId));
 
     useEffect(() => {
-        const host = hostRef.current;
-        // Taken once, so a panel that closes after the window moved to another machine still detaches from its own.
-        const sessions = sessionClientFor(endpointId);
-        if (!host || !sessions) {
+        const view = viewRef.current;
+        const term = view?.terminal;
+        if (!view || !term || !sessions) {
             return;
         }
-        const term = createTerminal();
-        const fit = new FitAddon();
-        term.loadAddon(fit);
-        term.loadAddon(new WebLinksAddon());
-        term.open(host);
-        fitToHost(term, fit);
-        termRef.current = term;
-
-        // The grid this panel asks for and the one the PTY has, which part while another window reads the same launch.
-        let claimed = { cols: term.cols, rows: term.rows };
-        let shared = claimed;
-        const drawShared = (): void => {
-            if (term.cols !== shared.cols || term.rows !== shared.rows) {
-                term.resize(shared.cols, shared.rows);
-            }
-        };
-        const refit = (): void => {
-            fitToHost(term, fit);
-            if (term.cols !== claimed.cols || term.rows !== claimed.rows) {
-                claimed = { cols: term.cols, rows: term.rows };
-                shared = claimed;
-                sessions.resize(sessionId, claimed.cols, claimed.rows);
-            }
-            drawShared();
-        };
-        refitRef.current = refit;
 
         // Typing reaches the launch, since some dev servers listen for a key; the app keeps the shortcuts it moves between views with.
         term.attachCustomKeyEventHandler((e) => {
@@ -249,22 +215,22 @@ function LaunchTerminal({ sessionId }: { sessionId: string }) {
             }
             return true;
         });
-        term.onData((data) => sessions.write(sessionId, data));
 
         let cancelled = false;
-        const offOutput = sessions.onOutput(sessionId, (data) => term.write(data));
-        const offSize = sessions.onSize(sessionId, (size) => {
-            shared = size;
-            drawShared();
+        const offOutput = sessions.onOutput(sessionId, (data) => view.write(data));
+        // The grid of another window that reads the same launch, until a resize here claims it back.
+        const offSize = sessions.onSize(sessionId, (size) => view.followGrid(size));
+        const offScreen = sessions.onScreen(sessionId, ({ screen }) => {
+            view.reset();
+            view.write(screen);
         });
-        const offScreen = sessions.onScreen(sessionId, ({ screen }) => term.write(`\x1bc${screen}`));
+        const { cols, rows } = view.size();
         sessions
-            .open(sessionId, { follow: true }, term.cols, term.rows)
+            .open(sessionId, { follow: true }, cols, rows)
             .then((result) => {
                 if (!cancelled && result) {
-                    shared = { cols: result.cols, rows: result.rows };
-                    drawShared();
-                    term.write(result.screen);
+                    view.followGrid({ cols: result.cols, rows: result.rows });
+                    view.write(result.screen);
                 }
             })
             .catch((e: unknown) => {
@@ -273,49 +239,27 @@ function LaunchTerminal({ sessionId }: { sessionId: string }) {
                 }
             });
 
-        let timer: number | null = null;
-        const observer = new ResizeObserver(() => {
-            if (timer !== null) {
-                window.clearTimeout(timer);
-            }
-            timer = window.setTimeout(() => {
-                timer = null;
-                refit();
-            }, RESIZE_DEBOUNCE_MS);
-        });
-        observer.observe(host);
-
         return () => {
             cancelled = true;
-            if (timer !== null) {
-                window.clearTimeout(timer);
-            }
-            observer.disconnect();
             offOutput();
             offSize();
             offScreen();
             void sessions.detach(sessionId);
-            term.dispose();
-            termRef.current = null;
-            refitRef.current = null;
         };
-    }, [endpointId, sessionId]);
-
-    useEffect(() => {
-        const term = termRef.current;
-        if (!term) {
-            return;
-        }
-        term.options.theme = readTerminalTheme();
-        term.options.fontFamily = readTerminalFont();
-        term.options.fontSize = useSettings.getState().fontSize;
-        term.options.lineHeight = useSettings.getState().terminalLineHeight;
-        refitRef.current?.();
-    }, [resolvedTheme, settingsVersion]);
+    }, [sessions, sessionId]);
 
     return (
         <div className="relative min-h-0 grow bg-term-bg">
-            <div ref={hostRef} className="term-host" />
+            {sessions && (
+                <TerminalView
+                    ref={viewRef}
+                    className="absolute inset-0"
+                    fontSize={fontSize}
+                    lineHeight={lineHeight}
+                    onData={(data) => sessions.write(sessionId, data)}
+                    onResize={(cols, rows) => sessions.resize(sessionId, cols, rows)}
+                />
+            )}
             {failure !== null && <NodeNotice tone="error">{failure}</NodeNotice>}
         </div>
     );

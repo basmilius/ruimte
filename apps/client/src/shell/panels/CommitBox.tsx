@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FolderGit2, LoaderCircle, Sparkles } from 'lucide-react';
 import type { GitCapabilitiesResult } from '@ruimte/contracts';
-import { Button, Icon, TextArea, Tooltip, KEY_SHORTCUTS, matchesShortcut } from '@basmilius/desktop-ui';
+import { Button, Icon, TextArea, Tooltip, KEY_SHORTCUTS, matchesShortcut } from '@adecore/ui';
 import { cancelGitRunAction, performAsPerson } from '@/actions/client-actions';
 import { commitTargets, nextActionId, splitMessage, type CommitCandidate } from '@/shell/panels/git-actions';
 import { CommitSuggestion } from './commit-suggestion';

@@ -19,7 +19,7 @@ export function setLazyPrefetch(next: (load: Loader) => void): void {
 
 /*
  * Tells `listener` when a module the chat loads for a render fails to load, the way `onLazyOpenError`
- * of `@basmilius/desktop-ui` does for the app's own. A failed prefetch never reaches it.
+ * of `@adecore/ui` does for the app's own. A failed prefetch never reaches it.
  */
 export function onLazyOpenError(listener: (error: unknown) => void): () => void {
     openErrorListeners.add(listener);

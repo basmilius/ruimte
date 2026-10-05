@@ -21,8 +21,8 @@ import { requiredShortcut } from '@/shell/editor-keymap';
 import type { FindOptions } from '@/find/query';
 import { FIND_SHORTCUTS } from '@/find/shortcuts';
 import type { FindState } from '@/find/use-find';
-import { formatNumber } from '@basmilius/desktop-ui/format';
-import { Button, ButtonGroup, Icon, IconButton, Surface, matchesShortcut, type Shortcut, Tooltip } from '@basmilius/desktop-ui';
+import { formatNumber } from '@adecore/ui/format';
+import { Button, ButtonGroup, Icon, IconButton, Surface, matchesShortcut, type Shortcut, Tooltip } from '@adecore/ui';
 
 const OPTIONS: readonly { key: keyof FindOptions; icon: LucideIcon; label: string }[] = [
     { key: 'caseSensitive', icon: CaseSensitive, label: 'find.caseSensitive' },

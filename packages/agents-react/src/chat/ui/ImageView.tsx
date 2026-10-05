@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { ImageOff, Minus, Plus, RotateCcw } from 'lucide-react';
 import type { ResourceUrl } from '../../host';
-import { ButtonGroup, CloseButton, Dialog, Icon, IconButton, Tooltip } from '@basmilius/desktop-ui';
+import { ButtonGroup, CloseButton, Dialog, Icon, IconButton, Tooltip } from '@adecore/ui';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 8;

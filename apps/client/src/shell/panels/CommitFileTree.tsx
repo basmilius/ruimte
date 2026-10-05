@@ -17,7 +17,7 @@ import {
     PANEL_TREE_ROW_HEIGHT
 } from '@/shell/panels/panel-tree';
 import { usePanelTreeShift } from '@/shell/panels/use-panel-tree-shift';
-import { FILE_TREE_ICONS } from '@basmilius/desktop-ui';
+import { FILE_TREE_ICONS } from '@adecore/ui';
 
 interface CommitFileTreeProps {
     files: readonly GitDiffFile[];

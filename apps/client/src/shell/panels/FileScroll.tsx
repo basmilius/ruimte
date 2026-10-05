@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 import clsx from 'clsx';
-import { TextMenu } from '@basmilius/desktop-ui';
+import { TextMenu } from '@adecore/ui';
 
 /*
  * The scrolling body of a file renderer. The canvas app turns selection off on `body`, so a file has

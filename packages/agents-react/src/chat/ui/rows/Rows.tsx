@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ErrorBoundary } from '@basmilius/desktop-ui';
+import { ErrorBoundary } from '@adecore/ui';
 import type { ThreadCard } from '../../../host';
 import type { TimelineRow } from '../../logic/timeline';
 import type { SubagentStep } from '../../subagent-view';

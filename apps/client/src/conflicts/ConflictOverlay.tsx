@@ -25,7 +25,7 @@ import { useGitStatus } from '@/state/git-watch';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { Button, ButtonGroup, CloseButton, Dialog, EmptyState, FormError, Icon, IconButton } from '@basmilius/desktop-ui';
+import { Button, ButtonGroup, CloseButton, Dialog, EmptyState, FormError, Icon, IconButton } from '@adecore/ui';
 
 type Reading = { cwd: string; answer: GitConflictsResult } | { cwd: string; failure: string };
 

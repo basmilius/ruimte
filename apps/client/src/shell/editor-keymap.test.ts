@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { matchesShortcut, shortcut, type Shortcut } from '@basmilius/desktop-ui';
+import { matchesShortcut, shortcut, type Shortcut } from '@adecore/ui';
 import { KEYMAP, KEYMAP_IDS, type KeymapId } from '@ruimte/smart-editor/keymap';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { shortcutFor } from '@/shell/editor-keymap';

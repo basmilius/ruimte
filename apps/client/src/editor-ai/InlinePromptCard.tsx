@@ -1,7 +1,7 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CircleX, Info, Sparkles, TriangleAlert } from 'lucide-react';
-import { FileIcon, Icon, Tooltip } from '@basmilius/desktop-ui';
+import { FileIcon, Icon, Tooltip } from '@adecore/ui';
 import { lineRangeLabel } from '@/chat/selection-to-chat';
 import type { EditorLanguage } from '@/language/editor-language';
 import { basenameOf } from '@/shell/panels/files-tree';

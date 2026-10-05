@@ -90,20 +90,7 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import {
-    Button,
-    ButtonGroup,
-    EmptyState,
-    FILE_TREE_ICONS,
-    Icon,
-    IconButton,
-    Input,
-    Menu,
-    Kbd,
-    PanelEmpty,
-    ContextMenu,
-    PromptDialog
-} from '@basmilius/desktop-ui';
+import { Button, ButtonGroup, EmptyState, FILE_TREE_ICONS, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu, PromptDialog } from '@adecore/ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
 const SEARCH_DEBOUNCE_MS = 150;

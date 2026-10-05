@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { AgentKind } from '@ruimte/contracts';
-import type { Shortcut } from '@basmilius/desktop-ui';
+import type { Shortcut } from '@adecore/ui';
 import { offerDraft } from '@ruimte/agents-react/chat/drafts';
 import { chatsLinkedTo } from '@/context/sources';
 import { createNodeAction, linkNodesAction } from '@/actions/client-actions';

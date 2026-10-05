@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowUp, ChevronDown } from 'lucide-react';
 import type { GitActionKind } from '@ruimte/contracts';
 import { pushAllButton, type PushButton, type PushEntry } from '@/shell/panels/git-actions';
-import { Button, ButtonGroup, Icon, Menu, Tooltip } from '@basmilius/desktop-ui';
+import { Button, ButtonGroup, Icon, Menu, Tooltip } from '@adecore/ui';
 
 interface PushMenuProps {
     /* What a folder with a single repository pushes; with more than one the button pushes them all. */

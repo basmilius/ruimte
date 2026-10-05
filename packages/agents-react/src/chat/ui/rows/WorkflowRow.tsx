@@ -7,7 +7,7 @@ import type { SubagentStep } from '../../subagent-view';
 import { ROW_GUTTER } from '../icons';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from './WorkRows';
 import { useChatScope } from '../../../scope';
-import { Icon, IconButton } from '@basmilius/desktop-ui';
+import { Icon, IconButton } from '@adecore/ui';
 import { useChatActions } from '../../actions';
 import { chatHost } from '../../../host';
 

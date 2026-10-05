@@ -12,8 +12,8 @@ import { useChatActions } from '../../actions';
 import { useChatScope } from '../../../scope';
 import { useCurrentItem } from '../../../state/chats';
 import { useTimelineFlash } from '../../timeline-flash';
-import { formatClockDuration, formatElapsedShort } from '@basmilius/desktop-ui/format';
-import { Icon, Spinner, useTickingText } from '@basmilius/desktop-ui';
+import { formatClockDuration, formatElapsedShort } from '@adecore/ui/format';
+import { Icon, Spinner, useTickingText } from '@adecore/ui';
 import { ROW_GUTTER, toolIcon } from '../icons';
 import { AnsiOutput } from '../AnsiOutput';
 

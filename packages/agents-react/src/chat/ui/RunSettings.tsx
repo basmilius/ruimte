@@ -24,8 +24,8 @@ import type { AccountChoice } from '../account-choice';
 import { modelName, shortModelName } from '../../agents/model-name';
 import { CONTEXT_OPTION, contextFraction, contextSegments, orderOptions, type ContextPart } from '../logic/context-usage';
 import { RUNTIME_MODES } from '../runtime-modes';
-import { formatClock, formatWeekdayClock, isSameDay, formatPercent, formatTokens } from '@basmilius/desktop-ui/format';
-import { Icon, Menu, Tooltip, useNow } from '@basmilius/desktop-ui';
+import { formatClock, formatWeekdayClock, isSameDay, formatPercent, formatTokens } from '@adecore/ui/format';
+import { Icon, Menu, Tooltip, useNow } from '@adecore/ui';
 import { chatHost } from '../../host';
 import { useUsageLimits } from '../../usage/limits';
 

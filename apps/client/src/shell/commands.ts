@@ -50,7 +50,7 @@ import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { runAppShortcut } from '@/shell/app-shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { cellCount, cellsRightOf, maximizedCell } from '@/shell/split';
-import type { Shortcut } from '@basmilius/desktop-ui';
+import type { Shortcut } from '@adecore/ui';
 
 export interface Command {
     id: string;

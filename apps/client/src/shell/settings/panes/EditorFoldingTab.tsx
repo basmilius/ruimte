@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Segmented, Switch } from '@basmilius/desktop-ui';
-import { SettingsRow } from '@basmilius/desktop-ui/settings';
+import { Segmented, Switch } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
 import type { EditorFoldOutline } from '@ruimte/smart-editor';
 import { FOLDING_GROUPS } from '@/shell/settings/folding-rows';
 import { SettingsSection } from '@/shell/settings/SettingsSection';

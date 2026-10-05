@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitCommitHorizontal, User, Users } from 'lucide-react';
-import { Button, Icon, Popover, Separator, Tooltip, useNow } from '@basmilius/desktop-ui';
-import { formatNumber } from '@basmilius/desktop-ui/format';
+import { Button, Icon, Popover, Separator, Tooltip, useNow } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
 import { relativeTime } from '@/shell/panels/commit-log';
 import type { EditorLanguage } from './editor-language';
 import type { AuthorsView } from './popups';

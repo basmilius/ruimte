@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { useProviders } from '@ruimte/agents-react/state/providers';
-import { ContextMenu, Kbd } from '@basmilius/desktop-ui';
+import { ContextMenu, Kbd } from '@adecore/ui';
 import { availableAgents } from '@/agents/creation';
 import { useChatChooser, useChooserSections, type ChooserChat } from '@/chat/chat-chooser';
 import { linkedChatsOfNode, sendToChat, startLinkedChatOrTell, type SelectionOffer } from '@/chat/selection-to-chat';

@@ -1,8 +1,8 @@
 import { Globe, PenTool } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
-import { SettingsRow } from '@basmilius/desktop-ui/settings';
-import { Switch, Keys, shortcut } from '@basmilius/desktop-ui';
+import { SettingsRow } from '@adecore/ui/settings';
+import { Switch, Keys, shortcut } from '@adecore/ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useSettings } from '@/state/settings';
 

@@ -12,8 +12,8 @@ import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
-import { SettingsRow, SettingsSection } from '@basmilius/desktop-ui/settings';
-import { Button, Icon, Pill, Switch } from '@basmilius/desktop-ui';
+import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
+import { Button, Icon, Pill, Switch } from '@adecore/ui';
 
 interface ProvidersTaskProps {
     machine: string;

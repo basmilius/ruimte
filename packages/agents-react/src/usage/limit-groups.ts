@@ -10,7 +10,7 @@ import {
 } from '@ruimte/agent-contracts';
 import { limitsAccountId } from '../agents/account-limits';
 import { accountName, accountsOfKind, accountStatusLine } from '../agents/accounts';
-import { formatDuration } from '@basmilius/desktop-ui/format';
+import { formatDuration } from '@adecore/ui/format';
 import { PROVIDER_LABELS } from './format';
 
 const MINUTE = 60_000;

@@ -8,7 +8,7 @@ import { menuContext } from '@/shell/menu/context';
 import { menuIconOf } from '@/shell/menu/icons';
 import { menuModel } from '@/shell/menu/model';
 import { Brand } from '@/ui/Brand';
-import { Icon, IconButton, Menu, Tooltip } from '@basmilius/desktop-ui';
+import { Icon, IconButton, Menu, Tooltip } from '@adecore/ui';
 
 /* A fixed box in front of every row, the empty one included, so every label starts on the same line. */
 function RowIcon({ id }: { id: string }) {

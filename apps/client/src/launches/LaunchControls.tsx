@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Circle, CircleAlert, CircleCheck, CircleDot, CircleX, OctagonX, Play, RotateCw, Square, type LucideIcon } from 'lucide-react';
-import { Icon, IconButton, Spinner, type IconButtonSize } from '@basmilius/desktop-ui';
+import { Icon, IconButton, Spinner, type IconButtonSize } from '@adecore/ui';
 import { startLaunch, stopLaunch } from '@/launches/actions';
 import type { LaunchHeld } from '@ruimte/contracts';
 import type { LaunchPhase, LaunchView } from '@/launches/model';

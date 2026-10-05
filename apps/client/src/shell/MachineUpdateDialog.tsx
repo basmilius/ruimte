@@ -4,7 +4,7 @@ import { desktop, type BackgroundServiceState, type DaemonCrash } from '@/deskto
 import { machineCrashToast } from '@/shell/machine-crash';
 import { machineUpdateAnswer, machineUpdatePrompt, type MachineUpdateAnswer } from '@/shell/machine-update';
 import { useToasts } from '@/state/toasts';
-import { Button, Dialog } from '@basmilius/desktop-ui';
+import { Button, Dialog } from '@adecore/ui';
 
 /*
  * Asked after an update when the background service still runs the older build, because a restart

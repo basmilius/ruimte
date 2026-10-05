@@ -3,7 +3,7 @@ import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { ThemeRegistration } from 'shiki';
 import type { AgentKind, ChatCheckpointDiff, ChatConfigurePayload, ChatItem, ChatSubagentItem } from '@ruimte/agent-contracts';
-import { isApplePlatform } from '@basmilius/desktop-ui';
+import { isApplePlatform } from '@adecore/ui';
 import type { TimelineRow } from './chat/logic/timeline';
 import type { FindReveal } from './chat/ui/find-reveal';
 import type { PromptAction } from './prompts/logic/prompts';

@@ -12,7 +12,7 @@ import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';
 import { useMachineEntry } from '@/shell/use-machine-entry';
 import { useEndpointConnection } from '@/transport/status';
-import { Button, Icon } from '@basmilius/desktop-ui';
+import { Button, Icon } from '@adecore/ui';
 
 /* What is being opened, in the words a person picked it by. */
 function titleOf(target: SwitchTarget, machine: string): string {

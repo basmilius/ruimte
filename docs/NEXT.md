@@ -350,7 +350,7 @@ step on an engineering assumption alone.
    tests. Add Linux CI, handle platform assumptions explicitly, and record package smoke checks for
    deb on Debian trixie/Ubuntu noble, arm64, AppImage on Ubuntu and GNOME/KDE/X11/Wayland.
 2. Address Linux font fallbacks in drawing text and request the generic UI font change in
-   `@basmilius/desktop-ui`. Decide native Wayland behavior from fractional-scaling measurements.
+   `@adecore/ui`. Decide native Wayland behavior from fractional-scaling measurements.
 3. Keep Windows deferred under [issue #15](https://github.com/basmilius/ruimte/issues/15). First prove
    a ConPTY helper behind the existing PTY adapter; then shell/path/process assumptions, filesystem
    watching, service/CLI packaging and an unsigned installer. Use

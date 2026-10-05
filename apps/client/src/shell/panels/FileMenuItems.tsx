@@ -5,7 +5,7 @@ import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { isCheckoutDiff, useFiles } from '@/state/files';
-import { copyText, Icon, Kbd, Menu } from '@basmilius/desktop-ui';
+import { copyText, Icon, Kbd, Menu } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 /*

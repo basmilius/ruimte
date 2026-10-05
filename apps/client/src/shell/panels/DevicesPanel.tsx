@@ -30,7 +30,7 @@ import { useServer } from '@/state/server';
 import { deviceClientFor } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
 import { EMPTY_DEVICE_LIST, useDevices } from '@/devices/state';
-import { ButtonGroup, Icon, IconButton, ListRow, PanelEmpty, Menu, ErrorBoundary, ContextMenu, Popover, lazyNamed } from '@basmilius/desktop-ui';
+import { ButtonGroup, Icon, IconButton, ListRow, PanelEmpty, Menu, ErrorBoundary, ContextMenu, Popover, lazyNamed } from '@adecore/ui';
 import { SignInMark } from '@/ui/SignInMark';
 import { failed } from '@/shell/surface-failure';
 

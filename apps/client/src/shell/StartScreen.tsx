@@ -33,7 +33,7 @@ import { useUpdates } from '@/state/updates';
 import { useWindow, type BootFailure } from '@/state/window';
 import { useEndpointConnection, useOpenEndpoints } from '@/transport/status';
 import { BrandIntro } from '@/ui/Brand';
-import { Button, ErrorBoundary, Icon, Kbd, SectionLabel, Tile, ContextMenu } from '@basmilius/desktop-ui';
+import { Button, ErrorBoundary, Icon, Kbd, SectionLabel, Tile, ContextMenu } from '@adecore/ui';
 
 const ROW = 'flex min-h-10 w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-hover disabled:opacity-50';
 

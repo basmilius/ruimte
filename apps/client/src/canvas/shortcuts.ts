@@ -1,6 +1,6 @@
 import type { SplitDirection } from '@/shell/split';
 import type { NodeKind } from '@/state/canvas';
-import { shortcut, type Shortcut } from '@basmilius/desktop-ui';
+import { shortcut, type Shortcut } from '@adecore/ui';
 import { requiredShortcut } from '@/shell/editor-keymap';
 
 /*

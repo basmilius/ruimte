@@ -8,8 +8,8 @@ import { chatHost } from '../host';
 import { useChatScope } from '../scope';
 import { createAccount, linkAccount } from './account-actions';
 import { AccountColors } from './AccountColors';
-import { DetailHeader, SettingsRow, SettingsSection } from '@basmilius/desktop-ui/settings';
-import { Button, FormError, Icon, Input } from '@basmilius/desktop-ui';
+import { DetailHeader, SettingsRow, SettingsSection } from '@adecore/ui/settings';
+import { Button, FormError, Icon, Input } from '@adecore/ui';
 import { CliTile } from './parts';
 import { providerAccountsOf } from '../state/provider-accounts';
 

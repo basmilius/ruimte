@@ -1,5 +1,5 @@
 import type { DocumentSymbol, DocumentSymbolResult, Position, SymbolInformation } from '@ruimte/smart-editor-lsp';
-import { formatNumber } from '@basmilius/desktop-ui/format';
+import { formatNumber } from '@adecore/ui/format';
 import i18next from 'i18next';
 
 /* More declarations than this in one file and the rows are left out, which is the file that is too big for them to be quiet. */

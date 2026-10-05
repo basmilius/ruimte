@@ -79,7 +79,7 @@ import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { FlagMark } from '@/project/FlagMark';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { Brand } from '@/ui/Brand';
-import { Tooltip, Icon, IconButton, Input, ListRow, Menu, ContextMenu, SectionLabel } from '@basmilius/desktop-ui';
+import { Tooltip, Icon, IconButton, Input, ListRow, Menu, ContextMenu, SectionLabel } from '@adecore/ui';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { IS_STATION } from '@/station';

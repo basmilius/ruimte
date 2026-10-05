@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
-import { Button } from '@basmilius/desktop-ui';
+import { Button } from '@adecore/ui';
 import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
 import type { Editor } from '@ruimte/smart-editor';
 import { colorOfChat } from './agent-runs';

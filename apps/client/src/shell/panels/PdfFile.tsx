@@ -15,8 +15,8 @@ import { useMachineUrl } from '@/transport/machine-url';
 import { readPiece } from '@/transport/piece';
 import { FileTextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { PDF_PAGE_GAP, pdfPageBox, pdfPageScale, pdfPageTops, pdfReadingPage, type PdfPageSize, type PdfZoom } from '@/shell/panels/pdf-layout';
-import { Button, ButtonGroup, EmptyState, Icon } from '@basmilius/desktop-ui';
-import { formatBytes, formatNumber } from '@basmilius/desktop-ui/format';
+import { Button, ButtonGroup, EmptyState, Icon } from '@adecore/ui';
+import { formatBytes, formatNumber } from '@adecore/ui/format';
 
 // From this page's own origin, so the worker stays inside `worker-src 'self'`.
 GlobalWorkerOptions.workerSrc = workerUrl;

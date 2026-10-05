@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { EditorSmartKeys } from '@ruimte/smart-editor';
-import { SettingsRow } from '@basmilius/desktop-ui/settings';
-import { Switch } from '@basmilius/desktop-ui';
+import { SettingsRow } from '@adecore/ui/settings';
+import { Switch } from '@adecore/ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useSettings } from '@/state/settings';
 

@@ -2,8 +2,8 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { ComputerGrant } from '@ruimte/contracts';
 import { COMPUTER_GRANTS, setupLine, type ComputerSetup, type GrantState } from '@/computer/setup';
-import { SettingsRow } from '@basmilius/desktop-ui/settings';
-import { Button, Pill } from '@basmilius/desktop-ui';
+import { SettingsRow } from '@adecore/ui/settings';
+import { Button, Pill } from '@adecore/ui';
 
 const PHASE_DOTS: Record<ComputerSetup['phase'], string> = {
     unknown: 'bg-text-faint',

@@ -9,8 +9,8 @@ import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
 import { drawsImageMime, imageFormatName } from '@/shell/panels/file-kind';
 import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
-import { Button, ButtonGroup, EmptyState, Icon } from '@basmilius/desktop-ui';
-import { formatBytes } from '@basmilius/desktop-ui/format';
+import { Button, ButtonGroup, EmptyState, Icon } from '@adecore/ui';
+import { formatBytes } from '@adecore/ui/format';
 
 type Zoom = 'fit' | 'full';
 

@@ -1,6 +1,6 @@
 /*
  * The chat of @ruimte/agents-react, its providers and its usage: the tokens only they read and the
- * rules they draw with. Imported right after `@basmilius/desktop-ui/theme.css`; the app scans the package with
+ * rules they draw with. Imported right after `@adecore/ui/theme.css`; the app scans the package with
  * `@source` and loads `@tailwindcss/typography`, which the markdown of a thread builds on.
  */
 :root, [data-theme="light"] {

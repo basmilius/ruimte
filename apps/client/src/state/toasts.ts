@@ -1,4 +1,4 @@
-import { createToastStore, type Toast as UiToast } from '@basmilius/desktop-ui';
+import { createToastStore, type Toast as UiToast } from '@adecore/ui';
 
 export interface Toast extends UiToast {
     /* Everything the command wrote, behind the copy button of a failure. */

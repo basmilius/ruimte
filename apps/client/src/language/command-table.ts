@@ -1,4 +1,4 @@
-import type { Shortcut } from '@basmilius/desktop-ui';
+import type { Shortcut } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 /*

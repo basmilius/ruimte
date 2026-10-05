@@ -11,7 +11,7 @@ import {
     type IdentityLinkCompletePayload,
     type ProviderId
 } from '@ruimte/pulsar';
-import { messageOf } from '@basmilius/desktop-ui';
+import { messageOf } from '@adecore/ui';
 import { currentClientLabel } from '@/endpoint/client-label';
 import { useUi } from '@/state/ui';
 import { offeredProviders } from './account-name';

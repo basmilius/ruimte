@@ -1,6 +1,6 @@
 import { KeyRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button, Icon, Tooltip, Dialog } from '@basmilius/desktop-ui';
+import { Button, Icon, Tooltip, Dialog } from '@adecore/ui';
 
 /*
  * Adding a machine from the start screen, which has no Account pane to do it in. A machine joins

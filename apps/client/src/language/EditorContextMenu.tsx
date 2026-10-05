@@ -17,8 +17,8 @@ import {
     Wand2
 } from 'lucide-react';
 import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
-import { ContextMenu, Icon, Kbd } from '@basmilius/desktop-ui';
-import type { Shortcut } from '@basmilius/desktop-ui';
+import { ContextMenu, Icon, Kbd } from '@adecore/ui';
+import type { Shortcut } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useAskAgents } from './ask-agents';
 import type { EditorLanguage } from './editor-language';

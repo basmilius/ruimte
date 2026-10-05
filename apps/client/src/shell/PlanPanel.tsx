@@ -32,7 +32,7 @@ import {
     IconButton,
     PanelHeader,
     SectionLabel
-} from '@basmilius/desktop-ui';
+} from '@adecore/ui';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';

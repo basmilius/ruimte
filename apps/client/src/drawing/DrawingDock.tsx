@@ -25,7 +25,7 @@ import { DRAWING_COLORS, type DrawingColor } from '@ruimte/contracts';
 import { fitAction, historyAction } from '@/actions/client-actions';
 import { copyDrawing, exportDrawing, styleSelection, unlockEverything } from '@/drawing/drawing-actions';
 import { useDrawing, useDrawingStore, type DrawingStyle, type DrawingTool } from '@/state/drawing';
-import { ButtonGroup, ColorSwatch, Icon, IconButton, Menu, Separator, Tooltip, DockShell, ZoomControls } from '@basmilius/desktop-ui';
+import { ButtonGroup, ColorSwatch, Icon, IconButton, Menu, Separator, Tooltip, DockShell, ZoomControls } from '@adecore/ui';
 import { useSettings } from '@/state/settings';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 

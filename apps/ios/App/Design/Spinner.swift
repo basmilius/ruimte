@@ -34,7 +34,7 @@ struct Spinner: View {
     }
 }
 
-/// The geometry and timing of the desktop's `.spinner` in `@basmilius/desktop-ui/theme.css`, in points for its
+/// The geometry and timing of the desktop's `.spinner` in `@adecore/ui/theme.css`, in points for its
 /// pixels. That spinner is Leap from loading-dev (https://github.com/jakubkrehel/loading), MIT, Copyright (c) 2026
 /// Jakub Krehel. Each dot turns half a circle over the other two around the middle of its hop, then slides back one
 /// gap at a time; the three are a third of a cycle apart, so at every moment one dot is in the air.

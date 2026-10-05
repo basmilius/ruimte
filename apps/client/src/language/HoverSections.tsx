@@ -1,6 +1,6 @@
 import { useEffect, useState, type MouseEvent } from 'react';
 import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
-import { Tooltip } from '@basmilius/desktop-ui';
+import { Tooltip } from '@adecore/ui';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useCodeTheme } from '@/state/code-theme';
 import { hoverSectionsOf, markdownParts, type DocTag, type HoverSection, type HoverText } from './hover-content';

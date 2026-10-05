@@ -1,4 +1,4 @@
-import { shortcut } from '@basmilius/desktop-ui';
+import { shortcut } from '@adecore/ui';
 
 /* The shortcuts `use-drawing-keys.ts` binds, apart from the handler so the dock and the Keyboard pane print them. */
 export const DRAWING_SHORTCUTS = {

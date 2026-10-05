@@ -11,7 +11,7 @@ const engine = createSmartEditorEngine({
 const editor = engine.mount(element, { text, language: 'typescript', theme: 'ruimte-dark' });
 ```
 
-The element needs a positioned box that its parent sizes, and the page needs `editor.css` and the tokens of `@basmilius/desktop-ui/theme.css` and the client's `styles.css`. The code face is the page's: `--font-mono`, `--code-font-size` and `--code-line-height`. `refreshFont()` reads it again.
+The element needs a positioned box that its parent sizes, and the page needs `editor.css` and the tokens of `@adecore/ui/theme.css` and the client's `styles.css`. The code face is the page's: `--font-mono`, `--code-font-size` and `--code-line-height`. `refreshFont()` reads it again.
 
 ## How it is put together
 

@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { AGENTS_LOCALES, AGENTS_NAMESPACES } from '@ruimte/agents-react/locales';
-import { UI_NAMESPACE } from '@basmilius/desktop-ui';
+import { UI_NAMESPACE } from '@adecore/ui';
 import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';
 import { FALLBACK_LANGUAGE, type AppLanguage } from '@/i18n/languages';

@@ -9,7 +9,7 @@ import { mergeMachines } from '@/shell/settings/machine-list';
 import { ACCOUNT_SECTION } from '@/shell/settings/sections';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
-import { Skeleton } from '@basmilius/desktop-ui';
+import { Skeleton } from '@adecore/ui';
 
 /* Who this client is signed in as, and how many machines it knows; it opens the Account pane. */
 export function AccountTab() {

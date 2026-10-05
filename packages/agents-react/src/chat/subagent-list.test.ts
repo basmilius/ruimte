@@ -15,7 +15,7 @@ import {
     taskIdOf,
     taskRowStateOf
 } from './subagent-list';
-import { formatMoment, formatTokens } from '@basmilius/desktop-ui/format';
+import { formatMoment, formatTokens } from '@adecore/ui/format';
 
 function subagent(id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem {
     return {

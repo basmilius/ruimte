@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MessageSquare, X } from 'lucide-react';
 import { chatHost } from '../../host';
 import { CHIP_IN_MESSAGE, MENTION_TONE } from './chips';
-import { Icon, Tooltip } from '@basmilius/desktop-ui';
+import { Icon, Tooltip } from '@adecore/ui';
 
 /* A chat attached to a message, under the title it has now rather than the one it had when it was attached. */
 export function ChatReferenceChip({ chatId, onRemove }: { chatId: string; onRemove?: () => void }) {

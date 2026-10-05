@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Cpu } from 'lucide-react';
-import { formatShortcut, Icon, shortcut } from '@basmilius/desktop-ui';
+import { formatShortcut, Icon, shortcut } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
 

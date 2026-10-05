@@ -4,7 +4,7 @@ import { ChevronDown, Copy, GitBranch, Plus, Search } from 'lucide-react';
 import type { GitRef } from '@ruimte/contracts';
 import { basenameOf } from '@/shell/panels/files-tree';
 import type { GitTarget } from '@/state/git-target';
-import { copyText, cameThroughPortal, Icon, IconButton, Input, Menu, Tooltip, ContextMenu } from '@basmilius/desktop-ui';
+import { copyText, cameThroughPortal, Icon, IconButton, Input, Menu, Tooltip, ContextMenu } from '@adecore/ui';
 
 // The keys the menu itself owns while the field has focus; every other key is the field's.
 const MENU_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Escape', 'Tab', 'Enter']);

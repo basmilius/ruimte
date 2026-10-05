@@ -8,8 +8,8 @@ import { FileContextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
-import { Button, EmptyState, Icon } from '@basmilius/desktop-ui';
-import { formatBytes, formatClockDuration } from '@basmilius/desktop-ui/format';
+import { Button, EmptyState, Icon } from '@adecore/ui';
+import { formatBytes, formatClockDuration } from '@adecore/ui/format';
 
 // An empty answer is the only certain no; see `VideoFile`.
 function canPlay(mime: string): boolean {

@@ -9,7 +9,7 @@ import { chatHost } from '../../host';
 import { useChatScope } from '../../scope';
 import { useChatRow } from '../../state/chats';
 import { openFileLink, useFileLinkCwd } from './file-links';
-import { ContextMenu, copyText, DisabledReason, EDIT_SHORTCUTS, Icon, Kbd, selectAllWithin } from '@basmilius/desktop-ui';
+import { ContextMenu, copyText, DisabledReason, EDIT_SHORTCUTS, Icon, Kbd, selectAllWithin } from '@adecore/ui';
 
 /*
  * The menu behind a right-click in a thread. Copy is the reason it exists. Everything in a thread

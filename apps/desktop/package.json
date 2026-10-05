@@ -24,7 +24,7 @@
         "build:computer-use": "bun ../computer-use/scripts/build.ts"
     },
     "dependencies": {
-        "@basmilius/desktop-shell": "^0.13.2",
+        "@adecore/shell": "^0.15.0",
         "@ruimte/actions": "workspace:*",
         "@ruimte/contracts": "workspace:*",
         "@ruimte/csp": "workspace:*",

@@ -1,7 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import type { TFunction } from 'i18next';
 import type { LanguageServerStatus } from '@ruimte/contracts';
-import { formatNumber } from '@basmilius/desktop-ui/format';
+import { formatNumber } from '@adecore/ui/format';
 import { useToasts } from '@/state/toasts';
 import type { LanguageStatusTracker } from './status';
 import { nameOf } from './status-view';

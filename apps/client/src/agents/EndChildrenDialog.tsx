@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { performAsPerson } from '@/actions/client-actions';
 import { endingTitle, endsAgentsWarning, stopsSubagentsWarning, stopsTaskWarning, useEndingAgents, type PendingEnd } from '@/agents/end-children';
 import { hasWork, leftBehindLine, removedToast } from '@/shell/panels/worktree-rows';
-import { Switch, Button, Icon, Dialog } from '@basmilius/desktop-ui';
+import { Switch, Button, Icon, Dialog } from '@adecore/ui';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { worktreeLists } from '@/state/worktrees';

@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { Shortcut } from '@basmilius/desktop-ui';
+import type { Shortcut } from '@adecore/ui';
 import { agentReviewOf } from '@/editor-ai/agent-review-registry';
 import { LANGUAGE_COMMANDS, LANGUAGE_COMMAND_IDS, type LanguageCommandId } from './command-table';
 import type { EditorLanguage } from './editor-language';

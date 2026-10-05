@@ -22,7 +22,7 @@ computer use app is assembled with that version before signing and notarization.
 Publishing a release also publishes `ruimte` on npm, Ruimte for a machine without the app, with the
 same version, and beside it the libraries another app builds on: `@ruimte/agent-contracts`,
 `@ruimte/agents` and `@ruimte/agents-react`. The components they draw with are not among them:
-`@basmilius/desktop-ui` lives in its own repository and releases on its own, and `@ruimte/agents-react`
+`@adecore/ui` lives in its own repository and releases on its own, and `@ruimte/agents-react`
 names it as a peer and compiles against its published declarations. `.github/workflows/npm.yml` runs on `release: published`, on the dispatch the
 `publish` job of `release.yml` sends (a release that job publishes starts no workflow by itself) and
 by hand (`gh workflow run npm.yml -f version=0.2.0`, for a tag that exists). It compiles the daemon for

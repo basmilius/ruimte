@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Select, Stepper } from '@basmilius/desktop-ui';
-import { SettingsRow } from '@basmilius/desktop-ui/settings';
+import { Select, Stepper } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, INTERFACE_FONTS, MONO_FONTS, TERMINAL_LINE_HEIGHT_RANGE, useSettings } from '@/state/settings';
 

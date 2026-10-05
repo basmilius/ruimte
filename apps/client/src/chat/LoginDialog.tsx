@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import type { Terminal } from '@xterm/xterm';
+import { TerminalView, type TerminalViewHandle } from '@adecore/terminal';
 import { Check, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ProviderAccountStatus } from '@ruimte/contracts';
@@ -12,16 +10,13 @@ import { loginLanded } from '@/chat/login-landing';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { useEndpoints } from '@/state/endpoints';
 import { useSettings } from '@/state/settings';
-import { useTheme } from '@/state/theme';
 import { useUi, type LoginRequest } from '@/state/ui';
-import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
-import { bindTerminalKeys, createTerminal, fitToHost } from '@/terminal/xterm';
+import { bindTerminalKeys } from '@/terminal/xterm';
 import { transportFor, TransportError } from '@/transport';
 import { sessionClientFor } from '@/transport/connections';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
-import { Button, CloseButton, copyText, Dialog, Icon } from '@basmilius/desktop-ui';
+import { Button, CloseButton, copyText, Dialog, Icon } from '@adecore/ui';
 
-const RESIZE_DEBOUNCE_MS = 50;
 /* Long enough to read that it worked, short enough not to wait on it. */
 const LANDED_MS = 1_200;
 
@@ -86,60 +81,32 @@ function LoginTerminal({ request, onRetry }: { request: LoginRequest; onRetry():
     const connected = useEndpointConnection(endpointId).status === 'open';
     const status = useProviderAccountsStore((s) => s.byScope[endpointId]?.accounts?.statuses.find((entry) => entry.id === accountId) ?? null);
     const cli = useProvidersStore((s) => s.byScope[endpointId]?.providers.find((provider) => provider.kind === kind)?.name ?? kind);
-    const resolvedTheme = useTheme((s) => s.resolved);
-    const settingsVersion = useSettings((s) => s.version);
+    const fontSize = useSettings((s) => s.fontSize);
+    const lineHeight = useSettings((s) => s.terminalLineHeight);
     const [phase, setPhase] = useState<Phase>({ kind: 'starting' });
     // One session per attempt; a retry mounts this again under a new key.
     const [sessionId] = useState(() => `login-${crypto.randomUUID()}`);
-    const hostRef = useRef<HTMLDivElement>(null);
-    const termRef = useRef<Terminal | null>(null);
-    const refitRef = useRef<(() => void) | null>(null);
+    const viewRef = useRef<TerminalViewHandle>(null);
     const started = useRef(false);
     // The account as it read until this login started, which is what a landing has to differ from.
     const before = useRef<ProviderAccountStatus | null>(status);
 
     useEffect(() => {
-        const host = hostRef.current;
+        const view = viewRef.current;
+        const term = view?.terminal;
         const sessions = sessionClientFor(endpointId);
-        if (!host || !sessions) {
+        if (!view || !term || !sessions) {
             return;
         }
-        const term = createTerminal();
-        const fit = new FitAddon();
-        term.loadAddon(fit);
-        term.loadAddon(new WebLinksAddon());
-        term.open(host);
-        fitToHost(term, fit);
-        termRef.current = term;
         bindTerminalKeys(term, { write: (data) => sessions.write(sessionId, data), clear: () => sessions.clear(sessionId), leaves: false });
-        term.onData((data) => sessions.write(sessionId, data));
         const offs = [
-            sessions.onOutput(sessionId, (data) => term.write(data)),
-            // A reset through the parser (RIS), since `term.reset()` runs at once and output still queued would land on the fresh screen.
-            sessions.onScreen(sessionId, ({ screen }) => term.write(`\x1bc${screen}`)),
+            sessions.onOutput(sessionId, (data) => view.write(data)),
+            sessions.onScreen(sessionId, ({ screen }) => {
+                view.reset();
+                view.write(screen);
+            }),
             sessions.onExit(sessionId, () => setPhase({ kind: 'ended', dropped: false }))
         ];
-
-        let size = { cols: term.cols, rows: term.rows };
-        const refit = (): void => {
-            fitToHost(term, fit);
-            if (started.current && (term.cols !== size.cols || term.rows !== size.rows)) {
-                size = { cols: term.cols, rows: term.rows };
-                sessions.resize(sessionId, size.cols, size.rows);
-            }
-        };
-        refitRef.current = refit;
-        let timer: number | null = null;
-        const observer = new ResizeObserver(() => {
-            if (timer !== null) {
-                window.clearTimeout(timer);
-            }
-            timer = window.setTimeout(() => {
-                timer = null;
-                refit();
-            }, RESIZE_DEBOUNCE_MS);
-        });
-        observer.observe(host);
 
         // Selecting copies, as in every terminal of the app; a login prints the address to open.
         const copySelection = (): void => {
@@ -147,18 +114,12 @@ function LoginTerminal({ request, onRetry }: { request: LoginRequest; onRetry():
                 copyText(term.getSelection());
             }
         };
-        host.addEventListener('pointerup', copySelection);
+        const element = term.element;
+        element?.addEventListener('pointerup', copySelection);
 
         return () => {
-            if (timer !== null) {
-                window.clearTimeout(timer);
-            }
-            observer.disconnect();
-            host.removeEventListener('pointerup', copySelection);
+            element?.removeEventListener('pointerup', copySelection);
             offs.forEach((off) => off());
-            term.dispose();
-            termRef.current = null;
-            refitRef.current = null;
             // The session is this dialog's alone; a retry starts another.
             if (started.current) {
                 void sessions.kill(sessionId).catch(noop);
@@ -167,25 +128,26 @@ function LoginTerminal({ request, onRetry }: { request: LoginRequest; onRetry():
     }, [endpointId, sessionId]);
 
     useEffect(() => {
-        const term = termRef.current;
+        const view = viewRef.current;
         const link = transportFor(endpointId);
         const sessions = sessionClientFor(endpointId);
-        if (!connected || started.current || !term || !link || !sessions) {
+        if (!connected || started.current || !view || !link || !sessions) {
             return;
         }
         started.current = true;
         const start = async (): Promise<void> => {
+            const { cols, rows } = view.size();
             try {
-                await link.request('session.login', { sessionId, kind, account: accountId, cols: term.cols, rows: term.rows });
-                const attached = await sessions.open(sessionId, { follow: true }, term.cols, term.rows);
-                if (termRef.current !== term) {
+                await link.request('session.login', { sessionId, kind, account: accountId, cols, rows });
+                const attached = await sessions.open(sessionId, { follow: true }, cols, rows);
+                if (viewRef.current !== view) {
                     return;
                 }
                 if (attached) {
-                    term.write(attached.screen);
+                    view.write(attached.screen);
                 }
                 setPhase((current) => (current.kind === 'starting' ? { kind: 'running' } : current));
-                term.focus();
+                view.focus();
                 // Watching is a courtesy: the status still arrives on the machine's own clock.
                 void link.request('accounts.watchLogin', { id: accountId }).catch(noop);
             } catch (e) {
@@ -227,18 +189,6 @@ function LoginTerminal({ request, onRetry }: { request: LoginRequest; onRetry():
         return () => window.clearTimeout(timer);
     }, [phase.kind]);
 
-    useEffect(() => {
-        const term = termRef.current;
-        if (!term) {
-            return;
-        }
-        term.options.theme = readTerminalTheme();
-        term.options.fontFamily = readTerminalFont();
-        term.options.fontSize = useSettings.getState().fontSize;
-        term.options.lineHeight = useSettings.getState().terminalLineHeight;
-        refitRef.current?.();
-    }, [resolvedTheme, settingsVersion]);
-
     return (
         <>
             <div className="flex items-center gap-3 border-b border-border px-5 py-3.5">
@@ -252,7 +202,18 @@ function LoginTerminal({ request, onRetry }: { request: LoginRequest; onRetry():
                 <CloseButton label={t('common:action.close')} dialog />
             </div>
             <div className="relative min-h-0 grow bg-term-bg">
-                <div ref={hostRef} className="term-host" />
+                <TerminalView
+                    ref={viewRef}
+                    className="absolute inset-0"
+                    fontSize={fontSize}
+                    lineHeight={lineHeight}
+                    onData={(data) => sessionClientFor(endpointId)?.write(sessionId, data)}
+                    onResize={(cols, rows) => {
+                        if (started.current) {
+                            sessionClientFor(endpointId)?.resize(sessionId, cols, rows);
+                        }
+                    }}
+                />
                 {phase.kind === 'starting' && !connected && <NodeNotice>{t('canvas:notice.connecting')}</NodeNotice>}
                 {phase.kind === 'outdated' && <NodeNotice>{t('login.outdated')}</NodeNotice>}
                 {phase.kind === 'failed' && (

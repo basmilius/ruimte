@@ -3,7 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ACCOUNT_DELETE_WORD, accountConfirmationName, confirmsAccountDeletion, type Account } from '@ruimte/pulsar';
 import { deleteAccountHere } from '@/pulsar/account-deletion';
-import { Button, Dialog, Field, FormError, Icon, Input, useAsyncAction } from '@basmilius/desktop-ui';
+import { Button, Dialog, Field, FormError, Icon, Input, useAsyncAction } from '@adecore/ui';
 
 const WHAT_GOES = ['account', 'sessions', 'push', 'machines'] as const;
 

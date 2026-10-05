@@ -8,8 +8,8 @@ import { ACCOUNT_TONE_CLASSES, accountName, accountStatusLine, type AccountEntry
 import { accountFor, forgetChatSelection, rememberChatAccount, rememberChatSelection, selectionFor, useChatPreferences } from '../chat/preferences';
 import { useChatScope } from '../scope';
 import { providerAbilities } from './provider-abilities';
-import { DetailHeader, SettingsRow, SettingsSection } from '@basmilius/desktop-ui/settings';
-import { Button, Icon, Select } from '@basmilius/desktop-ui';
+import { DetailHeader, SettingsRow, SettingsSection } from '@adecore/ui/settings';
+import { Button, Icon, Select } from '@adecore/ui';
 import { CliTile } from './parts';
 import { useProviderAccountsStore } from '../state/provider-accounts';
 

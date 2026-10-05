@@ -18,7 +18,7 @@ import { useGit } from '@/state/git';
 import { useGitSignal } from '@/state/git-watch';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
-import { ButtonGroup, ColumnResizeHandle, EmptyState, ErrorBoundary, Menu, Separator, lazyNamed, useColumnResize, useNow } from '@basmilius/desktop-ui';
+import { ButtonGroup, ColumnResizeHandle, EmptyState, ErrorBoundary, Menu, Separator, lazyNamed, useColumnResize, useNow } from '@adecore/ui';
 
 const UnifiedDiff = lazyNamed(() => import('@ruimte/agents-react/chat/ui/UnifiedDiff'), 'default');
 

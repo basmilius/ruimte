@@ -35,12 +35,11 @@ import { refuseStrayDrops } from '@/canvas/drop';
 import { useTheme } from '@/state/theme';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
 import { reloadOnStaleChunk } from '@/stale-chunks';
-import { onLazyOpenError, prefetcher } from '@basmilius/desktop-ui';
+import { onLazyOpenError, prefetcher } from '@adecore/ui';
 import { onLazyOpenError as onChatLazyOpenError } from '@ruimte/agents-react/lazy';
 import '@/state/theme';
 import '@/state/settings';
 import '@fontsource-variable/geist';
-import '@xterm/xterm/css/xterm.css';
 import '@/styles.css';
 
 // Before anything that writes a date or a number, so none of it is written in the default region first.

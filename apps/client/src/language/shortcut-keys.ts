@@ -1,4 +1,4 @@
-import { matchesShortcut, type Shortcut } from '@basmilius/desktop-ui';
+import { matchesShortcut, type Shortcut } from '@adecore/ui';
 import { isApplePlatform } from '@/desktop/bridge';
 
 /* Whether a key event is the shortcut, on this platform's idea of Mod. */

@@ -11,8 +11,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@adecore/terminal": "^0.15.0",
+    "@adecore/ui": "^0.15.0",
     "@base-ui-components/react": "^1.0.0-rc.0",
-    "@basmilius/desktop-ui": "^0.13.2",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/language": "^6.12.4",
     "@codemirror/state": "^6.7.6",

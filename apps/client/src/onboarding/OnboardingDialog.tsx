@@ -36,8 +36,8 @@ import { machineFor } from '@/transport/connections';
 import { useMachineHold } from '@/transport/status';
 import { BrandSymbol } from '@/ui/Brand';
 import { Eclipse, type EclipseOrbit } from '@/ui/Eclipse';
-import { SettingsRow, SettingsSection } from '@basmilius/desktop-ui/settings';
-import { Button, CloseButton, Dialog, Icon, Meter } from '@basmilius/desktop-ui';
+import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
+import { Button, CloseButton, Dialog, Icon, Meter } from '@adecore/ui';
 
 const WELCOME_ORBITS: readonly EclipseOrbit[] = [
     { size: 300, alpha: 0.1 },

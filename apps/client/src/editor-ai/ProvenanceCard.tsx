@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Button, useNow } from '@basmilius/desktop-ui';
-import { formatNumber } from '@basmilius/desktop-ui/format';
+import { Button, useNow } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
 import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
 import { AnchoredPopup } from '@/language/AnchoredPopup';
 import { relativeTime } from '@/shell/panels/commit-log';

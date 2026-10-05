@@ -8,7 +8,7 @@ import { usePlanAgent } from '@/plan/plan-agent';
 import { activeSteps, activeStepsLabel, nextActiveTarget, sameActiveSteps } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
-import { IconButton } from '@basmilius/desktop-ui';
+import { IconButton } from '@adecore/ui';
 
 // Long enough to bridge an agent closing one step before it opens the next, short enough that a stop still shows soon.
 export const ACTIVE_HOLD_MS = 1500;

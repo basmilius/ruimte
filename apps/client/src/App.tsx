@@ -19,7 +19,7 @@ import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
 import { useWindow } from '@/state/window';
 import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
-import { ErrorBoundary, ShortcutHints, UIProvider, lazyDialog, lazyNamed, prefetcher } from '@basmilius/desktop-ui';
+import { ErrorBoundary, ShortcutHints, UIProvider, lazyDialog, lazyNamed, prefetcher } from '@adecore/ui';
 import { formatSource } from '@/format/source';
 
 function loadWorkspaceShell() {

@@ -6,7 +6,7 @@ import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
 import { useAccountChoice, type AccountChoice } from '@ruimte/agents-react/chat/account-choice';
 import { ModelPicker } from '@ruimte/agents-react/chat/ui/Pickers';
 import { useProviders } from '@ruimte/agents-react/state/providers';
-import { Icon, Menu } from '@basmilius/desktop-ui';
+import { Icon, Menu } from '@adecore/ui';
 import { availableAgents } from '@/agents/creation';
 
 export interface InlineAgent {

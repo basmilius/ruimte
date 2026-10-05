@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { ProjectFileTabView, Worktree, WorktreeRemoveResult, WorktreeWork } from '@ruimte/contracts';
-import { formatNumber } from '@basmilius/desktop-ui/format';
+import { formatNumber } from '@adecore/ui/format';
 import { isUnderFolder } from '@/state/fs-watch';
 
 /* The branch the commits are counted against, in words; a worktree the register does not know was measured against the base. */

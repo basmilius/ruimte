@@ -7,7 +7,7 @@ import { useDocument } from '@/state/document';
 import { useToasts } from '@/state/toasts';
 import { watchNodes } from '@/terminal/lifecycle-watch';
 import type { ActionCall } from '@ruimte/actions';
-import { UNDO_MS } from '@basmilius/desktop-ui';
+import { UNDO_MS } from '@adecore/ui';
 
 const board: ProjectCanvasView = {
     kind: 'canvas',

@@ -1,22 +1,13 @@
-import { isAppUrl, type NavigationVerdict } from '@basmilius/desktop-shell';
+import { isAppUrl, type NavigationVerdict } from '@adecore/shell';
 
 /*
  * What the shell lets a page do, as pure decisions, so `main.ts` only wires them to Electron's events.
  * The app's page carries the whole bridge (the local secret included) and a browser node carries any
  * site on the web, so each rule here is a security boundary. The rules every app shares are
- * `@basmilius/desktop-shell`'s and pass through here, so `main.ts` has one place to ask.
+ * `@adecore/shell`'s and pass through here, so `main.ts` has one place to ask.
  */
 
-export {
-    appWindowNavigation,
-    isAppSender,
-    isAppUrl,
-    isExternalLink,
-    isWebLink,
-    originOf,
-    type NavigationVerdict,
-    type SenderFrame
-} from '@basmilius/desktop-shell';
+export { appWindowNavigation, isAppSender, isAppUrl, isExternalLink, isWebLink, originOf, type NavigationVerdict, type SenderFrame } from '@adecore/shell';
 
 // The partitions a `<webview>` may name: a browser node's (`apps/client/src/browser/registry.ts`) and a sealed preview's.
 export const BROWSER_PARTITION = 'persist:ruimte';

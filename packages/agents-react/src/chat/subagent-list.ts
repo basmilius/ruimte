@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/agent-contracts';
-import { formatMoment, formatElapsedShort, formatTokens } from '@basmilius/desktop-ui/format';
+import { formatMoment, formatElapsedShort, formatTokens } from '@adecore/ui/format';
 import type { StatusWord } from '../agents/status-look';
 import type { SubagentTask } from '../host';
 

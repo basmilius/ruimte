@@ -5,7 +5,7 @@ import { canCopyFilesOn, copiedText, copyableFiles, type CopyTarget, type CopyTe
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
-import { copyText, Icon, Menu } from '@basmilius/desktop-ui';
+import { copyText, Icon, Menu } from '@adecore/ui';
 
 /*
  * Copy in every menu of a file, a folder or a selection of them. The row copies them as mentions; its

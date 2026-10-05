@@ -57,7 +57,7 @@ export type CodeRole =
     | 'diffHeader';
 
 export interface CodePalette {
-    /* The ground a chat draws code on (`--term-bg` in `styles.css`). A panel draws code on its own `--surface`, and `code-themes.test.ts` holds every role readable on both. */
+    /* The ground a chat draws code on (`--term-bg` of `@adecore/terminal/terminal.css`). A panel draws code on its own `--surface`, and `code-themes.test.ts` holds every role readable on both. */
     readonly background: string;
     readonly colors: Readonly<Record<CodeRole, string>>;
     readonly fontStyles: Readonly<Partial<Record<CodeRole, 'italic' | 'bold'>>>;

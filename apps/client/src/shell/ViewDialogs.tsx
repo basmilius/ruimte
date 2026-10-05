@@ -4,7 +4,7 @@ import { ViewSettingsDialog } from '@/shell/ViewSettingsDialog';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
-import { PromptDialog, Dialog } from '@basmilius/desktop-ui';
+import { PromptDialog, Dialog } from '@adecore/ui';
 
 /* Settings, promoting and a new page: everything a view asks before it happens. */
 export function ViewDialogs() {

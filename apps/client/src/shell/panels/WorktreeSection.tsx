@@ -12,7 +12,7 @@ import { useChats } from '@ruimte/agents-react/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { worktreeLists, type WorktreeNode } from '@/state/worktrees';
-import { Icon, IconButton, ListRow, SectionLabel, Tooltip, Menu, ContextMenu } from '@basmilius/desktop-ui';
+import { Icon, IconButton, ListRow, SectionLabel, Tooltip, Menu, ContextMenu } from '@adecore/ui';
 
 /* The mark per kind of work. The number beside it carries the amount; the tooltip carries the words. */
 const BADGE_MARKS: Record<WorkBadgeKind, LucideIcon> = {

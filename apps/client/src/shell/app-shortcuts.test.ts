@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { appShortcutFor } from './app-shortcuts';
-import type { KeyLike } from '@basmilius/desktop-ui';
+import type { KeyLike } from '@adecore/ui';
 
 function key(patch: Partial<KeyLike>): KeyLike {
     return { metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, key: '', code: '', ...patch };

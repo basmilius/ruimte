@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import { diffLines, splitLines } from '@ruimte/merge';
 import type { GitBlameCommit, GitBlameResult } from '@ruimte/contracts';
-import { formatNumber } from '@basmilius/desktop-ui/format';
+import { formatNumber } from '@adecore/ui/format';
 
 /* What a line of the text in the editor is: the index of the commit that wrote it, or this for a line no commit holds yet. */
 export const UNCOMMITTED = -1;

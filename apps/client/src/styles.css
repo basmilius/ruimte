@@ -1,11 +1,13 @@
 @import "tailwindcss";
-@import "@basmilius/desktop-ui/theme.css";
+@import "@adecore/ui/theme.css";
+@import "@xterm/xterm/css/xterm.css";
+@import "@adecore/terminal/terminal.css";
 @import "@ruimte/agents-react/theme.css";
 @import "@ruimte/smart-editor/editor.css";
 
-/* The components of @basmilius/desktop-ui and the chat of @ruimte/agents-react carry their own classes, outside the folder Tailwind scans by itself.
+/* The components of @adecore/ui and the chat of @ruimte/agents-react carry their own classes, outside the folder Tailwind scans by itself.
    The library through `node_modules`, so a linked checkout, the published package and the station build read the same path. */
-@source "../node_modules/@basmilius/desktop-ui/src";
+@source "../node_modules/@adecore/ui/src";
 @source "../../../packages/agents-react/src";
 
 /* Markdown reads as prose, which is a rhythm nobody wants to write twice. The plugin brings it;
@@ -83,7 +85,7 @@
     --sidebar-glow-orbit: 255 255 255;
 }
 
-/* Ruimte's own tokens, beside the ones @basmilius/desktop-ui defines. */
+/* Ruimte's own tokens, beside the ones @adecore/ui defines. */
 :root, [data-theme="light"] {
     --canvas-bg: #eeeef1;
     --canvas-dot: #cfcfd6;
@@ -100,30 +102,11 @@
         0 1px 2px rgb(0 0 0 / 0.05),
         0 2px 4px -1px rgb(0 0 0 / 0.05),
         0 6px 12px -6px rgb(0 0 0 / 0.08);
-    --term-bg: #fbfbfc;
-    --term-fg: #27272a;
     --term-dim: #8e8e96;
     --term-green: #15803d;
     --term-blue: #1d4ed8;
     --term-yellow: #b45309;
     --term-red: #b91c1c;
-    --term-cursor: #155dfc;
-    --term-ansi-black: #3f3f46;
-    --term-ansi-red: #b91c1c;
-    --term-ansi-green: #15803d;
-    --term-ansi-yellow: #a16207;
-    --term-ansi-blue: #1d4ed8;
-    --term-ansi-magenta: #a21caf;
-    --term-ansi-cyan: #0e7490;
-    --term-ansi-white: #a1a1aa;
-    --term-ansi-bright-black: #71717a;
-    --term-ansi-bright-red: #dc2626;
-    --term-ansi-bright-green: #16a34a;
-    --term-ansi-bright-yellow: #ca8a04;
-    --term-ansi-bright-blue: #2563eb;
-    --term-ansi-bright-magenta: #c026d3;
-    --term-ansi-bright-cyan: #0891b2;
-    --term-ansi-bright-white: #e4e4e7;
     /* A find: every match a dim yellow, the one the bar is on a bright one with dark text on it in either theme. */
     --find-match: rgb(250 204 21 / 0.35);
     --find-current: #facc15;
@@ -212,29 +195,11 @@
         0 1px 2px rgb(0 0 0 / 0.3),
         0 2px 4px rgb(0 0 0 / 0.2),
         0 4px 8px rgb(0 0 0 / 0.12);
-    --term-bg: #08080a;
-    --term-fg: #d6d6de;
     --term-dim: #6b6b76;
     --term-green: #4ade80;
     --term-blue: #7dd3fc;
     --term-yellow: #fbbf24;
     --term-red: #f87171;
-    --term-ansi-black: #2a2a31;
-    --term-ansi-red: #f87171;
-    --term-ansi-green: #4ade80;
-    --term-ansi-yellow: #fbbf24;
-    --term-ansi-blue: #60a5fa;
-    --term-ansi-magenta: #c084fc;
-    --term-ansi-cyan: #67e8f9;
-    --term-ansi-white: #d6d6de;
-    --term-ansi-bright-black: #6b6b76;
-    --term-ansi-bright-red: #fca5a5;
-    --term-ansi-bright-green: #86efac;
-    --term-ansi-bright-yellow: #fde68a;
-    --term-ansi-bright-blue: #93c5fd;
-    --term-ansi-bright-magenta: #d8b4fe;
-    --term-ansi-bright-cyan: #a5f3fc;
-    --term-ansi-bright-white: #f4f4f5;
     --find-match: rgb(250 204 21 / 0.24);
     --find-current: #f5c542;
     --find-current-text: #18181b;
@@ -332,7 +297,7 @@
  * a counter, a keyframe.
  * Inside Tailwind's `components` layer on purpose: an unlayered rule beats every utility of the
  * same specificity, so `icon-btn h-7 w-7` would silently stay 32 pixels and `menu-popup min-w-48`
- * would keep the wider default. The controls and popups every component shares are in `@basmilius/desktop-ui/theme.css`.
+ * would keep the wider default. The controls and popups every component shares are in `@adecore/ui/theme.css`.
  */
 @layer components {
     /* ---------------------------------------------------------------- Canvas */
@@ -414,14 +379,6 @@
     .pdf-text-layer[data-main-rotation="90"] { transform: rotate(90deg) translateY(-100%); }
     .pdf-text-layer[data-main-rotation="180"] { transform: rotate(180deg) translate(-100%, -100%); }
     .pdf-text-layer[data-main-rotation="270"] { transform: rotate(270deg) translateX(-100%); }
-
-    /* ---------------------------------------------------------------- Terminal */
-
-    /* xterm paints into a fixed-size box of its own; the box fills the node body and the body sets
-       the size. The elements below the host are the addon's, not ours. */
-    .term-host { position: absolute; inset: 0; overflow: hidden; padding: 0 0 0 8px; }
-    .term-host .xterm { height: 100%; top: var(--term-offset, 6px); }
-    .term-host .xterm .xterm-viewport { background-color: transparent !important; }
 
     /* Every page the app embeds steps out of the pointer's way while anything is dragged; otherwise
        its own document absorbs the event before the cell underneath can see the drag arrive. The

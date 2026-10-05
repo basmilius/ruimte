@@ -1,8 +1,8 @@
 import type { Terminal } from '@xterm/xterm';
+import { webglTerminals } from '@adecore/terminal';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { focusedCanvas, type CanvasState } from '@/state/canvas';
 import { currentEndpointId, endpointKey } from '@/state/keys';
-import { webglBudget } from '@/terminal/webgl-budget';
 
 /*
  * Live xterm instances, and the last screen of the ones that were unmounted. Keyed on the machine
@@ -10,6 +10,7 @@ import { webglBudget } from '@/terminal/webgl-budget';
  */
 const live = new Map<string, Terminal>();
 const lastScreens = new Map<string, string[]>();
+const nodeOf = new WeakMap<Terminal, string>();
 
 export function screenLines(term: Terminal): string[] {
     const buffer = term.buffer.active;
@@ -26,6 +27,7 @@ export function screenLines(term: Terminal): string[] {
 export function registerTerminal(endpointId: string, nodeId: string, term: Terminal): () => void {
     const key = endpointKey(endpointId, nodeId);
     live.set(key, term);
+    nodeOf.set(term, nodeId);
     return () => {
         if (live.get(key) === term) {
             live.delete(key);
@@ -85,7 +87,7 @@ export function exposeTerminalTestHooks(): void {
             return focusedCanvas().getState().order;
         },
         webglContexts() {
-            return webglBudget.holders();
+            return webglTerminals().flatMap((term) => nodeOf.get(term) ?? []);
         },
         browserState(nodeId) {
             return useBrowser.getState().byKey[endpointKey(currentEndpointId(), nodeId)] ?? null;

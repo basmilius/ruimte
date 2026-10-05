@@ -15,7 +15,7 @@ import {
 } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
-import { Segmented, Switch, Button, CloseButton, FormError, Icon, Input, PanelHeader, SectionLabel, Select } from '@basmilius/desktop-ui';
+import { Segmented, Switch, Button, CloseButton, FormError, Icon, Input, PanelHeader, SectionLabel, Select } from '@adecore/ui';
 
 type ActionBody = DeviceAction extends infer Action ? (Action extends DeviceAction ? Omit<Action, 'backendId' | 'platform' | 'deviceId'> : never) : never;
 

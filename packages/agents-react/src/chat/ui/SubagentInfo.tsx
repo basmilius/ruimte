@@ -6,7 +6,7 @@ import { entryTimeOf, statusWordOf, subagentFacts, taskIdOf } from '../subagent-
 import { useSubagentItem } from '../subagent-view';
 import { StatusIcon } from './ChatActivity';
 import { Markdown } from './Markdown';
-import { Icon, useNow } from '@basmilius/desktop-ui';
+import { Icon, useNow } from '@adecore/ui';
 import { useModelName } from '../../agents/model-name';
 import { useChatRow } from '../../state/chats';
 import { chatHost } from '../../host';

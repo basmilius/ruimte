@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Hammer, Wrench } from 'lucide-react';
 import { toolEntry } from '../logic/tool-catalog';
-import { Icon } from '@basmilius/desktop-ui';
+import { Icon } from '@adecore/ui';
 
 const SIZE = 12;
 

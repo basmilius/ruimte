@@ -12,7 +12,7 @@ import { maximizedNodeOf, useCanvas, useCanvasStore } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { StatusSummary } from '@/shell/StatusSummary';
-import { ButtonGroup, Icon, IconButton, Menu, Separator, Kbd, DockShell, ZoomControls } from '@basmilius/desktop-ui';
+import { ButtonGroup, Icon, IconButton, Menu, Separator, Kbd, DockShell, ZoomControls } from '@adecore/ui';
 import { useSettings } from '@/state/settings';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 

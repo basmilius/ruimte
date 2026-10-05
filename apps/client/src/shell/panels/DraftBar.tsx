@@ -9,7 +9,7 @@ import { useFiles } from '@/state/files';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useSettings } from '@/state/settings';
 import { textDrafts, useTextDraft } from '@/state/text-drafts';
-import { Button, Icon } from '@basmilius/desktop-ui';
+import { Button, Icon } from '@adecore/ui';
 
 /* A line over the editor with the buttons that answer it. It wraps in a narrow node rather than cutting the message. */
 export function EditorNotice({ message, children }: { message: string; children?: ReactNode }) {

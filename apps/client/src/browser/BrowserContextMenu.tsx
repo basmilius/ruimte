@@ -7,7 +7,7 @@ import { previewGuestOf } from '@/browser/preview-guests';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { desktop, type BrowserContextAction } from '@/desktop/bridge';
 import { splitKey } from '@/state/keys';
-import { copyText, Icon, ContextMenu } from '@basmilius/desktop-ui';
+import { copyText, Icon, ContextMenu } from '@adecore/ui';
 
 interface MenuTarget {
     webContentsId: number;

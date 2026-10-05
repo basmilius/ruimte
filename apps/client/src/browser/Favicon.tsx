@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Globe } from 'lucide-react';
 import { useBrowserRow } from '@/browser/registry';
-import { Icon } from '@basmilius/desktop-ui';
+import { Icon } from '@adecore/ui';
 
 /* The page's own favicon where there is one, otherwise the globe. A URL that fails to load stays
    failed, so the row never flashes a broken image. */

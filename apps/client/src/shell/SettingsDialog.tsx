@@ -14,8 +14,8 @@ import {
 } from '@/shell/settings/sections';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useUi, type SettingsSectionId } from '@/state/ui';
-import { SettingsDialog as Dialog, type SettingsSectionEntry } from '@basmilius/desktop-ui/settings';
-import { formatShortcut, lazyNamed } from '@basmilius/desktop-ui';
+import { SettingsDialog as Dialog, type SettingsSectionEntry } from '@adecore/ui/settings';
+import { formatShortcut, lazyNamed } from '@adecore/ui';
 
 // Each pane is a chunk of its own, loaded when it is opened; the search index in `search.ts` never imports one.
 const PANES: Record<SettingsSectionId, ComponentType> = {
@@ -57,7 +57,7 @@ function entryOf(meta: SettingsSectionMeta): SettingsSectionEntry {
     };
 }
 
-/* Ruimte's sections, search and account in the settings dialog of @basmilius/desktop-ui. Opens on the section the caller asked for, or the last one. */
+/* Ruimte's sections, search and account in the settings dialog of @adecore/ui. Opens on the section the caller asked for, or the last one. */
 export function SettingsDialog() {
     const open = useUi((s) => s.settings.open);
     const section = useUi((s) => s.settings.section);

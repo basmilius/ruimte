@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { GitCommit } from '@ruimte/contracts';
-import { formatDay, formatDayWithYear, formatAgo } from '@basmilius/desktop-ui/format';
+import { formatDay, formatDayWithYear, formatAgo } from '@adecore/ui/format';
 
 const MINUTE = 60;
 const HOUR = 60 * MINUTE;

@@ -7,7 +7,7 @@ import { accentColor } from '@/canvas/accents';
 import { FONT_STACK } from '@/canvas/text-font';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { copyText, Icon, ContextMenu } from '@basmilius/desktop-ui';
+import { copyText, Icon, ContextMenu } from '@adecore/ui';
 
 export const TextElementView = memo(function TextElementView({ id }: { id: string }) {
     const { t } = useTranslation('canvas');

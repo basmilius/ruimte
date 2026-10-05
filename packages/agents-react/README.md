@@ -1,6 +1,6 @@
 # @ruimte/agents-react
 
-Ruimte's AI chat for any React app that runs agent CLIs: the thread and its composer, the approval and question cards, the model and mode pickers, the providers settings pane and the usage page. React 19, Base UI, zustand, react-i18next and Tailwind 4, on top of `@basmilius/desktop-ui` and `@ruimte/agent-contracts`. The app brings `@basmilius/desktop-ui`, React, `react-dom`, i18next and `react-i18next` as peer dependencies.
+Ruimte's AI chat for any React app that runs agent CLIs: the thread and its composer, the approval and question cards, the model and mode pickers, the providers settings pane and the usage page. React 19, Base UI, zustand, react-i18next and Tailwind 4, on top of `@adecore/ui` and `@ruimte/agent-contracts`. The app brings `@adecore/ui`, React, `react-dom`, i18next and `react-i18next` as peer dependencies.
 
 Import per file: `@ruimte/agents-react/chat/ui/Timeline`, `@ruimte/agents-react/transport`.
 
@@ -26,8 +26,8 @@ import { providerSinkFor } from '@ruimte/agents-react/state/providers';
 import { watchProviderAccounts } from '@ruimte/agents-react/state/provider-accounts';
 import { setChatHost } from '@ruimte/agents-react/host';
 import { AGENTS_LOCALES } from '@ruimte/agents-react/locales';
-import { UIProvider } from '@basmilius/desktop-ui';
-import { FORMAT_LANGUAGE, type FormatSource } from '@basmilius/desktop-ui/format';
+import { UIProvider } from '@adecore/ui';
+import { FORMAT_LANGUAGE, type FormatSource } from '@adecore/ui/format';
 
 // The port the utility process handed over, as the frames the chat speaks.
 const transport = portTransport({
@@ -111,13 +111,13 @@ function Chat({ chatId }: { chatId: string }) {
 </UIProvider>;
 ```
 
-The stylesheet goes right after the theme of `@basmilius/desktop-ui`, and Tailwind scans the `dist` of both packages, which is what npm ships. The markdown of a thread builds on the typography plugin, and a few rules read the terminal colors (`--term-bg`, `--term-fg`, `--term-green`, `--term-red`) and the find colors (`--find-current`) an app defines. Colored tool output also reads the ANSI palette, `--term-ansi-black` through `--term-ansi-white` and their `--term-ansi-bright-*` variants:
+The stylesheet goes right after the theme of `@adecore/ui`, and Tailwind scans the `dist` of both packages, which is what npm ships. The markdown of a thread builds on the typography plugin, and a few rules read the terminal colors (`--term-bg`, `--term-fg`, `--term-green`, `--term-red`) and the find colors (`--find-current`) an app defines. Colored tool output also reads the ANSI palette, `--term-ansi-black` through `--term-ansi-white` and their `--term-ansi-bright-*` variants. `@adecore/terminal/terminal.css` defines the ground, the text and that palette; the other colors are the app's own:
 
 ```css
 @import "tailwindcss";
-@import "@basmilius/desktop-ui/theme.css";
+@import "@adecore/ui/theme.css";
 @import "@ruimte/agents-react/theme.css";
-@source "<path to>/node_modules/@basmilius/desktop-ui/dist";
+@source "<path to>/node_modules/@adecore/ui/dist";
 @source "<path to>/node_modules/@ruimte/agents-react/dist";
 @plugin "@tailwindcss/typography";
 ```
@@ -158,13 +158,13 @@ setChatHost({
 
 ## Settings and usage
 
-`settings/sections` describes the two sections this package brings to the settings dialog of `@basmilius/desktop-ui`; `settingsSection` makes the entry the dialog takes, with the pane the app hands it:
+`settings/sections` describes the two sections this package brings to the settings dialog of `@adecore/ui`; `settingsSection` makes the entry the dialog takes, with the pane the app hands it:
 
 ```tsx
 import { ProvidersPane } from '@ruimte/agents-react/providers/ProvidersPane';
 import { PROVIDERS_SECTION, USAGE_SECTION, settingsSection } from '@ruimte/agents-react/settings/sections';
 import { UsagePane } from '@ruimte/agents-react/usage/UsagePane';
-import { SettingsDialog } from '@basmilius/desktop-ui/settings';
+import { SettingsDialog } from '@adecore/ui/settings';
 
 <SettingsDialog
     groups={[{ label: null, sections: [settingsSection(PROVIDERS_SECTION, ProvidersPane), settingsSection(USAGE_SECTION, () => <UsagePane onOpenPage={openUsage} />)] }]}

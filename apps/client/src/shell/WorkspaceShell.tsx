@@ -30,7 +30,7 @@ import { useUi } from '@/state/ui';
 import { startBytesWorker } from '@/transport/bytes-worker-host';
 import type { Workspace } from '@/transport/connections';
 import { ConnectionProvider } from '@/transport/ConnectionProvider';
-import { ErrorBoundary, lazyDialog, prefetcher } from '@basmilius/desktop-ui';
+import { ErrorBoundary, lazyDialog, prefetcher } from '@adecore/ui';
 import { stopVoice } from '@/voice/controller';
 import { VoiceOverlay } from '@/voice/VoiceOverlay';
 import { VoicePanel } from '@/voice/VoicePanel';

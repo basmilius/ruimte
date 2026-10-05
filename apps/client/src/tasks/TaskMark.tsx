@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { Task } from '@ruimte/contracts';
-import { Icon, Tooltip } from '@basmilius/desktop-ui';
+import { Icon, Tooltip } from '@adecore/ui';
 import { statusLookOf, taskStatusWord } from '@ruimte/agents-react/agents/status-look';
 
 /*

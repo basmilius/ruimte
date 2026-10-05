@@ -21,8 +21,8 @@ import {
     fileStorage,
     menuTemplateOf,
     staticMenuTemplate
-} from '@basmilius/desktop-shell';
-import type { ThemeState } from '@basmilius/desktop-shell/bridge';
+} from '@adecore/shell';
+import type { ThemeState } from '@adecore/shell/bridge';
 import { type AgentActivity, type BackgroundServiceState, type KeepAwakeRequest, type MenuShellAction, type MenuSpec } from '@ruimte/desktop-bridge';
 import { isWindowKey, isWindowView, totalActivity, windowUrl } from './app-windows';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';

@@ -1,4 +1,4 @@
-import { shortcut, type Shortcut } from '@basmilius/desktop-ui';
+import { shortcut, type Shortcut } from '@adecore/ui';
 import { chordOf, type KeymapId } from '@ruimte/smart-editor/keymap';
 import { isApplePlatform } from '@/desktop/bridge';
 

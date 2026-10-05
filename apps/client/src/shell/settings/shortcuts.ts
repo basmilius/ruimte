@@ -4,7 +4,7 @@ import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { PROMPT_SHORTCUTS } from '@ruimte/agents-react/prompts/logic/keys';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { CLEAR_SHORTCUT, LEAVE_NODE_SHORTCUT, platformShortcut } from '@/terminal/keymap';
-import { KEY_SHORTCUTS, shortcut, shortcutParts, type Shortcut } from '@basmilius/desktop-ui';
+import { KEY_SHORTCUTS, shortcut, shortcutParts, type Shortcut } from '@adecore/ui';
 
 export interface ShortcutRow {
     keys: Shortcut;

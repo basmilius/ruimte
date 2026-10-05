@@ -4,8 +4,8 @@ import { CircleCheck, CircleX, Info, Search, TriangleAlert } from 'lucide-react'
 import { resolveStoredPath } from '@ruimte/contracts';
 import type { EditorPosition } from '@ruimte/smart-editor';
 import { pathToFileUri } from '@ruimte/smart-editor-lsp';
-import { Icon, PanelEmpty } from '@basmilius/desktop-ui';
-import { formatNumber } from '@basmilius/desktop-ui/format';
+import { Icon, PanelEmpty } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { createHolder } from '@/shell/panels/use-editor-language';
 import { basenameOf } from '@/shell/panels/files-tree';
