@@ -15,6 +15,7 @@ use std::sync::{Arc, Mutex};
 use crate::composer::Composer;
 
 pub mod abilities;
+pub mod auth;
 pub mod config;
 pub mod container;
 pub mod eloquent;
@@ -27,9 +28,11 @@ pub mod migrations;
 pub mod overlay;
 pub mod routes;
 pub mod source;
+pub mod symfony;
 pub mod translations;
 pub mod validation;
 pub mod views;
+pub mod yaml;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
@@ -285,6 +288,9 @@ pub(crate) fn extend_methods<'a>(
     if index.framework.frameworks.eloquent {
         eloquent::extend_methods(index, ancestors, only, out, names);
     }
+    if index.framework.frameworks.doctrine {
+        symfony::doctrine::extend_methods(index, ancestors, only, out, names);
+    }
 }
 
 /// Adds the properties the frameworks make up at run time.
@@ -297,5 +303,8 @@ pub(crate) fn extend_properties<'a>(
 ) {
     if index.framework.frameworks.eloquent {
         eloquent::extend_properties(index, ancestors, only, out, names);
+    }
+    if index.framework.frameworks.doctrine {
+        symfony::doctrine::extend_properties(index, ancestors, only, out);
     }
 }

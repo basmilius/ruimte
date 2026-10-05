@@ -210,6 +210,25 @@ pub fn complete(index: &Index, text: &str, offset: u32, options: CompletionOptio
     };
     builder.run(&context, &token);
     let mut list = builder.finish();
+    if let Some(base) = crate::frameworks::keys::class_argument_base(&analyzer, &token) {
+        list.items.retain(|item| {
+            matches!(item.kind, ItemKind::Class)
+                && item
+                    .description
+                    .as_deref()
+                    .map(|namespace| {
+                        if namespace.is_empty() {
+                            item.label.clone()
+                        } else {
+                            format!("{namespace}\\{}", item.label)
+                        }
+                    })
+                    .is_some_and(|name| index.is_subclass_of(&name, &base) && !name.eq_ignore_ascii_case(&base))
+        });
+        for item in &mut list.items {
+            item.edit.new_text.push_str("::class");
+        }
+    }
     if crate::phpunit::complete::in_class_argument(&analyzer, &token) {
         list.items.retain(|item| {
             matches!(

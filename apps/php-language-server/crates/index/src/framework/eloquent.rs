@@ -224,6 +224,28 @@ fn string_list(text: &str) -> Vec<String> {
 
 /// The names a scope method gives: `scopeActive()` is `active`, and a method marked `#[Scope]` keeps
 /// its own name.
+/// The type of the first parameter of a scope method of a model, which Eloquent fills with the query
+/// builder of that model whatever the method writes.
+pub fn scope_builder_type(index: &Index, class: &str, method: &str) -> Option<Type> {
+    if !index.frameworks().eloquent || !index.is_subclass_of(class, MODEL) {
+        return None;
+    }
+    let found = index.find_declared_method(&Type::class(class.to_string()), method)?;
+    let marked = found
+        .member
+        .attributes
+        .iter()
+        .any(|attribute| attribute.name.eq_ignore_ascii_case(SCOPE));
+    let named = method
+        .strip_prefix("scope")
+        .and_then(|rest| rest.chars().next())
+        .is_some_and(char::is_uppercase);
+    (marked || named).then(|| Type::Class {
+        name: BUILDER.to_string(),
+        args: vec![Type::class(class.to_string())],
+    })
+}
+
 fn scope_of(ancestor: &Ancestor<'_>, method: &Method) -> Option<Scope> {
     let marked = method
         .attributes
@@ -761,6 +783,9 @@ pub(super) fn extend_methods<'a>(
 ) {
     extend_builder(index, ancestors, only, out, names);
     extend_model(index, ancestors, only, out, names);
+    if only.is_some() {
+        bind_relation(index, ancestors, out);
+    }
 }
 
 /// The scopes and the `where{Column}` calls of the model a query builder is for.
@@ -897,6 +922,39 @@ fn extend_model<'a>(
             mixin: true,
             static_as: Some(builder.clone()),
         });
+    }
+}
+
+/// A relation method that declares `HasMany` and no more returns what its body says: `HasMany<Post,
+/// $this>`, so that `$user->posts()->create(...)` is a `Post`.
+fn bind_relation<'a>(index: &'a Index, ancestors: &[Ancestor<'a>], out: &mut [Found<'a, Method>]) {
+    let Some(model) = model_of(ancestors) else {
+        return;
+    };
+    let model_type = Type::class(model.class.decl.name.clone());
+    for found in out.iter_mut() {
+        let method = &found.member;
+        if method.is_static || method.visibility != Visibility::Public || !method.callable.params.is_empty() {
+            continue;
+        }
+        let Some(Type::Class { name, args }) = method.callable.effective_return(index.level) else {
+            continue;
+        };
+        if !args.is_empty()
+            || !index.is_subclass_of(name, RELATION)
+            || found.class.decl.name.starts_with("Illuminate\\")
+        {
+            continue;
+        }
+        let Some(tree) = tree_of(index, &found.class.file.path) else {
+            continue;
+        };
+        let Some(bound) = relation_from_body(index, &model_type, method, &tree) else {
+            continue;
+        };
+        let mut refined = found.member.clone().into_owned();
+        refined.callable.doc_ret = Some(bound);
+        found.member = Cow::Owned(refined);
     }
 }
 

@@ -121,6 +121,11 @@ impl Analyzer<'_> {
                 .or_else(|| param.effective_type(level).cloned())
                 .or_else(|| hints.get(position).filter(|hint| !hint.is_unknown()).cloned());
             let mut ty = declared.unwrap_or(Type::Unknown);
+            if ty.is_unknown() && position == 0 {
+                if let Some(builder) = self.scope_parameter_type(function) {
+                    ty = builder;
+                }
+            }
             if param
                 .default
                 .as_deref()
@@ -135,6 +140,19 @@ impl Analyzer<'_> {
             }
             env.set(param.name.clone(), ty);
         }
+    }
+
+    /// The builder a scope method of a model is given.
+    fn scope_parameter_type(&self, function: &SyntaxNode) -> Option<Type> {
+        let class = self.class.as_ref()?;
+        if function.kind() != METHOD_DECLARATION || !self.index.frameworks().eloquent {
+            return None;
+        }
+        let name = function
+            .children()
+            .find(|child| child.kind() == NAME)
+            .map(|name| text_of(&name))?;
+        php_index::framework::eloquent::scope_builder_type(self.index, &class.name, &name)
     }
 
     /// The documented types of the parameters of the method this one overrides, by position, for the

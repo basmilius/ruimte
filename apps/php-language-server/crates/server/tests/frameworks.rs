@@ -270,3 +270,96 @@ fn a_changed_env_file_is_read_again() {
     assert_eq!(complete_at(&mut client, &uri, 1, 9), ["NEW_THING"]);
     client.shutdown();
 }
+
+/// A project that requires Symfony and Doctrine, with the parts of both that take names.
+fn symfony() -> Disk {
+    let disk = Disk::new();
+    disk.write(
+        "project/composer.json",
+        r#"{
+  "require": { "php": "^8.4", "symfony/framework-bundle": "8.1.*", "doctrine/orm": "^3.7" },
+  "autoload": { "psr-4": { "App\\": "src/" } }
+}"#,
+    );
+    disk.write(
+        "project/vendor/composer/installed.json",
+        r#"{"packages":[{"name":"symfony/framework-bundle","install-path":"../symfony","autoload":{"classmap":["."]}},{"name":"doctrine/orm","install-path":"../orm","autoload":{"classmap":["."]}}]}"#,
+    );
+    for (path, text) in php_index::framework::testing::SYMFONY
+        .iter()
+        .chain(php_index::framework::testing::DOCTRINE)
+    {
+        disk.write(&format!("project/{path}"), text);
+    }
+    disk.write("project/config/bundles.php", "<?php\nreturn [];\n");
+    disk.write(
+        "project/config/services.yaml",
+        "parameters:\n    app.admin: 'a@b.c'\n\nservices:\n    _defaults:\n        autowire: true\n    App\\:\n        resource: '../src/'\n    app.mailer:\n        class: App\\Service\\Mailer\n",
+    );
+    disk.write(
+        "project/src/Service/Mailer.php",
+        "<?php\nnamespace App\\Service;\n\nclass Mailer\n{\n    public function send(): bool {}\n}\n",
+    );
+    disk.write(
+        "project/src/Controller/BlogController.php",
+        "<?php\nnamespace App\\Controller;\n\nuse Symfony\\Component\\Routing\\Attribute\\Route;\n\n#[Route('/blog', name: 'blog_')]\nclass BlogController\n{\n    #[Route('/', name: 'index')]\n    public function index() {}\n}\n",
+    );
+    disk.write(
+        "project/templates/blog/index.html.twig",
+        "{% extends 'base.html.twig' %}\n",
+    );
+    disk.write(
+        "project/src/Entity/User.php",
+        "<?php\nnamespace App\\Entity;\n\nuse App\\Repository\\UserRepository;\nuse Doctrine\\ORM\\Mapping as ORM;\n\n#[ORM\\Entity(repositoryClass: UserRepository::class)]\nclass User\n{\n    #[ORM\\Column]\n    private string $email;\n}\n",
+    );
+    disk.write(
+        "project/src/Repository/UserRepository.php",
+        "<?php\nnamespace App\\Repository;\n\nuse App\\Entity\\User;\nuse Doctrine\\Bundle\\DoctrineBundle\\Repository\\ServiceEntityRepository;\n\n/** @extends ServiceEntityRepository<User> */\nclass UserRepository extends ServiceEntityRepository {}\n",
+    );
+    disk
+}
+
+#[test]
+fn symfony_names_complete_navigate_and_are_checked() {
+    let disk = symfony();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Controller/PageController.php");
+    let code = "<?php\nnamespace App\\Controller;\n\nuse Symfony\\Bundle\\FrameworkBundle\\Controller\\AbstractController;\n\nclass PageController extends AbstractController\n{\n    public function page()\n    {\n        $this->generateUrl('blog_index');\n        $this->generateUrl('blog_nope');\n        $this->render('blog/index.html.twig');\n        $this->getParameter('app.admin');\n        $this->generateUrl('blog_');\n    }\n}\n";
+    client.open(&uri, code);
+
+    let route = client.at("textDocument/definition", &uri, 9, 30);
+    assert_eq!(route[0]["uri"], disk.uri("project/src/Controller/BlogController.php"));
+    let template = client.at("textDocument/definition", &uri, 11, 28);
+    assert_eq!(template[0]["uri"], disk.uri("project/templates/blog/index.html.twig"));
+    let parameter = client.at("textDocument/definition", &uri, 12, 34);
+    assert_eq!(parameter[0]["uri"], disk.uri("project/config/services.yaml"));
+    assert_eq!(complete_at(&mut client, &uri, 13, 33), ["blog_index"]);
+
+    let diagnostics = client.diagnostics(&uri);
+    let unknown: Vec<&Value> = diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic["code"] == "unknown-route")
+        .collect();
+    assert_eq!(unknown.len(), 2, "{diagnostics:?}");
+    assert_eq!(unknown[0]["range"]["start"]["line"], 10);
+    client.shutdown();
+}
+
+#[test]
+fn doctrine_repositories_and_the_container_are_typed() {
+    let disk = symfony();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Controller/PageController.php");
+    client.open(
+        &uri,
+        "<?php\nnamespace App\\Controller;\n\nuse App\\Entity\\User;\nuse Doctrine\\ORM\\EntityManagerInterface;\nuse Symfony\\Component\\DependencyInjection\\ContainerInterface;\n\nclass PageController\n{\n    public function page(EntityManagerInterface $em, ContainerInterface $container)\n    {\n        $repository = $em->getRepository(User::class);\n        $user = $repository->findOneByEmail('a');\n        $mailer = $container->get('app.mailer');\n        $user;\n        $mailer;\n        $repository;\n    }\n}\n",
+    );
+    let shown = |hover: Value| hover["contents"]["value"].as_str().unwrap_or_default().to_string();
+    let repository = shown(client.at("textDocument/hover", &uri, 16, 10));
+    assert!(repository.contains("UserRepository"), "{repository}");
+    let user = shown(client.at("textDocument/hover", &uri, 14, 10));
+    assert!(user.contains("?User") || user.contains("User|null"), "{user}");
+    let mailer = shown(client.at("textDocument/hover", &uri, 15, 10));
+    assert!(mailer.contains("Mailer"), "{mailer}");
+    client.shutdown();
+}

@@ -723,7 +723,7 @@ pub fn parse_doc(raw: &str, cx: &TypeContext, stub: bool) -> Doc {
             in_fence = !in_fence;
         }
         if !in_fence && let Some(rest) = trimmed.strip_prefix('@') {
-            let name_end = rest.find(|c: char| c.is_whitespace()).unwrap_or(rest.len());
+            let name_end = rest.find(|c: char| c.is_whitespace() || c == '(').unwrap_or(rest.len());
             let name = rest[..name_end].to_string();
             if !name.is_empty()
                 && name

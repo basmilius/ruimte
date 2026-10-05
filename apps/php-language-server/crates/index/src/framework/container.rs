@@ -77,6 +77,18 @@ fn self_class(node: &php_syntax::SyntaxNode, application: &str) -> Option<Name> 
 /// The class a name the container knows stands for: a binding a service provider of the project makes
 /// with a literal name, else one of the framework's own aliases.
 pub fn class_of(index: &Index, name: &str) -> Option<Name> {
+    let frameworks = index.frameworks();
+    if frameworks.symfony {
+        if let Some(class) = index
+            .section::<super::symfony::services::Services>()
+            .class_of(index, name)
+        {
+            return Some(class);
+        }
+    }
+    if !(frameworks.laravel || frameworks.facades) {
+        return None;
+    }
     index
         .section::<Bindings>()
         .class_of(name)

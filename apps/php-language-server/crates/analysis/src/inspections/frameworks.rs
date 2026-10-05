@@ -27,6 +27,7 @@ pub(super) fn run(cx: &Cx) {
             KeyKind::Config => format!("The config key '{}' is not in the config files", key.value),
             KeyKind::Route => format!("No route is named '{}'", key.value),
             KeyKind::View => format!("The view '{}' does not exist", key.value),
+            KeyKind::Template => format!("The template '{}' does not exist", key.value),
             _ => format!("The translation '{}' is not in the language files", key.value),
         };
         cx.report(code, key.range, message, super::Fix::None);

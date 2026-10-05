@@ -20,19 +20,51 @@ fn laravel() -> &'static FileSymbols {
     })
 }
 
+fn symfony() -> &'static FileSymbols {
+    static PARSED: OnceLock<FileSymbols> = OnceLock::new();
+    PARSED.get_or_init(|| {
+        extract(
+            &parse(include_str!("symfony_overlay.php")).syntax(),
+            ExtractOptions::default(),
+        )
+    })
+}
+
+/// Which framework an overlay entry belongs to, which has to be in the project for it to count.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Owner {
+    Laravel,
+    Symfony,
+}
+
 /// What a function or method of the overlay says about its arguments.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Marker {
-    /// The argument at `position` names something a project declares: `config`, `route`, `view`,
-    /// `translation`, `env` or `ability`.
-    Key { kind: String, position: usize },
+    /// The argument at `position`, or the one with this name when it is written as a named argument,
+    /// names something a project declares: `config`, `route`, `view`, `translation`, `env`, `ability`,
+    /// `service`, `parameter`, `template` and the like.
+    Key {
+        kind: String,
+        position: usize,
+        name: Option<String>,
+    },
     /// The argument at `position` names a binding of the service container.
     Container { position: usize },
+    /// The call gives the user that is logged in, whose class the application configures.
+    User,
+    /// The call gives the repository of the entity named by the first argument, which the entity's
+    /// `repositoryClass` says.
+    Repository,
+    /// The argument at `position` is a class that is, or implements, `base`.
+    ClassArgument { base: String, position: usize },
+    /// The keys of the array a method returns name something, as the events a subscriber lists.
+    ReturnKeys { kind: String },
 }
 
 struct Entry {
     /// The class that declares the method, `None` for a function.
     class: Option<String>,
+    owner: Owner,
     marker: Marker,
 }
 
@@ -40,8 +72,7 @@ fn markers() -> &'static HashMap<String, Vec<Entry>> {
     static MARKERS: OnceLock<HashMap<String, Vec<Entry>>> = OnceLock::new();
     MARKERS.get_or_init(|| {
         let mut out: HashMap<String, Vec<Entry>> = HashMap::new();
-        let symbols = laravel();
-        let mut add = |class: Option<&str>, name: &str, doc: Option<&Doc>| {
+        let mut add = |owner: Owner, class: Option<&str>, name: &str, doc: Option<&Doc>| {
             let Some(doc) = doc else {
                 return;
             };
@@ -52,11 +83,31 @@ fn markers() -> &'static HashMap<String, Vec<Entry>> {
                         let Some(kind) = words.next() else {
                             continue;
                         };
-                        let position = words.next().and_then(|word| word.parse().ok()).unwrap_or(0);
+                        let word = words.next();
+                        let name = word.and_then(|word| word.strip_prefix('$')).map(str::to_string);
+                        let position = word.and_then(|word| word.parse().ok()).unwrap_or(0);
                         Marker::Key {
                             kind: kind.to_string(),
                             position,
+                            name,
                         }
+                    }
+                    "user" => Marker::User,
+                    "repository" => Marker::Repository,
+                    "class-argument" => {
+                        let Some(base) = words.next() else {
+                            continue;
+                        };
+                        Marker::ClassArgument {
+                            base: base.trim_start_matches('\\').to_string(),
+                            position: words.next().and_then(|word| word.parse().ok()).unwrap_or(0),
+                        }
+                    }
+                    "return-keys" => {
+                        let Some(kind) = words.next() else {
+                            continue;
+                        };
+                        Marker::ReturnKeys { kind: kind.to_string() }
                     }
                     "container" => Marker::Container {
                         position: words.next().and_then(|word| word.parse().ok()).unwrap_or(0),
@@ -65,16 +116,19 @@ fn markers() -> &'static HashMap<String, Vec<Entry>> {
                 };
                 out.entry(name.to_ascii_lowercase()).or_default().push(Entry {
                     class: class.map(str::to_string),
+                    owner,
                     marker,
                 });
             }
         };
-        for function in &symbols.functions {
-            add(None, &function.name, function.doc.as_deref());
-        }
-        for class in &symbols.classes {
-            for method in &class.methods {
-                add(Some(&class.name), &method.name, method.doc.as_deref());
+        for (owner, symbols) in [(Owner::Laravel, laravel()), (Owner::Symfony, symfony())] {
+            for function in &symbols.functions {
+                add(owner, None, &function.name, function.doc.as_deref());
+            }
+            for class in &symbols.classes {
+                for method in &class.methods {
+                    add(owner, Some(&class.name), &method.name, method.doc.as_deref());
+                }
             }
         }
         out
@@ -99,7 +153,7 @@ pub fn is_marked(name: &str) -> bool {
 /// a `receiver` that is one. Without the framework in the project nothing is marked.
 pub fn markers_for(index: &Index, declaring: Option<&str>, receiver: Option<&str>, name: &str) -> Vec<Marker> {
     let frameworks = index.frameworks();
-    if !(frameworks.laravel || frameworks.facades) {
+    if !frameworks.any() {
         return Vec::new();
     }
     let Some(entries) = markers().get(&name.to_ascii_lowercase()) else {
@@ -107,6 +161,10 @@ pub fn markers_for(index: &Index, declaring: Option<&str>, receiver: Option<&str
     };
     entries
         .iter()
+        .filter(|entry| match entry.owner {
+            Owner::Laravel => frameworks.laravel || frameworks.facades,
+            Owner::Symfony => frameworks.symfony,
+        })
         .filter(|entry| match (&entry.class, declaring) {
             (None, None) => frameworks.laravel,
             (Some(class), declaring) => {
@@ -292,5 +350,33 @@ mod tests {
         );
         assert_eq!(rules.get("renamecolumn"), Some(&SchemaRule::Rename));
         assert!(rules.len() > 70, "{}", rules.len());
+    }
+}
+
+#[cfg(test)]
+mod symfony_tests {
+    use super::*;
+    use crate::framework::testing::project;
+
+    #[test]
+    fn an_attribute_names_its_arguments() {
+        let index = project(&[]);
+        let markers = markers_for(
+            &index,
+            Some("Symfony\\Component\\DependencyInjection\\Attribute\\Autowire"),
+            None,
+            "__construct",
+        );
+        let kinds: Vec<String> = markers
+            .iter()
+            .filter_map(|marker| match marker {
+                Marker::Key { kind, name, .. } => Some(format!("{kind}:{}", name.clone().unwrap_or_default())),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            kinds,
+            ["service:service", "parameter:param", "env:env", "expression:value"]
+        );
     }
 }

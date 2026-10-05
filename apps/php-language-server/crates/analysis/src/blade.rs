@@ -212,7 +212,7 @@ fn directive(index: &Index, text: &str, at: usize, out: &mut Vec<Piece>) -> usiz
     let args_start = open + 1;
     let args = &text[args_start..close];
     for marker in directive_markers(index, name) {
-        let Marker::Key { kind, position } = marker else {
+        let Marker::Key { kind, position, .. } = marker else {
             continue;
         };
         let Some(kind) = KeyKind::parse(&kind) else {

@@ -321,7 +321,7 @@ impl Analyzer<'_> {
         for callee in &callees {
             results.push(self.return_type_of(callee, &args, env));
         }
-        let result = self.container_call_type(&callees, &args, Type::union(results));
+        let result = self.container_call_type(&callees, &args, env, Type::union(results));
         let nullsafe = callee_node.kind() == PROPERTY_FETCH_EXPR && has_token(&callee_node, NULLSAFE_ARROW);
         if nullsafe {
             let receiver = callee_node.children().next().map(|object| self.type_of(&object, env));

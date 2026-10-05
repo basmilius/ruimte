@@ -270,3 +270,47 @@ class View {}
 "#,
     ),
 ];
+
+/// The parts of Symfony that take names, and the container.
+pub const SYMFONY: &[(&str, &str)] = &[
+    (
+        "vendor/symfony/AbstractController.php",
+        "<?php namespace Symfony\\Bundle\\FrameworkBundle\\Controller; abstract class AbstractController { protected function generateUrl(string $route, array $parameters = [], int $referenceType = 1): string {} protected function redirectToRoute(string $route, array $parameters = [], int $status = 302) {} protected function render(string $view, array $parameters = [], $response = null) {} protected function getParameter(string $name) {} }",
+    ),
+    (
+        "vendor/symfony/ContainerInterface.php",
+        "<?php namespace Symfony\\Component\\DependencyInjection;\ninterface ContainerInterface {\n    /**\n     * @template C of object\n     * @param string|class-string<C> $id\n     * @return ($id is class-string<C> ? C|object : object)\n     */\n    public function get(string $id, int $invalidBehavior = 1): ?object;\n}",
+    ),
+    (
+        "vendor/symfony/Autowire.php",
+        "<?php namespace Symfony\\Component\\DependencyInjection\\Attribute; #[\\Attribute] class Autowire { public function __construct($value = null, $service = null, $expression = null, $env = null, $param = null, $lazy = false) {} }",
+    ),
+    (
+        "vendor/symfony/Route.php",
+        "<?php namespace Symfony\\Component\\Routing\\Attribute; #[\\Attribute] class Route { public function __construct($path = null, $name = null) {} }",
+    ),
+];
+
+/// The entity manager and the repository classes of Doctrine.
+pub const DOCTRINE: &[(&str, &str)] = &[
+    (
+        "vendor/orm/Entity.php",
+        "<?php namespace Doctrine\\ORM\\Mapping; #[\\Attribute] class Entity { public function __construct(public ?string $repositoryClass = null) {} } #[\\Attribute] class Column {}",
+    ),
+    (
+        "vendor/orm/EntityManagerInterface.php",
+        "<?php namespace Doctrine\\ORM;\ninterface EntityManagerInterface {\n    /**\n     * @template T of object\n     * @param class-string<T> $className\n     * @return EntityRepository<T>\n     */\n    public function getRepository(string $className): EntityRepository;\n}",
+    ),
+    (
+        "vendor/orm/ObjectRepository.php",
+        "<?php namespace Doctrine\\Persistence;\n/** @template-covariant T of object */\ninterface ObjectRepository {\n    /** @return T|null */\n    public function find($id);\n    /** @return T[] */\n    public function findAll();\n    /** @return T[] */\n    public function findBy(array $criteria, ?array $orderBy = null, $limit = null, $offset = null);\n    /** @return T|null */\n    public function findOneBy(array $criteria);\n}",
+    ),
+    (
+        "vendor/orm/EntityRepository.php",
+        "<?php namespace Doctrine\\ORM;\n/**\n * @template T of object\n * @template-implements \\Doctrine\\Persistence\\ObjectRepository<T>\n */\nclass EntityRepository implements \\Doctrine\\Persistence\\ObjectRepository {\n    /** @return object|null The entity */\n    public function find(mixed $id, $lockMode = null, $lockVersion = null): object|null {}\n    public function findAll(): array {}\n    public function findBy(array $criteria, ?array $orderBy = null, $limit = null, $offset = null): array {}\n    public function findOneBy(array $criteria, ?array $orderBy = null): object|null {}\n    public function __call(string $method, array $arguments): mixed {}\n}",
+    ),
+    (
+        "vendor/orm/ServiceEntityRepository.php",
+        "<?php namespace Doctrine\\Bundle\\DoctrineBundle\\Repository;\n/**\n * @template T of object\n * @template-extends \\Doctrine\\ORM\\EntityRepository<T>\n */\nclass ServiceEntityRepository extends \\Doctrine\\ORM\\EntityRepository {}",
+    ),
+];

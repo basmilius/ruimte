@@ -17,6 +17,8 @@
 //   @key <kind> [position]  the argument at this position (the first by default) names a config key,
 //                           route, view, translation, env variable or ability
 //   @container [position]   the argument names a binding of the service container
+//   @user                   the call gives the user that is logged in, an instance of the model
+//                           `config/auth.php` names
 // A method is matched by the class that declares it or any class below it.
 
 namespace Illuminate\Database\Schema {
@@ -321,6 +323,12 @@ class Gate
     public static function inspect($ability, $arguments = []) {}
 }
 
+class Auth
+{
+    /** @user */
+    public static function user() {}
+}
+
 class App
 {
     /** @container */
@@ -525,6 +533,26 @@ class BladeCompiler
     public function cannot($ability, $arguments = []) {}
     /** @key ability */
     public function elsecan($ability, $arguments = []) {}
+}
+
+}
+
+namespace Illuminate\Contracts\Auth {
+
+interface Guard
+{
+    /** @user */
+    public function user() {}
+}
+
+}
+
+namespace Illuminate\Http {
+
+class Request
+{
+    /** @user */
+    public function user($guard = null) {}
 }
 
 }

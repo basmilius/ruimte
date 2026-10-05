@@ -155,3 +155,12 @@ pub fn static_call_parts(call: &SyntaxNode) -> Option<(String, String, SyntaxNod
     let method = names.next()?;
     Some((class.text().to_string(), method.text().to_string(), call.clone()))
 }
+
+/// The class `Foo::class` names where an attribute argument of a class is written, which only the
+/// file's imports can say.
+pub fn class_in_attribute(index: &Index, class: crate::index::Class<'_>, text: &str) -> Option<crate::types::Name> {
+    let name = text.trim().strip_suffix("::class")?.trim();
+    let tree = tree_of(index, &class.file.path)?;
+    let resolver = resolver_at(&tree, class.decl.span.start);
+    Some(resolver.resolve_class(name))
+}
