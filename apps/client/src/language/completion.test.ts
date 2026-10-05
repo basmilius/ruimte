@@ -158,7 +158,7 @@ describe('asking for the list', () => {
         expect(one.editor.press(eventOf(CANVAS_SHORTCUTS.triggerCompletion))).toBe(true);
         one.timers.advance(10);
         await settle();
-        expect(one.editor.getText()).toBe("import 'x';\nfilter");
+        expect(one.editor.getText()).toBe("import 'x';\nfilter()");
         expect(one.view()).toBeNull();
         useToasts.setState({ toasts: [] });
         const none = await setup('zzz', ITEMS);
@@ -275,7 +275,7 @@ describe('accepting', () => {
         editor.press({ key: 'ArrowDown' });
         editor.press({ key: 'Enter' });
         await settle();
-        expect(editor.getText()).toBe("import 'x';\nitems.filter");
+        expect(editor.getText()).toBe("import 'x';\nitems.filter()");
         expect(view()).toBeNull();
     });
 
@@ -287,7 +287,7 @@ describe('accepting', () => {
         timers.advance(10);
         await settle();
         await language.completion.accept(false, 0);
-        expect(editor.getText()).toBe("import 'x';\na.fill\nb.fill");
+        expect(editor.getText()).toBe("import 'x';\na.fill()\nb.fill()");
     });
 
     test('shows the documentation the server resolves for the active row', async () => {

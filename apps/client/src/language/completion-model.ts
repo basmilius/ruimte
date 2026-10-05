@@ -220,10 +220,11 @@ export function snippetToText(snippet: string): string {
     return parseSnippet(snippet).text;
 }
 
-const METHOD_KIND = 2;
-const FUNCTION_KIND = 3;
-const CONSTRUCTOR_KIND = 4;
-const SNIPPET_FORMAT = 2;
+export const METHOD_KIND = 2;
+export const FUNCTION_KIND = 3;
+export const CONSTRUCTOR_KIND = 4;
+export const CLASS_KIND = 7;
+export const SNIPPET_FORMAT = 2;
 
 /* A call snippet with the call cut off, for a name that already has its parentheses: `log(${1:value})$0` becomes `log`. */
 function withoutCall(snippet: string): string {

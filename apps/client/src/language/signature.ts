@@ -63,6 +63,11 @@ export class SignatureFeature {
         this.ask({ triggerKind: 1, isRetrigger: false });
     }
 
+    /* Asks for the parameters as if `(` had just been typed, which is what a call opened by a completion is. */
+    trigger(): void {
+        this.ask({ triggerKind: 2, triggerCharacter: '(', isRetrigger: false });
+    }
+
     /* Shows the next overload, or the one before, while the card is up and has more than one; false when it has not, which leaves the arrow to the caret. */
     private cycle(step: 1 | -1): boolean {
         const { help } = this;

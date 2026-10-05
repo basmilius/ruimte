@@ -15,8 +15,10 @@ import {
     prefixFor,
     qualifiersOf,
     rankCompletions,
+    type Insertion,
     type Ranked
 } from './completion-model';
+import { PARAMETER_HINTS_COMMAND, isCallItem, planCall, withParentheses, type CallPlan } from './completion-call';
 import { RecentChoices, recentChoicesOf } from './recent-choices';
 import { shikiLanguageOf } from './language-ids';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
@@ -30,6 +32,7 @@ const START_DELAY_MS = 80;
 const REFRESH_DELAY_MS = 150;
 const RESOLVE_DELAY_MS = 120;
 const PAGE = 8;
+const LINES_BACK = 60;
 const TOAST_ID = 'language-completion';
 
 function isEmpty(range: EditorRange): boolean {
@@ -122,18 +125,26 @@ export class CompletionFeature {
         const lineBefore = editor.textInRange({ start: { line: caret.line, character: 0 }, end: caret });
         const lineAfter = editor.textInRange({ start: caret, end: { line: caret.line, character: Number.MAX_SAFE_INTEGER } });
         // A character that commits is typed after the name, so a call is not added before it.
-        const main = insertionOf(item, caret, lineBefore, replace, commit === undefined ? lineAfter : '(');
+        const planned = insertionOf(item, caret, lineBefore, replace, commit === undefined ? lineAfter : '(');
+        const { before, rest } = this.surroundings(planned, caret, lineAfter);
+        const plan: CallPlan =
+            commit === undefined ? planCall({ item, languageId: this.language.languageId, insertion: planned, before, rest, replace }) : { action: 'none' };
+        const main = plan.action === 'add' ? withParentheses(planned, plan.inside) : planned;
         const extras = (item.additionalTextEdits ?? []).map((edit): EditorContentChange => ({ range: edit.range, text: edit.newText }));
         // An import above the insertion moves it, and the tab stops are measured from where it ends up.
         const start = extras
             .filter((extra) => comparePositions(extra.range.end, main.range.start) <= 0)
             .sort((left, right) => comparePositions(right.range.start, left.range.start))
             .reduce((place, extra) => shiftPosition(place, extra), main.range.start);
-        // A name typed at several carets is completed at every one that has the same word before it.
+        // A name typed at several carets is completed at all of them, and the other carets end behind what was put in.
         const mirrored = mirroredInsertions(editor.getSelections(), editor.getSelection(), caret, (range) => editor.textInRange(range), main);
         editor.applyEdits([{ range: main.range, text: main.text }, ...mirrored, ...extras]);
         if (commit === undefined) {
             this.language.snippets.begin(start, main.text, main.stops);
+            if (plan.action === 'enter') {
+                const end = editor.getCaret();
+                editor.setCaret({ line: end.line, character: end.character + plan.shift });
+            }
         } else {
             const end = editor.getCaret();
             editor.applyEdits([{ range: { start: end, end }, text: commit }]);
@@ -141,7 +152,36 @@ export class CompletionFeature {
                 this.beginRequest({ triggerKind: 2, triggerCharacter: commit }, 0);
             }
         }
+        this.afterInsert(item, commit, lineBefore);
         editor.focus();
+    }
+
+    /* The lines above the insertion down to where it starts, and the rest of the line past what it replaces. */
+    private surroundings(insertion: Insertion, caret: EditorPosition, lineAfter: string): { before: string; rest: string } {
+        const { editor } = this.language;
+        const { start, end } = insertion.range;
+        const before = editor.textInRange({ start: { line: Math.max(0, start.line - LINES_BACK), character: 0 }, end: start });
+        const rest = end.line === caret.line ? lineAfter.slice(Math.max(0, end.character - caret.character)) : '';
+        return { before, rest };
+    }
+
+    /* Parameter info for a call that was opened (or that the server asks for), then the item's own command. */
+    private afterInsert(item: CompletionItem, commit: string | undefined, lineBefore: string): void {
+        const { editor, project, uri, signature } = this.language;
+        const { start } = editor.getSelection();
+        const insideCall = start.character > 0 && editor.textInRange({ start: { line: start.line, character: start.character - 1 }, end: start }) === '(';
+        if (commit === '(' || (insideCall && isCallItem(item, lineBefore))) {
+            signature.trigger();
+        }
+        const { command } = item;
+        if (command === undefined) {
+            return;
+        }
+        if (command.command === PARAMETER_HINTS_COMMAND) {
+            signature.trigger();
+        } else {
+            project.service.executeCommand(uri, command).catch(() => undefined);
+        }
     }
 
     /*
