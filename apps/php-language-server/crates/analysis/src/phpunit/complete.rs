@@ -179,3 +179,28 @@ fn groups(index: &Index, root: &SyntaxNode) -> Vec<String> {
     groups.dedup();
     groups
 }
+
+/// Whether a token is in an argument of an attribute that takes a class, `#[CoversClass(...)]` and
+/// its kin, where a class is written as `Foo::class`.
+pub fn in_class_argument(analyzer: &Analyzer<'_>, token: &php_syntax::SyntaxToken) -> bool {
+    let mut inside_argument = false;
+    for ancestor in token.parent_ancestors() {
+        match ancestor.kind() {
+            ARGUMENT => inside_argument = true,
+            ATTRIBUTE if inside_argument => {
+                let Some(name) = crate::ast::child_of(&ancestor, NAME) else {
+                    return false;
+                };
+                let resolved = analyzer.resolver.resolve_class(&crate::ast::text_of(&name));
+                return resolved.strip_prefix(super::ATTRIBUTES).is_some_and(|short| {
+                    ["CoversClass", "UsesClass", "CoversTrait", "UsesTrait", "DependsOnClass"]
+                        .iter()
+                        .any(|wanted| wanted.eq_ignore_ascii_case(short))
+                });
+            }
+            ATTRIBUTE => return false,
+            _ => {}
+        }
+    }
+    false
+}

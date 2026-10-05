@@ -206,7 +206,19 @@ pub fn complete(index: &Index, text: &str, offset: u32, options: CompletionOptio
         options,
     };
     builder.run(&context, &token);
-    builder.finish()
+    let mut list = builder.finish();
+    if crate::phpunit::complete::in_class_argument(&analyzer, &token) {
+        list.items.retain(|item| {
+            matches!(
+                item.kind,
+                ItemKind::Class | ItemKind::Interface | ItemKind::Trait | ItemKind::Enum
+            )
+        });
+        for item in &mut list.items {
+            item.edit.new_text.push_str("::class");
+        }
+    }
+    list
 }
 
 fn placeholder_token(root: &SyntaxNode, start: u32, is_variable: bool) -> Option<SyntaxToken> {

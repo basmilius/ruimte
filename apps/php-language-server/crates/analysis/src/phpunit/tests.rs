@@ -544,3 +544,24 @@ final class Plain {
 "#;
     assert_eq!(completions(plain), vec!["aaaHelper", "assertSomething", "run"]);
 }
+
+#[test]
+fn covers_attributes_complete_a_class_with_its_class_constant() {
+    let code = r#"<?php
+namespace Tests;
+use PHPUnit\Framework\Attributes\CoversClass;
+#[CoversClass(Mail$0)]
+final class FooTest {}
+"#;
+    let fixture = mock_fixture(code);
+    let offset = code.find("$0").unwrap() as u32;
+    let text = code.replacen("$0", "", 1);
+    let list = crate::completion::complete(
+        &fixture.index,
+        &text,
+        offset,
+        crate::completion::CompletionOptions::default(),
+    );
+    let edits: Vec<&str> = list.items.iter().map(|item| item.edit.new_text.as_str()).collect();
+    assert_eq!(edits, vec!["Mailer::class"]);
+}

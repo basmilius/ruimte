@@ -2,7 +2,7 @@
 
 A language server for PHP, written in Rust. It reads PHP 8.1 through 8.5 with a parser of its own that keeps every byte of a file, comments and whitespace included, and that goes on past a syntax error instead of stopping at it. The aim is the insight a full PHP IDE gives (navigation, completion, rename, inspections, refactors) as a server any editor can talk to over LSP.
 
-Phase 1a is the parser, the syntax tree and a small server on top of it. Phase 1b adds an index of the project, its Composer packages and the standard library, a type layer, and hover, navigation, workspace symbols and completion with auto-import on top of that. Phase 2 adds find usages, rename, highlights, signature help, call and type hierarchies, semantic tokens, inlay hints and completion of overridable methods, and keeps the declarations of packages in the cache file until something needs them. Phase 3 adds inspections, quick fixes and code actions, and a formatter. Phase 4 adds refactors, the wrapping of long lines in the formatter and `.editorconfig`.
+Phase 1a is the parser, the syntax tree and a small server on top of it. Phase 1b adds an index of the project, its Composer packages and the standard library, a type layer, and hover, navigation, workspace symbols and completion with auto-import on top of that. Phase 2 adds find usages, rename, highlights, signature help, call and type hierarchies, semantic tokens, inlay hints and completion of overridable methods, and keeps the declarations of packages in the cache file until something needs them. Phase 3 adds inspections, quick fixes and code actions, and a formatter. Phase 4 adds refactors, the wrapping of long lines in the formatter and `.editorconfig`. Phase 5 adds PHPUnit and Pest, and the type work phase 1b left: closure arguments typed through templates, return types read from bodies and `@psalm-assert` narrowing.
 
 ## Where the code comes from
 
@@ -24,8 +24,8 @@ A Cargo workspace with five crates.
 | --- | --- |
 | `crates/syntax` (`php-syntax`) | The lexer, the parser, the tree (on `rowan`), the language level table and the pass that checks a tree against a level. |
 | `crates/format` (`php-format`) | The formatter: it reads a tree and decides the whitespace between tokens, and nothing else, and reads `.editorconfig`. Knows nothing of LSP. |
-| `crates/index` (`php-index`) | The declarations of a file with their PHPDoc, name resolution, PHPDoc types, Composer metadata, the stubs of the standard library, the persistent cache and the stores that read declarations back from it, the parallel indexer, the class hierarchy and the word index that narrows a search to the files that may hold a name. Knows nothing of LSP. |
-| `crates/analysis` (`php-analysis`) | Questions about a tree and an index: document symbols, folding, selection ranges, diagnostics, the type layer, hover, definitions, implementations, workspace symbols, completion, usages, highlights, rename, signature help, hierarchies, semantic tokens, inlay hints, the refactors and the line index that maps offsets to positions. Knows nothing of LSP. |
+| `crates/index` (`php-index`) | The declarations of a file with their PHPDoc, name resolution, PHPDoc types, Composer metadata, the stubs of the standard library, the persistent cache and the stores that read declarations back from it, the parallel indexer, the class hierarchy, the word index that narrows a search to the files that may hold a name, and the test facts (groups, Pest datasets and bindings of a test case to a folder). Knows nothing of LSP. |
+| `crates/analysis` (`php-analysis`) | Questions about a tree and an index: document symbols, folding, selection ranges, diagnostics, the type layer, hover, definitions, implementations, workspace symbols, completion, usages, highlights, rename, signature help, hierarchies, semantic tokens, inlay hints, the refactors, the test support (PHPUnit, Pest, runnables) and the line index that maps offsets to positions. Knows nothing of LSP. |
 | `crates/server` (`php-language-server`) | The LSP front end over stdio: documents, incremental sync, workspace folders, background indexing with progress, the requests below, configuration. Library and binary. |
 
 ### The syntax crate
@@ -69,6 +69,7 @@ Supporting PHP 8.6 means adding rows to the table, plus the syntax to the parser
 
 - `textDocument/hover`, `textDocument/definition`, `textDocument/typeDefinition`, `textDocument/implementation`, `workspace/symbol`, `textDocument/completion` and `completionItem/resolve`, described under "Phase 1b" below;
 - `textDocument/references`, `textDocument/documentHighlight`, `textDocument/prepareRename`, `textDocument/rename`, `textDocument/signatureHelp`, `textDocument/prepareCallHierarchy` with `callHierarchy/incomingCalls` and `callHierarchy/outgoingCalls`, `textDocument/prepareTypeHierarchy` with `typeHierarchy/supertypes` and `typeHierarchy/subtypes`, `textDocument/semanticTokens/full` and `/range`, and `textDocument/inlayHint`, described under "Phase 2" below.
+- `php/runnables` and `textDocument/codeLens`, described under "Phase 5" below.
 
 ### Configuration
 
@@ -133,7 +134,11 @@ The level of a project is `config.platform.php` of its `composer.json`, else the
 - variables: parameters (with `@param` types, defaults of `null`, variadics), assignments, `new`, calls of functions, methods and static methods, property reads, constants and enum cases, array literals and `$a[] = x`, indexing, destructuring and `foreach` over arrays, iterables, `Iterator` and `IteratorAggregate` classes, `catch`, `static` and `global` variables, closures with `use`, arrow functions and inline `/** @var T $x */`;
 - flow: branches merge into unions, a branch that ends in `return` or `throw` does not, `instanceof`, `=== null`, `isset`, `is_*` functions, truthiness and `assert` narrow in the branch they hold for and survive an early exit.
 
-It stops at: the return type of a function with no declared or documented one (nothing is inferred from its body, except that a generator is a `Generator`), the element type a closure argument gives a template (`array_map` returns `array`), loops that need a fixed point, references, `list` with references, variable variables and dynamic member names, `__get` and `__call`, PHPDoc type aliases (`@psalm-type`), `key-of`, `value-of` and the other type-level functions, which come out as `mixed`. Where it gives up the type is `mixed` and nothing is offered or reported on it.
+- calls with closures: the parameter a closure takes is typed from the `callable(T): U` the callee asks for, with `T` bound from the other arguments and the receiver, and the closure's return type binds `U`. The standard library stubs have no generics, so `array_map`, `array_filter`, `array_reduce`, `usort` and 27 more array functions get theirs from `crates/index/src/stub_overlay.php`;
+- return types read from bodies: a function, method or closure with no declared or documented return type returns what its `return` statements return (a generator is a `Generator<K, V, mixed, R>` from its `yield`s), when all of them are known. A body in another file is read from disk, three bodies deep at most;
+- `@psalm-assert`, `@phpstan-assert` and their `-if-true` and `-if-false` forms, with `!Type` and `=Type`, narrow the argument a call names (`assertInstanceOf`, `assertNotNull`, `Assert::assertIsString`).
+
+It stops at: loops that need a fixed point, references, `list` with references, variable variables and dynamic member names, `__get` and `__call`, PHPDoc type aliases (`@psalm-type`), `key-of`, `value-of` and the other type-level functions, which come out as `mixed`, and a return type read from a body where one of the returns is not known. Where it gives up the type is `mixed` and nothing is offered or reported on it.
 
 ### Hover, navigation and symbols
 
@@ -229,6 +234,7 @@ Open documents keep their syntax tree, and no other tree is kept. Strings are no
 ```sh
 cargo run --release -p php-analysis --example probe -- <project> <stubs> <file> <line> <column> [complete|hover|definition|references|rename:<name>|tokens]
 cargo run --release -p php-analysis --example stress -- <project> <stubs> [limit]   # every analysis at every name, looking for panics
+cargo run --release -p php-analysis --example typecov -- <project> <stubs> [--under <folder>] [--top <n>]   # how many expressions the type layer cannot type
 cargo bench -p php-index                  # extraction and index building over the stubs
 cargo bench -p php-analysis               # completion and hover over the stubs
 cargo bench -p php-analysis --bench features   # tokens, hints, signature help, usages and rename
@@ -253,6 +259,7 @@ A value is `true` or `false`, a severity (`error`, `warning`, `information`, `hi
 | Calls and types | `wrong-argument-count`, `argument-type-mismatch`, `return-type-mismatch`, `missing-return`, `incompatible-comparison`, `assignment-in-condition`, `deprecated`, `static-call-of-instance-method`, `instance-call-of-static-method` |
 | Classes | `abstract-method-not-implemented`, `interface-method-not-implemented`, `incompatible-override`, `readonly-reassigned`, `enum-misuse` |
 | PHPDoc and style | `phpdoc-unknown-parameter`, `phpdoc-type-mismatch`, `missing-strict-types` (off by default) |
+| Tests | `missing-data-provider`, `missing-test-dependency`, `data-provider-arity`, `missing-double-method`, `double-return-type-mismatch` |
 
 The inspections report only what is certain. A name is undefined only after the project, its packages and the standard library of the extensions it requires have all been read, and a call is not checked when it reaches the callee through `__call`, which is how a method lent by a `@mixin` is called. `cargo run --release -p php-analysis --example survey -- <project> <stubs> [--all]` runs every inspection over a project and counts what they report, to find the ones that are wrong on code that is right. Over the 798 PHP files of a real project it takes about 3.7 s and reports 66 findings with the default set, none of them wrong when read by hand. The first run reported 68: a call through a `@mixin` and the classes Composer writes into `vendor/composer` were wrong, and both are fixed.
 
@@ -341,6 +348,89 @@ Run over a real application (798 PHP files, vendor trees left out; a sample of p
 
 Most refusals are what the rules above say: extract method is mostly offered on a selection inside a closure or a top-level script, which it declines, and the rest is code that returns on some paths only. Two kinds of result that the run made visible are written down as limits. A dead assignment to a parameter in the cut code (one nothing reads afterwards) is reported as an unused variable in the new method, where the parameter hid it before, and the types of an extraction are only the ones PHP guarantees (scalars and arrays, literals, `new`, declared types and the parameters of the function itself), since a doc block or the way objects flow is not checked by PHP and a wrong one would become a `TypeError`.
 
+## Phase 5: tests, and what was left of phase 1b
+
+### Closure arguments, returns and assert tags
+
+The type layer part of this phase is described under "The type layer" above. A function with a `callable(T): U` parameter gives the closure handed to it the types its other arguments bound, so `$user` is a `User` in `array_map(fn ($user) => $user->name, $users)` and the call is an `array<int, string>`. Nested array writes (`$byTicket[$id][] = $pivot`) build the element type, and `A|(A&B)` is `A`.
+
+### PHPUnit
+
+A class is a test case when it extends `PHPUnit\Framework\TestCase`, directly or through other classes. Without PHPUnit in the index a parent named `TestCase` counts. A method is a test when it is public, not static, and is named `test...`, carries `#[Test]` or has `@test`.
+
+The strings and tags that name something are followed like names:
+
+| Written | Names |
+| --- | --- |
+| `#[DataProvider('name')]`, `@dataProvider name` | a method of the class |
+| `#[DataProviderExternal(Foo::class, 'name')]`, `@dataProvider Foo::name` | a method of `Foo` |
+| `#[Depends('name')]`, `#[DependsUsingDeepClone]`, `#[DependsUsingShallowClone]`, `@depends name` | a test of the class |
+| `#[DependsExternal(Foo::class, 'name')]` and its clone forms | a test of `Foo` |
+| `#[CoversMethod(Foo::class, 'name')]`, `#[UsesMethod(...)]` | a method of `Foo` |
+| `#[CoversFunction('name')]`, `#[UsesFunction('name')]` | a function |
+| `#[Group('name')]`, `@group name` | a group, kept per file in the index |
+
+Definition, hover, find usages, highlights and rename (the string is renamed with the method) work on the text inside the quotes, and completion offers the data providers (public methods that are not tests, static ones first), the tests (for a dependency), the methods, the functions or the groups of the project there. `#[CoversClass(Foo::class)]`, `#[UsesClass]`, `#[CoversTrait]`, `#[UsesTrait]` and `#[DependsOnClass]` name a class by `::class`, which is an ordinary class reference that navigates like one, and completing a name in their argument inserts `Foo::class`. A group has no declaration, so it completes and is not followed. `@covers` and `@uses` tags in a doc comment are not read.
+
+Inspections: `missing-data-provider` (error), `missing-test-dependency` (warning) and `data-provider-arity` (warning), which compares the values of each row of a provider with the parameters of its test. It reads only a provider whose rows are written out as arrays of positional values in one `return` or in `yield`s, in this file or another, and stays silent for a test that also has `#[Depends]`, whose results arrive after the data set. A row with fewer values than the required parameters and one with more values than the test takes both count.
+
+Test doubles take their types from what PHPUnit declares: `createMock(Foo::class)` is `MockObject&Foo` through the `@return MockObject&RealInstanceType` of the package, `createStub` is `Foo&Stub` and `getMockBuilder(Foo::class)->...->getMock()` is `MockObject&Foo` through `MockBuilder<Foo>`. The class a double stands for is also found through a call on it (`$mock->expects($this->once())->method('send')`), so the strings of `->method('name')`, `->onlyMethods(['name'])` and `createPartialMock(Foo::class, ['name'])` are followed, completed and renamed like the strings above. `missing-double-method` (error) reports a name the class does not have, and `double-return-type-mismatch` (warning) a value `->method('name')->willReturn(value)` gives that the method's declared return type never takes, only when the type of the value is certain (a literal, `new`, a typed variable).
+
+In a test, completing `$this->` puts the `assert...` methods first, static ones included, as they are called through `$this` all the time.
+
+### Pest
+
+A Pest file is made of calls: `test()`, `it()`, `describe()`, `beforeEach()`, `afterEach()`, `beforeAll()`, `afterAll()`, `dataset()`, `uses()`, `arch()` and `todo()`. They are recognized by name, whatever their namespace.
+
+**`$this` is the test case.** In the closure of a test or a `beforeEach` or `afterEach`, `$this` is the class that `uses(...)->in('Feature')` or `pest()->extend(...)->in('Feature')` binds to the folder of the file, found in `tests/Pest.php` or any other file (the index keeps those calls with the file), and the traits named there (`->use()`, or any trait in `uses()`) are part of its type. `uses(...)` without `->in()` in the file itself binds to that file, and when nothing binds a class it is `PHPUnit\Framework\TestCase`. The deepest folder wins for the class. `__DIR__` and `__DIR__ . '/Feature'` work as folders. The folder of the file has to be known, so a client names the file of a request through the `textDocument` it sends (the server does) and a library user wraps its calls in `php_analysis::document::enter(Some(path))`. Without a path only the bindings of the file itself and the default apply.
+
+**Properties of `beforeEach`.** What `$this->name = value` assigns in a `beforeEach` of the file, or of the `describe` blocks around the test, is a property of `$this` in the tests it runs for, with the union of the types it is assigned (`??=` too). They complete after `$this->`, and `$this->event->startsOn` resolves. A property that is declared on the case class wins, and one that is not assigned in a hook (in the test itself, or by `pest()->beforeEach` in another file) is not known.
+
+**Datasets.** The name in `->with('name')` and the one `dataset('name', ...)` declares are the same thing: definition, find usages, rename and completion (the names of the project and of the file) work on them. A test closure takes the types of an inline dataset (`->with([[1, 'a'], [2, 'b']])`, `->with(['label' => [1, 'a']])`, `->with([1, 2])`) or of a named one the project declares as an array or as a closure returning one, for the parameters that declare no type of their own, when every row is written out. Two `->with()` on one test, or a row that is not written out, give nothing.
+
+**Expectations.** `expect($value)` and its chain follow what Pest declares in its own source (`Expectation<TValue>`, the `@property` of `not` and `each`, the `@mixin` of the expectation methods), so nothing about them is written into the server. An expectation a project adds with `expect()->extend('name', fn)` completes after `expect(...)->`, hovers and leads to its string, and a call of it gives the expectation back; inside that closure `$this` is the expectation. Usages and rename of a custom expectation, and checks on its arguments, are not offered.
+
+Inside a Pest closure `$this->name` and `$this->method()` are not checked for existence: the generated case class forwards what it does not have through `__call`, and a property can come from a hook the server does not read.
+
+### What a test file can run
+
+The server runs nothing. It says what is runnable, and the client runs it.
+
+`php/runnables` is a custom request with `{ "uri": "file:///project/tests/FooTest.php" }` (`{ "textDocument": { "uri": ... } }` also works), which needs the document to be open. It answers a list in file order:
+
+```json
+[
+  {
+    "kind": "phpunit",
+    "scope": "method",
+    "label": "FooTest::testIt",
+    "range": { "start": { "line": 9, "character": 20 }, "end": { "line": 9, "character": 26 } },
+    "filter": "/^Tests\\\\Unit\\\\FooTest::testIt( with data set .*)?$/",
+    "file": "/project/tests/Unit/FooTest.php",
+    "configFile": "/project/phpunit.xml"
+  }
+]
+```
+
+- `kind` is `phpunit` or `pest`. `scope` is `class`, `method`, `test`, `describe` or `arch`.
+- `range` is the name of the class or method, or the Pest function that declares the test, where a run marker goes.
+- `filter` is a delimited regular expression for `--filter`, which PHPUnit and Pest both take. PHPUnit matches it against `Class::method with data set "x"`, so a class is `/^Ns\\Class::/` and a method adds `( with data set .*)?$`. Pest turns the description of a test into the name of a method (`it does x` is `__pest_evaluable_it_does_x`, an underscore is doubled, any other character that is not a letter or a digit becomes an underscore, and the describe blocks around a test are prefixed as `` `outer` → ``), which the filter matches, so it does not hold the class and is meant to be run on `file`. A `describe` is the prefix of its tests. An `arch()` without a description is named after the calls chained to it, so its filter is the prefix of the first of them and reaches every test of the file that starts so. A test whose description is not a string is not listed.
+- `file` is the path of the file and `configFile` the closest `phpunit.xml`, `phpunit.xml.dist` or `phpunit.dist.xml` from its folder up to the workspace folder, or `null`.
+
+`textDocument/codeLens` answers the same list for a client that only knows lenses: one lens per runnable on its `range`, with the command `php.runTest` and the runnable as its only argument, titled `Run tests in class`, `Run group` or `Run test`. The server does not list `php.runTest` in `executeCommandProvider`, since it cannot run it. The client registers the command, runs `vendor/bin/phpunit` or `vendor/bin/pest` with `--configuration configFile --filter filter file`, and shows the result.
+
+### Measured on a real project
+
+`cargo run --release -p php-analysis --example typecov -- <project> <stubs>` counts the expressions of the project's own files (variables, calls, property reads, index reads and static reads) whose type is unknown or `mixed`. On the Pest backend this was developed against (798 files, 71,901 expressions, 22,178 of them the object of a member read or an index read):
+
+| | Before phase 5 | After |
+| --- | --- | --- |
+| Unresolved, all files | 15,890 (22.1%) | 4,823 (6.7%) |
+| Unresolved, `tests/` | 13,963 (32.0%) | 2,919 (6.7%) |
+| Unresolved, objects of a member read | 5,002 (22.6%) | 1,572 (7.1%) |
+
+Nearly all of the gain is `$this` in Pest closures, `$this->event->startsOn` and the like (about 11,000 expressions); closures typed through templates, return types and nested array writes add a few dozen on this code, which declares most of its types. `survey` (the inspections over the project) reports the same 66 findings before and after, all of which are real (unused imports and variables), so nothing new is reported on the tests. Running the inspections over the project takes about 1.8 times as long as before, since far more of what they read now resolves.
+
 ## Build, test and run
 
 ```sh
@@ -399,5 +489,5 @@ Measured on an Apple Silicon laptop, release build: lexing about 345 MiB/s, pars
 3. **Phase 2, usages, rename and editing aids (done):** find usages, document highlights, rename, signature help, call and type hierarchies, semantic tokens, inlay hints, completion of overridable methods and a cache that keeps declarations on disk, as described above.
 4. **Phase 3, inspections, fixes and formatting (done):** the inspections, quick fixes, code actions and the formatter described above.
 5. **Phase 4, refactors (done):** extract variable, constant, field, method and parameter, inline variable and method, move a class (and follow renamed files), change signature, pull up and push down, the rewrite intentions, and the formatter's wrapping and `.editorconfig`, as described above. Left for later: introducing a type or an interface from a class, a preview of a rename that moves namespaces, and strings that hold class names.
-6. **Phase 5, PHPUnit and Pest, and what is left of phase 1b:** test and dataset navigation, `$this` in Pest closures, `expect()` chains and their mixins, running a test from a code lens. Still open from phase 1b: the types a closure argument gives a template (`array_map` still returns `array`), return types inferred from function bodies, the doc and attribute formats of Laravel and Symfony macros and `@psalm-type` aliases. Also usages in the installed packages, usages found through a reference index that is kept on disk, and interned strings if the memory of the summaries ever matters.
+6. **Phase 5, PHPUnit and Pest, and what was left of phase 1b (done):** test and dataset navigation, `$this` and the properties of `beforeEach` in Pest closures, `expect()` chains and custom expectations, test doubles, the run markers (`php/runnables` and code lenses), closure arguments typed through templates, return types read from bodies and `@psalm-assert` narrowing, as described above. Left for later: the doc and attribute formats of Laravel and Symfony macros and `@psalm-type` aliases, usages in the installed packages, usages found through a reference index that is kept on disk, and interned strings if the memory of the summaries ever matters.
 7. **Phase 6, frameworks:** Composer autoload maps beyond PSR-4 and PSR-0 (classmap authoritative, `files`), then conventions that need more than types. Laravel: Eloquent attributes, relations and scopes, facades and their real classes, route, view, config and translation names, `Collection` and builder generics. Symfony: service ids and the container, route names, Twig templates, Doctrine entities and DQL, attributes such as `#[Route]` and `#[AsCommand]`.
