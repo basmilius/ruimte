@@ -48,6 +48,10 @@ use crate::documents::Documents;
 use crate::paths::uri_to_path;
 use crate::workspace::{Internal, Workspace};
 
+/// How many files read from the cache file stay in memory, the most recently used ones.
+const KEEP_LOADED_FILES: usize = 1500;
+const TRIM_INTERVAL: std::time::Duration = std::time::Duration::from_secs(3);
+
 pub(crate) type BoxError = Box<dyn Error + Send + Sync>;
 
 /// Runs the server on a connection until the client shuts it down.
@@ -108,6 +112,7 @@ pub(crate) struct Server<'a> {
     /// Questions asked of the client: which document each `workspace/configuration` answer is for.
     pending_configuration: HashMap<RequestId, Uri>,
     next_request_id: i32,
+    last_trim: std::time::Instant,
     pub(crate) workspace: Workspace,
     initial_folders: Vec<PathBuf>,
     internal_sender: Sender<Internal>,
@@ -201,6 +206,7 @@ impl<'a> Server<'a> {
             dirty: Vec::new(),
             pending_configuration: HashMap::new(),
             next_request_id: 0,
+            last_trim: std::time::Instant::now(),
             workspace,
             initial_folders: folders_of(params),
             internal_sender,
@@ -297,6 +303,7 @@ impl<'a> Server<'a> {
                         }
                     }
                     self.publish_dirty()?;
+                    self.trim_indexes();
                 }
                 recv(internal) -> event => {
                     if let Ok(event) = event {
@@ -305,6 +312,16 @@ impl<'a> Server<'a> {
                 }
             }
         }
+    }
+
+    /// Lets go of the declarations that were read from the cache file and have not been used for a
+    /// while, at most every few seconds.
+    fn trim_indexes(&mut self) {
+        if self.last_trim.elapsed() < TRIM_INTERVAL {
+            return;
+        }
+        self.last_trim = std::time::Instant::now();
+        self.workspace.trim_indexes(KEEP_LOADED_FILES);
     }
 
     /// Handles one message and says whether the server is done.
@@ -669,6 +686,13 @@ impl<'a> Server<'a> {
                     }
                     self.job_progress(count, 0);
                 }
+                IndexEvent::Persisted(moved) => {
+                    if let Some(project) = self.workspace.project_by_root(&root) {
+                        for (path, source) in moved {
+                            project.index.move_to_cache(&path, source);
+                        }
+                    }
+                }
                 IndexEvent::Finished(stats) => {
                     self.resync_open_documents();
                     self.log(
@@ -705,6 +729,7 @@ impl<'a> Server<'a> {
                     self.workspace.add_stub_files(files);
                     self.job_progress(count, 0);
                 }
+                IndexEvent::Persisted(moved) => self.workspace.move_stubs_to_cache(moved),
                 IndexEvent::Finished(stats) => {
                     self.workspace.apply_stubs();
                     self.resync_open_documents();

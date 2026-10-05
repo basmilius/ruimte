@@ -12,11 +12,12 @@ use php_syntax::parse;
 use rayon::prelude::*;
 use walkdir::WalkDir;
 
-use crate::cache::{Cache, Record, Stamp, content_hash};
+use crate::cache::{Cache, CachedFile, Entry, Payload, Stamp, content_hash};
 use crate::composer::Composer;
 use crate::extract::{ExtractOptions, extract};
 use crate::index::Origin;
-use crate::model::FileSymbols;
+use crate::model::{FileSummary, FileSymbols};
+use crate::store::SymbolSource;
 use crate::stubs;
 
 /// Files larger than this are generated or data, and parsing them tells the index nothing.
@@ -29,7 +30,10 @@ pub struct IndexedFile {
     pub origin: Origin,
     /// For a stub, the normalized name of its extension folder.
     pub extension: Option<String>,
-    pub symbols: Arc<FileSymbols>,
+    /// Where the declarations are: in memory when the file was just read, in the cache file when
+    /// the cache had them.
+    pub source: SymbolSource,
+    pub summary: Arc<FileSummary>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -44,6 +48,9 @@ pub struct Stats {
 pub enum IndexEvent {
     Discovered(usize),
     Files(Vec<IndexedFile>),
+    /// The cache was written again: these files can be read from the new cache file, which lets
+    /// the declarations kept in memory go and the old cache file be released.
+    Persisted(Vec<(PathBuf, SymbolSource)>),
     Finished(Stats),
 }
 
@@ -141,7 +148,8 @@ struct Counters {
 }
 
 /// Extracts every file, reusing cached declarations where the stamp or the content matches, and
-/// reports finished files in batches. The cache is rewritten when anything in it changed.
+/// reports finished files in batches. A cached file is not read at all: its declarations stay in the
+/// cache file until something needs them. The cache is rewritten when anything in it changed.
 pub fn run(
     files: Vec<(PathBuf, Origin)>,
     cache_path: Option<&Path>,
@@ -153,34 +161,36 @@ pub fn run(
     let total = files.len();
     emit(IndexEvent::Discovered(total));
     let cache = cache_path.map(Cache::load).unwrap_or_default();
-    let cached_before = cache.records.len();
+    let cached_before = cache.files.len();
     let counters = Counters {
         parsed: AtomicUsize::new(0),
         from_cache: AtomicUsize::new(0),
         done: AtomicUsize::new(0),
     };
-    let records: Mutex<Vec<Record>> = Mutex::new(Vec::with_capacity(total));
+    let entries: Mutex<Vec<Entry>> = Mutex::new(Vec::with_capacity(total));
 
     let work = || {
         files.par_chunks(BATCH).for_each(|chunk| {
             let mut batch = Vec::with_capacity(chunk.len());
             let mut fresh = Vec::with_capacity(chunk.len());
             for (path, origin) in chunk {
-                if let Some((symbols, record)) = process(path, *origin, &cache, &counters) {
+                if let Some((source, summary, entry)) = process(path, *origin, &cache, &counters, cache_path.is_some())
+                {
                     let extension = stub_root.and_then(|root| stubs::extension_of(root, path));
                     batch.push(IndexedFile {
                         path: path.clone(),
                         origin: *origin,
                         extension,
-                        symbols: Arc::new(symbols),
+                        source,
+                        summary,
                     });
-                    if let Some(record) = record {
-                        fresh.push(record);
+                    if let Some(entry) = entry {
+                        fresh.push(entry);
                     }
                 }
             }
             counters.done.fetch_add(chunk.len(), Ordering::Relaxed);
-            if let Ok(mut all) = records.lock() {
+            if let Ok(mut all) = entries.lock() {
                 all.append(&mut fresh);
             }
             emit(IndexEvent::Files(batch));
@@ -195,18 +205,34 @@ pub fn run(
         Err(_) => work(),
     }
 
-    let records = records.into_inner().unwrap_or_default();
+    let entries = entries.into_inner().unwrap_or_default();
     let parsed = counters.parsed.load(Ordering::Relaxed);
     let from_cache = counters.from_cache.load(Ordering::Relaxed);
     let removed = cached_before.saturating_sub(
-        records
+        entries
             .iter()
-            .filter(|record| cache.records.contains_key(&record.path))
+            .filter(|entry| cache.files.contains_key(&entry.path))
             .count(),
     );
     if let Some(path) = cache_path {
         if parsed > 0 || removed > 0 || cached_before == 0 {
-            let _ = Cache::save(path, &records);
+            if let Ok(saved) = Cache::save(path, entries) {
+                let moved = saved
+                    .places
+                    .into_iter()
+                    .map(|(path, (offset, length))| {
+                        (
+                            PathBuf::from(path),
+                            SymbolSource::Cached {
+                                store: saved.store.clone(),
+                                offset,
+                                length,
+                            },
+                        )
+                    })
+                    .collect();
+                emit(IndexEvent::Persisted(moved));
+            }
         }
     }
     emit(IndexEvent::Finished(Stats {
@@ -218,38 +244,62 @@ pub fn run(
     }));
 }
 
-fn process(path: &Path, origin: Origin, cache: &Cache, counters: &Counters) -> Option<(FileSymbols, Option<Record>)> {
+type Processed = (SymbolSource, Arc<FileSummary>, Option<Entry>);
+
+fn from_cached(path: &Path, cached: &CachedFile, cache: &Cache, stamp: Stamp) -> Option<Processed> {
+    let store = cache.store.as_ref()?;
+    let entry = Entry {
+        path: path.to_string_lossy().into_owned(),
+        stamp,
+        hash: cached.hash,
+        summary: cached.summary.clone(),
+        payload: Payload::Stored {
+            store: store.clone(),
+            offset: cached.offset,
+            length: cached.length,
+        },
+    };
+    Some((cached.source(store), cached.summary.clone(), Some(entry)))
+}
+
+/// Reads a file's declarations from the cache, or from the file when the cache has no current
+/// version. With `defer` set (there is a cache to write to) the declarations of a file read here are
+/// not kept: the cache will have them, and until then they are read again when asked for.
+fn process(path: &Path, origin: Origin, cache: &Cache, counters: &Counters, defer: bool) -> Option<Processed> {
     let stamp = Stamp::of(path)?;
     if stamp.size > MAX_FILE_SIZE {
         return None;
     }
     let key = path.to_string_lossy();
-    let cached = cache.records.get(key.as_ref());
-    if let Some(record) = cached {
-        if record.stamp == stamp {
-            if let Some(symbols) = record.symbols() {
-                counters.from_cache.fetch_add(1, Ordering::Relaxed);
-                return Some((symbols, Some(record.clone())));
-            }
+    let cached = cache.files.get(key.as_ref());
+    if let Some(cached) = cached.filter(|cached| cached.stamp == stamp) {
+        if let Some(done) = from_cached(path, cached, cache, stamp) {
+            counters.from_cache.fetch_add(1, Ordering::Relaxed);
+            return Some(done);
         }
     }
     let bytes = std::fs::read(path).ok()?;
     let hash = content_hash(&bytes);
-    if let Some(record) = cached {
-        if record.hash == hash {
-            if let Some(symbols) = record.symbols() {
-                counters.from_cache.fetch_add(1, Ordering::Relaxed);
-                let mut record = record.clone();
-                record.stamp = stamp;
-                return Some((symbols, Some(record)));
-            }
+    if let Some(cached) = cached.filter(|cached| cached.hash == hash) {
+        if let Some(done) = from_cached(path, cached, cache, stamp) {
+            counters.from_cache.fetch_add(1, Ordering::Relaxed);
+            return Some(done);
         }
     }
     let text = String::from_utf8_lossy(&bytes);
     let symbols = extract_text(&text, origin == Origin::Stub);
     counters.parsed.fetch_add(1, Ordering::Relaxed);
-    let record = Record::new(path, stamp, hash, &symbols);
-    Some((symbols, record))
+    let summary = Arc::new(FileSummary::of(&symbols));
+    let entry = Entry::new(path, stamp, hash, summary.clone(), &symbols);
+    let source = if defer {
+        SymbolSource::Parse {
+            path: path.to_path_buf(),
+            stub: origin == Origin::Stub,
+        }
+    } else {
+        SymbolSource::Memory(Arc::new(symbols))
+    };
+    Some((source, summary, entry))
 }
 
 #[cfg(test)]
@@ -258,14 +308,29 @@ mod tests {
     use std::fs;
 
     fn collect(files: Vec<(PathBuf, Origin)>, cache: Option<&Path>) -> (Vec<IndexedFile>, Stats) {
+        let (indexed, stats, _) = collect_with_moves(files, cache);
+        (indexed, stats)
+    }
+
+    /// Like `collect`, with the files the cache file took over at the end.
+    fn collect_with_moves(
+        files: Vec<(PathBuf, Origin)>,
+        cache: Option<&Path>,
+    ) -> (Vec<IndexedFile>, Stats, Vec<(PathBuf, SymbolSource)>) {
         let collected = Mutex::new(Vec::new());
+        let moved = Mutex::new(Vec::new());
         let stats = Mutex::new(Stats::default());
         run(files, cache, None, 2, &|event| match event {
             IndexEvent::Files(mut batch) => collected.lock().expect("lock").append(&mut batch),
             IndexEvent::Finished(done) => *stats.lock().expect("lock") = done,
+            IndexEvent::Persisted(mut batch) => moved.lock().expect("lock").append(&mut batch),
             IndexEvent::Discovered(_) => {}
         });
-        (collected.into_inner().expect("lock"), stats.into_inner().expect("lock"))
+        (
+            collected.into_inner().expect("lock"),
+            stats.into_inner().expect("lock"),
+            moved.into_inner().expect("lock"),
+        )
     }
 
     #[test]
@@ -291,6 +356,30 @@ mod tests {
             .map(|(path, _)| path.strip_prefix(root).expect("inside").to_string_lossy().into_owned())
             .collect();
         assert_eq!(names, vec!["src/A.php", "tests/ATest.php"]);
+    }
+
+    #[test]
+    fn a_cached_file_stays_on_disk_until_it_is_asked_for() {
+        let dir = tempfile::tempdir().expect("a temp dir");
+        let path = dir.path().join("a.php");
+        fs::write(&path, "<?php class A { public function m(): int {} } function f() {}").expect("written");
+        let files = vec![(path.clone(), Origin::Project)];
+        let cache = dir.path().join("cache/p.bin");
+
+        // The first run reads the file again when asked, until the cache file takes over.
+        let (indexed, _, moved) = collect_with_moves(files.clone(), Some(&cache));
+        assert!(matches!(indexed[0].source, SymbolSource::Parse { .. }));
+        assert_eq!(moved.len(), 1);
+        assert!(moved[0].1.is_cached());
+
+        let (indexed, stats, moved) = collect_with_moves(files, Some(&cache));
+        assert_eq!(stats.from_cache, 1);
+        assert!(moved.is_empty(), "nothing changed, so the cache was not written again");
+        assert!(indexed[0].source.is_cached());
+        assert_eq!(indexed[0].summary.classes[0].name, "A");
+        assert_eq!(indexed[0].summary.functions[0].name, "f");
+        let symbols = indexed[0].source.load().expect("read from the cache file");
+        assert_eq!(symbols.classes[0].methods[0].name, "m");
     }
 
     #[test]
@@ -328,7 +417,7 @@ mod tests {
         assert!(
             indexed
                 .iter()
-                .any(|file| file.symbols.classes.iter().any(|class| class.name == "Changed"))
+                .any(|file| file.summary.classes.iter().any(|class| class.name == "Changed"))
         );
     }
 }

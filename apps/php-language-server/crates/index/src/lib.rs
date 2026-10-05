@@ -11,13 +11,15 @@ pub mod model;
 pub mod phpdoc;
 pub mod project;
 pub mod resolve;
+pub mod store;
 pub mod stubs;
 pub mod types;
 pub mod words;
 
 pub use hierarchy::{Ancestor, Found};
-pub use index::{Class, ConstRef, FileEntry, FileId, FunctionRef, Index, Origin, StubFile};
+pub use index::{Class, ClassName, ConstRef, DeclName, FileEntry, FileId, FunctionRef, Index, Origin, StubFile};
 pub use model::*;
 pub use project::Project;
 pub use resolve::{NameResolver, UseKind};
+pub use store::{SymbolSource, SymbolStore};
 pub use types::{Name, Type};

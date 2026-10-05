@@ -483,7 +483,7 @@ fn class_file_rename(index: &Index, name: &str, new_name: &str) -> Option<FileRe
     let old_short = crate::short(&class.decl.name);
     let stem = class.file.path.file_stem()?.to_str()?;
     let extension = class.file.path.extension()?.to_str()?;
-    if stem != old_short || class.file.symbols.classes.len() != 1 {
+    if stem != old_short || class.file.symbols().classes.len() != 1 {
         return None;
     }
     let target = class.file.path.with_file_name(format!("{new_name}.{extension}"));

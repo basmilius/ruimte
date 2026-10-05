@@ -88,7 +88,8 @@ impl Project {
 
     pub fn apply(&mut self, files: Vec<IndexedFile>) {
         for file in files {
-            self.index.set_file(file.path, file.origin, file.symbols);
+            self.index
+                .set_indexed(file.path, file.origin, file.source, file.summary);
         }
     }
 }

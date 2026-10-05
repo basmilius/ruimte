@@ -34,7 +34,16 @@ pub fn workspace_symbols(index: &Index, query: &str, limit: usize) -> Vec<Worksp
             found.push(((score.max(1), rank, name.len()), symbol));
         }
     };
-    for class in index.classes() {
+    for name in index.class_names() {
+        // Only the project's own classes have members listed, and only the others whose name fits
+        // are worth reading.
+        let own = name.file.origin == Origin::Project && !query.is_empty();
+        if !own && match_score(crate::short(&name.summary.name), query).is_none() {
+            continue;
+        }
+        let Some(class) = name.load() else {
+            continue;
+        };
         let short = crate::short(&class.decl.name);
         let rank = origin_rank(class.file.origin);
         let kind = match class.decl.kind {
@@ -106,7 +115,13 @@ pub fn workspace_symbols(index: &Index, query: &str, limit: usize) -> Vec<Worksp
             );
         }
     }
-    for function in index.functions() {
+    for name in index.function_names() {
+        if match_score(crate::short(&name.summary.name), query).is_none() {
+            continue;
+        }
+        let Some(function) = name.load_function() else {
+            continue;
+        };
         let short = crate::short(&function.decl.name);
         let container = php_index::types::namespace_of(&function.decl.name);
         consider(
@@ -122,7 +137,13 @@ pub fn workspace_symbols(index: &Index, query: &str, limit: usize) -> Vec<Worksp
             },
         );
     }
-    for constant in index.constants() {
+    for name in index.constant_names() {
+        if match_score(crate::short(&name.summary.name), query).is_none() {
+            continue;
+        }
+        let Some(constant) = name.load_constant() else {
+            continue;
+        };
         let short = crate::short(&constant.decl.name);
         let container = php_index::types::namespace_of(&constant.decl.name);
         consider(

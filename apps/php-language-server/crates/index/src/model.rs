@@ -447,3 +447,75 @@ impl ClassDecl {
         self.constants.iter().find(|constant| constant.name == name)
     }
 }
+
+/// What the index keeps of a class while the rest of its file stays on disk: enough to find it by
+/// name, to list it, and to know which classes sit below it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ClassSummary {
+    pub name: Name,
+    pub kind: ClassKind,
+    pub is_abstract: bool,
+    pub deprecated: bool,
+    pub availability: Availability,
+    /// The classes it extends, implements or uses, by name.
+    pub parents: Vec<Name>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NameSummary {
+    pub name: Name,
+    pub deprecated: bool,
+    pub availability: Availability,
+}
+
+/// The names of a file, in the order of its [`FileSymbols`], so a position here is a position there.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FileSummary {
+    pub classes: Vec<ClassSummary>,
+    pub functions: Vec<NameSummary>,
+    pub constants: Vec<NameSummary>,
+}
+
+impl FileSummary {
+    pub fn of(symbols: &FileSymbols) -> FileSummary {
+        let deprecated = |doc: &Option<Box<Doc>>| doc.as_ref().is_some_and(|doc| doc.deprecated.is_some());
+        FileSummary {
+            classes: symbols
+                .classes
+                .iter()
+                .map(|class| ClassSummary {
+                    name: class.name.clone(),
+                    kind: class.kind,
+                    is_abstract: class.is_abstract,
+                    deprecated: deprecated(&class.doc),
+                    availability: class.availability,
+                    parents: class
+                        .extends
+                        .iter()
+                        .chain(&class.implements)
+                        .chain(class.trait_uses.iter().map(|usage| &usage.ty))
+                        .flat_map(|ty| ty.class_names().into_iter().map(str::to_string))
+                        .collect(),
+                })
+                .collect(),
+            functions: symbols
+                .functions
+                .iter()
+                .map(|function| NameSummary {
+                    name: function.name.clone(),
+                    deprecated: deprecated(&function.doc),
+                    availability: function.availability,
+                })
+                .collect(),
+            constants: symbols
+                .constants
+                .iter()
+                .map(|constant| NameSummary {
+                    name: constant.name.clone(),
+                    deprecated: deprecated(&constant.doc),
+                    availability: constant.availability,
+                })
+                .collect(),
+        }
+    }
+}

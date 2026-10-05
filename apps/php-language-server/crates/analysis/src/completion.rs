@@ -812,14 +812,17 @@ impl Builder<'_> {
         }
         let mut candidates: Vec<(u8, Class<'_>)> = Vec::new();
         let mut seen: HashSet<String> = HashSet::new();
-        for class in self.index.classes() {
-            if !filter.accepts(self.index, class) {
-                continue;
-            }
-            let short = crate::short(&class.decl.name);
+        for name in self.index.class_names() {
+            let short = crate::short(&name.summary.name);
             let Some(score) = match_score(short, &typed) else {
                 continue;
             };
+            let Some(class) = name.load() else {
+                continue;
+            };
+            if !filter.accepts(self.index, class) {
+                continue;
+            }
             if !seen.insert(class.decl.name.to_ascii_lowercase()) {
                 continue;
             }
@@ -882,14 +885,18 @@ impl Builder<'_> {
             typed.to_string()
         };
         let mut found: Vec<(Class<'_>, String)> = Vec::new();
-        for class in self.index.classes() {
+        for name in self.index.class_names() {
+            if !name.summary.name.to_ascii_lowercase().starts_with(&expected_lower) {
+                continue;
+            }
+            let Some(class) = name.load() else {
+                continue;
+            };
             if !filter.accepts(self.index, class) {
                 continue;
             }
-            if class.decl.name.to_ascii_lowercase().starts_with(&expected_lower) {
-                let insert = format!("{written}{}", &class.decl.name[expected.len()..]);
-                found.push((class, insert));
-            }
+            let insert = format!("{written}{}", &class.decl.name[expected.len()..]);
+            found.push((class, insert));
         }
         for (class, insert) in found {
             let fqn = &class.decl.name;
@@ -918,32 +925,32 @@ impl Builder<'_> {
         let mut names: Vec<(String, ItemKind, u8, String)> = Vec::new();
         match kind {
             UseKind::Class => {
-                for class in self.index.classes() {
+                for class in self.index.class_names() {
                     names.push((
-                        class.decl.name.clone(),
-                        class_item_kind(class.decl.kind),
+                        class.summary.name.clone(),
+                        class_item_kind(class.summary.kind),
                         origin_rank(class.file.origin),
-                        format!("class:{}", class.decl.name),
+                        format!("class:{}", class.summary.name),
                     ));
                 }
             }
             UseKind::Function => {
-                for function in self.index.functions() {
+                for function in self.index.function_names() {
                     names.push((
-                        function.decl.name.clone(),
+                        function.summary.name.clone(),
                         ItemKind::Function,
                         origin_rank(function.file.origin),
-                        format!("function:{}", function.decl.name),
+                        format!("function:{}", function.summary.name),
                     ));
                 }
             }
             UseKind::Constant => {
-                for constant in self.index.constants() {
+                for constant in self.index.constant_names() {
                     names.push((
-                        constant.decl.name.clone(),
+                        constant.summary.name.clone(),
                         ItemKind::Constant,
                         origin_rank(constant.file.origin),
-                        format!("constant:{}", constant.decl.name),
+                        format!("constant:{}", constant.summary.name),
                     ));
                 }
             }
@@ -1009,12 +1016,15 @@ impl Builder<'_> {
         let level = self.index.level;
         let mut seen: HashSet<String> = HashSet::new();
         let mut found = Vec::new();
-        for function in self.index.functions() {
-            let short = crate::short(&function.decl.name);
+        for name in self.index.function_names() {
+            let short = crate::short(&name.summary.name);
             let Some(score) = match_score(short, &typed) else {
                 continue;
             };
-            if seen.insert(function.decl.name.to_ascii_lowercase()) {
+            if !seen.insert(name.summary.name.to_ascii_lowercase()) {
+                continue;
+            }
+            if let Some(function) = name.load_function() {
                 found.push((score, function));
             }
         }
@@ -1056,12 +1066,15 @@ impl Builder<'_> {
         }
         let mut seen: HashSet<String> = HashSet::new();
         let mut found = Vec::new();
-        for constant in self.index.constants() {
-            let short = crate::short(&constant.decl.name);
+        for name in self.index.constant_names() {
+            let short = crate::short(&name.summary.name);
             let Some(score) = match_score(short, &typed) else {
                 continue;
             };
-            if seen.insert(constant.decl.name.clone()) {
+            if !seen.insert(name.summary.name.clone()) {
+                continue;
+            }
+            if let Some(constant) = name.load_constant() {
                 found.push((score, constant));
             }
         }

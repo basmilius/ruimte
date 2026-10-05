@@ -1,7 +1,6 @@
 //! The projects the server knows and the background work that fills their indexes.
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use crossbeam_channel::Sender;
 use php_index::cache::path_key;
@@ -170,11 +169,24 @@ impl Workspace {
         });
     }
 
+    /// The stubs were written to the cache file: read them from there from now on.
+    pub fn move_stubs_to_cache(&mut self, moved: Vec<(PathBuf, php_index::SymbolSource)>) {
+        let mut sources: std::collections::HashMap<PathBuf, php_index::SymbolSource> = moved.into_iter().collect();
+        for stub in &mut self.stubs {
+            if let Some(source) = sources.remove(&stub.path) {
+                stub.source = source;
+            }
+        }
+    }
+
+    /// Frees what the indexes read from the cache file and have not used lately.
+    pub fn trim_indexes(&mut self, keep: usize) {
+        for project in self.projects.iter_mut().chain(std::iter::once(&mut self.loose)) {
+            project.index.trim(keep);
+        }
+    }
+
     pub fn add_stub_files(&mut self, files: Vec<IndexedFile>) {
-        self.stubs.extend(files.into_iter().map(|file| StubFile {
-            path: file.path,
-            extension: file.extension.unwrap_or_default(),
-            symbols: Arc::clone(&file.symbols),
-        }));
+        self.stubs.extend(files.into_iter().map(StubFile::from_indexed));
     }
 }

@@ -51,11 +51,7 @@ fn main() {
                 stubs
                     .lock()
                     .expect("lock")
-                    .extend(batch.into_iter().map(|file| StubFile {
-                        path: file.path,
-                        extension: file.extension.unwrap_or_default(),
-                        symbols: file.symbols,
-                    }));
+                    .extend(batch.into_iter().map(StubFile::from_indexed));
             }
         },
     );
