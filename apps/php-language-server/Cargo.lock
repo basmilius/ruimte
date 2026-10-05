@@ -582,6 +582,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "expect-test",
+ "php-format",
  "php-index",
  "php-syntax",
  "rayon",

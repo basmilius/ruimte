@@ -8,7 +8,7 @@ use php_syntax::SyntaxKind::*;
 use php_syntax::{SyntaxNode, TextRange};
 
 use super::edits::{delete, line_end, line_start, remove_with_lines, replace};
-use crate::ast::{child_of, text_of};
+use crate::ast::{child_of, has_token, text_of};
 use crate::completion::TextEdit;
 use crate::imports::{ImportPlan, import_edit, plan_import};
 use crate::inspections::Cx;
@@ -74,7 +74,35 @@ impl<'a> ClassWriter<'a> {
         }
     }
 
+    /// The alias a file gives a class in an import of its own, as it is written there.
+    fn alias_of(&self, fqn: &str) -> Option<String> {
+        let wanted = fqn.trim_start_matches('\\');
+        self.root
+            .descendants()
+            .filter(|node| node.kind() == USE_CLAUSE && has_token(node, AS_KW))
+            .filter(|clause| {
+                child_of(clause, NAME)
+                    .is_some_and(|name| text_of(&name).trim_start_matches('\\').eq_ignore_ascii_case(wanted))
+            })
+            .find_map(|clause| {
+                let after = clause
+                    .descendants_with_tokens()
+                    .filter_map(php_syntax::SyntaxElement::into_token)
+                    .skip_while(|token| token.kind() != AS_KW)
+                    .find(|token| token.kind() == IDENT)?;
+                Some(after.text().to_string())
+            })
+            .filter(|alias| {
+                self.resolver
+                    .imports(UseKind::Class)
+                    .any(|(known, _)| known.eq_ignore_ascii_case(alias))
+            })
+    }
+
     pub fn written(&mut self, fqn: &str) -> String {
+        if let Some(alias) = self.alias_of(fqn) {
+            return alias;
+        }
         let plan = plan_import(self.resolver, fqn, UseKind::Class, |name| {
             let own = self.resolver.qualify(name);
             self.index

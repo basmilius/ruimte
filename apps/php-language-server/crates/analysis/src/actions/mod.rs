@@ -6,9 +6,9 @@
 mod docs;
 pub mod edits;
 mod fixes;
-mod imports;
-mod members;
-mod type_text;
+pub(crate) mod imports;
+pub(crate) mod members;
+pub(crate) mod type_text;
 
 use php_syntax::TextRange;
 

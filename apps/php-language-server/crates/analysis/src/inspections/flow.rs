@@ -117,6 +117,16 @@ pub(crate) fn body_completes(cx: &Cx, body: &SyntaxNode) -> bool {
     sequence_end(cx, &body.children().collect::<Vec<_>>()) == End::Completes
 }
 
+/// Whether control can reach the end of a run of statements, as far as it is certain.
+pub(crate) fn statements_complete(cx: &Cx, statements: &[SyntaxNode]) -> bool {
+    sequence_end(cx, statements) == End::Completes
+}
+
+/// Whether control certainly leaves a run of statements without reaching its end.
+pub(crate) fn statements_leave(cx: &Cx, statements: &[SyntaxNode]) -> bool {
+    matches!(sequence_end(cx, statements), End::Terminates)
+}
+
 fn sequence_end(cx: &Cx, statements: &[SyntaxNode]) -> End {
     let mut unknown = false;
     for statement in statements {

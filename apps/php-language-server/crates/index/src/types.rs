@@ -274,12 +274,23 @@ impl Type {
 
     /// The type as PHP source would write it. With `short` a class is its last name segment.
     pub fn display(&self, short: bool) -> String {
+        self.display_with(&mut |name| {
+            if short {
+                short_name(name).to_string()
+            } else {
+                name.to_string()
+            }
+        })
+    }
+
+    /// The type as PHP source would write it, with every class written the way `class` says.
+    pub fn display_with(&self, class: &mut dyn FnMut(&str) -> String) -> String {
         let mut out = String::new();
-        self.write(&mut out, short);
+        self.write(&mut out, class);
         out
     }
 
-    fn write(&self, out: &mut String, short: bool) {
+    fn write(&self, out: &mut String, class: &mut dyn FnMut(&str) -> String) {
         match self {
             Type::Unknown | Type::Mixed => out.push_str("mixed"),
             Type::Void => out.push_str("void"),
@@ -307,19 +318,19 @@ impl Type {
                     out.push_str("array");
                 } else if **key == Type::ArrayKey {
                     out.push_str("array<");
-                    value.write(out, short);
+                    value.write(out, class);
                     out.push('>');
                 } else {
                     out.push_str("array<");
-                    key.write(out, short);
+                    key.write(out, class);
                     out.push_str(", ");
-                    value.write(out, short);
+                    value.write(out, class);
                     out.push('>');
                 }
             }
             Type::List(value) => {
                 out.push_str("list<");
-                value.write(out, short);
+                value.write(out, class);
                 out.push('>');
             }
             Type::Shape(fields) => {
@@ -335,7 +346,7 @@ impl Type {
                         }
                         out.push_str(": ");
                     }
-                    field.ty.write(out, short);
+                    field.ty.write(out, class);
                 }
                 out.push('}');
             }
@@ -344,9 +355,9 @@ impl Type {
                     out.push_str("iterable");
                 } else {
                     out.push_str("iterable<");
-                    key.write(out, short);
+                    key.write(out, class);
                     out.push_str(", ");
-                    value.write(out, short);
+                    value.write(out, class);
                     out.push('>');
                 }
             }
@@ -357,7 +368,7 @@ impl Type {
                     if index > 0 {
                         out.push_str(", ");
                     }
-                    param.ty.write(out, short);
+                    param.ty.write(out, class);
                     if param.variadic {
                         out.push_str("...");
                     }
@@ -368,18 +379,18 @@ impl Type {
                 out.push(')');
                 if let Some(ret) = &callable.ret {
                     out.push_str(": ");
-                    ret.write(out, short);
+                    ret.write(out, class);
                 }
             }
             Type::Class { name, args } => {
-                out.push_str(if short { short_name(name) } else { name });
+                out.push_str(&class(name));
                 if !args.is_empty() {
                     out.push('<');
                     for (index, arg) in args.iter().enumerate() {
                         if index > 0 {
                             out.push_str(", ");
                         }
-                        arg.write(out, short);
+                        arg.write(out, class);
                     }
                     out.push('>');
                 }
@@ -391,14 +402,14 @@ impl Type {
             Type::ClassString(None) => out.push_str("class-string"),
             Type::ClassString(Some(inner)) => {
                 out.push_str("class-string<");
-                inner.write(out, short);
+                inner.write(out, class);
                 out.push('>');
             }
             Type::Union(members) => {
                 let others: Vec<&Type> = members.iter().filter(|ty| !matches!(ty, Type::Null)).collect();
                 if others.len() == 1 && members.len() == 2 && !matches!(others[0], Type::Callable(_)) {
                     out.push('?');
-                    others[0].write(out, short);
+                    others[0].write(out, class);
                     return;
                 }
                 for (index, member) in members.iter().enumerate() {
@@ -409,7 +420,7 @@ impl Type {
                     if wrap {
                         out.push('(');
                     }
-                    member.write(out, short);
+                    member.write(out, class);
                     if wrap {
                         out.push(')');
                     }
@@ -420,7 +431,7 @@ impl Type {
                     if index > 0 {
                         out.push('&');
                     }
-                    member.write(out, short);
+                    member.write(out, class);
                 }
             }
             Type::Conditional(conditional) => {
@@ -428,11 +439,11 @@ impl Type {
                 if conditional.negated {
                     out.push_str("not ");
                 }
-                conditional.is.write(out, short);
+                conditional.is.write(out, class);
                 out.push_str(" ? ");
-                conditional.then.write(out, short);
+                conditional.then.write(out, class);
                 out.push_str(" : ");
-                conditional.otherwise.write(out, short);
+                conditional.otherwise.write(out, class);
                 out.push(')');
             }
         }

@@ -58,9 +58,14 @@ pub(crate) type BoxError = Box<dyn Error + Send + Sync>;
 
 /// Runs the server on a connection until the client shuts it down.
 pub fn run(connection: Connection) -> Result<(), BoxError> {
-    let (id, params) = connection.initialize_start()?;
-    let params: InitializeParams = serde_json::from_value(params)?;
+    let (id, raw) = connection.initialize_start()?;
+    let params: InitializeParams = serde_json::from_value(raw.clone())?;
     let mut server = Server::new(&connection, &params);
+    // `lsp-types` has no field for snippet edits yet.
+    server.snippet_edits = raw
+        .pointer("/capabilities/workspace/workspaceEdit/snippetEditSupport")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
     let result = InitializeResult {
         capabilities: server.capabilities(),
         server_info: Some(ServerInfo {
@@ -111,6 +116,8 @@ pub(crate) struct Server<'a> {
     pub(crate) rename_files: bool,
     /// The client can ask for the edit of a code action after the list is shown.
     pub(crate) code_action_resolve: bool,
+    /// The client takes snippet text edits in a workspace edit.
+    pub(crate) snippet_edits: bool,
     /// Documents whose diagnostics are out of date, published once the queue of messages is empty.
     dirty: Vec<Uri>,
     /// Questions asked of the client: which document each `workspace/configuration` answer is for.
@@ -222,6 +229,7 @@ impl<'a> Server<'a> {
                 .and_then(|text_document| text_document.code_action.as_ref())
                 .and_then(|actions| actions.resolve_support.as_ref())
                 .is_some_and(|support| support.properties.iter().any(|property| property == "edit")),
+            snippet_edits: false,
             dirty: Vec::new(),
             pending_configuration: HashMap::new(),
             next_request_id: 0,
@@ -284,6 +292,9 @@ impl<'a> Server<'a> {
                         lsp_types::CodeActionKind::QUICKFIX,
                         lsp_types::CodeActionKind::REFACTOR,
                         lsp_types::CodeActionKind::REFACTOR_REWRITE,
+                        lsp_types::CodeActionKind::new("refactor.extract"),
+                        lsp_types::CodeActionKind::new("refactor.inline"),
+                        lsp_types::CodeActionKind::new("refactor.move"),
                         lsp_types::CodeActionKind::SOURCE,
                         lsp_types::CodeActionKind::SOURCE_ORGANIZE_IMPORTS,
                     ]),
@@ -291,6 +302,10 @@ impl<'a> Server<'a> {
                     work_done_progress_options: WorkDoneProgressOptions::default(),
                 },
             )),
+            execute_command_provider: Some(lsp_types::ExecuteCommandOptions {
+                commands: vec![crate::refactors::RENAME_COMMAND.to_string()],
+                work_done_progress_options: WorkDoneProgressOptions::default(),
+            }),
             document_formatting_provider: Some(OneOf::Left(true)),
             document_range_formatting_provider: Some(OneOf::Left(true)),
             document_on_type_formatting_provider: Some(lsp_types::DocumentOnTypeFormattingOptions {
@@ -409,7 +424,8 @@ impl<'a> Server<'a> {
             Rename::METHOD => self.answer_checked(id, request.params, Self::rename),
             DocumentHighlightRequest::METHOD => self.answer(id, request.params, Self::document_highlight),
             CodeActionRequest::METHOD => self.answer(id, request.params, Self::code_action),
-            CodeActionResolveRequest::METHOD => self.answer(id, request.params, Self::resolve_code_action),
+            CodeActionResolveRequest::METHOD => self.answer_checked(id, request.params, Self::resolve_code_action),
+            lsp_types::request::ExecuteCommand::METHOD => Response::new_ok(id, Value::Null),
             Formatting::METHOD => self.answer(id, request.params, Self::formatting),
             RangeFormatting::METHOD => self.answer(id, request.params, Self::range_formatting),
             OnTypeFormatting::METHOD => self.answer(id, request.params, Self::on_type_formatting),
@@ -547,6 +563,15 @@ impl<'a> Server<'a> {
         uri: &Uri,
         run: impl FnOnce(&InspectionEnv<'_>, &Mapper<'_>, &php_syntax::Parse) -> R,
     ) -> Option<R> {
+        self.inspect_document_in(uri, |env, mapper, parse, _| run(env, mapper, parse))
+    }
+
+    /// Like [`Self::inspect_document`], and the project the document belongs to as well.
+    pub(crate) fn inspect_document_in<R>(
+        &mut self,
+        uri: &Uri,
+        run: impl FnOnce(&InspectionEnv<'_>, &Mapper<'_>, &php_syntax::Parse, &php_index::Project) -> R,
+    ) -> Option<R> {
         self.sync_symbols(uri);
         let encoding = self.encoding;
         let path = uri_to_path(uri);
@@ -586,7 +611,7 @@ impl<'a> Server<'a> {
             index: &document.index,
             encoding,
         };
-        Some(run(&env, &mapper, parse))
+        Some(run(&env, &mapper, parse, project))
     }
 
     fn notification(&mut self, notification: Notification) -> Result<(), BoxError> {

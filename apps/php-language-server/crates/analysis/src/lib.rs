@@ -18,6 +18,7 @@ pub mod inlay_hints;
 pub mod inspections;
 mod line_index;
 pub mod nav;
+pub mod refactor;
 pub mod references;
 pub mod refs;
 pub mod rename;

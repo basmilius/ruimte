@@ -11,6 +11,7 @@ mod formatting;
 mod hierarchies;
 mod insight;
 mod paths;
+mod refactors;
 mod server;
 mod usages;
 mod workspace;

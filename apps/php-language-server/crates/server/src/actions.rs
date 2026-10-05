@@ -17,7 +17,7 @@ use crate::convert::Mapper;
 use crate::server::Server;
 
 /// Whether a kind is one the client asked for: the kind itself or one below it.
-fn wanted(kind: &str, only: Option<&[CodeActionKind]>) -> bool {
+pub(crate) fn wanted(kind: &str, only: Option<&[CodeActionKind]>) -> bool {
     let Some(only) = only else {
         return true;
     };
@@ -65,19 +65,20 @@ fn workspace_edit(
     }
 }
 
-fn selection(mapper: &Mapper, range: lsp_types::Range) -> TextRange {
+pub(crate) fn selection(mapper: &Mapper, range: lsp_types::Range) -> TextRange {
     let (start, end) = (mapper.offset(range.start), mapper.offset(range.end));
     TextRange::new(start.min(end), start.max(end))
 }
 
 impl Server<'_> {
-    pub(crate) fn code_action(&mut self, params: CodeActionParams) -> Option<CodeActionResponse> {
+    pub(crate) fn code_action(&mut self, params: CodeActionParams) -> Option<Vec<Value>> {
         let uri = params.text_document.uri.clone();
         let resolve = self.code_action_resolve;
         let document_changes = self.document_changes;
         let version = self.documents.get(&uri)?.version;
         let only = params.context.only.clone();
-        self.inspect_document(&uri, |env, mapper, _| {
+        let refactors = self.refactor_actions(&params);
+        let fixes = self.inspect_document(&uri, |env, mapper, _| {
             let range = selection(mapper, params.range);
             let findings = inspect(env);
             let input = ActionInput {
@@ -113,13 +114,31 @@ impl Server<'_> {
                             ..CodeAction::default()
                         })
                     })
-                    .collect()
+                    .collect::<CodeActionResponse>()
             })
-        })
+        })?;
+        let mut actions: Vec<Value> = fixes
+            .into_iter()
+            .filter_map(|action| serde_json::to_value(action).ok())
+            .collect();
+        actions.extend(refactors);
+        Some(actions)
     }
 
     /// Works out the edits of an action that was sent without them.
-    pub(crate) fn resolve_code_action(&mut self, mut action: CodeAction) -> Option<CodeAction> {
+    pub(crate) fn resolve_code_action(&mut self, action: Value) -> Result<Option<Value>, String> {
+        if action.pointer("/data/refactor").and_then(Value::as_bool) == Some(true) {
+            return self.resolve_refactor(action);
+        }
+        let Ok(action) = serde_json::from_value::<CodeAction>(action) else {
+            return Ok(None);
+        };
+        Ok(self
+            .resolve_fix(action)
+            .and_then(|resolved| serde_json::to_value(resolved).ok()))
+    }
+
+    fn resolve_fix(&mut self, mut action: CodeAction) -> Option<CodeAction> {
         let data = action.data.clone()?;
         let uri: Uri = data.get("uri")?.as_str()?.parse().ok()?;
         let version = i32::try_from(data.get("version")?.as_i64()?).ok()?;
