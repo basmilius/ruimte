@@ -17,16 +17,24 @@ pub struct Settings {
     pub storage_path: Option<PathBuf>,
     /// A folder of phpstorm-stubs to read instead of fetching them into the storage path.
     pub stubs_path: Option<PathBuf>,
+    /// `inlayHints.parameterNames`: show the name of the parameter in front of an argument.
+    pub hint_parameter_names: Option<bool>,
+    /// `inlayHints.closureTypes`: show the type a function promises for a closure's parameter.
+    pub hint_closure_types: Option<bool>,
 }
 
 impl Settings {
     pub fn from_value(value: &Value) -> Settings {
         let object = value.get(SECTION).unwrap_or(value);
         let text = |key: &str| object.get(key).and_then(Value::as_str);
+        let hints = object.get("inlayHints");
+        let flag = |key: &str| hints.and_then(|hints| hints.get(key)).and_then(Value::as_bool);
         Settings {
             php_version: text("phpVersion").and_then(PhpVersion::parse),
             storage_path: text("storagePath").map(PathBuf::from),
             stubs_path: text("stubsPath").map(PathBuf::from),
+            hint_parameter_names: flag("parameterNames"),
+            hint_closure_types: flag("closureTypes"),
         }
     }
 }
@@ -54,5 +62,12 @@ mod tests {
         let settings = Settings::from_value(&json!({ "storagePath": "/cache", "stubsPath": "/stubs" }));
         assert_eq!(settings.storage_path, Some(PathBuf::from("/cache")));
         assert_eq!(settings.stubs_path, Some(PathBuf::from("/stubs")));
+    }
+
+    #[test]
+    fn reads_the_inlay_hint_switches() {
+        let settings = Settings::from_value(&json!({ "inlayHints": { "parameterNames": false } }));
+        assert_eq!(settings.hint_parameter_names, Some(false));
+        assert_eq!(settings.hint_closure_types, None);
     }
 }

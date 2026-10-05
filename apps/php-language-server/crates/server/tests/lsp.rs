@@ -1151,3 +1151,55 @@ fn serves_semantic_tokens_in_the_delta_encoding_of_its_legend() {
     assert_eq!(ranged["data"].as_array().map(Vec::len), Some(10));
     client.shutdown();
 }
+
+#[test]
+fn serves_inlay_hints_and_follows_the_settings() {
+    let disk = Disk::new();
+    let (mut client, result) = Client::start_in(
+        json!({ "window": { "workDoneProgress": true }, "workspace": { "inlayHint": { "refreshSupport": true } } }),
+        disk.options(),
+        json!(disk.uri("project")),
+    );
+    assert_eq!(result["capabilities"]["inlayHintProvider"], true);
+    client.wait_for_indexing();
+    let uri = disk.uri("project/src/Page.php");
+    client.open(
+        &uri,
+        "<?php\nfunction pad(string $text, int $width) {}\npad('a', 3);\narray_map(fn($x) => $x, []);\n",
+    );
+    let range = json!({ "start": { "line": 0, "character": 0 }, "end": { "line": 4, "character": 0 } });
+    let hints = client.request(
+        "textDocument/inlayHint",
+        json!({ "textDocument": { "uri": uri }, "range": range }),
+    );
+    let labels: Vec<(&str, i64)> = hints
+        .as_array()
+        .expect("hints")
+        .iter()
+        .map(|hint| {
+            (
+                hint["label"].as_str().unwrap_or_default(),
+                hint["kind"].as_i64().unwrap_or(0),
+            )
+        })
+        .collect();
+    assert_eq!(labels, [("text:", 2), ("width:", 2)]);
+    assert_eq!(hints[0]["position"], json!({ "line": 2, "character": 4 }));
+    assert_eq!(hints[0]["paddingRight"], true);
+    assert_eq!(hints[0]["textEdits"][0]["newText"], "text: ");
+
+    client.notify(
+        "workspace/didChangeConfiguration",
+        json!({ "settings": { "phpLanguageServer": { "inlayHints": { "parameterNames": false } } } }),
+    );
+    client.wait_for(|message| match message {
+        Message::Request(request) if request.method == "workspace/inlayHint/refresh" => Some(()),
+        _ => None,
+    });
+    let hints = client.request(
+        "textDocument/inlayHint",
+        json!({ "textDocument": { "uri": uri }, "range": range }),
+    );
+    assert_eq!(hints.as_array().map(Vec::len), Some(0));
+    client.shutdown();
+}

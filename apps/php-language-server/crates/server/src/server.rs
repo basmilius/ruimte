@@ -10,9 +10,9 @@ use lsp_types::notification::{
     PublishDiagnostics,
 };
 use lsp_types::request::{
-    CallHierarchyIncomingCalls, CallHierarchyOutgoingCalls, CallHierarchyPrepare, SemanticTokensFullRequest,
-    SemanticTokensRangeRequest, SignatureHelpRequest, TypeHierarchyPrepare, TypeHierarchySubtypes,
-    TypeHierarchySupertypes,
+    CallHierarchyIncomingCalls, CallHierarchyOutgoingCalls, CallHierarchyPrepare, InlayHintRefreshRequest,
+    InlayHintRequest, SemanticTokensFullRequest, SemanticTokensRangeRequest, SemanticTokensRefresh,
+    SignatureHelpRequest, TypeHierarchyPrepare, TypeHierarchySubtypes, TypeHierarchySupertypes,
 };
 use lsp_types::request::{
     Completion, DocumentDiagnosticRequest, DocumentHighlightRequest, DocumentSymbolRequest, FoldingRangeRequest,
@@ -97,6 +97,8 @@ pub(crate) struct Server<'a> {
     configuration_support: bool,
     diagnostic_refresh_support: bool,
     watch_support: bool,
+    semantic_refresh_support: bool,
+    inlay_refresh_support: bool,
     /// The client takes `documentChanges` in a workspace edit.
     pub(crate) document_changes: bool,
     /// The client can rename files as part of a workspace edit.
@@ -180,6 +182,18 @@ impl<'a> Server<'a> {
                 .and_then(|workspace| workspace.did_change_watched_files.as_ref())
                 .and_then(|watched| watched.dynamic_registration)
                 .unwrap_or(false),
+            semantic_refresh_support: capabilities
+                .workspace
+                .as_ref()
+                .and_then(|workspace| workspace.semantic_tokens.as_ref())
+                .and_then(|tokens| tokens.refresh_support)
+                .unwrap_or(false),
+            inlay_refresh_support: capabilities
+                .workspace
+                .as_ref()
+                .and_then(|workspace| workspace.inlay_hint.as_ref())
+                .and_then(|hints| hints.refresh_support)
+                .unwrap_or(false),
             document_changes: workspace_edit.and_then(|edit| edit.document_changes).unwrap_or(false),
             rename_files: workspace_edit
                 .and_then(|edit| edit.resource_operations.as_ref())
@@ -219,6 +233,7 @@ impl<'a> Server<'a> {
             implementation_provider: Some(ImplementationProviderCapability::Simple(true)),
             workspace_symbol_provider: Some(OneOf::Left(true)),
             references_provider: Some(OneOf::Left(true)),
+            inlay_hint_provider: Some(OneOf::Left(true)),
             semantic_tokens_provider: Some(lsp_types::SemanticTokensServerCapabilities::SemanticTokensOptions(
                 lsp_types::SemanticTokensOptions {
                     work_done_progress_options: WorkDoneProgressOptions::default(),
@@ -326,6 +341,7 @@ impl<'a> Server<'a> {
             WorkspaceSymbolRequest::METHOD => self.answer(id, request.params, Self::workspace_symbols),
             References::METHOD => self.answer(id, request.params, Self::references),
             SignatureHelpRequest::METHOD => self.answer(id, request.params, Self::signature_help),
+            InlayHintRequest::METHOD => self.answer(id, request.params, Self::inlay_hints),
             SemanticTokensFullRequest::METHOD => self.answer(id, request.params, Self::semantic_tokens_full),
             SemanticTokensRangeRequest::METHOD => self.answer(id, request.params, Self::semantic_tokens_range),
             CallHierarchyPrepare::METHOD => self.answer(id, request.params, Self::prepare_call_hierarchy),
@@ -668,6 +684,7 @@ impl<'a> Server<'a> {
                     );
                     self.job_finished();
                     self.refresh_pulled_diagnostics()?;
+                    self.refresh_editor_features()?;
                 }
             },
             Internal::StubsLocated(dir) => {
@@ -700,6 +717,7 @@ impl<'a> Server<'a> {
                         self.mark_dirty(uri);
                     }
                     self.refresh_pulled_diagnostics()?;
+                    self.refresh_editor_features()?;
                 }
             },
         }
@@ -830,6 +848,13 @@ impl<'a> Server<'a> {
     /// document, since its answer may differ per folder; one that only pushes sets the default.
     fn configuration_changed(&mut self, settings: &Value) -> Result<(), BoxError> {
         let pushed = Settings::from_value(settings);
+        if pushed.hint_parameter_names.is_some() {
+            self.settings.hint_parameter_names = pushed.hint_parameter_names;
+        }
+        if pushed.hint_closure_types.is_some() {
+            self.settings.hint_closure_types = pushed.hint_closure_types;
+        }
+        self.refresh_editor_features()?;
         if pushed.php_version.is_some() || !self.configuration_support {
             self.settings.php_version = pushed.php_version;
             self.workspace
@@ -903,6 +928,21 @@ impl<'a> Server<'a> {
             document.level = answer;
             self.mark_dirty(uri);
             self.refresh_pulled_diagnostics()?;
+        }
+        Ok(())
+    }
+
+    /// What an editor shows from the index (colors, hints) is out of date: ask it to ask again.
+    fn refresh_editor_features(&mut self) -> Result<(), BoxError> {
+        if self.semantic_refresh_support {
+            self.next_request_id += 1;
+            let id = RequestId::from(self.next_request_id);
+            self.send(Request::new(id, SemanticTokensRefresh::METHOD.to_string(), ()))?;
+        }
+        if self.inlay_refresh_support {
+            self.next_request_id += 1;
+            let id = RequestId::from(self.next_request_id);
+            self.send(Request::new(id, InlayHintRefreshRequest::METHOD.to_string(), ()))?;
         }
         Ok(())
     }

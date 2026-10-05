@@ -13,6 +13,7 @@ mod folding;
 pub mod hierarchy;
 mod imports;
 pub mod infer;
+pub mod inlay_hints;
 mod line_index;
 pub mod nav;
 pub mod references;
@@ -61,3 +62,6 @@ mod hierarchy_tests;
 
 #[cfg(test)]
 mod semantic_tokens_tests;
+
+#[cfg(test)]
+mod inlay_hints_tests;

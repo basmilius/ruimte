@@ -2,11 +2,12 @@
 //! hints.
 
 use lsp_types::{
-    Documentation, MarkupContent, MarkupKind, ParameterInformation, ParameterLabel, SemanticToken,
-    SemanticTokenModifier, SemanticTokenType, SemanticTokens, SemanticTokensLegend, SemanticTokensParams,
-    SemanticTokensRangeParams, SemanticTokensRangeResult, SemanticTokensResult, SignatureHelp, SignatureHelpParams,
-    SignatureInformation,
+    Documentation, InlayHint, InlayHintKind, InlayHintLabel, InlayHintParams, MarkupContent, MarkupKind,
+    ParameterInformation, ParameterLabel, SemanticToken, SemanticTokenModifier, SemanticTokenType, SemanticTokens,
+    SemanticTokensLegend, SemanticTokensParams, SemanticTokensRangeParams, SemanticTokensRangeResult,
+    SemanticTokensResult, SignatureHelp, SignatureHelpParams, SignatureInformation,
 };
+use php_analysis::inlay_hints::{HintKind, HintOptions, inlay_hints};
 use php_analysis::semantic_tokens::{TOKEN_MODIFIERS, TOKEN_TYPES, semantic_tokens};
 use php_analysis::signature::signature_help;
 use php_syntax::{TextRange, TextSize};
@@ -27,6 +28,56 @@ pub(crate) fn semantic_legend() -> SemanticTokensLegend {
 }
 
 impl Server<'_> {
+    pub(crate) fn inlay_hints(&mut self, params: InlayHintParams) -> Option<Vec<InlayHint>> {
+        let uri = params.text_document.uri;
+        let path = uri_to_path(&uri);
+        self.sync_symbols(&uri);
+        let options = HintOptions {
+            parameter_names: self.settings.hint_parameter_names.unwrap_or(true),
+            closure_types: self.settings.hint_closure_types.unwrap_or(true),
+        };
+        let encoding = self.encoding;
+        let document = self.documents.get_mut(&uri)?;
+        let root = document.parse().syntax();
+        let mapper = Mapper {
+            text: &document.text,
+            index: &document.index,
+            encoding,
+        };
+        let range = TextRange::new(mapper.offset(params.range.start), mapper.offset(params.range.end));
+        let project = match &path {
+            Some(path) => self.workspace.project_for(path),
+            None => &self.workspace.loose,
+        };
+        let hints = inlay_hints(&project.index, &root, Some(range), options);
+        Some(
+            hints
+                .into_iter()
+                .map(|hint| {
+                    let position = mapper.position(TextSize::from(hint.offset));
+                    InlayHint {
+                        position,
+                        label: InlayHintLabel::String(hint.label),
+                        kind: Some(match hint.kind {
+                            HintKind::Parameter => InlayHintKind::PARAMETER,
+                            HintKind::Type => InlayHintKind::TYPE,
+                        }),
+                        text_edits: hint.insert.map(|text| {
+                            vec![lsp_types::TextEdit {
+                                range: lsp_types::Range::new(position, position),
+                                new_text: text,
+                            }]
+                        }),
+                        tooltip: None,
+                        padding_left: Some(false),
+                        padding_right: Some(true),
+                        data: None,
+                    }
+                })
+                .collect(),
+        )
+    }
+
     /// The tokens of a document, or of a range of it, in the delta encoding LSP uses.
     fn tokens_of(&mut self, uri: &lsp_types::Uri, range: Option<lsp_types::Range>) -> Option<Vec<SemanticToken>> {
         let path = uri_to_path(uri);
