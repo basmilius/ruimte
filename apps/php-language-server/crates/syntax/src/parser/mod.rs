@@ -325,6 +325,13 @@ impl<'a> Parser<'a> {
         self.builder.start_node(PhpLanguage::kind_to_raw_kind(kind));
     }
 
+    /// Starts a node whose first child may be a declaration, which takes the doc comment before it
+    /// along instead of leaving it outside the node.
+    pub(crate) fn start_before_declaration(&mut self, kind: SyntaxKind) {
+        self.flush_trivia_before_declaration();
+        self.builder.start_node(PhpLanguage::kind_to_raw_kind(kind));
+    }
+
     /// Starts the root, which also owns the trivia before the first token.
     pub(crate) fn start_root(&mut self, kind: SyntaxKind) {
         self.builder.start_node(PhpLanguage::kind_to_raw_kind(kind));

@@ -704,3 +704,30 @@ fn doc_comments_belong_to_declarations() {
     "#]]
     .assert_eq(&tree);
 }
+
+/// The first declaration after `namespace X;`, or inside a braced one or an alternative syntax
+/// body, keeps its doc comment inside itself like any other declaration.
+#[test]
+fn the_first_declaration_of_a_namespace_owns_its_doc_comment() {
+    use crate::{SyntaxKind, parse};
+    for text in [
+        "<?php\nnamespace A;\n\n/** doc */\nclass C {}\n",
+        "<?php\nnamespace A {\n    /** doc */\n    class C {}\n}\n",
+        "<?php\nif ($a):\n    /** doc */\n    function f() {}\nendif;\n",
+    ] {
+        let parsed = parse(text);
+        let declaration = parsed
+            .syntax()
+            .descendants()
+            .find(|node| {
+                matches!(
+                    node.kind(),
+                    SyntaxKind::CLASS_DECLARATION | SyntaxKind::FUNCTION_DECLARATION
+                )
+            })
+            .expect("a declaration");
+        let first = declaration.first_token().expect("a token");
+        assert_eq!(first.kind(), SyntaxKind::DOC_COMMENT, "{text}");
+        assert_eq!(parsed.syntax().text().to_string(), text);
+    }
+}

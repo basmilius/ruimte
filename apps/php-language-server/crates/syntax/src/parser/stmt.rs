@@ -257,7 +257,7 @@ fn condition(p: &mut Parser) {
 fn body_or_alternative(p: &mut Parser) -> bool {
     if p.at(COLON) {
         p.bump();
-        p.start(STATEMENT_LIST);
+        p.start_before_declaration(STATEMENT_LIST);
         statement_list(p);
         p.finish_node();
         true
@@ -585,7 +585,7 @@ fn declare_statement(p: &mut Parser) {
         SEMICOLON | CLOSE_TAG => p.bump(),
         COLON => {
             p.bump();
-            p.start(STATEMENT_LIST);
+            p.start_before_declaration(STATEMENT_LIST);
             statement_list(p);
             p.finish_node();
             end_keyword(p, ENDDECLARE_KW, "'enddeclare'");
@@ -608,7 +608,7 @@ fn namespace_declaration(p: &mut Parser) {
         block(p);
     } else {
         semicolon(p);
-        p.start(STATEMENT_LIST);
+        p.start_before_declaration(STATEMENT_LIST);
         top_level_statements(p, true);
         p.finish_node();
     }
