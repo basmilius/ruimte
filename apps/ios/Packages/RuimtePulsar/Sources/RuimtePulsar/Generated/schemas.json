@@ -43516,6 +43516,177 @@
       }
     }
   },
+  "request.provenance.read.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "path"
+    ]
+  },
+  "request.provenance.read.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "mtime": {
+        "type": "number"
+      },
+      "lines": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "runs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "chatId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "turnId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "turn": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "provider": {
+              "type": "string",
+              "x-open-enum": [
+                "claude",
+                "codex",
+                "gemini",
+                "copilot",
+                "apple"
+              ]
+            },
+            "at": {
+              "type": "number"
+            },
+            "promptExcerpt": {
+              "type": "string",
+              "maxLength": 400
+            },
+            "start": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "end": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "before": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "review": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "kept",
+                "undone"
+              ]
+            },
+            "via": {
+              "type": "string",
+              "enum": [
+                "tool",
+                "checkpoint"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "chatId",
+            "turnId",
+            "at",
+            "promptExcerpt",
+            "start",
+            "end",
+            "review",
+            "via"
+          ]
+        }
+      }
+    },
+    "required": [
+      "mtime",
+      "lines",
+      "runs"
+    ]
+  },
+  "request.provenance.review.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "runIds": {
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "kept",
+          "undone"
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "path",
+      "runIds",
+      "state"
+    ]
+  },
+  "request.provenance.review.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "updated": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "updated"
+    ]
+  },
   "event.push.attention": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -55055,6 +55226,38 @@
     "required": [
       "chatId",
       "planId"
+    ]
+  },
+  "event.provenance.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "turnId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "live": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "projectId",
+      "path",
+      "chatId",
+      "turnId",
+      "live"
     ]
   }
 }

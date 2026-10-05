@@ -285,7 +285,9 @@
     "task.list",
     "agent.children",
     "plan.list",
-    "plan.apply"
+    "plan.apply",
+    "provenance.read",
+    "provenance.review"
   ],
   "eventTypes": [
     "push.attention",
@@ -339,7 +341,8 @@
     "task.changed",
     "plan.changed",
     "plan.removed",
-    "plan.created"
+    "plan.created",
+    "provenance.changed"
   ],
   "crypto": [
     {

@@ -508,6 +508,42 @@ describe('git', () => {
     });
 });
 
+describe('provenance', () => {
+    const run = {
+        id: 'run-1',
+        chatId: 'chat-a',
+        turnId: 'turn-1',
+        at: 1_700_000_000_000,
+        promptExcerpt: 'Add rankCandidates',
+        start: 33,
+        end: 38,
+        review: 'pending',
+        via: 'tool'
+    };
+
+    test('a read answers the runs on the file it was mapped onto', () => {
+        const { payload, result } = REQUEST_SCHEMAS['provenance.read'];
+        expect(payload.safeParse({ projectId: 'p1', path: '/work/app/score.ts' }).success).toBe(true);
+        expect(payload.safeParse({ projectId: 'p1' }).success).toBe(false);
+        expect(result.safeParse({ mtime: 1, lines: 42, runs: [run] }).success).toBe(true);
+        expect(result.safeParse({ mtime: 1, lines: 42, runs: [{ ...run, via: 'guess' }] }).success).toBe(false);
+        expect(result.safeParse({ mtime: 1, lines: 42, runs: [{ ...run, promptExcerpt: 'x'.repeat(401) }] }).success).toBe(false);
+    });
+
+    test('a review names at least one run and a known state', () => {
+        const { payload } = REQUEST_SCHEMAS['provenance.review'];
+        expect(payload.safeParse({ projectId: 'p1', path: '/work/app/score.ts', runIds: ['run-1'], state: 'kept' }).success).toBe(true);
+        expect(payload.safeParse({ projectId: 'p1', path: '/work/app/score.ts', runIds: [], state: 'kept' }).success).toBe(false);
+        expect(payload.safeParse({ projectId: 'p1', path: '/work/app/score.ts', runIds: ['run-1'], state: 'merged' }).success).toBe(false);
+    });
+
+    test('the event says whether the turn still runs', () => {
+        const event = { projectId: 'p1', path: '/work/app/score.ts', chatId: 'chat-a', turnId: 'turn-1', live: true };
+        expect(EVENT_SCHEMAS['provenance.changed'].safeParse(event).success).toBe(true);
+        expect(EVENT_SCHEMAS['provenance.changed'].safeParse({ ...event, live: undefined }).success).toBe(false);
+    });
+});
+
 describe('usage', () => {
     const totals = { calls: 3, input: 100, cacheRead: 900, cacheWrite: 50, cacheWrite1h: 10, output: 40, reasoning: 12 };
     const summary = {

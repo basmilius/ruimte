@@ -194,6 +194,8 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `agentChildren` = "agent.children"
     case `planList` = "plan.list"
     case `planApply` = "plan.apply"
+    case `provenanceRead` = "provenance.read"
+    case `provenanceReview` = "provenance.review"
 
     public func validatePayload(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\(rawValue).payload", value) }
     public func validateResult(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\(rawValue).result", value) }
@@ -252,6 +254,7 @@ public enum WireEvent: String, CaseIterable, Sendable {
     case `planChanged` = "plan.changed"
     case `planRemoved` = "plan.removed"
     case `planCreated` = "plan.created"
+    case `provenanceChanged` = "provenance.changed"
 
     public func validatePayload(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("event.\(rawValue)", value) }
 }

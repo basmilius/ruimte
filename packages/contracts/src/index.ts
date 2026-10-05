@@ -201,6 +201,13 @@ import {
     PlanRemovedEventSchema
 } from './plan.ts';
 import {
+    ProvenanceChangedEventSchema,
+    ProvenanceReadPayloadSchema,
+    ProvenanceReadResultSchema,
+    ProvenanceReviewPayloadSchema,
+    ProvenanceReviewResultSchema
+} from './provenance.ts';
+import {
     ProjectChangedEventSchema,
     ProjectCloseResultSchema,
     ProjectClosingResultSchema,
@@ -287,6 +294,7 @@ export * from './model.ts';
 export * from './node-defaults.ts';
 export * from './plan.ts';
 export * from './processes.ts';
+export * from './provenance.ts';
 export * from './project.ts';
 export * from './project-flags.ts';
 export * from './project-sidebar.ts';
@@ -512,7 +520,9 @@ export const REQUEST_SCHEMAS = {
     'task.list': { payload: TaskListPayloadSchema, result: TaskListResultSchema },
     'agent.children': { payload: AgentChildrenPayloadSchema, result: AgentChildrenResultSchema },
     'plan.list': { payload: PlanListPayloadSchema, result: PlanListResultSchema },
-    'plan.apply': { payload: PlanApplyPayloadSchema, result: PlanApplyResultSchema }
+    'plan.apply': { payload: PlanApplyPayloadSchema, result: PlanApplyResultSchema },
+    'provenance.read': { payload: ProvenanceReadPayloadSchema, result: ProvenanceReadResultSchema },
+    'provenance.review': { payload: ProvenanceReviewPayloadSchema, result: ProvenanceReviewResultSchema }
 } as const satisfies Record<string, { payload: z.ZodType; result: z.ZodType }>;
 
 export type RequestType = keyof typeof REQUEST_SCHEMAS;
@@ -584,7 +594,8 @@ export const EVENT_SCHEMAS = {
     'task.changed': TaskChangedEventSchema,
     'plan.changed': PlanChangedEventSchema,
     'plan.removed': PlanRemovedEventSchema,
-    'plan.created': PlanCreatedEventSchema
+    'plan.created': PlanCreatedEventSchema,
+    'provenance.changed': ProvenanceChangedEventSchema
 } as const satisfies Record<string, z.ZodType>;
 
 export type EventType = keyof typeof EVENT_SCHEMAS;
