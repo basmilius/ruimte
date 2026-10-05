@@ -18,8 +18,9 @@ The plan for the code editor that replaces the previous engine (`packages/editor
 - Camel-hump word movement is off by default and a setting.
 
 - The daemon is the brain. A client never talks to a language server itself.
-- Language servers are installed only when a person asks, pinned, under `$RUIMTE_HOME/language-servers`, and run on the daemon's own Bun. A project's own `typescript` comes first.
-- A Vue project runs one TypeScript server with the Vue plugin for every script, so a `.ts` file sees the types of a `.vue` file.
+- Language servers are installed only when a person asks, pinned, under `$RUIMTE_HOME/language-servers`, and run on the daemon's own Bun, except TypeScript, whose `typescript` 7 package brings a native server that runs as it is. A project's own `typescript` comes first when it is 7 or newer.
+- A Vue project runs one TypeScript server with the Vue plugin for every script, so a `.ts` file sees the types of a `.vue` file. That server is a tsserver of TypeScript 6 behind typescript-language-server, since TypeScript 7 has no plugin API.
+- TypeScript and JavaScript run the native TypeScript 7 server, which diagnoses by pull and has no completion of a function as a call, no refactors and no `local` modifier in its semantic tokens. Extend Selection grows through the ranges it gives.
 - The catalog of servers (TypeScript, Vue, PHP, CSS, HTML, JSON, YAML, Python, Bash, Dockerfile, plus ESLint and Tailwind CSS beside the server of the language) is `apps/server/src/language/profiles.ts`; `apps/server/README.md` has what each serves and how it is configured.
 - A document can have several servers. Completion, code actions and hover are merged across them; any other feature is the first server's that offers it. ESLint and Tailwind CSS only serve a project that has an ESLint config or uses Tailwind.
 - A person can add servers of their own (a command, its arguments and environment, the languages and file patterns it serves, optionally the projects it runs for) in Settings, Editor, Language servers. They live under `$RUIMTE_HOME`, only the local secret saves them, and a save approves exactly that command.
@@ -128,7 +129,7 @@ On-device model (Apple Foundation Models), code never leaves the Mac:
 
 ### Servers that need a native binary
 
-Not in the catalog yet, since the catalog installs npm packages on the daemon's own Bun. Worth adding, with how each would arrive:
+Not in the catalog yet, since the catalog installs npm packages and runs them on the daemon's own Bun (TypeScript 7 is the one exception: an npm package whose platform package holds the executable, verified with `--version` after the install). Worth adding, with how each would arrive:
 
 - Rust (`rust-analyzer`), TOML (`taplo`), Lua (`lua-language-server`), Zig (`zls`): a download pinned by version and checksum under `$RUIMTE_HOME/language-servers/<kind>`, verified before it runs, only on a person's Install. `rust-analyzer` and `taplo` publish release archives per platform that fit this.
 - Go (`gopls`), Swift (`sourcekit-lsp`, which comes with Xcode): found on the PATH of the machine (`xcrun --find sourcekit-lsp` for Swift), since both are tied to the toolchain a person already has. A kind whose command is found counts as installed and has no Install button.

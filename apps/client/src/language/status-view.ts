@@ -2,7 +2,7 @@ import type { LanguageServerKind, LanguageServerState, LanguageServerStatus } fr
 
 /* The names of the servers are names and stay as they are in every language. */
 export const SERVER_NAMES: Record<LanguageServerKind, { name: string; package: string }> = {
-    typescript: { name: 'TypeScript', package: 'typescript-language-server' },
+    typescript: { name: 'TypeScript', package: 'typescript' },
     vue: { name: 'Vue', package: '@vue/language-server' },
     php: { name: 'PHP', package: 'Intelephense' },
     css: { name: 'CSS', package: 'vscode-langservers-extracted' },

@@ -96,7 +96,7 @@ describe('the language servers of a person', () => {
         const saved = await servers.save({ ...zig, args: ['--stdio'], env: { A: 'b' } });
         const [component] = customProfile(saved).components;
         expect(component).toMatchObject({ name: saved.id, title: 'Zig', command: 'zls', languages: ['zig'], patterns: ['*.zon'], env: { A: 'b' } });
-        expect(component!.args({ installDirectory: '', projectFolder: '/work', typescriptLib: '' })).toEqual(['--stdio']);
+        expect(component!.args({ installDirectory: '', projectFolder: '/work', typescriptLib: '', typescriptExecutable: '' })).toEqual(['--stdio']);
     });
 });
 

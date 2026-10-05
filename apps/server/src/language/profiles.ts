@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { matchesFilePattern, type LanguageServerId, type LanguageServerKind } from '@ruimte/contracts';
 
 /* What a component needs to know about where it runs. */
@@ -8,6 +8,8 @@ export interface LaunchContext {
     projectFolder: string;
     /* The `lib` folder of the TypeScript SDK to use: the project's own when it has one, else the pinned one. */
     typescriptLib: string;
+    /* The native TypeScript server to run: the project's own when it is TypeScript 7 or newer, else the pinned one. */
+    typescriptExecutable: string;
 }
 
 /* One process of a kind. Vue runs two: the Vue server and the TypeScript server it leans on. */
@@ -22,6 +24,8 @@ export interface ComponentProfile {
     patterns?: readonly string[];
     /* The script it runs, relative to the `node_modules` of the install. Empty for a server with a `command`. */
     entry: string;
+    /* Whether the entry is a program of its own, which runs as it is and not under the daemon's runtime. */
+    native?: boolean;
     /* A server of a person's own: the command that starts it, run as it is and not under the daemon's runtime. */
     command?: string;
     args(context: LaunchContext): string[];
@@ -50,6 +54,9 @@ export interface KindProfile {
 
 const SCRIPT_LANGUAGES = ['typescript', 'typescriptreact', 'javascript', 'javascriptreact'] as const;
 
+/* The server's `logVerbosity` that keeps warnings and errors only. */
+const LOG_VERBOSITY_WARNING = 4;
+
 const TYPESCRIPT_PREFERENCES = {
     includeCompletionsForModuleExports: true,
     includeInlayParameterNameHints: 'all',
@@ -58,10 +65,44 @@ const TYPESCRIPT_PREFERENCES = {
     includeInlayFunctionParameterTypeHints: true
 };
 
-function typescriptComponent(languages: readonly string[], withVuePlugin: boolean): ComponentProfile {
+/* The native server of TypeScript 7 sits in the package of the platform the `typescript` package pulls in. */
+const NATIVE_ENTRY = `@typescript/typescript-${process.platform}-${process.arch}/lib/${process.platform === 'win32' ? 'tsc.exe' : 'tsc'}`;
+
+/*
+ * The native server asks for the sections `js/ts`, `typescript`, `javascript` and `editor`, in rising
+ * precedence up to `js/ts`. It has no setting for `completeFunctionCalls`, so a function completes as its name.
+ */
+const NATIVE_TYPESCRIPT_SETTINGS = {
+    'js/ts': {
+        suggest: { autoImports: true },
+        inlayHints: {
+            parameterNames: { enabled: 'all' },
+            variableTypes: { enabled: true },
+            functionLikeReturnTypes: { enabled: true },
+            parameterTypes: { enabled: true }
+        }
+    }
+};
+
+function nativeTypescriptComponent(): ComponentProfile {
     return {
         name: 'typescript',
-        languages,
+        languages: SCRIPT_LANGUAGES,
+        entry: NATIVE_ENTRY,
+        native: true,
+        args: () => ['--lsp', '--stdio'],
+        // Diagnostics are pulled, and a server that logs every snapshot it takes would fill the log with it.
+        initializationOptions: () => ({ disablePushDiagnostics: true, logVerbosity: LOG_VERBOSITY_WARNING }),
+        configuration: NATIVE_TYPESCRIPT_SETTINGS,
+        pullDiagnostics: true
+    };
+}
+
+/* TypeScript 7 has no plugin API, so Vue keeps a tsserver of TypeScript 6 behind typescript-language-server, which loads `@vue/typescript-plugin`. */
+function vueTypescriptComponent(): ComponentProfile {
+    return {
+        name: 'typescript',
+        languages: [...SCRIPT_LANGUAGES, 'vue'],
         entry: 'typescript-language-server/lib/cli.mjs',
         args: () => ['--stdio'],
         // A function or method completes as a call with its parameters as tab stops.
@@ -72,9 +113,7 @@ function typescriptComponent(languages: readonly string[], withVuePlugin: boolea
             disableAutomaticTypingAcquisition: true,
             tsserver: { path: join(context.typescriptLib, 'tsserver.js'), useSyntaxServer: 'never' },
             preferences: TYPESCRIPT_PREFERENCES,
-            ...(withVuePlugin
-                ? { plugins: [{ name: '@vue/typescript-plugin', location: join(context.installDirectory, 'node_modules'), languages: ['vue'] }] }
-                : {})
+            plugins: [{ name: '@vue/typescript-plugin', location: join(context.installDirectory, 'node_modules'), languages: ['vue'] }]
         })
     };
 }
@@ -157,12 +196,12 @@ const TAILWIND_SETTINGS = {
 };
 
 export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
-    typescript: { kind: 'typescript', components: [typescriptComponent(SCRIPT_LANGUAGES, false)] },
+    typescript: { kind: 'typescript', components: [nativeTypescriptComponent()] },
     vue: {
         kind: 'vue',
         components: [
             // The one TypeScript server of a project that uses Vue serves its scripts too, so a `.ts` file that imports a `.vue` one gets its types and only one tsserver runs.
-            typescriptComponent([...SCRIPT_LANGUAGES, 'vue'], true),
+            vueTypescriptComponent(),
             {
                 name: 'vue',
                 languages: ['vue'],
@@ -435,6 +474,52 @@ export async function resolveTypescriptLib(projectFolder: string, installDirecto
         return own;
     }
     return join(installDirectory, 'node_modules', 'typescript', 'lib');
+}
+
+/* What the lookup of a project's own TypeScript reads from the file system. */
+export interface NativeLookupFiles {
+    exists(path: string): Promise<boolean>;
+    readText(path: string): Promise<string | null>;
+    realPath(path: string): Promise<string>;
+}
+
+/* The native server of the TypeScript 7 a project holds in `node_modules`, or null when it holds an older one or has no server for this platform. */
+async function ownNativeTypescript(directory: string, files: NativeLookupFiles): Promise<string | null | undefined> {
+    const manifest = join(directory, 'node_modules', 'typescript', 'package.json');
+    const text = await files.readText(manifest);
+    if (text === null) {
+        return undefined;
+    }
+    try {
+        if (Number.parseInt((JSON.parse(text) as { version?: string }).version ?? '', 10) < 7) {
+            return null;
+        }
+        // The platform package is a sibling of `typescript` where it really is, which holds for npm, bun and pnpm layouts alike.
+        const program = join(dirname(await files.realPath(dirname(manifest))), NATIVE_ENTRY);
+        return (await files.exists(program)) ? program : null;
+    } catch {
+        return null;
+    }
+}
+
+/*
+ * The native TypeScript server a project runs: the one of its own `typescript` when that is 7 or newer,
+ * found from the project folder upward the way the package itself would resolve, else the pinned one.
+ */
+export async function resolveNativeTypescript(projectFolder: string, installDirectory: string, files: NativeLookupFiles): Promise<string> {
+    for (let directory = projectFolder; ; directory = dirname(directory)) {
+        const own = await ownNativeTypescript(directory, files);
+        if (own !== undefined) {
+            return own ?? pinnedNativeTypescript(installDirectory);
+        }
+        if (dirname(directory) === directory) {
+            return pinnedNativeTypescript(installDirectory);
+        }
+    }
+}
+
+function pinnedNativeTypescript(installDirectory: string): string {
+    return join(installDirectory, 'node_modules', NATIVE_ENTRY);
 }
 
 const VUE_PACKAGES = /^(vue|nuxt|@nuxt\/.+|@vue\/.+|@vitejs\/plugin-vue)$/;

@@ -9,6 +9,7 @@ import { CustomLanguageServers } from './custom.ts';
 import { LanguageHost } from './host.ts';
 import { KIND_PROFILES } from './profiles.ts';
 import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
+import { versionOf } from './versions.ts';
 
 let root = '';
 
@@ -50,7 +51,11 @@ function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner;
         },
         runtime: { command: '/ruimte', args: [], env: { BUN_BE_BUN: '1' } },
         spawn: spawner.spawn,
-        run: async (spec) => {
+        run: async (spec, onLine) => {
+            if (spec.args.includes('--version')) {
+                onLine(`Version ${versionOf('typescript')}`);
+                return 0;
+            }
             const kind = basename(spec.cwd) as LanguageServerKind;
             installs.push(kind);
             for (const component of KIND_PROFILES[kind].components) {
@@ -641,7 +646,7 @@ describe('install and status', () => {
         await ready(host);
         expect(spawner.processes).toHaveLength(1);
         expect(installs).toEqual(['typescript']);
-        expect((await host.status('p1'))[0]).toMatchObject({ state: 'ready', version: '6.0.1', documents: 1 });
+        expect((await host.status('p1'))[0]).toMatchObject({ state: 'ready', version: '7.0.2', documents: 1 });
         const machine = kinds(events['client-2'], 'language.status').map(
             (event) => (event as { payload: { projectId: string | null; status: { state: string } } }).payload
         );
@@ -649,6 +654,15 @@ describe('install and status', () => {
             [null, 'installing'],
             [null, 'stopped']
         ]);
+    });
+
+    it('answers an install of older versions as not installed and says an install updates it', async () => {
+        const { host } = await installed(['typescript']);
+        await writeFile(
+            join(root, 'typescript', 'installed.json'),
+            JSON.stringify({ versions: { 'typescript-language-server': '6.0.1', typescript: '6.0.3' } })
+        );
+        expect((await host.status('p1'))[0]).toMatchObject({ state: 'not-installed', message: expect.stringContaining('Install it again to update') });
     });
 
     it('answers a failed install as not installed, with the reason', async () => {

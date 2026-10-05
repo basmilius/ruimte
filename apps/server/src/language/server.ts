@@ -1,3 +1,4 @@
+import { readFile, realpath } from 'node:fs/promises';
 import { basename } from 'node:path';
 import type { LanguageServerId, LanguageServerState } from '@ruimte/contracts';
 import {
@@ -12,13 +13,22 @@ import {
     type ApplyWorkspaceEditResult,
     type ContentChange,
     type Disposable,
+    type DocumentDiagnosticReport,
     type LspDocument,
     type ProgressParams,
     type PublishDiagnosticsParams
 } from '@ruimte/smart-editor-lsp';
 import { errorText } from '../error-text.ts';
 import { LanguageLog } from './log.ts';
-import { componentServes, lspLanguageId, resolveTypescriptLib, type ComponentProfile, type KindProfile, type LaunchContext } from './profiles.ts';
+import {
+    componentServes,
+    lspLanguageId,
+    resolveNativeTypescript,
+    resolveTypescriptLib,
+    type ComponentProfile,
+    type KindProfile,
+    type LaunchContext
+} from './profiles.ts';
 import type { LanguageChild, LanguageExit, LanguageRuntime, SpawnLanguageProcess } from './runtime.ts';
 
 // How long a stopped process may take to go before it is killed.
@@ -74,6 +84,9 @@ export interface LanguageServerOptions {
     spawn: SpawnLanguageProcess;
     clock?: LanguageClock;
     exists(path: string): Promise<boolean>;
+    /* The text of a file, or null when it cannot be read. */
+    readText?: (path: string) => Promise<string | null>;
+    realPath?: (path: string) => Promise<string>;
     hooks: LanguageServerHooks;
 }
 
@@ -205,7 +218,7 @@ export class LanguageServer {
                 }
                 try {
                     await open.applyChanges(changes);
-                    this.schedulePull(component, document);
+                    this.schedulePulls(component, document, open);
                 } catch (error) {
                     this.log.push('host', `Could not forward a change of ${document.storedPath}: ${errorText(error)}`);
                 }
@@ -310,10 +323,18 @@ export class LanguageServer {
         this.phase = 'starting';
         this.failure = undefined;
         this.notify();
+        const { installDirectory, folder, exists } = this.options;
         const context: LaunchContext = {
-            installDirectory: this.options.installDirectory,
-            projectFolder: this.options.folder,
-            typescriptLib: await resolveTypescriptLib(this.options.folder, this.options.installDirectory, this.options.exists)
+            installDirectory,
+            projectFolder: folder,
+            typescriptLib: await resolveTypescriptLib(folder, installDirectory, exists),
+            typescriptExecutable: this.options.profile.components.some((component) => component.native)
+                ? await resolveNativeTypescript(folder, installDirectory, {
+                      exists,
+                      readText: this.options.readText ?? ((path) => readFile(path, 'utf8').catch(() => null)),
+                      realPath: this.options.realPath ?? realpath
+                  })
+                : ''
         };
         try {
             for (const profile of this.options.profile.components) {
@@ -348,15 +369,16 @@ export class LanguageServer {
 
     private spawnComponent(profile: ComponentProfile, context: LaunchContext, generation: number): Component {
         const { runtime } = this.options;
+        const own = profile.native ? context.typescriptExecutable : profile.command;
         const child = this.options.spawn(
-            profile.command === undefined
+            own === undefined
                 ? {
                       command: runtime.command,
                       args: [...runtime.args, `${context.installDirectory}/node_modules/${profile.entry}`, ...profile.args(context)],
                       cwd: this.options.folder,
                       env: { ...runtime.env, ...profile.env }
                   }
-                : { command: profile.command, args: profile.args(context), cwd: this.options.folder, env: { ...profile.env } }
+                : { command: own, args: profile.args(context), cwd: this.options.folder, env: { ...profile.env } }
         );
         const rootUri = pathToFileUri(this.options.folder);
         const session = new LspSession(child.transport, {
@@ -450,6 +472,16 @@ export class LanguageServer {
         }
     }
 
+    /* The changed document is asked again, and with a server whose diagnostics reach across files every other document of it too. */
+    private schedulePulls(component: Component, changed: SharedDocument, open: LspDocument): void {
+        const acrossFiles = component.session.providerOptions('textDocument/diagnostic', open)?.interFileDependencies === true;
+        for (const document of this.documents.values()) {
+            if (document === changed || (acrossFiles && component.documents.has(document.absolutePath))) {
+                this.schedulePull(component, document);
+            }
+        }
+    }
+
     private schedulePull(component: Component, document: SharedDocument): void {
         if (!component.profile.pullDiagnostics) {
             return;
@@ -472,13 +504,28 @@ export class LanguageServer {
         }
         try {
             const report = await open.diagnostics(undefined, undefined, { timeoutMs: 0 });
-            if (report.kind === 'full' && component.documents.get(document.absolutePath) === open) {
+            if (component.documents.get(document.absolutePath) !== open) {
+                return;
+            }
+            if (report.kind === 'full') {
                 this.options.hooks.diagnostics(document, component.profile.name, { uri: document.uri, version: open.version, diagnostics: report.items });
             }
+            this.reportRelated(component, report.relatedDocuments);
         } catch (error) {
             // A request overtaken by a change or a newer request is not a failure.
             if (!(error instanceof StaleResultError) && !(error instanceof LspError && error.code === ErrorCodes.RequestCancelled)) {
                 this.log.push('host', `Could not read the diagnostics of ${document.storedPath}: ${errorText(error)}`);
+            }
+        }
+    }
+
+    /* A report may carry the diagnostics of other documents; those the server has open are reported as if pulled for themselves. */
+    private reportRelated(component: Component, related: Record<string, DocumentDiagnosticReport> | undefined): void {
+        for (const [uri, report] of Object.entries(related ?? {})) {
+            const document = this.documentByUri(uri);
+            const open = document && component.documents.get(document.absolutePath);
+            if (document && open && report.kind === 'full') {
+                this.options.hooks.diagnostics(document, component.profile.name, { uri, version: open.version, diagnostics: report.items });
             }
         }
     }

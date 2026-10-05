@@ -53,6 +53,8 @@ function rig(kind: LanguageServerKind, spawner = fakeSpawner()): Rig {
         spawn: spawner.spawn,
         clock,
         exists: async () => false,
+        readText: async () => null,
+        realPath: async (path) => path,
         hooks
     });
     return { server, spawner, clock, states, diagnostics, providers, install };
@@ -60,7 +62,7 @@ function rig(kind: LanguageServerKind, spawner = fakeSpawner()): Rig {
 
 describe('a language server of one kind in one project', () => {
     it('starts on the first document, runs its script under the daemon runtime and opens what waited', async () => {
-        const { server, spawner, states } = rig('typescript');
+        const { server, spawner, states } = rig('vue');
         const main = document('/work/src/a.ts', 'typescript', 'let a = 1;');
         server.attach(main);
         await settle();
@@ -70,10 +72,24 @@ describe('a language server of one kind in one project', () => {
         expect(process.spec.command).toBe('/ruimte');
         expect(process.spec.env.BUN_BE_BUN).toBe('1');
         expect(process.spec.cwd).toBe('/work');
-        expect(process.spec.args[0]).toBe('/home/language-servers/typescript/node_modules/typescript-language-server/lib/cli.mjs');
+        expect(process.spec.args[0]).toBe('/home/language-servers/vue/node_modules/typescript-language-server/lib/cli.mjs');
         expect(process.spec.args.slice(1)).toEqual(['--stdio']);
         expect(process.server.documents.get('file:///work/src/a.ts')).toEqual({ languageId: 'typescript', text: 'let a = 1;', version: 1 });
-        expect(Object.keys(server.capabilities ?? {})).toEqual(['typescript']);
+        expect(Object.keys(server.capabilities ?? {})).toEqual(['typescript', 'vue']);
+    });
+
+    it('runs the native TypeScript server as a program of its own, not under the daemon runtime', async () => {
+        const { server, spawner } = rig('typescript');
+        server.attach(document('/work/src/a.ts', 'typescript', 'let a = 1;'));
+        await settle();
+        const [process] = spawner.processes;
+        expect(process.spec.command).toBe(
+            `/home/language-servers/typescript/node_modules/@typescript/typescript-${globalThis.process.platform}-${globalThis.process.arch}/lib/${globalThis.process.platform === 'win32' ? 'tsc.exe' : 'tsc'}`
+        );
+        expect(process.spec.args).toEqual(['--lsp', '--stdio']);
+        expect(process.spec.env.BUN_BE_BUN).toBeUndefined();
+        expect(process.name).toBe('typescript');
+        expect(process.server.documents.get('file:///work/src/a.ts')).toEqual({ languageId: 'typescript', text: 'let a = 1;', version: 1 });
     });
 
     it('starts nothing while the kind is not installed, and starts once it is', async () => {
@@ -301,13 +317,78 @@ describe('a server that is asked for its diagnostics', () => {
     });
 
     it('leaves a server that pushes alone', async () => {
-        const { server, spawner, clock } = rig('typescript', fakeSpawner({ typescript: PULLING.css }));
+        const { server, spawner, clock } = rig('vue', fakeSpawner({ typescript: PULLING.css }));
         const script = document('/work/a.ts', 'typescript', 'x');
         server.attach(script);
         await settle();
         await server.change(script, [{ text: 'y' }]);
         expect(clock.pending).toBe(0);
         expect(spawner.processes[0].server.received.some((message) => message.method === 'textDocument/diagnostic')).toBe(false);
+    });
+});
+
+describe('the native TypeScript server and its diagnostics', () => {
+    const NATIVE: Partial<Record<string, ServerCapabilities>> = {
+        typescript: { textDocumentSync: 2, diagnosticProvider: { identifier: 'typescript', interFileDependencies: true, workspaceDiagnostics: false } }
+    };
+    const item: Diagnostic = { range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } }, message: 'Cannot find name', severity: 1 };
+
+    it('asks again for every open document when one changes, since a document depends on the others', async () => {
+        const { server, spawner, clock, diagnostics } = rig('typescript', fakeSpawner(NATIVE));
+        const first = document('/work/src/a.ts', 'typescript', 'a');
+        const second = document('/work/src/b.ts', 'typescript', 'b');
+        server.attach(first);
+        server.attach(second);
+        await settle();
+        const asked: string[] = [];
+        spawner.processes[0].server.handle('textDocument/diagnostic', (params) => {
+            asked.push((params as { textDocument: { uri: string } }).textDocument.uri);
+            return { kind: 'full', items: [item] };
+        });
+        first.version = 2;
+        await server.change(first, [{ text: 'a2' }]);
+        expect(clock.pending).toBe(2);
+        clock.fire();
+        await settle();
+        expect(asked.sort()).toEqual(['file:///work/src/a.ts', 'file:///work/src/b.ts']);
+        expect(diagnostics.map((report) => report.path).sort()).toEqual(['src/a.ts', 'src/b.ts']);
+    });
+
+    it('asks for every open document when the server refreshes its diagnostics', async () => {
+        const { server, spawner, clock } = rig('typescript', fakeSpawner(NATIVE));
+        server.attach(document('/work/src/a.ts', 'typescript', 'a'));
+        server.attach(document('/work/src/b.ts', 'typescript', 'b'));
+        await settle();
+        await spawner.processes[0].server.connection.request('workspace/diagnostic/refresh');
+        await settle();
+        expect(clock.pending).toBe(2);
+    });
+
+    it('reports the documents a report carries along, when the server has them open', async () => {
+        const { server, spawner, clock, diagnostics } = rig('typescript', fakeSpawner(NATIVE));
+        const first = document('/work/src/a.ts', 'typescript', 'a');
+        server.attach(first);
+        server.attach(document('/work/src/b.ts', 'typescript', 'b'));
+        await settle();
+        spawner.processes[0].server.handle('textDocument/diagnostic', (params) =>
+            (params as { textDocument: { uri: string } }).textDocument.uri === 'file:///work/src/a.ts'
+                ? {
+                      kind: 'full',
+                      items: [],
+                      relatedDocuments: {
+                          'file:///work/src/b.ts': { kind: 'full', items: [item] },
+                          'file:///work/src/closed.ts': { kind: 'full', items: [item] }
+                      }
+                  }
+                : { kind: 'full', items: [] }
+        );
+        first.version = 2;
+        await server.change(first, [{ text: 'a2' }]);
+        clock.fire();
+        await settle();
+        expect(diagnostics.filter((report) => report.params.diagnostics.length > 0)).toEqual([
+            { path: 'src/b.ts', component: 'typescript', params: { uri: 'file:///work/src/b.ts', version: 1, diagnostics: [item] } }
+        ]);
     });
 });
 

@@ -5,7 +5,7 @@ import { errorText } from '../error-text.ts';
 import { LanguageLog } from './log.ts';
 import { KIND_PROFILES } from './profiles.ts';
 import { runCommand, type LanguageRuntime, type RunCommand } from './runtime.ts';
-import { LANGUAGE_KIND_PACKAGES, pinnedVersionsOf } from './versions.ts';
+import { pinnedVersionsOf, versionOf } from './versions.ts';
 
 const MARKER = 'installed.json';
 
@@ -32,7 +32,8 @@ async function exists(path: string): Promise<boolean> {
  * Puts the pinned servers of a kind under `$RUIMTE_HOME/language-servers/<kind>`, with the daemon's own
  * runtime acting as `bun install`, and never on its own: `install` is called for a person's request
  * only. Scripts of the packages do not run. The kind counts as installed once a marker naming the
- * pinned versions exists beside the packages, so a version that moved here reads as missing.
+ * pinned versions exists beside the packages, so a version that moved here reads as missing. A server
+ * that is a program of its own has to print its version before the marker is written.
  */
 export class LanguageInstaller {
     private readonly options: LanguageInstallerOptions;
@@ -71,15 +72,29 @@ export class LanguageInstaller {
         return (await this.isInstalled(kind)) ? 'installed' : 'missing';
     }
 
+    /* Whether the kind was installed at versions other than the pinned ones, so an install brings it up to date. */
+    async isOutdated(kind: LanguageServerKind): Promise<boolean> {
+        const marker = await this.readMarker(kind);
+        return marker !== null && !this.matchesPins(kind, marker);
+    }
+
+    private async readMarker(kind: LanguageServerKind): Promise<Record<string, string> | null> {
+        try {
+            const marker = JSON.parse(await readFile(join(this.directoryOf(kind), MARKER), 'utf8')) as { versions?: Record<string, string> };
+            return marker.versions ?? {};
+        } catch {
+            return null;
+        }
+    }
+
+    private matchesPins(kind: LanguageServerKind, versions: Record<string, string>): boolean {
+        return Object.entries(pinnedVersionsOf(kind)).every(([name, version]) => versions[name] === version);
+    }
+
     async isInstalled(kind: LanguageServerKind): Promise<boolean> {
         const directory = this.directoryOf(kind);
-        try {
-            const marker = JSON.parse(await readFile(join(directory, MARKER), 'utf8')) as { versions?: Record<string, string> };
-            const pinned = pinnedVersionsOf(kind);
-            if (!Object.entries(pinned).every(([name, version]) => marker.versions?.[name] === version)) {
-                return false;
-            }
-        } catch {
+        const marker = await this.readMarker(kind);
+        if (marker === null || !this.matchesPins(kind, marker)) {
             return false;
         }
         const entries = KIND_PROFILES[kind].components.map((component) => join(directory, 'node_modules', component.entry));
@@ -101,6 +116,21 @@ export class LanguageInstaller {
         return work;
     }
 
+    /* A server that is a program of its own has to run on this machine and be the version pinned, since an install of another platform or a bad download leaves a file that only looks right. */
+    private async verifyPrograms(kind: LanguageServerKind, log: LanguageLog): Promise<void> {
+        const directory = this.directoryOf(kind);
+        for (const component of KIND_PROFILES[kind].components.filter((candidate) => candidate.native)) {
+            const lines: string[] = [];
+            const code = await this.run({ command: join(directory, 'node_modules', component.entry), args: ['--version'], cwd: directory, env: {} }, (line) => {
+                lines.push(line);
+                log.push('install', line);
+            });
+            if (code !== 0 || !lines.some((line) => line.includes(versionOf(kind)))) {
+                throw new Error(`The ${component.name} server did not report version ${versionOf(kind)}`);
+            }
+        }
+    }
+
     private async perform(kind: LanguageServerKind): Promise<void> {
         const log = this.logOf(kind);
         this.failures.delete(kind);
@@ -115,7 +145,12 @@ export class LanguageInstaller {
                 join(directory, 'package.json'),
                 `${JSON.stringify({ name: `ruimte-language-server-${kind}`, private: true, dependencies }, null, 2)}\n`
             );
-            log.push('install', `Installing ${LANGUAGE_KIND_PACKAGES[kind].map((name) => `${name}@${dependencies[name]}`).join(', ')}`);
+            log.push(
+                'install',
+                `Installing ${Object.entries(dependencies)
+                    .map(([name, version]) => `${name}@${version}`)
+                    .join(', ')}`
+            );
             const { runtime } = this.options;
             const code = await this.run(
                 { command: runtime.command, args: [...runtime.args, 'install', '--ignore-scripts'], cwd: directory, env: runtime.env },
@@ -130,6 +165,7 @@ export class LanguageInstaller {
                     throw new Error(`The install did not leave ${entry}`);
                 }
             }
+            await this.verifyPrograms(kind, log);
             await writeFile(join(directory, MARKER), `${JSON.stringify({ versions: dependencies, installedAt: (this.options.now ?? Date.now)() })}\n`);
             log.push('install', 'Installed');
         } catch (error) {

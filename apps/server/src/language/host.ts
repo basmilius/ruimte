@@ -64,6 +64,8 @@ function isCatalogKind(id: LanguageServerId): id is LanguageServerKind {
     return id in KIND_PROFILES;
 }
 
+const OUTDATED_MESSAGE = 'The installed version is not the one this version of Ruimte uses. Install it again to update.';
+
 const HELD_MESSAGE = 'Its command was changed outside Ruimte. Open it and save it again to start it.';
 
 /* Whether a server of a person's own runs for the project: for every project, or for the folders it names. */
@@ -557,6 +559,7 @@ export class LanguageHost {
                 spawn: this.options.spawn ?? spawnLanguageProcess,
                 clock: this.options.clock ?? realLanguageClock,
                 exists: this.options.exists ?? fileExists,
+                readText: this.options.readText,
                 hooks: this.hooks
             });
             project.servers.set(kind, server);
@@ -660,7 +663,7 @@ export class LanguageHost {
             return { ...base, state: 'installing', documents: 0 };
         }
         if (install === 'missing') {
-            const message = this.installer.failureOf(kind);
+            const message = this.installer.failureOf(kind) ?? ((await this.installer.isOutdated(kind)) ? OUTDATED_MESSAGE : null);
             return { ...base, state: 'not-installed', documents: project?.servers.get(kind)?.documentCount ?? 0, ...(message ? { message } : {}) };
         }
         const server = project?.servers.get(kind);

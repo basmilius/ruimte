@@ -7,7 +7,7 @@ import type { Diagnostic, Position } from '@ruimte/smart-editor-lsp';
 import { MachineHome } from '../fs/machine-home.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { LanguageHost } from './host.ts';
-import { runCommand, spawnLanguageProcess, type LanguageExit, type LanguageRuntime } from './runtime.ts';
+import { runCommand, spawnLanguageProcess, type LanguageExit, type LanguageProcessSpec, type LanguageRuntime } from './runtime.ts';
 
 /*
  * Real installs and real servers, run the way the compiled daemon runs them: a `bun build --compile`
@@ -65,10 +65,10 @@ const LINT_FILES: Record<string, string> = {
     'app.css': '@import "tailwindcss";\n.card { @apply p-4; }\n'
 };
 
-/* A project that does not use Vue, whose TypeScript stays on the TypeScript kind. */
+/* A project that does not use Vue, whose TypeScript stays on the TypeScript kind, and which holds a TypeScript 7 of its own that the kind runs instead of the pinned one. */
 const PLAIN_FILES: Record<string, string> = {
     'tsconfig.json': FILES['tsconfig.json'],
-    'package.json': JSON.stringify({ private: true, type: 'module' }),
+    'package.json': JSON.stringify({ private: true, type: 'module', devDependencies: { typescript: '7.0.2' } }),
     'src/helpers.ts': FILES['src/helpers.ts'],
     'src/a.ts': FILES['src/a.ts']
 };
@@ -86,6 +86,7 @@ let host: LanguageHost;
 let runtime: LanguageRuntime;
 const events: SessionEvent[] = [];
 const exits: Promise<LanguageExit>[] = [];
+const specs: LanguageProcessSpec[] = [];
 
 async function eventually<T>(what: string, run: () => Promise<T> | T, accept: (value: T) => boolean = Boolean, timeoutMs = 90_000): Promise<T> {
     const deadline = Date.now() + timeoutMs;
@@ -179,13 +180,14 @@ beforeAll(async () => {
         runtime,
         spawn: (spec) => {
             const child = spawnLanguageProcess(spec);
+            specs.push(spec);
             exits.push(child.exited);
             return child;
         }
     });
     host.subscribe('c1', (event) => events.push(event));
-    // The Vue server needs `vue` in the project to type a template.
-    for (const folder of [project, lint]) {
+    // The Vue server needs `vue` in the project to type a template, and the plain project's own TypeScript has to be there to be found.
+    for (const folder of [project, plain, lint]) {
         expect(await runCommand({ command: stub, args: ['install', '--ignore-scripts'], cwd: folder, env: runtime.env }, () => undefined)).toBe(0);
     }
 }, 180_000);
@@ -206,14 +208,23 @@ describe('the runtime of a compiled daemon', () => {
     });
 });
 
-describe('TypeScript', () => {
-    test('installs, starts on a document and answers features', async () => {
+describe('TypeScript, on the native server of TypeScript 7', () => {
+    test('installs, starts the TypeScript 7 of the project on a document and answers features', async () => {
         await install('typescript');
         const text = FILES['src/a.ts'];
         const opened = await host.open('c1', { projectId: 'p2', path: 'src/a.ts', languageId: 'typescript', text });
         expect(opened).toMatchObject({ version: 1, servers: ['typescript'] });
         await waitReady('typescript', 'p2');
+        // The program of the project's own package, not the pinned install, and not under the daemon's runtime.
+        const spec = specs.find((candidate) => candidate.cwd === plain)!;
+        expect(spec.command).toContain(join(plain, 'node_modules'));
+        expect(spec.command).toMatch(/typescript-(darwin|linux|win32)-[a-z0-9]+[\\/]lib[\\/]tsc(\.exe)?$/);
+        expect(spec.args).toEqual(['--lsp', '--stdio']);
+        const status = (await host.status('p2')).find((candidate) => candidate.server === 'typescript');
+        expect(status?.version).toBe('7.0.2');
+        expect(status?.capabilities?.typescript).toMatchObject({ diagnosticProvider: { interFileDependencies: true }, selectionRangeProvider: true });
 
+        // Diagnostics only come when the daemon pulls them.
         const diagnostics = await eventually(
             'a type error',
             () => diagnosticsOf('src/a.ts'),
@@ -232,7 +243,18 @@ describe('TypeScript', () => {
         expect((hints.result as { kind?: number }[]).filter((hint) => hint.kind === 2).length).toBeGreaterThanOrEqual(2);
 
         const providers = (await host.open('c1', { projectId: 'p2', path: 'src/a.ts', languageId: 'typescript', text })).providers;
-        expect(Object.keys(providers)).toEqual(expect.arrayContaining(['textDocument/hover', 'textDocument/completion', 'textDocument/inlayHint']));
+        expect(Object.keys(providers)).toEqual(
+            expect.arrayContaining(['textDocument/hover', 'textDocument/completion', 'textDocument/inlayHint', 'textDocument/selectionRange'])
+        );
+    }, 180_000);
+
+    test('runs the pinned TypeScript 7 in a project that has none of its own', async () => {
+        const text = LINT_FILES['src/a.js'];
+        await host.open('c1', { projectId: 'p3', path: 'src/a.js', languageId: 'javascript', text });
+        await waitReady('typescript', 'p3');
+        const spec = specs.find((candidate) => candidate.cwd === lint && candidate.args.includes('--lsp'))!;
+        expect(spec.command).toContain(join(base, 'home', 'language-servers', 'typescript', 'node_modules'));
+        await host.closeDocument('c1', { projectId: 'p3', path: 'src/a.js' });
     }, 180_000);
 
     test('follows an incremental change and completes against the new text', async () => {
@@ -257,11 +279,29 @@ describe('TypeScript', () => {
         });
     }, 60_000);
 
-    test('renames across files and formats', async () => {
-        const rename = await ask('src/a.ts', 'textDocument/rename', { position: positionOf(FILES['src/a.ts'], 'add(a', 0), newName: 'sum' }, 'p2');
+    test('reports the diagnostics of the new text by pulling them again', async () => {
+        await eventually(
+            'a report for the new text',
+            () => diagnosticsOf('src/a.ts'),
+            (list) => list.some((item) => /toF/.test(item.message))
+        );
+    }, 60_000);
+
+    test('renames across files, formats with the options it is given and gives the ranges around a position', async () => {
+        const text = FILES['src/a.ts'];
+        const rename = await ask('src/a.ts', 'textDocument/rename', { position: positionOf(text, 'add(a', 0), newName: 'sum' }, 'p2');
         expect(JSON.stringify(rename.result)).toContain('sum');
-        const formatted = await ask('src/a.ts', 'textDocument/formatting', { options: { tabSize: 4, insertSpaces: true } }, 'p2');
-        expect(Array.isArray(formatted.result)).toBe(true);
+        const formatted = await ask('src/a.ts', 'textDocument/formatting', { options: { tabSize: 4, insertSpaces: false } }, 'p2');
+        expect(JSON.stringify(formatted.result)).toContain('\\t');
+        const position = positionOf(text, 'a + b', 0);
+        const ranges = await ask('src/a.ts', 'textDocument/selectionRange', { positions: [position] }, 'p2');
+        const chain: { range: { start: Position; end: Position }; parent?: unknown }[] = [];
+        for (let link = (ranges.result as { range: never; parent?: never }[])[0]; link; link = link.parent as never) {
+            chain.push(link);
+        }
+        expect(chain.length).toBeGreaterThanOrEqual(3);
+        expect(chain[0]!.range.start.line).toBe(position.line);
+        expect(chain.at(-1)!.range.start).toEqual({ line: 0, character: 0 });
     }, 60_000);
 
     test('keeps the server running after its last document closes', async () => {

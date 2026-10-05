@@ -98,6 +98,63 @@ describe('language installer', () => {
         expect(await installer.state('php')).toBe('missing');
     });
 
+    it('runs a native server once after the install and counts the kind as installed when it reports the pinned version', async () => {
+        const calls: { command: string; args: string[] }[] = [];
+        const install = installing('typescript');
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run: async (spec, onLine) => {
+                calls.push({ command: spec.command, args: spec.args });
+                if (spec.args.includes('--version')) {
+                    onLine('Version 7.0.2');
+                    return 0;
+                }
+                return install(spec, onLine);
+            },
+            onChange: () => undefined
+        });
+        await installer.install('typescript');
+        expect(installer.failureOf('typescript')).toBeNull();
+        expect(await installer.state('typescript')).toBe('installed');
+        expect(calls.map((call) => call.args)).toEqual([['install', '--ignore-scripts'], ['--version']]);
+        expect(calls[1]!.command).toBe(join(root, 'typescript', 'node_modules', KIND_PROFILES.typescript.components[0]!.entry));
+        expect(JSON.parse(await readFile(join(root, 'typescript', 'package.json'), 'utf8')).dependencies).toEqual({ typescript: '7.0.2' });
+    });
+
+    it('does not count a native server that reports another version or fails as installed', async () => {
+        for (const [code, line] of [
+            [0, 'Version 6.0.3'],
+            [1, 'Version 7.0.2']
+        ] as const) {
+            const install = installing('typescript');
+            const installer = new LanguageInstaller({
+                root,
+                runtime,
+                run: async (spec, onLine) => {
+                    if (spec.args.includes('--version')) {
+                        onLine(line);
+                        return code;
+                    }
+                    return install(spec, onLine);
+                },
+                onChange: () => undefined
+            });
+            await installer.install('typescript');
+            expect(installer.failureOf('typescript')).toBe('The typescript server did not report version 7.0.2');
+            expect(await installer.state('typescript')).toBe('missing');
+        }
+    });
+
+    it('says an install of other versions is outdated, and one that never was is not', async () => {
+        const installer = new LanguageInstaller({ root, runtime, run: installing('php'), onChange: () => undefined });
+        expect(await installer.isOutdated('php')).toBe(false);
+        await installer.install('php');
+        expect(await installer.isOutdated('php')).toBe(false);
+        await writeFile(join(root, 'php', 'installed.json'), JSON.stringify({ versions: { intelephense: '1.0.0' } }));
+        expect(await installer.isOutdated('php')).toBe(true);
+    });
+
     it('reads an install of other versions as missing', async () => {
         const installer = new LanguageInstaller({ root, runtime, run: installing('php'), onChange: () => undefined });
         await installer.install('php');
