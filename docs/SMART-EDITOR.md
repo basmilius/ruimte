@@ -47,7 +47,7 @@ Three entries differ from the platform for a reason other than a collision. Shri
 
 Find (Cmd+F) and Replace (Cmd+Shift+H) are Ruimte's, for every surface with a find bar; the editor adds the platform's Replace (Cmd+R, Ctrl+R) and find next and previous (Cmd+G and Cmd+Shift+G, Ctrl+L and Ctrl+Shift+L). Adding a caret above or below is a gesture and has no chord: tap Option twice on macOS (Ctrl elsewhere), hold it and press Up or Down; the Code menu has both commands. Text motion (arrows, Home, End, Page Up and Down, Enter, Tab, Backspace, Delete, Escape, and Cmd+Up and Down for the ends of the text on macOS) is the same everywhere and not in the table.
 
-The macOS key of Reformat (Option+Cmd+L) is also the one the AI design gives to sending the selection to a chat, so phase 5 needs another key for one of the two.
+The AI design gave Option+Cmd+L to sending the selection to a chat; Reformat keeps it, and phase 5 picks another key.
 
 ## Carets, mouse and view
 
