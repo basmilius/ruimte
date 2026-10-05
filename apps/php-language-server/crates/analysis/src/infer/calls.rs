@@ -321,7 +321,7 @@ impl Analyzer<'_> {
         for callee in &callees {
             results.push(self.return_type_of(callee, &args, env));
         }
-        let result = Type::union(results);
+        let result = self.container_call_type(&callees, &args, Type::union(results));
         let nullsafe = callee_node.kind() == PROPERTY_FETCH_EXPR && has_token(&callee_node, NULLSAFE_ARROW);
         if nullsafe {
             let receiver = callee_node.children().next().map(|object| self.type_of(&object, env));
@@ -363,6 +363,13 @@ impl Analyzer<'_> {
         let mut by_name: HashMap<String, Type> = HashMap::new();
         self.bind_args(callee, args, env, ArgPass::Plain, &mut map, &mut by_name);
         self.bind_args(callee, args, env, ArgPass::Closures, &mut map, &mut by_name);
+        for param in callee.callable.params_at(self.level()) {
+            if let Some(default) = &param.default {
+                by_name
+                    .entry(format!("${}", param.name))
+                    .or_insert_with(|| default_type(default));
+            }
+        }
         (map, by_name)
     }
 
@@ -515,6 +522,17 @@ impl Analyzer<'_> {
             (Type::Static, None) => self.this_type(),
             _ => resolved,
         }
+    }
+}
+
+/// The type of a parameter's default value as far as a conditional return type needs it: an argument
+/// left out is that value.
+fn default_type(default: &str) -> Type {
+    match default.trim().to_ascii_lowercase().as_str() {
+        "null" => Type::Null,
+        "true" => Type::True,
+        "false" => Type::False,
+        _ => Type::Unknown,
     }
 }
 

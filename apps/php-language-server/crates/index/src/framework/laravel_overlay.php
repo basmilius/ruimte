@@ -12,8 +12,14 @@
 //   @drops n n ...          fixed columns the method removes
 //   @rename                 the column named by the first argument becomes the second
 // Types: int, string, bool, float, array, datetime, mixed.
+//
+// Strings that name something a project declares, on functions and methods:
+//   @key <kind> [position]  the argument at this position (the first by default) names a config key,
+//                           route, view, translation, env variable or ability
+//   @container [position]   the argument names a binding of the service container
+// A method is matched by the class that declares it or any class below it.
 
-namespace Illuminate\Database\Schema;
+namespace Illuminate\Database\Schema {
 
 class Blueprint
 {
@@ -178,4 +184,333 @@ class Blueprint
     public function dropSoftDeletesTz($column = 'deleted_at') {}
     /** @drops remember_token */
     public function dropRememberToken() {}
+}
+
+}
+
+namespace {
+
+/** @key config */
+function config($key = null, $default = null) {}
+/** @key route */
+function route($name, $parameters = [], $absolute = true) {}
+/** @key route */
+function to_route($route, $parameters = [], $status = 302, $headers = []) {}
+/** @key view */
+function view($view = null, $data = [], $mergeData = []) {}
+/** @key translation */
+function trans($key = null, $replace = [], $locale = null) {}
+/** @key translation */
+function __($key = null, $replace = [], $locale = null) {}
+/** @key translation */
+function trans_choice($key, $number, array $replace = [], $locale = null) {}
+/** @key env */
+function env($key, $default = null) {}
+/** @container */
+function app($abstract = null, array $parameters = []) {}
+/** @container */
+function resolve($name, array $parameters = []) {}
+
+}
+
+namespace Illuminate\Contracts\Config {
+
+interface Repository
+{
+    /** @key config */
+    public function has($key) {}
+    /** @key config */
+    public function get($key, $default = null) {}
+    /** @key config */
+    public function string(string $key, $default = null) {}
+    /** @key config */
+    public function integer(string $key, $default = null) {}
+    /** @key config */
+    public function float(string $key, $default = null) {}
+    /** @key config */
+    public function boolean(string $key, $default = null) {}
+    /** @key config */
+    public function array(string $key, $default = null) {}
+}
+
+}
+
+namespace Illuminate\Support\Facades {
+
+class Config
+{
+    /** @key config */
+    public static function has($key) {}
+    /** @key config */
+    public static function get($key, $default = null) {}
+    /** @key config */
+    public static function string(string $key, $default = null) {}
+    /** @key config */
+    public static function integer(string $key, $default = null) {}
+    /** @key config */
+    public static function float(string $key, $default = null) {}
+    /** @key config */
+    public static function boolean(string $key, $default = null) {}
+    /** @key config */
+    public static function array(string $key, $default = null) {}
+}
+
+class URL
+{
+    /** @key route */
+    public static function route($name, $parameters = [], $absolute = true) {}
+    /** @key route */
+    public static function signedRoute($name, $parameters = [], $expiration = null, $absolute = true) {}
+    /** @key route */
+    public static function temporarySignedRoute($name, $expiration, $parameters = [], $absolute = true) {}
+}
+
+class Route
+{
+    /** @key route */
+    public static function has($name) {}
+    /** @key view 1 */
+    public static function view($uri, $view, $data = [], $status = 200, array $headers = []) {}
+}
+
+class Redirect
+{
+    /** @key route */
+    public static function route($route, $parameters = [], $status = 302, $headers = []) {}
+}
+
+class View
+{
+    /** @key view */
+    public static function make($view, $data = [], $mergeData = []) {}
+    /** @key view */
+    public static function exists($view) {}
+}
+
+class Response
+{
+    /** @key view */
+    public static function view($view, $data = [], $status = 200, array $headers = []) {}
+}
+
+class Lang
+{
+    /** @key translation */
+    public static function get($key, array $replace = [], $locale = null, $fallback = true) {}
+    /** @key translation */
+    public static function has($key, $locale = null, $fallback = true) {}
+    /** @key translation */
+    public static function choice($key, $number, array $replace = [], $locale = null) {}
+}
+
+class Gate
+{
+    /** @key ability */
+    public static function has($ability) {}
+    /** @key ability */
+    public static function define($ability, $callback) {}
+    /** @key ability */
+    public static function allows($ability, $arguments = []) {}
+    /** @key ability */
+    public static function denies($ability, $arguments = []) {}
+    /** @key ability */
+    public static function check($abilities, $arguments = []) {}
+    /** @key ability */
+    public static function authorize($ability, $arguments = []) {}
+    /** @key ability */
+    public static function inspect($ability, $arguments = []) {}
+}
+
+class App
+{
+    /** @container */
+    public static function make($abstract, array $parameters = []) {}
+    /** @container */
+    public static function get($id) {}
+}
+
+}
+
+namespace Illuminate\Contracts\Routing {
+
+interface UrlGenerator
+{
+    /** @key route */
+    public function route($name, $parameters = [], $absolute = true) {}
+    /** @key route */
+    public function signedRoute($name, $parameters = [], $expiration = null, $absolute = true) {}
+    /** @key route */
+    public function temporarySignedRoute($name, $expiration, $parameters = [], $absolute = true) {}
+}
+
+interface ResponseFactory
+{
+    /** @key view */
+    public function view($view, $data = [], $status = 200, array $headers = []) {}
+}
+
+}
+
+namespace Illuminate\Routing {
+
+class UrlGenerator
+{
+    /** @key route */
+    public function route($name, $parameters = [], $absolute = true) {}
+    /** @key route */
+    public function signedRoute($name, $parameters = [], $expiration = null, $absolute = true) {}
+    /** @key route */
+    public function temporarySignedRoute($name, $expiration, $parameters = [], $absolute = true) {}
+}
+
+class Redirector
+{
+    /** @key route */
+    public function route($route, $parameters = [], $status = 302, $headers = []) {}
+}
+
+class ResponseFactory
+{
+    /** @key view */
+    public function view($view, $data = [], $status = 200, array $headers = []) {}
+}
+
+class Router
+{
+    /** @key route */
+    public function has($name) {}
+    /** @key view 1 */
+    public function view($uri, $view, $data = [], $status = 200, array $headers = []) {}
+}
+
+}
+
+namespace Illuminate\Contracts\View {
+
+interface Factory
+{
+    /** @key view */
+    public function make($view, $data = [], $mergeData = []) {}
+    /** @key view */
+    public function exists($view) {}
+}
+
+}
+
+namespace Illuminate\View {
+
+class Factory
+{
+    /** @key view */
+    public function make($view, $data = [], $mergeData = []) {}
+    /** @key view */
+    public function exists($view) {}
+    /** @key view */
+    public function first(array $views, $data = [], $mergeData = []) {}
+}
+
+}
+
+namespace Illuminate\Contracts\Translation {
+
+interface Translator
+{
+    /** @key translation */
+    public function get($key, array $replace = [], $locale = null) {}
+    /** @key translation */
+    public function choice($key, $number, array $replace = [], $locale = null) {}
+}
+
+}
+
+namespace Illuminate\Translation {
+
+class Translator
+{
+    /** @key translation */
+    public function get($key, array $replace = [], $locale = null, $fallback = true) {}
+    /** @key translation */
+    public function has($key, $locale = null, $fallback = true) {}
+    /** @key translation */
+    public function choice($key, $number, array $replace = [], $locale = null) {}
+}
+
+}
+
+namespace Illuminate\Support {
+
+class Env
+{
+    /** @key env */
+    public static function get($key, $default = null) {}
+}
+
+}
+
+namespace Illuminate\Contracts\Auth\Access {
+
+interface Gate
+{
+    /** @key ability */
+    public function has($ability) {}
+    /** @key ability */
+    public function define($ability, $callback) {}
+    /** @key ability */
+    public function allows($ability, $arguments = []) {}
+    /** @key ability */
+    public function denies($ability, $arguments = []) {}
+    /** @key ability */
+    public function check($abilities, $arguments = []) {}
+    /** @key ability */
+    public function authorize($ability, $arguments = []) {}
+    /** @key ability */
+    public function inspect($ability, $arguments = []) {}
+}
+
+interface Authorizable
+{
+    /** @key ability */
+    public function can($abilities, $arguments = []) {}
+}
+
+}
+
+namespace Illuminate\Foundation\Auth\Access {
+
+trait AuthorizesRequests
+{
+    /** @key ability */
+    public function authorize($ability, $arguments = []) {}
+}
+
+trait Authorizable
+{
+    /** @key ability */
+    public function can($abilities, $arguments = []) {}
+    /** @key ability */
+    public function cannot($abilities, $arguments = []) {}
+    /** @key ability */
+    public function cant($abilities, $arguments = []) {}
+}
+
+}
+
+namespace Illuminate\Contracts\Container {
+
+interface Container
+{
+    /** @container */
+    public function make($abstract, array $parameters = []) {}
+}
+
+}
+
+namespace Psr\Container {
+
+interface ContainerInterface
+{
+    /** @container */
+    public function get($id) {}
+}
+
 }

@@ -192,3 +192,55 @@ class BelongsTo extends Relation { /** @inheritDoc */ public function getResults
         "<?php namespace Illuminate\\Database\\Eloquent\\Attributes; #[\\Attribute] class Scope {}",
     ),
 ];
+
+/// The container, the application with its core aliases, and the helpers that resolve from it.
+pub const CONTAINER: &[(&str, &str)] = &[
+    (
+        "vendor/laravel/Container.php",
+        r#"<?php
+namespace Illuminate\Contracts\Container;
+interface Container {
+    /**
+     * @template TClass of object
+     * @param string|class-string<TClass> $abstract
+     * @return ($abstract is class-string<TClass> ? TClass : mixed)
+     */
+    public function make($abstract, array $parameters = []);
+}
+"#,
+    ),
+    (
+        "vendor/laravel/Application.php",
+        r#"<?php
+namespace Illuminate\Foundation;
+class Application implements \Illuminate\Contracts\Container\Container {
+    public function make($abstract, array $parameters = []) {}
+    public function registerCoreContainerAliases() {
+        foreach ([
+            'app' => [self::class, \Illuminate\Contracts\Container\Container::class],
+            'cache' => [\Illuminate\Cache\CacheManager::class, \Illuminate\Contracts\Cache\Factory::class],
+        ] as $key => $aliases) {}
+    }
+}
+"#,
+    ),
+    (
+        "vendor/laravel/CacheManager.php",
+        "<?php namespace Illuminate\\Cache; class CacheManager { public function store(): int {} }",
+    ),
+    (
+        "vendor/laravel/ServiceProvider.php",
+        "<?php namespace Illuminate\\Support; abstract class ServiceProvider { public function __construct(protected $app) {} }",
+    ),
+    (
+        "vendor/laravel/helpers.php",
+        r#"<?php
+/**
+ * @template TClass of object
+ * @param string|class-string<TClass>|null $abstract
+ * @return ($abstract is class-string<TClass> ? TClass : ($abstract is null ? \Illuminate\Foundation\Application : mixed))
+ */
+function app($abstract = null, array $parameters = []) {}
+"#,
+    ),
+];

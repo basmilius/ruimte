@@ -140,6 +140,13 @@ impl Analyzer<'_> {
                     return Some(true);
                 }
                 (Type::Callable(_), Type::Callable(_)) => return Some(true),
+                (Type::ClassString(Some(sub)), Type::ClassString(Some(sup))) => match self.satisfies(sub, sup) {
+                    Some(true) => return Some(true),
+                    Some(false) => {}
+                    None => unknown = true,
+                },
+                (Type::ClassString(_), Type::ClassString(_) | Type::String) => return Some(true),
+                (Type::String | Type::StringLiteral(_), Type::ClassString(_)) => unknown = true,
                 (Type::Class { name: sub, .. }, Type::Class { name: sup, .. }) => {
                     if self.index.is_subclass_of(sub, sup) {
                         return Some(true);

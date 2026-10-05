@@ -869,6 +869,9 @@ fn extend_model<'a>(
     let Some(model) = model_of(ancestors) else {
         return;
     };
+    if only.is_none_or(|only| only.eq_ignore_ascii_case("factory")) {
+        name_factory(index, model, out);
+    }
     let builder = Type::Class {
         name: BUILDER.to_string(),
         args: vec![Type::class(model.class.decl.name.clone())],
@@ -895,6 +898,52 @@ fn extend_model<'a>(
             static_as: Some(builder.clone()),
         });
     }
+}
+
+const USE_FACTORY: &str = "Illuminate\\Database\\Eloquent\\Attributes\\UseFactory";
+
+/// `factory()` returns the template of `HasFactory`, which a model binds with `@use HasFactory<...>`.
+/// A model that does not gets the factory the framework would look for: the one `#[UseFactory]` names,
+/// else `Database\Factories\<model>Factory`.
+fn name_factory<'a>(index: &'a Index, model: &Ancestor<'a>, out: &mut [Found<'a, Method>]) {
+    let Some(position) = out
+        .iter()
+        .position(|found| found.member.name.eq_ignore_ascii_case("factory") && found.member.is_static)
+    else {
+        return;
+    };
+    if matches!(out[position].subst.get("TFactory"), Some(Type::Class { .. })) {
+        return;
+    }
+    let Some(factory) = factory_of(index, model.class) else {
+        return;
+    };
+    let mut method = out[position].member.clone().into_owned();
+    method.callable.doc_ret = Some(Type::class(factory));
+    method.callable.ret = None;
+    out[position].member = Cow::Owned(method);
+}
+
+fn factory_of(index: &Index, model: Class<'_>) -> Option<Name> {
+    for ancestor in index.ancestors(&Type::class(model.decl.name.clone())) {
+        for attribute in &ancestor.class.decl.attributes {
+            if !attribute.name.eq_ignore_ascii_case(USE_FACTORY) {
+                continue;
+            }
+            let text = attribute.args.first()?.value.trim().to_string();
+            let class = text.strip_suffix("::class")?;
+            let tree = tree_of(index, &ancestor.class.file.path)?;
+            let resolver = crate::extract::resolver_at(&tree, ancestor.class.decl.span.start);
+            return Some(resolver.resolve_class(class.trim()));
+        }
+    }
+    let name = model.decl.name.as_str();
+    let rest = name
+        .strip_prefix("App\\Models\\")
+        .or_else(|| name.strip_prefix("App\\"))
+        .unwrap_or(name);
+    let factory = format!("Database\\Factories\\{rest}Factory");
+    index.class(&factory).map(|_| factory)
 }
 
 #[cfg(test)]
@@ -1097,6 +1146,62 @@ class User extends Model
                 .methods(&builder)
                 .iter()
                 .any(|found| found.member.name == "whereTeamId")
+        );
+    }
+
+    #[test]
+    fn a_model_without_a_documented_factory_gets_the_one_by_convention() {
+        let mut index = fixture();
+        for (path, text) in [
+            (
+                "vendor/laravel/HasFactory.php",
+                "<?php namespace Illuminate\\Database\\Eloquent\\Factories; /** @template TFactory of Factory */ trait HasFactory { /** @return TFactory */ public static function factory($count = null) {} }",
+            ),
+            (
+                "database/factories/PostFactory.php",
+                "<?php namespace Database\\Factories; class PostFactory {}",
+            ),
+            (
+                "database/factories/OddFactory.php",
+                "<?php namespace Database\\Factories; class OddFactory {}",
+            ),
+            (
+                "app/Models/Post.php",
+                "<?php namespace App\\Models; use Illuminate\\Database\\Eloquent\\Factories\\HasFactory; use Illuminate\\Database\\Eloquent\\Model; class Post extends Model { use HasFactory; }",
+            ),
+            (
+                "app/Models/Odd.php",
+                "<?php namespace App\\Models; use Database\\Factories\\OddFactory; use Illuminate\\Database\\Eloquent\\Attributes\\UseFactory; use Illuminate\\Database\\Eloquent\\Factories\\HasFactory; use Illuminate\\Database\\Eloquent\\Model; #[UseFactory(OddFactory::class)] class Odd extends Model { use HasFactory; }",
+            ),
+            (
+                "app/Models/Documented.php",
+                "<?php namespace App\\Models; use Illuminate\\Database\\Eloquent\\Factories\\HasFactory; use Illuminate\\Database\\Eloquent\\Model; class Documented extends Model { /** @use HasFactory<\\Database\\Factories\\PostFactory> */ use HasFactory; }",
+            ),
+        ] {
+            super::super::testing::add(&mut index, path, text);
+        }
+        let ret = |class: &str| {
+            let found = index
+                .find_method(&Type::class(class), "factory")
+                .expect("a factory method");
+            found
+                .member
+                .callable
+                .doc_ret
+                .clone()
+                .map(|ty| found.resolve(&ty).display(false))
+        };
+        assert_eq!(
+            ret("App\\Models\\Post").as_deref(),
+            Some("Database\\Factories\\PostFactory")
+        );
+        assert_eq!(
+            ret("App\\Models\\Odd").as_deref(),
+            Some("Database\\Factories\\OddFactory")
+        );
+        assert_eq!(
+            ret("App\\Models\\Documented").as_deref(),
+            Some("Database\\Factories\\PostFactory")
         );
     }
 

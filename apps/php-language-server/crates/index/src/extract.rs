@@ -681,7 +681,7 @@ impl Extractor {
                     }
                 }
                 TRAIT_USE => {
-                    let uses = self.trait_use(&member, decl.doc.as_deref());
+                    let uses = self.trait_use(&member, decl.doc.as_deref(), Some(scope));
                     decl.trait_uses.extend(uses);
                 }
                 _ => {}
@@ -821,7 +821,8 @@ impl Extractor {
         })
     }
 
-    fn trait_use(&self, node: &SyntaxNode, class_doc: Option<&Doc>) -> Vec<TraitUse> {
+    fn trait_use(&self, node: &SyntaxNode, class_doc: Option<&Doc>, scope: Option<&ClassScope>) -> Vec<TraitUse> {
+        let own_doc = self.parse_doc(node, scope);
         let names: Vec<Name> = node
             .children()
             .filter(|child| child.kind() == NAME)
@@ -884,8 +885,11 @@ impl Extractor {
         names
             .into_iter()
             .map(|name| {
-                let ty = class_doc
-                    .and_then(|doc| {
+                let ty = own_doc
+                    .as_deref()
+                    .into_iter()
+                    .chain(class_doc)
+                    .find_map(|doc| {
                         doc.uses
                             .iter()
                             .find(|ty| matches!(ty, Type::Class { name: used, .. } if used.eq_ignore_ascii_case(&name)))

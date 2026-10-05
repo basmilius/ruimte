@@ -7,7 +7,8 @@ use std::sync::OnceLock;
 use php_syntax::parse;
 
 use crate::extract::{ExtractOptions, extract};
-use crate::model::{ClassDecl, FileSymbols, Method};
+use crate::index::Index;
+use crate::model::{ClassDecl, Doc, FileSymbols, Method};
 
 fn laravel() -> &'static FileSymbols {
     static PARSED: OnceLock<FileSymbols> = OnceLock::new();
@@ -17,6 +18,88 @@ fn laravel() -> &'static FileSymbols {
             ExtractOptions::default(),
         )
     })
+}
+
+/// What a function or method of the overlay says about its arguments.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Marker {
+    /// The argument at `position` names something a project declares: `config`, `route`, `view`,
+    /// `translation`, `env` or `ability`.
+    Key { kind: String, position: usize },
+    /// The argument at `position` names a binding of the service container.
+    Container { position: usize },
+}
+
+struct Entry {
+    /// The class that declares the method, `None` for a function.
+    class: Option<String>,
+    marker: Marker,
+}
+
+fn markers() -> &'static HashMap<String, Vec<Entry>> {
+    static MARKERS: OnceLock<HashMap<String, Vec<Entry>>> = OnceLock::new();
+    MARKERS.get_or_init(|| {
+        let mut out: HashMap<String, Vec<Entry>> = HashMap::new();
+        let symbols = laravel();
+        let mut add = |class: Option<&str>, name: &str, doc: Option<&Doc>| {
+            let Some(doc) = doc else {
+                return;
+            };
+            for tag in &doc.tags {
+                let mut words = tag.text.split_whitespace();
+                let marker = match tag.name.as_str() {
+                    "key" => {
+                        let Some(kind) = words.next() else {
+                            continue;
+                        };
+                        let position = words.next().and_then(|word| word.parse().ok()).unwrap_or(0);
+                        Marker::Key {
+                            kind: kind.to_string(),
+                            position,
+                        }
+                    }
+                    "container" => Marker::Container {
+                        position: words.next().and_then(|word| word.parse().ok()).unwrap_or(0),
+                    },
+                    _ => continue,
+                };
+                out.entry(name.to_ascii_lowercase()).or_default().push(Entry {
+                    class: class.map(str::to_string),
+                    marker,
+                });
+            }
+        };
+        for function in &symbols.functions {
+            add(None, &function.name, function.doc.as_deref());
+        }
+        for class in &symbols.classes {
+            for method in &class.methods {
+                add(Some(&class.name), &method.name, method.doc.as_deref());
+            }
+        }
+        out
+    })
+}
+
+/// The markers of a function, or of a method declared in `declaring` or a class above it. Without the
+/// framework in the project nothing is marked.
+pub fn markers_for(index: &Index, declaring: Option<&str>, name: &str) -> Vec<Marker> {
+    let frameworks = index.frameworks();
+    if !(frameworks.laravel || frameworks.facades) {
+        return Vec::new();
+    }
+    let Some(entries) = markers().get(&name.to_ascii_lowercase()) else {
+        return Vec::new();
+    };
+    entries
+        .iter()
+        .filter(|entry| match (&entry.class, declaring) {
+            (None, None) => frameworks.laravel,
+            (Some(class), Some(declaring)) => index.is_subclass_of(declaring, class),
+            _ => false,
+        })
+        .map(|entry| entry.marker.clone())
+        .collect()
 }
 
 /// The tag of a method, with its text.

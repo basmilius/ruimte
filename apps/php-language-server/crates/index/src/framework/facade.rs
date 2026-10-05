@@ -8,7 +8,6 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use super::Section;
-use super::container::CoreAliases;
 use super::source::{Literal, literal_of, method_at, returned_expression, tree_of};
 use crate::hierarchy::{Ancestor, Found};
 use crate::index::{Class, Index};
@@ -53,7 +52,7 @@ fn read_target(index: &Index, class: Class<'_>) -> Option<Name> {
     let accessor = accessor_of(index, class);
     let from_accessor = match accessor {
         Some(Literal::Class(name)) => Some(name),
-        Some(Literal::Text(alias, _)) => index.section::<CoreAliases>().class_of(&alias),
+        Some(Literal::Text(alias, _)) => super::container::class_of(index, &alias),
         None => None,
     };
     from_accessor.or_else(|| {
