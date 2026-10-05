@@ -102,9 +102,9 @@ Left out: effects a scope cannot carry (the underline under a TypeScript paramet
 | 3b | Folding, wrap, editorconfig, sticky scroll, breadcrumb, git markers, scroll track, find and replace | Done |
 | 4a | Binding, status bar, diagnostics, semantic tokens, inlay hints, hover, completion, signature help, highlights, symbols, Vue | Done |
 | 4b | Workspace edits and commands, code actions, rename, go to definition, peek references, go to symbol, Problems, context menu, clickable names in the hover | Done |
-| Test round | A round of testing the editor without AI before building on it | Now |
+| Test round | A round of testing the editor without AI before building on it | Done, with a second platform review and a fix round |
 | Platform parity | The gaps a comparison with the platform's sources found: typing and editing (A), code insight (C), then carets, mouse and view (B) with the keymap | Done, being tested |
-| 5 | AI in the editor | After the test round |
+| 5 | AI in the editor: selection to chat, provenance and the gutter, conflicts and review, inline edit | Done, being tested |
 | 6 | On the device | After 5 |
 | Cleanup | Remove the previous engine, close the known limits | When parity is confirmed |
 
