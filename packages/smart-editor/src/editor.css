@@ -184,8 +184,7 @@
 .se-folded::before {
     transform: translateX(-2px) rotate(-45deg);
 }
-.se-gutter:hover .se-fold-toggle,
-.se-fold-toggle.se-folded {
+.se-gutter:hover .se-fold-toggle {
     opacity: 1;
 }
 .se-gutter-action {

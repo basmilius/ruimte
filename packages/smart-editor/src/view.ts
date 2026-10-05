@@ -65,12 +65,8 @@ const FOLD_LIMIT = 2_000_000;
 const MIN_GUTTER_WIDTH = 64;
 /* The caret stays solid this long after it moved, so holding an arrow key does not blink it between steps. */
 const CARET_SOLID_MS = 500;
-/*
- * A jump to something already in view leaves the view where it is, and one to something out of view puts it
- * a third from the top. The platform's own default is to move the view for a jump even then; here it is a
- * switch, so the one place that decides it says so.
- */
-const REFRAIN_FROM_SCROLLING = true;
+/* A jump moves the view even to something already in view, as the platform does by default. */
+const REFRAIN_FROM_SCROLLING = false;
 /* Selecting text marks its other occurrences, unless there are more than this many, which would be noise. */
 const OCCURRENCE_LIMIT = 50;
 const OCCURRENCE_TEXT_LIMIT = 1000;

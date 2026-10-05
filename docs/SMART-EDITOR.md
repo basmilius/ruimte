@@ -12,6 +12,8 @@ The plan for the code editor that replaces the previous engine (`packages/editor
 
 ## Decisions
 
+- Option+Cmd+L is Reformat, as on the platform; the AI features of phase 5 get keys of their own.
+
 - The keymap follows the platform's macOS keymap wherever it does not collide with Ruimte's own shortcuts; every shortcut keeps a modifier. See "Keymap".
 - Camel-hump word movement is off by default and a setting.
 
@@ -54,7 +56,7 @@ What the editor does that a person notices, and the rule behind it:
 - The caret added last is the primary one. The view scrolls to it, a language feature reads it, Escape keeps the oldest.
 - A double click selects an identifier (not a word break) and a drag after it grows by words; a triple click and a press on a line number select lines and a drag grows by lines, Shift on a number grows or shrinks the selected lines.
 - Selected text can be carried: a press on a selection waits for the pointer to move five pixels, then shows a drop caret; the copy key (Option on macOS, Ctrl elsewhere) at the drop copies. A press that does not move puts the caret there.
-- Scrolling follows the platform's scrolling model: a line of margin when a caret is kept in view, a third from the top for a jump to something out of view, and Page Up and Down move whole lines with the caret on the same row. A jump to something already in view leaves the view alone (`REFRAIN_FROM_SCROLLING` in `view.ts`; the platform's own default would move it). A scroll over more than a line takes up to a tenth of a second, a wheel or a touch ends it, and reduced motion turns it off.
+- Scrolling follows the platform's scrolling model: a line of margin when a caret is kept in view, a third from the top for a jump, also to something already in view (the platform's default), and Page Up and Down move whole lines with the caret on the same row. A scroll over more than a line takes up to a tenth of a second, a wheel or a touch ends it, and reduced motion turns it off.
 - Word moves stop at the end of a word, then at the start of the next line, and on an empty line; deleting by word stops at both edges. Camel humps are a setting.
 - Home and End go by the rows of a wrapped line; Home inside the indentation goes to the start of the line.
 - Folds: brackets, block comments, indentation, import lists, runs of line comments and `region` markers. The import list folds when a file opens for the first time, and what is folded is kept per file with the scroll and the caret. Fold selection folds whole lines, so a selection inside one line has nothing to fold.
@@ -91,8 +93,8 @@ Bas tests the editor without AI features. Findings are fixed before phase 5 star
 
 From the "Code Editor AI" design:
 
-- Selection to chat: ⌥⌘L puts the selection as a code block in the draft of a linked chat, without sending it.
-- Inline prompt (⌘I, 2b): pick the agent per request; the selection and the problems on those lines go along as context. The work runs as a chat in the project, and the result comes back under the selection.
+- Selection to chat (a key of its own, since Option+Cmd+L is Reformat) puts the selection as a code block in the draft of a linked chat, without sending it.
+- Inline prompt (2b): pick the agent per request; the selection and the problems on those lines go along as context. The work runs as a chat in the project, and the result comes back under the selection.
 - Agent changes in open files: Off, Gutter (a chip in the header, a named cursor, a bar in the agent's color on changed lines) or Review (Keep, Undo or Comment per change; a comment goes to the chat as a draft with file and line).
 - Provenance: hovering the colored bar shows the chat and the turn that wrote those lines, with the prompt.
 - Conflict with unsaved work: when an agent writes while a person has unsaved changes, nothing is overwritten; per block a person picks the version that stays.

@@ -23,7 +23,7 @@ The element needs a positioned box that its parent sizes, and the page needs `ed
 - `overview.ts`: the ticks in the scroll track for the host's change marks (`setChangeMarks`, also drawn in the gutter) and the find matches.
 - `find.ts`: the matches of the host's find bar. They are marked in the editor and never touch the selection until `endFind`.
 - `semantic.ts` and `theme-scopes.ts`: what a language server classified, drawn over the grammar's colors. The host hands scopes (`setSemanticTokens`), and the theme's own rules decide the color (`scopeColors`, `shikiScopeColors`), so a class is the theme's class color. A scope the theme says nothing about keeps what the grammar made.
-- `scroll.ts` and `scroll-animation.ts`: where a scroll goes (the platform's scrolling model: margins, a third from the top, centering only for what is out of view) and how it gets there, over up to a tenth of a second and never for a line or less.
+- `scroll.ts` and `scroll-animation.ts`: where a scroll goes (the platform's scrolling model: margins, and a jump a third from the top) and how it gets there, over up to a tenth of a second and never for a line or less.
 - `keymap-table.ts`: the keys of every editor and language command for macOS and the other platforms, which the client prints in its menus too (`@ruimte/smart-editor/keymap`).
 - `engine.ts`: the `Editor` contract over a model and a view.
 

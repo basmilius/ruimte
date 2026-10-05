@@ -348,7 +348,7 @@ describe('the keyboard', () => {
 
     test('keeps a line of margin below the caret while it moves down and above it while it moves up', () => {
         const text = Array.from({ length: 100 }, (_, i) => `line ${i}`).join('\n');
-        const { press, viewport } = mountEditor({ text, line: 19 });
+        const { press, viewport } = mountEditor({ text, line: 19, scrollTop: 0 });
         expect(viewport.scrollTop).toBe(0);
         press('ArrowDown');
         expect(viewport.scrollTop).toBe(20);
@@ -362,11 +362,11 @@ describe('the keyboard', () => {
         expect(viewport.scrollTop).toBeLessThan(400);
     });
 
-    test('puts a jump to a line out of view a third from the top and leaves one in view alone', () => {
+    test('puts a jump a third from the top, also to a line already in view', () => {
         const text = Array.from({ length: 100 }, (_, i) => `line ${i}`).join('\n');
         const { editor, viewport } = mountEditor({ text });
         editor.revealLine(10);
-        expect(viewport.scrollTop).toBe(0);
+        expect(viewport.scrollTop).toBe(9 * 20 - 133);
         editor.revealLine(61);
         expect(viewport.scrollTop).toBe(60 * 20 - 133);
         editor.setCaret({ line: 80, character: 0 }, 'centerDown');
