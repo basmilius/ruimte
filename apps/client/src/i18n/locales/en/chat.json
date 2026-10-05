@@ -31,5 +31,16 @@
         "dropped": "The connection to the machine dropped, which ended the login.",
         "outdated": "This machine needs an update before you can log in from here. Update Ruimte on it, or log in from a project that is open on it.",
         "failed": "The login could not start: {{reason}}"
+    },
+    "selection": {
+        "title": "Add selection to chat",
+        "linked": "Linked",
+        "here": "Open here",
+        "others": "Other chats",
+        "newWith": "New chat with {{provider}}",
+        "note": "Adds {{label}} to the draft. Nothing is sent yet.",
+        "ask": "Ask {{provider}}",
+        "problem": "Problem: {{message}}",
+        "noChat": "No chat could be started"
     }
 }

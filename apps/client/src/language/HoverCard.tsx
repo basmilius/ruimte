@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { CircleX, Info, TriangleAlert } from 'lucide-react';
 import { fileUriToPath } from '@ruimte/smart-editor-lsp';
+import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { Button, Icon, Tooltip } from '@basmilius/desktop-ui';
 import { formatNumber } from '@basmilius/desktop-ui/format';
 import { basenameOf } from '@/shell/panels/files-tree';
 import type { EditorPosition } from '@ruimte/smart-editor';
+import { useAskAgents } from './ask-agents';
 import type { EditorLanguage } from './editor-language';
 import { codeLabelOf, severityOf, type Problem } from './diagnostics-model';
 import type { HoverInfo } from './popups';
@@ -15,6 +17,8 @@ const SEVERITY_COLORS = { error: 'text-status-error', warning: 'text-status-need
 
 function ProblemSection({ problem, language }: { problem: Problem; language: EditorLanguage }) {
     const { t } = useTranslation('panels');
+    const { t: chat } = useTranslation('chat');
+    const agents = useAskAgents();
     const { diagnostic } = problem;
     const severity = severityOf(diagnostic);
     const label = [codeLabelOf(diagnostic), problem.server].filter((part, index, all) => part !== '' && all.indexOf(part) === index).join(' · ');
@@ -41,7 +45,7 @@ function ProblemSection({ problem, language }: { problem: Problem; language: Edi
                     </div>
                 );
             })}
-            <div className="flex items-center gap-1 pt-1 pl-[22px]">
+            <div className="flex flex-wrap items-center gap-1 pt-1 pl-[22px]">
                 <Tooltip label={supported ? t('language.hover.quickFix') : t('language.hover.quickFixNone')}>
                     <Button
                         size="xs"
@@ -57,6 +61,20 @@ function ProblemSection({ problem, language }: { problem: Problem; language: Edi
                         {t('language.hover.quickFix')}
                     </Button>
                 </Tooltip>
+                {agents.map((agent) => (
+                    <Button
+                        key={agent.kind}
+                        size="xs"
+                        variant="secondary"
+                        onClick={() => {
+                            language.hover.hide();
+                            language.selectionChat.askAboutProblem(problem, agent.kind);
+                        }}
+                    >
+                        <AgentIcon kind={agent.kind} size={12} />
+                        {chat('selection.ask', { provider: agent.name })}
+                    </Button>
+                ))}
             </div>
         </div>
     );

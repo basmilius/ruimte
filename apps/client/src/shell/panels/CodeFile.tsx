@@ -186,7 +186,9 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     // Where the placeholder was scrolled to, for the editor that replaces it.
     const viewerScroll = useRef(0);
     // A jump to a line is asked of a tab, so a node or a view of its own never answers one.
-    const tabKey = useFileActions()?.tabKey ?? null;
+    const fileActions = useFileActions();
+    const tabKey = fileActions?.tabKey ?? null;
+    const nodeId = fileActions?.nodeId ?? null;
     const reveal = useFiles((s) => (s.revealLine !== null && s.revealLine.key === tabKey ? s.revealLine : null));
     const caret = useFiles((s) => (s.caret !== null && s.caret.key === tabKey ? s.caret : null));
 
@@ -233,6 +235,9 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
         const element = surface.current;
         return editorLanguage === null || element === null ? undefined : registerFocusedLanguage(editorLanguage, element);
     }, [editorLanguage]);
+    useEffect(() => {
+        editorLanguage?.selectionChat.bindNode(nodeId);
+    }, [editorLanguage, nodeId]);
     useChangeMarks(editor, useGitBase(path, read.text));
     const folder = useProject((s) => s.current?.folder ?? null);
 

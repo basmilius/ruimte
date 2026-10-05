@@ -18,6 +18,7 @@ import { RenameFeature } from './rename';
 import { createPopupStore } from './popups';
 import { realTimers, type Timers } from './timers';
 import { InlayHintsFeature } from './inlay-hints';
+import { SelectionChatFeature } from './selection-chat';
 import { SelectionRangesFeature } from './selection-ranges';
 import { SemanticTokensFeature } from './semantic-tokens';
 import { SignatureFeature } from './signature';
@@ -54,6 +55,7 @@ export class EditorLanguage {
     readonly definitionLink: DefinitionLinkFeature;
     readonly symbols: SymbolsFeature;
     readonly codeVision: CodeVisionFeature;
+    readonly selectionChat: SelectionChatFeature;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -79,6 +81,7 @@ export class EditorLanguage {
         this.peek = new PeekFeature(this);
         this.symbolPicker = new SymbolPickerFeature(this);
         this.contextMenu = new ContextMenuFeature(this);
+        this.selectionChat = new SelectionChatFeature(this);
         this.history = new HistoryFeature(this);
         this.definitionLink = new DefinitionLinkFeature(this);
         this.codeVision = new CodeVisionFeature(this, (listener) => this.symbols.onResult(listener), timers);

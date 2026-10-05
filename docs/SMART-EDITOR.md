@@ -68,7 +68,7 @@ Three entries differ from the platform for a reason other than a collision. Shri
 
 Find (Cmd+F) and Replace (Cmd+Shift+H) are Ruimte's, for every surface with a find bar; the editor adds the platform's Replace (Cmd+R, Ctrl+R) and find next and previous (Cmd+G and Cmd+Shift+G, Ctrl+L and Ctrl+Shift+L). Adding a caret above or below is a gesture and has no chord: tap Option twice on macOS (Ctrl elsewhere), hold it and press Up or Down; the Code menu has both commands. Text motion (arrows, Home, End, Page Up and Down, Enter, Tab, Backspace, Delete, Escape, and Cmd+Up and Down for the ends of the text on macOS) is the same everywhere and not in the table.
 
-The AI design gave Option+Cmd+L to sending the selection to a chat; Reformat keeps it, and phase 5 picks another key.
+The AI design gave Option+Cmd+L to sending the selection to a chat; Reformat keeps it, and selection to chat takes Option+Cmd+K (Ctrl+Alt+K elsewhere), bound in the editor key table.
 
 ## Carets, mouse and view
 
@@ -122,7 +122,7 @@ Bas tests the editor without AI features. Findings are fixed before phase 5 star
 
 From the "Code Editor AI" design:
 
-- Selection to chat (a key of its own, since Option+Cmd+L is Reformat) puts the selection as a code block in the draft of a linked chat, without sending it.
+- Selection to chat (Option+Cmd+K, since Option+Cmd+L is Reformat) puts the selection as a code block in the draft of a linked chat, without sending it. Done: the chooser lists linked chats, chats in view and the other chats, and starts a new linked chat; Ask Claude Code and Ask Codex sit in the context menu and the problem card.
 - Inline prompt (2b): pick the agent per request; the selection and the problems on those lines go along as context. The work runs as a chat in the project, and the result comes back under the selection.
 - Agent changes in open files: Off, Gutter (a chip in the header, a named cursor, a bar in the agent's color on changed lines) or Review (Keep, Undo or Comment per change; a comment goes to the chat as a draft with file and line).
 - Provenance: hovering the colored bar shows the chat and the turn that wrote those lines, with the prompt.

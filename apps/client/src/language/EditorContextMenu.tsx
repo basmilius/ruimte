@@ -1,9 +1,25 @@
 import { Fragment, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Copy, Lightbulb, LocateFixed, MapPin, Blocks, Type, Rows3, TextCursorInput, AlignLeft, Scissors, ClipboardPaste, Wand2 } from 'lucide-react';
+import {
+    Copy,
+    Lightbulb,
+    MessageSquarePlus,
+    LocateFixed,
+    MapPin,
+    Blocks,
+    Type,
+    Rows3,
+    TextCursorInput,
+    AlignLeft,
+    Scissors,
+    ClipboardPaste,
+    Wand2
+} from 'lucide-react';
+import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { ContextMenu, Icon, Kbd } from '@basmilius/desktop-ui';
 import type { Shortcut } from '@basmilius/desktop-ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { useAskAgents } from './ask-agents';
 import type { EditorLanguage } from './editor-language';
 import type { MenuView } from './popups';
 import type { NavigationKind } from './navigation';
@@ -62,6 +78,8 @@ function Rows({ rows }: { rows: readonly Row[] }) {
 export function EditorContextMenu({ language, view }: { language: EditorLanguage; view: MenuView }) {
     const { t } = useTranslation('shell');
     const { t: panels } = useTranslation('panels');
+    const { t: chat } = useTranslation('chat');
+    const agents = useAskAgents();
     const trigger = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -95,6 +113,15 @@ export function EditorContextMenu({ language, view }: { language: EditorLanguage
                     </Fragment>
                 ))}
                 {groups.length > 0 && <ContextMenu.Separator />}
+                <ContextMenu.Item onClick={() => language.selectionChat.choose()}>
+                    <Icon icon={MessageSquarePlus} size={14} /> {t('menu.selectionToChat')} <Kbd shortcut={CANVAS_SHORTCUTS.selectionToChat} />
+                </ContextMenu.Item>
+                {agents.map((agent) => (
+                    <ContextMenu.Item key={agent.kind} onClick={() => language.selectionChat.askAbout(agent.kind)}>
+                        <AgentIcon kind={agent.kind} /> {chat('selection.ask', { provider: agent.name })}
+                    </ContextMenu.Item>
+                ))}
+                <ContextMenu.Separator />
                 <ContextMenu.Item onClick={() => language.contextMenu.clipboard('cut')}>
                     <Icon icon={Scissors} size={14} /> {panels('language.context.cut')}
                 </ContextMenu.Item>

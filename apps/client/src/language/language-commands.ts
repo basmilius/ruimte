@@ -21,7 +21,8 @@ const RUNNERS: Record<LanguageCommandId, (language: EditorLanguage) => void> = {
     'go-to-implementation': (language) => void language.navigation.go('implementation'),
     'peek-references': (language) => void language.peek.open(),
     'organize-imports': (language) => void language.codeActions.organizeImports(),
-    'format-document': (language) => void language.codeActions.formatDocument()
+    'format-document': (language) => void language.codeActions.formatDocument(),
+    'selection-to-chat': (language) => language.selectionChat.choose()
 };
 
 export interface LanguageCommandRow {

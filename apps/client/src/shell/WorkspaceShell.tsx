@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import i18next from 'i18next';
 import { WebviewParking } from '@/browser/WebviewParking';
 import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
+import { ChatChooserMenu } from '@/chat/ChatChooserMenu';
 import { connectWorkspaceChatHost } from '@/chat/workspace-host';
 import { useCanvasShortcuts } from '@/canvas/canvas-shortcuts';
 import { CellOverlayLayer } from '@/shell/CellOverlay';
@@ -112,6 +113,9 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
             {/* About the project that is open, so they belong to its workspace and not to the shell. */}
             <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                 <LayoutDialog />
+            </ErrorBoundary>
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <ChatChooserMenu />
             </ErrorBoundary>
             <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                 <ViewDialogs />

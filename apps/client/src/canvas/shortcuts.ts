@@ -57,6 +57,7 @@ export const CANVAS_SHORTCUTS = {
     rename: requiredShortcut('renameSymbol'),
     organizeImports: requiredShortcut('organizeImports'),
     formatDocument: requiredShortcut('formatDocument'),
+    selectionToChat: requiredShortcut('selectionToChat'),
     previousMessage: shortcut('Alt+ArrowUp'),
     nextMessage: shortcut('Alt+ArrowDown')
 } as const;

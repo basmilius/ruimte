@@ -33,7 +33,7 @@ export function FileNode({ id, focused }: { id: string; focused: boolean }) {
     const gate = useMemo(() => ({ focused }), [focused]);
     return (
         <FileNodeGateContext.Provider value={gate}>
-            <FileSurface path={path} on="node" />
+            <FileSurface path={path} on="node" nodeId={id} />
         </FileNodeGateContext.Provider>
     );
 }

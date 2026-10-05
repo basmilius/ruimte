@@ -31,5 +31,16 @@
         "dropped": "De verbinding met de machine viel weg, en daarmee stopte de login.",
         "outdated": "Deze machine heeft eerst een update nodig voordat je hier kunt inloggen. Werk Ruimte daar bij, of log in vanuit een project dat erop open staat.",
         "failed": "De login kon niet starten: {{reason}}"
+    },
+    "selection": {
+        "title": "Selectie aan chat toevoegen",
+        "linked": "Gekoppeld",
+        "here": "Hier geopend",
+        "others": "Andere chats",
+        "newWith": "Nieuwe chat met {{provider}}",
+        "note": "Zet {{label}} in het concept. Er wordt nog niets verstuurd.",
+        "ask": "Vraag aan {{provider}}",
+        "problem": "Probleem: {{message}}",
+        "noChat": "Er kon geen chat worden gestart"
     }
 }

@@ -24,10 +24,10 @@ function WithoutRenderer({ children }: { children: ReactNode }) {
  * shows a file (a preview tab, a node on the canvas, a view of its own) has one loading state and
  * one error state, and a renderer only ever sees a file that is there.
  */
-export function FileBody({ path, name, on, tabKey }: { path: string; name: string; on: FileSurfaceKind; tabKey?: string }) {
+export function FileBody({ path, name, on, tabKey, nodeId }: { path: string; name: string; on: FileSurfaceKind; tabKey?: string; nodeId?: string }) {
     const { t } = useTranslation('panels');
     const { state, retry } = useFileRead(path);
-    const actions = useMemo(() => ({ path, name, on, tabKey, refresh: retry }), [path, name, on, tabKey, retry]);
+    const actions = useMemo(() => ({ path, name, on, tabKey, nodeId, refresh: retry }), [path, name, on, tabKey, nodeId, retry]);
 
     const body = (): ReactNode => {
         if (state.status === 'loading') {
