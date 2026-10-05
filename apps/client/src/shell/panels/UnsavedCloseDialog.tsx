@@ -29,7 +29,7 @@ export function UnsavedCloseDialog() {
                     {pending?.paths.map((path) => (
                         <div key={path} className="overflow-hidden rounded-md border border-border">
                             <p className="px-3 py-2 text-xs break-all text-text">{path}</p>
-                            <DraftBar endpointId={pending.endpointId} path={path} />
+                            <DraftBar endpointId={pending.endpointId} path={path} onReviewed={close} />
                         </div>
                     ))}
                 </div>

@@ -168,7 +168,9 @@
             "failed": "Niet opgeslagen. {{reason}}",
             "notConnected": "De machine is niet verbonden.",
             "saveFailed": "De machine heeft het bestand niet opgeslagen.",
-            "notText": "Het bestand is geen tekst meer."
+            "notText": "Het bestand is geen tekst meer.",
+            "review": "Wijzigingen beoordelen",
+            "agentWrote": "{{name}} heeft naar {{file}} geschreven terwijl je niet-opgeslagen wijzigingen had."
         },
         "unsaved": {
             "mark": "Niet-opgeslagen wijzigingen",
@@ -192,6 +194,40 @@
             "wrotePossibly_other": "schreef mogelijk regels {{lines}}",
             "wrote_one": "schreef regel {{lines}}",
             "wrote_other": "schreef regels {{lines}}"
+        },
+        "conflict": {
+            "yours": "Van jou",
+            "unsaved": "niet opgeslagen",
+            "yoursRemoved": "jij hebt deze regels verwijderd",
+            "keepYours": "Houd de jouwe",
+            "keepTheirs": "Houd die van {{name}}",
+            "keepOther": "Houd de andere",
+            "keepBoth": "Houd beide",
+            "other": "Een ander programma",
+            "agent": "Agent",
+            "theirsRemoved": "verwijdert deze regels"
+        },
+        "review": {
+            "keep": "Behouden",
+            "undo": "Ongedaan maken",
+            "comment": "Opmerking",
+            "keepAll": "Alles behouden",
+            "undoAll": "Alles ongedaan maken",
+            "next": "Volgende wijziging",
+            "previous": "Vorige wijziging",
+            "position": "{{current}} van {{total}}",
+            "summary_one": "{{name}} heeft {{count}} plek gewijzigd",
+            "summary_other": "{{name}} heeft {{count}} plekken gewijzigd",
+            "summaryTurn_one": "Turn {{turn}} in {{name}} heeft {{count}} plek gewijzigd",
+            "summaryTurn_other": "Turn {{turn}} in {{name}} heeft {{count}} plekken gewijzigd",
+            "summaryMany_one": "{{count}} agentwijziging om te beoordelen",
+            "summaryMany_other": "{{count}} agentwijzigingen om te beoordelen",
+            "removed": "Verwijderde regels",
+            "commentLabel": "Opmerking bij deze wijziging",
+            "commentPlaceholder": "Zeg tegen {{name}} wat er anders moet",
+            "commentAdds": "Zet {{label}} in het concept in {{chat}}",
+            "addToDraft": "Aan concept toevoegen",
+            "noChat": "De chat bestaat niet meer"
         }
     },
     "files": {

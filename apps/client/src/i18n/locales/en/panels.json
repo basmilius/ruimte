@@ -168,7 +168,9 @@
             "failed": "Not saved. {{reason}}",
             "notConnected": "The machine is not connected.",
             "saveFailed": "The machine did not save the file.",
-            "notText": "The file is not text any more."
+            "notText": "The file is not text any more.",
+            "review": "Review changes",
+            "agentWrote": "{{name}} wrote to {{file}} while you had unsaved changes."
         },
         "unsaved": {
             "mark": "Unsaved changes",
@@ -192,6 +194,40 @@
             "wrotePossibly_other": "possibly wrote lines {{lines}}",
             "wrote_one": "wrote line {{lines}}",
             "wrote_other": "wrote lines {{lines}}"
+        },
+        "conflict": {
+            "yours": "Yours",
+            "unsaved": "unsaved",
+            "yoursRemoved": "you removed these lines",
+            "keepYours": "Keep yours",
+            "keepTheirs": "Keep {{name}}’s",
+            "keepOther": "Keep theirs",
+            "keepBoth": "Keep both",
+            "other": "Another program",
+            "agent": "Agent",
+            "theirsRemoved": "removes these lines"
+        },
+        "review": {
+            "keep": "Keep",
+            "undo": "Undo",
+            "comment": "Comment",
+            "keepAll": "Keep all",
+            "undoAll": "Undo all",
+            "next": "Next change",
+            "previous": "Previous change",
+            "position": "{{current}} of {{total}}",
+            "summary_one": "{{name}} changed {{count}} place",
+            "summary_other": "{{name}} changed {{count}} places",
+            "summaryTurn_one": "Turn {{turn}} in {{name}} changed {{count}} place",
+            "summaryTurn_other": "Turn {{turn}} in {{name}} changed {{count}} places",
+            "summaryMany_one": "{{count}} agent change to review",
+            "summaryMany_other": "{{count}} agent changes to review",
+            "removed": "Removed lines",
+            "commentLabel": "Comment on this change",
+            "commentPlaceholder": "Tell {{name}} what to change",
+            "commentAdds": "Adds {{label}} to the draft in {{chat}}",
+            "addToDraft": "Add to draft",
+            "noChat": "The chat is gone"
         }
     },
     "files": {
