@@ -198,6 +198,11 @@ export class OnDeviceModel {
             }
             return;
         }
+        if (event.type === 'session') {
+            // A helper from before `--oneshot` ignores the flag and opens a conversation instead.
+            this.lose(new CodedError('unavailable', 'The on-device helper is older than this daemon.'));
+            return;
+        }
         if (event.type === 'startup.error') {
             this.lose(new CodedError('unavailable', event.text));
             return;

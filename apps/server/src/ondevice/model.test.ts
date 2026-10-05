@@ -106,6 +106,14 @@ describe('on-device model', () => {
         expect(rig.fake.started).toHaveLength(2);
     });
 
+    test('a helper from before one-shot mode is refused instead of waited on', async () => {
+        const rig = harness();
+        const running = rig.model.generate({ purpose: 'explain', prompt: 'x' });
+        await new Promise((resolve) => setImmediate(resolve));
+        rig.out({ type: 'session', id: '00000000-0000-4000-8000-000000000000', restored: false });
+        await expect(running).rejects.toMatchObject({ code: 'unavailable', message: 'The on-device helper is older than this daemon.' });
+    });
+
     test('a helper that crashes fails what waits and is started again by the next request', async () => {
         const rig = harness();
         const running = rig.model.generate({ purpose: 'explain', prompt: 'x' });
