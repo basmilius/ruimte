@@ -88,7 +88,7 @@ function reindent(source: EditSource, from: number, text: string, options: Paste
 /*
  * What pasting `text` does at every selection: one line for each caret when the counts match, text
  * copied from a bare caret as lines above the caret's own, and a block moved to the indentation of
- * the line it lands on.
+ * the line it lands on, when it lands in code and not in a string, a comment or a heredoc.
  */
 export function planPaste(source: EditSource, selections: readonly Selection[], text: string, options: PasteOptions): EditPlan {
     const ordered = selections.map((selection, index) => ({
@@ -116,7 +116,7 @@ export function planPaste(source: EditSource, selections: readonly Selection[], 
     let shift = 0;
     for (const [position, { from, to, index }] of ordered.entries()) {
         const piece = segments?.[position] ?? text;
-        const inserted = options.reindent && segments === null ? reindent(source, from, piece, options) : piece;
+        const inserted = options.reindent && segments === null && source.context(from).mode === 'code' ? reindent(source, from, piece, options) : piece;
         edits.push({ from, to, text: inserted });
         const head = from + shift + inserted.length;
         carets[index] = { anchor: head, head };

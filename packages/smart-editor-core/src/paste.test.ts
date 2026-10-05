@@ -105,3 +105,25 @@ describe('paste indentation', () => {
         paste('f(\n    ¦\n)\ng(\n¦\n)', 'a\nb\nc', 'f(\n    a\n    b\n    c¦\n)\ng(\na\nb\nc¦\n)');
     });
 });
+
+describe('paste that lands outside code', () => {
+    const block = 'if (x) {\n    run();\n}';
+
+    it('keeps the lines as copied inside a template literal, a string, a block comment and a line comment', () => {
+        paste('function f() {\n    const a = `¦`;\n}', block, 'function f() {\n    const a = `' + block + '¦`;\n}');
+        paste('function f() {\n    /*\n     * ¦\n     */\n}', block, 'function f() {\n    /*\n     * ' + block + '¦\n     */\n}');
+        paste('function f() {\n    // note ¦\n}', block, 'function f() {\n    // note ' + block + '¦\n}');
+        paste("function f() {\n    const a = 'x¦';\n}", block, "function f() {\n    const a = 'x" + block + "¦';\n}");
+    });
+
+    it('keeps the lines as copied in a heredoc and in the markup of a PHP file', () => {
+        paste('<?php\nfunction f() {\n    $a = <<<EOT\n  ¦\nEOT;\n}', block, '<?php\nfunction f() {\n    $a = <<<EOT\n  ' + block + '¦\nEOT;\n}', {
+            language: 'php'
+        });
+        paste('<?php ?>\n<div>¦</div>', block, '<?php ?>\n<div>' + block + '¦</div>', { language: 'php' });
+    });
+
+    it('still moves a block to the indentation of the code it lands in', () => {
+        paste('function f() {\n    ¦\n}', block, 'function f() {\n    ' + block.replace(/\n/g, '\n    ') + '¦\n}');
+    });
+});
