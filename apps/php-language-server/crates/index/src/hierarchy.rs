@@ -2,6 +2,7 @@
 //! interfaces', with the template arguments of `@extends Base<Foo>` carried down the chain.
 
 use std::borrow::Cow;
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -57,7 +58,7 @@ impl Index {
     /// its parent chain, its interfaces, then the classes its doc comments mix in.
     pub fn ancestors(&self, ty: &Type) -> Vec<Ancestor<'_>> {
         let mut out = Vec::new();
-        let mut seen = HashSet::new();
+        let mut seen = HashMap::new();
         match ty {
             Type::Class { .. } => self.walk(ty, false, None, Vec::new(), Vec::new(), &mut out, &mut seen, 0),
             Type::Union(members) | Type::Intersection(members) => {
@@ -96,17 +97,35 @@ impl Index {
         excluded: Vec<String>,
         aliases: Vec<AliasRule>,
         out: &mut Vec<Ancestor<'a>>,
-        seen: &mut HashSet<String>,
+        seen: &mut HashMap<String, (bool, usize)>,
         depth: usize,
     ) {
         let Type::Class { name, args } = ty else {
             return;
         };
-        if depth > MAX_DEPTH || !seen.insert(name.to_ascii_lowercase()) {
+        if depth > MAX_DEPTH {
             return;
         }
         let Some(class) = self.class(name) else {
             return;
+        };
+        // A class met again is walked again only when the first time left a template unbound (or gave
+        // none at all) and this way down binds it, as a child that names the interface its raw parent
+        // implements. It then keeps its place and takes the better answer.
+        let wanted = class.decl.doc.iter().flat_map(|doc| doc.templates.iter()).count();
+        let bound = args.len() >= wanted && args.iter().all(|arg| !arg.has_template());
+        let revisited = match seen.entry(name.to_ascii_lowercase()) {
+            Entry::Occupied(mut visited) => {
+                if visited.get().0 || !bound {
+                    return;
+                }
+                visited.get_mut().0 = true;
+                Some(visited.get().1)
+            }
+            Entry::Vacant(vacant) => {
+                vacant.insert((bound, out.len()));
+                None
+            }
         };
         let mut subst = HashMap::new();
         for (index, template) in class.decl.doc.iter().flat_map(|doc| doc.templates.iter()).enumerate() {
@@ -118,15 +137,18 @@ impl Index {
         }
         let subst = Arc::new(subst);
         let self_name = using.map_or_else(|| class.decl.name.clone(), str::to_string);
-        out.push(Ancestor {
-            class,
-            subst: subst.clone(),
-            self_name: self_name.clone(),
-            via_trait,
-            mixin: false,
-            excluded,
-            aliases,
-        });
+        match revisited {
+            Some(at) => out[at].subst = subst.clone(),
+            None => out.push(Ancestor {
+                class,
+                subst: subst.clone(),
+                self_name: self_name.clone(),
+                via_trait,
+                mixin: false,
+                excluded,
+                aliases,
+            }),
+        }
 
         for usage in &class.decl.trait_uses {
             let trait_type = usage.ty.substitute(&subst, None, None);
@@ -185,7 +207,21 @@ impl Index {
                 depth + 1,
             );
         }
-        for interface in &class.decl.implements {
+        // An `@implements` naming an interface the class only inherits is the way a child binds the
+        // templates of a parent that is written raw.
+        let documented = class
+            .decl
+            .doc
+            .iter()
+            .flat_map(|doc| doc.implements.iter())
+            .filter(|documented| {
+                !class
+                    .decl
+                    .implements
+                    .iter()
+                    .any(|declared| matches!((declared, documented), (Type::Class { name: left, .. }, Type::Class { name: right, .. }) if left.eq_ignore_ascii_case(right)))
+            });
+        for interface in class.decl.implements.iter().chain(documented) {
             self.walk(
                 &interface.substitute(&subst, None, None),
                 false,

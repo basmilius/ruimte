@@ -218,7 +218,13 @@ impl Analyzer<'_> {
             }
             NAMED_TYPE | NEW_EXPR | ATTRIBUTE | TRAIT_USE => self.class_targets(&text),
             TRAIT_PRECEDENCE | TRAIT_ALIAS => self.adaptation_targets(&name_node, &text),
-            BINARY_EXPR => self.class_targets(&text),
+            BINARY_EXPR => {
+                if significant_sibling(&name_node, true) == Some(INSTANCEOF_KW) {
+                    self.class_targets(&text)
+                } else {
+                    self.expression_name_targets(&text)
+                }
+            }
             PROPERTY_FETCH_EXPR => {
                 if is_first_child {
                     return self.expression_name_targets(&text);

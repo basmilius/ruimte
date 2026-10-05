@@ -1,6 +1,8 @@
 //! Variables over the statements of a scope: what they are assigned, what a branch learns about
 //! them from its condition, and what is left after a branch merges back.
 
+use std::collections::HashMap;
+
 use php_index::Type;
 use php_index::phpdoc::{TypeContext, parse_var_comment};
 use php_syntax::SyntaxKind::*;
@@ -101,8 +103,18 @@ impl Analyzer<'_> {
         });
         let (callable, _) = php_index::extract::callable_at(function, &self.resolver, class_scope.as_ref());
         let level = self.level();
-        for param in &callable.params {
-            let declared = param.effective_type(level).cloned();
+        let inherited = self.inherited_param_types(function);
+        for (position, param) in callable.params.iter().enumerate() {
+            let declared = param
+                .effective_type(level)
+                .filter(|_| param.doc_ty.is_some())
+                .cloned()
+                .or_else(|| {
+                    let narrower = inherited.get(&position)?;
+                    self.narrows(param.native_type(level), narrower)
+                        .then(|| narrower.clone())
+                })
+                .or_else(|| param.effective_type(level).cloned());
             let mut ty = declared.unwrap_or(Type::Unknown);
             if param
                 .default
@@ -118,6 +130,57 @@ impl Analyzer<'_> {
             }
             env.set(param.name.clone(), ty);
         }
+    }
+
+    /// The documented types of the parameters of the method this one overrides, by position, for the
+    /// parameters it documents nothing for. An `@implements Handler<Message>` thereby gives
+    /// `handle(MessageInterface $message)` the `Message` that `@param T` of the interface stands for.
+    fn inherited_param_types(&self, function: &SyntaxNode) -> HashMap<usize, Type> {
+        let mut found = HashMap::new();
+        let (Some(class), METHOD_DECLARATION) = (&self.class, function.kind()) else {
+            return found;
+        };
+        let Some(name) = function
+            .children()
+            .find(|child| child.kind() == NAME)
+            .map(|name| text_of(&name))
+        else {
+            return found;
+        };
+        for ancestor in self.index.ancestors(&Type::class(&class.name)) {
+            if ancestor.class.decl.name.eq_ignore_ascii_case(&class.name) {
+                continue;
+            }
+            let Some(method) = ancestor.class.decl.method(&name) else {
+                continue;
+            };
+            for (position, param) in method.callable.params.iter().enumerate() {
+                let Some(documented) = &param.doc_ty else {
+                    continue;
+                };
+                let resolved = documented.substitute(&ancestor.subst, None, Some(&ancestor.self_name));
+                if !resolved.has_template() {
+                    found.entry(position).or_insert(resolved);
+                }
+            }
+        }
+        found
+    }
+
+    /// Whether `inherited` only says more than `native` already does, so taking it loses nothing.
+    fn narrows(&self, native: Option<&Type>, inherited: &Type) -> bool {
+        let Some(native) = native else {
+            return true;
+        };
+        if matches!(native, Type::Mixed) {
+            return true;
+        }
+        let Type::Class { name: parent, .. } = native else {
+            return false;
+        };
+        inherited.members().iter().all(
+            |member| matches!(member, Type::Class { name, .. } if self.index.is_subclass_of(name, parent.as_str())),
+        )
     }
 
     fn class_template_names(&self) -> Vec<String> {

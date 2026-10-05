@@ -138,14 +138,19 @@ pub fn doc_items(text: &str, base: u32) -> Vec<DocItem> {
             let stop = text[name_end..line_end].find("*/").map_or(line_end, |at| name_end + at);
             stop.min(line_end)
         };
-        let content = &text[name_end..content_end];
-        let lead = content.len() - content.trim_start().len();
-        let content_start = name_end + lead;
-        let content = content.trim();
         let normalized = tag
             .strip_prefix("psalm-")
             .or_else(|| tag.strip_prefix("phpstan-"))
             .unwrap_or(tag);
+        let content_end = if inline || !TYPED_TAGS.contains(&normalized) {
+            content_end
+        } else {
+            end_of_open_brackets(text, name_end, content_end)
+        };
+        let content = &text[name_end..content_end];
+        let lead = content.len() - content.trim_start().len();
+        let content_start = name_end + lead;
+        let content = content.trim();
         let mut cursor = Cursor {
             text,
             base,
@@ -157,6 +162,57 @@ pub fn doc_items(text: &str, base: u32) -> Vec<DocItem> {
         index = name_end;
     }
     out
+}
+
+/// The tags whose content starts with a type, which may run over several lines.
+const TYPED_TAGS: &[&str] = &[
+    "param",
+    "return",
+    "var",
+    "property",
+    "property-read",
+    "property-write",
+    "throws",
+    "extends",
+    "implements",
+    "use",
+    "mixin",
+    "template-extends",
+    "template-implements",
+    "template-use",
+    "yield",
+    "type",
+];
+
+/// Where a type that opens brackets on its line ends: at the line that closes them, as far as no
+/// other tag or the end of the comment comes first.
+fn end_of_open_brackets(text: &str, from: usize, line_end: usize) -> usize {
+    let mut depth: i32 = 0;
+    let mut end = line_end;
+    let mut line = &text[from..line_end];
+    loop {
+        for byte in line.bytes() {
+            match byte {
+                b'<' | b'{' | b'(' | b'[' => depth += 1,
+                b'>' | b'}' | b')' | b']' => depth -= 1,
+                _ => {}
+            }
+        }
+        if depth <= 0 || end >= text.len() {
+            return end;
+        }
+        let next_start = end + 1;
+        let Some(next) = text.get(next_start..) else {
+            return end;
+        };
+        let next_end = next.find('\n').map_or(text.len(), |at| next_start + at);
+        line = &text[next_start..next_end];
+        let trimmed = line.trim_start_matches([' ', '\t', '*']);
+        if trimmed.starts_with('@') || trimmed.starts_with('/') || line.contains("*/") {
+            return end;
+        }
+        end = next_end;
+    }
 }
 
 /// A tag starts a line (after the comment's own asterisks) or follows an inline `{`.
@@ -266,7 +322,8 @@ impl Cursor<'_> {
         }
         let resolver = NameResolver::new("");
         let cx = TypeContext::new(&resolver);
-        let length = parse_type_prefix(rest, &cx)
+        let flat = blank_line_stars(rest);
+        let length = parse_type_prefix(&flat, &cx)
             .map(|(_, length)| length)
             .filter(|length| *length > 0)
             .unwrap_or_else(|| rest.find(char::is_whitespace).unwrap_or(rest.len()));
@@ -501,6 +558,23 @@ impl Cursor<'_> {
     }
 }
 
+/// The text with the ` * ` that starts each line of a doc comment turned into spaces of the same
+/// length, so a type that spans lines reads as one the type grammar knows.
+fn blank_line_stars(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for (number, line) in text.split_inclusive('\n').enumerate() {
+        let indent = line.len() - line.trim_start_matches([' ', '\t']).len();
+        let star = number > 0 && line[indent..].starts_with('*') && !line[indent..].starts_with("*/");
+        if star {
+            out.push_str(&" ".repeat(indent + 1));
+            out.push_str(&line[indent + 1..]);
+        } else {
+            out.push_str(line);
+        }
+    }
+    out
+}
+
 fn is_name_byte(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || byte == b'_' || byte >= 0x80
 }
@@ -620,5 +694,13 @@ mod tests {
     fn template_names_are_not_classes() {
         let text = "/**\n * @template T of Model\n * @param class-string<T> $class\n * @return T\n */";
         assert_eq!(classes(text), vec!["Model"]);
+    }
+
+    #[test]
+    fn finds_classes_in_shapes_that_span_lines() {
+        let text = "/**\n * @return array<array{\n *     ranking: int,\n *     buyer: Buyer,\n *     other: ?Other\n * }>\n */";
+        assert_eq!(classes(text), ["Buyer", "Other"]);
+        let one = "/** @return array<array{ ranking: int, buyer: Buyer, other: ?Other }> */";
+        assert_eq!(classes(one), ["Buyer", "Other"]);
     }
 }

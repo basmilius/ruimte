@@ -10,7 +10,7 @@ use crate::ast::{self, last_segment_of_token, range_of};
 use crate::context::FileContext;
 use crate::doc_refs::{DocItemKind, MemberKind, doc_items};
 use crate::infer::Analyzer;
-use crate::refs::{Symbol, symbols_of_token};
+use crate::refs::{Symbol, is_name_token, symbols_of_token};
 
 /// The token types of the legend, in the order a token's `ty` indexes them.
 pub const TOKEN_TYPES: &[&str] = &[
@@ -106,7 +106,7 @@ pub fn semantic_tokens(index: &Index, root: &SyntaxNode, range: Option<TextRange
                 match token.kind() {
                     DOC_COMMENT => doc_tokens(&ctx, &token, &mut out),
                     VARIABLE => variable_token(&ctx, &token, &mut out),
-                    IDENT | QUALIFIED_NAME | FULLY_QUALIFIED_NAME | RELATIVE_NAME => {
+                    kind if is_name_token(&token, kind) => {
                         name_token(&ctx, &token, &mut out);
                     }
                     _ => {}

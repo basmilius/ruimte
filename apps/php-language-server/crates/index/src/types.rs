@@ -181,6 +181,20 @@ impl Type {
         Type::union(self.members().iter().filter(|ty| keep(ty)).cloned())
     }
 
+    /// Whether a template name is left in the type, which nothing bound to a type.
+    pub fn has_template(&self) -> bool {
+        match self {
+            Type::Template(_) => true,
+            Type::Array(key, value) | Type::Iterable(key, value) => key.has_template() || value.has_template(),
+            Type::List(value) => value.has_template(),
+            Type::Class { args, .. } => args.iter().any(Type::has_template),
+            Type::ClassString(Some(inner)) => inner.has_template(),
+            Type::Union(members) | Type::Intersection(members) => members.iter().any(Type::has_template),
+            Type::Shape(fields) => fields.iter().any(|field| field.ty.has_template()),
+            _ => false,
+        }
+    }
+
     /// Replaces template names and `static`/`self` where a map has an answer for them.
     pub fn substitute(
         &self,

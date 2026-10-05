@@ -80,12 +80,24 @@ impl<'a> Analyzer<'a> {
     /// shares the answer, so a pass over a whole file follows each function body once per statement.
     pub fn env_around(&self, node: &SyntaxNode) -> Rc<Env> {
         let anchor = ast::statement_anchor(node);
-        if let Some(env) = self.envs.borrow().get(&anchor) {
-            return env.clone();
+        let cached = self.envs.borrow().get(&anchor).cloned();
+        let base = match cached {
+            Some(env) => env,
+            None => {
+                let env = Rc::new(self.env_at(anchor));
+                self.envs.borrow_mut().insert(anchor, env.clone());
+                env
+            }
+        };
+        let conditions = short_circuit_conditions(node);
+        if conditions.is_empty() {
+            return base;
         }
-        let env = Rc::new(self.env_at(anchor));
-        self.envs.borrow_mut().insert(anchor, env.clone());
-        env
+        let mut env = (*base).clone();
+        for (condition, truth) in conditions.into_iter().rev() {
+            self.narrow(&condition, truth, &mut env);
+        }
+        Rc::new(env)
     }
 
     pub fn level(&self) -> php_syntax::PhpVersion {
@@ -188,3 +200,43 @@ fn class_context(root: &SyntaxNode, offset: u32, resolver: &NameResolver) -> Opt
 
 #[cfg(test)]
 mod tests;
+
+/// The conditions that hold where a node is evaluated because of the operators around it: the right
+/// side of `&&` runs once the left was true, that of `||` once it was false, and the branches of a
+/// ternary follow its condition. Innermost first, up to the statement or function the node is in.
+fn short_circuit_conditions(node: &SyntaxNode) -> Vec<(SyntaxNode, bool)> {
+    let mut out = Vec::new();
+    let mut child = node.clone();
+    while let Some(parent) = child.parent() {
+        match parent.kind() {
+            BINARY_EXPR => {
+                let operands: Vec<SyntaxNode> = parent.children().collect();
+                if operands.len() == 2 && operands[1] == child {
+                    let operator = ast::tokens(&parent)
+                        .find(|token| !token.kind().is_trivia())
+                        .map(|token| token.kind());
+                    match operator {
+                        Some(AND_AND | AND_KW) => out.push((operands[0].clone(), true)),
+                        Some(OR_OR | OR_KW) => out.push((operands[0].clone(), false)),
+                        _ => {}
+                    }
+                }
+            }
+            TERNARY_EXPR => {
+                let operands: Vec<SyntaxNode> = parent.children().collect();
+                match operands.as_slice() {
+                    [condition, then, _] if *then == child => out.push((condition.clone(), true)),
+                    [condition, .., otherwise] if *otherwise == child && operands.len() >= 2 => {
+                        out.push((condition.clone(), false));
+                    }
+                    _ => {}
+                }
+            }
+            ARROW_FUNCTION_EXPR | CLOSURE_EXPR | EXPR_STATEMENT | ECHO_STATEMENT | RETURN_STATEMENT | BLOCK
+            | STATEMENT_LIST | SOURCE_FILE => break,
+            _ => {}
+        }
+        child = parent;
+    }
+    out
+}

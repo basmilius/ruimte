@@ -291,3 +291,90 @@ fn enum_cases_and_methods_resolve() {
         ]
     );
 }
+
+#[test]
+fn constants_count_inside_the_values_of_class_constants_and_properties() {
+    let current = "<?php\nconst CACHE_DIR$0ECTORY = '/tmp';\nfinal class Server {\n    public const string FILE = CACHE_DIRECTORY . '/a.php';\n    public string $path = CACHE_DIRECTORY;\n    public function f($x = CACHE_DIRECTORY) {}\n}\n";
+    assert_eq!(
+        find(&[], current),
+        [
+            "current.php:2:CACHE_DIRECTORY:Declaration",
+            "current.php:4:CACHE_DIRECTORY:Reference",
+            "current.php:5:CACHE_DIRECTORY:Reference",
+            "current.php:6:CACHE_DIRECTORY:Reference",
+        ]
+    );
+}
+
+#[test]
+fn a_loop_over_a_generic_list_types_its_elements() {
+    let files = [
+        (
+            "iterators.php",
+            "<?php\n/** @template TKey @template TValue */\ninterface Traversable {}\n/**\n * @template TKey\n * @template TValue\n * @extends Traversable<TKey, TValue>\n */\ninterface IteratorAggregate extends Traversable {}\n/** @template TKey @template TValue */\ninterface ArrayAccess {}\n",
+        ),
+        (
+            "lib.php",
+            "<?php\nnamespace Lib;\n\n/**\n * @template TKey of array-key\n * @template TValue\n * @extends \\ArrayAccess<TKey, TValue>\n * @extends \\IteratorAggregate<TKey, TValue>\n */\ninterface ListInterface extends \\ArrayAccess, \\IteratorAggregate {\n    /** @return TValue */\n    public function offsetGet(mixed $offset): mixed;\n}\n/**\n * @template TKey of array-key\n * @template TValue\n * @implements ListInterface<TKey, TValue>\n */\nabstract class ArrayList implements ListInterface {\n    public function getIterator(): \\Traversable {}\n}\n/**\n * @template TKey of array-key\n * @template TValue of object\n * @implements ListInterface<TKey, TValue>\n */\nabstract class ModelList extends ArrayList {}\n",
+        ),
+    ];
+    let current = "<?php\nuse Lib\\ModelList;\nclass Line { public int $quan$0tity = 1; }\nclass Reservation {\n    /** @var ModelList<int, Line> */\n    public ModelList $lines;\n}\nfunction f(Reservation $reservation) {\n    foreach ($reservation->lines as $line) {\n        echo $line->quantity;\n    }\n    echo $reservation->lines[0]->quantity;\n}\n";
+    assert_eq!(
+        find(&files, current),
+        [
+            "current.php:3:$quantity:Declaration",
+            "current.php:10:quantity:Reference",
+            "current.php:12:quantity:Reference",
+        ]
+    );
+}
+
+#[test]
+fn a_method_takes_the_parameter_types_its_interface_documents() {
+    let files = [
+        (
+            "contract.php",
+            "<?php\nnamespace Lib;\n\ninterface MessageInterface {}\n/** @template T of MessageInterface */\ninterface HandlerInterface {\n    /** @param T $message */\n    public function handle(MessageInterface $message): void;\n}\n",
+        ),
+        (
+            "message.php",
+            "<?php\nclass Refunded implements Lib\\MessageInterface { public string $merchantId = ''; }\n",
+        ),
+    ];
+    let current = "<?php\nuse Lib\\{HandlerInterface, MessageInterface};\n/** @implements HandlerInterface<Refunded> */\nfinal class RefundHandler implements HandlerInterface {\n    #[\\Override]\n    public function handle(MessageInterface $message): void {\n        echo $message->merchantId;\n    }\n}\nclass Other implements HandlerInterface {\n    public function handle(MessageInterface $message): void { echo $message->merchantId; }\n}\nfunction f(Refunded $r) { echo $r->merchant$0Id; }\n";
+    let found = find(&files, current);
+    assert!(
+        found.contains(&"current.php:7:merchantId:Reference".to_string()),
+        "{found:?}"
+    );
+    assert!(!found.iter().any(|hit| hit.starts_with("current.php:11")), "{found:?}");
+}
+
+#[test]
+fn members_named_like_keywords_are_found() {
+    let current = "<?php\nenum Lang: string {\n    case EN = 'en';\n    const self DEFAULT = self::EN;\n    case NEW = 'new';\n    public function list(): void {}\n}\n$a = Lang::DEFAUL$0T;\n$b = Lang::NEW;\n$c = Lang::EN->list();\n";
+    assert_eq!(
+        find(&[], current),
+        ["current.php:4:DEFAULT:Declaration", "current.php:8:DEFAULT:Reference"]
+    );
+    let method = current.replace("DEFAUL$0T", "DEFAULT").replace("->list", "->li$0st");
+    assert_eq!(
+        find(&[], &method),
+        ["current.php:6:list:Declaration", "current.php:10:list:Reference"]
+    );
+}
+
+#[test]
+fn an_instanceof_narrows_the_rest_of_the_condition_it_stands_in() {
+    let base = "<?php\nclass Element {}\nclass Product extends Element { public function sellable(): bool {} }\nfunction f(Element $element) {\n    $a = fn(Element $e): bool => !($e instanceof Product) || $e->sellable();\n    $b = $element instanceof Product && $element->sellable();\n    $c = !$element instanceof Product || $element->sellable();\n    if (!$element instanceof Product || $element->sellable()) {}\n    $d = $element instanceof Product ? $element->sellable() : false;\n}\n";
+    let call = base.find("$e->sellable").expect("call") + "$e->".len();
+    let marked = format!("{}$0{}", &base[..call], &base[call..]);
+    assert_eq!(find(&[], &marked).len(), 6, "the declaration and the five calls");
+}
+
+#[test]
+fn shape_fields_named_like_their_class_still_name_the_class() {
+    let current = "<?php\nclass Bu$0yer {}\nclass Service {\n    /**\n     * @return array<array{\n     *     ranking: int,\n     *     buyer: Buyer,\n     *     other: ?Buyer\n     * }>\n     */\n    public function top(): array {}\n}\n";
+    let found = find(&[], current);
+    assert_eq!(found.len(), 3, "{found:?}");
+}

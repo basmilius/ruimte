@@ -6,7 +6,7 @@ use std::collections::HashSet;
 
 use php_index::{ClassDecl, Index, Name, Type};
 use php_syntax::SyntaxKind::*;
-use php_syntax::{SyntaxNode, SyntaxToken, TextRange};
+use php_syntax::{SyntaxKind, SyntaxNode, SyntaxToken, TextRange};
 
 use crate::ast::{self, child_of, enclosing_function, last_segment, range_of, start};
 use crate::context::FileContext;
@@ -638,6 +638,15 @@ fn node_is_alias_declaration(name: &SyntaxNode) -> bool {
     }
 }
 
+/// A token that spells a name. A member may be called like a keyword (`Lang::DEFAULT`, `->list()`),
+/// which the lexer reads as the keyword and the parser puts in a name node all the same.
+pub(crate) fn is_name_token(token: &SyntaxToken, kind: SyntaxKind) -> bool {
+    match kind {
+        IDENT | QUALIFIED_NAME | FULLY_QUALIFIED_NAME | RELATIVE_NAME => true,
+        _ => kind.is_keyword() && token.parent().is_some_and(|parent| parent.kind() == NAME),
+    }
+}
+
 /// Every place of a file that names the symbol of the query.
 pub fn hits_in_file(ctx: &FileContext, text: &str, query: &Query) -> Vec<Hit> {
     if let Symbol::Variable { name, scope } = &query.symbol {
@@ -660,7 +669,7 @@ pub fn hits_in_file(ctx: &FileContext, text: &str, query: &Query) -> Vec<Hit> {
                 }
                 push_token_hit(ctx, text, &token, query, &mut hits, false);
             }
-            IDENT | QUALIFIED_NAME | FULLY_QUALIFIED_NAME | RELATIVE_NAME => {
+            kind if is_name_token(&token, kind) => {
                 let Some(parent) = token.parent() else {
                     continue;
                 };
