@@ -2,6 +2,7 @@
 //! and, over an index of the project, its packages and the standard library, hover, navigation,
 //! workspace symbols and completion.
 
+mod actions;
 mod config;
 mod convert;
 mod documents;

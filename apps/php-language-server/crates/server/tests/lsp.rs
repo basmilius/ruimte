@@ -1320,3 +1320,115 @@ fn inspection_settings_switch_and_move_severities() {
     assert_eq!(found[0]["severity"], 4);
     client.shutdown();
 }
+
+// Code actions ---------------------------------------------------------------------------------
+
+fn action_titles(actions: &Value) -> Vec<String> {
+    actions
+        .as_array()
+        .expect("a list of actions")
+        .iter()
+        .map(|action| action["title"].as_str().unwrap_or_default().to_string())
+        .collect()
+}
+
+fn range_at(line: u32, from: u32, to: u32) -> Value {
+    json!({ "start": { "line": line, "character": from }, "end": { "line": line, "character": to } })
+}
+
+#[test]
+fn offers_quick_fixes_with_their_edits() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Page.php");
+    client.open(&uri, PAGE);
+    let found = client.diagnostics(&uri);
+    let actions = client.request(
+        "textDocument/codeAction",
+        json!({ "textDocument": { "uri": uri }, "range": range_at(3, 0, 20), "context": { "diagnostics": found } }),
+    );
+    assert_eq!(action_titles(&actions), ["Remove unused import", "Organize imports"]);
+    let remove = &actions[0];
+    assert_eq!(remove["kind"], "quickfix");
+    assert_eq!(remove["isPreferred"], true);
+    assert_eq!(remove["diagnostics"][0]["code"], "unused-import");
+    let edits = &remove["edit"]["changes"][&uri];
+    assert_eq!(edits[0]["newText"], "");
+    assert_eq!(edits[0]["range"]["start"], json!({ "line": 3, "character": 0 }));
+    assert_eq!(edits[0]["range"]["end"], json!({ "line": 4, "character": 0 }));
+    client.shutdown();
+}
+
+#[test]
+fn only_the_kinds_asked_for_are_offered() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Page.php");
+    client.open(&uri, PAGE);
+    client.diagnostics(&uri);
+    let actions = client.request(
+        "textDocument/codeAction",
+        json!({ "textDocument": { "uri": uri }, "range": range_at(3, 0, 0), "context": { "diagnostics": [], "only": ["source.organizeImports"] } }),
+    );
+    assert_eq!(action_titles(&actions), ["Organize imports"]);
+    let organized = &actions[0]["edit"]["changes"][&uri][0];
+    assert_eq!(organized["range"]["start"], json!({ "line": 3, "character": 0 }));
+    assert_eq!(organized["newText"], "use App\\Models\\User;\n");
+    client.shutdown();
+}
+
+#[test]
+fn a_client_that_resolves_gets_the_edit_of_an_expensive_action_late() {
+    let disk = Disk::new();
+    let capabilities = json!({
+        "window": { "workDoneProgress": true },
+        "textDocument": { "codeAction": { "resolveSupport": { "properties": ["edit"] } } }
+    });
+    let (mut client, _) = Client::start_in(capabilities, disk.options(), json!(disk.uri("project")));
+    client.wait_for_indexing();
+    let uri = disk.uri("project/src/Page.php");
+    client.open(
+        &uri,
+        "<?php\nnamespace App;\n\nclass Page\n{\n    public function show(): void\n    {\n        new Widget();\n    }\n}\n",
+    );
+    client.diagnostics(&uri);
+    let actions = client.request(
+        "textDocument/codeAction",
+        json!({ "textDocument": { "uri": uri }, "range": range_at(7, 14, 14), "context": { "diagnostics": [] } }),
+    );
+    let import = actions
+        .as_array()
+        .expect("actions")
+        .iter()
+        .find(|action| action["title"] == "Import 'Acme\\Lib\\Widget'")
+        .expect("an import")
+        .clone();
+    assert!(import["edit"].is_null(), "the edit waits for the resolve");
+    let resolved = client.request("codeAction/resolve", import);
+    let edit = &resolved["edit"]["changes"][&uri][0];
+    assert_eq!(edit["newText"], "\nuse Acme\\Lib\\Widget;\n");
+    client.shutdown();
+}
+
+#[test]
+fn writes_the_doc_block_after_an_opened_comment_and_enter() {
+    let (mut client, _) = Client::start(json!({}), Value::Null);
+    let text = "<?php\nclass A\n{\n    /**\n    \n    public function run(int $a, string $b): bool\n    {\n        return true;\n    }\n}\n";
+    client.open(URI, text);
+    client.diagnostics(URI);
+    let edits = client.request(
+        "textDocument/onTypeFormatting",
+        json!({
+            "textDocument": { "uri": URI },
+            "position": { "line": 4, "character": 4 },
+            "ch": "\n",
+            "options": { "tabSize": 4, "insertSpaces": true }
+        }),
+    );
+    assert_eq!(edits[0]["range"]["start"], json!({ "line": 4, "character": 0 }));
+    assert_eq!(
+        edits[0]["newText"],
+        "     * @param int $a\n     * @param string $b\n     * @return bool\n     */\n"
+    );
+    client.shutdown();
+}

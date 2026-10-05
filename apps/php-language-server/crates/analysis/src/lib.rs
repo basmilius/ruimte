@@ -3,6 +3,7 @@
 //! completes at a cursor and what a name refers to. Nothing here knows about LSP or about processes,
 //! so the same functions serve any front end.
 
+pub mod actions;
 mod ast;
 pub mod completion;
 pub mod context;

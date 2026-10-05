@@ -14,6 +14,7 @@ use lsp_types::request::{
     InlayHintRequest, SemanticTokensFullRequest, SemanticTokensRangeRequest, SemanticTokensRefresh,
     SignatureHelpRequest, TypeHierarchyPrepare, TypeHierarchySubtypes, TypeHierarchySupertypes,
 };
+use lsp_types::request::{CodeActionRequest, CodeActionResolveRequest, OnTypeFormatting};
 use lsp_types::request::{
     Completion, DocumentDiagnosticRequest, DocumentHighlightRequest, DocumentSymbolRequest, FoldingRangeRequest,
     GotoDefinition, GotoImplementation, GotoTypeDefinition, HoverRequest, PrepareRenameRequest, References,
@@ -108,6 +109,8 @@ pub(crate) struct Server<'a> {
     pub(crate) document_changes: bool,
     /// The client can rename files as part of a workspace edit.
     pub(crate) rename_files: bool,
+    /// The client can ask for the edit of a code action after the list is shown.
+    pub(crate) code_action_resolve: bool,
     /// Documents whose diagnostics are out of date, published once the queue of messages is empty.
     dirty: Vec<Uri>,
     /// Questions asked of the client: which document each `workspace/configuration` answer is for.
@@ -215,6 +218,10 @@ impl<'a> Server<'a> {
             rename_files: workspace_edit
                 .and_then(|edit| edit.resource_operations.as_ref())
                 .is_some_and(|operations| operations.contains(&lsp_types::ResourceOperationKind::Rename)),
+            code_action_resolve: text_document
+                .and_then(|text_document| text_document.code_action.as_ref())
+                .and_then(|actions| actions.resolve_support.as_ref())
+                .is_some_and(|support| support.properties.iter().any(|property| property == "edit")),
             dirty: Vec::new(),
             pending_configuration: HashMap::new(),
             next_request_id: 0,
@@ -271,6 +278,23 @@ impl<'a> Server<'a> {
                 work_done_progress_options: WorkDoneProgressOptions::default(),
             })),
             document_highlight_provider: Some(OneOf::Left(true)),
+            code_action_provider: Some(lsp_types::CodeActionProviderCapability::Options(
+                lsp_types::CodeActionOptions {
+                    code_action_kinds: Some(vec![
+                        lsp_types::CodeActionKind::QUICKFIX,
+                        lsp_types::CodeActionKind::REFACTOR,
+                        lsp_types::CodeActionKind::REFACTOR_REWRITE,
+                        lsp_types::CodeActionKind::SOURCE,
+                        lsp_types::CodeActionKind::SOURCE_ORGANIZE_IMPORTS,
+                    ]),
+                    resolve_provider: Some(true),
+                    work_done_progress_options: WorkDoneProgressOptions::default(),
+                },
+            )),
+            document_on_type_formatting_provider: Some(lsp_types::DocumentOnTypeFormattingOptions {
+                first_trigger_character: "\n".to_string(),
+                more_trigger_character: Some(vec!["}".to_string(), ";".to_string()]),
+            }),
             completion_provider: Some(CompletionOptions {
                 resolve_provider: Some(true),
                 trigger_characters: Some(["$", ">", ":", "\\", "#", "["].map(String::from).to_vec()),
@@ -382,6 +406,9 @@ impl<'a> Server<'a> {
             PrepareRenameRequest::METHOD => self.answer_checked(id, request.params, Self::prepare_rename),
             Rename::METHOD => self.answer_checked(id, request.params, Self::rename),
             DocumentHighlightRequest::METHOD => self.answer(id, request.params, Self::document_highlight),
+            CodeActionRequest::METHOD => self.answer(id, request.params, Self::code_action),
+            CodeActionResolveRequest::METHOD => self.answer(id, request.params, Self::resolve_code_action),
+            OnTypeFormatting::METHOD => self.answer(id, request.params, Self::on_type_formatting),
             Completion::METHOD => self.answer(id, request.params, Self::completion),
             ResolveCompletionItem::METHOD => self.answer(id, request.params, Self::resolve_completion),
             method => Response::new_err(
@@ -499,14 +526,31 @@ impl<'a> Server<'a> {
     }
 
     fn diagnostics_of(&mut self, uri: &Uri) -> Option<Vec<lsp_types::Diagnostic>> {
+        let level = self.level_of(uri, self.documents.get(uri)?.level);
+        self.inspect_document(uri, |env, mapper, parse| {
+            let mut found = diagnostics(parse, level);
+            found.extend(inspect(env).into_iter().map(|finding| finding.diagnostic));
+            found.sort_by_key(|diagnostic| (diagnostic.range.start(), diagnostic.range.end()));
+            found.iter().map(|found| mapper.diagnostic(found)).collect()
+        })
+    }
+
+    /// Runs something over an open document with everything an inspection reads: the tree, the
+    /// index of its project, what the client chose to switch on and which names are held back by
+    /// extensions the project does not require.
+    pub(crate) fn inspect_document<R>(
+        &mut self,
+        uri: &Uri,
+        run: impl FnOnce(&InspectionEnv<'_>, &Mapper<'_>, &php_syntax::Parse) -> R,
+    ) -> Option<R> {
         self.sync_symbols(uri);
         let encoding = self.encoding;
-        let level = self.level_of(uri, self.documents.get(uri)?.level);
         let path = uri_to_path(uri);
         let ready = path.as_ref().is_some_and(|path| self.workspace.is_ready(path));
         let document = self.documents.get_mut(uri)?;
-        let mut found = diagnostics(document.parse(), level);
-        let root = document.parse().syntax();
+        document.parse();
+        let parse = document.cached()?;
+        let root = parse.syntax();
         let settings = document
             .inspections
             .clone()
@@ -533,14 +577,12 @@ impl<'a> Server<'a> {
             ready,
             externals: &externals,
         };
-        found.extend(inspect(&env).into_iter().map(|finding| finding.diagnostic));
-        found.sort_by_key(|diagnostic| (diagnostic.range.start(), diagnostic.range.end()));
         let mapper = Mapper {
             text: &document.text,
             index: &document.index,
             encoding,
         };
-        Some(found.iter().map(|found| mapper.diagnostic(found)).collect())
+        Some(run(&env, &mapper, parse))
     }
 
     fn notification(&mut self, notification: Notification) -> Result<(), BoxError> {

@@ -3,15 +3,15 @@
 //! stays silent, so what is reported is something to look at and not a guess.
 
 mod calls;
-mod classes;
-mod flow;
+pub(crate) mod classes;
+pub(crate) mod flow;
 mod members;
 mod names;
 mod phpdoc;
 mod scopes;
-mod types;
-mod unused;
-mod util;
+pub(crate) mod types;
+pub(crate) mod unused;
+pub(crate) mod util;
 
 use std::cell::{OnceCell, RefCell};
 use std::collections::{BTreeMap, HashMap};
@@ -370,7 +370,7 @@ pub(crate) struct Cx<'a> {
 }
 
 impl<'a> Cx<'a> {
-    fn new(env: &'a InspectionEnv<'a>) -> Cx<'a> {
+    pub(crate) fn new(env: &'a InspectionEnv<'a>) -> Cx<'a> {
         let severities = INSPECTIONS
             .iter()
             .filter_map(|info| env.settings.severity_of(info).map(|severity| (info.code, severity)))
@@ -466,4 +466,4 @@ pub fn inspect(env: &InspectionEnv) -> Vec<Finding> {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

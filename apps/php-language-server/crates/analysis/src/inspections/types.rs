@@ -268,7 +268,7 @@ impl Cx<'_> {
 /// What PHP itself guarantees an expression is: the type of a literal, of `new`, of a parameter
 /// that is never assigned again, of a typed property or of a call whose return type is declared.
 /// What the type layer infers from PHPDoc or from the way variables flow is not that sure.
-pub(super) fn sure_type(cx: &Cx, analyzer: &Analyzer<'_>, env: &Env, expr: &SyntaxNode) -> Option<Type> {
+pub(crate) fn sure_type(cx: &Cx, analyzer: &Analyzer<'_>, env: &Env, expr: &SyntaxNode) -> Option<Type> {
     match expr.kind() {
         LITERAL | ARRAY_EXPR | CAST_EXPR => {
             let ty = analyzer.type_of(expr, env);
@@ -306,7 +306,7 @@ pub(super) fn sure_type(cx: &Cx, analyzer: &Analyzer<'_>, env: &Env, expr: &Synt
 }
 
 /// The signature of a function as it is written, with the types read from the code and no PHPDoc.
-pub(super) fn callable_of(analyzer: &Analyzer<'_>, function: &SyntaxNode) -> php_index::Callable {
+pub(crate) fn callable_of(analyzer: &Analyzer<'_>, function: &SyntaxNode) -> php_index::Callable {
     let class_scope = analyzer.class.as_ref().map(|class| php_index::extract::ClassScope {
         name: class.name.clone(),
         parent: class.parent.clone(),

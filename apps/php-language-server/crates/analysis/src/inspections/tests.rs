@@ -10,7 +10,7 @@ use std::sync::Arc;
 use super::{Externals, InspectionEnv, InspectionSettings, Override, inspect};
 use crate::DiagnosticSeverity;
 
-pub(super) const STUBS: &str = r#"<?php
+pub(crate) const STUBS: &str = r#"<?php
 namespace {
     function strlen(string $string): int {}
     function count(Countable|array $value, int $mode = COUNT_NORMAL): int {}
@@ -55,7 +55,7 @@ pub(super) struct Found {
     pub severity: DiagnosticSeverity,
 }
 
-pub(super) fn index_with(files: &[(&str, &str)], current: &str) -> Index {
+pub(crate) fn index_with(files: &[(&str, &str)], current: &str) -> Index {
     let mut index = Index::new(PhpVersion::V8_4);
     let stubs = extract(&parse(STUBS).syntax(), ExtractOptions { stub: true });
     index.set_file(PathBuf::from("/stubs/core.php"), Origin::Stub, Arc::new(stubs));

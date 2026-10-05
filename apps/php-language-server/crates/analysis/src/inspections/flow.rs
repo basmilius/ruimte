@@ -112,6 +112,11 @@ fn has_goto(node: &SyntaxNode) -> bool {
 
 // How statements end ----------------------------------------------------------------------------
 
+/// Whether control can reach the end of a body, as far as it is certain.
+pub(crate) fn body_completes(cx: &Cx, body: &SyntaxNode) -> bool {
+    sequence_end(cx, &body.children().collect::<Vec<_>>()) == End::Completes
+}
+
 fn sequence_end(cx: &Cx, statements: &[SyntaxNode]) -> End {
     let mut unknown = false;
     for statement in statements {

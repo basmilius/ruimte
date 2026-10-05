@@ -42,14 +42,18 @@ fn check_class(cx: &Cx, node: &SyntaxNode) {
 
 // Missing implementations -----------------------------------------------------------------------
 
-fn check_missing_methods(cx: &Cx, node: &SyntaxNode, name_node: &SyntaxNode, name: &str) {
-    if !(cx.on("abstract-method-not-implemented") || cx.on("interface-method-not-implemented")) {
-        return;
-    }
+/// A method a concrete class has to implement and does not.
+pub(crate) struct Missing {
+    pub method: Method,
+    pub owner: String,
+    pub from_interface: bool,
+}
+
+/// The abstract and interface methods nothing in a class's hierarchy implements.
+pub(crate) fn missing_methods(cx: &Cx, name: &str) -> Vec<Missing> {
     let ty = Type::class(name.to_string());
     let level = cx.index.level;
-    let mut abstract_missing: Vec<String> = Vec::new();
-    let mut interface_missing: Vec<String> = Vec::new();
+    let mut missing: Vec<Missing> = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
     let ancestors = cx.index.ancestors(&ty);
     for ancestor in ancestors.iter().skip(1).filter(|ancestor| !ancestor.mixin) {
@@ -75,28 +79,40 @@ fn check_missing_methods(cx: &Cx, node: &SyntaxNode, name_node: &SyntaxNode, nam
                         })
                 }) || enum_provides(&ancestors, &method.name);
             if !implemented {
-                let label = format!("{}::{}()", decl.name, method.name);
-                if from_interface {
-                    interface_missing.push(label);
-                } else {
-                    abstract_missing.push(label);
-                }
+                missing.push(Missing {
+                    method: method.clone(),
+                    owner: decl.name.clone(),
+                    from_interface,
+                });
             }
         }
     }
+    missing
+}
+
+fn check_missing_methods(cx: &Cx, node: &SyntaxNode, name_node: &SyntaxNode, name: &str) {
+    if !(cx.on("abstract-method-not-implemented") || cx.on("interface-method-not-implemented")) {
+        return;
+    }
+    let missing = missing_methods(cx, name);
     let fix = Fix::ImplementMembers {
         class: crate::ast::start(node),
     };
-    for (code, missing, noun) in [
-        ("abstract-method-not-implemented", &abstract_missing, "abstract"),
-        ("interface-method-not-implemented", &interface_missing, "interface"),
+    for (code, from_interface, noun) in [
+        ("abstract-method-not-implemented", false, "abstract"),
+        ("interface-method-not-implemented", true, "interface"),
     ] {
-        if missing.is_empty() {
+        let labels: Vec<String> = missing
+            .iter()
+            .filter(|entry| entry.from_interface == from_interface)
+            .map(|entry| format!("{}::{}()", entry.owner, entry.method.name))
+            .collect();
+        if labels.is_empty() {
             continue;
         }
-        let shown: Vec<&str> = missing.iter().take(3).map(String::as_str).collect();
-        let more = if missing.len() > 3 {
-            format!(" and {} more", missing.len() - 3)
+        let shown: Vec<&str> = labels.iter().take(3).map(String::as_str).collect();
+        let more = if labels.len() > 3 {
+            format!(" and {} more", labels.len() - 3)
         } else {
             String::new()
         };

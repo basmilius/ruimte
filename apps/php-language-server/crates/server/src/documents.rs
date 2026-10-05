@@ -39,6 +39,11 @@ impl Document {
         self.parsed.get_or_insert_with(|| parse(&self.text))
     }
 
+    /// The tree of the text, when it was parsed since the last change.
+    pub fn cached(&self) -> Option<&Parse> {
+        self.parsed.as_ref()
+    }
+
     pub fn apply_changes(
         &mut self,
         version: i32,

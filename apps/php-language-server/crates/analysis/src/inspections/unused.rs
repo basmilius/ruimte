@@ -3,6 +3,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
+use php_index::UseKind;
 use php_syntax::SyntaxKind::*;
 use php_syntax::SyntaxNode;
 
@@ -23,46 +24,85 @@ pub(super) fn run(cx: &Cx) {
     }
 }
 
-/// An imported name and where it is imported.
+/// A name a `use` statement brings in.
+pub(crate) struct ImportClause {
+    pub statement: SyntaxNode,
+    pub clause: SyntaxNode,
+    pub kind: UseKind,
+    /// The qualified name without a leading backslash.
+    pub full: String,
+    /// Something in the file refers to it.
+    pub used: bool,
+}
+
+/// Every name the file imports, and whether anything uses it.
+pub(crate) fn import_clauses(cx: &Cx) -> Vec<ImportClause> {
+    let mentioned = mentioned_names(cx);
+    let mut out = Vec::new();
+    for statement in cx.nodes.iter().filter(|node| node.kind() == USE_STATEMENT) {
+        if statement.parent().is_some_and(|parent| parent.kind() == CLASS_BODY) {
+            continue;
+        }
+        let statement_kind = kind_of(statement);
+        for clause in statement.descendants().filter(|node| node.kind() == USE_CLAUSE) {
+            let Some(import) = import_of(&clause) else {
+                continue;
+            };
+            let kind = if has_token(&clause, FUNCTION_KW) {
+                UseKind::Function
+            } else if has_token(&clause, CONST_KW) {
+                UseKind::Constant
+            } else {
+                statement_kind
+            };
+            let key = if kind == UseKind::Constant {
+                import.alias.clone()
+            } else {
+                import.alias.to_ascii_lowercase()
+            };
+            out.push(ImportClause {
+                statement: statement.clone(),
+                clause,
+                kind,
+                full: import.full,
+                used: mentioned.contains(&key),
+            });
+        }
+    }
+    out
+}
+
+fn kind_of(statement: &SyntaxNode) -> UseKind {
+    if has_token(statement, FUNCTION_KW) {
+        UseKind::Function
+    } else if has_token(statement, CONST_KW) {
+        UseKind::Constant
+    } else {
+        UseKind::Class
+    }
+}
+
 struct Import {
     alias: String,
     full: String,
-    constant: bool,
 }
 
 fn unused_imports(cx: &Cx) {
-    let mentioned = mentioned_names(cx);
-    for statement in cx.nodes.iter().filter(|node| node.kind() == USE_STATEMENT) {
-        let in_class_scope = statement.parent().is_some_and(|parent| parent.kind() == CLASS_BODY);
-        if in_class_scope {
-            continue;
+    let clauses = import_clauses(cx);
+    let mut statements: Vec<SyntaxNode> = Vec::new();
+    for entry in &clauses {
+        if !statements.contains(&entry.statement) {
+            statements.push(entry.statement.clone());
         }
-        let kind_constant = has_token(statement, CONST_KW);
-        let mut clauses: Vec<(SyntaxNode, Import)> = Vec::new();
-        for clause in statement.descendants().filter(|node| node.kind() == USE_CLAUSE) {
-            if let Some(import) = import_of(&clause, kind_constant) {
-                clauses.push((clause, import));
-            }
-        }
-        if clauses.is_empty() {
-            continue;
-        }
-        let unused: Vec<&(SyntaxNode, Import)> = clauses
-            .iter()
-            .filter(|(_, import)| {
-                let key = if import.constant {
-                    import.alias.clone()
-                } else {
-                    import.alias.to_ascii_lowercase()
-                };
-                !mentioned.contains(&key)
-            })
-            .collect();
+    }
+    for statement in &statements {
+        let own: Vec<&ImportClause> = clauses.iter().filter(|entry| entry.statement == *statement).collect();
+        let unused: Vec<&&ImportClause> = own.iter().filter(|entry| !entry.used).collect();
         if unused.is_empty() {
             continue;
         }
-        if unused.len() == clauses.len() {
-            let names: Vec<&str> = unused.iter().map(|(_, import)| import.full.as_str()).collect();
+        if unused.len() == own.len() {
+            let names: Vec<&str> = unused.iter().map(|entry| entry.full.as_str()).collect();
             cx.report(
                 "unused-import",
                 statement.text_range(),
@@ -73,13 +113,13 @@ fn unused_imports(cx: &Cx) {
             );
             continue;
         }
-        for (clause, import) in unused {
+        for entry in unused {
             cx.report(
                 "unused-import",
-                clause.text_range(),
-                format!("Unused import '{}'", import.full),
+                entry.clause.text_range(),
+                format!("Unused import '{}'", entry.full),
                 Fix::RemoveImport {
-                    range: clause.text_range(),
+                    range: entry.clause.text_range(),
                 },
             );
         }
@@ -87,7 +127,7 @@ fn unused_imports(cx: &Cx) {
 }
 
 /// The alias and the full name a `use` clause brings in.
-fn import_of(clause: &SyntaxNode, statement_constant: bool) -> Option<Import> {
+fn import_of(clause: &SyntaxNode) -> Option<Import> {
     let mut names = clause.children().filter(|child| child.kind() == NAME);
     let written = names.next()?;
     let alias = names.next();
@@ -101,13 +141,12 @@ fn import_of(clause: &SyntaxNode, statement_constant: bool) -> Option<Import> {
         Some(alias) => text_of(&alias),
         None => full.rsplit('\\').next().unwrap_or(&full).to_string(),
     };
-    let constant = statement_constant || has_token(clause, CONST_KW);
-    Some(Import { alias, full, constant })
+    Some(Import { alias, full })
 }
 
 /// The first segment of every name written in code, and every word in the comments, since an
 /// import a doc comment names is used. Classes and functions fold case; constants do not.
-fn mentioned_names(cx: &Cx) -> HashSet<String> {
+pub(crate) fn mentioned_names(cx: &Cx) -> HashSet<String> {
     let mut out = HashSet::new();
     for node in &cx.nodes {
         if node.kind() == NAME {
