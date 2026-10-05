@@ -77,6 +77,7 @@
             "colors": "Kleuren",
             "folding": "Invouwen",
             "smartKeys": "Slimme toetsen",
+            "ai": "AI",
             "languageServers": "Language servers"
         },
         "general": {
@@ -132,6 +133,27 @@
                     "label": "Auteurs",
                     "description": "Toont boven een klasse, functie of methode wie hem volgens git schreef, met een plus voor andere auteurs. Klik erop voor de commits."
                 }
+            }
+        },
+        "ai": {
+            "title": "AI",
+            "inlineAgent": {
+                "label": "Inline edit",
+                "description": "De agent die inline edits uitvoert. Hij draait als chat in het project.",
+                "none": "Er is geen agent ingesteld"
+            },
+            "agentChanges": {
+                "label": "Wijzigingen van agents in open bestanden",
+                "description": "Hoe edits van een lopende chat in de editor verschijnen.",
+                "options": {
+                    "off": "Uit",
+                    "gutter": "Gutter",
+                    "review": "Review"
+                }
+            },
+            "attribution": {
+                "label": "Toeschrijving in de gutter",
+                "description": "Markeert de regels die een agent schreef. Hover toont de chat en de turn."
             }
         },
         "folding": {

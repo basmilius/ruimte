@@ -3,14 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { ErrorBoundary, Segmented } from '@basmilius/desktop-ui';
 import { useSettingsTarget } from '@basmilius/desktop-ui/settings';
 import { CodeSection } from '@/shell/settings/panes/CodeSection';
+import { EditorAiTab } from '@/shell/settings/panes/EditorAiTab';
 import { EditorFoldingTab } from '@/shell/settings/panes/EditorFoldingTab';
 import { EditorGeneralTab } from '@/shell/settings/panes/EditorGeneralTab';
 import { LanguageServersTab } from '@/shell/settings/panes/LanguageServersTab';
 import { SmartKeysSection } from '@/shell/settings/panes/SmartKeysSection';
 
-type EditorTab = 'general' | 'colors' | 'folding' | 'smartKeys' | 'languageServers';
+type EditorTab = 'general' | 'colors' | 'folding' | 'smartKeys' | 'ai' | 'languageServers';
 
-const TABS: readonly EditorTab[] = ['general', 'colors', 'folding', 'smartKeys', 'languageServers'];
+const TABS: readonly EditorTab[] = ['general', 'colors', 'folding', 'smartKeys', 'ai', 'languageServers'];
 
 /* The tab that holds the row a search result names, by the prefix of its id. */
 function tabOfTarget(target: string | null): EditorTab | null {
@@ -28,6 +29,9 @@ function tabOfTarget(target: string | null): EditorTab | null {
     }
     if (target.startsWith('editor.smartKeys.')) {
         return 'smartKeys';
+    }
+    if (target.startsWith('editor.ai.')) {
+        return 'ai';
     }
     return target.startsWith('editor.servers') ? 'languageServers' : null;
 }
@@ -60,6 +64,7 @@ export function EditorPane() {
             {tab === 'colors' && <CodeSection />}
             {tab === 'folding' && <EditorFoldingTab />}
             {tab === 'smartKeys' && <SmartKeysSection />}
+            {tab === 'ai' && <EditorAiTab />}
             {tab === 'languageServers' && (
                 <ErrorBoundary label={t('editor.servers.failed')} compact className="rounded-xl border border-border">
                     <LanguageServersTab />

@@ -23,6 +23,7 @@ describe('searching the settings', () => {
 
     test('finds a fold setting by its words', () => {
         expect(searchSettings('documentation comments').map((result) => result.id)).toContain('editor.folding.general.docComments');
+        expect(searchSettings('attribution')[0]).toMatchObject({ section: 'editor', id: 'editor.ai.attribution' });
         expect(searchSettings('heredocs')[0]).toMatchObject({ section: 'editor', id: 'editor.folding.php.heredocs' });
     });
 

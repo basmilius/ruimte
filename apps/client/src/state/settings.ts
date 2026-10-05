@@ -6,6 +6,14 @@ import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 import { FORMAT_LANGUAGE, formatRegionFrom } from '@basmilius/desktop-ui/format';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
 import type { EditorFoldOutline, EditorSmartKeys } from '@ruimte/smart-editor';
+import {
+    agentChangesModeFrom,
+    DEFAULT_AGENT_CHANGES_MODE,
+    DEFAULT_INLINE_EDIT_AGENT,
+    inlineEditAgentFrom,
+    type AgentChangesMode,
+    type InlineEditAgent
+} from '@/state/ai-settings';
 import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING } from '@/state/code-folding';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
 
@@ -165,6 +173,12 @@ export interface Settings {
     /* What folds by itself when a file opens, and when the arrow that folds shows in the gutter. */
     codeFolding: CodeFolding;
     codeFoldOutline: EditorFoldOutline;
+    /* The agent that handles an inline edit, which runs as a chat in the project. */
+    aiInlineAgent: InlineEditAgent;
+    /* How the edits of a running chat show in the files that are open. */
+    aiAgentChanges: AgentChangesMode;
+    /* Whether the gutter marks the lines an agent wrote. */
+    aiAttribution: boolean;
     /* Whether a font draws `=>` or `!==` as one glyph. Off sets the whole document, since the diffs draw in a shadow root that only inheritance reaches. */
     codeLigatures: boolean;
     /* What the editor does by itself as you type. The defaults are the editor's own: all on, except the camel humps. */
@@ -264,6 +278,9 @@ const DEFAULT_SETTINGS: Settings = {
     codeVisionAuthors: true,
     codeFolding: { ...DEFAULT_CODE_FOLDING },
     codeFoldOutline: 'hover',
+    aiInlineAgent: { ...DEFAULT_INLINE_EDIT_AGENT },
+    aiAgentChanges: DEFAULT_AGENT_CHANGES_MODE,
+    aiAttribution: true,
     codeLigatures: true,
     smartKeys: { ...DEFAULT_SMART_KEYS },
     diffLayout: 'stacked',
@@ -328,6 +345,9 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         codeVisionAuthors: stored.codeVisionAuthors !== false,
         codeFolding: codeFoldingFrom(stored.codeFolding),
         codeFoldOutline: FOLD_OUTLINES.find((outline) => outline === stored.codeFoldOutline) ?? DEFAULT_SETTINGS.codeFoldOutline,
+        aiInlineAgent: inlineEditAgentFrom(stored.aiInlineAgent),
+        aiAgentChanges: agentChangesModeFrom(stored.aiAgentChanges),
+        aiAttribution: stored.aiAttribution !== false,
         codeLigatures: stored.codeLigatures !== false,
         smartKeys: smartKeysFrom(stored.smartKeys),
         // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
@@ -446,6 +466,9 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 codeVisionAuthors,
                 codeFolding,
                 codeFoldOutline,
+                aiInlineAgent,
+                aiAgentChanges,
+                aiAttribution,
                 codeLigatures,
                 smartKeys,
                 diffLayout,
@@ -494,6 +517,9 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 codeVisionAuthors,
                 codeFolding,
                 codeFoldOutline,
+                aiInlineAgent,
+                aiAgentChanges,
+                aiAttribution,
                 codeLigatures,
                 smartKeys,
                 diffLayout,

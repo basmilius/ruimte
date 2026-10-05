@@ -159,6 +159,24 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         }))
     ),
     {
+        id: 'editor.ai.inlineAgent',
+        section: 'editor',
+        label: 'settings:editor.ai.inlineAgent.label',
+        description: 'settings:editor.ai.inlineAgent.description'
+    },
+    {
+        id: 'editor.ai.agentChanges',
+        section: 'editor',
+        label: 'settings:editor.ai.agentChanges.label',
+        description: 'settings:editor.ai.agentChanges.description'
+    },
+    {
+        id: 'editor.ai.attribution',
+        section: 'editor',
+        label: 'settings:editor.ai.attribution.label',
+        description: 'settings:editor.ai.attribution.description'
+    },
+    {
         id: 'editor.smartKeys.pairBrackets',
         section: 'editor',
         label: 'settings:editor.smartKeys.pairBrackets.label',

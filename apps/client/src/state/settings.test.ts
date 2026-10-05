@@ -291,6 +291,23 @@ describe('code folding', () => {
     });
 });
 
+describe('AI in the editor', () => {
+    test('starts with Claude Code editing inline, changes in the gutter and the lines attributed', () => {
+        const settings = settingsFrom({});
+        expect(settings.aiInlineAgent).toEqual({ provider: 'claude', model: null });
+        expect(settings.aiAgentChanges).toBe('gutter');
+        expect(settings.aiAttribution).toBe(true);
+    });
+
+    test('reads a stored pick, and falls back for an agent or a mode it does not know', () => {
+        expect(settingsFrom({ aiInlineAgent: { provider: 'codex', model: 'gpt-5' } }).aiInlineAgent).toEqual({ provider: 'codex', model: 'gpt-5' });
+        expect(settingsFrom({ aiInlineAgent: { provider: 'nobody', model: 4 } as never }).aiInlineAgent).toEqual({ provider: 'claude', model: null });
+        expect(settingsFrom({ aiAgentChanges: 'review' }).aiAgentChanges).toBe('review');
+        expect(settingsFrom({ aiAgentChanges: 'loud' as never }).aiAgentChanges).toBe('gutter');
+        expect(settingsFrom({ aiAttribution: false }).aiAttribution).toBe(false);
+    });
+});
+
 describe('wrapping long lines of code', () => {
     test('is off until a person turns it on', () => {
         expect(settingsFrom({}).codeWrap).toBe(false);

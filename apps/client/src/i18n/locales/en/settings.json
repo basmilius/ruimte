@@ -77,6 +77,7 @@
             "colors": "Colors",
             "folding": "Code folding",
             "smartKeys": "Smart keys",
+            "ai": "AI",
             "languageServers": "Language servers"
         },
         "general": {
@@ -132,6 +133,27 @@
                     "label": "Authors",
                     "description": "Shows above a class, function or method who wrote it according to git, with a plus for other authors. Press it for the commits."
                 }
+            }
+        },
+        "ai": {
+            "title": "AI",
+            "inlineAgent": {
+                "label": "Inline edit",
+                "description": "The agent that handles inline edits. It runs as a chat in the project.",
+                "none": "No agent is set up"
+            },
+            "agentChanges": {
+                "label": "Agent changes in open files",
+                "description": "How edits from a running chat appear in the editor.",
+                "options": {
+                    "off": "Off",
+                    "gutter": "Gutter",
+                    "review": "Review"
+                }
+            },
+            "attribution": {
+                "label": "Attribution in gutter",
+                "description": "Marks the lines an agent wrote. Hover shows the chat and the turn."
             }
         },
         "folding": {
