@@ -10,7 +10,7 @@ function document(path: string, languageId: string, text: string): SharedDocumen
     return {
         absolutePath: path,
         uri: `file://${path}`,
-        kind: null,
+        kinds: [],
         storedPath: path.replace('/work/', ''),
         languageId,
         text,

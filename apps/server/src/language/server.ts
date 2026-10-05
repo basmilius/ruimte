@@ -42,8 +42,8 @@ export const realLanguageClock: LanguageClock = {
 export interface SharedDocument {
     readonly absolutePath: string;
     readonly uri: string;
-    /* The kind of server that serves it; null for a language none does, which the daemon still holds so a client's calls stay uniform. */
-    kind: LanguageServerKind | null;
+    /* The kinds of server that serve it, the one of its language first; empty for a language none serves, which the daemon still holds so a client's calls stay uniform. */
+    kinds: LanguageServerKind[];
     /* The stored path a client hears about it under. */
     readonly storedPath: string;
     languageId: string;
@@ -204,6 +204,22 @@ export class LanguageServer {
                 }
             })
         );
+    }
+
+    /* Whether a process of this server could answer `method` for the document right now. */
+    canAnswer(document: SharedDocument, method: string, params?: object, hint?: string): boolean {
+        if (this.phase !== 'ready') {
+            return false;
+        }
+        return this.orderFor(document, method, params ?? {}, hint).some((component) => {
+            const open = component.documents.get(document.absolutePath);
+            return open !== undefined && component.session.supports(method, open);
+        });
+    }
+
+    /* Whether one of the processes of this server goes by this name. */
+    hasComponent(name: string): boolean {
+        return KIND_PROFILES[this.kind].components.some((component) => component.name === name);
     }
 
     /* What the document may ask: by method, the options of the first process that supports it. */

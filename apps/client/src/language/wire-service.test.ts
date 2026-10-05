@@ -192,6 +192,24 @@ describe('requests', () => {
         await language.changeDocument(uri, [{ text: 'let b;' }]);
         await expect(language.resolveCompletion(uri, item!)).rejects.toMatchObject({ name: 'StaleResultError' });
     });
+
+    test('resolves an item of a merged list against the process that made that item', async () => {
+        const { transport, language } = service();
+        await language.openDocument({ uri, languageId: 'typescript', text: 'let a = 1;' });
+        transport.answers.set('language.request', () => ({
+            result: { isIncomplete: false, items: [{ label: 'a' }, { label: 'flex' }] },
+            server: 'typescript',
+            version: 1,
+            itemServers: ['typescript', 'tailwind']
+        }));
+        const result = await language.completion(uri, origin);
+        const items = !Array.isArray(result) && result ? result.items : [];
+        transport.answers.set('language.request', () => ({ result: { label: 'flex' }, server: 'tailwind', version: 1 }));
+        await language.resolveCompletion(uri, items[1]!);
+        expect(transport.callsOf('language.request').at(-1)?.payload).toMatchObject({ method: 'completionItem/resolve', server: 'tailwind' });
+        await language.resolveCompletion(uri, items[0]!);
+        expect(transport.callsOf('language.request').at(-1)?.payload).toMatchObject({ server: 'typescript' });
+    });
 });
 
 describe('events', () => {

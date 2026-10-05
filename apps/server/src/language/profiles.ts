@@ -27,10 +27,19 @@ export interface ComponentProfile {
     pullDiagnostics?: boolean;
 }
 
+/* What a project has to hold for an addition to serve it: any of the files, or a dependency, or a field of its `package.json`. */
+export interface Activation {
+    files: readonly string[];
+    dependency?: RegExp;
+    packageField?: string;
+}
+
 export interface KindProfile {
     kind: LanguageServerKind;
     /* In the order they start, since the second may need the first. */
     components: readonly ComponentProfile[];
+    /* Set for a kind that serves beside the kind of the language, in the projects that call for it, rather than instead of it. */
+    activation?: Activation;
 }
 
 const SCRIPT_LANGUAGES = ['typescript', 'typescriptreact', 'javascript', 'javascriptreact'] as const;
@@ -106,6 +115,39 @@ const YAML_SCHEMAS = {
         'compose.yml',
         'compose.*.yml'
     ]
+};
+
+/*
+ * What the ESLint server reads for each file it lints. `probe` stays quiet for a file ESLint cannot lint
+ * with the project's configuration, and the search for a global install is off since the project's own is
+ * the one to lint with.
+ */
+const ESLINT_SETTINGS = {
+    validate: 'probe',
+    run: 'onType',
+    packageManager: null,
+    nodePath: null,
+    quiet: false,
+    format: false,
+    onIgnoredFiles: 'off',
+    options: {},
+    rulesCustomizations: [],
+    experimental: {},
+    problems: { shortenToSingleLine: false },
+    workingDirectory: { mode: 'location' },
+    codeActionOnSave: { enable: false, mode: 'all' },
+    codeAction: { disableRuleComment: { enable: true, location: 'separateLine', commentStyle: 'line' }, showDocumentation: { enable: true } }
+};
+
+const TAILWIND_SETTINGS = {
+    editor: { tabSize: 4 },
+    tailwindCSS: {
+        validate: true,
+        emmetCompletions: false,
+        classAttributes: ['class', 'className', 'ngClass', 'class:list'],
+        includeLanguages: {},
+        experimental: { classRegex: [] }
+    }
 };
 
 export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
@@ -236,6 +278,44 @@ export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
                 initializationOptions: () => ({})
             }
         ]
+    },
+    eslint: {
+        kind: 'eslint',
+        activation: {
+            files: [
+                ...['js', 'mjs', 'cjs', 'ts', 'mts', 'cts'].map((extension) => `eslint.config.${extension}`),
+                ...['', '.js', '.cjs', '.json', '.yaml', '.yml'].map((extension) => `.eslintrc${extension}`)
+            ],
+            packageField: 'eslintConfig'
+        },
+        components: [
+            {
+                name: 'eslint',
+                languages: [...SCRIPT_LANGUAGES, 'vue'],
+                entry: extractedScript('eslint'),
+                args: () => ['--stdio'],
+                initializationOptions: () => ({}),
+                configuration: ESLINT_SETTINGS,
+                pullDiagnostics: true
+            }
+        ]
+    },
+    tailwind: {
+        kind: 'tailwind',
+        activation: {
+            files: ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'].map((extension) => `tailwind.config.${extension}`),
+            dependency: /^(tailwindcss|@tailwindcss\/.+)$/
+        },
+        components: [
+            {
+                name: 'tailwind',
+                languages: ['html', 'css', 'scss', 'less', ...SCRIPT_LANGUAGES, 'vue', 'php'],
+                entry: '@tailwindcss/language-server/bin/tailwindcss-language-server',
+                args: () => ['--stdio'],
+                initializationOptions: () => ({}),
+                configuration: TAILWIND_SETTINGS
+            }
+        ]
     }
 };
 
@@ -271,11 +351,62 @@ export function documentLanguageId(languageId: string, storedPath: string): stri
     return id === 'json' && JSONC_FILES.test(storedPath) ? 'jsonc' : id;
 }
 
+function serves(profile: KindProfile, languageId: string): boolean {
+    return profile.components.some((component) => component.languages.includes(lspLanguageId(languageId)));
+}
+
 /* The kind that serves a language, or null for one no server here knows. */
 export function kindForLanguage(languageId: string): LanguageServerKind | null {
-    const id = lspLanguageId(languageId);
-    return (Object.values(KIND_PROFILES).find((profile) => profile.components.some((component) => component.languages.includes(id)))?.kind ??
-        null) as LanguageServerKind | null;
+    return Object.values(KIND_PROFILES).find((profile) => profile.activation === undefined && serves(profile, languageId))?.kind ?? null;
+}
+
+/* The kinds that serve a language beside its own, in a project that calls for them, in the order of the catalog. */
+export function additionKindsForLanguage(languageId: string): LanguageServerKind[] {
+    return Object.values(KIND_PROFILES)
+        .filter((profile) => profile.activation !== undefined && serves(profile, languageId))
+        .map((profile) => profile.kind);
+}
+
+/* What a project says about itself, as far as an addition needs to know. */
+export interface ProjectFacts {
+    folder: string;
+    /* The text of the `package.json` in the folder, or null without one. */
+    packageJson: string | null;
+    exists(path: string): Promise<boolean>;
+}
+
+function packageJsonHas(packageJson: string | null, activation: Activation): boolean {
+    if (packageJson === null) {
+        return false;
+    }
+    try {
+        const parsed = JSON.parse(packageJson) as Record<string, unknown>;
+        if (activation.packageField !== undefined && parsed[activation.packageField] !== undefined) {
+            return true;
+        }
+        const { dependency } = activation;
+        return (
+            dependency !== undefined &&
+            ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'].some((field) => {
+                const dependencies = parsed[field];
+                return typeof dependencies === 'object' && dependencies !== null && Object.keys(dependencies).some((name) => dependency.test(name));
+            })
+        );
+    } catch {
+        return false;
+    }
+}
+
+/* Whether a project calls for an addition: one of its files in the project folder, or its `package.json` naming what the addition is for. */
+export async function activates(profile: KindProfile, facts: ProjectFacts): Promise<boolean> {
+    const { activation } = profile;
+    if (activation === undefined) {
+        return false;
+    }
+    if (packageJsonHas(facts.packageJson, activation)) {
+        return true;
+    }
+    return (await Promise.all(activation.files.map((file) => facts.exists(join(facts.folder, file))))).some(Boolean);
 }
 
 /*

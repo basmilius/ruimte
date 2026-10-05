@@ -444,7 +444,7 @@ export class WireLanguageService implements LanguageService {
             if (this.documents.get(uri) !== document || document.version !== version) {
                 throw new StaleResultError(uri);
             }
-            this.remember(reply.result, { server: reply.server, version });
+            this.remember(reply.result, { server: reply.server, version }, reply.itemServers);
             return reply.result as T;
         } catch (error) {
             if (isCode(error, LANGUAGE_ERROR_CODES.staleDocument, LANGUAGE_ERROR_CODES.documentNotOpen)) {
@@ -516,7 +516,8 @@ export class WireLanguageService implements LanguageService {
             .catch(() => undefined);
     }
 
-    private remember(result: unknown, origin: Origin): void {
+    /* `itemServers` names the process of each item of a merged list, which then resolves against that process and not the one that headed the answer. */
+    private remember(result: unknown, origin: Origin, itemServers?: readonly string[]): void {
         if (!result || typeof result !== 'object') {
             return;
         }
@@ -525,11 +526,9 @@ export class WireLanguageService implements LanguageService {
             this.remember(result.command, origin);
         }
         if (Array.isArray(result)) {
-            for (const item of result) {
-                this.remember(item, origin);
-            }
+            result.forEach((item, index) => this.remember(item, { ...origin, server: itemServers?.[index] ?? origin.server }));
         } else if ('items' in result) {
-            this.remember(result.items, origin);
+            this.remember(result.items, origin, itemServers);
         }
     }
 

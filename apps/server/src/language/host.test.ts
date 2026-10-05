@@ -31,7 +31,7 @@ interface Rig {
 }
 
 /* The install of a kind is played by `run`, which leaves the scripts where bun would. */
-function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner; packageJson?: string } = {}): Rig {
+function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner; packageJson?: string; files?: string[] } = {}): Rig {
     const spawner = options.spawner ?? fakeSpawner();
     const holders = new Set(['client-1']);
     const installs: LanguageServerKind[] = [];
@@ -60,7 +60,7 @@ function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner;
             return 0;
         },
         clock,
-        exists: async () => false,
+        exists: async (path) => (options.files ?? []).includes(path),
         readText: async (path) => (path === '/work/package.json' ? (options.packageJson ?? null) : null)
     });
     const events: Record<string, SessionEvent[]> = { 'client-1': [], 'client-2': [] };
@@ -70,7 +70,10 @@ function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner;
     return { host, spawner, holders, events, installs, clock };
 }
 
-async function installed(kinds: LanguageServerKind[] = ['typescript'], options: { packageJson?: string } = {}): Promise<Rig> {
+async function installed(
+    kinds: LanguageServerKind[] = ['typescript'],
+    options: { packageJson?: string; files?: string[]; spawner?: FakeSpawner } = {}
+): Promise<Rig> {
     const result = rig(options);
     for (const kind of kinds) {
         await result.host.install(kind);
@@ -304,6 +307,103 @@ describe('requests', () => {
         await expect(host.request({ ...base, path: 'src/none.ts', method: 'textDocument/hover' })).rejects.toMatchObject({
             code: LANGUAGE_ERROR_CODES.documentNotOpen
         });
+    });
+});
+
+describe('several servers on one document', () => {
+    const eslintFiles = ['/work/eslint.config.js'];
+    const caps = (extra: object = {}) => ({ textDocumentSync: 2 as const, hoverProvider: true, ...extra });
+
+    it('adds ESLint to the kind of the language in a project that has an ESLint config, and nothing without one', async () => {
+        const { host, spawner } = await installed(['typescript', 'eslint'], { files: eslintFiles });
+        expect((await open(host)).servers).toEqual(['typescript', 'eslint']);
+        await ready(host);
+        await ready(host, 'eslint');
+        expect(spawner.of('eslint')[0]!.server.documents.has('file:///work/src/a.ts')).toBe(true);
+        expect(spawner.of('typescript')[0]!.server.documents.has('file:///work/src/a.ts')).toBe(true);
+        expect(
+            (await installed(['typescript', 'eslint'])).host.open('client-1', { projectId: 'p1', path: 'src/a.ts', languageId: 'typescript', text: '' })
+        ).resolves.toMatchObject({
+            servers: ['typescript']
+        });
+    });
+
+    it('adds Tailwind where the package.json names it, to a stylesheet and to markup', async () => {
+        const { host } = await installed(['css', 'tailwind', 'html'], { packageJson: JSON.stringify({ devDependencies: { tailwindcss: '^4' } }) });
+        expect((await open(host, 'src/app.css', 'a {}', 'client-1', 'css')).servers).toEqual(['css', 'tailwind']);
+        expect((await open(host, 'index.html', '<div></div>', 'client-1', 'html')).servers).toEqual(['html', 'tailwind']);
+        expect((await open(host, 'main.py', '', 'client-1', 'python')).servers).toEqual(['python']);
+    });
+
+    it('lists an addition that is not installed as serving, and answers from the server that is', async () => {
+        const spawner = fakeSpawner({ typescript: caps() });
+        const { host } = await installed(['typescript'], { files: eslintFiles, spawner });
+        await openReady(host);
+        spawner.processes[0].server.handle('textDocument/hover', () => ({ contents: 'from tsserver' }));
+        expect((await open(host)).servers).toEqual(['typescript', 'eslint']);
+        const answer = await host.request({ projectId: 'p1', path: 'src/a.ts', method: 'textDocument/hover', params: {} });
+        expect(answer).toMatchObject({ result: { contents: 'from tsserver' }, server: 'typescript' });
+    });
+
+    it('reports the diagnostics of each server under its own name, and clears both when the document closes', async () => {
+        const { host, spawner, events } = await installed(['typescript', 'eslint'], { files: eslintFiles });
+        await open(host);
+        await ready(host);
+        await ready(host, 'eslint');
+        const item = { range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } }, message: 'm' };
+        await spawner
+            .of('eslint')[0]!
+            .server.connection.notify('textDocument/publishDiagnostics', { uri: 'file:///work/src/a.ts', version: 1, diagnostics: [item] });
+        await settle();
+        const reports = kinds(events['client-1'], 'language.diagnostics').map(
+            (event) => (event as { payload: { server: string; diagnostics: unknown[] } }).payload
+        );
+        expect(reports.at(-1)).toMatchObject({ server: 'eslint', diagnostics: [item] });
+        await host.closeDocument('client-1', { projectId: 'p1', path: 'src/a.ts' });
+        const cleared = kinds(events['client-1'], 'language.diagnostics')
+            .map((event) => (event as { payload: { server: string; diagnostics: unknown[] } }).payload)
+            .filter((payload) => payload.diagnostics.length === 0)
+            .map((payload) => payload.server);
+        expect(cleared).toEqual(expect.arrayContaining(['typescript', 'eslint']));
+    });
+
+    it('merges the suggestions of both servers, and sends an item back to the server that made it', async () => {
+        const spawner = fakeSpawner({
+            typescript: caps({ completionProvider: { resolveProvider: true, triggerCharacters: ['.'] } }),
+            eslint: caps({ completionProvider: { resolveProvider: true, triggerCharacters: ['"'] } })
+        });
+        const { host } = await installed(['typescript', 'eslint'], { files: eslintFiles, spawner });
+        await open(host);
+        await ready(host);
+        await ready(host, 'eslint');
+        spawner.of('typescript')[0]!.server.handle('textDocument/completion', () => [{ label: 'toFixed' }]);
+        spawner.of('eslint')[0]!.server.handle('textDocument/completion', () => ({ isIncomplete: true, items: [{ label: 'rule' }] }));
+        spawner.of('eslint')[0]!.server.handle('completionItem/resolve', (item) => ({ ...(item as object), detail: 'from eslint' }));
+        const base = { projectId: 'p1', path: 'src/a.ts' };
+        const answer = await host.request({ ...base, method: 'textDocument/completion', params: { position: { line: 0, character: 0 } } });
+        expect(answer.result).toEqual({ isIncomplete: true, items: [{ label: 'toFixed' }, { label: 'rule' }] });
+        expect(answer.itemServers).toEqual(['typescript', 'eslint']);
+        const resolved = await host.request({ ...base, method: 'completionItem/resolve', params: { label: 'rule' }, server: 'eslint' });
+        expect(resolved).toMatchObject({ result: { detail: 'from eslint' }, server: 'eslint' });
+        const opened = await open(host);
+        expect(opened.providers['textDocument/completion']).toEqual({ resolveProvider: true, triggerCharacters: ['.', '"'] });
+    });
+
+    it('keeps the answer of the server that answers when the other fails, and gives a feature that does not add up to the first', async () => {
+        const spawner = fakeSpawner({ typescript: caps({ definitionProvider: true }), eslint: caps({ definitionProvider: true }) });
+        const { host } = await installed(['typescript', 'eslint'], { files: eslintFiles, spawner });
+        await open(host);
+        await ready(host);
+        await ready(host, 'eslint');
+        spawner.of('typescript')[0]!.server.handle('textDocument/hover', () => {
+            throw new Error('broke');
+        });
+        spawner.of('eslint')[0]!.server.handle('textDocument/hover', () => ({ contents: { kind: 'markdown', value: 'rule docs' } }));
+        spawner.of('typescript')[0]!.server.handle('textDocument/definition', () => ({ uri: 'file:///a', range: {} }));
+        spawner.of('eslint')[0]!.server.handle('textDocument/definition', () => ({ uri: 'file:///b', range: {} }));
+        const base = { projectId: 'p1', path: 'src/a.ts', params: {} };
+        expect((await host.request({ ...base, method: 'textDocument/hover' })).result).toEqual({ contents: ['rule docs'] });
+        expect((await host.request({ ...base, method: 'textDocument/definition' })).result).toEqual({ uri: 'file:///a', range: {} });
     });
 });
 

@@ -56,6 +56,15 @@ const OTHER_FILES: Record<string, string> = {
     Dockerfile: 'FROM node:22\nRUN npm install\nCOPY . /app\nFRM broken\n'
 };
 
+/* A project with an ESLint config and Tailwind, where those two serve beside the server of the language. */
+const LINT_FILES: Record<string, string> = {
+    'package.json': JSON.stringify({ private: true, type: 'module', devDependencies: { eslint: '9.20.0', tailwindcss: '4.1.0' } }),
+    'eslint.config.js': "export default [{ files: ['**/*.js'], rules: { semi: ['error', 'always'], 'no-unused-vars': 'error' } }];\n",
+    'src/a.js': 'const unused = 1\nexport const used = 2;\n',
+    'index.html': '<div class="flex block p-4"></div>\n',
+    'app.css': '@import "tailwindcss";\n.card { @apply p-4; }\n'
+};
+
 /* A project that does not use Vue, whose TypeScript stays on the TypeScript kind. */
 const PLAIN_FILES: Record<string, string> = {
     'tsconfig.json': FILES['tsconfig.json'],
@@ -72,6 +81,7 @@ const SCRIPT_FILES: Record<string, string> = {
 let base = '';
 let project = '';
 let plain = '';
+let lint = '';
 let host: LanguageHost;
 let runtime: LanguageRuntime;
 const events: SessionEvent[] = [];
@@ -138,9 +148,11 @@ beforeAll(async () => {
     base = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-language-')));
     project = join(base, 'project');
     plain = join(base, 'plain');
+    lint = join(base, 'lint');
     for (const [root, files] of [
         [project, { ...FILES, ...SCRIPT_FILES, ...OTHER_FILES }],
-        [plain, PLAIN_FILES]
+        [plain, PLAIN_FILES],
+        [lint, LINT_FILES]
     ] as const) {
         for (const [path, text] of Object.entries(files)) {
             await mkdir(join(root, path, '..'), { recursive: true });
@@ -158,7 +170,7 @@ beforeAll(async () => {
     runtime = { command: stub, args: [], env: { BUN_BE_BUN: '1' } };
     host = new LanguageHost({
         root: join(base, 'home', 'language-servers'),
-        folderOf: (projectId) => (projectId === 'p1' ? project : projectId === 'p2' ? plain : null),
+        folderOf: (projectId) => ({ p1: project, p2: plain, p3: lint })[projectId] ?? null,
         holders: () => ['c1'],
         machineHome: new MachineHome(join(base, 'home')),
         runtime,
@@ -170,7 +182,9 @@ beforeAll(async () => {
     });
     host.subscribe('c1', (event) => events.push(event));
     // The Vue server needs `vue` in the project to type a template.
-    expect(await runCommand({ command: stub, args: ['install', '--ignore-scripts'], cwd: project, env: runtime.env }, () => undefined)).toBe(0);
+    for (const folder of [project, lint]) {
+        expect(await runCommand({ command: stub, args: ['install', '--ignore-scripts'], cwd: folder, env: runtime.env }, () => undefined)).toBe(0);
+    }
 }, 180_000);
 
 afterAll(async () => {
@@ -482,13 +496,90 @@ describe('Dockerfile', () => {
     }, 180_000);
 });
 
+describe('servers that serve beside the server of the language', () => {
+    test('ESLint reports the rules of the project and offers its fixes among the actions of the TypeScript server', async () => {
+        await install('typescript');
+        await install('eslint');
+        const text = LINT_FILES['src/a.js'];
+        const opened = await host.open('c1', { projectId: 'p3', path: 'src/a.js', languageId: 'javascript', text });
+        expect(opened.servers).toEqual(['typescript', 'eslint', 'tailwind']);
+        await Promise.all([waitReady('typescript', 'p3'), waitReady('eslint', 'p3')]);
+        const diagnostics = await eventually(
+            'ESLint problems',
+            () => diagnosticsOf('src/a.js', 'eslint'),
+            (list) => list.some((item) => item.code === 'semi')
+        );
+        expect(diagnostics.some((item) => item.code === 'no-unused-vars')).toBe(true);
+        const semi = diagnostics.find((item) => item.code === 'semi')!;
+        const actions = await ask('src/a.js', 'textDocument/codeAction', { range: semi.range, context: { diagnostics: [semi], only: ['quickfix'] } }, 'p3');
+        expect(actions.itemServers).toContain('eslint');
+        const fix = (actions.result as { title: string; command: { command: string; arguments: unknown[] } }[]).find((action) => /semi/.test(action.title))!;
+        // ESLint makes its fix as an edit it asks the client for while the command runs.
+        const running = host.command('c1', {
+            projectId: 'p3',
+            path: 'src/a.js',
+            command: fix.command.command,
+            arguments: fix.command.arguments,
+            server: 'eslint'
+        });
+        const asked = await eventually('an edit asked for', () => events.find((event) => event.event === 'language.edit'), Boolean);
+        if (asked?.event !== 'language.edit') {
+            throw new Error('No edit was asked for');
+        }
+        expect(JSON.stringify(asked.payload.edit)).toContain(';');
+        host.answerEdit('c1', { projectId: 'p3', editId: asked.payload.editId, applied: true });
+        await running;
+    }, 180_000);
+
+    test('Tailwind completes classes and finds the conflict beside the HTML server', async () => {
+        await install('html');
+        await install('tailwind');
+        const text = LINT_FILES['index.html'];
+        const opened = await host.open('c1', { projectId: 'p3', path: 'index.html', languageId: 'html', text });
+        expect(opened.servers).toEqual(['html', 'tailwind']);
+        await Promise.all([waitReady('html', 'p3'), waitReady('tailwind', 'p3')]);
+        const hover = await eventually(
+            'a class hover',
+            () => ask('index.html', 'textDocument/hover', { position: positionOf(text, 'flex', 1) }, 'p3').then((reply) => reply.result),
+            Boolean
+        );
+        expect(JSON.stringify(hover)).toContain('display: flex');
+        const completion = await eventually(
+            'class completions',
+            () => ask('index.html', 'textDocument/completion', { position: positionOf(text, 'p-4', 3) }, 'p3'),
+            (reply) => reply.itemServers?.includes('tailwind') === true
+        );
+        expect(JSON.stringify(completion.result)).toContain('p-4');
+        await eventually(
+            'a conflict',
+            () => diagnosticsOf('index.html', 'tailwind'),
+            (list) => list.length > 0
+        );
+    }, 180_000);
+
+    test('serves a stylesheet with the CSS server and Tailwind together', async () => {
+        await install('css');
+        const text = LINT_FILES['app.css'];
+        const opened = await host.open('c1', { projectId: 'p3', path: 'app.css', languageId: 'css', text });
+        expect(opened.servers).toEqual(['css', 'tailwind']);
+        await waitReady('css', 'p3');
+        await eventually(
+            'a CSS report',
+            () => events.some((event) => event.event === 'language.diagnostics' && event.payload.path === 'app.css' && event.payload.server === 'css'),
+            Boolean
+        );
+        // `@apply` is no problem for a project that uses Tailwind.
+        expect(diagnosticsOf('app.css', 'css')).toEqual([]);
+    }, 180_000);
+});
+
 describe('the project closing', () => {
     test('ends every server and leaves no process behind', async () => {
         // Both projects, since a server outlives its last document and only its project's end stops it.
-        await Promise.all([host.end('p1'), host.end('p2')]);
+        await Promise.all([host.end('p1'), host.end('p2'), host.end('p3')]);
         const results = await Promise.all(exits);
         expect(results.length).toBeGreaterThanOrEqual(4);
-        for (const projectId of ['p1', 'p2']) {
+        for (const projectId of ['p1', 'p2', 'p3']) {
             expect((await host.status(projectId)).every((status) => status.state === 'stopped')).toBe(true);
         }
     }, 60_000);

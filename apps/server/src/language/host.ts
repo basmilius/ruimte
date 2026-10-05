@@ -35,7 +35,8 @@ import {
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LanguageInstaller } from './installer.ts';
-import { documentLanguageId, KIND_PROFILES, kindForLanguage, usesVue } from './profiles.ts';
+import { MERGED_METHODS, mergeAnswers, mergeProviders } from './merge.ts';
+import { activates, additionKindsForLanguage, documentLanguageId, KIND_PROFILES, kindForLanguage, usesVue, type ProjectFacts } from './profiles.ts';
 import { bunRuntime, runCommand, spawnLanguageProcess, type LanguageRuntime, type RunCommand, type SpawnLanguageProcess } from './runtime.ts';
 import { LanguageServer, realLanguageClock, type LanguageClock, type LanguageServerHooks, type SharedDocument } from './server.ts';
 import { versionOf } from './versions.ts';
@@ -144,11 +145,11 @@ export class LanguageHost {
         applyEdit: (server, params) => this.askForEdit(server, params),
         providers: (document) => {
             const projectId = this.projectOf(document);
-            const server = projectId === null || document.kind === null ? undefined : this.projects.get(projectId)?.servers.get(document.kind);
-            if (projectId !== null && server) {
+            const project = projectId === null ? undefined : this.projects.get(projectId);
+            if (projectId !== null && project && this.serversOf(project, document).length > 0) {
                 this.toHolders(projectId, {
                     event: 'language.providers',
-                    payload: { projectId, path: document.storedPath, providers: server.providers(document, LANGUAGE_METHODS) }
+                    payload: { projectId, path: document.storedPath, providers: this.providersOf(project, document) }
                 });
             }
         }
@@ -195,7 +196,7 @@ export class LanguageHost {
     async open(clientId: string, payload: LanguageDocumentOpenPayload): Promise<LanguageDocumentOpenResult> {
         const project = this.projectFor(payload.projectId);
         const absolutePath = await this.pathOf(project, payload.path);
-        const kind = await this.kindFor(project, kindForLanguage(payload.languageId));
+        const kinds = await this.kindsFor(project, payload.languageId);
         let document = project.documents.get(absolutePath);
         if (document) {
             document.clients.add(clientId);
@@ -204,26 +205,26 @@ export class LanguageHost {
                 const changes = [{ text: payload.text }];
                 document.text = payload.text;
                 document.version++;
-                await this.serverOf(project, document)?.change(document, changes);
+                await Promise.all(this.serversOf(project, document).map((server) => server.change(document!, changes)));
             }
         } else {
+            const storedPath = storedPathOf(project.folder, absolutePath);
             document = {
                 absolutePath,
                 uri: pathToFileUri(absolutePath),
-                kind,
-                storedPath: storedPathOf(project.folder, absolutePath),
-                languageId: documentLanguageId(payload.languageId, storedPathOf(project.folder, absolutePath)),
+                kinds,
+                storedPath,
+                languageId: documentLanguageId(payload.languageId, storedPath),
                 text: payload.text,
                 version: 1,
                 clients: new Set([clientId])
             };
             project.documents.set(absolutePath, document);
-            if (kind !== null) {
+            for (const kind of kinds) {
                 this.ensureServer(project, kind).attach(document);
             }
         }
-        const server = this.serverOf(project, document);
-        return { version: document.version, servers: kind === null ? [] : [kind], providers: server?.providers(document, LANGUAGE_METHODS) ?? {} };
+        return { version: document.version, servers: [...document.kinds], providers: this.providersOf(project, document) };
     }
 
     async change(payload: LanguageDocumentChangePayload): Promise<{ version: number }> {
@@ -240,7 +241,7 @@ export class LanguageHost {
         }
         document.text = next;
         const version = ++document.version;
-        await this.serverOf(project, document)?.change(document, payload.changes);
+        await Promise.all(this.serversOf(project, document).map((server) => server.change(document, payload.changes)));
         return { version };
     }
 
@@ -256,25 +257,70 @@ export class LanguageHost {
         if (payload.version !== undefined && payload.version !== document.version) {
             throw new LanguageError(LANGUAGE_ERROR_CODES.staleDocument, `The document is at version ${document.version}, not ${payload.version}`);
         }
-        const server = this.serverOf(project, document);
-        if (!server) {
+        const servers = this.serversOf(project, document);
+        if (servers.length === 0) {
             throw new LanguageError(LANGUAGE_ERROR_CODES.unavailable, `No language server serves ${document.languageId}`);
         }
         const params = typeof payload.params === 'object' && payload.params !== null ? payload.params : {};
         try {
-            return await server.request(document, payload.method, params, payload.server);
+            return await this.route(servers, document, payload.method, params, payload.server);
         } catch (error) {
             throw translated(error);
         }
     }
 
+    /*
+     * A resolve or a command goes to the process that made it. A feature that adds up goes to every
+     * server that offers it, and any other to the first, the one of the document's language before
+     * the additions.
+     */
+    private async route(
+        servers: readonly LanguageServer[],
+        document: SharedDocument,
+        method: string,
+        params: object,
+        hint?: string
+    ): Promise<LanguageRequestResult> {
+        if (hint) {
+            const owner = servers.find((server) => server.hasComponent(hint));
+            if (!owner) {
+                throw new LspError(`No ${hint} server serves this document`, ErrorCodes.MethodNotFound);
+            }
+            return owner.request(document, method, params, hint);
+        }
+        const able = servers.filter((server) => server.canAnswer(document, method, params));
+        if (MERGED_METHODS.has(method) && able.length > 1) {
+            const settled = await Promise.allSettled(able.map((server) => server.request(document, method, params)));
+            const answers = settled.flatMap((outcome) => (outcome.status === 'fulfilled' ? [outcome.value] : []));
+            if (answers.length === 0) {
+                throw (settled[0] as PromiseRejectedResult).reason;
+            }
+            const merged = mergeAnswers(
+                method,
+                answers.map((answer) => ({ server: answer.server, result: answer.result }))
+            );
+            return {
+                result: merged.result,
+                server: answers[0]!.server,
+                version: answers[0]!.version,
+                ...(merged.itemServers ? { itemServers: merged.itemServers } : {})
+            };
+        }
+        // With nothing able to answer, the first server says why not: it is down, or it does not do that.
+        return (able[0] ?? servers[0]!).request(document, method, params);
+    }
+
     /* Runs a command of a server for a client, which may be asked to make edits while it runs. */
     async command(clientId: string, payload: LanguageCommandPayload): Promise<LanguageCommandResult> {
         const { project, document } = this.documentOf(payload);
-        const server = this.serverOf(project, document);
-        if (!server) {
+        const servers = this.serversOf(project, document);
+        if (servers.length === 0) {
             throw new LanguageError(LANGUAGE_ERROR_CODES.unavailable, `No language server serves ${document.languageId}`);
         }
+        const server =
+            (payload.server ? servers.find((candidate) => candidate.hasComponent(payload.server!)) : undefined) ??
+            servers.find((candidate) => candidate.canAnswer(document, 'workspace/executeCommand')) ??
+            servers[0]!;
         const running = { clientId };
         project.commands.push(running);
         try {
@@ -329,12 +375,29 @@ export class LanguageHost {
      * one TypeScript server loads Vue's plugin, so a `.ts` file importing a `.vue` one is typed and only one
      * tsserver runs. A `.vue` file opening in a project that did not say so makes it one.
      */
-    private async kindFor(project: ProjectLanguage, kind: LanguageServerKind | null): Promise<LanguageServerKind | null> {
+    private async primaryKindFor(project: ProjectLanguage, kind: LanguageServerKind | null): Promise<LanguageServerKind | null> {
         if (kind === 'vue') {
             await this.markVue(project);
             return 'vue';
         }
         return kind === 'typescript' && (await this.projectUsesVue(project)) ? 'vue' : kind;
+    }
+
+    /* The kinds that serve a document: the one of its language, then the additions the project calls for. */
+    private async kindsFor(project: ProjectLanguage, languageId: string): Promise<LanguageServerKind[]> {
+        const primary = await this.primaryKindFor(project, kindForLanguage(languageId));
+        const candidates = additionKindsForLanguage(languageId);
+        const kinds: LanguageServerKind[] = primary === null ? [] : [primary];
+        if (candidates.length === 0) {
+            return kinds;
+        }
+        const facts: ProjectFacts = {
+            folder: project.folder,
+            packageJson: await (this.options.readText ?? readTextOrNull)(join(project.folder, 'package.json')),
+            exists: this.options.exists ?? fileExists
+        };
+        const active = await Promise.all(candidates.map((kind) => activates(KIND_PROFILES[kind], facts)));
+        return [...kinds, ...candidates.filter((_, index) => active[index])];
     }
 
     private projectUsesVue(project: ProjectLanguage): Promise<boolean> {
@@ -355,10 +418,10 @@ export class LanguageHost {
         }
         project.vue = true;
         const typescript = project.servers.get('typescript');
-        const moved = [...project.documents.values()].filter((document) => document.kind === 'typescript');
+        const moved = [...project.documents.values()].filter((document) => document.kinds.includes('typescript'));
         for (const document of moved) {
             await typescript?.detach(document);
-            document.kind = 'vue';
+            document.kinds = document.kinds.map((kind) => (kind === 'typescript' ? 'vue' : kind));
             this.ensureServer(project, 'vue').attach(document);
         }
         if (typescript && moved.length > 0 && typescript.documentCount === 0 && typescript.state !== 'crashed') {
@@ -399,8 +462,13 @@ export class LanguageHost {
         return found;
     }
 
-    private serverOf(project: ProjectLanguage, document: SharedDocument): LanguageServer | undefined {
-        return document.kind === null ? undefined : project.servers.get(document.kind);
+    /* The servers of the document that exist in the project, the one of its language first. */
+    private serversOf(project: ProjectLanguage, document: SharedDocument): LanguageServer[] {
+        return document.kinds.flatMap((kind) => project.servers.get(kind) ?? []);
+    }
+
+    private providersOf(project: ProjectLanguage, document: SharedDocument): Record<string, unknown> {
+        return mergeProviders(this.serversOf(project, document).map((server) => server.providers(document, LANGUAGE_METHODS)));
     }
 
     private ensureServer(project: ProjectLanguage, kind: LanguageServerKind): LanguageServer {
@@ -431,17 +499,13 @@ export class LanguageHost {
         }
         project.documents.delete(document.absolutePath);
         // A server clears what it reported for a file it was told closed, but no report of it reaches the clients once the file is out of the project's documents.
-        for (const component of document.kind === null ? [] : KIND_PROFILES[document.kind].components) {
+        for (const component of document.kinds.flatMap((kind) => KIND_PROFILES[kind].components)) {
             this.toHolders(project.projectId, {
                 event: 'language.diagnostics',
                 payload: { projectId: project.projectId, path: document.storedPath, server: component.name, diagnostics: [] }
             });
         }
-        const server = this.serverOf(project, document);
-        if (!server) {
-            return;
-        }
-        await server.detach(document);
+        await Promise.all(this.serversOf(project, document).map((server) => server.detach(document)));
     }
 
     private dropClient(clientId: string): void {

@@ -33706,7 +33706,9 @@
           "yaml",
           "python",
           "bash",
-          "docker"
+          "docker",
+          "eslint",
+          "tailwind"
         ]
       }
     },
@@ -33787,7 +33789,9 @@
           "yaml",
           "python",
           "bash",
-          "docker"
+          "docker",
+          "eslint",
+          "tailwind"
         ]
       }
     },
@@ -33869,7 +33873,9 @@
           "yaml",
           "python",
           "bash",
-          "docker"
+          "docker",
+          "eslint",
+          "tailwind"
         ]
       }
     },
@@ -34168,6 +34174,12 @@
         "type": "integer",
         "exclusiveMinimum": 0,
         "maximum": 9007199254740991
+      },
+      "itemServers": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       }
     },
     "required": [

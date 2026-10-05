@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'bun:test';
-import { documentLanguageId, KIND_PROFILES, kindForLanguage, lspLanguageId, resolveTypescriptLib, usesVue } from './profiles.ts';
+import {
+    activates,
+    additionKindsForLanguage,
+    documentLanguageId,
+    KIND_PROFILES,
+    kindForLanguage,
+    lspLanguageId,
+    resolveTypescriptLib,
+    usesVue
+} from './profiles.ts';
 import { LANGUAGE_KIND_PACKAGES, LANGUAGE_PACKAGE_VERSIONS, pinnedVersionsOf, versionOf } from './versions.ts';
 
 const context = { installDirectory: '/home/.ruimte/language-servers/vue', projectFolder: '/work/app', typescriptLib: '/work/app/node_modules/typescript/lib' };
@@ -24,6 +33,31 @@ describe('server profiles', () => {
         expect(lspLanguageId('php')).toBe('php');
     });
 
+    it('keeps ESLint and Tailwind out of the kind of a language, and offers them beside it', () => {
+        expect(kindForLanguage('typescript')).toBe('typescript');
+        expect(kindForLanguage('css')).toBe('css');
+        expect(additionKindsForLanguage('typescript')).toEqual(['eslint', 'tailwind']);
+        expect(additionKindsForLanguage('vue')).toEqual(['eslint', 'tailwind']);
+        expect(additionKindsForLanguage('scss')).toEqual(['tailwind']);
+        expect(additionKindsForLanguage('python')).toEqual([]);
+    });
+
+    it('activates an addition by a config file, a dependency or a package.json field', async () => {
+        const facts = (packageJson: string | null, files: string[] = []) => ({
+            folder: '/work',
+            packageJson,
+            exists: async (path: string) => files.includes(path)
+        });
+        expect(await activates(KIND_PROFILES.eslint, facts(null, ['/work/eslint.config.mjs']))).toBe(true);
+        expect(await activates(KIND_PROFILES.eslint, facts(null, ['/work/.eslintrc.json']))).toBe(true);
+        expect(await activates(KIND_PROFILES.eslint, facts(JSON.stringify({ eslintConfig: {} })))).toBe(true);
+        expect(await activates(KIND_PROFILES.eslint, facts(JSON.stringify({ devDependencies: { eslint: '^9' } })))).toBe(false);
+        expect(await activates(KIND_PROFILES.tailwind, facts(JSON.stringify({ devDependencies: { '@tailwindcss/vite': '^4' } })))).toBe(true);
+        expect(await activates(KIND_PROFILES.tailwind, facts(null, ['/work/tailwind.config.ts']))).toBe(true);
+        expect(await activates(KIND_PROFILES.tailwind, facts('not json'))).toBe(false);
+        expect(await activates(KIND_PROFILES.typescript, facts(null, ['/work/eslint.config.js']))).toBe(false);
+    });
+
     it('opens a JSON file that allows comments as JSONC and any other as JSON', () => {
         expect(documentLanguageId('json', 'tsconfig.json')).toBe('jsonc');
         expect(documentLanguageId('json', 'packages/app/tsconfig.build.json')).toBe('jsonc');
@@ -36,7 +70,7 @@ describe('server profiles', () => {
         const pulling = Object.values(KIND_PROFILES).flatMap((profile) =>
             profile.components.filter((component) => component.pullDiagnostics).map((component) => component.name)
         );
-        expect(pulling).toEqual(['css', 'html', 'json', 'python']);
+        expect(pulling).toEqual(['css', 'html', 'json', 'python', 'eslint']);
     });
 
     it('keeps the schema store of the YAML server off', () => {

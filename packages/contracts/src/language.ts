@@ -10,7 +10,7 @@ import { ProjectIdSchema } from './project.ts';
  */
 
 /* A kind is one server, or for Vue a pair: `@vue/language-server` with a TypeScript server that loads `@vue/typescript-plugin`. */
-export const LanguageServerKindSchema = z.enum(['typescript', 'vue', 'php', 'css', 'html', 'json', 'yaml', 'python', 'bash', 'docker']);
+export const LanguageServerKindSchema = z.enum(['typescript', 'vue', 'php', 'css', 'html', 'json', 'yaml', 'python', 'bash', 'docker', 'eslint', 'tailwind']);
 export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
 
 export const LanguageServerStateSchema = z.enum([
@@ -180,11 +180,17 @@ export const LanguageRequestPayloadSchema = LanguageDocumentTargetPayloadSchema.
 });
 export type LanguageRequestPayload = z.infer<typeof LanguageRequestPayloadSchema>;
 
-/* `result` is the LSP 3.17 result of the method, `server` the process that answered and `version` the version it answered for. */
+/*
+ * `result` is the LSP 3.17 result of the method, `server` the process that answered and `version` the
+ * version it answered for. When several servers answered and their lists were merged, `itemServers`
+ * names the process of each item (of the list, or of its `items`), so an item resolves against the
+ * process that made it.
+ */
 export const LanguageRequestResultSchema = z.object({
     result: z.unknown(),
     server: z.string(),
-    version: z.number().int().positive()
+    version: z.number().int().positive(),
+    itemServers: z.array(z.string()).optional()
 });
 export type LanguageRequestResult = z.infer<typeof LanguageRequestResultSchema>;
 

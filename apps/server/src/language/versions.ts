@@ -13,6 +13,7 @@ export const LANGUAGE_PACKAGE_VERSIONS = {
     intelephense: '1.18.5',
     // One package holds the CSS, HTML, JSON and ESLint servers, each installed under its own kind.
     'vscode-langservers-extracted': '4.10.0',
+    '@tailwindcss/language-server': '0.16.0',
     'yaml-language-server': '1.24.0',
     pyright: '1.1.414',
     'bash-language-server': '5.8.1',
@@ -32,7 +33,9 @@ export const LANGUAGE_KIND_PACKAGES: Record<LanguageServerKind, readonly Languag
     yaml: ['yaml-language-server'],
     python: ['pyright'],
     bash: ['bash-language-server'],
-    docker: ['dockerfile-language-server-nodejs']
+    docker: ['dockerfile-language-server-nodejs'],
+    eslint: ['vscode-langservers-extracted'],
+    tailwind: ['@tailwindcss/language-server']
 };
 
 /* The package a kind is named after, whose version a client reads. */
@@ -46,7 +49,9 @@ export const LANGUAGE_KIND_MAIN_PACKAGE: Record<LanguageServerKind, LanguagePack
     yaml: 'yaml-language-server',
     python: 'pyright',
     bash: 'bash-language-server',
-    docker: 'dockerfile-language-server-nodejs'
+    docker: 'dockerfile-language-server-nodejs',
+    eslint: 'vscode-langservers-extracted',
+    tailwind: '@tailwindcss/language-server'
 };
 
 export function pinnedVersionsOf(kind: LanguageServerKind): Record<string, string> {

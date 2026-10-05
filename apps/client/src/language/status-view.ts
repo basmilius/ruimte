@@ -11,7 +11,9 @@ export const SERVER_NAMES: Record<LanguageServerKind, { name: string; package: s
     yaml: { name: 'YAML', package: 'yaml-language-server' },
     python: { name: 'Python', package: 'Pyright' },
     bash: { name: 'Bash', package: 'bash-language-server' },
-    docker: { name: 'Dockerfile', package: 'dockerfile-language-server-nodejs' }
+    docker: { name: 'Dockerfile', package: 'dockerfile-language-server-nodejs' },
+    eslint: { name: 'ESLint', package: 'vscode-langservers-extracted' },
+    tailwind: { name: 'Tailwind CSS', package: '@tailwindcss/language-server' }
 };
 
 export type ServerTone = 'ok' | 'busy' | 'error' | 'idle';
