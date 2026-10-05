@@ -243,6 +243,49 @@ mod keys {
     }
 
     #[test]
+    fn completes_and_follows_the_fields_a_form_request_validates() {
+        let mut files = HELPERS.to_vec();
+        files.extend_from_slice(&[
+            (
+                "vendor/laravel/FormRequest.php",
+                "<?php namespace Illuminate\\Foundation\\Http; class FormRequest { public function input($key = null, $default = null) {} public function rules() { return []; } }",
+            ),
+            (
+                "app/Http/Requests/StoreUserRequest.php",
+                "<?php namespace App\\Http\\Requests; use Illuminate\\Foundation\\Http\\FormRequest; class StoreUserRequest extends FormRequest { public function rules(): array { return ['name' => 'required', 'email' => 'email']; } }",
+            ),
+        ]);
+        let code = "<?php use App\\Http\\Requests\\StoreUserRequest;\nfunction store(StoreUserRequest $request) { $request->input('$0'); }";
+        let fixture = Fixture::framework(&files).with_current(code);
+        let offset = code.find(CURSOR).expect("a cursor marker") as u32;
+        let text = code.replacen(CURSOR, "", 1);
+        let labels: Vec<String> = complete(&fixture.index, &text, offset, CompletionOptions::default())
+            .items
+            .into_iter()
+            .map(|item| item.label)
+            .collect();
+        assert_eq!(labels, ["email", "name"]);
+        let code = "<?php use App\\Http\\Requests\\StoreUserRequest;\nfunction store(StoreUserRequest $request) { $request->input('em$0ail'); }";
+        let fixture = Fixture::framework(&files).with_current(code);
+        let (_, root, offset) = split_cursor(code);
+        let places = Analyzer::new(&fixture.index, &root, offset).definitions(offset);
+        assert_eq!(places.len(), 1);
+        assert!(
+            places[0]
+                .path
+                .as_ref()
+                .is_some_and(|path| path.ends_with("StoreUserRequest.php"))
+        );
+        let other = "<?php function f($bag) { $bag->input('em$0ail'); }";
+        let (_, root, offset) = split_cursor(other);
+        assert!(
+            Analyzer::new(&fixture.index, &root, offset)
+                .definitions(offset)
+                .is_empty()
+        );
+    }
+
+    #[test]
     fn a_string_that_names_nothing_completes_nothing() {
         assert!(completions("<?php strlen('app.$0');").is_empty());
         assert!(completions("<?php $x = ['app.$0'];").is_empty());

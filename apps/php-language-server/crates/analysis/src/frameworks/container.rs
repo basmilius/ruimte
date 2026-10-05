@@ -19,7 +19,7 @@ impl Analyzer<'_> {
                 Some((class, method)) => (Some(class), method),
                 None => (None, callee.name.as_str()),
             };
-            for marker in markers_for(self.index, class, method) {
+            for marker in markers_for(self.index, class, None, method) {
                 let Marker::Container { position } = marker else {
                     continue;
                 };

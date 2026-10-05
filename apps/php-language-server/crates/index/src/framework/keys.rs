@@ -20,6 +20,10 @@ pub enum KeyKind {
     Translation,
     Env,
     Ability,
+    /// A field of the form request the call is made on.
+    Field,
+    /// The name of a Blade component, after `<x-`.
+    Component,
 }
 
 impl KeyKind {
@@ -32,6 +36,7 @@ impl KeyKind {
             "translation" => KeyKind::Translation,
             "env" => KeyKind::Env,
             "ability" => KeyKind::Ability,
+            "field" => KeyKind::Field,
             _ => return None,
         })
     }
@@ -44,6 +49,8 @@ impl KeyKind {
             KeyKind::Translation => "translation",
             KeyKind::Env => "environment variable",
             KeyKind::Ability => "ability",
+            KeyKind::Field => "validated field",
+            KeyKind::Component => "component",
         }
     }
 
@@ -54,7 +61,7 @@ impl KeyKind {
             KeyKind::Route => Some("unknown-route"),
             KeyKind::View => Some("unknown-view"),
             KeyKind::Translation => Some("unknown-translation"),
-            KeyKind::Env | KeyKind::Ability => None,
+            KeyKind::Env | KeyKind::Ability | KeyKind::Field | KeyKind::Component => None,
         }
     }
 }
@@ -80,12 +87,26 @@ fn candidate(key: &str, detail: impl Into<Option<String>>) -> Candidate {
 }
 
 /// Every name that can be written, to complete from.
-pub fn candidates(index: &Index, kind: KeyKind) -> Vec<Candidate> {
+pub fn candidates(index: &Index, kind: KeyKind, scope: Option<&str>) -> Vec<Candidate> {
     match kind {
+        KeyKind::Field => scope
+            .map(|class| {
+                super::validation::fields_of(index, class)
+                    .iter()
+                    .map(|field| candidate(&field.name, None))
+                    .collect()
+            })
+            .unwrap_or_default(),
         KeyKind::Config => index
             .section::<ConfigKeys>()
             .keys()
             .map(|entry| candidate(&entry.key, entry.value.clone()))
+            .collect(),
+        KeyKind::Component => index
+            .section::<Views>()
+            .components
+            .iter()
+            .map(|component| candidate(&component.tag, component.class.clone()))
             .collect(),
         KeyKind::Route => index
             .section::<Routes>()
@@ -132,8 +153,21 @@ pub fn candidates(index: &Index, kind: KeyKind) -> Vec<Candidate> {
 }
 
 /// Where a name is declared.
-pub fn definitions(index: &Index, kind: KeyKind, key: &str) -> Vec<Definition> {
+pub fn definitions(index: &Index, kind: KeyKind, key: &str, scope: Option<&str>) -> Vec<Definition> {
     match kind {
+        KeyKind::Field => scope
+            .map(|class| {
+                super::validation::fields_of(index, class)
+                    .into_iter()
+                    .filter(|field| field.name == key)
+                    .map(|field| Definition {
+                        path: field.path,
+                        span: field.span,
+                        detail: String::new(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
         KeyKind::Config => index
             .section::<ConfigKeys>()
             .find(key)
@@ -141,6 +175,16 @@ pub fn definitions(index: &Index, kind: KeyKind, key: &str) -> Vec<Definition> {
                 path: entry.path.clone(),
                 span: entry.span,
                 detail: entry.value.clone().unwrap_or_default(),
+            })
+            .into_iter()
+            .collect(),
+        KeyKind::Component => index
+            .section::<Views>()
+            .component(key)
+            .map(|component| Definition {
+                path: component.path.clone(),
+                span: Span::default(),
+                detail: component.class.clone().unwrap_or_default(),
             })
             .into_iter()
             .collect(),
@@ -209,6 +253,6 @@ pub fn is_missing(index: &Index, kind: KeyKind, key: &str) -> bool {
         KeyKind::Route => index.section::<Routes>().is_missing(index, key),
         KeyKind::View => index.section::<Views>().is_missing(key),
         KeyKind::Translation => index.section::<Translations>().is_missing(key),
-        KeyKind::Env | KeyKind::Ability => false,
+        KeyKind::Env | KeyKind::Ability | KeyKind::Field | KeyKind::Component => false,
     }
 }

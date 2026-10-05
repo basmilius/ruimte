@@ -21,6 +21,8 @@ pub struct Document {
     parsed: Option<Parse>,
     /// The version whose declarations the index holds.
     pub indexed_version: Option<i32>,
+    /// A Blade template: only the names it holds and the PHP in it are read.
+    pub blade: bool,
 }
 
 impl Document {
@@ -35,6 +37,7 @@ impl Document {
             format: None,
             parsed: None,
             indexed_version: None,
+            blade: false,
         }
     }
 

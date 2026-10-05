@@ -42,6 +42,7 @@ pub enum Target {
     Key {
         kind: php_index::framework::keys::KeyKind,
         name: String,
+        scope: Option<String>,
     },
 }
 
@@ -94,6 +95,7 @@ impl Analyzer<'_> {
                 target: Target::Key {
                     kind: key.kind,
                     name: key.value,
+                    scope: key.scope,
                 },
                 range: key.range,
             }];

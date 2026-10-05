@@ -5,6 +5,7 @@
 
 pub mod actions;
 mod ast;
+pub mod blade;
 pub mod completion;
 pub mod context;
 pub mod decl;

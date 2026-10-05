@@ -3,7 +3,7 @@
 //! time. The members that Eloquent and the facades make up live in `php-index`, which is where the
 //! type layer finds members.
 
-mod complete;
+pub(crate) mod complete;
 mod container;
 pub mod keys;
 

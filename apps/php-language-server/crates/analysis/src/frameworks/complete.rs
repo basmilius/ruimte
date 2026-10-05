@@ -16,6 +16,8 @@ fn item_kind(kind: KeyKind) -> ItemKind {
         KeyKind::Translation => ItemKind::Constant,
         KeyKind::Env => ItemKind::Variable,
         KeyKind::Ability => ItemKind::Keyword,
+        KeyKind::Field => ItemKind::Property,
+        KeyKind::Component => ItemKind::Class,
     }
 }
 
@@ -34,7 +36,26 @@ pub fn complete_key(
     let found = key_at(&analyzer, offset)?;
     let start = u32::from(found.range.start());
     let typed = text.get(start as usize..offset as usize)?;
-    let mut items: Vec<(u8, CompletionItem)> = candidates(index, found.kind)
+    Some(key_items(
+        index,
+        found.kind,
+        found.scope.as_deref(),
+        typed,
+        (start, u32::from(found.range.end())),
+        options,
+    ))
+}
+
+/// The names of a kind that fit what was typed, each replacing the text from `start` to `end`.
+pub(crate) fn key_items(
+    index: &Index,
+    kind: KeyKind,
+    scope: Option<&str>,
+    typed: &str,
+    (start, end): (u32, u32),
+    options: CompletionOptions,
+) -> CompletionList {
+    let mut items: Vec<(u8, CompletionItem)> = candidates(index, kind, scope)
         .into_iter()
         .filter_map(|candidate| {
             let score = match_score(&candidate.key, typed)?;
@@ -42,12 +63,12 @@ pub fn complete_key(
                 score,
                 CompletionItem {
                     label: candidate.key.clone(),
-                    kind: item_kind(found.kind),
+                    kind: item_kind(kind),
                     detail: candidate.detail,
-                    description: Some(found.kind.label().to_string()),
+                    description: Some(kind.label().to_string()),
                     edit: TextEdit {
                         start,
-                        end: u32::from(found.range.end()),
+                        end,
                         new_text: candidate.key.clone(),
                     },
                     additional_edits: Vec::new(),
@@ -62,8 +83,8 @@ pub fn complete_key(
     items.sort_by(|left, right| (left.0, &left.1.sort_text).cmp(&(right.0, &right.1.sort_text)));
     let incomplete = items.len() > options.limit;
     items.truncate(options.limit);
-    Some(CompletionList {
+    CompletionList {
         items: items.into_iter().map(|(_, item)| item).collect(),
         incomplete,
-    })
+    }
 }

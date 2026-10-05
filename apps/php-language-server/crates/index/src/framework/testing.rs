@@ -248,7 +248,7 @@ function app($abstract = null, array $parameters = []) {}
 /// The global helpers that take names a project declares, and the facades with the same methods.
 pub const HELPERS: &[(&str, &str)] = &[
     (
-        "vendor/laravel/helpers.php",
+        "vendor/laravel/support-helpers.php",
         r#"<?php
 function config($key = null, $default = null) {}
 function route($name, $parameters = [], $absolute = true) {}

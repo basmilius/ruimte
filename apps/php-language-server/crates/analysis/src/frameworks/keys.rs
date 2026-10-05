@@ -17,6 +17,8 @@ pub struct KeyString {
     pub kind: KeyKind,
     pub value: String,
     pub range: TextRange,
+    /// The class the call is made on, for the kinds that depend on it.
+    pub scope: Option<String>,
     /// The code expects the name to be missing: it asks whether it exists or gives a default.
     pub guarded: bool,
 }
@@ -53,7 +55,11 @@ pub fn key_of_literal(analyzer: &Analyzer<'_>, literal: &SyntaxNode) -> Option<K
             Some((class, method)) => (Some(class), method),
             None => (None, resolved.name.as_str()),
         };
-        for marker in markers_for(analyzer.index, class, method) {
+        let receiver = resolved
+            .receiver
+            .as_ref()
+            .and_then(|ty| ty.class_names().first().map(|name| name.to_string()));
+        for marker in markers_for(analyzer.index, class, receiver.as_deref(), method) {
             if let Marker::Key { kind, position: wanted } = marker {
                 if wanted == position {
                     if let Some(kind) = KeyKind::parse(&kind) {
@@ -63,6 +69,7 @@ pub fn key_of_literal(analyzer: &Analyzer<'_>, literal: &SyntaxNode) -> Option<K
                             kind,
                             value,
                             range: range_of(span.start, span.end),
+                            scope: receiver.clone(),
                             guarded: asks_existence || has_default,
                         });
                     }
@@ -123,8 +130,13 @@ pub fn keys_in(ctx: &FileContext<'_>) -> Vec<KeyString> {
 }
 
 /// What a key stands for, one description per place it is declared.
-pub fn describe(index: &php_index::Index, kind: KeyKind, name: &str) -> Vec<crate::nav::Description> {
-    let definitions = php_index::framework::keys::definitions(index, kind, name);
+pub fn describe(
+    index: &php_index::Index,
+    kind: KeyKind,
+    name: &str,
+    scope: Option<&str>,
+) -> Vec<crate::nav::Description> {
+    let definitions = php_index::framework::keys::definitions(index, kind, name, scope);
     let title = format!("{} '{name}'", kind.label());
     if definitions.is_empty() {
         return vec![crate::nav::Description {

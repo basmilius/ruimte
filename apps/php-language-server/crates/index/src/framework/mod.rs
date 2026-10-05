@@ -28,6 +28,7 @@ pub mod overlay;
 pub mod routes;
 pub mod source;
 pub mod translations;
+pub mod validation;
 pub mod views;
 
 #[cfg(any(test, feature = "testing"))]

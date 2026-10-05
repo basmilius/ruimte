@@ -600,6 +600,9 @@ impl<'a> Server<'a> {
     }
 
     fn diagnostics_of(&mut self, uri: &Uri) -> Option<Vec<lsp_types::Diagnostic>> {
+        if self.documents.get(uri)?.blade {
+            return Some(Vec::new());
+        }
         let _document = php_analysis::document::enter(uri_to_path(uri).as_deref());
         let level = self.level_of(uri, self.documents.get(uri)?.level);
         self.inspect_document(uri, |env, mapper, parse| {
@@ -675,6 +678,10 @@ impl<'a> Server<'a> {
                 let params: DidOpenTextDocumentParams = serde_json::from_value(notification.params)?;
                 let item = params.text_document;
                 self.documents.open(item.uri.clone(), item.version, item.text);
+                let is_blade = item.language_id == "blade" || item.uri.as_str().ends_with(".blade.php");
+                if let Some(document) = self.documents.get_mut(&item.uri) {
+                    document.blade = is_blade;
+                }
                 self.sync_symbols(&item.uri);
                 self.request_configuration(&item.uri)?;
                 self.mark_dirty(item.uri);

@@ -81,15 +81,23 @@ fn markers() -> &'static HashMap<String, Vec<Entry>> {
     })
 }
 
+/// The class whose methods name the directives of a Blade template.
+pub const BLADE_COMPILER: &str = "Illuminate\\View\\Compilers\\BladeCompiler";
+
+/// What a Blade directive names: its markers, from the method of the compiler class it is named after.
+pub fn directive_markers(index: &Index, directive: &str) -> Vec<Marker> {
+    markers_for(index, Some(BLADE_COMPILER), None, directive)
+}
+
 /// Whether a function or method of this name has a marker in some class, as a cheap test before the
 /// call is resolved.
 pub fn is_marked(name: &str) -> bool {
     markers().contains_key(&name.to_ascii_lowercase())
 }
 
-/// The markers of a function, or of a method declared in `declaring` or a class above it. Without the
-/// framework in the project nothing is marked.
-pub fn markers_for(index: &Index, declaring: Option<&str>, name: &str) -> Vec<Marker> {
+/// The markers of a function, or of a method declared in `declaring` or a class above it, or called on
+/// a `receiver` that is one. Without the framework in the project nothing is marked.
+pub fn markers_for(index: &Index, declaring: Option<&str>, receiver: Option<&str>, name: &str) -> Vec<Marker> {
     let frameworks = index.frameworks();
     if !(frameworks.laravel || frameworks.facades) {
         return Vec::new();
@@ -101,7 +109,10 @@ pub fn markers_for(index: &Index, declaring: Option<&str>, name: &str) -> Vec<Ma
         .iter()
         .filter(|entry| match (&entry.class, declaring) {
             (None, None) => frameworks.laravel,
-            (Some(class), Some(declaring)) => index.is_subclass_of(declaring, class),
+            (Some(class), declaring) => {
+                declaring.is_some_and(|declaring| index.is_subclass_of(declaring, class))
+                    || receiver.is_some_and(|receiver| index.is_subclass_of(receiver, class))
+            }
             _ => false,
         })
         .map(|entry| entry.marker.clone())

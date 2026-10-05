@@ -199,8 +199,60 @@ impl Server<'_> {
         loaded
     }
 
+    /// The hover over a name or a piece of PHP in a Blade template.
+    fn blade_hover(&mut self, uri: &Uri, position: lsp_types::Position) -> Option<Hover> {
+        let path = uri_to_path(uri);
+        let encoding = self.encoding;
+        let document = self.documents.get(uri)?;
+        let mapper = Mapper {
+            text: &document.text,
+            index: &document.index,
+            encoding,
+        };
+        let offset = u32::from(mapper.offset(position));
+        let project = match &path {
+            Some(path) => self.workspace.project_for(path),
+            None => &self.workspace.loose,
+        };
+        let hover = php_analysis::blade::hover_at(&project.index, &document.text, offset)?;
+        Some(Hover {
+            contents: HoverContents::Markup(markdown(hover.markdown)),
+            range: Some(mapper.range(hover.range)),
+        })
+    }
+
+    /// Where a name or a piece of PHP in a Blade template is declared.
+    fn blade_definition(&mut self, params: &GotoDefinitionParams) -> Option<GotoDefinitionResponse> {
+        let position = &params.text_document_position_params;
+        let uri = &position.text_document.uri;
+        let path = uri_to_path(uri);
+        let encoding = self.encoding;
+        let document = self.documents.get(uri)?;
+        let mapper = Mapper {
+            text: &document.text,
+            index: &document.index,
+            encoding,
+        };
+        let offset = u32::from(mapper.offset(position.position));
+        let project = match &path {
+            Some(path) => self.workspace.project_for(path),
+            None => &self.workspace.loose,
+        };
+        let places = php_analysis::blade::definitions_at(&project.index, &document.text, offset);
+        let mut sources = TextCache::new(self, Some(uri));
+        let locations: Vec<Location> = places.iter().filter_map(|place| sources.location(place)).collect();
+        (!locations.is_empty()).then_some(GotoDefinitionResponse::Array(locations))
+    }
+
     pub(crate) fn hover(&mut self, params: HoverParams) -> Option<Hover> {
         let position = params.text_document_position_params;
+        if self
+            .documents
+            .get(&position.text_document.uri)
+            .is_some_and(|document| document.blade)
+        {
+            return self.blade_hover(&position.text_document.uri, position.position);
+        }
         self.load_missing_classes(&position.text_document.uri, position.position);
         self.with_analyzer(
             &position.text_document.uri,
@@ -231,6 +283,13 @@ impl Server<'_> {
     }
 
     pub(crate) fn definition(&mut self, params: GotoDefinitionParams) -> Option<GotoDefinitionResponse> {
+        if self
+            .documents
+            .get(&params.text_document_position_params.text_document.uri)
+            .is_some_and(|document| document.blade)
+        {
+            return self.blade_definition(&params);
+        }
         self.navigate(params, |analyzer, offset| analyzer.definitions(offset))
     }
 
@@ -324,7 +383,12 @@ impl Server<'_> {
             Some(path) => self.workspace.project_for(path),
             None => &self.workspace.loose,
         };
-        let list = complete(&project.index, &document.text, offset, CompletionOptions::default());
+        let list = if document.blade {
+            php_analysis::blade::complete_at(&project.index, &document.text, offset, CompletionOptions::default())
+                .unwrap_or_default()
+        } else {
+            complete(&project.index, &document.text, offset, CompletionOptions::default())
+        };
         let root = project.root.to_string_lossy().into_owned();
         let edit = |edit: &php_analysis::completion::TextEdit| TextEdit {
             range: mapper.range(range_of(edit.start, edit.end)),

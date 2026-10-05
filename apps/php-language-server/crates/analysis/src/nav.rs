@@ -164,7 +164,9 @@ impl Analyzer<'_> {
                     }),
                 })
                 .collect(),
-            Target::Key { kind, name } => crate::frameworks::keys::describe(self.index, *kind, name),
+            Target::Key { kind, name, scope } => {
+                crate::frameworks::keys::describe(self.index, *kind, name, scope.as_deref())
+            }
             Target::Variable { name, ty } => vec![Description {
                 title: format!("${name}"),
                 signature: format!("{} ${name}", ty.display(true)),

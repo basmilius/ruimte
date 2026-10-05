@@ -495,6 +495,76 @@ trait Authorizable
 
 }
 
+// The directives of a Blade template are the methods of this class: the one named after a directive
+// says which of its arguments is a name.
+namespace Illuminate\View\Compilers {
+
+class BladeCompiler
+{
+    /** @key view */
+    public function include($view, $data = []) {}
+    /** @key view */
+    public function includeIf($view, $data = []) {}
+    /** @key view 1 */
+    public function includeWhen($condition, $view, $data = []) {}
+    /** @key view 1 */
+    public function includeUnless($condition, $view, $data = []) {}
+    /** @key view */
+    public function extends($view) {}
+    /** @key view */
+    public function component($view) {}
+    /** @key view */
+    public function each($view, $items, $iterator, $empty = null) {}
+    /** @key translation */
+    public function lang($key, $replace = []) {}
+    /** @key translation */
+    public function choice($key, $number) {}
+    /** @key ability */
+    public function can($ability, $arguments = []) {}
+    /** @key ability */
+    public function cannot($ability, $arguments = []) {}
+    /** @key ability */
+    public function elsecan($ability, $arguments = []) {}
+}
+
+}
+
+namespace Illuminate\Foundation\Http {
+
+class FormRequest
+{
+    /** @key field */
+    public function input($key = null, $default = null) {}
+    /** @key field */
+    public function get($key, $default = null) {}
+    /** @key field */
+    public function post($key = null, $default = null) {}
+    /** @key field */
+    public function string($key, $default = null) {}
+    /** @key field */
+    public function str($key, $default = null) {}
+    /** @key field */
+    public function integer($key, $default = 0) {}
+    /** @key field */
+    public function float($key, $default = 0.0) {}
+    /** @key field */
+    public function boolean($key = null, $default = false) {}
+    /** @key field */
+    public function date($key, $format = null, $tz = null) {}
+    /** @key field */
+    public function enum($key, $enumClass) {}
+    /** @key field */
+    public function has($key) {}
+    /** @key field */
+    public function filled($key) {}
+    /** @key field */
+    public function missing($key) {}
+    /** @key field */
+    public function validated($key = null, $default = null) {}
+}
+
+}
+
 namespace Illuminate\Contracts\Container {
 
 interface Container
