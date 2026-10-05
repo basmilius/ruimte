@@ -77,7 +77,7 @@ const NATIVE_ENTRY = `@typescript/typescript-${process.platform}-${process.arch}
 
 /*
  * The native server asks for the sections `js/ts`, `typescript`, `javascript` and `editor`, in rising
- * precedence up to `js/ts`. It has no setting for `completeFunctionCalls`, so a function completes as its name.
+ * precedence up to `js/ts`. It has no setting for `completeFunctionCalls`; the client adds the parentheses of a call itself.
  */
 const NATIVE_TYPESCRIPT_SETTINGS = {
     'js/ts': {
@@ -134,8 +134,6 @@ function vueTypescriptComponent(): ComponentProfile {
         languages: [...SCRIPT_LANGUAGES, 'vue'],
         entry: 'typescript-language-server/lib/cli.mjs',
         args: () => ['--stdio'],
-        // A function or method completes as a call with its parameters as tab stops.
-        configuration: { completions: { completeFunctionCalls: true } },
         initializationOptions: (context) => ({
             hostInfo: 'ruimte',
             // Fetching typings is the project's own package manager's job, and the daemon makes no request nobody asked for.

@@ -123,8 +123,8 @@ describe('server profiles', () => {
         expect(typescript.args(context)).toEqual(['--stdio']);
     });
 
-    it('has the tsserver of Vue complete a function as a call', () => {
-        expect(KIND_PROFILES.vue.components[0]!.configuration).toEqual({ completions: { completeFunctionCalls: true } });
+    it('leaves the parentheses of a call to the client, whose own handling adds them for every server', () => {
+        expect(KIND_PROFILES.vue.components[0]!.configuration).toBeUndefined();
     });
 
     it('pairs Vue with a TypeScript server that loads the plugin, started first', () => {
