@@ -125,14 +125,18 @@ class Enter {
         return text.length > 0 && continues(text, this.source.context(line.start + text.length), this.options.language);
     }
 
-    private inCode(from: number, to: number, context: TypingContext, index: number): EnterPlan {
+    private inCode(from: number, to: number, lineContext: TypingContext, index: number): EnterPlan {
         const { source, options } = this;
         const line = source.line(index);
         const before = source.slice(line.start, from);
         const leading = whitespaceOf(before);
         const newline = source.newline(index);
         const { unit, language } = options;
-        const trimmed = before.trimEnd();
+        // A comment that trails the code is not part of what decides the indentation.
+        const commentAt = lineContext.mode === 'line-comment' ? lineContext.commentStart : undefined;
+        const trailing = commentAt !== undefined && commentAt >= line.start && !isBlank(source.slice(line.start, commentAt));
+        const trimmed = trailing ? source.slice(line.start, commentAt).trimEnd() : before.trimEnd();
+        const context = trailing ? source.context(line.start + trimmed.length) : lineContext;
         const last = trimmed.at(-1) ?? '';
         const rest = source.slice(to, line.end);
         const afterWhitespace = to + whitespaceOf(rest).length;

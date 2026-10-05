@@ -20,6 +20,30 @@ function enter(source: string, expected: string, options: CommandOptions = {}): 
     expect(model.getSelections()).toEqual([{ anchor: result.offset, head: result.offset }]);
 }
 
+describe('Enter after code that a comment trails', () => {
+    it('indents and closes as if the comment were not there', () => {
+        enter('function f() { // note¦', 'function f() { // note\n    ¦\n}');
+        enter('    if (x) { // note¦', '    if (x) { // note\n        ¦\n    }');
+        enter('foo(function () { // note¦', 'foo(function () { // note\n    ¦\n}');
+        enter('const a = [ // note¦', 'const a = [ // note\n    ¦');
+        enter('a = // note¦', 'a = // note\n    ¦');
+        enter('if (x) // note¦', 'if (x) // note\n    ¦');
+        enter('case 1: // note¦', 'case 1: // note\n    ¦');
+        enter('<div> // note¦', '<div> // note\n    ¦', { language: 'tsx' });
+    });
+
+    it('does the same for hash comments', () => {
+        enter('if x:  # note¦', 'if x:  # note\n    ¦', { language: 'python' });
+        enter('def f():  ## note¦', 'def f():  ## note\n    ¦', { language: 'python' });
+        enter('key:  # note¦', 'key:  # note\n    ¦', { language: 'yaml' });
+        enter('x = 1  # note¦', 'x = 1  # note\n¦', { language: 'python' });
+    });
+
+    it('leaves a comment that is a line of its own to the comment rules', () => {
+        enter('// note¦', '// note\n¦');
+    });
+});
+
 describe('Enter in a line comment', () => {
     it.each([
         ['// foo¦bar', '// foo\n// ¦bar'],
@@ -208,7 +232,7 @@ describe('Enter continuing a statement', () => {
     });
 
     it('does not continue in a comment or in a language without braces', () => {
-        enter('a = // x =¦', 'a = // x =\n¦');
+        enter('a = 1; // x =¦', 'a = 1; // x =\n¦');
         enter('x = 1 +¦', 'x = 1 +\n¦', { language: 'python' });
         enter('a = [1,¦', 'a = [1,\n¦');
     });
