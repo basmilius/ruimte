@@ -415,9 +415,7 @@ pub fn is_missing(index: &Index, kind: KeyKind, key: &str) -> bool {
         }
         KeyKind::View => frameworks.laravel && index.section::<Views>().is_missing(key),
         KeyKind::Template => frameworks.symfony && index.section::<Templates>().is_missing(key),
-        KeyKind::Translation => {
-            frameworks.laravel && !frameworks.symfony && index.section::<Translations>().is_missing(key)
-        }
+        KeyKind::Translation => frameworks.laravel && index.section::<Translations>().is_missing(key),
         _ => false,
     }
 }
