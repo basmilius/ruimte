@@ -112,6 +112,7 @@ export const KEYMAP = {
     renameSymbol: bind('Shift+F6'),
     organizeImports: bind('Ctrl+Alt+O'),
     formatDocument: bind('Mod+Alt+L'),
+    selectionToChat: bind('Mod+Alt+K'),
 
     goToSymbol: bind('Mod+F12'),
     goToDefinition: bind('Alt+Shift+D', 'Alt+Shift+D', {
