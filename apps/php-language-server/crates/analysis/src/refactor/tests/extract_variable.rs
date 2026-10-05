@@ -230,3 +230,13 @@ fn writes_with_the_indent_of_the_options_and_leaves_multibyte_text_alone() {
         "<?php\nfunction f($a)\n{\n\t$string = 'héllo ' . $a;\n\treturn strlen($string) + 1;\n}\n"
     );
 }
+
+#[test]
+fn refuses_what_a_call_takes_by_reference() {
+    let reason = refused(
+        &[],
+        &method("        preg_match('/a/', 'abc', «$items»);\n        return 1;\n"),
+        "Extract variable",
+    );
+    assert_eq!(reason, "The expression is taken by reference");
+}

@@ -67,8 +67,7 @@ fn parameters_of(rcx: &Rcx<'_>, call: &SyntaxNode) -> Result<Vec<(String, bool)>
     for callee in callees {
         let names: Vec<(String, bool)> = callee
             .callable
-            .params
-            .iter()
+            .params_at(rcx.cx.index.level)
             .map(|param| (param.name.clone(), param.variadic))
             .collect();
         match &found {

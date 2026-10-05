@@ -81,6 +81,7 @@ impl Server<'_> {
         let asked = params.range;
         let offered = self.with_refactor_env(
             &uri,
+            !defer,
             |mapper| selection(mapper, asked),
             |refactors| {
                 refactors
@@ -170,6 +171,7 @@ impl Server<'_> {
         let change = self
             .with_refactor_env(
                 &uri,
+                true,
                 |_| range,
                 |refactors| {
                     refactors
@@ -191,14 +193,20 @@ impl Server<'_> {
         Ok(Some(action))
     }
 
+    /// Runs something over the refactors at a range. The words of the project are only read when
+    /// something is going to run that searches it, which listing the refactors of a client that
+    /// resolves them late does not.
     fn with_refactor_env<R>(
         &mut self,
         uri: &Uri,
+        needs_words: bool,
         pick: impl FnOnce(&Mapper<'_>) -> TextRange,
         run: impl FnOnce(Vec<php_analysis::refactor::Refactor<'_>>) -> R,
     ) -> Option<R> {
         let path = uri_to_path(uri)?;
-        self.ensure_words(&path);
+        if needs_words {
+            self.ensure_words(&path);
+        }
         let open = self.documents.texts();
         let format = self.refactor_format_options(uri);
         self.inspect_document_in(uri, |env, mapper, _, project| {

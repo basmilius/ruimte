@@ -223,3 +223,25 @@ fn takes_the_next_free_name() {
     );
     assert!(found.contains("$this->extracted2($a);"), "{found}");
 }
+
+/// The write is dead in the function too, but its parameter hid that from the inspection; as a
+/// variable of the new method it is reported, which is the one new finding that is accepted.
+#[test]
+fn a_dead_write_to_a_parameter_goes_along() {
+    let source = class(
+        "    public function run(int $a, int $n): int\n    {\n        echo $n;\n        «$n = $a + 1;»\n        return $a;\n    }\n",
+    );
+    let outcome = super::run_with(
+        super::Setup::PLAIN,
+        &[],
+        &source,
+        "Extract method",
+        &php_format::FormatOptions::default(),
+    );
+    let found = outcome.result.expect("offered").expect("done").text;
+    assert!(found.contains("$this->extracted($a);"), "{found}");
+    assert!(
+        found.contains("private function extracted(int $a): void\n    {\n        $n = $a + 1;\n    }"),
+        "{found}"
+    );
+}

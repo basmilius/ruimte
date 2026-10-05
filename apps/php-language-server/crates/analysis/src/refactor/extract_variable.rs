@@ -202,6 +202,18 @@ fn reads_by_reference(call: &SyntaxNode, reads: &[String]) -> bool {
 fn extract(rcx: &Rcx<'_>, expr: &SyntaxNode, all: bool) -> Result<Change, String> {
     let cx = &rcx.cx;
     replaceable(expr)?;
+    if expr.parent().is_some_and(|parent| parent.kind() == ARGUMENT)
+        && super::scope::by_reference_variables(cx, &scope_of(expr)).contains(&start(expr))
+    {
+        return Err("The expression is taken by reference".to_string());
+    }
+    {
+        let analyzer = cx.file.analyzer(expr);
+        let env = analyzer.env_around(expr);
+        if analyzer.type_of(expr, &env) == php_index::Type::Never {
+            return Err("The expression never returns, so nothing could use its value".to_string());
+        }
+    }
     let places = if all { occurrences(expr)? } else { vec![expr.clone()] };
     let Some(first) = places.first() else {
         return Err("There is nothing to replace".to_string());
