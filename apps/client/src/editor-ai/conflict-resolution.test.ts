@@ -89,7 +89,7 @@ beforeEach(() => {
     transport = new FakeLanguageTransport();
     answer = null;
     transport.answers.set('provenance.read', () => answer ?? { mtime: 0, lines: 0, runs: [] });
-    mounted = mountConflictResolution(editor, transport, FILE, { drafts, mode: () => 'gutter' });
+    mounted = mountConflictResolution(editor, transport, FILE, { drafts });
     unmount = mounted.unmount;
 });
 
@@ -199,6 +199,16 @@ describe('a stretch both sides changed', () => {
         await conflict.refreshAuthors();
         expect(conflict.store.getState().blocks.map((block) => block.author?.turn ?? null)).toEqual([null, 5]);
         expect(useConflictInfo.getState().rows[KEY]!.author).toMatchObject({ chatId: 'chat-a' });
+    });
+
+    test('the runs are asked for as soon as the review begins, whatever agent changes are set to, so Off still names who wrote the lines', async () => {
+        const { conflict } = mountedConflict();
+        await flush();
+        expect(transport.callsOf('provenance.read')).toHaveLength(1);
+
+        answer = { mtime: 5, lines: 7, runs: [run(6, 6)] };
+        await conflict.refreshAuthors();
+        expect(conflict.store.getState().blocks.map((block) => block.author?.turn ?? null)).toEqual([null, 5]);
     });
 
     test('Reload drops the review, and a new write is planned again over what the editor holds', async () => {

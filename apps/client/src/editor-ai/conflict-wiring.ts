@@ -1,5 +1,4 @@
 import type { Editor } from '@ruimte/smart-editor';
-import type { AgentChangesMode } from '@/state/ai-settings';
 import { endpointKey } from '@/state/keys';
 import { type TextDrafts, textDrafts, useTextDrafts } from '@/state/text-drafts';
 import type { Transport } from '@/transport/transport';
@@ -27,17 +26,16 @@ export function reviewConflict(endpointId: string, path: string): boolean {
 
 /*
  * A `ConflictResolution` for the file of an editor, on the shared draft: it starts when the draft has
- * an incoming text and ends when it has none. The runs that name who wrote the other side are only
- * asked for while agent changes are on.
+ * an incoming text and ends when it has none. The runs that name who wrote the other side are asked
+ * for however agent changes are set, since a row that says who wrote the lines is not a mark in the gutter.
  */
 export function mountConflictResolution(
     editor: Editor,
     transport: Pick<Transport, 'request' | 'on'>,
     file: ConflictFile,
-    options: { drafts?: TextDrafts; mode?: () => AgentChangesMode } = {}
+    options: { drafts?: TextDrafts } = {}
 ): { conflict: ConflictResolution; unmount(): void } {
     const drafts = options.drafts ?? textDrafts;
-    const mode = options.mode ?? (() => 'gutter');
     const key = endpointKey(file.endpointId, file.path);
     const conflict = new ConflictResolution(
         editor,
@@ -53,7 +51,7 @@ export function mountConflictResolution(
                     }
                 }),
             resolve: (merged) => drafts.resolveIncoming(file.endpointId, file.path, merged),
-            runs: () => (mode() === 'off' ? Promise.resolve(null) : transport.request('provenance.read', { projectId: file.projectId, path: file.path }))
+            runs: () => transport.request('provenance.read', { projectId: file.projectId, path: file.path })
         },
         key
     );

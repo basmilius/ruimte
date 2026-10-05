@@ -3,7 +3,6 @@ import type { Editor } from '@ruimte/smart-editor';
 import { createHolder } from '@/shell/panels/use-editor-language';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
 import type { ConflictResolution } from './conflict-resolution';
 import { mountConflictResolution } from './conflict-wiring';
@@ -23,7 +22,7 @@ export function useConflictResolution(editor: Editor | null, path: string): Conf
         if (editor === null || projectId === null) {
             return;
         }
-        const mounted = mountConflictResolution(editor, transport, { endpointId, projectId, path }, { mode: () => useSettings.getState().aiAgentChanges });
+        const mounted = mountConflictResolution(editor, transport, { endpointId, projectId, path });
         holder.set(mounted.conflict);
         return () => {
             mounted.unmount();

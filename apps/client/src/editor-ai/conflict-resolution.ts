@@ -43,7 +43,7 @@ export interface ConflictSource {
     onDraft(listener: () => void): () => void;
     /* Every block is answered: the text is what stays, and saves as usual. */
     resolve(merged: string): Promise<boolean>;
-    /* The runs the daemon mapped onto the file on disk; null where agent changes are off. */
+    /* The runs the daemon mapped onto the file on disk; null when it could not say. */
     runs(): Promise<ProvenanceReadResult | null>;
 }
 
