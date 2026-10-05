@@ -10,7 +10,7 @@ import { ProjectIdSchema } from './project.ts';
  */
 
 /* A kind is one server, or for Vue a pair: `@vue/language-server` with a TypeScript server that loads `@vue/typescript-plugin`. */
-export const LanguageServerKindSchema = z.enum(['typescript', 'vue', 'php']);
+export const LanguageServerKindSchema = z.enum(['typescript', 'vue', 'php', 'css', 'html', 'json', 'yaml', 'python', 'bash', 'docker']);
 export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
 
 export const LanguageServerStateSchema = z.enum([
@@ -38,7 +38,7 @@ export const LanguageServerStatusSchema = z.object({
     documents: z.number().int().nonnegative(),
     // The reason behind `crashed`, or behind a kind that is `not-installed` after a failed install.
     message: z.string().optional(),
-    // LSP `ServerCapabilities` of each process the kind runs, by its name (`typescript`, `vue`, `php`). Once a server answered its handshake.
+    // LSP `ServerCapabilities` of each process the kind runs, by its name (`typescript`, `vue`, `php`, `css`, ...). Once a server answered its handshake.
     capabilities: z.record(z.string(), z.unknown()).optional()
 });
 export type LanguageServerStatus = z.infer<typeof LanguageServerStatusSchema>;

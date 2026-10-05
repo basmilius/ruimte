@@ -7,7 +7,17 @@ const LSP_IDS: Record<string, string> = {
     javascript: 'javascript',
     jsx: 'javascriptreact',
     vue: 'vue',
-    php: 'php'
+    php: 'php',
+    css: 'css',
+    scss: 'scss',
+    less: 'less',
+    html: 'html',
+    json: 'json',
+    jsonc: 'jsonc',
+    yaml: 'yaml',
+    python: 'python',
+    shellscript: 'shellscript',
+    docker: 'dockerfile'
 };
 
 const SERVER_KINDS: Record<string, LanguageServerKind> = {
@@ -16,7 +26,17 @@ const SERVER_KINDS: Record<string, LanguageServerKind> = {
     javascript: 'typescript',
     javascriptreact: 'typescript',
     vue: 'vue',
-    php: 'php'
+    php: 'php',
+    css: 'css',
+    scss: 'css',
+    less: 'css',
+    html: 'html',
+    json: 'json',
+    jsonc: 'json',
+    yaml: 'yaml',
+    python: 'python',
+    shellscript: 'bash',
+    dockerfile: 'docker'
 };
 
 /* The LSP language id of a file, or null when no language server here knows its language. */

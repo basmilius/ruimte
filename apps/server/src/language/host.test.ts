@@ -418,11 +418,9 @@ describe('the project going', () => {
 describe('install and status', () => {
     it('starts as not installed, installs only on a request and starts what waited', async () => {
         const { host, spawner, events, installs } = rig();
-        expect((await host.status('p1')).map((status) => [status.server, status.state])).toEqual([
-            ['typescript', 'not-installed'],
-            ['vue', 'not-installed'],
-            ['php', 'not-installed']
-        ]);
+        expect((await host.status('p1')).map((status) => [status.server, status.state])).toEqual(
+            Object.keys(KIND_PROFILES).map((kind) => [kind, 'not-installed'])
+        );
         await open(host);
         await settle();
         expect(installs).toEqual([]);

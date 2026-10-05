@@ -4,7 +4,14 @@ import type { LanguageServerKind, LanguageServerState, LanguageServerStatus } fr
 export const SERVER_NAMES: Record<LanguageServerKind, { name: string; package: string }> = {
     typescript: { name: 'TypeScript', package: 'typescript-language-server' },
     vue: { name: 'Vue', package: '@vue/language-server' },
-    php: { name: 'PHP', package: 'Intelephense' }
+    php: { name: 'PHP', package: 'Intelephense' },
+    css: { name: 'CSS', package: 'vscode-langservers-extracted' },
+    html: { name: 'HTML', package: 'vscode-langservers-extracted' },
+    json: { name: 'JSON', package: 'vscode-langservers-extracted' },
+    yaml: { name: 'YAML', package: 'yaml-language-server' },
+    python: { name: 'Python', package: 'Pyright' },
+    bash: { name: 'Bash', package: 'bash-language-server' },
+    docker: { name: 'Dockerfile', package: 'dockerfile-language-server-nodejs' }
 };
 
 export type ServerTone = 'ok' | 'busy' | 'error' | 'idle';

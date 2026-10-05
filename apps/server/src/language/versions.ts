@@ -10,7 +10,13 @@ export const LANGUAGE_PACKAGE_VERSIONS = {
     typescript: '6.0.3',
     '@vue/language-server': '3.3.12',
     '@vue/typescript-plugin': '3.3.12',
-    intelephense: '1.18.5'
+    intelephense: '1.18.5',
+    // One package holds the CSS, HTML, JSON and ESLint servers, each installed under its own kind.
+    'vscode-langservers-extracted': '4.10.0',
+    'yaml-language-server': '1.24.0',
+    pyright: '1.1.414',
+    'bash-language-server': '5.8.1',
+    'dockerfile-language-server-nodejs': '0.15.0'
 } as const;
 
 export type LanguagePackage = keyof typeof LANGUAGE_PACKAGE_VERSIONS;
@@ -19,14 +25,28 @@ export type LanguagePackage = keyof typeof LANGUAGE_PACKAGE_VERSIONS;
 export const LANGUAGE_KIND_PACKAGES: Record<LanguageServerKind, readonly LanguagePackage[]> = {
     typescript: ['typescript-language-server', 'typescript'],
     vue: ['typescript-language-server', 'typescript', '@vue/language-server', '@vue/typescript-plugin'],
-    php: ['intelephense']
+    php: ['intelephense'],
+    css: ['vscode-langservers-extracted'],
+    html: ['vscode-langservers-extracted'],
+    json: ['vscode-langservers-extracted'],
+    yaml: ['yaml-language-server'],
+    python: ['pyright'],
+    bash: ['bash-language-server'],
+    docker: ['dockerfile-language-server-nodejs']
 };
 
 /* The package a kind is named after, whose version a client reads. */
 export const LANGUAGE_KIND_MAIN_PACKAGE: Record<LanguageServerKind, LanguagePackage> = {
     typescript: 'typescript-language-server',
     vue: '@vue/language-server',
-    php: 'intelephense'
+    php: 'intelephense',
+    css: 'vscode-langservers-extracted',
+    html: 'vscode-langservers-extracted',
+    json: 'vscode-langservers-extracted',
+    yaml: 'yaml-language-server',
+    python: 'pyright',
+    bash: 'bash-language-server',
+    docker: 'dockerfile-language-server-nodejs'
 };
 
 export function pinnedVersionsOf(kind: LanguageServerKind): Record<string, string> {

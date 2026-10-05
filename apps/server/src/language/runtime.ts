@@ -28,6 +28,8 @@ export interface LanguageProcessSpec {
 export interface LanguageExit {
     code: number | null;
     signal: string | null;
+    /* Why the process never ran, such as a command that does not exist. */
+    error?: string;
 }
 
 /* A running server process, as far as the host needs to know: what it speaks over, what it says on stderr, and when it ends. */
@@ -61,7 +63,7 @@ export function spawnLanguageProcess(spec: LanguageProcessSpec): LanguageChild {
     const exited = new Promise<LanguageExit>((resolve) => {
         child.once('error', (error) => {
             finish(error);
-            resolve({ code: null, signal: null });
+            resolve({ code: null, signal: null, error: error.message });
         });
         child.once('close', (code, signal) => {
             finish(code ? new Error(`The process exited with code ${code}`) : undefined);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { KIND_PROFILES, kindForLanguage, lspLanguageId, resolveTypescriptLib, usesVue } from './profiles.ts';
+import { documentLanguageId, KIND_PROFILES, kindForLanguage, lspLanguageId, resolveTypescriptLib, usesVue } from './profiles.ts';
 import { LANGUAGE_KIND_PACKAGES, LANGUAGE_PACKAGE_VERSIONS, pinnedVersionsOf, versionOf } from './versions.ts';
 
 const context = { installDirectory: '/home/.ruimte/language-servers/vue', projectFolder: '/work/app', typescriptLib: '/work/app/node_modules/typescript/lib' };
@@ -11,9 +11,36 @@ describe('server profiles', () => {
         expect(kindForLanguage('javascriptreact')).toBe('typescript');
         expect(kindForLanguage('vue')).toBe('vue');
         expect(kindForLanguage('php')).toBe('php');
+        expect(kindForLanguage('scss')).toBe('css');
+        expect(kindForLanguage('less')).toBe('css');
+        expect(kindForLanguage('html')).toBe('html');
+        expect(kindForLanguage('jsonc')).toBe('json');
+        expect(kindForLanguage('yaml')).toBe('yaml');
+        expect(kindForLanguage('python')).toBe('python');
+        expect(kindForLanguage('sh')).toBe('bash');
+        expect(kindForLanguage('docker')).toBe('docker');
         expect(kindForLanguage('rust')).toBeNull();
         expect(lspLanguageId('tsx')).toBe('typescriptreact');
         expect(lspLanguageId('php')).toBe('php');
+    });
+
+    it('opens a JSON file that allows comments as JSONC and any other as JSON', () => {
+        expect(documentLanguageId('json', 'tsconfig.json')).toBe('jsonc');
+        expect(documentLanguageId('json', 'packages/app/tsconfig.build.json')).toBe('jsonc');
+        expect(documentLanguageId('json', '.vscode/settings.json')).toBe('jsonc');
+        expect(documentLanguageId('json', 'package.json')).toBe('json');
+        expect(documentLanguageId('tsx', 'a.tsx')).toBe('typescriptreact');
+    });
+
+    it('gives every server that pulls its diagnostics the pull, and lets the others push', () => {
+        const pulling = Object.values(KIND_PROFILES).flatMap((profile) =>
+            profile.components.filter((component) => component.pullDiagnostics).map((component) => component.name)
+        );
+        expect(pulling).toEqual(['css', 'html', 'json', 'python']);
+    });
+
+    it('keeps the schema store of the YAML server off', () => {
+        expect(KIND_PROFILES.yaml.components[0]!.configuration).toMatchObject({ yaml: { schemaStore: { enable: false } } });
     });
 
     it('drives tsserver with the SDK it is given, the inlay hint preferences on, and no typings fetch', () => {
@@ -91,5 +118,7 @@ describe('pinned versions', () => {
         expect(Object.keys(pinnedVersionsOf('vue'))).toEqual(['typescript-language-server', 'typescript', '@vue/language-server', '@vue/typescript-plugin']);
         expect(versionOf('typescript')).toBe('6.0.1');
         expect(versionOf('vue')).toBe('3.3.12');
+        expect(pinnedVersionsOf('css')).toEqual(pinnedVersionsOf('json'));
+        expect(versionOf('python')).toBe(LANGUAGE_PACKAGE_VERSIONS.pyright);
     });
 });

@@ -13,7 +13,7 @@ export interface LaunchContext {
 /* One process of a kind. Vue runs two: the Vue server and the TypeScript server it leans on. */
 export interface ComponentProfile {
     /* Names the process on the wire, in a diagnostics report and in the capabilities of a status. */
-    name: 'typescript' | 'vue' | 'php';
+    name: string;
     /* The language ids it serves, as LSP names them. */
     languages: readonly string[];
     /* The script it runs, relative to the `node_modules` of the install. */
@@ -23,6 +23,8 @@ export interface ComponentProfile {
     /* Settings the server reads through `workspace/didChangeConfiguration` and `workspace/configuration`, which are not initialization options. */
     configuration?: Record<string, unknown>;
     env?: Record<string, string>;
+    /* A server told that the client pulls diagnostics stops pushing them, so the daemon asks for them (`textDocument/diagnostic`). */
+    pullDiagnostics?: boolean;
 }
 
 export interface KindProfile {
@@ -62,6 +64,50 @@ function typescriptComponent(languages: readonly string[], withVuePlugin: boolea
     };
 }
 
+/* Packages in `vscode-langservers-extracted` are separate servers, each with a script of its own. */
+function extractedScript(name: string): string {
+    return `vscode-langservers-extracted/bin/vscode-${name}-language-server`;
+}
+
+/*
+ * `@import` and `@apply` of Tailwind, `@custom-media` and the like are what most projects with a
+ * stylesheet use, and the server answers them with a warning each.
+ */
+const STYLE_SETTINGS = { validate: true, lint: { unknownAtRules: 'ignore' } };
+
+/*
+ * The schemas the JSON server associates by file name. The server fetches one from its host the first
+ * time a matching file opens, and never otherwise.
+ */
+const JSON_SCHEMAS = [
+    { fileMatch: ['package.json'], url: 'https://www.schemastore.org/package.json' },
+    { fileMatch: ['tsconfig.json', 'tsconfig.*.json'], url: 'https://www.schemastore.org/tsconfig.json' },
+    { fileMatch: ['jsconfig.json', 'jsconfig.*.json'], url: 'https://www.schemastore.org/jsconfig.json' },
+    { fileMatch: ['composer.json'], url: 'https://getcomposer.org/schema.json' },
+    { fileMatch: ['.eslintrc', '.eslintrc.json'], url: 'https://www.schemastore.org/eslintrc.json' },
+    { fileMatch: ['.prettierrc', '.prettierrc.json'], url: 'https://www.schemastore.org/prettierrc.json' },
+    { fileMatch: ['.babelrc', '.babelrc.json', 'babel.config.json'], url: 'https://www.schemastore.org/babelrc.json' },
+    { fileMatch: ['.stylelintrc', '.stylelintrc.json'], url: 'https://www.schemastore.org/stylelintrc.json' },
+    { fileMatch: ['renovate.json', '.renovaterc', '.renovaterc.json'], url: 'https://www.schemastore.org/renovate.json' },
+    { fileMatch: ['lerna.json'], url: 'https://www.schemastore.org/lerna.json' }
+];
+
+/*
+ * The schema store of the YAML server is off: it downloads the whole catalog when the server starts,
+ * whatever file is open. These associations are fetched like the JSON ones, when a matching file opens.
+ */
+const YAML_SCHEMAS = {
+    'https://www.schemastore.org/github-workflow.json': ['.github/workflows/*.yml', '.github/workflows/*.yaml'],
+    'https://www.schemastore.org/github-action.json': ['action.yml', 'action.yaml', '.github/actions/*/action.yml', '.github/actions/*/action.yaml'],
+    'https://www.schemastore.org/dependabot-2.0.json': ['.github/dependabot.yml', '.github/dependabot.yaml'],
+    'https://raw.githubusercontent.com/compose-spec/compose-go/main/schema/compose-spec.json': [
+        'docker-compose.yml',
+        'docker-compose.*.yml',
+        'compose.yml',
+        'compose.*.yml'
+    ]
+};
+
 export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
     typescript: { kind: 'typescript', components: [typescriptComponent(SCRIPT_LANGUAGES, false)] },
     vue: {
@@ -93,6 +139,103 @@ export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
                 env: { INTELEPHENSE_TELEMETRY_ENABLED: 'false' }
             }
         ]
+    },
+    css: {
+        kind: 'css',
+        components: [
+            {
+                name: 'css',
+                languages: ['css', 'scss', 'less'],
+                entry: extractedScript('css'),
+                args: () => ['--stdio'],
+                initializationOptions: () => ({ provideFormatter: true }),
+                configuration: { css: STYLE_SETTINGS, scss: STYLE_SETTINGS, less: STYLE_SETTINGS },
+                pullDiagnostics: true
+            }
+        ]
+    },
+    html: {
+        kind: 'html',
+        components: [
+            {
+                name: 'html',
+                languages: ['html'],
+                entry: extractedScript('html'),
+                args: () => ['--stdio'],
+                initializationOptions: () => ({
+                    provideFormatter: true,
+                    embeddedLanguages: { css: true, javascript: true },
+                    configurationSection: ['html', 'css', 'javascript']
+                }),
+                configuration: { html: { validate: { scripts: true, styles: true } }, css: STYLE_SETTINGS },
+                pullDiagnostics: true
+            }
+        ]
+    },
+    json: {
+        kind: 'json',
+        components: [
+            {
+                name: 'json',
+                languages: ['json', 'jsonc'],
+                entry: extractedScript('json'),
+                args: () => ['--stdio'],
+                initializationOptions: () => ({ provideFormatter: true }),
+                configuration: { json: { validate: { enable: true }, format: { enable: true }, schemas: JSON_SCHEMAS } },
+                pullDiagnostics: true
+            }
+        ]
+    },
+    yaml: {
+        kind: 'yaml',
+        components: [
+            {
+                name: 'yaml',
+                languages: ['yaml'],
+                entry: 'yaml-language-server/bin/yaml-language-server',
+                args: () => ['--stdio'],
+                initializationOptions: () => ({}),
+                configuration: { yaml: { validate: true, format: { enable: true }, schemaStore: { enable: false }, schemas: YAML_SCHEMAS } }
+            }
+        ]
+    },
+    python: {
+        kind: 'python',
+        components: [
+            {
+                name: 'python',
+                languages: ['python'],
+                entry: 'pyright/langserver.index.js',
+                args: () => ['--stdio'],
+                initializationOptions: () => ({}),
+                configuration: { python: { analysis: { autoSearchPaths: true, useLibraryCodeForTypes: true, diagnosticMode: 'openFilesOnly' } } },
+                pullDiagnostics: true
+            }
+        ]
+    },
+    bash: {
+        kind: 'bash',
+        components: [
+            {
+                name: 'bash',
+                languages: ['shellscript'],
+                entry: 'bash-language-server/out/cli.js',
+                args: () => ['start'],
+                initializationOptions: () => ({})
+            }
+        ]
+    },
+    docker: {
+        kind: 'docker',
+        components: [
+            {
+                name: 'docker',
+                languages: ['dockerfile'],
+                entry: 'dockerfile-language-server-nodejs/bin/docker-langserver',
+                args: () => ['--stdio'],
+                initializationOptions: () => ({})
+            }
+        ]
     }
 };
 
@@ -105,11 +248,27 @@ const LANGUAGE_ALIASES: Record<string, string> = {
     mjs: 'javascript',
     cjs: 'javascript',
     mts: 'typescript',
-    cts: 'typescript'
+    cts: 'typescript',
+    sh: 'shellscript',
+    bash: 'shellscript',
+    zsh: 'shellscript',
+    docker: 'dockerfile',
+    yml: 'yaml',
+    py: 'python'
 };
 
 export function lspLanguageId(languageId: string): string {
     return LANGUAGE_ALIASES[languageId] ?? languageId;
+}
+
+/* Files that are JSON with comments and trailing commas: a JSON server reports both as errors in a plain `json` document. */
+const JSONC_FILES =
+    /(^|\/)(tsconfig(\..+)?\.json|jsconfig(\..+)?\.json|\.eslintrc(\.json)?|\.babelrc(\.json)?|\.swcrc|devcontainer\.json|\.devcontainer\/.+\.json|\.vscode\/.+\.json|.+\.jsonc)$/;
+
+/* The language id a document opens with: the client's, except for a JSON file that allows comments. */
+export function documentLanguageId(languageId: string, storedPath: string): string {
+    const id = lspLanguageId(languageId);
+    return id === 'json' && JSONC_FILES.test(storedPath) ? 'jsonc' : id;
 }
 
 /* The kind that serves a language, or null for one no server here knows. */

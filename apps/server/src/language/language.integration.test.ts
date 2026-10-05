@@ -45,6 +45,17 @@ const FILES: Record<string, string> = {
         "<?php\ndeclare(strict_types=1);\n\nfunction greet(string $name): string\n{\n    return 'Hello, ' . $name;\n}\n\n$message = greet('Ada');\necho $message;\n"
 };
 
+/* Files for the servers of the other languages, in the project that has Vue. */
+const OTHER_FILES: Record<string, string> = {
+    'style.css': 'a { colr: red; }\n.b { color: #fffff; }\n',
+    'page.html': '<!DOCTYPE html>\n<html>\n<body>\n<div class="x"><span></div>\n</body>\n</html>\n',
+    'broken.json': '{ "name": "x", "list": [1, 2,] , "bad": }\n',
+    'config.yaml': 'name: a\nname: b\nitems: [1, 2\n',
+    'script.py': 'def total(count: int) -> str:\n    return count\n\n\nprint(total(1))\n',
+    'run.sh': '#!/bin/bash\ngreet() {\n    echo "hello $1"\n}\ngreet world\n',
+    Dockerfile: 'FROM node:22\nRUN npm install\nCOPY . /app\nFRM broken\n'
+};
+
 /* A project that does not use Vue, whose TypeScript stays on the TypeScript kind. */
 const PLAIN_FILES: Record<string, string> = {
     'tsconfig.json': FILES['tsconfig.json'],
@@ -128,7 +139,7 @@ beforeAll(async () => {
     project = join(base, 'project');
     plain = join(base, 'plain');
     for (const [root, files] of [
-        [project, { ...FILES, ...SCRIPT_FILES }],
+        [project, { ...FILES, ...SCRIPT_FILES, ...OTHER_FILES }],
         [plain, PLAIN_FILES]
     ] as const) {
         for (const [path, text] of Object.entries(files)) {
@@ -354,6 +365,120 @@ describe('PHP', () => {
             () => diagnosticsOf('main.php'),
             (list) => list.some((item) => /unknown_function_for_smoke/.test(item.message) || item.severity === 1)
         );
+    }, 180_000);
+});
+
+async function openAndWait(path: string, languageId: string, kind: LanguageServerKind, text: string): Promise<void> {
+    await install(kind);
+    const opened = await host.open('c1', { projectId: 'p1', path, languageId, text });
+    expect(opened.servers).toEqual([kind]);
+    await waitReady(kind);
+}
+
+describe('CSS, HTML and JSON, from one package of extracted servers', () => {
+    test('CSS reports a syntax error and hovers', async () => {
+        await openAndWait('style.css', 'css', 'css', OTHER_FILES['style.css']);
+        const diagnostics = await eventually(
+            'a CSS error',
+            () => diagnosticsOf('style.css', 'css'),
+            (list) => list.length > 0
+        );
+        expect(diagnostics.some((item) => item.severity === 1)).toBe(true);
+        const hover = await eventually(
+            'a hover',
+            () => ask('style.css', 'textDocument/hover', { position: positionOf(OTHER_FILES['style.css'], 'color', 1) }).then((reply) => reply.result),
+            Boolean
+        );
+        expect(JSON.stringify(hover)).toContain('color');
+    }, 180_000);
+
+    test('HTML reports an unclosed element and completes a tag', async () => {
+        await openAndWait('page.html', 'html', 'html', OTHER_FILES['page.html']);
+        const completion = await eventually(
+            'a tag completion',
+            () => ask('page.html', 'textDocument/completion', { position: positionOf(OTHER_FILES['page.html'], '<span>', 1) }),
+            (reply) => JSON.stringify(reply.result).includes('span')
+        );
+        expect(completion.server).toBe('html');
+    }, 180_000);
+
+    test('JSON reports a syntax error and takes a trailing comma in a tsconfig', async () => {
+        await openAndWait('broken.json', 'json', 'json', OTHER_FILES['broken.json']);
+        await eventually(
+            'a JSON error',
+            () => diagnosticsOf('broken.json', 'json'),
+            (list) => list.some((item) => item.severity === 1)
+        );
+        const tsconfig = '{\n    // comments are allowed here\n    "compilerOptions": { "strict": true, },\n}\n';
+        await host.open('c1', { projectId: 'p1', path: 'tsconfig.json', languageId: 'json', text: tsconfig });
+        await eventually(
+            'the tsconfig checked',
+            () => events.some((event) => event.event === 'language.diagnostics' && event.payload.path === 'tsconfig.json' && event.payload.server === 'json'),
+            Boolean
+        );
+        expect(diagnosticsOf('tsconfig.json', 'json').filter((item) => item.severity === 1)).toEqual([]);
+        // The description comes from the schema of tsconfig files, which the server fetches when the file opens.
+        const hover = await eventually(
+            'a hover from the schema',
+            () => ask('tsconfig.json', 'textDocument/hover', { position: positionOf(tsconfig, '"strict"', 2) }).then((reply) => reply.result),
+            Boolean
+        );
+        expect(JSON.stringify(hover).toLowerCase()).toContain('strict');
+    }, 180_000);
+});
+
+describe('YAML', () => {
+    test('reports duplicate keys and a broken flow sequence', async () => {
+        await openAndWait('config.yaml', 'yaml', 'yaml', OTHER_FILES['config.yaml']);
+        const diagnostics = await eventually(
+            'YAML errors',
+            () => diagnosticsOf('config.yaml', 'yaml'),
+            (list) => list.length >= 2
+        );
+        expect(diagnostics.some((item) => /unique/.test(item.message))).toBe(true);
+    }, 180_000);
+});
+
+describe('Python', () => {
+    test('reports a type error and hovers', async () => {
+        await openAndWait('script.py', 'python', 'python', OTHER_FILES['script.py']);
+        await eventually(
+            'a type error',
+            () => diagnosticsOf('script.py', 'python'),
+            (list) => list.some((item) => /not assignable/.test(item.message))
+        );
+        const hover = await eventually(
+            'a hover',
+            () => ask('script.py', 'textDocument/hover', { position: positionOf(OTHER_FILES['script.py'], 'total(1)', 1) }).then((reply) => reply.result),
+            Boolean
+        );
+        expect(JSON.stringify(hover)).toContain('total');
+    }, 180_000);
+});
+
+describe('Bash', () => {
+    test('finds the definition of a function', async () => {
+        await openAndWait('run.sh', 'shellscript', 'bash', OTHER_FILES['run.sh']);
+        const definition = await eventually(
+            'a definition',
+            () => ask('run.sh', 'textDocument/definition', { position: positionOf(OTHER_FILES['run.sh'], 'greet world', 1) }).then((reply) => reply.result),
+            (result) => JSON.stringify(result ?? null).includes('"line":1')
+        );
+        expect(JSON.stringify(definition)).toContain('run.sh');
+    }, 180_000);
+});
+
+describe('Dockerfile', () => {
+    test('reports an unknown instruction and hovers an instruction', async () => {
+        await openAndWait('Dockerfile', 'dockerfile', 'docker', OTHER_FILES.Dockerfile);
+        const diagnostics = await eventually(
+            'an unknown instruction',
+            () => diagnosticsOf('Dockerfile', 'docker'),
+            (list) => list.length > 0
+        );
+        expect(diagnostics[0]?.message).toContain('FRM');
+        const hover = await ask('Dockerfile', 'textDocument/hover', { position: positionOf(OTHER_FILES.Dockerfile, 'FROM', 1) });
+        expect(JSON.stringify(hover.result)).toContain('baseImage');
     }, 180_000);
 });
 

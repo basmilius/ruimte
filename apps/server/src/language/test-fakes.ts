@@ -1,6 +1,7 @@
 import { createMemoryTransportPair, FakeLanguageServer } from '@ruimte/smart-editor-lsp/testing';
 import type { ServerCapabilities } from '@ruimte/smart-editor-lsp';
 import type { LanguageChild, LanguageExit, LanguageProcessSpec, SpawnLanguageProcess } from './runtime.ts';
+import { KIND_PROFILES } from './profiles.ts';
 import type { LanguageClock } from './server.ts';
 
 export const FULL_CAPABILITIES: ServerCapabilities = {
@@ -14,7 +15,7 @@ export const FULL_CAPABILITIES: ServerCapabilities = {
 
 export interface FakeProcess {
     readonly spec: LanguageProcessSpec;
-    /* Which component: `typescript`, `vue` or `php`, read off the script it was started with. */
+    /* Which component (`typescript`, `vue`, `css`, ...), read off the script it was started with. */
     readonly name: string;
     readonly server: FakeLanguageServer;
     readonly kills: string[];
@@ -33,13 +34,8 @@ export interface FakeSpawner {
 }
 
 function nameOf(spec: LanguageProcessSpec): string {
-    if (spec.args.some((arg) => arg.includes('vue-language-server'))) {
-        return 'vue';
-    }
-    if (spec.args.some((arg) => arg.includes('intelephense'))) {
-        return 'php';
-    }
-    return 'typescript';
+    const components = Object.values(KIND_PROFILES).flatMap((profile) => profile.components);
+    return components.find((component) => spec.args.some((arg) => arg.endsWith(component.entry)))?.name ?? 'typescript';
 }
 
 /* Starts no process: every `spawn` is a fake language server on the far end of an in-memory transport. */

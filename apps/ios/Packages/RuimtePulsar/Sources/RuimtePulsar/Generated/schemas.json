@@ -33699,7 +33699,14 @@
         "enum": [
           "typescript",
           "vue",
-          "php"
+          "php",
+          "css",
+          "html",
+          "json",
+          "yaml",
+          "python",
+          "bash",
+          "docker"
         ]
       }
     },
@@ -33773,7 +33780,14 @@
         "enum": [
           "typescript",
           "vue",
-          "php"
+          "php",
+          "css",
+          "html",
+          "json",
+          "yaml",
+          "python",
+          "bash",
+          "docker"
         ]
       }
     },
@@ -33848,7 +33862,14 @@
         "enum": [
           "typescript",
           "vue",
-          "php"
+          "php",
+          "css",
+          "html",
+          "json",
+          "yaml",
+          "python",
+          "bash",
+          "docker"
         ]
       }
     },

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { LanguageServer, type LanguageServerHooks, type SharedDocument } from './server.ts';
 import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
 import type { LanguageServerKind } from '@ruimte/contracts';
-import type { PublishDiagnosticsParams } from '@ruimte/smart-editor-lsp';
+import type { Diagnostic, PublishDiagnosticsParams, ServerCapabilities } from '@ruimte/smart-editor-lsp';
 
 const runtime = { command: '/ruimte', args: [], env: { BUN_BE_BUN: '1' } };
 
@@ -255,6 +255,57 @@ describe('a language server of one kind in one project', () => {
         const { server } = rig('typescript');
         expect(server.serves('typescriptreact')).toBe(true);
         expect(server.serves('php')).toBe(false);
+    });
+});
+
+describe('a server that is asked for its diagnostics', () => {
+    const PULLING: Partial<Record<string, ServerCapabilities>> = {
+        css: { textDocumentSync: 2, diagnosticProvider: { interFileDependencies: false, workspaceDiagnostics: false } }
+    };
+
+    it('is asked when a document opens, and again when typing pauses after a change', async () => {
+        const { server, spawner, diagnostics, clock } = rig('css', fakeSpawner(PULLING));
+        const sheet = document('/work/a.css', 'css', 'a { colr: red }');
+        server.attach(sheet);
+        await settle();
+        const item: Diagnostic = { range: { start: { line: 0, character: 4 }, end: { line: 0, character: 8 } }, message: 'Unknown property', severity: 2 };
+        let answered = 0;
+        spawner.processes[0].server.handle('textDocument/diagnostic', () => {
+            answered++;
+            return { kind: 'full', items: [item] };
+        });
+        sheet.version = 2;
+        await server.change(sheet, [{ text: 'a { color: red }' }]);
+        expect(answered).toBe(0);
+        expect(clock.pending).toBe(1);
+        clock.fire();
+        await settle();
+        expect(answered).toBe(1);
+        expect(diagnostics.at(-1)).toEqual({ path: 'a.css', component: 'css', params: { uri: 'file:///work/a.css', version: 2, diagnostics: [item] } });
+    });
+
+    it('is not asked once the document is gone', async () => {
+        const { server, spawner, clock, diagnostics } = rig('css', fakeSpawner(PULLING));
+        const sheet = document('/work/a.css', 'css', 'a {}');
+        server.attach(sheet);
+        await settle();
+        spawner.processes[0].server.handle('textDocument/diagnostic', () => ({ kind: 'full', items: [] }));
+        await server.change(sheet, [{ text: 'b {}' }]);
+        await server.detach(sheet);
+        expect(clock.pending).toBe(0);
+        clock.fire();
+        await settle();
+        expect(diagnostics).toEqual([]);
+    });
+
+    it('leaves a server that pushes alone', async () => {
+        const { server, spawner, clock } = rig('typescript', fakeSpawner({ typescript: PULLING.css }));
+        const script = document('/work/a.ts', 'typescript', 'x');
+        server.attach(script);
+        await settle();
+        await server.change(script, [{ text: 'y' }]);
+        expect(clock.pending).toBe(0);
+        expect(spawner.processes[0].server.received.some((message) => message.method === 'textDocument/diagnostic')).toBe(false);
     });
 });
 

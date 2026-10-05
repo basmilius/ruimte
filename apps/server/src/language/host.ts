@@ -35,7 +35,7 @@ import {
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LanguageInstaller } from './installer.ts';
-import { KIND_PROFILES, kindForLanguage, usesVue } from './profiles.ts';
+import { documentLanguageId, KIND_PROFILES, kindForLanguage, usesVue } from './profiles.ts';
 import { bunRuntime, runCommand, spawnLanguageProcess, type LanguageRuntime, type RunCommand, type SpawnLanguageProcess } from './runtime.ts';
 import { LanguageServer, realLanguageClock, type LanguageClock, type LanguageServerHooks, type SharedDocument } from './server.ts';
 import { versionOf } from './versions.ts';
@@ -212,7 +212,7 @@ export class LanguageHost {
                 uri: pathToFileUri(absolutePath),
                 kind,
                 storedPath: storedPathOf(project.folder, absolutePath),
-                languageId: payload.languageId,
+                languageId: documentLanguageId(payload.languageId, storedPathOf(project.folder, absolutePath)),
                 text: payload.text,
                 version: 1,
                 clients: new Set([clientId])

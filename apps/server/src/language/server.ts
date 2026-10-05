@@ -6,6 +6,7 @@ import {
     LspError,
     LspSession,
     pathToFileUri,
+    StaleResultError,
     vueServerOrder,
     type ApplyWorkspaceEditParams,
     type ApplyWorkspaceEditResult,
@@ -22,6 +23,9 @@ import type { LanguageChild, LanguageExit, LanguageRuntime, SpawnLanguageProcess
 
 // How long a stopped process may take to go before it is killed.
 export const STOP_GRACE_MS = 3_000;
+
+// How long typing pauses before a server that is asked for its diagnostics is asked again.
+export const PULL_DELAY_MS = 200;
 
 export interface LanguageClock {
     set(run: () => void, ms: number): () => void;
@@ -78,6 +82,8 @@ interface Component {
     documents: Map<string, LspDocument>;
     progress: Set<string | number>;
     subscriptions: Disposable[];
+    /* The diagnostics requests waiting for typing to pause, by document. */
+    pulls: Map<string, () => void>;
 }
 
 type Phase = 'stopped' | 'starting' | 'ready' | 'crashed';
@@ -152,6 +158,8 @@ export class LanguageServer {
             this.components.map(async (component) => {
                 const open = component.documents.get(document.absolutePath);
                 component.documents.delete(document.absolutePath);
+                component.pulls.get(document.absolutePath)?.();
+                component.pulls.delete(document.absolutePath);
                 await open?.close().catch((error) => this.log.push('host', errorText(error)));
             })
         );
@@ -190,6 +198,7 @@ export class LanguageServer {
                 }
                 try {
                     await open.applyChanges(changes);
+                    this.schedulePull(component, document);
                 } catch (error) {
                     this.log.push('host', `Could not forward a change of ${document.storedPath}: ${errorText(error)}`);
                 }
@@ -333,7 +342,7 @@ export class LanguageServer {
             onApplyEdit: (params) => this.options.hooks.applyEdit(this, params),
             timeoutMs: 0
         });
-        const component: Component = { profile, child, session, documents: new Map(), progress: new Set(), subscriptions: [] };
+        const component: Component = { profile, child, session, documents: new Map(), progress: new Set(), subscriptions: [], pulls: new Map() };
         child.onStderr((text) => this.log.push('server', text));
         component.subscriptions.push(
             session.onError((error) => this.log.push('host', errorText(error))),
@@ -366,6 +375,7 @@ export class LanguageServer {
                         version: document.version
                     })
                 );
+                void this.pull(component, document);
             } catch (error) {
                 this.log.push('host', `Could not open ${document.storedPath}: ${errorText(error)}`);
             }
@@ -407,6 +417,42 @@ export class LanguageServer {
         }
         for (const document of this.documents.values()) {
             this.options.hooks.providers(document);
+            for (const component of this.components) {
+                this.schedulePull(component, document);
+            }
+        }
+    }
+
+    private schedulePull(component: Component, document: SharedDocument): void {
+        if (!component.profile.pullDiagnostics) {
+            return;
+        }
+        component.pulls.get(document.absolutePath)?.();
+        component.pulls.set(
+            document.absolutePath,
+            this.clock.set(() => {
+                component.pulls.delete(document.absolutePath);
+                void this.pull(component, document);
+            }, PULL_DELAY_MS)
+        );
+    }
+
+    /* Asks a server that does not push for the diagnostics of the document as it stands, and reports them as a push would. */
+    private async pull(component: Component, document: SharedDocument): Promise<void> {
+        const open = component.documents.get(document.absolutePath);
+        if (!open || !component.profile.pullDiagnostics || !component.session.supports('textDocument/diagnostic', open)) {
+            return;
+        }
+        try {
+            const report = await open.diagnostics(undefined, undefined, { timeoutMs: 0 });
+            if (report.kind === 'full' && component.documents.get(document.absolutePath) === open) {
+                this.options.hooks.diagnostics(document, component.profile.name, { uri: document.uri, version: open.version, diagnostics: report.items });
+            }
+        } catch (error) {
+            // A request overtaken by a change or a newer request is not a failure.
+            if (!(error instanceof StaleResultError) && !(error instanceof LspError && error.code === ErrorCodes.RequestCancelled)) {
+                this.log.push('host', `Could not read the diagnostics of ${document.storedPath}: ${errorText(error)}`);
+            }
         }
     }
 
@@ -414,7 +460,11 @@ export class LanguageServer {
         if (generation !== this.generation || !this.components.includes(component)) {
             return;
         }
-        const reason = exit.signal ? `was stopped by ${exit.signal}` : `exited with code ${exit.code ?? 'unknown'}`;
+        const reason = exit.error
+            ? `could not run: ${exit.error}`
+            : exit.signal
+              ? `was stopped by ${exit.signal}`
+              : `exited with code ${exit.code ?? 'unknown'}`;
         const said = this.log.last('server');
         void this.fail(`The ${component.profile.name} language server ${reason}${said ? `: ${said}` : ''}`);
     }
@@ -442,6 +492,10 @@ export class LanguageServer {
             subscription.dispose();
         }
         component.subscriptions = [];
+        for (const cancel of component.pulls.values()) {
+            cancel();
+        }
+        component.pulls.clear();
     }
 
     private async shutdown(component: Component): Promise<void> {
