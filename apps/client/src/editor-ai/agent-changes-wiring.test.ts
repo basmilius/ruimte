@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { ProvenanceReadResult } from '@ruimte/contracts';
+import { useChats } from '@ruimte/agents-react/state/chats';
 import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { endpointKey } from '@/state/keys';
@@ -72,6 +73,39 @@ describe('the daemon and the editor', () => {
 
         mounted.unmount();
         expect(editor.attributionMarks).toEqual([]);
+    });
+});
+
+describe('a turn whose end was missed', () => {
+    const chatKey = endpointKey(FILE.endpointId, 'chat-a');
+    const status = (activeTurnId: string | null) => ({ statusByKey: { [chatKey]: { info: { activeTurnId } } } }) as never;
+
+    afterEach(() => {
+        useChats.setState({ statusByKey: {} });
+    });
+
+    test('the chat list of a fresh socket saying the turn is over takes the chip and the cursor away', async () => {
+        const { transport, editor, mounted } = mount(result(1, 2, 3));
+        await flush();
+        useChats.setState(status('turn-1'));
+        transport.emit('provenance.changed', { projectId: 'p1', path: FILE.path, chatId: 'chat-a', turnId: 'turn-1', live: true });
+        await flush();
+        expect(mounted.changes.getState().live).not.toBeNull();
+        expect(editor.remoteCursors).toHaveLength(1);
+
+        useChats.setState(status(null));
+        expect(mounted.changes.getState().live).toBeNull();
+        expect(editor.remoteCursors).toEqual([]);
+    });
+
+    test('an editor that is gone stops listening to the chats', async () => {
+        const { transport, mounted } = mount(result(1, 2, 3));
+        await flush();
+        transport.emit('provenance.changed', { projectId: 'p1', path: FILE.path, chatId: 'chat-a', turnId: 'turn-1', live: true });
+        await flush();
+        mounted.unmount();
+        useChats.setState(status(null));
+        expect(mounted.changes.getState().live).not.toBeNull();
     });
 });
 

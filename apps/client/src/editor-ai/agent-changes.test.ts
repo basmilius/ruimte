@@ -39,6 +39,8 @@ interface Setup {
     answer: { value: ProvenanceReadResult };
     disk: { text: string; mtime: number };
     reads: { count: number };
+    /* The turn each chat runs, as this client's chat list says; a chat that is not here is one it does not know. */
+    turns: Map<string, string | null>;
 }
 
 function setup(runs: ProvenanceRun[] = [run('r1', 2, 3)], settings: AgentChangesSettings = { mode: 'gutter', attribution: true }): Setup {
@@ -47,6 +49,7 @@ function setup(runs: ProvenanceRun[] = [run('r1', 2, 3)], settings: AgentChanges
     const disk = { text: DISK, mtime: 10 };
     const answer = { value: { mtime: 10, lines: 6, runs } };
     const reads = { count: 0 };
+    const turns = new Map<string, string | null>();
     const changes = new AgentChanges(
         editor,
         {
@@ -55,12 +58,13 @@ function setup(runs: ProvenanceRun[] = [run('r1', 2, 3)], settings: AgentChanges
                 return answer.value;
             },
             disk: () => disk,
-            nameOf: (provider) => (provider === 'claude' ? 'Claude Code' : 'Codex')
+            nameOf: (provider) => (provider === 'claude' ? 'Claude Code' : 'Codex'),
+            activeTurn: (chatId) => turns.get(chatId)
         },
         timers
     );
     changes.configure(settings);
-    return { editor, changes, timers, answer, disk, reads };
+    return { editor, changes, timers, answer, disk, reads, turns };
 }
 
 const marks = (editor: FakeEditor): Array<[number, number]> => editor.attributionMarks.map((mark) => [mark.startLine, mark.endLine]);
@@ -190,6 +194,44 @@ describe('a turn that is writing', () => {
         changes.changed(live);
         changes.changed({ ...live, chatId: 'chat-b', live: false });
         expect(changes.getState().live).toEqual({ chatId: 'chat-a', turnId: 'turn-1' });
+    });
+});
+
+describe('a turn whose end was never heard', () => {
+    const live: ProvenanceChangedEvent = { projectId: 'p1', path: '/a', chatId: 'chat-a', turnId: 'turn-1', live: true };
+
+    test('the chat list saying the chat runs nothing takes the chip and the cursor away', async () => {
+        const { editor, changes, turns } = setup();
+        turns.set('chat-a', 'turn-1');
+        changes.changed(live);
+        await flush();
+        expect(editor.remoteCursors).toHaveLength(1);
+
+        turns.set('chat-a', null);
+        changes.chatsChanged();
+        expect(changes.getState().live).toBeNull();
+        expect(editor.remoteCursors).toEqual([]);
+        expect(marks(editor)).toEqual([[2, 3]]);
+    });
+
+    test('so does the chat running another turn', async () => {
+        const { changes, turns } = setup();
+        changes.changed(live);
+        await flush();
+        turns.set('chat-a', 'turn-2');
+        changes.chatsChanged();
+        expect(changes.getState().live).toBeNull();
+    });
+
+    test('a chat that is still on the turn, or one this client does not know, keeps its chip', async () => {
+        const { changes, turns } = setup();
+        changes.changed(live);
+        await flush();
+        changes.chatsChanged();
+        expect(changes.getState().live).not.toBeNull();
+        turns.set('chat-a', 'turn-1');
+        changes.chatsChanged();
+        expect(changes.getState().live).not.toBeNull();
     });
 });
 

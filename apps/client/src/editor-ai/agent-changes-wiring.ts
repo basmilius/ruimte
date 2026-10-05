@@ -1,5 +1,6 @@
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import type { Editor } from '@ruimte/smart-editor';
+import { useChats } from '@ruimte/agents-react/state/chats';
 import { endpointKey } from '@/state/keys';
 import { type TextDraft, useTextDrafts } from '@/state/text-drafts';
 import type { Transport } from '@/transport/transport';
@@ -46,7 +47,14 @@ export function mountAgentChanges(
             const draft = useTextDrafts.getState().rows[key];
             return draft === undefined ? null : (draft.incoming ?? { text: draft.disk, mtime: draft.mtime });
         },
-        nameOf: (provider: AgentKind | undefined) => providerNameOf(providers(), provider)
+        nameOf: (provider: AgentKind | undefined) => providerNameOf(providers(), provider),
+        activeTurn: (chatId) => useChats.getState().statusByKey[endpointKey(file.endpointId, chatId)]?.info.activeTurnId
+    });
+    // The list of chats is asked again on every fresh socket, so a turn that ended while it was gone shows here.
+    const stopChats = useChats.subscribe((state, previous) => {
+        if (state.statusByKey !== previous.statusByKey) {
+            changes.chatsChanged();
+        }
     });
     // One review per file and window: every editor on the file answers through the same group.
     const membership = app === undefined ? null : joinReviewGroup(key);
@@ -87,6 +95,7 @@ export function mountAgentChanges(
         review,
         unmount: () => {
             stopEvents();
+            stopChats();
             stopDrafts();
             review?.dispose();
             membership?.leave();

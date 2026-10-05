@@ -54,6 +54,8 @@ export interface AgentChangesSource {
     disk(): { text: string; mtime: number } | null;
     /* What the cursor of a turn says. */
     nameOf(provider: AgentKind | undefined): string;
+    /* The turn the machine says a chat is running: null when it runs none, undefined when this client does not know the chat. */
+    activeTurn?(chatId: string): string | null | undefined;
 }
 
 /*
@@ -161,6 +163,22 @@ export class AgentChanges {
             this.set({ ...this.state, live: null });
         }
         this.refresh();
+    }
+
+    /*
+     * What the chats are doing changed. The end of a turn is an event, and a socket that was gone for it
+     * says nothing afterwards, so the chip and the cursor of a turn the machine no longer runs go here.
+     */
+    chatsChanged(): void {
+        const live = this.state.live;
+        if (live === null || this.disposed) {
+            return;
+        }
+        const running = this.source.activeTurn?.(live.chatId);
+        if (running !== undefined && running !== live.turnId) {
+            this.set({ ...this.state, live: null });
+            this.draw();
+        }
     }
 
     /* The card the pointer is in stays open, and the one it left closes after a moment. */
