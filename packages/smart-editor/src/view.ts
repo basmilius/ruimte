@@ -13,7 +13,8 @@ import {
 import { FindController } from './find.ts';
 import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type LayoutRect, type LayoutRow, RIGHT_PADDING, type TextRow } from './layout.ts';
 import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
-import { type AttributedLines, AttributionRuns } from './attribution.ts';
+import { type AttributedLines, AttributionRuns, tintValue } from './attribution.ts';
+import { renderCodeBlock } from './code-block.ts';
 import { mapOffset } from './offsets.ts';
 import { mapTrackedRange } from './tracked-range.ts';
 import { type ScrollKind, scrollPosition } from './scroll.ts';
@@ -40,6 +41,7 @@ import type {
     EditorBlock,
     EditorChangeKind,
     EditorChangeMark,
+    EditorCodeBlockOptions,
     EditorFindQuery,
     EditorFindState,
     EditorHighlightKind,
@@ -181,6 +183,7 @@ export class EditorView {
     private changeMarks: { kind: EditorChangeKind; from: number; to: number }[] = [];
     private changeVersion = 0;
     private readonly attribution = new AttributionRuns();
+    private readonly highlights = new AttributionRuns();
     private remoteCarets: { id: string; name: string; color: string; at: number }[] = [];
     private remoteKey: string | null = null;
     private readonly attributionListeners = new Set<(hover: { id: string; rect: EditorRect } | null) => void>();
@@ -538,6 +541,7 @@ export class EditorView {
                 this.markers = this.markers.map((marker) => ({ ...marker, from: mapOffset(marker.from, changes), to: mapOffset(marker.to, changes) }));
                 this.mapTracked(changes);
                 this.attribution.map(changes);
+                this.highlights.map(changes);
                 this.remoteCarets = this.remoteCarets.map((caret) => ({ ...caret, at: mapOffset(caret.at, changes) }));
                 this.semantic = this.semantic.map((token) => ({ ...token, from: mapOffset(token.from, changes), to: mapOffset(token.to, changes) }));
             }
@@ -1687,14 +1691,18 @@ export class EditorView {
             foldable.set(range.startLine, (foldable.get(range.startLine) ?? false) || this.collapsed.has(range.from));
         }
         const lastRow = rows.at(-1);
+        const firstLine = rows[0]?.line ?? 0;
+        const lastLine = lastRow?.kind === 'text' ? lastRow.lastLine : (lastRow?.line ?? 0);
+        const highlighted = this.highlightedLines(firstLine, lastLine);
         paintGutter(this.gutterLines, this.layout, rows, {
             changes: this.changedLines(rows),
-            attribution: this.attributedLines(rows[0]?.line ?? 0, lastRow?.kind === 'text' ? lastRow.lastLine : (lastRow?.line ?? 0)),
+            attribution: this.attributedLines(firstLine, lastLine),
+            highlights: highlighted,
             activeLines: new Set(selections.map((selection) => this.model.positionAt(selection.head).line)),
             foldable,
             action: this.gutterAction
         });
-        const marks: { className: string; rects: LayoutRect[] }[] = [];
+        const marks: { className: string; rects: LayoutRect[]; background?: string }[] = this.highlightMarks(rows, highlighted);
         const row = this.layout.rowForLine(this.model.positionAt(primary.head).line);
         const currentLine =
             primary.anchor === primary.head && row.kind === 'text'
@@ -1872,6 +1880,49 @@ export class EditorView {
     setAttributionMarks(marks: readonly { id: string; startLine: number; endLine: number; color: string }[]): void {
         this.attribution.set(marks, this.model.getLineCount(), (line) => this.model.getLine(line));
         this.render();
+    }
+
+    /* Lines the host tinted, which follow their text through edits until it sets them again. */
+    setLineHighlights(highlights: readonly { startLine: number; endLine: number; color: string; sign?: string }[]): void {
+        this.highlights.set(
+            highlights.map((highlight) => ({ id: '', ...highlight })),
+            this.model.getLineCount(),
+            (line) => this.model.getLine(line)
+        );
+        this.render();
+    }
+
+    private highlightedLines(first: number, last: number): Map<number, AttributedLines> {
+        return this.highlights.linesIn(
+            first,
+            last,
+            this.model.getLine(first).start,
+            this.model.getLine(last).end,
+            (offset) => this.model.positionAt(offset).line
+        );
+    }
+
+    /* One box per row, so a row of the host's between two tinted lines stays clear. */
+    private highlightMarks(
+        rows: readonly LayoutRow[],
+        lines: ReadonlyMap<number, AttributedLines>
+    ): { className: string; rects: LayoutRect[]; background: string }[] {
+        const byColor = new Map<string, LayoutRect[]>();
+        const width = Math.max(this.layout.width, this.viewportWidth);
+        for (const row of rows) {
+            const highlight = row.kind === 'text' ? lines.get(row.line) : undefined;
+            if (highlight !== undefined) {
+                const rects = byColor.get(highlight.color) ?? [];
+                rects.push({ x: 0, y: row.top, width, height: row.height });
+                byColor.set(highlight.color, rects);
+            }
+        }
+        return [...byColor].map(([color, rects]) => ({ className: 'se-line-highlight', rects, background: tintValue(color) }));
+    }
+
+    /* Code that is not in the document, drawn in the editor's own face and colors. */
+    renderCode(container: HTMLElement, text: string, options: EditorCodeBlockOptions): void {
+        renderCodeBlock(container, text, this.tokens.tokenizeText(text.split(/\r?\n/)), this.settings.tabSize, options);
     }
 
     private attributedLines(first: number, last: number): Map<number, AttributedLines> {
@@ -2172,6 +2223,7 @@ export class EditorView {
         this.tracked.clear();
         this.remoteCarets = [];
         this.attribution.clear();
+        this.highlights.clear();
         this.attributionListeners.clear();
         this.painter.clear();
         this.root.remove();

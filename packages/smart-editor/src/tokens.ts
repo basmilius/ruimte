@@ -58,6 +58,23 @@ export class TokenCache {
         return this.frontier;
     }
 
+    /* The colors of text that is not part of the document, a line at a time, or null without a tokenizer. */
+    tokenizeText(lines: readonly string[]): (readonly LineToken[])[] | null {
+        const tokenizer = this.tokenizer;
+        if (tokenizer === null) {
+            return null;
+        }
+        let state: unknown = null;
+        return lines.map((text) => {
+            if (text.length > LONGEST_COLORED_LINE) {
+                return [{ length: text.length, color: '', fontStyle: 0 }];
+            }
+            const result = tokenizer.tokenizeLine(text, state);
+            state = result.state;
+            return result.tokens;
+        });
+    }
+
     /* The colors of a line, or null while it has none; the old colors of a line the recoloring has not reached yet. */
     tokensOf(line: number): readonly LineToken[] | null {
         return this.entries[line]?.tokens ?? null;

@@ -39,7 +39,7 @@ export interface RowPaint {
     onUnfold(line: number): void;
 }
 
-function styleSpan(span: HTMLElement, token: LineToken): void {
+export function styleSpan(span: HTMLElement, token: LineToken): void {
     if (token.color !== '') {
         span.style.color = token.color;
     }
@@ -335,6 +335,8 @@ export interface GutterPaint {
     changes: ReadonlyMap<number, EditorChangeKind>;
     /* The bar of the agent that wrote each line, which takes the place of the change mark beside it. */
     attribution: ReadonlyMap<number, AttributedLines>;
+    /* The line highlights of the host, whose sign stands in the gutter. */
+    highlights: ReadonlyMap<number, AttributedLines>;
     /* Lines a fold can start at, and whether each is collapsed. */
     foldable: ReadonlyMap<number, boolean>;
     /* The line that carries the host's button, and what it is called. */
@@ -364,6 +366,14 @@ export function paintGutter(container: HTMLElement, layout: EditorLayout, rows: 
             button.tabIndex = -1;
             button.setAttribute('aria-label', paint.action.label);
             item.append(button);
+        }
+        const sign = paint.highlights.get(row.line)?.sign;
+        if (sign) {
+            const mark = document.createElement('span');
+            mark.className = 'se-line-sign';
+            mark.textContent = sign;
+            mark.style.color = colorValue(paint.highlights.get(row.line)!.color);
+            item.append(mark);
         }
         const bar = paint.attribution.get(row.line);
         if (bar) {
@@ -403,7 +413,7 @@ export interface OverlayPaint {
     currentLine: LayoutRect | null;
     selections: readonly LayoutRect[];
     focused: boolean;
-    marks: readonly { className: string; rects: readonly LayoutRect[] }[];
+    marks: readonly { className: string; rects: readonly LayoutRect[]; background?: string }[];
 }
 
 function box(document: Document, className: string, rect: LayoutRect): HTMLElement {
@@ -425,7 +435,11 @@ export function paintOverlays(container: HTMLElement, paint: OverlayPaint): void
     }
     for (const mark of paint.marks) {
         for (const rect of mark.rects) {
-            fragment.append(box(document, mark.className, rect));
+            const element = box(document, mark.className, rect);
+            if (mark.background) {
+                element.style.background = mark.background;
+            }
+            fragment.append(element);
         }
     }
     for (const rect of paint.selections) {

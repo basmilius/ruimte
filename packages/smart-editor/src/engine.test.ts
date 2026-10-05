@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, jest, test } from 'bun:test';
 import { mountEditor } from './testing.ts';
 import type { EditorFindQuery, EditorFindState, EditorOptions, KeyChord, LineTokenizer, SmartEditorEngineOptions } from './types.ts';
 
@@ -1112,5 +1112,69 @@ describe('setRemoteCursors', () => {
         editor.setCaret({ line: 2, character: 1 });
         editor.setRemoteCursors([{ id: 'a', position: { line: 5, character: 0 }, name: 'Claude Code', color: '--agent-1' }]);
         expect(editor.getCaret()).toEqual({ line: 2, character: 1 });
+    });
+});
+
+describe('setLineHighlights', () => {
+    const text = Array.from({ length: 12 }, (_, i) => `line ${i}`).join('\n');
+    const tinted = (host: HTMLElement): string[] =>
+        [...host.querySelectorAll('.se-line-highlight')].map((element) => `${(element as HTMLElement).style.top}:${(element as HTMLElement).style.background}`);
+
+    test('tints each row of the lines and follows them through an edit', () => {
+        const { editor, host } = setup({ text });
+        editor.setLineHighlights([{ startLine: 3, endLine: 4, color: '--agent-3' }]);
+        const tint = 'color-mix(in srgb, var(--agent-3) 14%, transparent)';
+        expect(tinted(host)).toEqual([`40px:${tint}`, `60px:${tint}`]);
+        editor.applyEdits([{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, text: 'new\n' }]);
+        expect(tinted(host)).toEqual([`60px:${tint}`, `80px:${tint}`]);
+        editor.setLineHighlights([]);
+        expect(tinted(host)).toEqual([]);
+    });
+
+    test('keeps a row of a widget between two tinted lines clear, and puts the sign in the gutter', () => {
+        jest.useFakeTimers();
+        const { editor, host } = setup({ text });
+        jest.runAllTimers();
+        jest.useRealTimers();
+        editor.setWidgets([{ id: 'removed', line: 3, height: 40, render: (container) => (container.textContent = 'old') }]);
+        editor.setLineHighlights([{ startLine: 4, endLine: 5, color: '#336699', sign: '+' }]);
+        expect(tinted(host).map((entry) => entry.split(':')[0])).toEqual(['60px', '120px']);
+        const signs = [...host.querySelectorAll('.se-line-sign')].map((sign) => sign.textContent);
+        expect(signs).toEqual(['+', '+']);
+    });
+});
+
+describe('renderCode', () => {
+    const tokenizer: LineTokenizer = {
+        tokenizeLine: (text) => ({
+            tokens: [
+                { length: 3, color: '#112233', fontStyle: 0 },
+                { length: Math.max(0, text.length - 3), color: '', fontStyle: 0 }
+            ],
+            state: null
+        }),
+        sameState: () => true
+    };
+
+    test('draws lines in the editor colors with a gutter column, numbers, a sign and a tinted bar', async () => {
+        const { editor, host } = setup({ language: 'typescript' }, { tokenizer: async () => tokenizer });
+        await settle();
+        const container = host.ownerDocument.createElement('div');
+        editor.renderCode(container, 'let a = 1;\nlet b = 2;', { firstLine: 14, sign: '-', color: '--agent-1' });
+        const rows = [...container.querySelectorAll('.se-code-row')];
+        expect(rows.map((row) => row.querySelector('.se-code-text')!.textContent)).toEqual(['let a = 1;', 'let b = 2;']);
+        expect(rows.map((row) => row.querySelector('.se-code-gutter span')!.textContent)).toEqual(['14', '15']);
+        expect(rows[0]!.querySelector('.se-line-sign')!.textContent).toBe('-');
+        expect((rows[0] as HTMLElement).style.background).toBe('color-mix(in srgb, var(--agent-1) 14%, transparent)');
+        expect((rows[0]!.querySelector('.se-attribution') as HTMLElement).style.background).toBe('var(--agent-1)');
+        expect(rows[0]!.querySelector('.se-code-text span')!.getAttribute('style')).toContain('#112233');
+    });
+
+    test('draws plain text without a tokenizer, a gutter and a color', () => {
+        const { editor, host } = setup();
+        const container = host.ownerDocument.createElement('div');
+        editor.renderCode(container, 'one');
+        expect(container.querySelector('.se-code-text')!.textContent).toBe('one');
+        expect(container.querySelector('.se-code-gutter')!.children).toHaveLength(0);
     });
 });

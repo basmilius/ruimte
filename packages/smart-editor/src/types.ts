@@ -170,6 +170,27 @@ export interface EditorRemoteCursor {
     readonly color: EditorMarkColor;
 }
 
+/* Lines tinted behind the text, such as the lines an agent changed in a review. */
+export interface EditorLineHighlight {
+    /* One-based and inclusive, as for the change marks. */
+    readonly startLine: number;
+    readonly endLine: number;
+    /* The tint is this color at a low alpha, so the code keeps its colors on it in either theme. */
+    readonly color: EditorMarkColor;
+    /* A character in the gutter of each line, such as `+`, in the same color. */
+    readonly sign?: string;
+}
+
+/* How `renderCode` draws lines that are not part of the document. */
+export interface EditorCodeBlockOptions {
+    /* One-based number of the first line, shown in the gutter column; without it the lines have none. */
+    readonly firstLine?: number;
+    /* A character in the gutter of each line, such as `-`. */
+    readonly sign?: string;
+    /* Tints the rows and draws the bar beside them, as a highlight and an attribution mark do for lines of the document. */
+    readonly color?: EditorMarkColor;
+}
+
 /* The pointer is on the bar of a run. */
 export interface EditorAttributionHover {
     readonly id: string;
@@ -446,6 +467,14 @@ export interface Editor {
      * the caret or under it where the view has no room above.
      */
     setRemoteCursors(cursors: readonly EditorRemoteCursor[]): void;
+    /* Lines tinted behind the text, replacing the ones set before. They follow their text through edits until set again, and cost one mapping of two offsets per highlight. */
+    setLineHighlights(highlights: readonly EditorLineHighlight[]): void;
+    /*
+     * Fills a widget row's element with lines of code that are not in the document, such as the lines an
+     * agent removed, in the editor's face and colors for the language, a gutter column as wide as the
+     * editor's and a row as high as a line. Call it from `EditorWidget.render`.
+     */
+    renderCode(container: HTMLElement, text: string, options?: EditorCodeBlockOptions): void;
     /* The pointer rests on a bar, or null when it left it or the bar is gone. */
     onAttributionHover(listener: (hover: EditorAttributionHover | null) => void): () => void;
     /* Problems to draw, replacing the ones set before. */

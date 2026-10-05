@@ -47,6 +47,10 @@ Folds are kept by line (`getFolds`, and `folds` on mounting), the way scroll and
 
 `setRemoteCursors` draws the caret of an agent (`id`, `position`, `name`, `color`, the same colors) over the text, two pixels wide with its name in a label above it, the label's lower left corner square. Where there is no room above the caret (the first line, or under the pinned headers) the name goes under it. It follows its text through edits until set again, is not interactive, and is left out on a line a fold hides. The editor's own caret and selection never move for it.
 
+## Review and conflict rows
+
+`setLineHighlights` tints lines behind the text (`startLine` and `endLine` one-based, a `color`, an optional `sign` such as `+` in the gutter beside the number), one box per row so a widget row between two tinted lines stays clear. It follows its text through edits like the marks do. `renderCode(container, text, options)` fills a widget row's element with lines that are not in the document, such as the lines an agent removed or the other side of a conflict, in the editor's face and token colors, with a gutter column as wide as the editor's, so the text lines up with the document's (`firstLine` for numbers, `sign`, and `color` for the tint and the bar). Both take the same colors as the attribution marks. A widget has `placement: 'above'` for a row over its line.
+
 ## Widgets per owner
 
 `setWidgets(widgets, owner?)` replaces the rows of one owner, `default` without one, and leaves every other owner's alone, so a peek, the review rows of an agent's change and a conflict stand together. Rows next to the same line are ordered by their owners' names and then in the order each owner gave them, not by who set them last, so they never swap places. An empty list takes the owner's rows away.

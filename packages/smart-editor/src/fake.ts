@@ -3,6 +3,8 @@ import type {
     EditorAttributionHover,
     EditorAttributionMark,
     EditorBlock,
+    EditorCodeBlockOptions,
+    EditorLineHighlight,
     EditorChangeMark,
     EditorCodeVision,
     EditorClick,
@@ -294,6 +296,20 @@ export class FakeEditor implements Editor {
 
     setChangeMarks(marks: readonly EditorChangeMark[]): void {
         this.changeMarks = marks;
+    }
+
+    /* The tinted lines the client set last. */
+    lineHighlights: readonly EditorLineHighlight[] = [];
+
+    setLineHighlights(highlights: readonly EditorLineHighlight[]): void {
+        this.lineHighlights = highlights;
+    }
+
+    /* What the client drew as code outside the document: the text and how, and into which element. */
+    codeBlocks: { container: HTMLElement; text: string; options: EditorCodeBlockOptions }[] = [];
+
+    renderCode(container: HTMLElement, text: string, options: EditorCodeBlockOptions = {}): void {
+        this.codeBlocks.push({ container, text, options });
     }
 
     /* The cursors of agents the client set last. */

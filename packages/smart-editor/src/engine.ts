@@ -7,6 +7,8 @@ import type {
     EditorAttributionHover,
     EditorAttributionMark,
     EditorBlock,
+    EditorCodeBlockOptions,
+    EditorLineHighlight,
     EditorChangeMark,
     EditorCodeVision,
     EditorClickHandler,
@@ -517,6 +519,14 @@ class SmartEditor implements Editor {
 
     setAttributionMarks(marks: readonly EditorAttributionMark[]): void {
         this.view.setAttributionMarks(marks);
+    }
+
+    setLineHighlights(highlights: readonly EditorLineHighlight[]): void {
+        this.view.setLineHighlights(highlights);
+    }
+
+    renderCode(container: HTMLElement, text: string, options: EditorCodeBlockOptions = {}): void {
+        this.view.renderCode(container, text, options);
     }
 
     setRemoteCursors(cursors: readonly EditorRemoteCursor[]): void {
