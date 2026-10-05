@@ -2,6 +2,7 @@
 
 pub mod complete;
 mod detect;
+pub mod mocks;
 pub mod strings;
 
 #[cfg(test)]

@@ -123,6 +123,7 @@ fn method_candidates(
             Role::DataProvider if is_test || is_lifecycle(name) => continue,
             Role::DataProvider => u8::from(!method.is_static),
             Role::Depends if !is_test => continue,
+            Role::Mocked if method.is_final || method.is_static => continue,
             _ => 0,
         };
         out.push(Candidate {

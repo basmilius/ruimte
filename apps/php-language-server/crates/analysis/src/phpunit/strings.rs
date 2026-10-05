@@ -18,6 +18,8 @@ pub enum Role {
     DataProvider,
     Depends,
     Covers,
+    /// A method of the class a test double stands for.
+    Mocked,
 }
 
 /// What a string names.
@@ -283,6 +285,13 @@ fn line_end_of_tag(trimmed: &str, tag_end: usize) -> usize {
     tag_end + usize::from(trimmed[tag_end..].starts_with([' ', '\t']))
 }
 
+/// The strings of a call that name something: the methods of a double, a Pest dataset.
+fn call_strings(analyzer: &Analyzer<'_>, call: &SyntaxNode) -> Vec<TestString> {
+    let mut out = super::mocks::call_strings(analyzer, call);
+    out.extend(crate::pest::call_strings(analyzer, call));
+    out
+}
+
 /// Every string of a file that names a test, a function or a group.
 pub fn strings_in(ctx: &FileContext<'_>) -> Vec<TestString> {
     let mut out = Vec::new();
@@ -297,7 +306,7 @@ pub fn strings_in(ctx: &FileContext<'_>) -> Vec<TestString> {
                 }
             }
             php_syntax::SyntaxElement::Node(node) if node.kind() == CALL_EXPR => {
-                out.extend(crate::pest::call_strings(&ctx.analyzer(&node), &node));
+                out.extend(call_strings(&ctx.analyzer(&node), &node));
             }
             _ => {}
         }
@@ -319,12 +328,12 @@ pub fn string_at(analyzer: &Analyzer<'_>, offset: u32) -> Option<TestString> {
                 let owner = literal.as_ref().and_then(|argument| {
                     argument
                         .ancestors()
-                        .take(4)
+                        .take(6)
                         .find(|ancestor| matches!(ancestor.kind(), ATTRIBUTE | CALL_EXPR))
                 });
                 match owner {
                     Some(owner) if owner.kind() == ATTRIBUTE => attribute_strings(analyzer, &owner),
-                    Some(owner) => crate::pest::call_strings(analyzer, &owner),
+                    Some(owner) => call_strings(analyzer, &owner),
                     None => Vec::new(),
                 }
             }

@@ -227,6 +227,18 @@ pub const INSPECTIONS: &[InspectionInfo] = &[
         "A data set with more or fewer values than the test takes",
     ),
     info(
+        "missing-double-method",
+        Error,
+        true,
+        "A method of a test double that the class does not have",
+    ),
+    info(
+        "double-return-type-mismatch",
+        Warning,
+        true,
+        "A value `willReturn()` gives that the method cannot return",
+    ),
+    info(
         "missing-strict-types",
         Hint,
         false,

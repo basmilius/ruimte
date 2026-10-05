@@ -345,3 +345,202 @@ final class FooTest {
     .collect();
     assert_eq!(labels, vec!["fast", "slow"]);
 }
+
+const SERVICE: &str = r#"<?php
+namespace App;
+class Mailer {
+    public function send(string $to, string $body): bool {}
+    public function count(): int {}
+    public function name(): ?string {}
+    public function reset(): void {}
+    final public function sealed(): void {}
+    public static function make(): static {}
+}
+"#;
+
+fn mock_fixture(current: &str) -> Fixture {
+    Fixture::new(&[
+        ("phpunit.php", PHPUNIT),
+        ("Providers.php", PROVIDERS),
+        ("Mailer.php", SERVICE),
+    ])
+    .with_current(current)
+}
+
+fn type_at(code: &str, name: &str) -> String {
+    let fixture = mock_fixture(code);
+    let (_, root, offset) = split_cursor(code);
+    let analyzer = Analyzer::new(&fixture.index, &root, offset);
+    analyzer
+        .env_at(offset)
+        .get(name)
+        .map_or_else(|| "<unset>".to_string(), |ty| ty.display(false))
+}
+
+#[test]
+fn mocks_and_stubs_are_the_double_and_the_class() {
+    let code = r#"<?php
+namespace Tests;
+use App\Mailer;
+use PHPUnit\Framework\TestCase;
+final class FooTest extends TestCase {
+    public function testIt(): void {
+        $mock = $this->createMock(Mailer::class);
+        $stub = self::createStub(Mailer::class);
+        $built = $this->getMockBuilder(Mailer::class)->onlyMethods(['send'])->getMock();
+        $0
+    }
+}
+"#;
+    let parts = |name: &str| {
+        let shown = type_at(code, name);
+        let mut parts: Vec<String> = shown.split('&').map(str::to_string).collect();
+        parts.sort();
+        parts
+    };
+    assert_eq!(
+        parts("mock"),
+        vec!["App\\Mailer", "PHPUnit\\Framework\\MockObject\\MockObject"]
+    );
+    assert_eq!(
+        parts("stub"),
+        vec!["App\\Mailer", "PHPUnit\\Framework\\MockObject\\Stub"]
+    );
+    assert_eq!(
+        parts("built"),
+        vec!["App\\Mailer", "PHPUnit\\Framework\\MockObject\\MockObject"]
+    );
+}
+
+#[test]
+fn a_method_of_a_double_is_named_in_the_string_that_configures_it() {
+    let code = r#"<?php
+namespace Tests;
+use App\Mailer;
+use PHPUnit\Framework\TestCase;
+final class FooTest extends TestCase {
+    public function testIt(): void {
+        $mock = $this->createMock(Mailer::class);
+        $mock->expects($this->once())->method('se$0nd');
+    }
+}
+"#;
+    assert_eq!(
+        {
+            let fixture = mock_fixture(code);
+            let (_, root, offset) = split_cursor(code);
+            let analyzer = Analyzer::new(&fixture.index, &root, offset);
+            analyzer
+                .definitions(offset)
+                .into_iter()
+                .map(|place| {
+                    let source = &fixture.sources[place.path.as_ref().unwrap()];
+                    source[place.span.start as usize..place.span.end as usize].to_string()
+                })
+                .collect::<Vec<_>>()
+        },
+        vec!["send"]
+    );
+    let completing = code.replace("'se$0nd'", "'$0'");
+    let fixture = mock_fixture(&completing);
+    let offset = completing.find("$0").unwrap() as u32;
+    let text = completing.replacen("$0", "", 1);
+    let labels: Vec<String> = crate::completion::complete(
+        &fixture.index,
+        &text,
+        offset,
+        crate::completion::CompletionOptions::default(),
+    )
+    .items
+    .into_iter()
+    .map(|item| item.label)
+    .collect();
+    assert_eq!(labels, vec!["count", "name", "reset", "send"]);
+}
+
+#[test]
+fn renaming_a_method_follows_the_strings_of_doubles() {
+    let code = r#"<?php
+namespace Tests;
+use App\Mailer;
+use PHPUnit\Framework\TestCase;
+final class FooTest extends TestCase {
+    public function testIt(): void {
+        $mock = $this->createMock(Mailer::class);
+        $mock->method('count')->willReturn(1);
+        $partial = $this->getMockBuilder(Mailer::class)->onlyMethods(['count', 'name'])->getMock();
+    }
+}
+"#;
+    let fixture = Fixture::new(&[("phpunit.php", PHPUNIT), ("Mailer.php", SERVICE), ("FooTest.php", code)]);
+    let sources = Files(fixture.sources.clone());
+    let current = "<?php\nnamespace App;\n$m = new Mailer();\n$m->cou$0nt();\n";
+    let fixture = fixture.with_current(current);
+    let (text, root, offset) = split_cursor(current);
+    let path = PathBuf::from("/project/current.php");
+    let done = rename(
+        &fixture.index,
+        &sources,
+        &Current {
+            path: &path,
+            text: &text,
+            root: &root,
+        },
+        offset,
+        "total",
+    )
+    .expect("renamed");
+    let touched: Vec<String> = done
+        .files
+        .iter()
+        .flat_map(|file| {
+            let source = if file.path == path {
+                text.clone()
+            } else {
+                fixture.sources[&file.path].clone()
+            };
+            file.edits
+                .iter()
+                .map(|edit| source[usize::from(edit.range.start())..usize::from(edit.range.end())].to_string())
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    assert_eq!(touched.iter().filter(|text| *text == "count").count(), 4, "{touched:?}");
+}
+
+#[test]
+fn assertions_come_first_among_the_members_of_this_in_a_test() {
+    let code = r#"<?php
+namespace Tests;
+use PHPUnit\Framework\TestCase;
+final class FooTest extends TestCase {
+    public function aaaHelper(): void {}
+    public function testIt(): void {
+        $this->$0
+    }
+}
+"#;
+    let labels = completions(code);
+    assert_eq!(
+        &labels[..5],
+        [
+            "assertInstanceOf",
+            "assertIsString",
+            "assertNotNull",
+            "assertSame",
+            "assertTrue"
+        ]
+    );
+    assert!(labels.contains(&"aaaHelper".to_string()));
+    let plain = r#"<?php
+namespace Tests;
+final class Plain {
+    public function aaaHelper(): void {}
+    public function assertSomething(): void {}
+    public function run(): void {
+        $this->$0
+    }
+}
+"#;
+    assert_eq!(completions(plain), vec!["aaaHelper", "assertSomething", "run"]);
+}

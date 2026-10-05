@@ -11,11 +11,15 @@ use crate::infer::DeclRef;
 use crate::phpunit::strings::{Role, StringTarget, TestString, strings_in};
 
 pub(super) fn run(cx: &Cx) {
-    if !(cx.on("missing-data-provider") || cx.on("missing-test-dependency") || cx.on("data-provider-arity")) {
+    let doubles = cx.on("missing-double-method") || cx.on("double-return-type-mismatch");
+    if !(cx.on("missing-data-provider") || cx.on("missing-test-dependency") || cx.on("data-provider-arity") || doubles)
+    {
         return;
     }
     let text = cx.text;
-    if !(text.contains("ataProvider") || text.contains("epends")) {
+    let mentions_doubles =
+        doubles && (text.contains("->method(") || text.contains("onlyMethods") || text.contains("PartialMock"));
+    if !(text.contains("ataProvider") || text.contains("epends") || mentions_doubles) {
         return;
     }
     let strings = strings_in(&cx.file);
@@ -23,10 +27,15 @@ pub(super) fn run(cx: &Cx) {
         let StringTarget::Method { class, role } = &string.target else {
             continue;
         };
-        if !matches!(role, Role::DataProvider | Role::Depends) || string.value.is_empty() {
+        if !matches!(role, Role::DataProvider | Role::Depends | Role::Mocked) || string.value.is_empty() {
             continue;
         }
         check_exists(cx, string, class, *role);
+    }
+    if cx.on("double-return-type-mismatch") {
+        for node in cx.nodes.iter().filter(|node| node.kind() == CALL_EXPR) {
+            check_return_value(cx, node, &strings);
+        }
     }
     if cx.on("data-provider-arity") {
         for node in cx.nodes.iter().filter(|node| node.kind() == METHOD_DECLARATION) {
@@ -45,6 +54,7 @@ fn check_exists(cx: &Cx, string: &TestString, class: &str, role: Role) {
     }
     let (code, what) = match role {
         Role::DataProvider => ("missing-data-provider", "data provider"),
+        Role::Mocked => ("missing-double-method", "method"),
         _ => ("missing-test-dependency", "test"),
     };
     cx.report(
@@ -61,6 +71,76 @@ fn check_exists(cx: &Cx, string: &TestString, class: &str, role: Role) {
 
 fn has_magic_call(cx: &Cx, receiver: &Type) -> bool {
     cx.index.find_method(receiver, "__callStatic").is_some()
+}
+
+/// `->method('name')->willReturn(value)`: a value the method of the double cannot return.
+fn check_return_value(cx: &Cx, call: &SyntaxNode, strings: &[TestString]) {
+    let Some(callee) = call
+        .children()
+        .next()
+        .filter(|callee| callee.kind() == PROPERTY_FETCH_EXPR)
+    else {
+        return;
+    };
+    let is_will_return = callee
+        .children()
+        .find(|child| child.kind() == NAME)
+        .is_some_and(|name| name.text().to_string().eq_ignore_ascii_case("willReturn"));
+    let Some(configured) = callee.children().next().filter(|node| node.kind() == CALL_EXPR) else {
+        return;
+    };
+    let args = crate::infer::arguments(call);
+    let [given] = args.as_slice() else {
+        return;
+    };
+    let (true, Some(value)) = (is_will_return, given.expr.as_ref()) else {
+        return;
+    };
+    let Some(string) = strings.iter().find(|string| {
+        matches!(string.target, StringTarget::Method { role: Role::Mocked, .. })
+            && configured.text_range().contains_range(string.range)
+    }) else {
+        return;
+    };
+    let StringTarget::Method { class, .. } = &string.target else {
+        return;
+    };
+    let Some(found) = cx.index.find_method(&Type::class(class.clone()), &string.value) else {
+        return;
+    };
+    let level = cx.index.level;
+    let Some(wanted) = found.member.callable.native_return(level) else {
+        return;
+    };
+    if matches!(wanted, Type::Void | Type::Never) || wanted.has_template() {
+        return;
+    }
+    if wanted
+        .members()
+        .iter()
+        .any(|member| matches!(member, Type::Static | Type::SelfType | Type::Parent))
+    {
+        return;
+    }
+    let analyzer = cx.file.analyzer(call);
+    let env = analyzer.env_around(call);
+    let Some(actual) = super::types::sure_type(cx, &analyzer, &env, value) else {
+        return;
+    };
+    if cx.type_mismatch(&actual, wanted, false) {
+        cx.report(
+            "double-return-type-mismatch",
+            value.text_range(),
+            format!(
+                "{}::{}() returns {}, which cannot be {}",
+                crate::short(class),
+                found.member.name,
+                wanted.display(true),
+                actual.display(true)
+            ),
+            super::Fix::None,
+        );
+    }
 }
 
 /// How many values a data set gives the test: the required and the most the test takes.
@@ -290,5 +370,38 @@ mod tests {
             "{HEAD}    #[DataProvider('rows')]\n    public function testA(int $a): void {{}}\n    public static function rows(): iterable {{ return [[...[1, 2]], $x]; }}\n}}\n"
         );
         assert_eq!(found(&spread), vec![]);
+    }
+
+    const MAILER: &str = "<?php\nnamespace App;\nclass Mailer {\n    public function send(string $to): bool {}\n    public function count(): int {}\n    public function reset(): void {}\n    public function name(): ?string {}\n}\n";
+
+    fn doubles(source: &str) -> Vec<(&'static str, String)> {
+        check_with(&[("phpunit.php", PHPUNIT), ("Mailer.php", MAILER)], source)
+            .into_iter()
+            .filter(|(code, _)| code.contains("double"))
+            .collect()
+    }
+
+    const DOUBLE_HEAD: &str = "<?php\nnamespace Tests;\nuse App\\Mailer;\nuse PHPUnit\\Framework\\TestCase;\nfinal class FooTest extends TestCase {\n    public function testIt(): void {\n        $mock = $this->createMock(Mailer::class);\n";
+
+    #[test]
+    fn a_method_a_double_cannot_configure_is_reported() {
+        let source = format!(
+            "{DOUBLE_HEAD}        $mock->method('send')->willReturn(true);\n        $mock->method('gone')->willReturn(true);\n    }}\n}}\n"
+        );
+        assert_eq!(doubles(&source), vec![("missing-double-method", "gone".to_string())]);
+    }
+
+    #[test]
+    fn a_value_the_method_cannot_return_is_reported_where_it_is_certain() {
+        let source = format!(
+            "{DOUBLE_HEAD}        $mock->method('count')->willReturn('many');\n        $mock->method('count')->willReturn(3);\n        $mock->method('name')->willReturn(null);\n        $mock->method('send')->willReturn(new \\stdClass());\n        $mock->method('reset')->willReturn(1);\n        $mock->expects($this->once())->method('count')->willReturn([]);\n        $mock->method('send')->willReturn($unknown);\n    }}\n}}\n"
+        );
+        assert_eq!(
+            doubles(&source),
+            vec![
+                ("double-return-type-mismatch", "new \\stdClass()".to_string()),
+                ("double-return-type-mismatch", "[]".to_string()),
+            ]
+        );
     }
 }

@@ -523,6 +523,8 @@ impl Builder<'_> {
         let typed = self.typed().to_string();
         let level = self.index.level;
         let mut seen: HashSet<String> = HashSet::new();
+        // In a test the assertions are what `$this->` is for, so they come before everything else.
+        let assertions_first = text_of(object) == "$this" && self.in_test();
         for (member_index, member) in receiver.members().iter().enumerate() {
             if !matches!(member, Type::Class { .. } | Type::Intersection(_)) {
                 continue;
@@ -530,7 +532,8 @@ impl Builder<'_> {
             let depth = self.depths(member);
             for found in self.index.methods(member) {
                 let name = &found.member.name;
-                if found.member.is_static
+                let assertion = assertions_first && name.starts_with("assert");
+                if (found.member.is_static && !assertion)
                     || !self
                         .index
                         .is_accessible(found.member.visibility, &found.self_name, context.as_deref())
@@ -551,8 +554,13 @@ impl Builder<'_> {
                     edit: self.range_edit(name.clone()),
                     additional_edits: Vec::new(),
                     sort_text: format!(
-                        "{}{:02}{:02}{}",
-                        u8::from(found.member.is_static),
+                        "{}{}{:02}{:02}{}",
+                        if assertions_first && name.starts_with("assert") {
+                            "!"
+                        } else {
+                            ""
+                        },
+                        u8::from(found.member.is_static && !assertion),
                         member_index,
                         rank,
                         name.to_ascii_lowercase()
@@ -593,6 +601,16 @@ impl Builder<'_> {
                 self.push(score, item);
             }
         }
+    }
+
+    /// Whether the cursor is in a test: a method of a test case or a Pest closure.
+    fn in_test(&self) -> bool {
+        self.analyzer.pest.is_some()
+            || self
+                .analyzer
+                .class
+                .as_ref()
+                .is_some_and(|class| crate::phpunit::is_test_class(self.index, &class.name))
     }
 
     /// The properties `beforeEach` puts on `$this` in a Pest file.
