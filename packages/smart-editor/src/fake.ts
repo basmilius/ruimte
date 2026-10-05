@@ -419,11 +419,29 @@ export class FakeEditor implements Editor {
         return this.selection ?? { start: this.caret, end: this.caret };
     }
 
-    /* The other carets of the editor, which a test sets; the primary one is always last. */
-    otherCarets: EditorPosition[] = [];
+    /* The other selections of the editor; the primary one is always last. */
+    private otherSelections: EditorRange[] = [];
+
+    /* The other carets of the editor, which a test sets. */
+    get otherCarets(): EditorPosition[] {
+        return this.otherSelections.map((range) => range.end);
+    }
+
+    set otherCarets(positions: EditorPosition[]) {
+        this.otherSelections = positions.map((position) => ({ start: position, end: position }));
+    }
 
     getSelections(): EditorRange[] {
-        return [...this.otherCarets.map((position) => ({ start: position, end: position })), this.getSelection()];
+        return [...this.otherSelections, this.getSelection()];
+    }
+
+    setSelections(ranges: readonly EditorRange[], reveal: EditorReveal = 'relative'): void {
+        const last = ranges.at(-1);
+        if (last === undefined) {
+            return;
+        }
+        this.otherSelections = ranges.slice(0, -1).map((range) => ({ ...range }));
+        this.setSelection(last, reveal);
     }
 
     getIndentation(): EditorIndentation {
@@ -562,7 +580,27 @@ export class FakeEditor implements Editor {
         for (const edit of ordered) {
             text = text.slice(0, edit.from) + edit.text + text.slice(edit.to);
         }
+        // The other carets follow the text as the real editor's do: one inside a replaced stretch ends behind what replaced it.
+        const others = this.otherSelections.map((range) => ({ anchor: this.offsetAt(range.start), head: this.offsetAt(range.end) }));
+        const follow = (offset: number): number => {
+            let delta = 0;
+            for (const edit of [...ordered].reverse()) {
+                if (offset < edit.from) {
+                    break;
+                }
+                if (offset < edit.to || (offset === edit.from && edit.from === edit.to)) {
+                    return edit.from + delta + edit.text.length;
+                }
+                delta += edit.text.length - (edit.to - edit.from);
+            }
+            return offset + delta;
+        };
+        const moved = others.map((range) => ({ anchor: follow(range.anchor), head: follow(range.head) }));
         this.replaceText(text, 'command');
+        this.otherSelections = moved.map((range) => ({
+            start: positionIn(text, Math.min(range.anchor, range.head)),
+            end: positionIn(text, Math.max(range.anchor, range.head))
+        }));
         emit(this.changes);
         return true;
     }

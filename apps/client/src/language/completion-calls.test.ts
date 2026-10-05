@@ -145,6 +145,34 @@ describe('a call added on accepting', () => {
         expect(editor.getCaret()).toEqual(at(1, 7));
     });
 
+    test('puts every caret that got the call inside its parentheses', async () => {
+        const { editor, language, timers } = await setup('a.op\nb.op\nc.op', [WITH_PARAMETERS]);
+        editor.moveCaret(at(2, 4));
+        editor.otherCarets = [at(0, 4), at(1, 4)];
+        language.completion.invoke();
+        timers.advance(10);
+        await settle();
+        await language.completion.accept(false, 0);
+        expect(editor.getText()).toBe('a.open()\nb.open()\nc.open()');
+        expect(editor.getSelections()).toEqual([
+            { start: at(0, 7), end: at(0, 7) },
+            { start: at(1, 7), end: at(1, 7) },
+            { start: at(2, 7), end: at(2, 7) }
+        ]);
+    });
+
+    test('leaves every caret behind the parentheses of a call without parameters', async () => {
+        const { editor, language, timers } = await setup('a.cl\nb.cl\nc.cl', [{ label: 'close', kind: 2, detail: '(method) Box.close(): void' }]);
+        editor.moveCaret(at(2, 4));
+        editor.otherCarets = [at(0, 4), at(1, 4)];
+        language.completion.invoke();
+        timers.advance(10);
+        await settle();
+        await language.completion.accept(false, 0);
+        expect(editor.getText()).toBe('a.close()\nb.close()\nc.close()');
+        expect(editor.getSelections().map((range) => range.end)).toEqual([at(0, 9), at(1, 9), at(2, 9)]);
+    });
+
     test('adds none when ( commits the item, and the typed parenthesis opens parameter info', async () => {
         const items: CompletionItem[] = [
             { ...WITH_PARAMETERS, commitCharacters: ['('] },

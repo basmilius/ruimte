@@ -183,6 +183,22 @@ describe('copying a line without a selection', () => {
     });
 });
 
+describe('setSelections', () => {
+    test('puts a caret in each range and makes the last the primary one', () => {
+        const { editor } = setup({ text: 'one\ntwo\nthree' });
+        editor.setSelections([
+            { start: { line: 0, character: 1 }, end: { line: 0, character: 1 } },
+            { start: { line: 1, character: 0 }, end: { line: 1, character: 2 } },
+            { start: { line: 2, character: 3 }, end: { line: 2, character: 3 } }
+        ]);
+        expect(editor.getSelections()).toHaveLength(3);
+        expect(editor.getSelection()).toEqual({ start: { line: 2, character: 3 }, end: { line: 2, character: 3 } });
+        expect(editor.getSelections()[1]).toEqual({ start: { line: 1, character: 0 }, end: { line: 1, character: 2 } });
+        editor.setSelections([]);
+        expect(editor.getSelections()).toHaveLength(3);
+    });
+});
+
 describe('setText', () => {
     test('is not reported as a change', () => {
         const { editor } = setup();

@@ -137,10 +137,15 @@ export class CompletionFeature {
             .sort((left, right) => comparePositions(right.range.start, left.range.start))
             .reduce((place, extra) => shiftPosition(place, extra), main.range.start);
         // A name typed at several carets is completed at all of them, and the other carets end behind what was put in.
-        const mirrored = mirroredInsertions(editor.getSelections(), editor.getSelection(), caret, (range) => editor.textInRange(range), main);
+        const carets = editor.getSelections();
+        const mirrored = mirroredInsertions(carets, editor.getSelection(), caret, (range) => editor.textInRange(range), main);
         editor.applyEdits([{ range: main.range, text: main.text }, ...mirrored, ...extras]);
+        const landed = editor.getSelections();
         if (commit === undefined) {
             this.language.snippets.begin(start, main.text, main.stops);
+            if (plan.action === 'add' && plan.inside && mirrored.length > 0) {
+                this.placeMirroredCarets(carets, mirrored, landed);
+            }
             if (plan.action === 'enter') {
                 const end = editor.getCaret();
                 editor.setCaret({ line: end.line, character: end.character + plan.shift });
@@ -154,6 +159,25 @@ export class CompletionFeature {
         }
         this.afterInsert(item, commit, lineBefore);
         editor.focus();
+    }
+
+    /* The carets that got the same `()` go inside it like the primary one, which the snippet already placed. */
+    private placeMirroredCarets(before: readonly EditorRange[], mirrored: readonly EditorContentChange[], landed: readonly EditorRange[]): void {
+        const { editor } = this.language;
+        const primary = before.length - 1;
+        const selections = landed.map((range, index): EditorRange => {
+            const caret = before[index]!.start;
+            const got = mirrored.some(
+                (edit) => edit.range.start.line === caret.line && edit.range.start.character <= caret.character && caret.character <= edit.range.end.character
+            );
+            if (index === primary || !got) {
+                return range;
+            }
+            const stop = { line: range.end.line, character: range.end.character - 1 };
+            return { start: stop, end: stop };
+        });
+        selections[primary] = editor.getSelection();
+        editor.setSelections(selections);
     }
 
     /* The lines above the insertion down to where it starts, and the rest of the line past what it replaces. */

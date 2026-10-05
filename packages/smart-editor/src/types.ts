@@ -415,6 +415,8 @@ export interface Editor {
     setCaret(position: EditorPosition, reveal?: EditorReveal): void;
     /* Replaces the selections with one over the range, the caret at its end, and scrolls it into view. */
     setSelection(range: EditorRange, reveal?: EditorReveal): void;
+    /* Replaces the selections with these, in the order given: the last is the primary one, as for the newest caret, and is scrolled into view. An empty list changes nothing. */
+    setSelections(ranges: readonly EditorRange[], reveal?: EditorReveal): void;
     /* The caret moved or the text under it changed. */
     onCaret(listener: (position: EditorPosition) => void): () => void;
     /* The pointer moved onto another character, or null when it left the text. */
