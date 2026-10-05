@@ -292,7 +292,8 @@ export class InputController {
             smartSemicolon: keys.smartSemicolon,
             language: settings.language ?? 'plaintext',
             camelCase: keys.camelHumps,
-            visualLine: (offset) => this.view.rowOf(offset)
+            visualLine: (offset) => this.view.rowOf(offset),
+            lineSpan: (line) => this.view.lineSpan(line)
         };
     }
 
@@ -389,7 +390,11 @@ export class InputController {
                 }
             }
         }
-        const result = model.execute(name, this.commandOptions());
+        const folded = name === 'moveLineUp' || name === 'moveLineDown' ? this.view.getFolds().collapsed : [];
+        const result = model.execute(name, {
+            ...this.commandOptions(),
+            onLinesMoved: (moves) => this.view.refoldMoved(folded, moves)
+        });
         if (name === 'selectNextOccurrence' && model.occurrencesExhausted && this.view.settings.messages.noMoreOccurrences !== undefined) {
             this.view.notify(this.view.settings.messages.noMoreOccurrences);
         }
@@ -717,8 +722,11 @@ export class InputController {
         const empty = selections.every((selection) => selection.anchor === selection.head);
         const text = empty
             ? selections
-                  .map((selection) => model.getLine(model.positionAt(selection.head).line))
-                  .map((line) => model.slice(line.start, line.next) + (line.next === line.end ? '\n' : ''))
+                  .map((selection) => {
+                      const { first, last } = this.view.lineSpan(model.positionAt(selection.head).line);
+                      return { start: model.getLine(first).start, end: model.getLine(last).end, next: model.getLine(last).next };
+                  })
+                  .map((lines) => model.slice(lines.start, lines.next) + (lines.next === lines.end ? '\n' : ''))
                   .join('')
             : selections.map((selection) => model.slice(Math.min(selection.anchor, selection.head), Math.max(selection.anchor, selection.head))).join('\n');
         event.clipboardData?.setData('text/plain', text);

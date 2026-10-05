@@ -1032,6 +1032,34 @@ export class EditorView {
         return { start, end };
     }
 
+    /* The lines that stand on one row of the screen: a collapsed fold is a row, from its first line to its last. */
+    lineSpan(line: number): { first: number; last: number } {
+        const row = this.layout.rowForLine(line);
+        return row.kind === 'text' ? { first: row.line, last: row.lastLine } : { first: line, last: line };
+    }
+
+    /* The folds that were closed before lines moved stay closed on the lines they went to, which the edit that moved them could not carry. */
+    refoldMoved(folded: readonly { startLine: number; endLine: number }[], moves: readonly { from: number; to: number }[]): void {
+        const moved = new Map(moves.map((move) => [move.from, move.to]));
+        this.refreshFolds();
+        for (const range of this.foldRanges) {
+            if (moved.size > 0 && [...moved.values()].includes(range.startLine)) {
+                this.collapsed.delete(range.from);
+            }
+        }
+        for (const fold of folded) {
+            const start = moved.get(fold.startLine);
+            const target =
+                start === undefined
+                    ? undefined
+                    : this.foldRanges.find((range) => range.startLine === start && range.endLine === start + fold.endLine - fold.startLine);
+            if (target !== undefined) {
+                this.setCollapsed(target, true);
+            }
+        }
+        this.refoldLayout();
+    }
+
     /* A caret that went to the end of a wrapped row stays drawn there, though its offset is where the next row starts. */
     markRowEnd(offset: number): void {
         const line = this.model.getLine(this.model.positionAt(offset).line);

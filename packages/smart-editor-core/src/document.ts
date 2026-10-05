@@ -268,6 +268,12 @@ function inverseChanges(changes: readonly DocumentChange[]): DocumentChange[] {
 }
 
 /* Runs of consecutive line numbers, from a sorted list. */
+type LineSpanOf = NonNullable<CommandOptions['lineSpan']>;
+
+function range(first: number, last: number): number[] {
+    return Array.from({ length: last - first + 1 }, (_, index) => first + index);
+}
+
 function blocks(indices: readonly number[]): LineBlock[] {
     const result: LineBlock[] = [];
     for (const index of indices) {
@@ -701,10 +707,10 @@ export class DocumentModel {
         const wordMatch = wordCommand.exec(command);
         if (wordMatch) {
             const camel = wordMatch[2]!.toLowerCase() === 'camel' || options.camelCase === true;
-            return this.moveByWord(wordMatch[1] as 'select' | 'delete' | undefined, wordMatch[3] === 'Left' ? -1 : 1, camel);
+            return this.moveByWord(wordMatch[1] as 'select' | 'delete' | undefined, wordMatch[3] === 'Left' ? -1 : 1, camel, options.lineSpan);
         }
         if (command === 'addCaretAbove' || command === 'addCaretBelow') {
-            return this.addCaret(command === 'addCaretAbove' ? -1 : 1);
+            return this.addCaret(command === 'addCaretAbove' ? -1 : 1, options.lineSpan);
         }
         if (command === 'selectNextOccurrence') {
             return this.selectNextOccurrence();
@@ -749,15 +755,14 @@ export class DocumentModel {
         if (command === 'indent' || command === 'outdent') {
             return this.changeLineIndentation(command, tabSize, options);
         }
-        const selectedLines = this.selectedLines();
         if (command === 'duplicateLine') {
-            return this.duplicate();
+            return this.duplicate(options.lineSpan);
         }
         if (command === 'deleteLine') {
-            return this.deleteLines(selectedLines);
+            return this.deleteLines(this.selectedLines(options.lineSpan));
         }
         if (command === 'moveLineUp' || command === 'moveLineDown') {
-            return this.moveLines(selectedLines, command === 'moveLineUp' ? -1 : 1);
+            return this.moveLines(this.selectedLines(options.lineSpan), command === 'moveLineUp' ? -1 : 1, options);
         }
         return false;
     }
@@ -1058,7 +1063,7 @@ export class DocumentModel {
         return target === end || target === offset ? end : target;
     }
 
-    private moveByWord(mode: 'select' | 'delete' | undefined, direction: -1 | 1, camel: boolean): boolean {
+    private moveByWord(mode: 'select' | 'delete' | undefined, direction: -1 | 1, camel: boolean, span?: LineSpanOf): boolean {
         if (mode === 'delete') {
             const stops = direction === 1 ? DELETE_FORWARD : DELETE_BACKWARD;
             return this.deleteRanges(
@@ -1071,7 +1076,7 @@ export class DocumentModel {
         const stops = direction === 1 ? MOVE_FORWARD : MOVE_BACKWARD;
         return this.changeSelections(
             this.selections.map((selection) => {
-                const head = this.caretStop(selection.head, direction, stops, camel);
+                const head = this.foldedStop(selection.head, direction, this.caretStop(selection.head, direction, stops, camel), span);
                 return { anchor: mode === 'select' ? selection.anchor : head, head };
             })
         );
@@ -1101,6 +1106,33 @@ export class DocumentModel {
         return position;
     }
 
+    /*
+     * A collapsed fold is one stop of a word move, as the platform has it: from the end of the first line
+     * the caret goes past the fold, and a stop inside it is the end of the first line. The stop after the
+     * fold is the start of the line that follows it, since the end of its last line is hidden.
+     */
+    private foldedStop(offset: number, direction: -1 | 1, stop: number, span: LineSpanOf | undefined): number {
+        if (span === undefined) {
+            return stop;
+        }
+        const fold = (position: number): { from: number; to: number; next: number } | null => {
+            const { first, last } = span(this.rope.lineAt(position));
+            if (last === first) {
+                return null;
+            }
+            return { from: this.rope.lineBounds(first).end, to: this.rope.lineBounds(last).end, next: this.rope.lineBounds(last).next };
+        };
+        const current = direction === 1 ? fold(offset) : fold(offset - 1);
+        if (direction === 1 && current !== null && current.from <= offset && offset < current.to) {
+            return current.next > current.to ? current.next : offset;
+        }
+        if (direction === -1 && current !== null && current.from <= offset - 1 && offset - 1 < current.to) {
+            return current.from;
+        }
+        const landing = fold(stop);
+        return landing !== null && landing.from < stop && stop <= landing.to ? landing.from : stop;
+    }
+
     private nextLineStop(line: number, offset: number, stop: CaretStopAt): number {
         if (line + 1 >= this.rope.lineCount) {
             return this.rope.length;
@@ -1128,7 +1160,7 @@ export class DocumentModel {
      * came from even when a line in between is shorter. Pressed again the other way it takes back the carets
      * it added, one step at a time, before it adds any on that side.
      */
-    private addCaret(direction: -1 | 1): boolean {
+    private addCaret(direction: -1 | 1, span?: LineSpanOf): boolean {
         const session = this.cloneSession;
         const frames = session !== undefined && session.signature === this.occurrenceSignature() ? session.frames : [];
         const top = frames.at(-1);
@@ -1143,7 +1175,7 @@ export class DocumentModel {
         const sources = top === undefined ? this.selections.map((selection) => this.cloneSource(selection)) : top.carets;
         const clones: CaretClone[] = [];
         for (const source of sources) {
-            const clone = this.cloneOnto(source, direction, [...this.selections, ...clones.map((added) => added.selection)]);
+            const clone = this.cloneOnto(source, direction, [...this.selections, ...clones.map((added) => added.selection)], span);
             if (clone !== null) {
                 clones.push(clone);
             }
@@ -1168,7 +1200,7 @@ export class DocumentModel {
     }
 
     /* The clone of a caret on a neighboring line, or on the next one that can hold its selection; null at the end of the text or on top of another caret. */
-    private cloneOnto(source: CaretClone, direction: -1 | 1, existing: readonly Selection[]): CaretClone | null {
+    private cloneOnto(source: CaretClone, direction: -1 | 1, existing: readonly Selection[], span?: LineSpanOf): CaretClone | null {
         const { selection } = source;
         const { from, to } = rangeOf(selection);
         const startLine = this.rope.lineAt(from);
@@ -1178,6 +1210,9 @@ export class DocumentModel {
             const line = caretLine + shift;
             if (line < 0 || line >= this.getLineCount()) {
                 return null;
+            }
+            if (span !== undefined && span(line).first !== line) {
+                continue;
             }
             const start = this.offsetAt({ line: startLine + shift, column: source.startColumn });
             const end = this.offsetAt({ line: endLine + shift, column: source.endColumn });
@@ -1213,7 +1248,7 @@ export class DocumentModel {
     }
 
     private toggleComment(command: 'toggleLineComment' | 'toggleBlockComment', tabSize: number, options: CommandOptions, language: string): boolean {
-        const commentOptions = { language, tabSize, insertSpaces: options.insertSpaces !== false, lineToken: options.commentToken };
+        const commentOptions = { language, tabSize, insertSpaces: options.insertSpaces !== false, lineToken: options.commentToken, lineSpan: options.lineSpan };
         const source = this.editSource(language);
         const plan: EditPlan | null =
             command === 'toggleLineComment'
@@ -1223,14 +1258,18 @@ export class DocumentModel {
     }
 
     /* The lines the carets and selections touch. A selection that ends at the start of a line does not touch it. */
-    private selectedLines(): number[] {
+    private selectedLines(span?: LineSpanOf): number[] {
         const indices = new Set<number>();
         for (const selection of this.selections) {
             const { from, to } = rangeOf(selection);
-            const first = this.rope.lineAt(from);
+            let first = this.rope.lineAt(from);
             let last = this.rope.lineAt(to);
             if (to > from && this.rope.lineBounds(last).start === to) {
                 last--;
+            }
+            if (span) {
+                first = span(first).first;
+                last = Math.max(last, span(last).last);
             }
             for (let line = first; line <= last; line++) {
                 indices.add(line);
@@ -1240,11 +1279,15 @@ export class DocumentModel {
     }
 
     /* A selection is copied in place, its copy selected; a caret duplicates its line and moves down with it. */
-    private duplicate(): boolean {
+    private duplicate(span?: LineSpanOf): boolean {
         const carets = this.selections.filter((selection) => selection.anchor === selection.head);
         const lines = new Set<number>();
         for (const caret of carets) {
-            lines.add(this.rope.lineAt(caret.head));
+            const line = this.rope.lineAt(caret.head);
+            const { first, last } = span ? span(line) : { first: line, last: line };
+            for (let index = first; index <= last; index++) {
+                lines.add(index);
+            }
         }
         const groups = blocks([...lines].sort((left, right) => left - right));
         interface Copy {
@@ -1327,24 +1370,22 @@ export class DocumentModel {
         return this.applyEdits(edits, { source: 'command', selections });
     }
 
-    private moveLines(indices: readonly number[], direction: -1 | 1): boolean {
+    private moveLines(indices: readonly number[], direction: -1 | 1, options: CommandOptions): boolean {
+        const span: LineSpanOf = options.lineSpan ?? ((line) => ({ first: line, last: line }));
         const groups = blocks(indices).filter((block) => (direction === -1 ? block.first > 0 : block.last < this.getLineCount() - 1));
         if (groups.length === 0) {
             return false;
         }
         const targets = new Map<number, { start: number; end: number; next: number }>();
+        const moves: { from: number; to: number }[] = [];
         const edits = groups.map((block) => {
-            const first = direction === -1 ? block.first - 1 : block.first;
-            const last = direction === 1 ? block.last + 1 : block.last;
-            const order: number[] = [];
-            for (let line = block.first; line <= block.last; line++) {
-                order.push(line);
-            }
-            if (direction === -1) {
-                order.push(first);
-            } else {
-                order.unshift(last);
-            }
+            const own = range(block.first, block.last);
+            // The line it swaps with is a whole row of the screen, so a collapsed fold is never cut in two.
+            const neighbor = direction === -1 ? span(block.first - 1) : span(block.last + 1);
+            const other = range(neighbor.first, neighbor.last);
+            const first = direction === -1 ? neighbor.first : block.first;
+            const last = direction === 1 ? neighbor.last : block.last;
+            const order = direction === -1 ? [...own, ...other] : [...other, ...own];
             let at = this.rope.lineBounds(first).start;
             const from = at;
             const parts: string[] = [];
@@ -1355,6 +1396,9 @@ export class DocumentModel {
                 const ending = this.slice(slot.end, slot.next);
                 parts.push(line.text, ending);
                 targets.set(original, { start: at, end: at + line.text.length, next: at + line.text.length + ending.length });
+                if (original !== first + index) {
+                    moves.push({ from: original, to: first + index });
+                }
                 at += line.text.length + ending.length;
             }
             return { from, to: this.rope.lineBounds(last).next, text: parts.join('') };
@@ -1371,7 +1415,11 @@ export class DocumentModel {
             const { from, to } = rangeOf(selection);
             return { anchor: mapOffsetThroughMove(selection.anchor, from, to), head: mapOffsetThroughMove(selection.head, from, to) };
         });
-        return this.applyEdits(edits, { source: 'command', selections });
+        const changed = this.applyEdits(edits, { source: 'command', selections });
+        if (changed) {
+            options.onLinesMoved?.(moves);
+        }
+        return changed;
     }
 
     /* Enter, or the same Enter from the end of the line (`below`) or with the caret left in front of the break (`split`). */

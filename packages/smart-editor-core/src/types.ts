@@ -131,4 +131,11 @@ export interface CommandOptions {
     indentOnPaste?: boolean;
     /* Where the row of the screen an offset is on starts and ends, so Home and End go by wrapped rows. Without it a line is one row. */
     visualLine?: (offset: number) => { start: number; end: number };
+    /*
+     * The lines that stand on one row of the screen: a collapsed fold is a row, from its first line to its last.
+     * Line commands act on the whole row, a word move treats it as one stop and an added caret skips its inside.
+     */
+    lineSpan?: (line: number) => { first: number; last: number };
+    /* Told which lines a move went to (`from` before, `to` after), so a host can take what it keeps by line along. */
+    onLinesMoved?: (moves: readonly { from: number; to: number }[]) => void;
 }

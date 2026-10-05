@@ -10,6 +10,8 @@ export interface CommentOptions {
     insertSpaces: boolean;
     /* Replaces the language's own line marker. */
     lineToken?: string;
+    /* The lines that stand on one row of the screen, so a collapsed fold is commented as a whole. */
+    lineSpan?: (line: number) => { first: number; last: number };
 }
 
 interface Block {
@@ -42,14 +44,18 @@ function rangeOf(selection: Selection): { from: number; to: number } {
 }
 
 /* The runs of adjacent lines the selections touch. A selection that ends at the start of a line does not touch it. */
-function blocksOf(source: EditSource, selections: readonly Selection[]): Block[] {
+function blocksOf(source: EditSource, selections: readonly Selection[], span?: CommentOptions['lineSpan']): Block[] {
     const blocks: Block[] = [];
     const ordered = selections.map((selection, index) => ({ ...rangeOf(selection), index })).sort((left, right) => left.from - right.from);
     for (const { from, to, index } of ordered) {
-        const first = source.lineAt(from);
+        let first = source.lineAt(from);
         let last = source.lineAt(to);
         if (last > first && source.line(last).start === to) {
             last--;
+        }
+        if (span) {
+            first = span(first).first;
+            last = Math.max(last, span(last).last);
         }
         const previous = blocks.at(-1);
         if (previous && first <= previous.last + 1) {
@@ -101,7 +107,7 @@ function geometryOf(source: EditSource, edits: readonly TextEdit[], index: numbe
  * The markers go in at the smallest indentation of the lines, and a lone caret moves to the next line.
  */
 export function planLineComments(source: EditSource, selections: readonly Selection[], options: CommentOptions): EditPlan | null {
-    const blocks = blocksOf(source, selections);
+    const blocks = blocksOf(source, selections, options.lineSpan);
     const syntaxes = blocks.map((block) => syntaxOf(source, options, block.first));
     if (syntaxes.some((syntax) => syntax.line === null && syntax.block === null)) {
         return null;
@@ -153,7 +159,7 @@ export function planLineComments(source: EditSource, selections: readonly Select
     if (edits.length === 0) {
         return null;
     }
-    return { edits, selections: finalSelections(source, selections, blocks, edits, allCommented, placed, lineBased) };
+    return { edits, selections: finalSelections(source, selections, blocks, edits, allCommented, placed, lineBased, options.lineSpan) };
 }
 
 function minimumIndent(source: EditSource, block: Block, syntax: CommentSyntax, options: CommentOptions): number {
@@ -245,7 +251,8 @@ function finalSelections(
     edits: readonly TextEdit[],
     allCommented: boolean,
     placed: ReadonlySet<number>,
-    syntaxes: readonly CommentSyntax[]
+    syntaxes: readonly CommentSyntax[],
+    span: CommentOptions['lineSpan']
 ): Selection[] {
     const sorted = [...edits].sort((left, right) => left.from - right.from);
     const result = selections.map((selection) => ({
@@ -262,7 +269,7 @@ function finalSelections(
             const { from, to } = rangeOf(selection);
             const line = source.lineAt(from);
             if (from === to) {
-                result[index] = caretAfter(source, sorted, line, selection.head, allCommented, placed, syntaxes[position]!);
+                result[index] = caretAfter(source, sorted, line, span?.(line).last ?? line, selection.head, allCommented, placed, syntaxes[position]!);
                 continue;
             }
             const lastLine = source.lineAt(to - 1);
@@ -281,6 +288,7 @@ function caretAfter(
     source: EditSource,
     edits: readonly TextEdit[],
     line: number,
+    lastLine: number,
     offset: number,
     allCommented: boolean,
     placed: ReadonlySet<number>,
@@ -292,10 +300,10 @@ function caretAfter(
         return { anchor: caret, head: caret };
     }
     const mapped = mapOffset(offset, edits);
-    if (line >= source.lineCount - 1) {
+    if (lastLine >= source.lineCount - 1) {
         return { anchor: mapped, head: mapped };
     }
-    const next = geometryOf(source, edits, line + 1);
+    const next = geometryOf(source, edits, lastLine + 1);
     const column = Math.min(mapped - geometry.start, next.length);
     return { anchor: next.start + column, head: next.start + column };
 }

@@ -119,6 +119,59 @@ describe('typing', () => {
     });
 });
 
+describe('a collapsed fold as one unit', () => {
+    const text = 'one\nfunction a() {\n    body();\n}\ntwo\nthree';
+    const folded = (extra: Partial<EditorOptions> = {}) =>
+        setup({ text, language: 'typescript', folds: { collapsed: [{ startLine: 1, endLine: 3 }], custom: [] }, line: 2, column: 1, ...extra });
+
+    test('deletes, duplicates and comments the whole fold', () => {
+        const deleted = folded();
+        deleted.editor.runCommand('deleteLine');
+        expect(deleted.editor.getText()).toBe('one\ntwo\nthree');
+        const copied = folded();
+        copied.editor.runCommand('duplicateLine');
+        expect(copied.editor.getText()).toBe('one\nfunction a() {\n    body();\n}\nfunction a() {\n    body();\n}\ntwo\nthree');
+        const commented = folded();
+        commented.editor.runCommand('toggleLineComment');
+        expect(commented.editor.getText()).toBe('one\n// function a() {\n//     body();\n// }\ntwo\nthree');
+        expect(commented.editor.getFolds().collapsed).toEqual([{ startLine: 1, endLine: 3 }]);
+    });
+
+    test('moves the whole fold and keeps it collapsed on the lines it went to', () => {
+        const { editor } = folded();
+        editor.runCommand('moveLineUp');
+        expect(editor.getText()).toBe('function a() {\n    body();\n}\none\ntwo\nthree');
+        expect(editor.getFolds().collapsed).toEqual([{ startLine: 0, endLine: 2 }]);
+        editor.runCommand('moveLineDown');
+        editor.runCommand('moveLineDown');
+        expect(editor.getText()).toBe('one\ntwo\nfunction a() {\n    body();\n}\nthree');
+        expect(editor.getFolds().collapsed).toEqual([{ startLine: 2, endLine: 4 }]);
+    });
+
+    test('copies and cuts the whole fold when nothing is selected', () => {
+        const copied = folded();
+        expect(copied.clip('copy')).toBe('function a() {\n    body();\n}\n');
+        const cut = folded();
+        expect(cut.clip('cut')).toBe('function a() {\n    body();\n}\n');
+        expect(cut.editor.getText()).toBe('one\ntwo\nthree');
+    });
+
+    test('steps over it as one word stop and adds carets past it', () => {
+        const { editor } = folded();
+        editor.setCaret({ line: 1, character: 14 });
+        editor.runCommand('wordRight');
+        expect(editor.getCaret()).toEqual({ line: 4, character: 0 });
+        expect(editor.getFolds().collapsed).toEqual([{ startLine: 1, endLine: 3 }]);
+        editor.runCommand('wordLeft');
+        expect(editor.getCaret()).toEqual({ line: 1, character: 14 });
+        editor.setCaret({ line: 0, character: 1 });
+        editor.runCommand('addCaretBelow');
+        editor.runCommand('addCaretBelow');
+        expect(editor.getSelections().map((range) => range.start.line)).toEqual([0, 1, 4]);
+        expect(editor.getFolds().collapsed).toEqual([{ startLine: 1, endLine: 3 }]);
+    });
+});
+
 describe('setText', () => {
     test('is not reported as a change', () => {
         const { editor } = setup();
