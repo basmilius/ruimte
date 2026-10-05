@@ -33,8 +33,8 @@ export function neighborRange(ranges: readonly EditorRange[], from: EditorPositi
 }
 
 /*
- * The other uses of the name at the caret, drawn softly in the text, which Alt+F3 and Alt+Shift+F3
- * step through. They are asked for when the caret rests on a name and go with the next edit.
+ * The other uses of the name at the caret, drawn softly in the text, which the next and previous highlight
+ * keys step through. They are asked for when the caret rests on a name and go with the next edit.
  */
 export class HighlightsFeature {
     private readonly language: EditorLanguage;

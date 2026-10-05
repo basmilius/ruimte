@@ -58,7 +58,7 @@ export class SignatureFeature {
         return this.language.popups.getState().signature !== null;
     }
 
-    /* Asks for the parameters of the call at the caret, as Ctrl+Shift+Space does. */
+    /* Asks for the parameters of the call at the caret, as its key does. */
     invoke(): void {
         this.ask({ triggerKind: 1, isRetrigger: false });
     }
