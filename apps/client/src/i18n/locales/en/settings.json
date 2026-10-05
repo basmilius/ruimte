@@ -55,18 +55,6 @@
                 "label": "Terminal font size"
             }
         },
-        "code": {
-            "title": "Code",
-            "light": {
-                "label": "Light theme",
-                "description": "The colors of code while the app is light, in files, the editor and chats."
-            },
-            "dark": {
-                "label": "Dark theme",
-                "description": "The colors of code while the app is dark."
-            },
-            "preview": "Preview of {{theme}}"
-        },
         "sidebar": {
             "label": "Sidebar",
             "description": "Choose which projects appear in the sidebar and Needs attention, across all your machines.",
@@ -82,6 +70,7 @@
         "tabs": {
             "label": "Editor sections",
             "general": "General",
+            "colors": "Colors",
             "smartKeys": "Smart keys",
             "languageServers": "Language servers"
         },
@@ -161,6 +150,17 @@
             "needsProject": "Open a project to manage its language servers. A server is installed once per machine and runs per project.",
             "description": "Installed once on the machine, started per project when a file needs it.",
             "failed": "The language servers failed to render"
+        },
+        "colors": {
+            "light": {
+                "label": "Light theme",
+                "description": "The colors of code while the app is light, in files, the editor and chats."
+            },
+            "dark": {
+                "label": "Dark theme",
+                "description": "The colors of code while the app is dark."
+            },
+            "preview": "Preview of {{theme}}"
         }
     },
     "sections": {

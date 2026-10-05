@@ -80,20 +80,20 @@ export function CodeSection() {
         <CodeThemePreview
             theme={shown}
             mode={side}
-            label={t('appearance.code.preview', { theme: themes.find((theme) => theme.value === shown)?.label ?? shown })}
+            label={t('editor.colors.preview', { theme: themes.find((theme) => theme.value === shown)?.label ?? shown })}
         />
     );
 
     return (
-        <SettingsSection title={t('appearance.code.title')}>
+        <SettingsSection>
             <SettingsRow
-                searchId="appearance.code.light"
-                label={t('appearance.code.light.label')}
-                description={t('appearance.code.light.description')}
+                searchId="editor.colors.light"
+                label={t('editor.colors.light.label')}
+                description={t('editor.colors.light.description')}
                 control={
                     <Select
                         value={codeThemeLight}
-                        label={t('appearance.code.light.label')}
+                        label={t('editor.colors.light.label')}
                         align="end"
                         items={lightThemes}
                         onValueChange={(value) => update({ codeThemeLight: value })}
@@ -103,13 +103,13 @@ export function CodeSection() {
                 {side === 'light' && preview}
             </SettingsRow>
             <SettingsRow
-                searchId="appearance.code.dark"
-                label={t('appearance.code.dark.label')}
-                description={t('appearance.code.dark.description')}
+                searchId="editor.colors.dark"
+                label={t('editor.colors.dark.label')}
+                description={t('editor.colors.dark.description')}
                 control={
                     <Select
                         value={codeThemeDark}
-                        label={t('appearance.code.dark.label')}
+                        label={t('editor.colors.dark.label')}
                         align="end"
                         items={darkThemes}
                         onValueChange={(value) => update({ codeThemeDark: value })}

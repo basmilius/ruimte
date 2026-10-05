@@ -6,7 +6,6 @@ import { AccentSwatches, Switch, Select } from '@basmilius/desktop-ui';
 import { SettingsRow } from '@basmilius/desktop-ui/settings';
 import { chooseLanguage, chooseRegion } from '@/i18n';
 import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
-import { CodeSection } from '@/shell/settings/panes/CodeSection';
 import { FontSection } from '@/shell/settings/panes/FontSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useSettings } from '@/state/settings';
@@ -226,7 +225,6 @@ export function AppearancePane() {
                 <RegionRow />
             </SettingsSection>
             <FontSection />
-            <CodeSection />
         </>
     );
 }

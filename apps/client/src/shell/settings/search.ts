@@ -66,16 +66,16 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     { id: 'appearance.font.terminalSize', section: 'appearance', label: 'settings:appearance.font.terminalSize.label' },
     {
-        id: 'appearance.code.light',
-        section: 'appearance',
-        label: 'settings:appearance.code.light.label',
-        description: 'settings:appearance.code.light.description'
+        id: 'editor.colors.light',
+        section: 'editor',
+        label: 'settings:editor.colors.light.label',
+        description: 'settings:editor.colors.light.description'
     },
     {
-        id: 'appearance.code.dark',
-        section: 'appearance',
-        label: 'settings:appearance.code.dark.label',
-        description: 'settings:appearance.code.dark.description'
+        id: 'editor.colors.dark',
+        section: 'editor',
+        label: 'settings:editor.colors.dark.label',
+        description: 'settings:editor.colors.dark.description'
     },
     {
         id: 'editor.general.font.size',

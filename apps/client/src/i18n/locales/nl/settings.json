@@ -55,18 +55,6 @@
                 "label": "Tekstgrootte terminal"
             }
         },
-        "code": {
-            "title": "Code",
-            "light": {
-                "label": "Licht thema",
-                "description": "De kleuren van code als de app licht is, in bestanden, de editor en chats."
-            },
-            "dark": {
-                "label": "Donker thema",
-                "description": "De kleuren van code als de app donker is."
-            },
-            "preview": "Voorbeeld van {{theme}}"
-        },
         "sidebar": {
             "label": "Sidebar",
             "description": "Kies welke projecten de sidebar en Needs attention tonen, over al je machines.",
@@ -82,6 +70,7 @@
         "tabs": {
             "label": "Onderdelen van de editor",
             "general": "Algemeen",
+            "colors": "Kleuren",
             "smartKeys": "Slimme toetsen",
             "languageServers": "Language servers"
         },
@@ -161,6 +150,17 @@
             "needsProject": "Open een project om de language servers ervan te beheren. Een server installeer je eenmalig per machine en hij draait per project.",
             "description": "Eenmalig geïnstalleerd op de machine, per project gestart als een bestand het nodig heeft.",
             "failed": "De language servers konden niet worden getoond"
+        },
+        "colors": {
+            "light": {
+                "label": "Licht thema",
+                "description": "De kleuren van code als de app licht is, in bestanden, de editor en chats."
+            },
+            "dark": {
+                "label": "Donker thema",
+                "description": "De kleuren van code als de app donker is."
+            },
+            "preview": "Voorbeeld van {{theme}}"
         }
     },
     "sections": {
