@@ -13,6 +13,7 @@ import {
     qualifierOf,
     qualifiersOf,
     rankCompletions,
+    rowWindow,
     snippetToText
 } from './completion-model';
 
@@ -24,6 +25,15 @@ describe('identifierPrefix', () => {
         expect(identifierPrefix('  .map(c => c.fil')).toBe('fil');
         expect(identifierPrefix('foo.')).toBe('');
         expect(identifierPrefix('let $naïve_1')).toBe('$naïve_1');
+    });
+});
+
+describe('identifierPrefix after another line', () => {
+    test('answers the same for the same text and for a text that came between', () => {
+        expect(identifierPrefix('foo.bar')).toBe('bar');
+        expect(identifierPrefix('foo.bar')).toBe('bar');
+        expect(identifierPrefix('baz')).toBe('baz');
+        expect(identifierPrefix('foo.bar')).toBe('bar');
     });
 });
 
@@ -281,5 +291,35 @@ describe('completionDocsOf', () => {
             { language: 'typescript', code: 'map(): void' }
         ]);
         expect(completionDocsOf(item('map'), 'typescript')).toBeNull();
+    });
+});
+
+describe('matching a label again', () => {
+    test('finds the same match the second time, which is read from what was kept of the label', () => {
+        const first = matchDetail('getUserById', 'gubi');
+        expect(matchDetail('getUserById', 'gubi')).toEqual(first);
+        expect(matchDetail('getUserById', 'U')).toEqual({ score: 2 + 3 / 1000, positions: [3] });
+        expect(matchDetail('getUserById', 'USER')).toEqual({ score: 2 + 3 / 1000, positions: [3, 4, 5, 6] });
+    });
+});
+
+describe('rowWindow', () => {
+    const window = (scrollTop: number, active: number) => rowWindow(scrollTop, active, 150, 24, 8, 6, 4);
+
+    test('draws the rows in view and a margin of them', () => {
+        expect(window(0, 0)).toEqual({ first: 0, last: 15 });
+        // 28 pixels down is one row gone and the next one half in view: the padding of the list counts.
+        expect(window(28, 0)).toEqual({ first: 0, last: 16 });
+        expect(window(24 * 40 + 4, 40)).toEqual({ first: 34, last: 55 });
+    });
+
+    test('keeps the active row inside, and the rows between it and the ones in view', () => {
+        expect(window(0, 30)).toEqual({ first: 0, last: 37 });
+        expect(window(24 * 100, 3)).toEqual({ first: 0, last: 114 });
+    });
+
+    test('stops at the end of a short list', () => {
+        expect(rowWindow(0, 0, 3, 24, 8, 6, 4)).toEqual({ first: 0, last: 3 });
+        expect(rowWindow(0, 0, 0, 24, 8, 6, 4)).toEqual({ first: 0, last: 0 });
     });
 });

@@ -31,6 +31,7 @@ The plan for the code editor that replaces the previous engine (`packages/editor
 - A person can add servers of their own (a command, its arguments and environment, the languages and file patterns it serves, optionally the projects it runs for) in Settings, Editor, Language servers. They live under `$RUIMTE_HOME`, only the local secret saves them, and a save approves exactly that command.
 - Schemas for JSON and YAML are fetched from their hosts when a matching file opens. The YAML schema store is off, since it downloads its whole catalog when the server starts.
 - Completion follows design 1c (documentation beside the list), diagnostics follow 1e (calm: squiggles, the message in the hover and in Problems).
+- Typing stays within a frame of an editor with no language service. A host setter that changes nothing draws nothing, a draw reads the viewport's scroll and size once at its start (a read after the first write makes the browser lay the page out again, and each setter used to draw on its own), the suggestion list draws only the rows in or near view, and a signature that was highlighted before is not tokenized again. One rule outside the editor still costs a page-wide style pass per keystroke: `:root:has(.popup-positioner[data-open]) *` in `@basmilius/desktop-ui/theme.css`.
 - Tabs (1a) and a file per view (1b) both exist in Ruimte, so the editor carries both the breadcrumb and sticky scroll.
 - An edit across files lands as unsaved drafts; nothing is written to disk on a server's word alone.
 - The file tree no longer follows the open file.

@@ -11,14 +11,22 @@ export function isIdentifierCharacter(character: string): boolean {
     return IDENTIFIER_CHARACTER.test(character);
 }
 
-/* The word being typed: the identifier characters at the end of the text before the caret. */
+let lastBefore = '';
+let lastPrefix = '';
+
+/* The word being typed: the identifier characters at the end of the text before the caret. A list asks it of every item with the same line, so the last answer is kept. */
 export function identifierPrefix(before: string): string {
+    if (before === lastBefore) {
+        return lastPrefix;
+    }
     const characters = Array.from(before);
     let start = characters.length;
     while (start > 0 && IDENTIFIER_CHARACTER.test(characters[start - 1]!)) {
         start--;
     }
-    return characters.slice(start).join('');
+    lastBefore = before;
+    lastPrefix = characters.slice(start).join('');
+    return lastPrefix;
 }
 
 export interface MatchDetail {
@@ -30,6 +38,39 @@ export interface MatchDetail {
 
 function run(start: number, length: number): number[] {
     return Array.from({ length }, (_, offset) => start + offset);
+}
+
+interface LabelShape {
+    readonly lower: string;
+    /* Where each word of the label starts: after an underscore, a dollar sign, a space or a hyphen, and at each capital. */
+    readonly offsets: readonly number[];
+    /* The lowercased first letter of each word. */
+    readonly initials: string;
+}
+
+const SHAPE_LIMIT = 4000;
+const shapes = new Map<string, LabelShape>();
+
+/* What matching reads of a label, which is the same at every keystroke of a word and costs a regular expression pass to find. */
+function shapeOf(value: string): LabelShape {
+    const known = shapes.get(value);
+    if (known !== undefined) {
+        return known;
+    }
+    const boundaries = [...value.matchAll(/(?:^|[_$\s-])([\p{L}\p{N}])|(\p{Lu})/gu)];
+    const shape: LabelShape = {
+        lower: value.toLocaleLowerCase(),
+        offsets: boundaries.map((boundary) => boundary.index! + (boundary[1] ? boundary[0].length - boundary[1].length : 0)),
+        initials: boundaries
+            .map((match) => match[1] ?? match[2])
+            .join('')
+            .toLocaleLowerCase()
+    };
+    if (shapes.size >= SHAPE_LIMIT) {
+        shapes.clear();
+    }
+    shapes.set(value, shape);
+    return shape;
 }
 
 /*
@@ -45,20 +86,17 @@ export function matchDetail(value: string, prefix: string): MatchDetail | undefi
     if (value.startsWith(prefix)) {
         return { score: 0, positions: run(0, prefix.length) };
     }
-    const lower = value.toLocaleLowerCase();
+    const { lower, offsets, initials } = shapeOf(value);
     const query = prefix.toLocaleLowerCase();
     if (lower.startsWith(query)) {
         return { score: 1, positions: run(0, query.length) };
     }
-    const boundaries = [...value.matchAll(/(?:^|[_$\s-])([\p{L}\p{N}])|(\p{Lu})/gu)];
-    const offsets = boundaries.map((boundary) => boundary.index! + (boundary[1] ? boundary[0].length - boundary[1].length : 0));
     for (const offset of offsets) {
         if (lower.slice(offset).startsWith(query)) {
             return { score: 2 + offset / 1000, positions: run(offset, query.length) };
         }
     }
-    const initials = boundaries.map((match) => match[1] ?? match[2]).join('');
-    if (initials.toLocaleLowerCase().startsWith(query)) {
+    if (initials.startsWith(query)) {
         return { score: 3, positions: offsets.slice(0, query.length) };
     }
     if (query.length < 2 || lower[0] !== query[0]) {
@@ -381,4 +419,22 @@ export function kindLetterOf(kind: number | undefined): string {
 
 export function kindToneOf(kind: number | undefined): KindTone {
     return kind === undefined ? 'other' : (KIND_TONES[kind] ?? 'other');
+}
+
+export interface RowWindow {
+    readonly first: number;
+    /* One past the last row drawn. */
+    readonly last: number;
+}
+
+/*
+ * The rows of a list worth drawing: the ones in view, a few on each side, and the active one with the
+ * same margin, so the rows between never leave a gap. The rest is only space.
+ */
+export function rowWindow(scrollTop: number, active: number, total: number, rowHeight: number, visible: number, margin: number, padding: number): RowWindow {
+    const shown = Math.floor(Math.max(0, scrollTop - padding) / rowHeight);
+    return {
+        first: Math.max(0, Math.min(shown, active) - margin),
+        last: Math.min(total, Math.max(shown + visible + 1, active + 1) + margin)
+    };
 }

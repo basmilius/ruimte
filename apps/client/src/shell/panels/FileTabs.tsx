@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type WheelEvent as ReactWheelEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type WheelEvent as ReactWheelEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitCommitHorizontal, GitCompare, Pin, X } from 'lucide-react';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
@@ -39,7 +39,14 @@ export function FileTabs() {
     const active = useFiles((s) => s.active);
     const counts = useGit((s) => s.counts);
     const endpointId = useEndpointId();
-    const drafts = useTextDrafts((s) => s.rows);
+    // The paths, not the rows: a draft changes with every keystroke, and the strip only has to know which tabs are unsaved.
+    const unsavedKey = useTextDrafts((s) =>
+        tabs
+            .filter((tab) => tab.view === undefined && isUnsavedDraft(s.rows[endpointKey(endpointId, tab.path)]))
+            .map((tab) => tab.path)
+            .join('\0')
+    );
+    const unsavedPaths = useMemo(() => new Set(unsavedKey === '' ? [] : unsavedKey.split('\0')), [unsavedKey]);
     const stripRef = useRef<HTMLDivElement>(null);
     const [edges, setEdges] = useState({ start: false, end: false });
 
@@ -91,7 +98,7 @@ export function FileTabs() {
                 const commit = tab.view?.commit;
                 const checkout = isCheckoutDiff(tab.path, tab.view);
                 const count = counts[tab.key];
-                const unsaved = tab.view === undefined && isUnsavedDraft(drafts[endpointKey(endpointId, tab.path)]);
+                const unsaved = tab.view === undefined && unsavedPaths.has(tab.path);
                 const label =
                     commit !== undefined ? commit.slice(0, 7) : checkout ? basenameOf(tab.path) : tab.view ? t('git.tab.changes') : basenameOf(tab.path);
                 const hint =

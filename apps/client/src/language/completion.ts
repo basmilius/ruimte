@@ -416,7 +416,17 @@ export class CompletionFeature {
             return;
         }
         const lineBefore = editor.textInRange({ start: { line: caret.line, character: 0 }, end: caret });
-        const textBetween = (range: EditorRange): string => editor.textInRange(range);
+        // Most items of a list replace the same range, so the text under it is read once and not once per item.
+        const typed = new Map<string, string>();
+        const textBetween = (range: EditorRange): string => {
+            const key = `${range.start.line}:${range.start.character}:${range.end.line}:${range.end.character}`;
+            let text = typed.get(key);
+            if (text === undefined) {
+                text = editor.textInRange(range);
+                typed.set(key, text);
+            }
+            return text;
+        };
         const before = this.ranked[this.active]?.item;
         const recent = recentChoicesOf(this.language.languageId);
         this.ranked = rankCompletions(

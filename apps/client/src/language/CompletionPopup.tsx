@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { EditorRect } from '@ruimte/smart-editor';
 import type { EditorLanguage } from './editor-language';
-import { kindLetterOf, kindToneOf, type KindTone } from './completion-model';
+import { kindLetterOf, kindToneOf, rowWindow, type KindTone } from './completion-model';
 import { SourceLine, SymbolSections } from './HoverSections';
 import { PathText } from './PathText';
 import { placeBeside, placePopup } from './popup-placement';
@@ -50,6 +50,10 @@ function MarkedLabel({ label, matches }: { label: string; matches: readonly numb
 const CARD = 'fixed top-0 left-0 z-(--z-popup) overflow-hidden rounded-lg border border-border bg-surface-raised text-text shadow-(--float-shadow)';
 const ROW_HEIGHT = 24;
 const VISIBLE_ROWS = 8;
+/* Rows drawn past the visible ones on each side, so a wheel turn lands on rows that exist. */
+const OVERSCAN_ROWS = 6;
+/* The padding the listbox has around its rows. */
+const LIST_PADDING = 4;
 /* What a row takes besides its name and namespace: padding, the kind badge and the gaps. */
 const ROW_CHROME = 72;
 
@@ -65,6 +69,8 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
     const activeRow = useRef<HTMLButtonElement>(null);
     // The widest row so far in characters, which only grows, so the list never narrows or jumps while it is typed into.
     const [widest, setWidest] = useState(0);
+    // Only the rows near the visible ones are drawn: a list of 150 is mostly out of sight, and every keystroke makes it again.
+    const [listTop, setListTop] = useState(0);
     const need = Math.max(0, ...view.rows.slice(0, VISIBLE_ROWS * 2).map((row) => row.label.length + 2 + row.description.length));
     if (need > widest) {
         setWidest(need);
@@ -76,15 +82,25 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
         if (card === null) {
             return;
         }
-        const viewport = { width: window.innerWidth, height: window.innerHeight };
-        const placed = placePopup(rect, { width: card.offsetWidth, height: card.offsetHeight }, viewport, { gap: 2 });
+        const viewport = {
+            width: window.innerWidth,
+            height: window.innerHeight
+        };
+        const side = docs.current;
+        // Every size is read before the first write, so the page is laid out once and not after each of them.
+        const size = { width: card.offsetWidth, height: card.offsetHeight };
+        const sideSize = side === null ? null : { width: side.offsetWidth, height: side.offsetHeight };
+        const placed = placePopup(rect, size, viewport, { gap: 2 });
         card.style.left = `${Math.round(placed.left)}px`;
         card.style.top = `${Math.round(placed.top)}px`;
         card.style.visibility = 'visible';
-        const side = docs.current;
-        if (side !== null) {
-            const box = { left: Math.round(placed.left), top: Math.round(placed.top), width: card.offsetWidth, height: card.offsetHeight };
-            const beside = placeBeside(box, { width: side.offsetWidth, height: side.offsetHeight }, viewport);
+        if (side !== null && sideSize !== null) {
+            const box = {
+                left: Math.round(placed.left),
+                top: Math.round(placed.top),
+                ...size
+            };
+            const beside = placeBeside(box, sideSize, viewport);
             side.style.left = `${Math.round(beside.left)}px`;
             side.style.top = `${Math.round(beside.top)}px`;
             side.style.maxHeight = `${Math.floor(beside.maxHeight)}px`;
@@ -96,6 +112,9 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
         activeRow.current?.scrollIntoView({ block: 'nearest' });
     }, [view.active, view.rows]);
 
+    const total = view.rows.length;
+    const { first, last } = rowWindow(listTop, view.active, total, ROW_HEIGHT, VISIBLE_ROWS, OVERSCAN_ROWS, LIST_PADDING);
+
     return createPortal(
         <>
             <div
@@ -105,31 +124,47 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
                 onPointerDown={(event) => event.preventDefault()}
             >
                 {/* Sizes the list to the widest rows in the face the rows use; the rows themselves fill that width and truncate inside it. */}
-                <div aria-hidden className="h-0 overflow-hidden font-mono text-code" style={{ width: `calc(${Math.max(widest, need)}ch + ${ROW_CHROME}px)` }} />
-                <div role="listbox" className="w-0 min-w-full overflow-y-auto p-1" style={{ maxHeight: ROW_HEIGHT * VISIBLE_ROWS + 8 }}>
-                    {view.rows.map((row, index) => (
-                        <button
-                            key={`${index}:${row.label}`}
-                            ref={index === view.active ? activeRow : undefined}
-                            type="button"
-                            role="option"
-                            aria-selected={index === view.active}
-                            data-active={index === view.active}
-                            className="flex h-6 w-full items-center gap-2 overflow-hidden rounded-md px-1.5 text-left text-xs cursor-row"
-                            onClick={() => void language.completion.accept(false, index)}
-                        >
-                            <span
-                                className={`grid size-4 shrink-0 place-items-center rounded-sm font-mono text-xs leading-none font-semibold ${TONES[kindToneOf(row.kind)]}`}
+                <div
+                    aria-hidden
+                    className="h-0 overflow-hidden font-mono text-code"
+                    style={{
+                        width: `calc(${Math.max(widest, need)}ch + ${ROW_CHROME}px)`
+                    }}
+                />
+                <div
+                    role="listbox"
+                    className="w-0 min-w-full overflow-y-auto p-1"
+                    style={{ maxHeight: ROW_HEIGHT * VISIBLE_ROWS + 8 }}
+                    onScroll={(event) => setListTop(event.currentTarget.scrollTop)}
+                >
+                    <div style={{ height: first * ROW_HEIGHT }} />
+                    {view.rows.slice(first, last).map((row, offset) => {
+                        const index = first + offset;
+                        return (
+                            <button
+                                key={`${index}:${row.label}`}
+                                ref={index === view.active ? activeRow : undefined}
+                                type="button"
+                                role="option"
+                                aria-selected={index === view.active}
+                                data-active={index === view.active}
+                                className="flex h-6 w-full items-center gap-2 overflow-hidden rounded-md px-1.5 text-left text-xs cursor-row"
+                                onClick={() => void language.completion.accept(false, index)}
                             >
-                                {kindLetterOf(row.kind)}
-                            </span>
-                            <span className={`max-w-full shrink-0 truncate font-mono text-code ${row.deprecated ? 'line-through' : ''}`}>
-                                <MarkedLabel label={row.label} matches={row.matches} />
-                            </span>
-                            <span className="min-w-0 grow truncate font-mono text-text-faint">{row.detail}</span>
-                            <PathText path={row.description} className="max-w-[60%] font-mono text-text-faint" />
-                        </button>
-                    ))}
+                                <span
+                                    className={`grid size-4 shrink-0 place-items-center rounded-sm font-mono text-xs leading-none font-semibold ${TONES[kindToneOf(row.kind)]}`}
+                                >
+                                    {kindLetterOf(row.kind)}
+                                </span>
+                                <span className={`max-w-full shrink-0 truncate font-mono text-code ${row.deprecated ? 'line-through' : ''}`}>
+                                    <MarkedLabel label={row.label} matches={row.matches} />
+                                </span>
+                                <span className="min-w-0 grow truncate font-mono text-text-faint">{row.detail}</span>
+                                <PathText path={row.description} className="max-w-[60%] font-mono text-text-faint" />
+                            </button>
+                        );
+                    })}
+                    <div style={{ height: (total - last) * ROW_HEIGHT }} />
                 </div>
                 <div className="flex items-center gap-3 border-t border-border px-2 py-1 text-xs whitespace-nowrap text-text-faint">
                     <span>↵ {t('language.completion.insert')}</span>
