@@ -20,7 +20,7 @@ use php_syntax::SyntaxNode;
 
 use crate::ast::{self, child_of, node_at, text_of};
 
-pub use calls::{Arg, ResolvedCallable};
+pub use calls::{Arg, ResolvedCallable, arguments};
 
 /// The variables in scope and their types, without the `$`.
 #[derive(Clone, Debug, Default, PartialEq)]

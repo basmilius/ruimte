@@ -94,6 +94,9 @@ pub struct Query {
     pub symbol: Symbol,
     /// Lowercase names of the classes whose member is the symbol, for a member.
     family: HashSet<String>,
+    /// Words besides the symbol's own that a file naming it may hold. A constructor is also called
+    /// by `new` and the name of the class (or of a class below it, that has none of its own).
+    extra_words: Vec<String>,
 }
 
 impl Query {
@@ -122,7 +125,35 @@ impl Query {
             }
             _ => HashSet::new(),
         };
-        Query { symbol, family }
+        let extra_words = match &symbol {
+            Symbol::Method { class, name } if name.eq_ignore_ascii_case("__construct") => {
+                let mut words = vec![crate::short(class).to_ascii_lowercase()];
+                words.extend(
+                    index
+                        .all_subtypes(class)
+                        .iter()
+                        .map(|subtype| crate::short(&subtype.decl.name).to_ascii_lowercase()),
+                );
+                words
+            }
+            _ => Vec::new(),
+        };
+        Query {
+            symbol,
+            family,
+            extra_words,
+        }
+    }
+
+    /// The lowercase words a file must hold to name the symbol.
+    pub fn words(&self) -> Vec<String> {
+        let mut words = vec![self.symbol.word()];
+        words.extend(self.extra_words.iter().cloned());
+        words
+    }
+
+    fn is_constructor(&self) -> bool {
+        matches!(&self.symbol, Symbol::Method { name, .. } if name.eq_ignore_ascii_case("__construct"))
     }
 
     /// The classes a member is one thing across, lowercase.
@@ -656,9 +687,50 @@ pub fn hits_in_file(ctx: &FileContext, text: &str, query: &Query) -> Vec<Hit> {
             _ => {}
         }
     }
+    if query.is_constructor() {
+        constructor_hits(ctx, text, query, &mut hits);
+    }
     hits.sort_by_key(|hit| (hit.range.start(), hit.range.end()));
     hits.dedup_by_key(|hit| (hit.range.start(), hit.range.end()));
     hits
+}
+
+/// A `new Foo` is a call of the constructor Foo has or inherits.
+fn constructor_hits(ctx: &FileContext, text: &str, query: &Query, hits: &mut Vec<Hit>) {
+    for node in ctx.root.descendants().filter(|node| node.kind() == NEW_EXPR) {
+        let Some(name) = node.children().find(|child| child.kind() == NAME) else {
+            continue;
+        };
+        let written = ast::text_of(&name);
+        let last = written.rsplit('\\').next().unwrap_or(&written).to_ascii_lowercase();
+        let relative = matches!(last.as_str(), "self" | "static" | "parent");
+        if !relative && !query.extra_words.contains(&last) {
+            continue;
+        }
+        let analyzer = ctx.analyzer(&name);
+        let class = analyzer.class_type(&written);
+        let Some(found) = ctx.index.find_method(&class, "__construct") else {
+            continue;
+        };
+        let symbol = Symbol::Method {
+            class: found.class.decl.name.clone(),
+            name: found.member.name.clone(),
+        };
+        if !query.matches(&symbol) {
+            continue;
+        }
+        let Some(token) = ast::tokens(&name).find(|token| !token.kind().is_trivia()) else {
+            continue;
+        };
+        hits.push(Hit {
+            range: last_segment(token.text_range(), text),
+            kind: HitKind::Reference,
+            access: Access::Read,
+            dollar: false,
+            via_alias: false,
+            symbol,
+        });
+    }
 }
 
 fn push_token_hit(

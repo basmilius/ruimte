@@ -1008,3 +1008,67 @@ fn a_client_without_documentchanges_gets_plain_changes() {
     assert_eq!(changes[&page][0]["newText"], "length");
     client.shutdown();
 }
+
+#[test]
+fn offers_signature_help_for_the_call_under_the_cursor() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Page.php");
+    client.open(
+        &uri,
+        "<?php\nuse App\\Models\\User;\nfunction f() {\n    User::find(1);\n    strlen('');\n}\n",
+    );
+    let help = client.at("textDocument/signatureHelp", &uri, 3, 15);
+    assert_eq!(help["signatures"][0]["label"], "find(int $id): ?static");
+    assert_eq!(help["signatures"][0]["parameters"][0]["label"], "int $id");
+    assert_eq!(help["activeParameter"], 0);
+    assert_eq!(help["signatures"][0]["documentation"]["value"], "Finds a user.");
+    let outside = client.at("textDocument/signatureHelp", &uri, 2, 5);
+    assert!(outside.is_null());
+    let builtin = client.at("textDocument/signatureHelp", &uri, 4, 11);
+    assert_eq!(builtin["signatures"][0]["label"], "strlen(string $string): int");
+    client.shutdown();
+}
+
+#[test]
+fn walks_call_and_type_hierarchies() {
+    let disk = Disk::new();
+    disk.write(
+        "project/src/Controller.php",
+        "<?php\nnamespace App;\n\nuse App\\Models\\User;\n\nclass Controller\n{\n    public function show(int $id): ?User\n    {\n        return User::find($id);\n    }\n}\n",
+    );
+    disk.write(
+        "project/src/Admin.php",
+        "<?php\nnamespace App;\n\nuse App\\Models\\User;\n\nclass Admin extends User {}\n",
+    );
+    let mut client = indexed_server(&disk);
+    let user = disk.uri("project/src/Models/User.php");
+    client.open(
+        &user,
+        &std::fs::read_to_string(disk.path("project/src/Models/User.php")).expect("read"),
+    );
+
+    let prepared = client.at("textDocument/prepareCallHierarchy", &user, 9, 30);
+    let item = prepared[0].clone();
+    assert_eq!(item["name"], "find");
+    assert_eq!(item["detail"], "App\\Models\\User");
+    let incoming = client.request("callHierarchy/incomingCalls", json!({ "item": item }));
+    assert_eq!(incoming[0]["from"]["name"], "show");
+    assert_eq!(incoming[0]["from"]["detail"], "App\\Controller");
+    assert_eq!(
+        incoming[0]["fromRanges"][0]["start"],
+        json!({ "line": 9, "character": 21 })
+    );
+
+    let show = client.request("callHierarchy/outgoingCalls", json!({ "item": incoming[0]["from"] }));
+    assert_eq!(show[0]["to"]["name"], "find");
+    assert_eq!(show[0]["to"]["uri"], user);
+
+    let types = client.at("textDocument/prepareTypeHierarchy", &user, 4, 8);
+    assert_eq!(types[0]["name"], "User");
+    let subtypes = client.request("typeHierarchy/subtypes", json!({ "item": types[0] }));
+    assert_eq!(subtypes[0]["name"], "Admin");
+    let supertypes = client.request("typeHierarchy/supertypes", json!({ "item": subtypes[0] }));
+    assert_eq!(supertypes[0]["name"], "User");
+    client.shutdown();
+}

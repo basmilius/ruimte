@@ -10,6 +10,10 @@ use lsp_types::notification::{
     PublishDiagnostics,
 };
 use lsp_types::request::{
+    CallHierarchyIncomingCalls, CallHierarchyOutgoingCalls, CallHierarchyPrepare, SignatureHelpRequest,
+    TypeHierarchyPrepare, TypeHierarchySubtypes, TypeHierarchySupertypes,
+};
+use lsp_types::request::{
     Completion, DocumentDiagnosticRequest, DocumentHighlightRequest, DocumentSymbolRequest, FoldingRangeRequest,
     GotoDefinition, GotoImplementation, GotoTypeDefinition, HoverRequest, PrepareRenameRequest, References,
     RegisterCapability, Rename, Request as _, ResolveCompletionItem, SelectionRangeRequest, WorkDoneProgressCreate,
@@ -58,7 +62,10 @@ pub fn run(connection: Connection) -> Result<(), BoxError> {
         }),
     };
     // `initialize_finish` waits for and consumes the `initialized` notification.
-    connection.initialize_finish(id, serde_json::to_value(result)?)?;
+    let mut result = serde_json::to_value(result)?;
+    // `lsp-types` has no field for the type hierarchy provider yet.
+    result["capabilities"]["typeHierarchyProvider"] = Value::Bool(true);
+    connection.initialize_finish(id, result)?;
     server.initialized()?;
     server.main_loop(&connection.receiver)
 }
@@ -211,6 +218,12 @@ impl<'a> Server<'a> {
             implementation_provider: Some(ImplementationProviderCapability::Simple(true)),
             workspace_symbol_provider: Some(OneOf::Left(true)),
             references_provider: Some(OneOf::Left(true)),
+            call_hierarchy_provider: Some(lsp_types::CallHierarchyServerCapability::Simple(true)),
+            signature_help_provider: Some(lsp_types::SignatureHelpOptions {
+                trigger_characters: Some(vec!["(".to_string(), ",".to_string()]),
+                retrigger_characters: Some(vec![",".to_string()]),
+                work_done_progress_options: WorkDoneProgressOptions::default(),
+            }),
             rename_provider: Some(OneOf::Right(lsp_types::RenameOptions {
                 prepare_provider: Some(true),
                 work_done_progress_options: WorkDoneProgressOptions::default(),
@@ -303,6 +316,13 @@ impl<'a> Server<'a> {
             GotoImplementation::METHOD => self.answer(id, request.params, Self::implementation),
             WorkspaceSymbolRequest::METHOD => self.answer(id, request.params, Self::workspace_symbols),
             References::METHOD => self.answer(id, request.params, Self::references),
+            SignatureHelpRequest::METHOD => self.answer(id, request.params, Self::signature_help),
+            CallHierarchyPrepare::METHOD => self.answer(id, request.params, Self::prepare_call_hierarchy),
+            CallHierarchyIncomingCalls::METHOD => self.answer(id, request.params, Self::incoming_calls),
+            CallHierarchyOutgoingCalls::METHOD => self.answer(id, request.params, Self::outgoing_calls),
+            TypeHierarchyPrepare::METHOD => self.answer(id, request.params, Self::prepare_type_hierarchy),
+            TypeHierarchySupertypes::METHOD => self.answer(id, request.params, Self::type_hierarchy_supertypes),
+            TypeHierarchySubtypes::METHOD => self.answer(id, request.params, Self::type_hierarchy_subtypes),
             PrepareRenameRequest::METHOD => self.answer_checked(id, request.params, Self::prepare_rename),
             Rename::METHOD => self.answer_checked(id, request.params, Self::rename),
             DocumentHighlightRequest::METHOD => self.answer(id, request.params, Self::document_highlight),

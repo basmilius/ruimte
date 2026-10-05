@@ -1,21 +1,42 @@
 //! Asks the analyses a question about a real project: `cargo run --release -p php-analysis --example
-//! probe -- <project> <stubs> <file> <line> <column> [complete|hover|definition]`. Lines and columns
+//! probe -- <project> <stubs> <file> <line> <column> [complete|hover|definition|references|rename:<name>]`. Lines and columns
 //! count from 1 and in bytes.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Instant;
 
 use php_analysis::Analyzer;
 use php_analysis::completion::{CompletionOptions, complete};
+use php_analysis::references::{Current, Sources, references_at};
+use php_analysis::rename::rename;
 use php_index::indexer::{self, IndexEvent};
-use php_index::{Project, StubFile};
+use php_index::words::WordIndex;
+use php_index::{Origin, Project, StubFile};
 use php_syntax::{PhpVersion, parse};
+
+struct Disk<'a> {
+    words: &'a WordIndex,
+}
+
+impl Sources for Disk<'_> {
+    fn candidates(&self, word: &str) -> Vec<PathBuf> {
+        self.words.candidates(word)
+    }
+
+    fn text(&self, path: &Path) -> Option<String> {
+        std::fs::read(path)
+            .ok()
+            .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
+    }
+}
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.len() < 5 {
-        eprintln!("usage: probe <project> <stubs> <file> <line> <column> [complete|hover|definition]");
+        eprintln!(
+            "usage: probe <project> <stubs> <file> <line> <column> [complete|hover|definition|references|rename:<name>]"
+        );
         std::process::exit(2);
     }
     let threads = std::thread::available_parallelism().map_or(4, usize::from);
@@ -71,6 +92,86 @@ fn main() {
                     println!("{place:?}");
                 }
             }
+        }
+        "references" => {
+            let words_started = Instant::now();
+            let mut words = WordIndex::default();
+            words.build(
+                project
+                    .index
+                    .files()
+                    .filter(|file| file.origin == Origin::Project)
+                    .map(|file| file.path.clone())
+                    .collect(),
+            );
+            println!("words of {} files in {:?}", words.len(), words_started.elapsed());
+            let started = Instant::now();
+            let root = parse(&text).syntax();
+            let path = PathBuf::from(&args[2]);
+            let found = references_at(
+                &project.index,
+                &Disk { words: &words },
+                &Current {
+                    path: &path,
+                    text: &text,
+                    root: &root,
+                },
+                offset as u32,
+            );
+            match found {
+                Some(found) => {
+                    println!("{:?}", found.symbols);
+                    let total: usize = found.files.iter().map(|file| file.hits.len()).sum();
+                    for file in found.files.iter().take(8) {
+                        println!("{} {}", file.path.display(), file.hits.len());
+                    }
+                    println!(
+                        "{total} places in {} files in {:?}",
+                        found.files.len(),
+                        started.elapsed()
+                    );
+                }
+                None => println!("nothing"),
+            }
+            return;
+        }
+        mode if mode.starts_with("rename:") => {
+            let mut words = WordIndex::default();
+            words.build(
+                project
+                    .index
+                    .files()
+                    .filter(|file| file.origin == Origin::Project)
+                    .map(|file| file.path.clone())
+                    .collect(),
+            );
+            let started = Instant::now();
+            let root = parse(&text).syntax();
+            let path = PathBuf::from(&args[2]);
+            let result = rename(
+                &project.index,
+                &Disk { words: &words },
+                &Current {
+                    path: &path,
+                    text: &text,
+                    root: &root,
+                },
+                offset as u32,
+                &mode["rename:".len()..],
+            );
+            match result {
+                Ok(done) => {
+                    let total: usize = done.files.iter().map(|file| file.edits.len()).sum();
+                    println!(
+                        "{total} edits in {} files, file rename {:?}, in {:?}",
+                        done.files.len(),
+                        done.file_rename.map(|moved| moved.to),
+                        started.elapsed()
+                    );
+                }
+                Err(message) => println!("refused: {message}"),
+            }
+            return;
         }
         _ => {
             let list = complete(&project.index, &text, offset as u32, CompletionOptions::default());

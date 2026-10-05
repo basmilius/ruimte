@@ -92,20 +92,21 @@ fn hits_of_symbol(index: &Index, sources: &dyn Sources, current: &Current, symbo
         }];
     }
     let query = Query::new(index, symbol.clone());
-    let mut out = find_hits(index, sources, current, &query);
+    let mut out = find_hits(index, sources, Some(current), &query);
     if matches!(symbol, Symbol::Parameter { .. }) {
         out.extend(parameter_body_hits(index, sources, current, &query));
     }
     out
 }
 
-/// The places of a query in the current file and in the files the sources think may hold it.
-pub fn find_hits(index: &Index, sources: &dyn Sources, current: &Current, query: &Query) -> Vec<FileHits> {
-    let word = query.symbol.word();
-    let mut paths: Vec<PathBuf> = sources
-        .candidates(&word)
-        .into_iter()
-        .filter(|path| path != current.path)
+/// The places of a query in the current file, if there is one, and in the files the sources think
+/// may hold it.
+pub fn find_hits(index: &Index, sources: &dyn Sources, current: Option<&Current>, query: &Query) -> Vec<FileHits> {
+    let mut paths: Vec<PathBuf> = query
+        .words()
+        .iter()
+        .flat_map(|word| sources.candidates(word))
+        .filter(|path| current.is_none_or(|current| path != current.path))
         .collect();
     paths.sort();
     paths.dedup();
@@ -122,13 +123,15 @@ pub fn find_hits(index: &Index, sources: &dyn Sources, current: &Current, query:
             })
         })
         .collect();
-    let ctx = FileContext::new(index, current.root);
-    let own = hits_in_file(&ctx, current.text, query);
-    if !own.is_empty() {
-        out.push(FileHits {
-            path: current.path.to_path_buf(),
-            hits: own,
-        });
+    if let Some(current) = current {
+        let ctx = FileContext::new(index, current.root);
+        let own = hits_in_file(&ctx, current.text, query);
+        if !own.is_empty() {
+            out.push(FileHits {
+                path: current.path.to_path_buf(),
+                hits: own,
+            });
+        }
     }
     out
 }

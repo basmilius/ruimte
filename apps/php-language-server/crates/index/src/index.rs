@@ -251,6 +251,28 @@ impl Index {
         .map(|(file, decl)| FunctionRef { file, decl })
     }
 
+    /// Every declaration of a function that exists at the level, from the origin that wins. The
+    /// standard library declares some functions once per way of calling them.
+    pub fn function_overloads(&self, name: &str) -> Vec<FunctionRef<'_>> {
+        let Some(slots) = self.functions.get(&class_key(name.trim_start_matches('\\'))) else {
+            return Vec::new();
+        };
+        let mut found: Vec<FunctionRef<'_>> = slots
+            .iter()
+            .filter_map(|(file, index)| {
+                let entry = self.files.get(*file as usize)?.as_ref()?;
+                let decl = entry.symbols.functions.get(*index as usize)?;
+                decl.availability
+                    .contains(self.level)
+                    .then_some(FunctionRef { file: entry, decl })
+            })
+            .collect();
+        if let Some(best) = found.iter().map(|function| function.file.origin).min() {
+            found.retain(|function| function.file.origin == best);
+        }
+        found
+    }
+
     pub fn constant(&self, name: &str) -> Option<ConstRef<'_>> {
         let slots = self.constants.get(&constant_key(name.trim_start_matches('\\')))?;
         self.pick(slots, |entry, index| {

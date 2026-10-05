@@ -10,6 +10,7 @@ pub mod decl;
 mod diagnostics;
 pub mod doc_refs;
 mod folding;
+pub mod hierarchy;
 mod imports;
 pub mod infer;
 mod line_index;
@@ -19,6 +20,7 @@ pub mod refs;
 pub mod rename;
 pub mod render;
 mod selection;
+pub mod signature;
 mod symbols;
 pub mod target;
 pub mod workspace_symbols;
@@ -49,3 +51,9 @@ mod references_tests;
 
 #[cfg(test)]
 mod rename_tests;
+
+#[cfg(test)]
+mod signature_tests;
+
+#[cfg(test)]
+mod hierarchy_tests;
