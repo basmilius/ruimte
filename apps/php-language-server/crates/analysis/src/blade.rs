@@ -477,8 +477,14 @@ mod tests {
 
     #[test]
     fn a_template_in_words_with_accents_is_read() {
-        assert_eq!(places("<p>Dé prijs: {{ config('app.na$0me') }} €5</p>"), ["config/app.php"]);
-        assert_eq!(places("<p>één</p> @include('wel$0come')"), ["resources/views/welcome.blade.php"]);
+        assert_eq!(
+            places("<p>Dé prijs: {{ config('app.na$0me') }} €5</p>"),
+            ["config/app.php"]
+        );
+        assert_eq!(
+            places("<p>één</p> @include('wel$0come')"),
+            ["resources/views/welcome.blade.php"]
+        );
     }
 
     #[test]
