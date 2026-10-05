@@ -172,6 +172,9 @@ beforeAll(async () => {
         expect(Bun.spawnSync(['codesign', '--sign', '-', '--force', stub], { stdio: ['ignore', 'ignore', 'inherit'] }).exitCode).toBe(0);
     }
     runtime = { command: stub, args: [], env: { BUN_BE_BUN: '1' } };
+    // PHP goes to the server of Ruimte by default; these tests run Intelephense, which the machine can pick instead.
+    await mkdir(join(base, 'home', 'language-servers'), { recursive: true });
+    await writeFile(join(base, 'home', 'language-servers', 'choices.json'), JSON.stringify({ picks: { php: 'php' } }));
     host = new LanguageHost({
         root: join(base, 'home', 'language-servers'),
         folderOf: (projectId) => ({ p1: project, p2: plain, p3: lint })[projectId] ?? null,
@@ -185,6 +188,7 @@ beforeAll(async () => {
             return child;
         }
     });
+    await host.load();
     host.subscribe('c1', (event) => events.push(event));
     // The Vue server needs `vue` in the project to type a template, and the plain project's own TypeScript has to be there to be found.
     for (const folder of [project, plain, lint]) {

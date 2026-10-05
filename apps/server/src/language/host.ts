@@ -42,11 +42,14 @@ import { ClientSinks } from '../client-sinks.ts';
 import { ProjectFileWatcher, type StatPath } from './file-watch.ts';
 import { CustomLanguageServers, customProfile } from './custom.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import { LanguageChoices } from './choices.ts';
 import { LanguageInstaller } from './installer.ts';
+import type { Download, NativePolicy } from './native.ts';
 import { MERGED_METHODS, mergeAnswers, mergeProviders } from './merge.ts';
 import {
     activates,
     additionKindsForLanguage,
+    alternativesOf,
     componentServes,
     documentLanguageId,
     KIND_PROFILES,
@@ -57,7 +60,6 @@ import {
 } from './profiles.ts';
 import { bunRuntime, runCommand, spawnLanguageProcess, type LanguageRuntime, type RunCommand, type SpawnLanguageProcess } from './runtime.ts';
 import { LanguageServer, MERGE_DEADLINE_MS, realLanguageClock, type LanguageClock, type LanguageServerHooks, type SharedDocument } from './server.ts';
-import { versionOf } from './versions.ts';
 
 export class LanguageError extends CodedError<LanguageErrorCode> {}
 
@@ -96,6 +98,12 @@ export interface LanguageHostOptions {
     watch?: { platform?: NodeJS.Platform; seams?: WatchSeams; stat?: StatPath };
     /* The servers of a person's own; by default the file beside the installs. */
     custom?: CustomLanguageServers;
+    /* Which server the machine uses where two serve one language; by default the file beside the installs. */
+    choices?: LanguageChoices;
+    /* Where the native servers come from: the checkout the daemon runs from, else the pinned releases. */
+    native?: NativePolicy;
+    /* How an install downloads a release or the stubs. */
+    download?: Download;
 }
 
 interface ProjectLanguage {
@@ -163,6 +171,7 @@ export class LanguageHost {
     private readonly options: LanguageHostOptions;
     private readonly installer: LanguageInstaller;
     private readonly custom: CustomLanguageServers;
+    private readonly choices: LanguageChoices;
     private readonly sinks = new ClientSinks((clientId) => this.dropClient(clientId));
     private readonly projects = new Map<string, ProjectLanguage>();
     private readonly edits = new Map<string, PendingEdit>();
@@ -197,11 +206,14 @@ export class LanguageHost {
     constructor(options: LanguageHostOptions) {
         this.options = options;
         this.custom = options.custom ?? new CustomLanguageServers({ path: join(options.root, 'custom.json') });
+        this.choices = options.choices ?? new LanguageChoices({ path: join(options.root, 'choices.json') });
         this.installer = new LanguageInstaller({
             root: options.root,
             runtime: options.runtime ?? bunRuntime(),
             run: options.run ?? runCommand,
             now: options.now,
+            native: options.native,
+            download: options.download,
             onChange: (kind) => this.installChanged(kind)
         });
     }
@@ -210,9 +222,9 @@ export class LanguageHost {
         return this.sinks.subscribe(clientId, sink);
     }
 
-    /* Reads the servers of a person's own. Call before a client can ask. */
-    load(): Promise<void> {
-        return this.custom.load();
+    /* Reads the servers of a person's own and the machine's choices. Call before a client can ask. */
+    async load(): Promise<void> {
+        await Promise.all([this.custom.load(), this.choices.load()]);
     }
 
     async status(projectId: string): Promise<LanguageServerStatus[]> {
@@ -225,6 +237,33 @@ export class LanguageHost {
     /* Starts installing a kind and answers while it runs; the end comes as a `language.status` event. */
     async install(kind: LanguageServerKind): Promise<LanguageServerStatus> {
         void this.installer.install(kind);
+        return this.statusOf(null, kind);
+    }
+
+    /*
+     * The machine uses this server for what it and its alternative both serve. Open documents move to it
+     * at once, and the alternative ends when it has none left; clients hear of both through the machine's status.
+     */
+    async prefer(kind: LanguageServerKind): Promise<LanguageServerStatus> {
+        const alternatives = alternativesOf(kind);
+        if (alternatives.length === 0) {
+            throw new LanguageError(LANGUAGE_ERROR_CODES.invalidServer, `${kind} has no alternative to choose it over`);
+        }
+        await this.choices.set(kind);
+        for (const project of this.projects.values()) {
+            for (const document of project.documents.values()) {
+                await this.reroute(project, document);
+            }
+            for (const other of alternatives) {
+                const left = project.servers.get(other);
+                if (left && left.documentCount === 0 && left.state !== 'crashed') {
+                    await left.stop();
+                }
+            }
+        }
+        for (const changed of [...alternatives, kind]) {
+            this.sinks.emit({ event: 'language.status', payload: { projectId: null, status: await this.statusOf(null, changed) } });
+        }
         return this.statusOf(null, kind);
     }
 
@@ -484,7 +523,7 @@ export class LanguageHost {
 
     /* The kinds that serve a document: the one of its language, then the additions the project calls for. */
     private async kindsFor(project: ProjectLanguage, languageId: string, storedPath: string): Promise<LanguageServerId[]> {
-        const primary = await this.primaryKindFor(project, kindForLanguage(languageId));
+        const primary = await this.primaryKindFor(project, kindForLanguage(languageId, this.choices.get(), storedPath));
         const candidates = additionKindsForLanguage(languageId);
         const kinds: LanguageServerId[] = primary === null ? [] : [primary];
         if (candidates.length > 0) {
@@ -593,6 +632,7 @@ export class LanguageHost {
                 projectId: project.projectId,
                 folder: project.folder,
                 installDirectory: catalog === null ? '' : this.installer.directoryOf(catalog),
+                native: () => (catalog === null ? null : this.installer.launchOf(catalog)),
                 isInstalled: () => (catalog === null ? Promise.resolve(true) : this.installer.isInstalled(catalog)),
                 runtime: this.options.runtime ?? bunRuntime(),
                 spawn: this.options.spawn ?? spawnLanguageProcess,
@@ -739,13 +779,19 @@ export class LanguageHost {
         }
         const kind = id;
         const install = await this.installer.state(kind);
-        const base = { server: kind, version: versionOf(kind) };
+        const base = { server: kind, version: this.installer.versionOf(kind), ...this.choiceOf(kind) };
         if (install === 'installing') {
             return { ...base, state: 'installing', documents: 0 };
         }
         if (install === 'missing') {
             const message = this.installer.failureOf(kind) ?? ((await this.installer.isOutdated(kind)) ? OUTDATED_MESSAGE : null);
-            return { ...base, state: 'not-installed', documents: project?.servers.get(kind)?.documentCount ?? 0, ...(message ? { message } : {}) };
+            return {
+                ...base,
+                state: 'not-installed',
+                documents: project?.servers.get(kind)?.documentCount ?? 0,
+                ...(message ? { message } : {}),
+                ...(this.installer.isUnavailable(kind) ? { unavailable: true } : {})
+            };
         }
         const server = project?.servers.get(kind);
         return server ? this.serverStatus(server) : { ...base, state: 'stopped', documents: 0 };
@@ -764,10 +810,16 @@ export class LanguageHost {
         };
     }
 
+    /* Whether the machine uses the kind, for a kind that has an alternative; nothing for one that has none. */
+    private choiceOf(kind: LanguageServerKind): { chosen?: boolean } {
+        const { choice } = KIND_PROFILES[kind];
+        return choice === undefined || alternativesOf(kind).length === 0 ? {} : { chosen: kindForLanguage(choice, this.choices.get()) === kind };
+    }
+
     /* The id and version of a server, and for one of a person's own what the client has no catalog entry to say. */
-    private identityOf(id: LanguageServerId): Pick<LanguageServerStatus, 'server' | 'version' | 'name' | 'languages' | 'patterns'> {
+    private identityOf(id: LanguageServerId): Pick<LanguageServerStatus, 'server' | 'version' | 'name' | 'languages' | 'patterns' | 'chosen'> {
         if (isCatalogKind(id)) {
-            return { server: id, version: versionOf(id) };
+            return { server: id, version: this.installer.versionOf(id), ...this.choiceOf(id) };
         }
         const own = this.custom.get(id);
         return { server: id, version: '', name: own?.name ?? id, languages: own?.languages ?? [], patterns: own?.patterns ?? [] };

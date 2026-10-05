@@ -97,6 +97,8 @@ export interface LanguageServerOptions {
     projectId: string;
     folder: string;
     installDirectory: string;
+    /* What a kind that is a program of its own runs: the file and the stubs beside it. */
+    native?: () => { executable: string; stubsCommit: string } | null;
     isInstalled(): Promise<boolean>;
     runtime: LanguageRuntime;
     spawn: SpawnLanguageProcess;
@@ -500,6 +502,7 @@ export class LanguageServer {
             installDirectory,
             projectFolder: folder,
             typescriptLib: await resolveTypescriptLib(folder, installDirectory, exists),
+            native: this.options.native?.() ?? null,
             typescriptExecutable: this.options.profile.components.some((component) => component.native)
                 ? await resolveNativeTypescript(folder, installDirectory, {
                       exists,
@@ -625,7 +628,7 @@ export class LanguageServer {
 
     private spawnComponent(profile: ComponentProfile, context: LaunchContext, generation: number): Component {
         const { runtime } = this.options;
-        const own = profile.native ? context.typescriptExecutable : profile.command;
+        const own = profile.native ? context.typescriptExecutable : (profile.program?.(context) ?? profile.command);
         const child = this.options.spawn(
             own === undefined
                 ? {

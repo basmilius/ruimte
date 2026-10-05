@@ -86,6 +86,7 @@ const LANGUAGES: Record<string, string> = {
     mts: 'typescript',
     patch: 'diff',
     php: 'php',
+    phtml: 'php',
     pl: 'perl',
     prisma: 'prisma',
     ps1: 'powershell',

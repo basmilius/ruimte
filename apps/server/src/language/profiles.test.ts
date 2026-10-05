@@ -26,7 +26,9 @@ describe('server profiles', () => {
         expect(kindForLanguage('tsx')).toBe('typescript');
         expect(kindForLanguage('javascriptreact')).toBe('typescript');
         expect(kindForLanguage('vue')).toBe('vue');
-        expect(kindForLanguage('php')).toBe('php');
+        expect(kindForLanguage('php')).toBe('php-native');
+        expect(kindForLanguage('php', { php: 'php' })).toBe('php');
+        expect(kindForLanguage('php', { php: 'php-native' })).toBe('php-native');
         expect(kindForLanguage('scss')).toBe('css');
         expect(kindForLanguage('less')).toBe('css');
         expect(kindForLanguage('html')).toBe('html');
@@ -36,6 +38,8 @@ describe('server profiles', () => {
         expect(kindForLanguage('sh')).toBe('bash');
         expect(kindForLanguage('docker')).toBe('docker');
         expect(kindForLanguage('rust')).toBeNull();
+        expect(kindForLanguage('plaintext', {}, 'views/page.phtml')).toBe('php-native');
+        expect(kindForLanguage('plaintext', {}, 'notes/readme.txt')).toBeNull();
         expect(lspLanguageId('tsx')).toBe('typescriptreact');
         expect(lspLanguageId('php')).toBe('php');
     });
@@ -77,7 +81,7 @@ describe('server profiles', () => {
         const pulling = Object.values(KIND_PROFILES).flatMap((profile) =>
             profile.components.filter((component) => component.pullDiagnostics).map((component) => component.name)
         );
-        expect(pulling).toEqual(['typescript', 'css', 'html', 'json', 'python', 'eslint']);
+        expect(pulling).toEqual(['typescript', 'php-native', 'css', 'html', 'json', 'python', 'eslint']);
     });
 
     it('keeps the schema store of the YAML server off', () => {
@@ -159,6 +163,18 @@ describe('server profiles', () => {
             globalStoragePath: '/home/.ruimte/language-servers/vue/storage'
         });
         expect(php.env).toEqual({ INTELEPHENSE_TELEMETRY_ENABLED: 'false' });
+    });
+
+    it('runs the PHP server of Ruimte as the program it was installed as, and keeps it from downloading the stubs itself', () => {
+        const [php] = KIND_PROFILES['php-native'].components;
+        const native = { executable: '/repo/target/release/php-language-server', stubsCommit: 'abc' };
+        expect(php.program?.({ ...context, native })).toBe(native.executable);
+        expect(php.args(context)).toEqual(['--stdio']);
+        expect(php.initializationOptions({ ...context, native })).toEqual({
+            storagePath: '/home/.ruimte/language-servers/vue/storage',
+            stubsPath: '/home/.ruimte/language-servers/vue/storage/stubs/abc'
+        });
+        expect(php.pullDiagnostics).toBe(true);
     });
 
     it('prefers the TypeScript of the project and falls back to the pinned one', async () => {

@@ -4,8 +4,10 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { LanguageServerKind } from '@ruimte/contracts';
 import { LanguageInstaller } from './installer.ts';
+import { NativePolicy, nativeStubsOf, type Download, type NativeRelease } from './native.ts';
 import { KIND_PROFILES } from './profiles.ts';
-import type { RunCommand } from './runtime.ts';
+import type { LanguageProcessSpec, RunCommand } from './runtime.ts';
+import { sha256, tarGz } from './test-archives.ts';
 
 let root = '';
 
@@ -164,5 +166,207 @@ describe('language installer', () => {
         await installer.install('php');
         await writeFile(join(root, 'php', 'installed.json'), JSON.stringify({ versions: { intelephense: '1.0.0' } }));
         expect(await installer.state('php')).toBe('missing');
+    });
+});
+
+const COMMIT = 'b'.repeat(40);
+const STUBS_URL = `https://codeload.github.com/JetBrains/phpstorm-stubs/tar.gz/${COMMIT}`;
+const STUBS = tarGz([{ path: `stubs-${COMMIT}/standard/a.php`, text: '<?php' }]);
+
+describe('native install', () => {
+    const checkout = () => ({ folder: join(root, 'repo'), version: '0.1.0', stubsCommit: COMMIT });
+    const devPolicy = () => new NativePolicy({ checkout: checkout() });
+
+    /* Plays cargo, which leaves the executable where a build does, and the executable's own `--version`. */
+    function building(calls: LanguageProcessSpec[] = [], version = 'php-language-server 0.1.0'): RunCommand {
+        return async (spec, onLine) => {
+            calls.push(spec);
+            if (spec.args.includes('--version')) {
+                onLine(version);
+                return 0;
+            }
+            onLine('Compiling php-language-server');
+            await mkdir(join(spec.cwd, 'target', 'release'), { recursive: true });
+            await writeFile(join(spec.cwd, 'target', 'release', 'php-language-server'), '');
+            return 0;
+        };
+    }
+
+    const downloads =
+        (requested: string[] = []): Download =>
+        async (url, destination) => {
+            requested.push(url);
+            if (url !== STUBS_URL) {
+                throw new Error(`${url} answered 404`);
+            }
+            await writeFile(destination, STUBS);
+        };
+
+    it('builds the checkout with cargo, checks the binary, fetches the stubs and then counts as installed', async () => {
+        const calls: LanguageProcessSpec[] = [];
+        const requested: string[] = [];
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run: building(calls),
+            native: devPolicy(),
+            download: downloads(requested),
+            onChange: () => undefined
+        });
+        expect(await installer.state('php-native')).toBe('missing');
+        await installer.install('php-native');
+        expect(installer.failureOf('php-native')).toBeNull();
+        expect(await installer.state('php-native')).toBe('installed');
+        expect(calls[0]).toMatchObject({ args: ['build', '--release', '--locked'], cwd: join(root, 'repo') });
+        expect(calls[1]).toMatchObject({ command: join(root, 'repo', 'target', 'release', 'php-language-server'), args: ['--version'] });
+        expect(requested).toEqual([STUBS_URL]);
+        expect(await readFile(join(nativeStubsOf(join(root, 'php-native'), COMMIT), 'standard', 'a.php'), 'utf8')).toBe('<?php');
+        expect(
+            installer
+                .logOf('php-native')
+                .tail()
+                .map((line) => line.text)
+        ).toContain('Compiling php-language-server');
+        expect(installer.launchOf('php-native')).toEqual({ executable: join(root, 'repo', 'target', 'release', 'php-language-server'), stubsCommit: COMMIT });
+        expect(installer.versionOf('php-native')).toBe('0.1.0');
+    });
+
+    it('does nothing again for an install that is whole', async () => {
+        const calls: LanguageProcessSpec[] = [];
+        const installer = new LanguageInstaller({ root, runtime, run: building(calls), native: devPolicy(), download: downloads(), onChange: () => undefined });
+        await installer.install('php-native');
+        await installer.install('php-native');
+        expect(calls).toHaveLength(2);
+    });
+
+    it('reads the kind as missing when the stubs are gone, and as outdated when the server moved on', async () => {
+        const installer = new LanguageInstaller({ root, runtime, run: building(), native: devPolicy(), download: downloads(), onChange: () => undefined });
+        await installer.install('php-native');
+        await rm(join(nativeStubsOf(join(root, 'php-native'), COMMIT), '.complete'));
+        expect(await installer.state('php-native')).toBe('missing');
+        await installer.install('php-native');
+        expect(await installer.state('php-native')).toBe('installed');
+        const newer = new LanguageInstaller({
+            root,
+            runtime,
+            native: new NativePolicy({ checkout: { ...checkout(), version: '0.2.0' } }),
+            onChange: () => undefined
+        });
+        expect(await newer.isOutdated('php-native')).toBe(true);
+        expect(await newer.state('php-native')).toBe('missing');
+    });
+
+    it('says why when cargo is missing or the build fails', async () => {
+        const missing = new LanguageInstaller({
+            root,
+            runtime,
+            run: async () => {
+                throw new Error('spawn cargo ENOENT');
+            },
+            native: devPolicy(),
+            download: downloads(),
+            onChange: () => undefined
+        });
+        await missing.install('php-native');
+        expect(missing.failureOf('php-native')).toContain('cargo is not installed');
+        const failing = new LanguageInstaller({ root, runtime, run: async () => 101, native: devPolicy(), download: downloads(), onChange: () => undefined });
+        await failing.install('php-native');
+        expect(failing.failureOf('php-native')).toBe('cargo build exited with code 101');
+    });
+
+    it('does not count a binary that reports another version', async () => {
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run: building([], 'php-language-server 9.9.9'),
+            native: devPolicy(),
+            download: downloads(),
+            onChange: () => undefined
+        });
+        await installer.install('php-native');
+        expect(installer.failureOf('php-native')).toBe('The server did not report version 0.1.0');
+        expect(await installer.state('php-native')).toBe('missing');
+    });
+
+    it('fails an install whose stubs cannot be downloaded, and leaves the kind missing', async () => {
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run: building(),
+            native: devPolicy(),
+            download: async () => Promise.reject(new Error('offline')),
+            onChange: () => undefined
+        });
+        await installer.install('php-native');
+        expect(installer.failureOf('php-native')).toBe('offline');
+        expect(await installer.state('php-native')).toBe('missing');
+    });
+
+    describe('from a release', () => {
+        const binary = tarGz([{ path: 'php-language-server', text: '#!/bin/sh\n', mode: 0o755 }]);
+        const release = (checksum = sha256(binary)): NativeRelease => ({
+            version: '1.2.3',
+            stubsCommit: COMMIT,
+            assets: {
+                [`${process.platform}-${process.arch}`]: {
+                    url: 'https://example.test/server.tar.gz',
+                    sha256: checksum,
+                    format: 'tar.gz',
+                    executable: 'php-language-server'
+                }
+            }
+        });
+        const download: Download = async (url, destination) => {
+            await writeFile(destination, url === STUBS_URL ? STUBS : binary);
+        };
+        const versions: RunCommand = async (_spec, onLine) => {
+            onLine('php-language-server 1.2.3');
+            return 0;
+        };
+
+        it('downloads it, checks it and runs it from the install folder', async () => {
+            const installer = new LanguageInstaller({
+                root,
+                runtime,
+                run: versions,
+                native: new NativePolicy({ checkout: null, releases: { 'php-native': release() } }),
+                download,
+                onChange: () => undefined
+            });
+            await installer.install('php-native');
+            expect(installer.failureOf('php-native')).toBeNull();
+            expect(await installer.state('php-native')).toBe('installed');
+            expect(installer.launchOf('php-native')?.executable).toBe(join(root, 'php-native', 'bin', 'php-language-server'));
+            expect(installer.versionOf('php-native')).toBe('1.2.3');
+        });
+
+        it('stops at a checksum that does not match, before it runs anything', async () => {
+            const calls: unknown[] = [];
+            const installer = new LanguageInstaller({
+                root,
+                runtime,
+                run: async (spec, onLine) => {
+                    calls.push(spec);
+                    return versions(spec, onLine);
+                },
+                native: new NativePolicy({ checkout: null, releases: { 'php-native': release('0'.repeat(64)) } }),
+                download,
+                onChange: () => undefined
+            });
+            await installer.install('php-native');
+            expect(installer.failureOf('php-native')).toContain('does not match its checksum');
+            expect(calls).toEqual([]);
+            expect(await installer.state('php-native')).toBe('missing');
+        });
+    });
+
+    it('has nothing to install in a build with neither a checkout nor a release', async () => {
+        const installer = new LanguageInstaller({ root, runtime, run: async () => 0, onChange: () => undefined });
+        expect(installer.isUnavailable('php-native')).toBe(true);
+        expect(installer.isUnavailable('php')).toBe(false);
+        expect(installer.versionOf('php-native')).toBe('');
+        await installer.install('php-native');
+        expect(installer.failureOf('php-native')).toBe('Not available in this build yet');
+        expect(await installer.state('php-native')).toBe('missing');
     });
 });

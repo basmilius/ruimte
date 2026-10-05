@@ -108,6 +108,7 @@ import { registerDiagramHandlers } from './handlers/diagram.ts';
 import { registerLaunchHandlers } from './handlers/launches.ts';
 import { registerLanguageHandlers } from './handlers/language.ts';
 import { LanguageHost } from './language/host.ts';
+import { NativePolicy, readNativeCheckout } from './language/native.ts';
 import { agentLaunches } from './launches/agent-host.ts';
 import { LaunchRunner } from './launches/runner.ts';
 import { managerSessions } from './launches/sessions.ts';
@@ -850,7 +851,9 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         root: join(config.home, 'language-servers'),
         folderOf: (projectId) => projects.index.folderOf(projectId),
         holders: (projectId) => projects.holdersOf(projectId),
-        machineHome
+        machineHome,
+        // A checkout builds the PHP server it holds; a compiled daemon only ever installs a pinned release.
+        native: new NativePolicy({ checkout: compiled ? null : readNativeCheckout(resolve(import.meta.dir, '../../php-language-server')) })
     });
     await language.load();
     projects.attachLanguage(language);

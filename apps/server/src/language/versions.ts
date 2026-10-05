@@ -1,4 +1,8 @@
 import type { LanguageServerKind } from '@ruimte/contracts';
+import type { NativeKind } from './native.ts';
+
+/* A kind installed as npm packages, which is every kind but the native ones. */
+export type NpmKind = Exclude<LanguageServerKind, NativeKind>;
 
 /*
  * What a server install pins, exactly. The `typescript` kind runs the native server of TypeScript 7.
@@ -34,7 +38,7 @@ const NPM_NAMES: Partial<Record<LanguagePackage, string>> = { 'typescript-native
 const NPM_SPECS: Partial<Record<LanguagePackage, (version: string) => string>> = { 'typescript-sdk-6': (version) => `npm:typescript@${version}` };
 
 /* Vue pairs its server with a TypeScript server that loads the plugin, so its install holds both. */
-export const LANGUAGE_KIND_PACKAGES: Record<LanguageServerKind, readonly LanguagePackage[]> = {
+export const LANGUAGE_KIND_PACKAGES: Record<NpmKind, readonly LanguagePackage[]> = {
     // TypeScript 7 serves the document, and TypeScript 6 behind typescript-language-server answers the code actions 7 lacks.
     typescript: ['typescript-native', 'typescript-language-server', 'typescript-sdk-6'],
     vue: ['typescript-language-server', 'typescript', '@vue/language-server', '@vue/typescript-plugin'],
@@ -51,7 +55,7 @@ export const LANGUAGE_KIND_PACKAGES: Record<LanguageServerKind, readonly Languag
 };
 
 /* The package a kind is named after, whose version a client reads. */
-export const LANGUAGE_KIND_MAIN_PACKAGE: Record<LanguageServerKind, LanguagePackage> = {
+export const LANGUAGE_KIND_MAIN_PACKAGE: Record<NpmKind, LanguagePackage> = {
     typescript: 'typescript-native',
     vue: '@vue/language-server',
     php: 'intelephense',
@@ -67,7 +71,7 @@ export const LANGUAGE_KIND_MAIN_PACKAGE: Record<LanguageServerKind, LanguagePack
 };
 
 /* The npm packages of a kind with their exact versions, as its `package.json` lists them. */
-export function pinnedVersionsOf(kind: LanguageServerKind): Record<string, string> {
+export function pinnedVersionsOf(kind: NpmKind): Record<string, string> {
     return Object.fromEntries(
         LANGUAGE_KIND_PACKAGES[kind].map((name) => [
             NPM_NAMES[name] ?? name,
@@ -76,6 +80,6 @@ export function pinnedVersionsOf(kind: LanguageServerKind): Record<string, strin
     );
 }
 
-export function versionOf(kind: LanguageServerKind): string {
+export function versionOf(kind: NpmKind): string {
     return LANGUAGE_PACKAGE_VERSIONS[LANGUAGE_KIND_MAIN_PACKAGE[kind]];
 }

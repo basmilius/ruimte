@@ -6,13 +6,22 @@ import { LANGUAGE_ERROR_CODES, type LanguageServerKind } from '@ruimte/contracts
 import { CodedError } from '@ruimte/agents/coded-error';
 import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
 import type { SessionEvent } from '../sessions/manager.ts';
+import { LanguageChoices } from './choices.ts';
 import { CustomLanguageServers } from './custom.ts';
 import { LanguageHost } from './host.ts';
+import { NativePolicy, type Download } from './native.ts';
 import { KIND_PROFILES } from './profiles.ts';
 import { fakeSpawner, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
+import { tarGz } from './test-archives.ts';
 import { versionOf } from './versions.ts';
 
 let root = '';
+
+const STUBS_COMMIT = 'c'.repeat(40);
+
+const stubsDownload: Download = async (_url, destination) => {
+    await writeFile(destination, tarGz([{ path: `stubs/standard/a.php`, text: '<?php' }]));
+};
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-language-host-'));
@@ -38,7 +47,15 @@ interface Rig {
 
 /* The install of a kind is played by `run`, which leaves the scripts where bun would. */
 function rig(
-    options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner; packageJson?: string; files?: string[]; platform?: NodeJS.Platform } = {}
+    options: {
+        installed?: LanguageServerKind[];
+        spawner?: FakeSpawner;
+        packageJson?: string;
+        files?: string[];
+        platform?: NodeJS.Platform;
+        choices?: LanguageChoices;
+        native?: NativePolicy;
+    } = {}
 ): Rig {
     const spawner = options.spawner ?? fakeSpawner();
     const holders = new Set(['client-1']);
@@ -59,7 +76,19 @@ function rig(
         },
         runtime: { command: '/ruimte', args: [], env: { BUN_BE_BUN: '1' } },
         spawn: spawner.spawn,
+        native: options.native ?? new NativePolicy({ checkout: { folder: join(root, 'repo'), version: '0.1.0', stubsCommit: STUBS_COMMIT } }),
+        download: stubsDownload,
         run: async (spec, onLine) => {
+            if (spec.command.endsWith('php-language-server')) {
+                onLine('php-language-server 0.1.0');
+                return 0;
+            }
+            if (spec.args[0] === 'build') {
+                installs.push('php-native');
+                await mkdir(join(spec.cwd, 'target', 'release'), { recursive: true });
+                await writeFile(join(spec.cwd, 'target', 'release', 'php-language-server'), '');
+                return 0;
+            }
             if (spec.args.includes('--version')) {
                 onLine(`Version ${versionOf('typescript')}`);
                 return 0;
@@ -74,6 +103,7 @@ function rig(
             return 0;
         },
         clock,
+        choices: options.choices ?? new LanguageChoices({ path: join(root, 'choices.json') }),
         watch: { platform: options.platform ?? 'darwin', seams: watch, stat: async (path) => (disk.has(path) ? 'file' : null) },
         custom: new CustomLanguageServers({
             path: join(root, 'custom.json'),
@@ -91,9 +121,15 @@ function rig(
 
 async function installed(
     kinds: LanguageServerKind[] = ['typescript'],
-    options: { packageJson?: string; files?: string[]; spawner?: FakeSpawner; platform?: NodeJS.Platform } = {}
+    options: { packageJson?: string; files?: string[]; spawner?: FakeSpawner; platform?: NodeJS.Platform; intelephense?: boolean; native?: NativePolicy } = {}
 ): Promise<Rig> {
-    const result = rig(options);
+    // PHP goes to the server of Ruimte unless the machine picked Intelephense, which these tests stand in with.
+    if (options.intelephense) {
+        await writeFile(join(root, 'choices.json'), JSON.stringify({ picks: { php: 'php' } }));
+    }
+    const choices = new LanguageChoices({ path: join(root, 'choices.json') });
+    await choices.load();
+    const result = rig({ ...options, choices });
     for (const kind of kinds) {
         await result.host.install(kind);
     }
@@ -781,8 +817,9 @@ describe('install and status', () => {
             spawn: failing.spawner.spawn
         });
         await host.install('php');
-        await until(async () => (await host.status('p1'))[2].message !== undefined);
-        expect((await host.status('p1'))[2]).toMatchObject({ server: 'php', state: 'not-installed', message: 'The installer exited with code 1' });
+        const php = async () => (await host.status('p1')).find((status) => status.server === 'php')!;
+        await until(async () => (await php()).message !== undefined);
+        expect(await php()).toMatchObject({ server: 'php', state: 'not-installed', message: 'The installer exited with code 1' });
     });
 
     it('restarts a crashed server on request and says how it ended up', async () => {
@@ -817,7 +854,7 @@ async function registerWatchers(process: FakeProcess, id: string, globs: { globP
 
 describe('files that change on disk', () => {
     it('reaches a PHP server for a file created beside the one that is open', async () => {
-        const { host, spawner, watch, disk } = await installed(['php']);
+        const { host, spawner, watch, disk } = await installed(['php'], { intelephense: true });
         await open(host, 'main.php', '<?php\nnew Gener;\n', 'client-1', 'php');
         await ready(host, 'php');
         const [php] = spawner.of('php');
@@ -835,7 +872,7 @@ describe('files that change on disk', () => {
     });
 
     it('tells a server that a file changed or went, in one batch per burst', async () => {
-        const { host, spawner, watch, disk } = await installed(['php']);
+        const { host, spawner, watch, disk } = await installed(['php'], { intelephense: true });
         await open(host, 'main.php', '<?php', 'client-1', 'php');
         await ready(host, 'php');
         const [php] = spawner.of('php');
@@ -857,7 +894,7 @@ describe('files that change on disk', () => {
     });
 
     it('leaves dependency folders alone unless a server named them, and skips a directory that appeared', async () => {
-        const { host, spawner, watch } = await installed(['php']);
+        const { host, spawner, watch } = await installed(['php'], { intelephense: true });
         await open(host, 'main.php', '<?php', 'client-1', 'php');
         await ready(host, 'php');
         const [php] = spawner.of('php');
@@ -896,7 +933,7 @@ describe('files that change on disk', () => {
     });
 
     it('stops watching when no server asks any more, and when the project closes', async () => {
-        const { host, spawner, watch } = await installed(['php']);
+        const { host, spawner, watch } = await installed(['php'], { intelephense: true });
         await open(host, 'main.php', '<?php', 'client-1', 'php');
         await ready(host, 'php');
         const [php] = spawner.of('php');
@@ -914,7 +951,7 @@ describe('files that change on disk', () => {
     });
 
     it('watches the directories of the open documents where a tree cannot be watched in one call', async () => {
-        const { host, spawner, watch, disk } = await installed(['php'], { platform: 'linux' });
+        const { host, spawner, watch, disk } = await installed(['php'], { platform: 'linux', intelephense: true });
         await open(host, 'src/Models/User.php', '<?php', 'client-1', 'php');
         await ready(host, 'php');
         const [php] = spawner.of('php');
@@ -928,5 +965,91 @@ describe('files that change on disk', () => {
         watch.on('/work/src/Models').emit('Post.php', 'rename');
         await watch.settle();
         expect(php.server.paramsOf('workspace/didChangeWatchedFiles')).toEqual([{ changes: [{ uri: 'file:///work/src/Models/Post.php', type: 1 }] }]);
+    });
+});
+
+describe('the PHP server of Ruimte and Intelephense', () => {
+    const picked = async (kind: 'php' | 'php-native') => {
+        await writeFile(join(root, 'choices.json'), JSON.stringify({ picks: { php: kind } }));
+    };
+
+    it('serves PHP with the server of Ruimte by default and lists Intelephense as the alternative', async () => {
+        const { host } = await installed(['php-native', 'php']);
+        const statuses = await host.status('p1');
+        expect(statuses.find((status) => status.server === 'php-native')).toMatchObject({ version: '0.1.0', chosen: true });
+        expect(statuses.find((status) => status.server === 'php')).toMatchObject({ chosen: false });
+        expect(statuses.find((status) => status.server === 'css')?.chosen).toBeUndefined();
+        expect((await open(host, 'src/a.php', '<?php', 'client-1', 'php')).servers).toEqual(['php-native']);
+    });
+
+    it('runs the program of the kind with the storage and the stubs it installed, and the pull of diagnostics', async () => {
+        const { host, spawner } = await installed(['php-native']);
+        await open(host, 'src/a.php', '<?php', 'client-1', 'php');
+        await ready(host, 'php-native');
+        const [process] = spawner.of('php-native');
+        const install = join(root, 'php-native');
+        expect(process!.spec.command).toBe(join(root, 'repo', 'target', 'release', 'php-language-server'));
+        expect(process!.spec.args).toEqual(['--stdio']);
+        expect(process!.server.paramsOf('initialize')[0]).toMatchObject({
+            initializationOptions: { storagePath: join(install, 'storage'), stubsPath: join(install, 'storage', 'stubs', STUBS_COMMIT) }
+        });
+    });
+
+    it('serves a template of PHP by its name when the editor gave it no language', async () => {
+        const { host } = await installed(['php-native']);
+        expect((await open(host, 'views/page.phtml', '<p>', 'client-1', 'plaintext')).servers).toEqual(['php-native']);
+    });
+
+    it('moves the open documents to the other server, clears what the first reported and ends it', async () => {
+        const { host, spawner, events } = await installed(['php-native', 'php']);
+        await open(host, 'src/a.php', '<?php', 'client-1', 'php');
+        await ready(host, 'php-native');
+        const [first] = spawner.of('php-native');
+        events['client-1'].length = 0;
+        const status = await host.prefer('php');
+        expect(status).toMatchObject({ server: 'php', chosen: true });
+        await ready(host, 'php');
+        await settle();
+        expect(first!.kills).toEqual(['SIGTERM']);
+        expect((await host.status('p1')).find((entry) => entry.server === 'php-native')).toMatchObject({ state: 'stopped', chosen: false });
+        expect((await open(host, 'src/a.php', '<?php', 'client-1', 'php')).servers).toEqual(['php']);
+        expect(kinds(events['client-1'], 'language.diagnostics').map((event) => (event as { payload: { server: string } }).payload.server)).toContain(
+            'php-native'
+        );
+        const changed = kinds(events['client-1'], 'language.status').map(
+            (event) => (event as { payload: { projectId: string | null; status: { server: string; chosen?: boolean } } }).payload
+        );
+        expect(changed).toEqual(
+            expect.arrayContaining([
+                { projectId: null, status: expect.objectContaining({ server: 'php', chosen: true }) },
+                { projectId: null, status: expect.objectContaining({ server: 'php-native', chosen: false }) }
+            ])
+        );
+        expect(JSON.parse(await readFile(join(root, 'choices.json'), 'utf8'))).toEqual({ picks: { php: 'php' } });
+    });
+
+    it('keeps the choice across a restart of the daemon', async () => {
+        await picked('php');
+        const { host } = await installed(['php-native', 'php'], { intelephense: true });
+        expect((await host.status('p1')).find((status) => status.server === 'php')).toMatchObject({ chosen: true });
+        expect((await open(host, 'src/a.php', '<?php', 'client-1', 'php')).servers).toEqual(['php']);
+    });
+
+    it('refuses to choose a kind that has no alternative', async () => {
+        const { host } = await installed(['typescript']);
+        await expect(host.prefer('typescript')).rejects.toMatchObject({ code: LANGUAGE_ERROR_CODES.invalidServer });
+    });
+
+    it('says a build with nothing to install is unavailable, and starts no install for it', async () => {
+        const { host, installs } = await installed(['typescript'], { native: new NativePolicy({ checkout: null }) });
+        expect((await host.status('p1')).find((status) => status.server === 'php-native')).toMatchObject({
+            state: 'not-installed',
+            version: '',
+            unavailable: true
+        });
+        await host.install('php-native');
+        await until(async () => (await host.status('p1')).find((status) => status.server === 'php-native')?.message !== undefined);
+        expect((await host.status('p1')).find((status) => status.server === 'php-native')).toMatchObject({ message: 'Not available in this build yet' });
+        expect(installs).toEqual(['typescript']);
     });
 });

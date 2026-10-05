@@ -1,5 +1,6 @@
 import { dirname, join } from 'node:path';
 import { matchesFilePattern, type LanguageServerId, type LanguageServerKind } from '@ruimte/contracts';
+import { nativeStorageOf, nativeStubsOf } from './native.ts';
 
 /* What a component needs to know about where it runs. */
 export interface LaunchContext {
@@ -10,6 +11,8 @@ export interface LaunchContext {
     typescriptLib: string;
     /* The native TypeScript server to run: the project's own when it is TypeScript 7 or newer, else the pinned one. */
     typescriptExecutable: string;
+    /* A kind whose server is a program of its own: the file it runs and the commit of the stubs installed beside it. Null for any other kind. */
+    native?: { executable: string; stubsCommit: string } | null;
 }
 
 /* One process of a kind. Vue runs two: the Vue server and the TypeScript server it leans on. */
@@ -20,12 +23,14 @@ export interface ComponentProfile {
     title?: string;
     /* The language ids it serves, as LSP names them. */
     languages: readonly string[];
-    /* File patterns it serves besides those languages (`matchesFilePattern`). Only a server of a person's own has them. */
+    /* File patterns it serves besides those languages (`matchesFilePattern`), such as the templates of a language the editor does not name. */
     patterns?: readonly string[];
     /* The script it runs, relative to the `node_modules` of the install. Empty for a server with a `command`. */
     entry: string;
     /* Whether the entry is a program of its own, which runs as it is and not under the daemon's runtime. */
     native?: boolean;
+    /* The program of a kind installed through `native.ts`, which runs as it is. `entry` is then only its file name. */
+    program?(context: LaunchContext): string;
     /* A server of a person's own: the command that starts it, run as it is and not under the daemon's runtime. */
     command?: string;
     args(context: LaunchContext): string[];
@@ -52,6 +57,8 @@ export interface KindProfile {
     kind: LanguageServerId;
     /* In the order they start, since the second may need the first. */
     components: readonly ComponentProfile[];
+    /* Kinds with the same choice are alternatives to each other, named by the language id they serve; the machine uses one of them at a time. */
+    choice?: string;
     /* Set for a kind that serves beside the kind of the language, in the projects that call for it, rather than instead of it. */
     activation?: Activation;
 }
@@ -238,8 +245,30 @@ export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
             }
         ]
     },
+    // The default for PHP, ahead of Intelephense, which stays an alternative the machine can pick.
+    'php-native': {
+        kind: 'php-native',
+        choice: 'php',
+        components: [
+            {
+                name: 'php-native',
+                languages: ['php'],
+                patterns: ['*.phtml'],
+                entry: 'php-language-server',
+                program: (context) => context.native?.executable ?? '',
+                args: () => ['--stdio'],
+                // The server reads `composer.json` for the language level. The stubs are fetched by Install, so `stubsPath` keeps it from downloading anything itself.
+                initializationOptions: (context) => ({
+                    storagePath: nativeStorageOf(context.installDirectory),
+                    stubsPath: nativeStubsOf(context.installDirectory, context.native?.stubsCommit ?? '')
+                }),
+                pullDiagnostics: true
+            }
+        ]
+    },
     php: {
         kind: 'php',
+        choice: 'php',
         components: [
             {
                 name: 'php',
@@ -425,7 +454,7 @@ export function documentLanguageId(languageId: string, storedPath: string): stri
 
 /* Whether a process serves a document, by its language or by its path. */
 export function componentServes(component: ComponentProfile, languageId: string, storedPath: string): boolean {
-    return component.languages.includes(lspLanguageId(languageId)) || (component.patterns ?? []).some((pattern) => matchesFilePattern(pattern, storedPath));
+    return component.languages.includes(lspLanguageId(languageId)) || servesPath(component, storedPath);
 }
 
 function catalog(): [LanguageServerKind, KindProfile][] {
@@ -436,9 +465,43 @@ function serves(profile: KindProfile, languageId: string): boolean {
     return profile.components.some((component) => component.languages.includes(lspLanguageId(languageId)));
 }
 
-/* The kind that serves a language, or null for one no server here knows. */
-export function kindForLanguage(languageId: string): LanguageServerKind | null {
-    return catalog().find(([, profile]) => profile.activation === undefined && serves(profile, languageId))?.[0] ?? null;
+/* The server a machine picked for each choice (`KindProfile.choice`). */
+export type LanguagePreferences = Readonly<Record<string, LanguageServerKind | undefined>>;
+
+function primaryKinds(languageId: string): LanguageServerKind[] {
+    return catalog()
+        .filter(([, profile]) => profile.activation === undefined && serves(profile, languageId))
+        .map(([kind]) => kind);
+}
+
+/*
+ * The kind that serves a language, or null for one no server here knows. Of kinds that are alternatives
+ * to each other the machine's pick serves, else the first of the catalog. A file whose language nothing
+ * serves still goes to the kind that names its path, such as a `.phtml` template.
+ */
+export function kindForLanguage(languageId: string, preferred: LanguagePreferences = {}, storedPath?: string): LanguageServerKind | null {
+    const kinds = primaryKinds(languageId);
+    if (kinds.length === 0 && storedPath !== undefined) {
+        const named = catalog().find(
+            ([, profile]) => profile.activation === undefined && profile.components.some((component) => servesPath(component, storedPath))
+        );
+        return named?.[0] ?? null;
+    }
+    const picked = kinds.find((kind) => {
+        const { choice } = KIND_PROFILES[kind];
+        return choice !== undefined && preferred[choice] === kind;
+    });
+    return picked ?? kinds[0] ?? null;
+}
+
+function servesPath(component: ComponentProfile, storedPath: string): boolean {
+    return (component.patterns ?? []).some((pattern) => matchesFilePattern(pattern, storedPath));
+}
+
+/* The kinds that serve what this one does, instead of it: the machine uses one of them at a time. Empty for a kind with no alternative. */
+export function alternativesOf(kind: LanguageServerKind): LanguageServerKind[] {
+    const { choice } = KIND_PROFILES[kind];
+    return choice === undefined ? [] : catalog().flatMap(([other, profile]) => (other !== kind && profile.choice === choice ? [other] : []));
 }
 
 /* The kinds that serve a language beside its own, in a project that calls for them, in the order of the catalog. */
