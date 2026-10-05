@@ -4,8 +4,10 @@ import {
     CustomLanguageServerInputSchema,
     LANGUAGE_METHODS,
     LanguageDocumentChangePayloadSchema,
+    LanguagePreferPayloadSchema,
     LanguageRequestPayloadSchema,
-    LanguageServerIdSchema
+    LanguageServerIdSchema,
+    LanguageServerStatusSchema
 } from './language.ts';
 
 describe('language wire', () => {
@@ -26,7 +28,7 @@ describe('language wire', () => {
     });
 
     test('the requests and events are in the tables', () => {
-        expect(Object.keys(REQUEST_SCHEMAS).filter((type) => type.startsWith('language.'))).toHaveLength(14);
+        expect(Object.keys(REQUEST_SCHEMAS).filter((type) => type.startsWith('language.'))).toHaveLength(15);
         expect(Object.keys(EVENT_SCHEMAS).filter((type) => type.startsWith('language.'))).toHaveLength(5);
     });
 
@@ -38,5 +40,13 @@ describe('language wire', () => {
         expect(LanguageServerIdSchema.safeParse('typescript').success).toBe(true);
         expect(LanguageServerIdSchema.safeParse('custom:abc').success).toBe(true);
         expect(LanguageServerIdSchema.safeParse('nonsense').success).toBe(false);
+    });
+
+    test('a status carries which of two servers the machine uses, and whether a build has none to install, only when it has something to say', () => {
+        const base = { server: 'php-native', state: 'not-installed', version: '', documents: 0 };
+        expect(LanguageServerStatusSchema.safeParse(base).success).toBe(true);
+        expect(LanguageServerStatusSchema.safeParse({ ...base, chosen: true, unavailable: true }).success).toBe(true);
+        expect(LanguagePreferPayloadSchema.safeParse({ server: 'php' }).success).toBe(true);
+        expect(LanguagePreferPayloadSchema.safeParse({ server: 'custom:a' }).success).toBe(false);
     });
 });

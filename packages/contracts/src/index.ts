@@ -169,6 +169,7 @@ import {
     LanguageEditEventSchema,
     LanguageInstallPayloadSchema,
     LanguageLogResultSchema,
+    LanguagePreferPayloadSchema,
     LanguageProvidersEventSchema,
     LanguageRequestPayloadSchema,
     LanguageRequestResultSchema,
@@ -429,6 +430,8 @@ export const REQUEST_SCHEMAS = {
     'language.status': { payload: LanguageStatusPayloadSchema, result: LanguageStatusResultSchema },
     // Only a person's request installs: the daemon never installs a server on its own, and no verb does.
     'language.install': { payload: LanguageInstallPayloadSchema, result: LanguageServerStatusResultSchema },
+    // The machine's choice between two servers of one language; any client may switch it, since both were installed by a person.
+    'language.prefer': { payload: LanguagePreferPayloadSchema, result: LanguageServerStatusResultSchema },
     'language.restart': { payload: LanguageServerTargetPayloadSchema, result: LanguageServerStatusResultSchema },
     'language.log': { payload: LanguageServerTargetPayloadSchema, result: LanguageLogResultSchema },
     'language.custom.list': { payload: EmptySchema, result: LanguageCustomListResultSchema },

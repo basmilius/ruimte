@@ -196,6 +196,7 @@
     "diagram.copy",
     "language.status",
     "language.install",
+    "language.prefer",
     "language.restart",
     "language.log",
     "language.custom.list",

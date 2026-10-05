@@ -10,7 +10,21 @@ import { ProjectIdSchema } from './project.ts';
  */
 
 /* A kind is one server, or for Vue a pair: `@vue/language-server` with a TypeScript server that loads `@vue/typescript-plugin`. */
-export const LanguageServerKindSchema = z.enum(['typescript', 'vue', 'php', 'css', 'html', 'json', 'yaml', 'python', 'bash', 'docker', 'eslint', 'tailwind']);
+export const LanguageServerKindSchema = z.enum([
+    'typescript',
+    'vue',
+    'php',
+    'php-native',
+    'css',
+    'html',
+    'json',
+    'yaml',
+    'python',
+    'bash',
+    'docker',
+    'eslint',
+    'tailwind'
+]);
 export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
 
 /* The id a server of a person's own goes by: this prefix and an id the daemon made. */
@@ -57,7 +71,11 @@ export const LanguageServerStatusSchema = z.object({
     // Processes of the kind that start when they are first needed and answer one feature only, such as TypeScript 6 for the code actions TypeScript 7 lacks. `idle` means not started yet.
     sidecars: z
         .array(z.object({ name: z.string(), title: z.string(), state: z.enum(['idle', 'starting', 'ready', 'crashed']), message: z.string().optional() }))
-        .optional()
+        .optional(),
+    // Only for a kind that has an alternative serving the same language (PHP): whether the machine uses this one for it.
+    chosen: z.boolean().optional(),
+    // There is no build of the kind to install in this release of Ruimte yet, so Install has nothing to download.
+    unavailable: z.boolean().optional()
 });
 export type LanguageServerStatus = z.infer<typeof LanguageServerStatusSchema>;
 
@@ -67,6 +85,9 @@ export type LanguageStatusResult = z.infer<typeof LanguageStatusResultSchema>;
 
 /* The kinds install into `$RUIMTE_HOME/language-servers` for the whole machine, so no project is named. */
 export const LanguageInstallPayloadSchema = z.object({ server: LanguageServerKindSchema });
+
+/* A server that serves the same language as another one, as the machine's choice between them: the daemon uses it for the language from the next document on, and the other one ends with its documents. */
+export const LanguagePreferPayloadSchema = z.object({ server: LanguageServerKindSchema });
 
 export const LanguageServerTargetPayloadSchema = z.object({ projectId: ProjectIdSchema, server: LanguageServerIdSchema });
 
