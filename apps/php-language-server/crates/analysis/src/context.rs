@@ -15,7 +15,7 @@ use crate::infer::{Analyzer, SharedCache};
 pub struct FileContext<'a> {
     pub index: &'a Index,
     pub root: SyntaxNode,
-    analyzers: RefCell<HashMap<(u32, u32), Rc<Analyzer<'a>>>>,
+    analyzers: RefCell<HashMap<(u32, u32, u32), Rc<Analyzer<'a>>>>,
     shared: Rc<SharedCache>,
 }
 
@@ -47,8 +47,10 @@ impl<'a> FileContext<'a> {
     }
 }
 
-/// The start of the top-level statement a node is in and of the class around it.
-fn context_key(node: &SyntaxNode) -> (u32, u32) {
+/// The start of the top-level statement a node is in, of the class around it and of the Pest
+/// closure around it, which is where `$this` is a test case.
+fn context_key(node: &SyntaxNode) -> (u32, u32, u32) {
+    let pest = crate::pest::calls::enclosing_test_closure(node).map_or(0, |closure| start(&closure) + 1);
     let mut top = 0;
     let mut class = 0;
     for ancestor in node.ancestors() {
@@ -69,5 +71,5 @@ fn context_key(node: &SyntaxNode) -> (u32, u32) {
             top = start(&ancestor) + 1;
         }
     }
-    (top, class)
+    (top, class, pest)
 }

@@ -281,9 +281,9 @@ impl Analyzer<'_> {
     fn methods_named(&self, receiver: &Type, name: &str) -> Vec<ResolvedCallable> {
         let mut out = Vec::new();
         for member in receiver.members() {
-            let Type::Class { .. } = member else {
+            if !matches!(member, Type::Class { .. } | Type::Intersection(_)) {
                 continue;
-            };
+            }
             if let Some(found) = self.index.find_method(member, name) {
                 out.push(ResolvedCallable {
                     name: format!("{}::{}", found.class.decl.name, found.member.name),

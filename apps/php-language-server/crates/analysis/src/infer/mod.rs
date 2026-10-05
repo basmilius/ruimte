@@ -65,6 +65,10 @@ pub struct SharedCache {
     trees: RefCell<HashMap<PathBuf, Option<SyntaxNode>>>,
     in_progress: RefCell<HashSet<(PathBuf, u32)>>,
     depth: Cell<u32>,
+    /// The test case bound to the file being read, worked out once.
+    pub(crate) pest_case: RefCell<Option<Option<crate::pest::case::TestCaseBinding>>>,
+    /// What `beforeEach` gives a property, by the describe blocks around the test and the name.
+    pub(crate) pest_types: RefCell<HashMap<(Vec<u32>, String), Type>>,
 }
 
 pub struct Analyzer<'a> {
@@ -80,7 +84,9 @@ pub struct Analyzer<'a> {
     hints: RefCell<HashMap<u32, Vec<Type>>>,
     /// What a closure without a declared return type returns, by the start of the closure.
     closure_returns: RefCell<HashMap<u32, Type>>,
-    shared: Rc<SharedCache>,
+    pub(crate) shared: Rc<SharedCache>,
+    /// Set inside the closure of a Pest test or hook, where `$this` is a test case.
+    pub(crate) pest: Option<crate::pest::case::PestScope>,
 }
 
 const MAX_DEPTH: u32 = 48;
@@ -92,7 +98,10 @@ impl<'a> Analyzer<'a> {
 
     pub fn with_shared(index: &'a Index, root: &SyntaxNode, offset: u32, shared: Rc<SharedCache>) -> Analyzer<'a> {
         let resolver = resolver_at(root, offset);
-        let class = class_context(root, offset, &resolver);
+        let path = crate::document::current();
+        let pest = crate::pest::case::scope_at(index, root, offset, path.as_deref(), &shared);
+        let class = class_context(root, offset, &resolver)
+            .or_else(|| pest.as_ref().map(crate::pest::case::PestScope::class_context));
         Analyzer {
             index,
             root: root.clone(),
@@ -103,6 +112,7 @@ impl<'a> Analyzer<'a> {
             hints: RefCell::new(HashMap::new()),
             closure_returns: RefCell::new(HashMap::new()),
             shared,
+            pest,
         }
     }
 
@@ -165,6 +175,9 @@ impl<'a> Analyzer<'a> {
 
     /// The type `$this` has: the enclosing class.
     pub fn this_type(&self) -> Type {
+        if let Some(scope) = &self.pest {
+            return scope.this_type();
+        }
         match &self.class {
             Some(class) if class.anonymous => class.parent.clone().map_or(Type::Unknown, Type::class),
             Some(class) => Type::class(class.name.clone()),

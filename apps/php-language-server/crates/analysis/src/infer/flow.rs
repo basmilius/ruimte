@@ -588,7 +588,9 @@ impl Analyzer<'_> {
                         }
                     }
                 }
-                self.narrow_by_asserts(expr, None, env);
+                if expr.parent().is_some_and(|parent| parent.kind() == EXPR_STATEMENT) {
+                    self.narrow_by_asserts(expr, None, env);
+                }
             }
             _ => {
                 for child in expr.children() {

@@ -41,6 +41,8 @@ pub enum Symbol {
         name: String,
         scope: (u32, u32),
     },
+    /// A Pest dataset, by the name it is declared and used under.
+    Dataset(String),
 }
 
 impl Symbol {
@@ -52,9 +54,17 @@ impl Symbol {
             | Symbol::Property { name, .. }
             | Symbol::ClassConst { name, .. }
             | Symbol::Parameter { name, .. }
-            | Symbol::Variable { name, .. } => name,
+            | Symbol::Variable { name, .. }
+            | Symbol::Dataset(name) => name,
         };
-        name.to_ascii_lowercase()
+        match self {
+            Symbol::Dataset(name) => name
+                .split(|c: char| !c.is_alphanumeric() && c != '_')
+                .find(|word| !word.is_empty())
+                .unwrap_or(name)
+                .to_lowercase(),
+            _ => name.to_ascii_lowercase(),
+        }
     }
 }
 
@@ -181,6 +191,7 @@ impl Query {
                 },
                 Symbol::Parameter { callee, name },
             ) => wanted_name == name && same_callee(wanted, callee),
+            (Symbol::Dataset(wanted), Symbol::Dataset(name)) => wanted == name,
             _ => false,
         }
     }
@@ -699,9 +710,42 @@ pub fn hits_in_file(ctx: &FileContext, text: &str, query: &Query) -> Vec<Hit> {
     if query.is_constructor() {
         constructor_hits(ctx, text, query, &mut hits);
     }
+    if matches!(
+        query.symbol,
+        Symbol::Method { .. } | Symbol::Function(_) | Symbol::Dataset(_)
+    ) {
+        test_string_hits(ctx, query, &mut hits);
+    }
     hits.sort_by_key(|hit| (hit.range.start(), hit.range.end()));
     hits.dedup_by_key(|hit| (hit.range.start(), hit.range.end()));
     hits
+}
+
+/// The strings of a test that name the symbol: a data provider, a dependency, a dataset.
+fn test_string_hits(ctx: &FileContext, query: &Query, hits: &mut Vec<Hit>) {
+    use crate::phpunit::strings::{strings_in, symbol_of};
+    for string in strings_in(ctx) {
+        let node = ast::node_at(&ctx.root, u32::from(string.range.start()));
+        let analyzer = ctx.analyzer(&node);
+        let Some(symbol) = symbol_of(ctx.index, &string, &analyzer) else {
+            continue;
+        };
+        if !query.matches(&symbol) {
+            continue;
+        }
+        hits.push(Hit {
+            range: string.range,
+            kind: if string.declaration {
+                HitKind::Declaration
+            } else {
+                HitKind::Reference
+            },
+            access: Access::Read,
+            dollar: false,
+            via_alias: false,
+            symbol,
+        });
+    }
 }
 
 /// A `new Foo` is a call of the constructor Foo has or inherits.

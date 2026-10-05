@@ -103,3 +103,161 @@ pub fn split_cursor(text: &str) -> (String, SyntaxNode, u32) {
     let root = parse(&clean).syntax();
     (clean, root, offset as u32)
 }
+
+/// The files of a fixture as the place a search for usages reads from.
+pub struct Files(pub std::collections::HashMap<PathBuf, String>);
+
+impl crate::references::Sources for Files {
+    fn candidates(&self, word: &str) -> Vec<PathBuf> {
+        self.0
+            .iter()
+            .filter(|(_, text)| text.to_ascii_lowercase().contains(word))
+            .map(|(path, _)| path.clone())
+            .collect()
+    }
+
+    fn text(&self, path: &std::path::Path) -> Option<String> {
+        self.0.get(path).cloned()
+    }
+}
+
+/// A stand-in for the parts of PHPUnit that tests refer to by name.
+pub const PHPUNIT: &str = r#"<?php
+namespace PHPUnit\Framework\MockObject {
+    interface Stub {
+        public function method(string $constraint): InvocationStubber;
+    }
+    interface MockObject extends Stub {
+        public function expects(object $invocationRule): InvocationMocker;
+    }
+    interface InvocationStubber {
+        public function willReturn(mixed $value, mixed ...$nextValues): InvocationStubber;
+        public function with(mixed ...$arguments): InvocationStubber;
+    }
+    interface InvocationMocker extends InvocationStubber {
+        public function method(string $constraint): InvocationStubber;
+    }
+    /** @template MockedType of object */
+    final class MockBuilder {
+        public function onlyMethods(array $methods): static {}
+        /** @return MockedType&MockObject */
+        public function getMock(): MockObject {}
+    }
+}
+
+namespace PHPUnit\Framework {
+    use PHPUnit\Framework\MockObject\{MockBuilder, MockObject, Stub};
+
+    abstract class Assert {
+        /**
+         * @template ExpectedType of object
+         * @param class-string<ExpectedType> $expected
+         * @phpstan-assert =ExpectedType $actual
+         */
+        final public static function assertInstanceOf(string $expected, mixed $actual, string $message = ''): void {}
+        /** @phpstan-assert !null $actual */
+        final public static function assertNotNull(mixed $actual, string $message = ''): void {}
+        /** @phpstan-assert string $actual */
+        final public static function assertIsString(mixed $actual, string $message = ''): void {}
+        final public static function assertSame(mixed $expected, mixed $actual, string $message = ''): void {}
+        final public static function assertTrue(mixed $condition, string $message = ''): void {}
+    }
+
+    abstract class TestCase extends Assert {
+        protected function setUp(): void {}
+        public function once(): object {}
+        /**
+         * @template RealInstanceType of object
+         * @param class-string<RealInstanceType> $type
+         * @return MockObject&RealInstanceType
+         */
+        final protected function createMock(string $type): MockObject {}
+        /**
+         * @template RealInstanceType of object
+         * @param class-string<RealInstanceType> $type
+         * @return RealInstanceType&Stub
+         */
+        final protected static function createStub(string $type): Stub {}
+        /**
+         * @template RealInstanceType of object
+         * @param class-string<RealInstanceType> $className
+         * @return MockBuilder<RealInstanceType>
+         */
+        final protected function getMockBuilder(string $className): MockBuilder {}
+    }
+}
+
+namespace PHPUnit\Framework\Attributes {
+    #[\Attribute] final class Test {}
+    #[\Attribute] final class DataProvider { public function __construct(string $methodName) {} }
+    #[\Attribute] final class DataProviderExternal { public function __construct(string $className, string $methodName) {} }
+    #[\Attribute] final class Depends { public function __construct(string $methodName) {} }
+    #[\Attribute] final class DependsExternal { public function __construct(string $className, string $methodName) {} }
+    #[\Attribute] final class Group { public function __construct(string $name) {} }
+    #[\Attribute] final class CoversClass { public function __construct(string $className) {} }
+    #[\Attribute] final class UsesClass { public function __construct(string $className) {} }
+    #[\Attribute] final class CoversMethod { public function __construct(string $className, string $methodName) {} }
+    #[\Attribute] final class CoversFunction { public function __construct(string $functionName) {} }
+}
+"#;
+
+/// A stand-in for the functions and classes of Pest that tests are written with.
+pub const PEST: &str = r#"<?php
+namespace Pest {
+    /** @template TValue */
+    final class Expectation {
+        /**
+         * @param TValue $value
+         */
+        public function __construct(public mixed $value) {}
+        /**
+         * @template TAndValue
+         * @param TAndValue $value
+         * @return self<TAndValue>
+         */
+        public function and(mixed $value): Expectation {}
+        public function not(): OppositeExpectation {}
+        /** @return self<TValue> */
+        public function toBe(mixed $expected): self {}
+        /** @return self<TValue> */
+        public function toBeInstanceOf(string $class): self {}
+        /** @return self<TValue> */
+        public function toBeNull(): self {}
+        /** @return self<TValue> */
+        public function toHaveCount(int $count): self {}
+        /** @return self<TValue> */
+        public function sequence(mixed ...$callbacks): self {}
+        public function __call(string $method, array $parameters) {}
+    }
+    final class OppositeExpectation {
+        public function toBe(mixed $expected): Expectation {}
+    }
+    final class TestCall {
+        public function with(\Closure|iterable|string ...$data): self {}
+        public function group(string ...$groups): self {}
+    }
+    final class BeforeEachCall {
+        public function group(string ...$groups): self {}
+    }
+    final class DescribeCall {}
+    final class UsesCall {
+        public function in(string ...$targets): self {}
+    }
+}
+namespace {
+    /**
+     * @template TValue
+     * @param TValue|null $value
+     * @return \Pest\Expectation<TValue|null>
+     */
+    function expect(mixed $value = null): \Pest\Expectation {}
+    function it(string $description, ?\Closure $closure = null): \Pest\TestCall {}
+    function test(?string $description = null, ?\Closure $closure = null): \Pest\TestCall {}
+    function describe(string $description, \Closure $tests): \Pest\DescribeCall {}
+    function beforeEach(?\Closure $closure = null): \Pest\BeforeEachCall {}
+    function afterEach(?\Closure $closure = null): \Pest\BeforeEachCall {}
+    function dataset(string $name, \Closure|iterable $dataset): void {}
+    function uses(string ...$classAndTraits): \Pest\UsesCall {}
+    function arch(?string $description = null, ?\Closure $closure = null): \Pest\TestCall {}
+}
+"#;

@@ -108,6 +108,7 @@ pub enum RenameKind {
     ClassConst,
     Variable,
     Namespace,
+    Dataset,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -155,11 +156,20 @@ fn kind_of(symbol: &Symbol) -> RenameKind {
         Symbol::Property { .. } => RenameKind::Property,
         Symbol::ClassConst { .. } => RenameKind::ClassConst,
         Symbol::Parameter { .. } | Symbol::Variable { .. } => RenameKind::Variable,
+        Symbol::Dataset(_) => RenameKind::Dataset,
     }
 }
 
 /// The name under a position, when it can be renamed.
 pub fn prepare_rename(index: &Index, root: &SyntaxNode, text: &str, offset: u32) -> Result<Prepared, String> {
+    if let Some((range, symbols)) = crate::phpunit::strings::symbols_at_string(&FileContext::new(index, root), offset) {
+        check_declared_in_project(index, &symbols)?;
+        return Ok(Prepared {
+            placeholder: text[usize::from(range.start())..usize::from(range.end())].to_string(),
+            range,
+            kind: kind_of(primary_symbol(&symbols)),
+        });
+    }
     let Some(token) = token_at(root, offset) else {
         return Err("There is no name to rename here".to_string());
     };
@@ -258,6 +268,12 @@ pub fn validate_name(kind: RenameKind, name: &str) -> Result<(), String> {
             }
             Ok(())
         }
+        RenameKind::Dataset => {
+            if name.is_empty() || name.contains(['\'', '"', '\\', '\n']) {
+                return Err(format!("'{name}' is not a valid dataset name"));
+            }
+            Ok(())
+        }
         _ if !identifier => Err(format!("'{name}' is not a valid name")),
         RenameKind::Variable => {
             if SUPERGLOBALS.contains(&name) {
@@ -348,7 +364,8 @@ fn symbol_name(symbol: &Symbol) -> Option<&str> {
         | Symbol::Property { name, .. }
         | Symbol::ClassConst { name, .. }
         | Symbol::Parameter { name, .. }
-        | Symbol::Variable { name, .. } => Some(name),
+        | Symbol::Variable { name, .. }
+        | Symbol::Dataset(name) => Some(name),
     }
 }
 
@@ -389,6 +406,11 @@ fn check_conflicts(index: &Index, current: &Current, symbol: &Symbol, new_name: 
             }
         }
         Symbol::Parameter { .. } => {}
+        Symbol::Dataset(name) => {
+            if name != new_name && !crate::pest::dataset_declarations(index, new_name).is_empty() {
+                return Err(format!("A dataset named '{new_name}' already exists"));
+            }
+        }
     }
     Ok(())
 }

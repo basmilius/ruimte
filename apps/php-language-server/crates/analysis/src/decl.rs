@@ -100,6 +100,7 @@ pub fn declarations(index: &Index, query: &Query) -> Vec<Declaration> {
             }
         }
         Symbol::Variable { .. } => {}
+        Symbol::Dataset(name) => out.extend(crate::pest::dataset_declarations(index, name)),
     }
     out
 }

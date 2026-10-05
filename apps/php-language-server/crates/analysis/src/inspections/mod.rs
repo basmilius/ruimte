@@ -8,6 +8,7 @@ pub(crate) mod flow;
 mod members;
 mod names;
 mod phpdoc;
+mod phpunit;
 mod scopes;
 pub(crate) mod types;
 pub(crate) mod unused;
@@ -206,6 +207,24 @@ pub const INSPECTIONS: &[InspectionInfo] = &[
         Warning,
         true,
         "A PHPDoc type that contradicts the declared type",
+    ),
+    info(
+        "missing-data-provider",
+        Error,
+        true,
+        "A data provider that does not exist",
+    ),
+    info(
+        "missing-test-dependency",
+        Warning,
+        true,
+        "A test a `#[Depends]` names that does not exist",
+    ),
+    info(
+        "data-provider-arity",
+        Warning,
+        true,
+        "A data set with more or fewer values than the test takes",
     ),
     info(
         "missing-strict-types",
@@ -457,6 +476,7 @@ pub fn inspect(env: &InspectionEnv) -> Vec<Finding> {
     flow::run(&cx);
     classes::run(&cx);
     phpdoc::run(&cx);
+    phpunit::run(&cx);
     let mut found = cx.found.into_inner();
     found.sort_by_key(|finding| (finding.diagnostic.range.start(), finding.diagnostic.range.end()));
     found.dedup_by(|later, earlier| {

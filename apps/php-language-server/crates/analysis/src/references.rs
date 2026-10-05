@@ -48,8 +48,11 @@ pub struct References {
 
 /// The symbols under a position, with the range of the name they were found on.
 pub fn symbols_at(index: &Index, root: &SyntaxNode, offset: u32) -> Option<(TextRange, Vec<Symbol>)> {
-    let token = token_at(root, offset)?;
     let ctx = FileContext::new(index, root);
+    if let Some(found) = crate::phpunit::strings::symbols_at_string(&ctx, offset) {
+        return Some(found);
+    }
+    let token = token_at(root, offset)?;
     let symbols = symbols_of_token(&ctx, &token);
     if symbols.is_empty() {
         return None;

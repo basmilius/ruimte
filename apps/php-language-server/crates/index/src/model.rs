@@ -455,6 +455,8 @@ pub struct FileSymbols {
     /// A `define()` the file makes that the declarations above do not hold, because its name is
     /// only known when the code runs.
     pub dynamic_define: bool,
+    /// Groups, datasets and test case bindings, when the file has any.
+    pub tests: Option<Box<crate::test_facts::TestFacts>>,
 }
 
 impl FileSymbols {
@@ -510,6 +512,7 @@ pub struct FileSummary {
     pub functions: Vec<NameSummary>,
     pub constants: Vec<NameSummary>,
     pub dynamic_define: bool,
+    pub tests: Option<Box<crate::test_facts::TestFacts>>,
 }
 
 impl FileSummary {
@@ -517,6 +520,7 @@ impl FileSummary {
         let deprecated = |doc: &Option<Box<Doc>>| doc.as_ref().is_some_and(|doc| doc.deprecated.is_some());
         FileSummary {
             dynamic_define: symbols.dynamic_define,
+            tests: symbols.tests.clone(),
             classes: symbols
                 .classes
                 .iter()

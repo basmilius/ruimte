@@ -160,7 +160,12 @@ impl Analyzer<'_> {
         };
         let receiver = self.type_of(&object, env);
         let receiver = self.receiver_type(&receiver);
-        let result = self.property_on(&receiver, &text_of(&name));
+        let mut result = self.property_on(&receiver, &text_of(&name));
+        if result.is_unknown() && text_of(&object) == "$this" {
+            if let Some(found) = self.pest_property(&text_of(&name)) {
+                result = found;
+            }
+        }
         if nullsafe && self.type_of(&object, env).contains_null() {
             return result.nullable();
         }

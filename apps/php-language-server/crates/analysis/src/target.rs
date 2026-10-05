@@ -79,6 +79,9 @@ pub fn token_at(root: &SyntaxNode, offset: u32) -> Option<SyntaxToken> {
 impl Analyzer<'_> {
     /// The targets under an offset. A member of a union has one per class that has it.
     pub fn targets_at(&self, offset: u32) -> Vec<Found> {
+        if let Some(found) = self.test_string_target(offset) {
+            return vec![found];
+        }
         let Some(token) = token_at(&self.root, offset) else {
             return Vec::new();
         };
@@ -87,6 +90,32 @@ impl Analyzer<'_> {
             .into_iter()
             .map(|target| Found { target, range })
             .collect()
+    }
+
+    /// The method or function a string of a test names, with the range of the text in the quotes.
+    fn test_string_target(&self, offset: u32) -> Option<Found> {
+        let string = crate::phpunit::strings::string_at(self, offset)?;
+        let target = match &string.target {
+            crate::phpunit::strings::StringTarget::Method { class, .. } => {
+                let receiver = Type::class(class.clone());
+                self.index.find_method(&receiver, &string.value)?;
+                Target::Method {
+                    receiver,
+                    name: string.value.clone(),
+                }
+            }
+            crate::phpunit::strings::StringTarget::Function => {
+                let candidates = self.resolver.function_candidates(&string.value);
+                Target::Function(self.index.first_function(&candidates)?.decl.name.clone())
+            }
+            crate::phpunit::strings::StringTarget::Group | crate::phpunit::strings::StringTarget::Dataset => {
+                return crate::pest::string_target(self, &string);
+            }
+        };
+        Some(Found {
+            target,
+            range: string.range,
+        })
     }
 
     /// The targets a token stands for.

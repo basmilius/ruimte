@@ -43,7 +43,7 @@ impl Analyzer<'_> {
 
     /// The declaration node at a place: in the tree this analyzer works on when the name is there,
     /// else in the file on disk.
-    fn read_declaration(&self, decl: &DeclRef) -> Option<(SyntaxNode, SyntaxNode)> {
+    pub(crate) fn read_declaration(&self, decl: &DeclRef) -> Option<(SyntaxNode, SyntaxNode)> {
         if let Some(function) = declaration_at(&self.root, decl.name_start) {
             return Some((self.root.clone(), function));
         }

@@ -41,7 +41,9 @@ pub(super) fn unreliable_receiver(cx: &Cx, node: &SyntaxNode, object: &SyntaxNod
         return true;
     }
     let is_this = root_variable(object).is_some_and(|variable| text_of(&variable) == "$this");
-    is_this && (in_anonymous_class(node) || in_rebindable_closure(cx, node))
+    // Pest's test case takes what `beforeEach` sets and what its own `__call` forwards.
+    let in_pest = text_of(object) == "$this" && cx.file.analyzer(node).pest.is_some();
+    is_this && (in_anonymous_class(node) || in_rebindable_closure(cx, node)) || in_pest
 }
 
 /// Whether `$this` here may be another object: a closure that the function it is made in binds

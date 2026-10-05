@@ -312,6 +312,9 @@ impl<'a> Server<'a> {
                 first_trigger_character: "\n".to_string(),
                 more_trigger_character: Some(vec!["}".to_string(), ";".to_string()]),
             }),
+            code_lens_provider: Some(lsp_types::CodeLensOptions {
+                resolve_provider: Some(false),
+            }),
             completion_provider: Some(CompletionOptions {
                 resolve_provider: Some(true),
                 trigger_characters: Some(["$", ">", ":", "\\", "#", "["].map(String::from).to_vec()),
@@ -421,6 +424,14 @@ impl<'a> Server<'a> {
 
     fn request(&mut self, request: Request) -> Result<(), BoxError> {
         let id = request.id.clone();
+        let document = request
+            .params
+            .pointer("/textDocument/uri")
+            .or_else(|| request.params.pointer("/uri"))
+            .and_then(Value::as_str)
+            .and_then(|uri| uri.parse::<Uri>().ok())
+            .and_then(|uri| uri_to_path(&uri));
+        let _document = php_analysis::document::enter(document.as_deref());
         let response = match request.method.as_str() {
             DocumentSymbolRequest::METHOD => self.answer(id, request.params, Self::document_symbols),
             FoldingRangeRequest::METHOD => self.answer(id, request.params, Self::folding_ranges),
@@ -455,6 +466,8 @@ impl<'a> Server<'a> {
             RangeFormatting::METHOD => self.answer(id, request.params, Self::range_formatting),
             OnTypeFormatting::METHOD => self.answer(id, request.params, Self::on_type_formatting),
             Completion::METHOD => self.answer(id, request.params, Self::completion),
+            lsp_types::request::CodeLensRequest::METHOD => self.answer(id, request.params, Self::code_lens),
+            crate::runnables::RUNNABLES_METHOD => self.answer(id, request.params, Self::runnables),
             ResolveCompletionItem::METHOD => self.answer(id, request.params, Self::resolve_completion),
             method => Response::new_err(
                 id,
@@ -571,6 +584,7 @@ impl<'a> Server<'a> {
     }
 
     fn diagnostics_of(&mut self, uri: &Uri) -> Option<Vec<lsp_types::Diagnostic>> {
+        let _document = php_analysis::document::enter(uri_to_path(uri).as_deref());
         let level = self.level_of(uri, self.documents.get(uri)?.level);
         self.inspect_document(uri, |env, mapper, parse| {
             let mut found = diagnostics(parse, level);

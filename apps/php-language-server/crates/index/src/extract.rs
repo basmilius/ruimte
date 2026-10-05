@@ -28,6 +28,9 @@ pub fn extract(root: &SyntaxNode, options: ExtractOptions) -> FileSymbols {
     if options.stub {
         crate::stub_overlay::apply(&mut extractor.out);
     }
+    if extractor.out.tests.as_ref().is_some_and(|facts| facts.is_empty()) {
+        extractor.out.tests = None;
+    }
     extractor.out
 }
 
@@ -183,12 +186,28 @@ impl Extractor {
                     self.class_like(&child);
                 }
                 CONST_STATEMENT => self.constants(&child),
-                EXPR_STATEMENT => self.define(&child),
+                EXPR_STATEMENT => {
+                    self.define(&child);
+                    if !self.options.stub {
+                        let mut found = crate::test_facts::TestFacts::default();
+                        crate::test_facts::read_statement(&child, &self.resolver, &mut found);
+                        if !found.is_empty() {
+                            let tests = self.tests();
+                            tests.datasets.extend(found.datasets);
+                            tests.bindings.extend(found.bindings);
+                            tests.expectations.extend(found.expectations);
+                        }
+                    }
+                }
                 IF_STATEMENT | ELSEIF_CLAUSE | ELSE_CLAUSE | BLOCK | STATEMENT_LIST | TRY_STATEMENT | CATCH_CLAUSE
                 | FINALLY_CLAUSE => self.statements(&child),
                 _ => {}
             }
         }
+    }
+
+    fn tests(&mut self) -> &mut crate::test_facts::TestFacts {
+        self.out.tests.get_or_insert_with(Default::default)
     }
 
     fn use_statement(&mut self, node: &SyntaxNode) {
@@ -566,6 +585,18 @@ impl Extractor {
             _ => ClassKind::Class,
         };
         let name = self.resolver.qualify(&name_node.text().to_string());
+        if !self.options.stub {
+            let mut found = crate::test_facts::TestFacts::default();
+            crate::test_facts::read_groups(node, &self.resolver, &mut found);
+            if !found.groups.is_empty() {
+                let tests = self.tests();
+                for group in found.groups {
+                    if !tests.groups.contains(&group) {
+                        tests.groups.push(group);
+                    }
+                }
+            }
+        }
         let modifiers = node.children().find(|child| child.kind() == MODIFIER_LIST);
         let has_modifier = |kind: SyntaxKind| modifiers.as_ref().is_some_and(|list| has_token(list, kind));
 

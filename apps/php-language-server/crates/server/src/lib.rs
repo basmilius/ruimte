@@ -12,6 +12,7 @@ mod hierarchies;
 mod insight;
 mod paths;
 mod refactors;
+mod runnables;
 mod server;
 mod usages;
 mod workspace;

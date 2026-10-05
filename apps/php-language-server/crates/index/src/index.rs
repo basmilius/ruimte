@@ -612,6 +612,15 @@ impl Index {
     pub fn files(&self) -> impl Iterator<Item = &FileEntry> {
         self.files.iter().flatten()
     }
+
+    /// The project files that declare a group, a dataset or a binding of a test case, with it.
+    pub fn test_files(&self) -> impl Iterator<Item = (&FileEntry, &crate::test_facts::TestFacts)> {
+        self.files
+            .iter()
+            .flatten()
+            .filter(|entry| entry.origin == Origin::Project)
+            .filter_map(|entry| Some((entry, entry.summary().tests.as_deref()?)))
+    }
 }
 
 #[cfg(test)]

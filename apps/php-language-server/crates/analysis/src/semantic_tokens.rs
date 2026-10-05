@@ -219,6 +219,7 @@ fn describe(index: &Index, symbol: &Symbol) -> Option<(Kind, u32)> {
         }
         Symbol::Parameter { .. } => Some((Kind::Parameter, 0)),
         Symbol::Variable { .. } => Some((Kind::Variable, 0)),
+        Symbol::Dataset(_) => None,
     }
 }
 

@@ -27,7 +27,8 @@ const SCHEMA: u64 = const_hash(include_bytes!("model.rs"))
     ^ const_hash(include_bytes!("cache.rs")).rotate_left(4)
     ^ const_hash(include_bytes!("store.rs")).rotate_left(5)
     ^ const_hash(include_bytes!("stub_overlay.php")).rotate_left(6)
-    ^ const_hash(include_bytes!("stub_overlay.rs")).rotate_left(7);
+    ^ const_hash(include_bytes!("stub_overlay.rs")).rotate_left(7)
+    ^ const_hash(include_bytes!("test_facts.rs")).rotate_left(8);
 
 /// What identifies a version of a file on disk.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

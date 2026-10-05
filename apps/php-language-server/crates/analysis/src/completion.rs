@@ -169,6 +169,9 @@ fn in_dead_zone(root: &SyntaxNode, offset: u32) -> bool {
 pub fn complete(index: &Index, text: &str, offset: u32, options: CompletionOptions) -> CompletionList {
     let offset = (offset as usize).min(text.len());
     let real = parse(text).syntax();
+    if let Some(list) = crate::phpunit::complete::complete_string(index, &real, text, offset as u32, options) {
+        return list;
+    }
     if in_dead_zone(&real, offset as u32) {
         return CompletionList::default();
     }
@@ -457,7 +460,10 @@ impl Builder<'_> {
     fn run(&mut self, context: &Context, token: &SyntaxToken) {
         match context {
             Context::Nothing => {}
-            Context::Member { object } => self.members(object),
+            Context::Member { object } => {
+                self.members(object);
+                self.pest_members(object);
+            }
             Context::Static { qualifier } => self.static_members(qualifier),
             Context::Variable => self.variables(),
             Context::New => self.classes(ClassFilter::Instantiable, true),
@@ -586,6 +592,33 @@ impl Builder<'_> {
                 };
                 self.push(score, item);
             }
+        }
+    }
+
+    /// The properties `beforeEach` puts on `$this` in a Pest file.
+    fn pest_members(&mut self, object: &SyntaxNode) {
+        if text_of(object) != "$this" || self.analyzer.pest.is_none() {
+            return;
+        }
+        let typed = self.typed().to_string();
+        for name in self.analyzer.pest_property_names() {
+            let Some(score) = match_score(&name, &typed) else {
+                continue;
+            };
+            let ty = self.analyzer.pest_property(&name).map(|ty| ty.display(true));
+            let item = CompletionItem {
+                label: name.clone(),
+                kind: ItemKind::Property,
+                detail: ty,
+                description: Some("beforeEach".to_string()),
+                edit: self.range_edit(name.clone()),
+                additional_edits: Vec::new(),
+                sort_text: format!("0{:02}{:02}{}", 0, 0, name.to_ascii_lowercase()),
+                filter_text: Some(name.clone()),
+                deprecated: false,
+                data: None,
+            };
+            self.push(score, item);
         }
     }
 
