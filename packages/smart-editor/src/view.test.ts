@@ -49,6 +49,15 @@ describe('folding', () => {
         expect(rendered(host)).toEqual(['0', '1', '2', '3', '4', '5']);
     });
 
+    test('keeps a fold closed while text is typed above it, before the folds are read again', () => {
+        const { host, model, view } = mount(text);
+        view.refreshFolds();
+        view.toggleFold(0);
+        model.applyEdits([{ from: 0, to: 0, text: '// note\n' }]);
+        expect(view.getFolds().collapsed).toEqual([{ startLine: 1, endLine: 4 }]);
+        expect(rendered(host)).toEqual(['0', '1', '5', '6']);
+    });
+
     test('has nothing to fold on a line that starts no range', () => {
         const { view } = mount(text);
         view.refreshFolds();

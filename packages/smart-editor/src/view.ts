@@ -1,4 +1,5 @@
 import {
+    type DocumentChange,
     type DocumentModel,
     type EditorSnapshot,
     type FoldHints,
@@ -492,6 +493,7 @@ export class EditorView {
                 this.markers = this.markers.map((marker) => ({ ...marker, from: mapOffset(marker.from, changes), to: mapOffset(marker.to, changes) }));
                 this.semantic = this.semantic.map((token) => ({ ...token, from: mapOffset(token.from, changes), to: mapOffset(token.to, changes) }));
             }
+            this.foldRanges = this.mappedFolds(batches);
             this.semanticVersion++;
             this.markerVersion++;
             const anchor = this.topAnchor;
@@ -518,6 +520,25 @@ export class EditorView {
             this.rowEndCaret = null;
         }
         this.requestRender();
+    }
+
+    /* The ranges follow the text until the next read of the document, so a fold above an edit stays closed meanwhile. */
+    private mappedFolds(batches: readonly (readonly DocumentChange[])[]): ViewFold[] {
+        const mapped: ViewFold[] = [];
+        for (const range of this.foldRanges) {
+            let from = range.from;
+            let to = range.to;
+            for (const changes of batches) {
+                from = mapOffset(from, changes);
+                to = mapOffset(to, changes);
+            }
+            const startLine = this.model.positionAt(from).line;
+            const endLine = this.model.positionAt(to).line;
+            if (endLine > startLine) {
+                mapped.push({ ...range, from, to, startLine, endLine });
+            }
+        }
+        return mapped;
     }
 
     private displayedInlays(): Inlay[] {
