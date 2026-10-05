@@ -14,7 +14,7 @@ use lsp_types::request::{
     InlayHintRequest, SemanticTokensFullRequest, SemanticTokensRangeRequest, SemanticTokensRefresh,
     SignatureHelpRequest, TypeHierarchyPrepare, TypeHierarchySubtypes, TypeHierarchySupertypes,
 };
-use lsp_types::request::{CodeActionRequest, CodeActionResolveRequest, OnTypeFormatting};
+use lsp_types::request::{CodeActionRequest, CodeActionResolveRequest, Formatting, OnTypeFormatting, RangeFormatting};
 use lsp_types::request::{
     Completion, DocumentDiagnosticRequest, DocumentHighlightRequest, DocumentSymbolRequest, FoldingRangeRequest,
     GotoDefinition, GotoImplementation, GotoTypeDefinition, HoverRequest, PrepareRenameRequest, References,
@@ -291,6 +291,8 @@ impl<'a> Server<'a> {
                     work_done_progress_options: WorkDoneProgressOptions::default(),
                 },
             )),
+            document_formatting_provider: Some(OneOf::Left(true)),
+            document_range_formatting_provider: Some(OneOf::Left(true)),
             document_on_type_formatting_provider: Some(lsp_types::DocumentOnTypeFormattingOptions {
                 first_trigger_character: "\n".to_string(),
                 more_trigger_character: Some(vec!["}".to_string(), ";".to_string()]),
@@ -408,6 +410,8 @@ impl<'a> Server<'a> {
             DocumentHighlightRequest::METHOD => self.answer(id, request.params, Self::document_highlight),
             CodeActionRequest::METHOD => self.answer(id, request.params, Self::code_action),
             CodeActionResolveRequest::METHOD => self.answer(id, request.params, Self::resolve_code_action),
+            Formatting::METHOD => self.answer(id, request.params, Self::formatting),
+            RangeFormatting::METHOD => self.answer(id, request.params, Self::range_formatting),
             OnTypeFormatting::METHOD => self.answer(id, request.params, Self::on_type_formatting),
             Completion::METHOD => self.answer(id, request.params, Self::completion),
             ResolveCompletionItem::METHOD => self.answer(id, request.params, Self::resolve_completion),
@@ -1002,6 +1006,9 @@ impl<'a> Server<'a> {
         if pushed.inspections.is_some() {
             self.settings.inspections = pushed.inspections;
         }
+        if pushed.format.is_some() {
+            self.settings.format = pushed.format;
+        }
         self.refresh_editor_features()?;
         if pushed.php_version.is_some() || !self.configuration_support {
             self.settings.php_version = pushed.php_version;
@@ -1072,6 +1079,8 @@ impl<'a> Server<'a> {
             .and_then(|result| result.as_array().and_then(|items| items.first().cloned()))
             .map(|item| Settings::from_value(&item));
         let level = answer.as_ref().and_then(|settings| settings.php_version);
+        let format = answer.as_ref().and_then(|settings| settings.format.clone());
+        document.format = format;
         let inspections = answer.and_then(|settings| settings.inspections);
         if document.level != level || document.inspections != inspections {
             document.level = level;

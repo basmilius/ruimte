@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use php_analysis::DiagnosticSeverity;
 use php_analysis::inspections::{InspectionSettings, Override};
+use php_format::{BraceStyle, FormatOptions};
 use php_syntax::PhpVersion;
 use serde_json::Value;
 
@@ -25,6 +26,57 @@ pub struct Settings {
     pub hint_closure_types: Option<bool>,
     /// `inspections`: a switch or a severity per inspection code. `None` when the key is absent.
     pub inspections: Option<InspectionSettings>,
+    /// `format`: what the formatter is told to do besides the indentation the client sends.
+    pub format: Option<FormatSettings>,
+}
+
+/// The keys of `format`, each of which leaves the formatter's default alone when absent.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct FormatSettings {
+    pub class_brace: Option<BraceStyle>,
+    pub function_brace: Option<BraceStyle>,
+    pub blank_lines_between_members: Option<usize>,
+    pub align_assignments: Option<bool>,
+    pub align_array_arrows: Option<bool>,
+    pub line_length: Option<usize>,
+}
+
+impl FormatSettings {
+    fn from_value(value: &Value) -> FormatSettings {
+        let brace = |key: &str| match value.get(key).and_then(Value::as_str) {
+            Some("nextLine") => Some(BraceStyle::NextLine),
+            Some("sameLine") => Some(BraceStyle::SameLine),
+            _ => None,
+        };
+        let number = |key: &str| {
+            value
+                .get(key)
+                .and_then(Value::as_u64)
+                .and_then(|number| usize::try_from(number).ok())
+        };
+        let flag = |key: &str| value.get(key).and_then(Value::as_bool);
+        FormatSettings {
+            class_brace: brace("classBrace"),
+            function_brace: brace("functionBrace"),
+            blank_lines_between_members: number("blankLinesBetweenMembers"),
+            align_assignments: flag("alignAssignments"),
+            align_array_arrows: flag("alignArrayArrows"),
+            line_length: number("lineLength"),
+        }
+    }
+
+    /// The options with the keys that are set laid over them.
+    pub fn apply(&self, mut options: FormatOptions) -> FormatOptions {
+        options.class_brace = self.class_brace.unwrap_or(options.class_brace);
+        options.function_brace = self.function_brace.unwrap_or(options.function_brace);
+        options.blank_lines_between_members = self
+            .blank_lines_between_members
+            .unwrap_or(options.blank_lines_between_members);
+        options.align_assignments = self.align_assignments.unwrap_or(options.align_assignments);
+        options.align_array_arrows = self.align_array_arrows.unwrap_or(options.align_array_arrows);
+        options.line_length = self.line_length.unwrap_or(options.line_length);
+        options
+    }
 }
 
 impl Settings {
@@ -40,6 +92,10 @@ impl Settings {
             hint_parameter_names: flag("parameterNames"),
             hint_closure_types: flag("closureTypes"),
             inspections: object.get("inspections").map(parse_inspections),
+            format: object
+                .get("format")
+                .filter(|value| value.is_object())
+                .map(FormatSettings::from_value),
         }
     }
 }
@@ -110,6 +166,23 @@ mod tests {
             Settings::from_value(&json!({ "phpVersion": "nonsense" })).php_version,
             None
         );
+    }
+
+    #[test]
+    fn reads_the_format_keys_and_lays_them_over_the_defaults() {
+        let settings = Settings::from_value(&json!({
+            "format": { "classBrace": "sameLine", "lineLength": 100, "alignArrayArrows": true, "functionBrace": "nonsense" }
+        }));
+        let options = settings
+            .format
+            .expect("the key is there")
+            .apply(FormatOptions::default());
+        assert_eq!(options.class_brace, BraceStyle::SameLine);
+        assert_eq!(options.function_brace, BraceStyle::NextLine);
+        assert_eq!(options.line_length, 100);
+        assert!(options.align_array_arrows);
+        assert!(!options.align_assignments);
+        assert_eq!(Settings::from_value(&json!({})).format, None);
     }
 
     #[test]

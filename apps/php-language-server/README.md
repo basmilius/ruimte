@@ -2,7 +2,7 @@
 
 A language server for PHP, written in Rust. It reads PHP 8.1 through 8.5 with a parser of its own that keeps every byte of a file, comments and whitespace included, and that goes on past a syntax error instead of stopping at it. The aim is the insight a full PHP IDE gives (navigation, completion, rename, inspections, refactors) as a server any editor can talk to over LSP.
 
-Phase 1a is the parser, the syntax tree and a small server on top of it. Phase 1b adds an index of the project, its Composer packages and the standard library, a type layer, and hover, navigation, workspace symbols and completion with auto-import on top of that. Phase 2 adds find usages, rename, highlights, signature help, call and type hierarchies, semantic tokens, inlay hints and completion of overridable methods, and keeps the declarations of packages in the cache file until something needs them.
+Phase 1a is the parser, the syntax tree and a small server on top of it. Phase 1b adds an index of the project, its Composer packages and the standard library, a type layer, and hover, navigation, workspace symbols and completion with auto-import on top of that. Phase 2 adds find usages, rename, highlights, signature help, call and type hierarchies, semantic tokens, inlay hints and completion of overridable methods, and keeps the declarations of packages in the cache file until something needs them. Phase 3 adds inspections, quick fixes and code actions, and a formatter.
 
 ## Where the code comes from
 
@@ -18,11 +18,12 @@ Nothing was taken from the bytecode or the decompiled classes of any IDE plugin,
 
 ## Layout
 
-A Cargo workspace with four crates.
+A Cargo workspace with five crates.
 
 | Crate | Holds |
 | --- | --- |
 | `crates/syntax` (`php-syntax`) | The lexer, the parser, the tree (on `rowan`), the language level table and the pass that checks a tree against a level. |
+| `crates/format` (`php-format`) | The formatter: it reads a tree and decides the whitespace between tokens, and nothing else. Knows nothing of LSP. |
 | `crates/index` (`php-index`) | The declarations of a file with their PHPDoc, name resolution, PHPDoc types, Composer metadata, the stubs of the standard library, the persistent cache and the stores that read declarations back from it, the parallel indexer, the class hierarchy and the word index that narrows a search to the files that may hold a name. Knows nothing of LSP. |
 | `crates/analysis` (`php-analysis`) | Questions about a tree and an index: document symbols, folding, selection ranges, diagnostics, the type layer, hover, definitions, implementations, workspace symbols, completion, usages, highlights, rename, signature help, hierarchies, semantic tokens, inlay hints and the line index that maps offsets to positions. Knows nothing of LSP. |
 | `crates/server` (`php-language-server`) | The LSP front end over stdio: documents, incremental sync, workspace folders, background indexing with progress, the requests below, configuration. Library and binary. |
@@ -74,7 +75,7 @@ Supporting PHP 8.6 means adding rows to the table, plus the syntax to the parser
 Only standard LSP channels are used:
 
 - `initializationOptions`: `{ "phpVersion": "8.4", "storagePath": "/some/folder", "stubsPath": "/some/stubs", "inlayHints": { "parameterNames": true, "closureTypes": true } }`. `phpVersion` is the language level for a project whose `composer.json` names none. `storagePath` is where the server keeps its cache and the standard library stubs; without it nothing is kept between runs and the stubs are not fetched, so the server then knows the project and nothing of the standard library. `stubsPath` reads a folder of phpstorm-stubs instead of fetching them; `inlayHints` switches the two kinds of inlay hint, both on by default;
-- `workspace/configuration`, when the client supports it: the server asks for the section `phpLanguageServer` with the document as `scopeUri` and reads `{ "phpVersion": "8.4", "inlayHints": { ... } }`, so a client can answer differently per project or folder;
+- `workspace/configuration`, when the client supports it: the server asks for the section `phpLanguageServer` with the document as `scopeUri` and reads `{ "phpVersion": "8.4", "inlayHints": { ... }, "inspections": { ... }, "format": { ... } }`, so a client can answer differently per project or folder;
 - `workspace/didChangeConfiguration` with the same object, bare or under `phpLanguageServer`.
 
 The level of a document is the answer for its scope, else the default, else the newest version (8.5).
@@ -229,6 +230,64 @@ cargo bench -p php-analysis               # completion and hover over the stubs
 cargo bench -p php-analysis --bench features   # tokens, hints, signature help, usages and rename
 ```
 
+## Phase 3: inspections, fixes and formatting
+
+### Inspections
+
+Diagnostics from the index and the type layer, in the spirit of PHPStan and Psalm, are published next to the syntax errors and language level findings. Each has a code, a default severity and a default state, and every one can be switched off or given another severity with the `inspections` key of the configuration:
+
+```json
+{ "inspections": { "unused-import": "off", "undefined-class": "warning", "deprecated": { "severity": "hint" }, "missing-strict-types": true } }
+```
+
+A value is `true` or `false`, a severity (`error`, `warning`, `information`, `hint`, or `off`), or an object with `enabled` and `severity`.
+
+| Group | Codes |
+| --- | --- |
+| Names | `undefined-class`, `undefined-function`, `undefined-constant`, `undefined-class-constant`, `undefined-method`, `undefined-property`, `undefined-variable`, `undefined-named-argument`, `this-in-static-context` |
+| Unused code | `unused-import`, `unused-private-method`, `unused-private-property`, `unused-private-constant`, `unused-variable`, `unused-parameter`, `unreachable-code` |
+| Calls and types | `wrong-argument-count`, `argument-type-mismatch`, `return-type-mismatch`, `missing-return`, `incompatible-comparison`, `assignment-in-condition`, `deprecated`, `static-call-of-instance-method`, `instance-call-of-static-method` |
+| Classes | `abstract-method-not-implemented`, `interface-method-not-implemented`, `incompatible-override`, `readonly-reassigned`, `enum-misuse` |
+| PHPDoc and style | `phpdoc-unknown-parameter`, `phpdoc-type-mismatch`, `missing-strict-types` (off by default) |
+
+The inspections report only what is certain. A name is undefined only after the project, its packages and the standard library of the extensions it requires have all been read, and a call is not checked when it reaches the callee through `__call`, which is how a method lent by a `@mixin` is called. `cargo run --release -p php-analysis --example survey -- <project> <stubs> [--all]` runs every inspection over a project and counts what they report, to find the ones that are wrong on code that is right. Over the 798 PHP files of a real project it takes about 3.7 s and reports 66 findings with the default set, none of them wrong when read by hand. The first run reported 68: a call through a `@mixin` and the classes Composer writes into `vendor/composer` were wrong, and both are fixed.
+
+### Quick fixes and code actions
+
+`textDocument/codeAction` offers, with the edits sent along or resolved on demand (`codeAction/resolve`):
+
+- quick fixes: import a class, function or constant, or write its name in full; remove an unused import, declaration or variable (keeping the call when the assignment has a side effect); remove unreachable code; replace `=` with `===` in a condition; remove a `@param` of a parameter that does not exist; implement the missing methods of an abstract class or interface; create a missing method or property; add `declare(strict_types=1)`; make a member public, protected or private where an override needs it;
+- intentions: add or update a PHPDoc, add a return type from what the body returns, change the visibility of a member, make a property readonly, convert a constructor and its properties to constructor property promotion;
+- `source.organizeImports`.
+
+`textDocument/onTypeFormatting` also writes the doc block after `/**` and Enter, with a `@param` per parameter and the `@return`.
+
+### Formatting
+
+`textDocument/formatting`, `textDocument/rangeFormatting` and `textDocument/onTypeFormatting` (on `}`, `;` and a new line) are answered by `php-format`. The defaults are PER Coding Style 2.0, and the indent follows the `FormattingOptions` the client sends.
+
+The formatter moves whitespace and nothing else. It decides the text between two tokens with a rule per pair of neighbors, writes the indentation from the brackets and unfinished statements around a line, and keeps the line breaks the code has where PER has no opinion (arguments, chains, array items), with at most one blank line in a row. Four things follow from that:
+
+- **Lossless.** Comments, strings and heredocs are never touched, apart from the indentation of the later lines of a block comment, which moves with its first line. Before an edit is sent the result is parsed again and compared with the original token by token, and a text whose tokens would differ is left as it is.
+- **Idempotent.** The second pass over a formatted text changes nothing. This holds because every decision is made from the structure of the tree and the line breaks that are there, never from the columns of the old layout.
+- **Safe on what it cannot read.** A text with syntax errors or with markup around its PHP is not formatted, and `textDocument/formatting` answers `null`. `onTypeFormatting` does lay out unfinished code (a new line gets the indentation of the open brackets above it), since that is when it is asked.
+- **Range formatting follows the whole file.** The layout is worked out for the whole text and only the edits in the lines asked for are sent, so a line comes out as it would in a full format.
+
+What PER decides is applied: one blank line between header blocks (`declare`, `namespace`, the `use` block) and between top-level declarations, methods separated by a blank line, the brace of a class or method on its own line, `{}` for an empty body, and `) {` together on one line after a parameter list that runs over several lines. A blank line at the start or end of a class body is kept; one at the start or end of a function or control structure body is removed. The spacing of casts (`(int)$x` or `(int) $x`) is left as written, since the specification does not say.
+
+The options come from the `format` key of the configuration, besides the indent that the client sends:
+
+| Key | Values | Default |
+| --- | --- | --- |
+| `classBrace` | `nextLine`, `sameLine` | `nextLine` |
+| `functionBrace` | `nextLine`, `sameLine` | `nextLine` |
+| `blankLinesBetweenMembers` | a number, the blank lines around a method | `1` |
+| `alignAssignments` | pad the `=` of assignment statements on consecutive lines to one column | `false` |
+| `alignArrayArrows` | pad the `=>` of array items on consecutive lines to one column | `false` |
+| `lineLength` | an argument or parameter list on a line longer than this is put on lines of its own, one item per line, without adding a trailing comma; `0` never wraps | `120` |
+
+Held to the corpora (`cargo run --release -p php-format --example check -- <folder>... [--tabs --wrap --align]`): every PHP file of phpstorm-stubs, the files of a real project and the `--FILE--` sections of 6,180 php-src tests keep their tokens and format the same twice, with the defaults and with tabs, a line length of 80 and alignment all on. A test in the default run does the same over the stubs when they are fetched.
+
 ## Build, test and run
 
 ```sh
@@ -285,6 +344,6 @@ Measured on an Apple Silicon laptop, release build: lexing about 345 MiB/s, pars
 1. **Phase 1a (done):** parser, lossless tree, error recovery, language level table and gate, a server with diagnostics, symbols, folding and selection ranges.
 2. **Phase 1b, index and completion (done):** the index, the cache, Composer, the language level per project, name resolution, the type layer, hover, definition, type definition, implementation, workspace symbols and completion with auto-import, as described above.
 3. **Phase 2, usages, rename and editing aids (done):** find usages, document highlights, rename, signature help, call and type hierarchies, semantic tokens, inlay hints, completion of overridable methods and a cache that keeps declarations on disk, as described above.
-4. **Phase 3, inspections and fixes:** type-aware diagnostics in the spirit of PHPStan and Psalm (unknown classes and members, wrong argument counts and types, unused imports and variables, missing returns, deprecated usage), with quick fixes and code actions (import a class, implement the missing methods, add a PHPDoc), formatting, and the open points of phase 1b: the types a closure argument gives a template (`array_map` still returns `array`), return types inferred from function bodies, the doc and attribute formats of Laravel and Symfony macros and `@psalm-type` aliases. Also usages in the installed packages, usages found through a reference index that is kept on disk, and interned strings if the memory of the summaries ever matters.
-5. **Phase 4, refactors:** extract, inline, move (a class to another namespace with its file), change signature, built on the lossless tree so formatting and comments survive.
-6. **Phase 5, frameworks:** Composer autoload maps beyond PSR-4, Laravel, Symfony and similar conventions, such as Eloquent attributes, facades, route and view names.
+4. **Phase 3, inspections, fixes and formatting (done):** the inspections, quick fixes, code actions and the formatter described above. Still open from phase 1b: the types a closure argument gives a template (`array_map` still returns `array`), return types inferred from function bodies, the doc and attribute formats of Laravel and Symfony macros and `@psalm-type` aliases. Also usages in the installed packages, usages found through a reference index that is kept on disk, and interned strings if the memory of the summaries ever matters.
+5. **Phase 4, refactors:** extract variable, constant, method and parameter, inline variable and method, move a class to another namespace or folder with its file and every reference, change signature, pull up and push down members, introduce a type or an interface from a class, each as a `WorkspaceEdit` built on the lossless tree and followed by the formatter on the lines it touched, so comments and layout survive. Rename gains the same preview and file moves for namespaces. Formatting gains wrapping of binary chains, arrays, ternaries and method chains, and `.editorconfig` as a source of the indent and line length.
+6. **Phase 5, frameworks:** Composer autoload maps beyond PSR-4 and PSR-0 (classmap authoritative, `files`), then conventions that need more than types. Laravel: Eloquent attributes, relations and scopes, facades and their real classes, route, view, config and translation names, `Collection` and builder generics. Symfony: service ids and the container, route names, Twig templates, Doctrine entities and DQL, attributes such as `#[Route]` and `#[AsCommand]`. PHPUnit and Pest: test and dataset navigation, `$this` in Pest closures, `expect()` chains and their mixins, running a test from a code lens.

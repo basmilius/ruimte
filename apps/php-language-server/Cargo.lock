@@ -588,6 +588,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "php-format"
+version = "0.1.0"
+dependencies = [
+ "expect-test",
+ "php-syntax",
+]
+
+[[package]]
 name = "php-index"
 version = "0.1.0"
 dependencies = [
@@ -615,6 +623,7 @@ dependencies = [
  "lsp-server",
  "lsp-types",
  "php-analysis",
+ "php-format",
  "php-index",
  "php-syntax",
  "serde",

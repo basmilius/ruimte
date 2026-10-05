@@ -150,18 +150,21 @@ impl Server<'_> {
         Some(action)
     }
 
-    /// The edits a typed character asks for: the doc block after `/**` and Enter.
+    /// The edits a typed character asks for: the doc block after `/**` and Enter, else the layout of
+    /// the line the character ended.
     pub(crate) fn on_type_formatting(&mut self, params: DocumentOnTypeFormattingParams) -> Option<Vec<TextEdit>> {
-        let uri = params.text_document_position.text_document.uri;
+        let uri = params.text_document_position.text_document.uri.clone();
         let position = params.text_document_position.position;
-        self.inspect_document(&uri, |env, mapper, _| {
+        let stub = self.inspect_document(&uri, |env, mapper, _| {
             let offset = u32::from(mapper.offset(position));
             if params.ch == "\n" {
-                if let Some(stub) = php_analysis::actions::doc_stub_at(env, offset) {
-                    return lsp_edits(mapper, &[stub]);
-                }
+                return php_analysis::actions::doc_stub_at(env, offset).map(|stub| lsp_edits(mapper, &[stub]));
             }
-            Vec::new()
-        })
+            None
+        })?;
+        match stub {
+            Some(edits) => Some(edits),
+            None => self.typed_formatting(&params).or_else(|| Some(Vec::new())),
+        }
     }
 }

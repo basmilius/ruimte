@@ -7,6 +7,7 @@ mod config;
 mod convert;
 mod documents;
 mod features;
+mod formatting;
 mod hierarchies;
 mod insight;
 mod paths;

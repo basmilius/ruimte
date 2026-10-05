@@ -1637,3 +1637,172 @@ fn a_composer_json_that_appears_below_the_folder_becomes_a_project() {
     );
     client.shutdown();
 }
+
+// Formatting ------------------------------------------------------------------------------------
+
+/// The text after applying LSP edits. The tests use ASCII, so a character is a byte.
+fn apply_edits(text: &str, edits: &Value) -> String {
+    let offset = |position: &Value| {
+        let line = position["line"].as_u64().expect("a line") as usize;
+        let character = position["character"].as_u64().expect("a character") as usize;
+        let start: usize = text.split_inclusive('\n').take(line).map(str::len).sum();
+        start + character
+    };
+    let mut edits: Vec<(usize, usize, String)> = edits
+        .as_array()
+        .expect("edits")
+        .iter()
+        .map(|edit| {
+            (
+                offset(&edit["range"]["start"]),
+                offset(&edit["range"]["end"]),
+                edit["newText"].as_str().expect("text").to_string(),
+            )
+        })
+        .collect();
+    edits.sort_by_key(|edit| std::cmp::Reverse(edit.0));
+    let mut out = text.to_string();
+    for (start, end, replacement) in edits {
+        out.replace_range(start..end, &replacement);
+    }
+    out
+}
+
+const UNFORMATTED: &str = "<?php\nclass A{\npublic function f($a,$b){\nreturn [$a=>$b];\n}\n}\n";
+
+#[test]
+fn formats_a_document_with_the_indent_the_client_asks_for() {
+    let (mut client, result) = Client::start(json!({}), Value::Null);
+    assert_eq!(result["capabilities"]["documentFormattingProvider"], true);
+    assert_eq!(result["capabilities"]["documentRangeFormattingProvider"], true);
+    client.open(URI, UNFORMATTED);
+    client.diagnostics(URI);
+    let edits = client.request(
+        "textDocument/formatting",
+        json!({ "textDocument": { "uri": URI }, "options": { "tabSize": 2, "insertSpaces": true } }),
+    );
+    assert_eq!(
+        apply_edits(UNFORMATTED, &edits),
+        "<?php\nclass A\n{\n  public function f($a, $b)\n  {\n    return [$a => $b];\n  }\n}\n"
+    );
+    let edits = client.request(
+        "textDocument/formatting",
+        json!({ "textDocument": { "uri": URI }, "options": { "tabSize": 4, "insertSpaces": false } }),
+    );
+    assert!(apply_edits(UNFORMATTED, &edits).contains("\n\tpublic function f($a, $b)\n\t{\n\t\treturn"));
+    client.shutdown();
+}
+
+#[test]
+fn leaves_a_document_with_syntax_errors_alone() {
+    let (mut client, _) = Client::start(json!({}), Value::Null);
+    client.open(URI, "<?php\nclass A{\npublic function f(\n");
+    client.diagnostics(URI);
+    let edits = client.request(
+        "textDocument/formatting",
+        json!({ "textDocument": { "uri": URI }, "options": { "tabSize": 4, "insertSpaces": true } }),
+    );
+    assert!(edits.is_null());
+    client.shutdown();
+}
+
+#[test]
+fn formats_a_range_and_the_options_come_from_the_settings() {
+    let (mut client, _) = Client::start(
+        json!({}),
+        json!({ "format": { "classBrace": "sameLine", "functionBrace": "sameLine" } }),
+    );
+    client.open(URI, UNFORMATTED);
+    client.diagnostics(URI);
+    let edits = client.request(
+        "textDocument/rangeFormatting",
+        json!({
+            "textDocument": { "uri": URI },
+            "range": { "start": { "line": 3, "character": 0 }, "end": { "line": 3, "character": 5 } },
+            "options": { "tabSize": 4, "insertSpaces": true }
+        }),
+    );
+    assert_eq!(
+        apply_edits(UNFORMATTED, &edits),
+        "<?php\nclass A{\npublic function f($a,$b){\n        return [$a => $b];\n}\n}\n"
+    );
+    let edits = client.request(
+        "textDocument/formatting",
+        json!({ "textDocument": { "uri": URI }, "options": { "tabSize": 4, "insertSpaces": true } }),
+    );
+    assert!(apply_edits(UNFORMATTED, &edits).starts_with("<?php\nclass A {\n    public function f($a, $b) {\n"));
+    client.shutdown();
+}
+
+#[test]
+fn the_client_can_answer_the_format_settings_per_document() {
+    let (mut client, _) = Client::start(json!({ "workspace": { "configuration": true } }), Value::Null);
+    client.open(URI, UNFORMATTED);
+    let request = client.wait_for(|message| match message {
+        Message::Request(request) if request.method == "workspace/configuration" => Some(request.clone()),
+        _ => None,
+    });
+    client.send(Response::new_ok(
+        request.id,
+        json!([{ "format": { "alignArrayArrows": true, "lineLength": 0 } }]),
+    ));
+    let text = "<?php\n$a = [\n'x' => 1,\n'yyy' => 2,\n];\n";
+    client.notify(
+        "textDocument/didChange",
+        json!({ "textDocument": { "uri": URI, "version": 2 }, "contentChanges": [{ "text": text }] }),
+    );
+    let edits = client.request(
+        "textDocument/formatting",
+        json!({ "textDocument": { "uri": URI }, "options": { "tabSize": 4, "insertSpaces": true } }),
+    );
+    assert_eq!(
+        apply_edits(text, &edits),
+        "<?php\n$a = [\n    'x'   => 1,\n    'yyy' => 2,\n];\n"
+    );
+    client.shutdown();
+}
+
+#[test]
+fn formats_the_line_a_typed_brace_or_newline_belongs_to() {
+    let (mut client, result) = Client::start(json!({}), Value::Null);
+    assert_eq!(
+        result["capabilities"]["documentOnTypeFormattingProvider"]["moreTriggerCharacter"],
+        json!(["}", ";"])
+    );
+    let text = "<?php\nfunction a()\n{\nif ($x) {\nfoo();\n}\n}\n";
+    client.open(URI, text);
+    client.diagnostics(URI);
+    let on_type = |client: &mut Client, line: u32, character: u32, ch: &str| {
+        client.request(
+            "textDocument/onTypeFormatting",
+            json!({
+                "textDocument": { "uri": URI },
+                "position": { "line": line, "character": character },
+                "ch": ch,
+                "options": { "tabSize": 4, "insertSpaces": true }
+            }),
+        )
+    };
+    let edits = on_type(&mut client, 5, 1, "}");
+    assert_eq!(
+        apply_edits(text, &edits),
+        "<?php\nfunction a()\n{\nif ($x) {\nfoo();\n    }\n}\n"
+    );
+    let edits = on_type(&mut client, 4, 6, ";");
+    assert_eq!(
+        apply_edits(text, &edits),
+        "<?php\nfunction a()\n{\nif ($x) {\n        foo();\n}\n}\n"
+    );
+
+    let unfinished = "<?php\nclass A\n{\n    public function f()\n    {\n\n";
+    client.notify(
+        "textDocument/didChange",
+        json!({ "textDocument": { "uri": URI, "version": 2 }, "contentChanges": [{ "text": unfinished }] }),
+    );
+    let edits = on_type(&mut client, 5, 0, "\n");
+    assert_eq!(
+        apply_edits(unfinished, &edits),
+        "<?php\nclass A\n{\n    public function f()\n    {\n        \n"
+    );
+    client.shutdown();
+}
