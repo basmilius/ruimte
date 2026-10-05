@@ -12,6 +12,7 @@ import type { EditorLanguage } from './editor-language';
 import type { ExplainView } from './explain';
 import { codeLabelOf, severityOf, type Problem } from './diagnostics-model';
 import type { HoverInfo } from './popups';
+import { nameOf } from './status-view';
 import { SymbolSections } from './HoverSections';
 
 const SEVERITY_ICONS = { error: CircleX, warning: TriangleAlert, info: Info, hint: Info } as const;
@@ -23,7 +24,9 @@ function ProblemSection({ problem, language }: { problem: Problem; language: Edi
     const agents = useAskAgents();
     const { diagnostic } = problem;
     const severity = severityOf(diagnostic);
-    const label = [codeLabelOf(diagnostic), problem.server].filter((part, index, all) => part !== '' && all.indexOf(part) === index).join(' · ');
+    // A source already says where a problem comes from; the server only names one that has none.
+    const label =
+        diagnostic.source === undefined ? [codeLabelOf(diagnostic), nameOf(problem.server)].filter((part) => part !== '').join(' · ') : codeLabelOf(diagnostic);
     const supported = language.codeActions.supported;
 
     return (
