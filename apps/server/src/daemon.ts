@@ -866,6 +866,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         chat: (chatId) => provenanceChat(chats, chatId)
     });
     chats.observe((event) => provenance.consume(event));
+    projects.attachProvenance(provenance);
     registerProvenanceHandlers(dispatcher, provenance, machineHome);
     registerFsHandlers(
         dispatcher,

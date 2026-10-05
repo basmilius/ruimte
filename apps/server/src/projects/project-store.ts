@@ -165,6 +165,11 @@ export interface ProjectLanguage {
     end(projectId: string): Promise<void>;
 }
 
+/* What the store needs of the provenance records: they go with the project. */
+export interface ProjectProvenance {
+    forget(projectId: string): Promise<void>;
+}
+
 /* What a change hands back: the whole new content, and whatever the caller wants to answer with. */
 export interface ProjectMutation<T> {
     /* Null when nothing changed, which is what a dry run leaves behind: it runs every check under
@@ -255,6 +260,7 @@ export class ProjectStore {
 
     private launches: ProjectLaunches | null = null;
     private language: ProjectLanguage | null = null;
+    private provenance: ProjectProvenance | null = null;
 
     constructor(home: string, seams: WatchSeams = SYSTEM_WATCH, writeIO: ProjectWriteIO = PROJECT_WRITE_IO) {
         this.home = home;
@@ -279,6 +285,10 @@ export class ProjectStore {
 
     attachLanguage(language: ProjectLanguage): void {
         this.language = language;
+    }
+
+    attachProvenance(provenance: ProjectProvenance): void {
+        this.provenance = provenance;
     }
 
     /* Only `save` tells it, which only a client's `project.save` calls: a verb, a watcher or a pull never does. */
@@ -1010,6 +1020,8 @@ export class ProjectStore {
         this.index.remove(projectId);
         await this.saveRegistry(entries.filter((candidate) => candidate.projectId !== projectId));
         await rm(this.localPath(projectId), { force: true });
+        // Who wrote which lines of a project that is gone is of no use to anyone, and it lives in the daemon's own folder.
+        await this.provenance?.forget(projectId).catch((e: unknown) => console.warn(`Forgetting the provenance of project ${projectId} failed:`, errorText(e)));
         if (!removeFiles) {
             return;
         }

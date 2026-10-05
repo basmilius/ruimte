@@ -402,6 +402,15 @@ describe('what happens to a run afterwards', () => {
         expect(t.heard.map((event) => (event.event === 'provenance.changed' ? event.payload.live : null))).toEqual([false]);
     });
 
+    test('forgetting a project drops the records of all its files and leaves nothing to read', async () => {
+        const t = await withRun();
+        expect((await t.service.read('p1', t.path)).runs).toHaveLength(1);
+
+        await t.service.forget('p1');
+        expect((await t.service.read('p1', t.path)).runs).toEqual([]);
+        await t.service.forget('p1');
+    });
+
     test('a client cannot ask about a path outside the project', async () => {
         const t = await withRun();
         await expect(t.service.read('p1', '/etc/hosts')).rejects.toMatchObject({ code: 'forbidden' });

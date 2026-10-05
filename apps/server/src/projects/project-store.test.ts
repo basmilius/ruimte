@@ -222,6 +222,23 @@ describe('ProjectStore', () => {
         expect((await store.list()).map((project) => project.projectId)).not.toContain(opened.summary.projectId);
     });
 
+    test('deleting a project has the provenance records of it forgotten, with or without its files, and a refusal there does not stop the delete', async () => {
+        const forgotten: string[] = [];
+        store.attachProvenance({ forget: async (id) => void forgotten.push(id) });
+        const first = await store.openProject({ folder });
+        await store.delete(first.summary.projectId, false);
+        expect(forgotten).toEqual([first.summary.projectId]);
+
+        store.attachProvenance({
+            forget: async () => {
+                throw new Error('disk full');
+            }
+        });
+        const second = await store.openProject({ folder });
+        await store.delete(second.summary.projectId, true);
+        expect((await store.list()).map((project) => project.projectId)).not.toContain(second.summary.projectId);
+    });
+
     test('deleting a folder project without removing files keeps the canvas on disk', async () => {
         const opened = await store.openProject({ folder });
         await store.delete(opened.summary.projectId, false);

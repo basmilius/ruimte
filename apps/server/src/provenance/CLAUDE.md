@@ -9,5 +9,5 @@ The invariants of this folder. The repository root's `CLAUDE.md` has the map, th
 - Provenance ends where git blame begins: a line the file at HEAD holds unchanged is dropped, whoever wrote it. Never keep a run to show it next to a commit.
 - A run is a place and not an identity: it is mapped through every change of the file by line hashes, and a run cut in pieces keeps one id so a review of it reaches every piece. Lines a change replaced lose their run.
 - Only a file inside the project's folder counts, and every request is held to that folder and to `MachineHome` like a file request. A chat in a worktree marks files of that worktree, which are not the project's.
-- The records are bounded: runs older than 30 days, files that are gone, 300 records per project, 500 runs per file, and `before` only up to 200 lines or 16 KB (it is left out, never cut, since half of it would put back a broken file).
+- The records are bounded: runs older than 30 days, files that are gone, a project that left the registry (`ProjectStore.delete` calls `forget`), 300 records per project, 500 runs per file, and `before` only up to 200 lines or 16 KB (it is left out, never cut, since half of it would put back a broken file).
 - Nothing here changes a file, and nothing schedules work on a clock.

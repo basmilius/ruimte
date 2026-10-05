@@ -60,6 +60,11 @@ export class ProvenanceStore {
         await rm(join(this.dirOf(projectId), name), { force: true });
     }
 
+    /* Every record of a project, with the folder that held them. */
+    async removeProject(projectId: string): Promise<void> {
+        await rm(this.dirOf(projectId), { recursive: true, force: true });
+    }
+
     /* Whether a project already has a record for this file, which tells a new file from one that is only updated. */
     async has(projectId: string, path: string): Promise<boolean> {
         return stat(join(this.dirOf(projectId), recordNameOf(path))).then(

@@ -190,6 +190,13 @@ export class ProvenanceService {
         });
     }
 
+    /* Drops every record of a project that left the registry, once the writes that were in flight are done. */
+    async forget(projectId: string): Promise<void> {
+        await this.idle();
+        this.lastSweep.delete(projectId);
+        await this.store.removeProject(projectId);
+    }
+
     /* Every file request stops at the project's folder, so a client cannot read the records of a path it could not read. */
     private require(projectId: string, path: string): void {
         const folder = this.options.folderOf(projectId);
