@@ -4,7 +4,9 @@ import type { LanguageServerKind, LanguageServerState, LanguageServerStatus } fr
 export const SERVER_NAMES: Record<LanguageServerKind, { name: string; package: string }> = {
     typescript: { name: 'TypeScript', package: 'typescript' },
     vue: { name: 'Vue', package: '@vue/language-server' },
-    php: { name: 'PHP', package: 'Intelephense' },
+    // Ruimte's own PHP server is the default and takes the plain name; Intelephense is the alternative.
+    'php-native': { name: 'PHP', package: 'php-language-server' },
+    php: { name: 'Intelephense', package: 'intelephense' },
     css: { name: 'CSS', package: 'vscode-langservers-extracted' },
     html: { name: 'HTML', package: 'vscode-langservers-extracted' },
     json: { name: 'JSON', package: 'vscode-langservers-extracted' },
@@ -52,7 +54,7 @@ export const SERVER_GROUPS = [
     { id: 'scripts', kinds: ['typescript', 'vue', 'eslint'] },
     { id: 'web', kinds: ['html', 'css', 'tailwind'] },
     { id: 'data', kinds: ['json', 'yaml'] },
-    { id: 'other', kinds: ['php', 'python', 'bash', 'docker'] }
+    { id: 'other', kinds: ['php-native', 'php', 'python', 'bash', 'docker'] }
 ] as const satisfies readonly { id: string; kinds: readonly LanguageServerKind[] }[];
 
 export type ServerGroupId = (typeof SERVER_GROUPS)[number]['id'];
@@ -79,9 +81,14 @@ function isActive(state: LanguageServerState): boolean {
     return state !== 'not-installed' && state !== 'stopped';
 }
 
-/* The servers the status popover lists: the ones that serve the open file, and any other that is up or has failed. */
+/* The servers the status popover lists: the ones that serve the open file, and any other that is up or has failed. The alternative the machine does not use is left to the switch on the one it does. */
 export function listedServers(statuses: readonly LanguageServerStatus[], serving: readonly string[]): LanguageServerStatus[] {
-    return statuses.filter((status) => serving.includes(status.server) || isActive(status.state));
+    return statuses.filter((status) => status.chosen !== false && (serving.includes(status.server) || isActive(status.state)));
+}
+
+/* The server that serves the same language instead of this one, when this is the one the machine uses. */
+export function alternativeTo(status: LanguageServerStatus, statuses: readonly LanguageServerStatus[]): LanguageServerStatus | null {
+    return status.chosen === true ? (statuses.find((candidate) => candidate.chosen === false) ?? null) : null;
 }
 
 /* The one a file's chip reports: the first server that serves it, or any that is up. */
@@ -98,7 +105,7 @@ export function chipServer(statuses: readonly LanguageServerStatus[], serving: r
 /* What can be done to a server in this state, and only that. A server of a person's own is never installed. */
 export function actionsOf(status: LanguageServerStatus): { install: boolean; restart: boolean; log: boolean } {
     return {
-        install: status.state === 'not-installed' && !isOwn(status),
+        install: status.state === 'not-installed' && !isOwn(status) && status.unavailable !== true,
         restart: status.state === 'crashed' || status.state === 'ready' || status.state === 'indexing',
         log: status.state !== 'not-installed' || status.message !== undefined
     };

@@ -64,6 +64,12 @@ export class LanguageStatusTracker {
         this.machineChanged(status);
     }
 
+    /* A person chose this server for its language over the one that serves it otherwise. The other one's change comes as an event. */
+    async prefer(server: LanguageServerKind): Promise<void> {
+        const { status } = await this.transport.request('language.prefer', { server });
+        this.machineChanged(status);
+    }
+
     async restart(server: string): Promise<void> {
         const { status } = await this.transport.request('language.restart', { projectId: this.projectId, server });
         this.set(status);

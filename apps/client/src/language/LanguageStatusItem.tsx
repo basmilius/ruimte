@@ -6,7 +6,7 @@ import type { EditorLanguage } from './editor-language';
 import { Dot, LogDialog } from './ServerParts';
 import { report, serverDetail, sidecarDetails, useStatuses } from './server-status';
 import type { LanguageStatusTracker } from './status';
-import { actionsOf, chipServer, kindOf, listedServers, nameOf, packageOf, toneOf } from './status-view';
+import { actionsOf, alternativeTo, chipServer, kindOf, listedServers, nameOf, packageOf, toneOf } from './status-view';
 import { useServingKinds } from './use-serving-kinds';
 
 /*
@@ -92,6 +92,8 @@ function ServerRow({
     const actions = actionsOf(status);
     const fail = (error: unknown): void => report(error, t);
     const detail = serverDetail(status, t);
+    const alternative = alternativeTo(status, statuses);
+    const alternativeKind = alternative === null ? null : kindOf(alternative.server);
 
     return (
         <div className="flex flex-col gap-1 rounded-md px-2 py-1.5">
@@ -108,8 +110,8 @@ function ServerRow({
                     {line}
                 </div>
             ))}
-            {(actions.install || actions.restart || actions.log) && (
-                <div className="flex gap-2 pl-4">
+            {(actions.install || actions.restart || actions.log || alternativeKind !== null) && (
+                <div className="flex flex-wrap gap-2 pl-4">
                     {kind !== null && actions.install && (
                         <Button size="xs" variant="secondary" onClick={() => void tracker.install(kind).catch(fail)}>
                             {t('language.install')}
@@ -123,6 +125,11 @@ function ServerRow({
                     {actions.log && (
                         <Button size="xs" onClick={onLog}>
                             {t('language.showLog')}
+                        </Button>
+                    )}
+                    {alternative !== null && alternativeKind !== null && (
+                        <Button size="xs" onClick={() => void tracker.prefer(alternativeKind).catch(fail)}>
+                            {t('language.useInstead', { name: nameOf(alternative.server, statuses) })}
                         </Button>
                     )}
                 </div>

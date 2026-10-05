@@ -51,6 +51,26 @@ describe('language status', () => {
         expect(transport.callsOf('language.status')).toHaveLength(2);
     });
 
+    test('asks the daemon to use the other PHP server and takes the answer and the event for the one it replaced', async () => {
+        const transport = new FakeLanguageTransport();
+        transport.answers.set('language.status', () => ({
+            servers: [status('php-native', 'stopped', { chosen: false }), status('php', 'not-installed', { chosen: true })]
+        }));
+        transport.answers.set('language.prefer', () => ({ status: status('php-native', 'ready', { chosen: true }) }));
+        const tracker = new LanguageStatusTracker(transport, 'p1');
+        await tracker.refresh();
+        transport.answers.set('language.status', () => ({
+            servers: [status('php-native', 'ready', { chosen: true }), status('php', 'not-installed', { chosen: true })]
+        }));
+        await tracker.prefer('php-native');
+        await settle();
+        transport.emit('language.status', { projectId: null, status: status('php', 'not-installed', { chosen: false }) });
+        expect(tracker.getSnapshot().map((entry) => [entry.server, entry.chosen])).toEqual([
+            ['php-native', true],
+            ['php', false]
+        ]);
+    });
+
     test('restarts, reads the log and asks again when the link comes back', async () => {
         const transport = new FakeLanguageTransport();
         transport.answers.set('language.restart', () => ({ status: status('typescript', 'ready') }));

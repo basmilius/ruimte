@@ -105,6 +105,12 @@ function ServerRow({ status, statuses, tracker, searchId, onLog }: ServerRowProp
             control={
                 <>
                     <span className="text-xs text-text-muted">{t(`language.state.${status.state}`)}</span>
+                    {status.chosen === true && <span className="text-xs text-text-muted">{t('language.inUse')}</span>}
+                    {kind !== null && status.chosen === false && (
+                        <Button size="sm" variant="secondary" onClick={() => void tracker.prefer(kind).catch(fail)}>
+                            {t('language.use')}
+                        </Button>
+                    )}
                     {kind !== null && actions.install && (
                         <Button size="sm" variant="secondary" onClick={() => void tracker.install(kind).catch(fail)}>
                             {t('language.install')}

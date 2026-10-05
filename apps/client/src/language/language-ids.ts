@@ -26,7 +26,7 @@ const SERVER_KINDS: Record<string, LanguageServerKind> = {
     javascript: 'typescript',
     javascriptreact: 'typescript',
     vue: 'vue',
-    php: 'php',
+    php: 'php-native',
     css: 'css',
     scss: 'css',
     less: 'css',

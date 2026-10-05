@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { LanguageServerStatus } from '@ruimte/contracts';
-import { actionsOf, chipServer, groupedStatuses, isOwn, listedServers, nameOf, packageOf, toneOf } from './status-view';
+import { actionsOf, alternativeTo, chipServer, groupedStatuses, isOwn, listedServers, nameOf, packageOf, toneOf } from './status-view';
 
 function status(server: string, state: LanguageServerStatus['state'], extra: Partial<LanguageServerStatus> = {}): LanguageServerStatus {
     return { server, state, version: '1.0.0', documents: 0, ...extra };
@@ -10,6 +10,30 @@ describe('listedServers', () => {
     test('lists the server of the file, installed or not, and any other one that is up', () => {
         const all = [status('typescript', 'not-installed'), status('vue', 'ready'), status('php', 'stopped')];
         expect(listedServers(all, ['typescript']).map((entry) => entry.server)).toEqual(['typescript', 'vue']);
+    });
+});
+
+describe('the two PHP servers', () => {
+    const chosen = status('php-native', 'ready', { chosen: true });
+    const other = status('php', 'stopped', { chosen: false });
+
+    test("are named for what they are, Ruimte's server as plain PHP", () => {
+        expect(nameOf('php-native')).toBe('PHP');
+        expect(nameOf('php')).toBe('Intelephense');
+        expect(packageOf('php-native')).toBe('php-language-server');
+    });
+
+    test('list only the one the machine uses, and name the other as what to switch to', () => {
+        expect(listedServers([chosen, other], ['php-native']).map((entry) => entry.server)).toEqual(['php-native']);
+        expect(listedServers([chosen, status('php', 'crashed', { chosen: false })], []).map((entry) => entry.server)).toEqual(['php-native']);
+        expect(alternativeTo(chosen, [chosen, other])).toBe(other);
+        expect(alternativeTo(other, [chosen, other])).toBeNull();
+        expect(alternativeTo(status('css', 'ready'), [chosen, other])).toBeNull();
+    });
+
+    test('offer no Install for a server this build has none of', () => {
+        expect(actionsOf(status('php-native', 'not-installed', { unavailable: true })).install).toBe(false);
+        expect(actionsOf(status('php-native', 'not-installed')).install).toBe(true);
     });
 });
 
@@ -59,11 +83,18 @@ describe('the servers of a person of their own', () => {
 
 describe('groupedStatuses', () => {
     test('puts the catalog under what it is for, in order, leaves out a group nothing is in, and keeps a server it does not know', () => {
-        const all = [status('php', 'stopped'), status('css', 'ready'), status('typescript', 'ready'), status('future', 'stopped'), own('custom:a')];
+        const all = [
+            status('php', 'stopped'),
+            status('php-native', 'stopped'),
+            status('css', 'ready'),
+            status('typescript', 'ready'),
+            status('future', 'stopped'),
+            own('custom:a')
+        ];
         expect(groupedStatuses(all).map((group) => [group.id, group.statuses.map((entry) => entry.server)])).toEqual([
             ['scripts', ['typescript']],
             ['web', ['css']],
-            ['other', ['php', 'future']]
+            ['other', ['php-native', 'php', 'future']]
         ]);
     });
 });

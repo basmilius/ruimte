@@ -25,6 +25,9 @@ export function serverDetail(status: LanguageServerStatus, t: TFunction<'panels'
     if (status.state === 'crashed' || (status.state === 'not-installed' && status.message !== undefined)) {
         return status.message ?? '';
     }
+    if (status.state === 'not-installed' && status.unavailable === true) {
+        return t('language.unavailable');
+    }
     if (status.state === 'not-installed') {
         return t('language.installDetail', { name: nameOf(status.server, [status]), version: status.version });
     }
