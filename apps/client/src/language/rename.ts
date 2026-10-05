@@ -1,15 +1,25 @@
 import i18next from 'i18next';
-import { StaleResultError, type PrepareRenameResult, type WorkspaceEdit } from '@ruimte/smart-editor-lsp';
+import { StaleResultError, type Location, type PrepareRenameResult, type WorkspaceEdit } from '@ruimte/smart-editor-lsp';
 import type { EditorRange } from '@ruimte/smart-editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { parseNames } from '@/ondevice/names-model';
+import { onDeviceClientFor } from '@/ondevice/ondevice-client';
+import { namesPrompt } from '@/ondevice/prompts';
+import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import type { EditorLanguage } from './editor-language';
+import { shikiLanguageOf } from './language-ids';
 import type { RenameView } from './popups';
 import { occurrencesOf, renamePreviewOf, renameTargetOf, wordRangeAt, type RenameTarget } from './rename-model';
 import { isShortcut } from './shortcut-keys';
 
 const METHOD = 'textDocument/rename';
 const TOAST_ID = 'language-rename';
+/* How many names are offered, and how many other lines and files are read to say how the symbol is used. */
+const SUGGESTIONS = 3;
+const SAMPLE_LOCATIONS = 8;
+const SAMPLE_OTHER_FILES = 3;
+const CONTEXT_LINES = 3;
 
 function say(key: string, options?: Record<string, unknown>): string {
     return i18next.t(`panels:language.rename.${key}`, options);
@@ -24,6 +34,8 @@ interface Session {
     readonly original: string;
     /* Set once the preview asked for the edit, so Enter applies exactly what was shown. */
     edit: WorkspaceEdit | null;
+    /* The request for names, which ends with the rename. */
+    readonly names: AbortController;
 }
 
 /*
@@ -91,10 +103,10 @@ export class RenameFeature {
             tell('error', say('nothing'));
             return;
         }
-        const session: Session = { target, original: editor.textInRange(target.range), edit: null };
+        const session: Session = { target, original: editor.textInRange(target.range), edit: null, names: new AbortController() };
         this.session = session;
-        this.publish({ phase: 'input', busy: false, name: target.placeholder, files: [], occurrences: null });
-        void this.light(session);
+        this.publish({ phase: 'input', busy: false, name: target.placeholder, files: [], occurrences: null, suggestions: [] });
+        void this.light(session).then((locations) => this.suggest(session, locations));
     }
 
     /* The name was typed: Enter applies it, Shift+Enter lists what it would change first. */
@@ -184,6 +196,7 @@ export class RenameFeature {
     }
 
     private finish(): void {
+        this.session?.names.abort();
         this.session = null;
         const { editor, popups } = this.language;
         popups.setState({ rename: null });
@@ -191,23 +204,79 @@ export class RenameFeature {
         editor.focus();
     }
 
-    /* Lights up the places the name has in this file, and counts them all. */
-    private async light(session: Session): Promise<void> {
+    /* Lights up the places the name has in this file, and counts them all; what the servers listed, or null when they did not. */
+    private async light(session: Session): Promise<readonly Location[] | null> {
         const { editor, project, uri } = this.language;
         if (!project.service.supports('textDocument/references', uri)) {
-            return;
+            return null;
         }
         try {
             const locations = await project.service.references(uri, session.target.range.start, true);
             if (this.session !== session || locations === null) {
-                return;
+                return null;
             }
             const found = occurrencesOf(locations, uri);
             editor.setHighlights(found.inFile.map((range: EditorRange) => ({ range, kind: 'write' as const })));
             this.publish({ occurrences: { count: found.count, files: found.files } });
+            return locations;
         } catch {
             // The count is a courtesy; renaming does not wait for it.
+            return null;
         }
+    }
+
+    /*
+     * Names from the model on the machine, from the lines around the symbol and a sample of the lines that
+     * use it. They only appear under the input: the name that is typed stays the one that is applied.
+     */
+    private async suggest(session: Session, locations: readonly Location[] | null): Promise<void> {
+        if (!useSettings.getState().aiOnDeviceHelp || this.session !== session) {
+            return;
+        }
+        const { editor, project, languageId } = this.language;
+        try {
+            const client = onDeviceClientFor(project.transport);
+            if (!(await client.availability()).available || this.session !== session) {
+                return;
+            }
+            const line = session.target.range.start.line;
+            const context = editor.textInRange({
+                start: { line: Math.max(0, line - CONTEXT_LINES), character: 0 },
+                end: { line: line + CONTEXT_LINES, character: Number.MAX_SAFE_INTEGER }
+            });
+            const uses = await this.linesOf(locations ?? []);
+            const result = await client.generate(
+                { purpose: 'names', prompt: namesPrompt({ language: shikiLanguageOf(languageId), name: session.original, context, uses }) },
+                session.names.signal
+            );
+            const names = result.state === 'done' ? parseNames(result.text, session.original, languageId, SUGGESTIONS) : [];
+            if (this.session === session && names.length > 0) {
+                this.publish({ suggestions: names });
+            }
+        } catch {
+            // Suggestions are a courtesy; a model that cannot answer leaves the input as it is.
+        }
+    }
+
+    /* The text of the first lines that name the symbol, in the order the servers listed them, reading at most a few other files. */
+    private async linesOf(locations: readonly Location[]): Promise<string[]> {
+        const { project } = this.language;
+        const texts = new Map<string, string[] | null>();
+        const lines: string[] = [];
+        let others = 0;
+        for (const location of locations.slice(0, SAMPLE_LOCATIONS)) {
+            if (!texts.has(location.uri)) {
+                if (location.uri !== this.language.uri && others++ >= SAMPLE_OTHER_FILES) {
+                    continue;
+                }
+                texts.set(location.uri, (await project.readText(location.uri))?.split('\n') ?? null);
+            }
+            const text = texts.get(location.uri)?.[location.range.start.line];
+            if (text !== undefined && text.trim() !== '' && !lines.includes(text)) {
+                lines.push(text);
+            }
+        }
+        return lines;
     }
 
     private publish(patch: Partial<RenameView>): void {
@@ -228,6 +297,7 @@ export class RenameFeature {
                 error: null,
                 name: session.target.placeholder,
                 files: [],
+                suggestions: [],
                 ...current,
                 ...patch
             }

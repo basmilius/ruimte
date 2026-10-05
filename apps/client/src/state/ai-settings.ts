@@ -40,3 +40,14 @@ export function inlineEditAccountOn(accounts: ProviderAccounts | null | undefine
 export function agentChangesModeFrom(stored: unknown): AgentChangesMode {
     return AGENT_CHANGES_MODES.find((mode) => mode === stored) ?? DEFAULT_AGENT_CHANGES_MODE;
 }
+
+/* Whether the editor asks the on-device model for a continuation: never, or when a person presses the key. */
+export const GHOST_TEXT_MODES = ['off', 'request'] as const;
+
+export type GhostTextMode = (typeof GHOST_TEXT_MODES)[number];
+
+export const DEFAULT_GHOST_TEXT_MODE: GhostTextMode = 'request';
+
+export function ghostTextModeFrom(stored: unknown): GhostTextMode {
+    return GHOST_TEXT_MODES.find((mode) => mode === stored) ?? DEFAULT_GHOST_TEXT_MODE;
+}

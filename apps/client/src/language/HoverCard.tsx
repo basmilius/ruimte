@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { CircleX, Info, TriangleAlert } from 'lucide-react';
+import { useStore } from 'zustand';
+import { CircleX, Cpu, Info, TriangleAlert } from 'lucide-react';
 import { fileUriToPath } from '@ruimte/smart-editor-lsp';
 import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { Button, Icon, Tooltip } from '@basmilius/desktop-ui';
@@ -8,6 +9,7 @@ import { basenameOf } from '@/shell/panels/files-tree';
 import type { EditorPosition } from '@ruimte/smart-editor';
 import { useAskAgents } from './ask-agents';
 import type { EditorLanguage } from './editor-language';
+import type { ExplainView } from './explain';
 import { codeLabelOf, severityOf, type Problem } from './diagnostics-model';
 import type { HoverInfo } from './popups';
 import { SymbolSections } from './HoverSections';
@@ -80,7 +82,43 @@ function ProblemSection({ problem, language }: { problem: Problem; language: Edi
     );
 }
 
-function InfoSection({ language, info, anchor, position }: { language: EditorLanguage; info: HoverInfo; anchor: EditorPosition; position: EditorPosition }) {
+/* The explanation the model on the machine wrote, which fills in as it streams. */
+function ExplainSection({ view }: { view: ExplainView }) {
+    const { t } = useTranslation('panels');
+    return (
+        <div className="flex flex-col gap-1.5 px-3 pt-2.5 pb-3">
+            <Tooltip label={t('language.onDevice.note')}>
+                <span className="flex items-center gap-1.5 text-xs text-text-faint">
+                    <Icon icon={Cpu} size={12} className="shrink-0" />
+                    {t('language.onDevice.explanation')}
+                </span>
+            </Tooltip>
+            {view.phase === 'error' ? (
+                <div role="alert" className="text-xs/[19px] break-words text-status-error">
+                    {view.error}
+                </div>
+            ) : (
+                <div className={`text-xs/[19px] break-words whitespace-pre-wrap select-text ${view.text === '' ? 'text-text-faint' : 'text-text'}`}>
+                    {view.text === '' ? t('language.onDevice.thinking') : view.text}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function InfoSection({
+    language,
+    info,
+    anchor,
+    position,
+    explain
+}: {
+    language: EditorLanguage;
+    info: HoverInfo;
+    anchor: EditorPosition;
+    position: EditorPosition;
+    explain: ExplainView;
+}) {
     const { t } = useTranslation('panels');
     const { text, definition } = info;
     const place = definition === null ? null : fileUriToPath(definition.uri);
@@ -95,11 +133,14 @@ function InfoSection({ language, info, anchor, position }: { language: EditorLan
     return (
         <div className="flex flex-col divide-y divide-border">
             <SymbolSections text={text} onName={followName} />
-            {definition !== null && (
+            {explain.phase !== 'idle' && <ExplainSection view={explain} />}
+            {(definition !== null || explain.offered) && (
                 <div className="flex items-center gap-3 border-t border-border px-3 py-1.5 text-xs">
-                    <button type="button" className="text-accent hover:underline" onClick={() => language.goTo(definition)}>
-                        {t('language.hover.definition')}
-                    </button>
+                    {definition !== null && (
+                        <button type="button" className="text-accent hover:underline" onClick={() => language.goTo(definition)}>
+                            {t('language.hover.definition')}
+                        </button>
+                    )}
                     {info.references !== null && info.references > 0 && (
                         <button
                             type="button"
@@ -112,7 +153,14 @@ function InfoSection({ language, info, anchor, position }: { language: EditorLan
                             {t('language.hover.references', { count: info.references, formatted: formatNumber(info.references) })}
                         </button>
                     )}
-                    {place !== null && (
+                    {explain.offered && (
+                        <Tooltip label={t('language.onDevice.note')}>
+                            <button type="button" className="text-accent hover:underline" onClick={() => void language.explain.explainCard()}>
+                                {t('language.onDevice.explain')}
+                            </button>
+                        </Tooltip>
+                    )}
+                    {place !== null && definition !== null && (
                         <span className="ml-auto font-mono text-text-faint">
                             {basenameOf(place)}:{definition.range.start.line + 1}
                         </span>
@@ -137,9 +185,11 @@ export function HoverCard({
     anchor: EditorPosition;
     position: EditorPosition;
 }) {
+    const explain = useStore(language.explain.store);
     return (
         <div className="flex w-max min-w-[280px] max-w-[min(520px,calc(100vw-16px))] flex-col divide-y divide-border">
-            {info !== null && <InfoSection language={language} info={info} anchor={anchor} position={position} />}
+            {info !== null && <InfoSection language={language} info={info} anchor={anchor} position={position} explain={explain} />}
+            {info === null && explain.phase !== 'idle' && <ExplainSection view={explain} />}
             {problems.map((problem, index) => (
                 <ProblemSection key={index} problem={problem} language={language} />
             ))}

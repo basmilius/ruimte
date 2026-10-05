@@ -609,7 +609,9 @@
             "peekDefinition": "Peek definition",
             "historyBack": "Go back to the previous location",
             "historyForward": "Go forward to the next location",
-            "recentLocations": "Show recent locations"
+            "recentLocations": "Show recent locations",
+            "explain": "Explain code",
+            "suggestInline": "Suggest code"
         },
         "sections": {
             "recent": "Recent",
@@ -855,6 +857,8 @@
         "historyBack": "Back",
         "historyForward": "Forward",
         "recentLocations": "Recent Locations…",
-        "folding": "Folding"
+        "folding": "Folding",
+        "explain": "Explain Code",
+        "suggestInline": "Suggest Code"
     }
 }

@@ -1,6 +1,8 @@
 import type { AgentKind } from '@ruimte/contracts';
 import {
     Activity,
+    Cpu,
+    WandSparkles,
     Sparkles,
     Book,
     BookOpen,
@@ -229,6 +231,8 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     'selection-to-chat': MessageSquarePlus,
     'inline-edit': Sparkles,
     'show-inline-edit': ScanSearch,
+    explain: Cpu,
+    'suggest-inline': WandSparkles,
     'next-highlight': ArrowDown,
     'previous-highlight': ArrowUp,
     'find-in-files': Search,

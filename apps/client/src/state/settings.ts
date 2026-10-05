@@ -9,9 +9,12 @@ import type { EditorFoldOutline, EditorSmartKeys } from '@ruimte/smart-editor';
 import {
     agentChangesModeFrom,
     DEFAULT_AGENT_CHANGES_MODE,
+    DEFAULT_GHOST_TEXT_MODE,
     DEFAULT_INLINE_EDIT_AGENT,
+    ghostTextModeFrom,
     inlineEditAgentFrom,
     type AgentChangesMode,
+    type GhostTextMode,
     type InlineEditAgent
 } from '@/state/ai-settings';
 import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING } from '@/state/code-folding';
@@ -179,6 +182,10 @@ export interface Settings {
     aiAgentChanges: AgentChangesMode;
     /* Whether the gutter marks the lines an agent wrote. */
     aiAttribution: boolean;
+    /* Whether the hover explains code and rename suggests names, both with the model on the machine. */
+    aiOnDeviceHelp: boolean;
+    /* When the editor asks the model on the machine for ghost text. */
+    aiGhostText: GhostTextMode;
     /* Whether a font draws `=>` or `!==` as one glyph. Off sets the whole document, since the diffs draw in a shadow root that only inheritance reaches. */
     codeLigatures: boolean;
     /* What the editor does by itself as you type. The defaults are the editor's own: all on, except the camel humps. */
@@ -281,6 +288,8 @@ const DEFAULT_SETTINGS: Settings = {
     aiInlineAgent: { ...DEFAULT_INLINE_EDIT_AGENT },
     aiAgentChanges: DEFAULT_AGENT_CHANGES_MODE,
     aiAttribution: true,
+    aiOnDeviceHelp: true,
+    aiGhostText: DEFAULT_GHOST_TEXT_MODE,
     codeLigatures: true,
     smartKeys: { ...DEFAULT_SMART_KEYS },
     diffLayout: 'stacked',
@@ -348,6 +357,8 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         aiInlineAgent: inlineEditAgentFrom(stored.aiInlineAgent),
         aiAgentChanges: agentChangesModeFrom(stored.aiAgentChanges),
         aiAttribution: stored.aiAttribution !== false,
+        aiOnDeviceHelp: stored.aiOnDeviceHelp !== false,
+        aiGhostText: ghostTextModeFrom(stored.aiGhostText),
         codeLigatures: stored.codeLigatures !== false,
         smartKeys: smartKeysFrom(stored.smartKeys),
         // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
@@ -469,6 +480,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 aiInlineAgent,
                 aiAgentChanges,
                 aiAttribution,
+                aiOnDeviceHelp,
+                aiGhostText,
                 codeLigatures,
                 smartKeys,
                 diffLayout,
@@ -520,6 +533,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 aiInlineAgent,
                 aiAgentChanges,
                 aiAttribution,
+                aiOnDeviceHelp,
+                aiGhostText,
                 codeLigatures,
                 smartKeys,
                 diffLayout,

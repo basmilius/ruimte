@@ -153,6 +153,22 @@
             "attribution": {
                 "label": "Toeschrijving in de gutter",
                 "description": "Markeert de regels die een agent schreef. Hover toont de chat en de turn."
+            },
+            "onDevice": {
+                "title": "Op het apparaat",
+                "help": {
+                    "label": "Uitleg en naamsuggesties",
+                    "description": "Gebruikt Apple Foundation Models op deze Mac. Code wordt nergens naartoe gestuurd."
+                },
+                "ghost": {
+                    "label": "Suggesties tijdens het typen",
+                    "description": "Ghost text van het model op het apparaat, twee tot drie seconden per suggestie.",
+                    "options": {
+                        "off": "Uit",
+                        "request": "Op verzoek"
+                    }
+                },
+                "unavailable": "Niet beschikbaar: {{reason}}"
             }
         },
         "folding": {

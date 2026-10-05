@@ -82,6 +82,8 @@ interface Holder {
  */
 export class ProjectLanguage {
     readonly service: WireLanguageService;
+    /* The link to the machine, for what a feature asks of it that is no language server's: the on-device model. */
+    readonly transport: Transport;
     readonly status: LanguageStatusTracker;
     /* What the servers report for every file of the project that is open on the machine, which the problems panel lists. */
     readonly problems: ProjectProblems;
@@ -102,6 +104,7 @@ export class ProjectLanguage {
         files: ProjectFiles | null = null,
         openFile: (folder: string, path: string, line: number) => void = (root, path, line) => void openFileLink(root, { path, line, directory: false })
     ) {
+        this.transport = transport;
         this.folder = folder;
         this.files = files;
         this.openFile = openFile;

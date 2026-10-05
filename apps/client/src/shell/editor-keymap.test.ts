@@ -72,6 +72,27 @@ describe('Inline Edit', () => {
     }
 });
 
+describe('ghost text keys', () => {
+    for (const apple of [true, false]) {
+        for (const [id, chord] of [
+            ['suggestInline', 'Alt+\\'],
+            ['acceptGhostWord', 'Alt+]']
+        ] as const) {
+            test(`${id} is ${chord} on ${apple ? 'macOS' : 'the other platforms'}, a key no other editor command and nothing of Ruimte's holds`, () => {
+                const mine = signature(shortcutFor(id, apple)!, apple);
+
+                expect(mine).toBe(signature(shortcut(chord), apple));
+                expect(
+                    KEYMAP_IDS.filter(
+                        (other) => other !== id && [shortcutFor(other, apple)].some((found) => found !== undefined && signature(found, apple) === mine)
+                    )
+                ).toEqual([]);
+                expect(ownShortcuts(apple).some((candidate) => signature(candidate, apple) === mine)).toBe(false);
+            });
+        }
+    }
+});
+
 function eventOf(target: Shortcut, apple: boolean): Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'> {
     const letter = /^[A-Z]$/.test(target.key);
     const code: Record<string, string> = { '[': 'BracketLeft', ']': 'BracketRight', '\\': 'Backslash' };

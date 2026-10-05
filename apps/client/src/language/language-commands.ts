@@ -27,7 +27,9 @@ const RUNNERS: Record<LanguageCommandId, (language: EditorLanguage) => void> = {
     'previous-agent-change': (language) => agentReviewOf(language.editor)?.step(-1),
     'selection-to-chat': (language) => language.selectionChat.choose(),
     'inline-edit': (language) => language.inlineEdit.start(),
-    'show-inline-edit': (language) => void language.inlineEdit.show()
+    'show-inline-edit': (language) => void language.inlineEdit.show(),
+    explain: (language) => void language.explain.explainHere(),
+    'suggest-inline': (language) => void language.ghost.request()
 };
 
 export interface LanguageCommandRow {

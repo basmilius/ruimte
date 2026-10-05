@@ -153,6 +153,22 @@
             "attribution": {
                 "label": "Attribution in gutter",
                 "description": "Marks the lines an agent wrote. Hover shows the chat and the turn."
+            },
+            "onDevice": {
+                "title": "On device",
+                "help": {
+                    "label": "Explain and name suggestions",
+                    "description": "Uses Apple Foundation Models on this Mac. Code is not sent anywhere."
+                },
+                "ghost": {
+                    "label": "Suggestions while typing",
+                    "description": "Ghost text from the on-device model, two to three seconds per suggestion.",
+                    "options": {
+                        "off": "Off",
+                        "request": "On request"
+                    }
+                },
+                "unavailable": "Not available: {{reason}}"
             }
         },
         "folding": {

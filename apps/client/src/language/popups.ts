@@ -130,6 +130,8 @@ export interface RenameView {
     readonly error: string | null;
     readonly name: string;
     readonly files: readonly RenameFileView[];
+    /* Names the model on the machine proposes, from how the symbol is used. They fill the input when chosen and never apply by themselves. */
+    readonly suggestions: readonly string[];
 }
 
 /* The references of a name between the lines of the file: a list of places and the code around the one that is active. */

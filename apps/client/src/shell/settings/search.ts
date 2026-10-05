@@ -177,6 +177,18 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         description: 'settings:editor.ai.attribution.description'
     },
     {
+        id: 'editor.ai.onDevice.help',
+        section: 'editor',
+        label: 'settings:editor.ai.onDevice.help.label',
+        description: 'settings:editor.ai.onDevice.help.description'
+    },
+    {
+        id: 'editor.ai.onDevice.ghost',
+        section: 'editor',
+        label: 'settings:editor.ai.onDevice.ghost.label',
+        description: 'settings:editor.ai.onDevice.ghost.description'
+    },
+    {
         id: 'editor.smartKeys.pairBrackets',
         section: 'editor',
         label: 'settings:editor.smartKeys.pairBrackets.label',

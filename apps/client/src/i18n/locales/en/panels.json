@@ -652,7 +652,9 @@
             "rename": "Rename",
             "preview": "Preview",
             "cancel": "Cancel",
-            "apply": "Rename"
+            "apply": "Rename",
+            "suggestions": "Suggestions · on device",
+            "useSuggestion": "Use suggestion"
         },
         "navigation": {
             "unavailable": "No language server answers that here",
@@ -730,6 +732,24 @@
         },
         "history": {
             "recent": "Recent locations"
+        },
+        "onDevice": {
+            "oldMachine": "This machine does not have on-device help yet. Update it to use it.",
+            "explain": "Explain",
+            "explanation": "Explanation · Apple Foundation Models, on device",
+            "note": "Written by the model on this Mac. It costs no credit, and the code stays on this Mac.",
+            "thinking": "Explaining on this Mac…",
+            "off": "Explain is turned off. Turn it on in Settings, Editor, AI.",
+            "nothing": "Select code, or put the caret in a function, to explain it."
+        },
+        "ghost": {
+            "onDevice": "On device",
+            "accept": "Accept",
+            "next": "Next",
+            "thinking": "Thinking on this Mac",
+            "off": "Suggestions are turned off. Turn them on in Settings, Editor, AI.",
+            "none": "No suggestion for this spot",
+            "unavailable": "The on-device model is not available."
         }
     },
     "machineNotAnswering": "This machine is not answering.",

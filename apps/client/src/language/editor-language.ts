@@ -6,8 +6,10 @@ import { CompletionFeature } from './completion';
 import { ContextMenuFeature } from './context-menu';
 import { DefinitionLinkFeature } from './definition-link';
 import { DiagnosticsFeature } from './diagnostics';
+import { ExplainFeature } from './explain';
 import { FoldingFeature } from './folding';
 import { HighlightsFeature } from './highlights';
+import { GhostTextFeature } from './ghost-text';
 import { HistoryFeature } from './history';
 import { HoverFeature } from './hover';
 import { NavigationFeature, locationRow } from './navigation';
@@ -41,6 +43,8 @@ export class EditorLanguage {
     readonly popups = createPopupStore();
     readonly diagnostics: DiagnosticsFeature;
     readonly hover: HoverFeature;
+    readonly explain: ExplainFeature;
+    readonly ghost: GhostTextFeature;
     readonly completion: CompletionFeature;
     readonly signature: SignatureFeature;
     readonly snippets: SnippetFeature;
@@ -69,6 +73,8 @@ export class EditorLanguage {
         this.pick = new PickFeature(this, timers);
         this.diagnostics = new DiagnosticsFeature(this);
         this.hover = new HoverFeature(this, timers);
+        this.explain = new ExplainFeature(this);
+        this.ghost = new GhostTextFeature(this);
         this.completion = new CompletionFeature(this, timers);
         this.snippets = new SnippetFeature(this);
         this.signature = new SignatureFeature(this, timers);

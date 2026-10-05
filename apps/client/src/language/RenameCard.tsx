@@ -1,9 +1,10 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { Cpu, Sparkles } from 'lucide-react';
 import { fileUriToPath } from '@ruimte/smart-editor-lsp';
 import type { EditorRect } from '@ruimte/smart-editor';
-import { Button } from '@basmilius/desktop-ui';
+import { Button, Icon } from '@basmilius/desktop-ui';
 import { formatNumber } from '@basmilius/desktop-ui/format';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { AnchoredPopup } from './AnchoredPopup';
@@ -17,7 +18,39 @@ function staysInside(target: EventTarget | null): boolean {
     return target instanceof Element && target.closest(`[${CARD_ATTRIBUTE}]`) !== null;
 }
 
-function Hints({ view }: { view: RenameView }) {
+/*
+ * The names the model on the machine proposes, in a list under the input; a press fills the input and the
+ * typed name stays what Enter applies. While it is up the card says only its two keys.
+ */
+function Suggestions({ names, active, onPick }: { names: readonly string[]; active: number; onPick(name: string): void }) {
+    const { t } = useTranslation('panels');
+    return (
+        <div className="flex w-[250px] flex-col p-1.25">
+            <div className="flex items-center gap-1.5 px-2.25 pt-1.25 pb-1 text-xs font-semibold text-text-faint">
+                <Icon icon={Cpu} size={12} className="shrink-0" />
+                {t('language.rename.suggestions')}
+            </div>
+            {names.map((name, index) => (
+                <button
+                    key={name}
+                    type="button"
+                    tabIndex={-1}
+                    className={`flex h-6.5 items-center gap-2 rounded-md px-2.25 text-left font-mono text-code text-text ${index === active ? 'bg-accent/20' : 'hover:bg-surface-hover'}`}
+                    onClick={() => onPick(name)}
+                >
+                    <Icon icon={Sparkles} size={12} className={`shrink-0 ${index === active ? 'text-accent' : 'text-text-faint'}`} />
+                    {name}
+                </button>
+            ))}
+            <div className="mt-1 flex gap-3 border-t border-border px-2.25 pt-1.75 pb-0.75 text-xs text-text-muted">
+                <span>↵ {t('language.rename.rename')}</span>
+                <span>⇥ {t('language.rename.useSuggestion')}</span>
+            </div>
+        </div>
+    );
+}
+
+function Hints({ view, active, onPick }: { view: RenameView; active: number; onPick(name: string): void }) {
     const { t } = useTranslation('panels');
     const { occurrences } = view;
     return (
@@ -27,21 +60,25 @@ function Hints({ view }: { view: RenameView }) {
                     {view.error}
                 </div>
             )}
-            <div className="flex items-center gap-3 px-2.5 py-1.5 text-xs whitespace-nowrap text-text-muted">
-                {occurrences !== null && (
-                    <span>
-                        {occurrences.files > 1
-                            ? t('language.rename.occurrencesFiles', {
-                                  count: occurrences.count,
-                                  formatted: formatNumber(occurrences.count),
-                                  files: formatNumber(occurrences.files)
-                              })
-                            : t('language.rename.occurrences', { count: occurrences.count, formatted: formatNumber(occurrences.count) })}
-                    </span>
-                )}
-                <span>↵ {t('language.rename.rename')}</span>
-                <span>⇧↵ {t('language.rename.preview')}</span>
-            </div>
+            {view.suggestions.length > 0 ? (
+                <Suggestions names={view.suggestions} active={active} onPick={onPick} />
+            ) : (
+                <div className="flex items-center gap-3 px-2.5 py-1.5 text-xs whitespace-nowrap text-text-muted">
+                    {occurrences !== null && (
+                        <span>
+                            {occurrences.files > 1
+                                ? t('language.rename.occurrencesFiles', {
+                                      count: occurrences.count,
+                                      formatted: formatNumber(occurrences.count),
+                                      files: formatNumber(occurrences.files)
+                                  })
+                                : t('language.rename.occurrences', { count: occurrences.count, formatted: formatNumber(occurrences.count) })}
+                        </span>
+                    )}
+                    <span>↵ {t('language.rename.rename')}</span>
+                    <span>⇧↵ {t('language.rename.preview')}</span>
+                </div>
+            )}
         </div>
     );
 }
@@ -99,13 +136,34 @@ function Preview({ language, view }: { language: EditorLanguage; view: RenameVie
 export function RenameCard({ language, view, rect, endRect }: { language: EditorLanguage; view: RenameView; rect: EditorRect; endRect: EditorRect | null }) {
     const input = useRef<HTMLInputElement>(null);
     const [value, setValue] = useState(view.placeholder);
+    const [active, setActive] = useState(0);
 
     useLayoutEffect(() => {
         input.current?.focus();
         input.current?.select();
     }, []);
 
+    function fill(name: string): void {
+        setValue(name);
+        language.rename.edited();
+        input.current?.focus();
+    }
+
     function onKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+        const names = view.phase === 'input' ? view.suggestions : [];
+        if (names.length > 0 && !event.nativeEvent.isComposing && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey) {
+            const step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
+            if (step !== 0 || event.key === 'Tab') {
+                event.preventDefault();
+                event.stopPropagation();
+                if (event.key === 'Tab') {
+                    fill(names[Math.min(active, names.length - 1)]!);
+                } else {
+                    setActive((active + step + names.length) % names.length);
+                }
+                return;
+            }
+        }
         if (event.key === 'Escape') {
             event.preventDefault();
             event.stopPropagation();
@@ -152,7 +210,7 @@ export function RenameCard({ language, view, rect, endRect }: { language: Editor
             />
             <AnchoredPopup rect={{ ...rect, top: rect.top - 2, bottom: rect.bottom + 2 }} className="overflow-hidden" placement={{ gap: 2 }}>
                 <div {...{ [CARD_ATTRIBUTE]: '' }} onPointerDown={(event) => event.preventDefault()}>
-                    {view.phase === 'preview' ? <Preview language={language} view={view} /> : <Hints view={view} />}
+                    {view.phase === 'preview' ? <Preview language={language} view={view} /> : <Hints view={view} active={active} onPick={fill} />}
                 </div>
             </AnchoredPopup>
         </>,

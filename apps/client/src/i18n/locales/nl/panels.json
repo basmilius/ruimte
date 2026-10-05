@@ -652,7 +652,9 @@
             "rename": "Hernoem",
             "preview": "Voorbeeld",
             "cancel": "Annuleer",
-            "apply": "Hernoem"
+            "apply": "Hernoem",
+            "suggestions": "Suggesties · op het apparaat",
+            "useSuggestion": "Suggestie gebruiken"
         },
         "navigation": {
             "unavailable": "Geen language server die dat hier beantwoordt",
@@ -730,6 +732,24 @@
         },
         "history": {
             "recent": "Recente plekken"
+        },
+        "onDevice": {
+            "oldMachine": "Deze machine heeft nog geen hulp op het apparaat. Werk hem bij om die te gebruiken.",
+            "explain": "Uitleg",
+            "explanation": "Uitleg · Apple Foundation Models, op het apparaat",
+            "note": "Geschreven door het model op deze Mac. Het kost geen tegoed en de code blijft op deze Mac.",
+            "thinking": "Uitleg wordt op deze Mac geschreven…",
+            "off": "Uitleg staat uit. Zet hem aan bij Instellingen, Editor, AI.",
+            "nothing": "Selecteer code, of zet de cursor in een functie, om die uit te leggen."
+        },
+        "ghost": {
+            "onDevice": "Op apparaat",
+            "accept": "Accepteren",
+            "next": "Volgende",
+            "thinking": "Bezig op deze Mac",
+            "off": "Suggesties staan uit. Zet ze aan bij Instellingen, Editor, AI.",
+            "none": "Geen suggestie voor deze plek",
+            "unavailable": "Het model op het apparaat is niet beschikbaar."
         }
     },
     "machineNotAnswering": "Deze machine antwoordt niet.",

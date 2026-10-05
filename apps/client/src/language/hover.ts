@@ -35,6 +35,8 @@ export class HoverFeature {
     private lookup: AbortController | null = null;
     /* A card the keyboard opened: scrolling does not take it away, since it was never under a pointer. Moving the caret does. */
     private pinned = false;
+    /* The card is being read: an explanation runs in it or is shown, so the pointer going elsewhere neither closes nor replaces it. */
+    private held = false;
 
     constructor(language: EditorLanguage, timers: Timers = realTimers) {
         this.language = language;
@@ -45,6 +47,12 @@ export class HoverFeature {
             editor.onTextChange(() => {
                 this.counts.clear();
                 this.hide();
+            }),
+            editor.onClick(() => {
+                if (this.held) {
+                    this.hide();
+                }
+                return false;
             }),
             editor.onViewChange(() => {
                 if (!this.pinned) {
@@ -105,8 +113,23 @@ export class HoverFeature {
         return true;
     }
 
+    /* Keeps the card up until Escape, a press in the text, an edit or a move of the caret. */
+    keep(): void {
+        this.pinned = true;
+        this.held = true;
+        this.timers.clear(this.hideTimer);
+    }
+
+    /* A card of its own for a range, such as the explanation of a selection, which stays like the card Quick Info opens. */
+    showRange(range: EditorRange): void {
+        this.hide();
+        this.keep();
+        this.present(range.start, [], null, range);
+    }
+
     hide(): void {
         this.pinned = false;
+        this.held = false;
         this.request++;
         this.lookup?.abort();
         this.timers.clear(this.showTimer);
@@ -119,6 +142,9 @@ export class HoverFeature {
     }
 
     private moved(hover: EditorHover | null): void {
+        if (this.held) {
+            return;
+        }
         this.timers.clear(this.showTimer);
         if (hover === null) {
             this.request++;
@@ -137,7 +163,7 @@ export class HoverFeature {
 
     private scheduleHide(): void {
         this.timers.clear(this.hideTimer);
-        if (this.language.popups.getState().hover === null || this.inCard) {
+        if (this.language.popups.getState().hover === null || this.inCard || this.held) {
             return;
         }
         this.hideTimer = this.timers.set(() => {

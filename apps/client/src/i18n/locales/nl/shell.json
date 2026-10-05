@@ -609,7 +609,9 @@
             "peekDefinition": "Bekijk definitie",
             "historyBack": "Ga terug naar de vorige plek",
             "historyForward": "Ga vooruit naar de volgende plek",
-            "recentLocations": "Toon recente plekken"
+            "recentLocations": "Toon recente plekken",
+            "explain": "Code uitleggen",
+            "suggestInline": "Code voorstellen"
         },
         "sections": {
             "recent": "Recent",
@@ -855,6 +857,8 @@
         "historyBack": "Terug",
         "historyForward": "Vooruit",
         "recentLocations": "Recente plekken…",
-        "folding": "Invouwen"
+        "folding": "Invouwen",
+        "explain": "Code uitleggen",
+        "suggestInline": "Code voorstellen"
     }
 }
