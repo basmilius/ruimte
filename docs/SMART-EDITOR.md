@@ -105,7 +105,7 @@ Left out: effects a scope cannot carry (the underline under a TypeScript paramet
 | Test round | A round of testing the editor without AI before building on it | Done, with a second platform review and a fix round |
 | Platform parity | The gaps a comparison with the platform's sources found: typing and editing (A), code insight (C), then carets, mouse and view (B) with the keymap | Done, being tested |
 | 5 | AI in the editor: selection to chat, provenance and the gutter, conflicts and review, inline edit | Done, being tested |
-| 6 | On the device | After 5 |
+| 6 | On the device: explain, name suggestions and ghost text from the model on the machine | Done, being tested |
 | Cleanup | Remove the previous engine, close the known limits | When parity is confirmed |
 
 ### Test round
@@ -145,11 +145,15 @@ The hard part sits in the daemon (chats, outbox, lineage); its brief gets writte
 
 ### Phase 6: on the device
 
-On-device model (Apple Foundation Models), code never leaves the Mac:
+From the "Code Editor AI" design (`explain`, `names`, `ghost`, `settings`). The model is Apple Foundation Models on the machine of the daemon, so code never leaves the Mac: the helper (`apps/foundation-models`, started with `--oneshot`) has no tools and opens no connection, and a client's text goes only to the daemon it already talks to. These help with reading and typing; nothing here changes code on an agent's word, and all of it is free of credit.
 
-- Explain in the hover.
-- Name suggestions in rename.
-- Ghost text only on ⌥\, since the first text takes two to three seconds.
+- The one-shot request (`apps/server/src/ondevice`, `packages/contracts/src/ondevice.ts`): `ondevice.status` (`available`, `reason`), `ondevice.generate { id, purpose, prompt, stream? }` and `ondevice.cancel { id }`, with the text streaming back as `ondevice.text` to the asking client when `stream` is set. The daemon owns each purpose's instructions, so a client sends text to read and no instruction. The client keeps one `OnDeviceClient` per machine (`apps/client/src/ondevice`) that believes a status for 30 seconds. A machine without the model, an older daemon and a Mac with Apple Intelligence off all answer `available: false` with a reason, which the settings show and the features act on by offering nothing.
+- Explain in the hover (`language/explain.ts`): a function's card offers Explain next to Go to definition and the references once the machine has the model. The prompt carries the function's source, found from the definition by its braces or indentation (`explain-model.ts`, at most 80 lines and 4,000 characters), its signature and its documentation, and asks for an answer in the interface language. The text streams into the card under the doc, headed "Explanation · Apple Foundation Models, on device", with the note that it costs no credit and the code stays on the Mac. The card stays up while it is read (Escape, a press in the text, an edit or a move of the caret close it) and the request is cancelled when it goes. Code, Explain Code (menu and palette) explains the selection, or the function around the caret when nothing is selected, in a card of its own.
+- Name suggestions in rename (`language/rename.ts`): while the input is open the model gets the lines around the symbol and a sample of the lines the servers listed for its references (eight, in at most three other files), and answers five names. `names-model.ts` keeps the ones the language accepts (identifier rules by language, no keywords, not the current name, no repeats) and the card lists the first three under the input as in the design: Up and Down choose, Tab or a press fills the input, and Enter still renames what is typed. A suggestion is never applied by itself, and the list goes with the rename.
+- Ghost text on request (`language/ghost-text.ts`): Option+\ (Alt+\ elsewhere) asks for a continuation at the caret from the text around it (60 lines before and 15 after, cut to what the model's window takes), shows "On device · Thinking on this Mac · Esc" after the line while it takes its two to three seconds, then draws the answer after the caret with `setGhostText`. The small model often writes the line it was asked to continue again, and the closing lines the file already has, so `ghost-model.ts` takes those off before anything is shown. Tab takes all of it as one undo step, Option+] a word at a time, Escape, an edit or a move of the caret puts it away, and an answer for text that changed in the meantime is dropped. With text after the caret on the line only the rest of that line is suggested. Nothing is ever asked for while typing.
+- Settings, Editor, AI, On device: "Explain and name suggestions" (on or off) and "Suggestions while typing" (Off or On request ⌥\). When the machine has no model both rows say why and are disabled. Settings: `aiOnDeviceHelp` and `aiGhostText`.
+- Code, Explain Code and Suggest Code are in the menu and the palette; Suggest Code carries the key.
+- Left out: the explanation of a symbol that is not a function (classes and types), Explain in the context menu, and automatic suggestions while typing, since each takes seconds; the keys leave room for a mode later.
 
 ### Open questions
 
