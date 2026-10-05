@@ -490,8 +490,8 @@ A document with the language id `blade` (or a path ending in `.blade.php`) is no
 
 | Project | Files | Unresolved before | After | Receivers before | After |
 | --- | --- | --- | --- | --- | --- |
-| Laravel 13 skeleton plus models, relations, scopes, a policy, a form request, routes, views and translations | 44 | 42.0% | 34.9% | 12.4% | 1.8% |
-| `laravelio/laravel.io` (Laravel 11, Eloquent, Pest, Livewire) | 452 | 35.6% | 15.1% | 34.7% | 6.1% |
+| Laravel 13 skeleton plus models, relations, scopes, a policy, a form request, routes, views and translations | 45 | 42.9% | 31.4% | 14.4% | 0.5% |
+| `laravelio/laravel.io` (Laravel 11, Eloquent, Pest, Livewire) | 452 | 35.6% | 14.9% | 34.7% | 5.8% |
 | Symfony 8.1 skeleton plus entities, repositories, a form, services, a subscriber | 17 | 8.9% | 8.1% | 0.0% | 0.0% |
 | `symfony/symfony-demo` | 51 | 3.2% | 3.2% | 0.4% | 0.4% |
 
