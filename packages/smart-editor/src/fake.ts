@@ -22,6 +22,7 @@ import type {
     EditorMarker,
     EditorOptions,
     EditorPosition,
+    EditorRemoteCursor,
     EditorRange,
     EditorReveal,
     EditorRect,
@@ -293,6 +294,13 @@ export class FakeEditor implements Editor {
 
     setChangeMarks(marks: readonly EditorChangeMark[]): void {
         this.changeMarks = marks;
+    }
+
+    /* The cursors of agents the client set last. */
+    remoteCursors: readonly EditorRemoteCursor[] = [];
+
+    setRemoteCursors(cursors: readonly EditorRemoteCursor[]): void {
+        this.remoteCursors = cursors;
     }
 
     /* What the client marked as written by an agent last. */

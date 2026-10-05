@@ -41,6 +41,7 @@ export type {
     EditorSmartKeys,
     EditorOptions,
     EditorPosition,
+    EditorRemoteCursor,
     EditorRange,
     EditorTextChange,
     EditorTrackedRange,

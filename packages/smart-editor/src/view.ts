@@ -20,7 +20,19 @@ import { type ScrollKind, scrollPosition } from './scroll.ts';
 import { easeOut, scrollDuration } from './scroll-animation.ts';
 import { Outline, scopeChain, type StickyPlacement, stickyCover, stickyPlacements, structuralEntries } from './outline.ts';
 import { type OverviewSpan, overviewTicks, paintOverview } from './overview.ts';
-import { paintCarets, paintGutter, paintOver, paintOverlays, paintSigns, paintSticky, RowPainter, type StickyEntry, type WrapSign } from './paint.ts';
+import {
+    paintCarets,
+    paintGutter,
+    paintOver,
+    paintOverlays,
+    paintRemoteCarets,
+    paintSigns,
+    paintSticky,
+    type RemoteCaret,
+    RowPainter,
+    type StickyEntry,
+    type WrapSign
+} from './paint.ts';
 import { overlayTokens, type SemanticSpan } from './semantic.ts';
 import { indentationColumn } from '@ruimte/smart-editor-core';
 import { TokenCache } from './tokens.ts';
@@ -76,6 +88,8 @@ const FOLD_LIMIT = 2_000_000;
 const MIN_GUTTER_WIDTH = 64;
 const ATTRIBUTION_WIDTH = 3;
 const ATTRIBUTION_REACH = 3;
+/* The height of an agent's name over its caret, which the label's style in `editor.css` has too. */
+const REMOTE_LABEL_HEIGHT = 18;
 /* The caret stays solid this long after it moved, so holding an arrow key does not blink it between steps. */
 const CARET_SOLID_MS = 500;
 /* A jump moves the view even to something already in view, as the platform does by default. */
@@ -134,6 +148,7 @@ export class EditorView {
     private readonly overlays: HTMLElement;
     private readonly over: HTMLElement;
     private readonly carets: HTMLElement;
+    private readonly remote: HTMLElement;
     private readonly preview: HTMLElement;
     private readonly signs: HTMLElement;
     private readonly notice: HTMLElement;
@@ -166,6 +181,8 @@ export class EditorView {
     private changeMarks: { kind: EditorChangeKind; from: number; to: number }[] = [];
     private changeVersion = 0;
     private readonly attribution = new AttributionRuns();
+    private remoteCarets: { id: string; name: string; color: string; at: number }[] = [];
+    private remoteKey: string | null = null;
     private readonly attributionListeners = new Set<(hover: { id: string; rect: EditorRect } | null) => void>();
     private attributionHover: { id: string; rect: EditorRect } | null = null;
     /* Where the pointer is in the gutter, so the bar under it is found again after the view scrolled or the text moved. */
@@ -240,16 +257,17 @@ export class EditorView {
         const code = make('div', 'se-code');
         this.over = make('div', 'se-over');
         this.carets = make('div', 'se-carets');
+        this.remote = make('div', 'se-remote');
         this.signs = make('div', 'se-signs');
         this.signs.setAttribute('aria-hidden', 'true');
         this.preview = make('div', 'se-preview');
         this.preview.setAttribute('aria-hidden', 'true');
         this.preview.hidden = true;
-        for (const layer of [this.overlays, this.over, this.carets]) {
+        for (const layer of [this.overlays, this.over, this.carets, this.remote]) {
             layer.setAttribute('aria-hidden', 'true');
         }
         code.setAttribute('aria-hidden', 'true');
-        this.content.append(this.overlays, this.signs, code, this.over, this.carets, this.preview);
+        this.content.append(this.overlays, this.signs, code, this.over, this.carets, this.remote, this.preview);
         // The gutter is in the scroller with the text and sticks to its left, so the browser moves both in the same frame.
         const scroller = make('div', 'se-scroller');
         // The pinned headers stick to the corner the same way, which keeps them still against the text while the browser scrolls.
@@ -520,6 +538,7 @@ export class EditorView {
                 this.markers = this.markers.map((marker) => ({ ...marker, from: mapOffset(marker.from, changes), to: mapOffset(marker.to, changes) }));
                 this.mapTracked(changes);
                 this.attribution.map(changes);
+                this.remoteCarets = this.remoteCarets.map((caret) => ({ ...caret, at: mapOffset(caret.at, changes) }));
                 this.semantic = this.semantic.map((token) => ({ ...token, from: mapOffset(token.from, changes), to: mapOffset(token.to, changes) }));
             }
             this.foldRanges = this.mappedFolds(batches);
@@ -1647,6 +1666,7 @@ export class EditorView {
             this.paintPreview();
             this.paintSticky();
             this.paintOverview();
+            this.paintRemote();
             if (this.attributionPointer !== null) {
                 this.refreshAttributionHover();
             }
@@ -1813,6 +1833,39 @@ export class EditorView {
             }
         }
         return lines;
+    }
+
+    /* The carets of agents, each at an offset that follows its text through edits until the host sets them again. */
+    setRemoteCarets(carets: readonly { id: string; name: string; color: string; at: number }[]): void {
+        this.remoteCarets = carets.map((caret) => ({ ...caret }));
+        this.remoteKey = null;
+        this.render();
+    }
+
+    private paintRemote(): void {
+        const lineHeight = this.layout.metrics.lineHeight;
+        const top = this.viewport.scrollTop;
+        const cover = this.stickyHeightAt(top);
+        const carets: RemoteCaret[] = [];
+        for (const remote of this.remoteCarets) {
+            const line = this.model.positionAt(remote.at).line;
+            const row = this.layout.rowForLine(line);
+            if (row.kind !== 'text' || row.line !== line) {
+                continue;
+            }
+            const place = this.layout.caret(remote.at);
+            const x = Math.round(place.x);
+            const y = Math.round(place.y);
+            if (y + lineHeight < top - REMOTE_LABEL_HEIGHT || y > top + this.viewportHeight) {
+                continue;
+            }
+            carets.push({ id: remote.id, name: remote.name, color: remote.color, x, y, height: lineHeight, below: y - top - cover < REMOTE_LABEL_HEIGHT });
+        }
+        const key = carets.map((caret) => `${caret.id}|${caret.name}|${caret.color}|${caret.x},${caret.y},${caret.below}`).join('\n');
+        if (key !== this.remoteKey) {
+            this.remoteKey = key;
+            paintRemoteCarets(this.remote, carets);
+        }
     }
 
     /* Bars in the gutter for runs of lines, which follow their text through edits until the host sets them again. */
@@ -2117,6 +2170,7 @@ export class EditorView {
         this.hoverListeners.clear();
         this.gutterActionListeners.clear();
         this.tracked.clear();
+        this.remoteCarets = [];
         this.attribution.clear();
         this.attributionListeners.clear();
         this.painter.clear();

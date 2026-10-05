@@ -454,6 +454,38 @@ export function paintCarets(container: HTMLElement, carets: readonly (LayoutRect
     );
 }
 
+export interface RemoteCaret {
+    id: string;
+    name: string;
+    color: string;
+    x: number;
+    y: number;
+    height: number;
+    /* The name goes under the caret, when there is no room above it. */
+    below: boolean;
+}
+
+/* The carets of agents with their names, above the text; they take no pointer and never move the real caret. */
+export function paintRemoteCarets(container: HTMLElement, carets: readonly RemoteCaret[]): void {
+    const document = container.ownerDocument;
+    container.replaceChildren(
+        ...carets.map((caret) => {
+            const element = box(document, 'se-remote-caret', { x: caret.x, y: caret.y, width: 2, height: caret.height });
+            element.dataset.remoteId = caret.id;
+            element.style.background = colorValue(caret.color);
+            const label = document.createElement('span');
+            label.className = 'se-remote-label';
+            label.textContent = caret.name;
+            label.style.background = colorValue(caret.color);
+            if (caret.below) {
+                label.dataset.below = 'true';
+            }
+            element.append(label);
+            return element;
+        })
+    );
+}
+
 export interface StickyEntry {
     line: number;
     geometry: LineGeometry;

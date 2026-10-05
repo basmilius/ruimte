@@ -160,6 +160,16 @@ export interface EditorAttributionMark {
     readonly color: EditorMarkColor;
 }
 
+/* An agent's caret with its name, drawn above the text where it is writing; the editor's own caret and selection never move for it. */
+export interface EditorRemoteCursor {
+    readonly id: string;
+    /* A line past the end is the last one, a character past the end of its line is the end of it. */
+    readonly position: EditorPosition;
+    /* What the label says, such as the agent's name. */
+    readonly name: string;
+    readonly color: EditorMarkColor;
+}
+
 /* The pointer is on the bar of a run. */
 export interface EditorAttributionHover {
     readonly id: string;
@@ -430,6 +440,12 @@ export interface Editor {
     onScope(listener: (scope: readonly EditorBlock[]) => void): () => void;
     /* Bars in the gutter for the lines an agent wrote, replacing the ones set before. */
     setAttributionMarks(marks: readonly EditorAttributionMark[]): void;
+    /*
+     * Carets of agents with their names, replacing the ones set before. Each follows its text through
+     * edits until the host sets them again, takes no pointer and sits over the text, with the name above
+     * the caret or under it where the view has no room above.
+     */
+    setRemoteCursors(cursors: readonly EditorRemoteCursor[]): void;
     /* The pointer rests on a bar, or null when it left it or the bar is gone. */
     onAttributionHover(listener: (hover: EditorAttributionHover | null) => void): () => void;
     /* Problems to draw, replacing the ones set before. */

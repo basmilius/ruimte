@@ -28,6 +28,7 @@ import type {
     EditorMarker,
     EditorOptions,
     EditorPosition,
+    EditorRemoteCursor,
     EditorRange,
     EditorReveal,
     EditorRect,
@@ -516,6 +517,10 @@ class SmartEditor implements Editor {
 
     setAttributionMarks(marks: readonly EditorAttributionMark[]): void {
         this.view.setAttributionMarks(marks);
+    }
+
+    setRemoteCursors(cursors: readonly EditorRemoteCursor[]): void {
+        this.view.setRemoteCarets(cursors.map((cursor) => ({ id: cursor.id, name: cursor.name, color: cursor.color, at: this.offsetAt(cursor.position) })));
     }
 
     onAttributionHover(listener: (hover: EditorAttributionHover | null) => void): () => void {

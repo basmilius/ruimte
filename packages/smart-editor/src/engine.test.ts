@@ -1064,3 +1064,53 @@ describe('trackRange', () => {
         expect(disposed.get()).toBeNull();
     });
 });
+
+describe('setRemoteCursors', () => {
+    const text = Array.from({ length: 12 }, (_, i) => `line ${i}`).join('\n');
+    const carets = (host: HTMLElement) =>
+        [...host.querySelectorAll('.se-remote-caret')].map((caret) => {
+            const element = caret as HTMLElement;
+            const label = element.querySelector('.se-remote-label') as HTMLElement;
+            return `${label.textContent}@${element.style.left},${element.style.top}${label.dataset.below ? ' below' : ''}`;
+        });
+
+    test('draws a caret with its name, and the name under it on the first line where there is no room above', () => {
+        const { editor, host } = setup({ text });
+        editor.setRemoteCursors([
+            { id: 'a', position: { line: 5, character: 3 }, name: 'Claude Code', color: '--agent-1' },
+            { id: 'b', position: { line: 0, character: 0 }, name: 'Codex', color: '#336699' }
+        ]);
+        expect(carets(host)).toEqual(['Claude Code@23px,100px', 'Codex@0px,0px below']);
+        const label = host.querySelector('.se-remote-label') as HTMLElement;
+        expect(label.style.background).toBe('var(--agent-1)');
+        expect(host.querySelector('.se-remote')!.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    test('follows its text through an edit, and is gone once set again', () => {
+        const { editor, host } = setup({ text });
+        editor.setRemoteCursors([{ id: 'a', position: { line: 5, character: 0 }, name: 'Claude Code', color: '--agent-1' }]);
+        editor.applyEdits([{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, text: 'new\n' }]);
+        expect(carets(host)).toEqual(['Claude Code@0px,120px']);
+        editor.setRemoteCursors([]);
+        expect(carets(host)).toEqual([]);
+    });
+
+    test('draws nothing for a cursor on a line a fold hides', () => {
+        const { editor, host } = setup({
+            text: 'one\nfunction a() {\n    body();\n}\ntwo',
+            language: 'typescript',
+            folds: { collapsed: [{ startLine: 1, endLine: 3 }], custom: [] }
+        });
+        editor.setRemoteCursors([{ id: 'a', position: { line: 2, character: 0 }, name: 'Claude Code', color: '--agent-1' }]);
+        expect(carets(host)).toEqual([]);
+        editor.setRemoteCursors([{ id: 'a', position: { line: 1, character: 0 }, name: 'Claude Code', color: '--agent-1' }]);
+        expect(carets(host)).toEqual(['Claude Code@0px,20px']);
+    });
+
+    test('leaves the real caret and selection alone', () => {
+        const { editor } = setup({ text });
+        editor.setCaret({ line: 2, character: 1 });
+        editor.setRemoteCursors([{ id: 'a', position: { line: 5, character: 0 }, name: 'Claude Code', color: '--agent-1' }]);
+        expect(editor.getCaret()).toEqual({ line: 2, character: 1 });
+    });
+});
