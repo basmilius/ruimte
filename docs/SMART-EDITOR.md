@@ -41,7 +41,25 @@ Where Ruimte's own shortcut holds a key, the entry says which key the platform h
 | Back and forward, other platforms | Ctrl+Alt+Left and Right | Focus the cell beside | Ctrl+[ and Ctrl+] |
 | Next problem | F2 | Every shortcut needs a modifier | Alt+F2 (Alt+Shift+F2 for the previous one) |
 
-Find (Cmd+F) and Replace (Cmd+Shift+H) are Ruimte's, for every surface with a find bar. Text motion (arrows, Home, End, Page Up and Down, Enter, Tab, Backspace, Delete, Escape, and Cmd+Up and Down for the ends of the text on macOS) is the same everywhere and not in the table.
+Three entries differ from the platform for a reason other than a collision. Shrink selection stays Alt+Down off macOS, so it pairs with extend selection (the platform's Ctrl+Shift+W is free). Previous problem is Alt+Shift+F2, so it pairs with Alt+F2. Column mode is Cmd+Shift+8 off macOS too, since the platform's Alt+Shift+Insert is a key the shortcut notation has no name for. Move statement (Cmd+Shift+Up and Down) is not built, since it needs a syntax tree; those chords select to the ends of the text.
+
+Find (Cmd+F) and Replace (Cmd+Shift+H) are Ruimte's, for every surface with a find bar; the editor adds the platform's Replace (Cmd+R, Ctrl+R) and find next and previous (Cmd+G and Cmd+Shift+G, Ctrl+L and Ctrl+Shift+L). Adding a caret above or below is a gesture and has no chord: tap Option twice on macOS (Ctrl elsewhere), hold it and press Up or Down; the Code menu has both commands. Text motion (arrows, Home, End, Page Up and Down, Enter, Tab, Backspace, Delete, Escape, and Cmd+Up and Down for the ends of the text on macOS) is the same everywhere and not in the table.
+
+The macOS key of Reformat (Option+Cmd+L) is also the one the AI design gives to sending the selection to a chat, so phase 5 needs another key for one of the two.
+
+## Carets, mouse and view
+
+What the editor does that a person notices, and the rule behind it:
+
+- The caret added last is the primary one. The view scrolls to it, a language feature reads it, Escape keeps the oldest.
+- A double click selects an identifier (not a word break) and a drag after it grows by words; a triple click and a press on a line number select lines and a drag grows by lines, Shift on a number grows or shrinks the selected lines.
+- Selected text can be carried: a press on a selection waits for the pointer to move five pixels, then shows a drop caret; the copy key (Option on macOS, Ctrl elsewhere) at the drop copies. A press that does not move puts the caret there.
+- Scrolling follows the platform's scrolling model: a line of margin when a caret is kept in view, a third from the top for a jump to something out of view, and Page Up and Down move whole lines with the caret on the same row. A jump to something already in view leaves the view alone (`REFRAIN_FROM_SCROLLING` in `view.ts`; the platform's own default would move it). A scroll over more than a line takes up to a tenth of a second, a wheel or a touch ends it, and reduced motion turns it off.
+- Word moves stop at the end of a word, then at the start of the next line, and on an empty line; deleting by word stops at both edges. Camel humps are a setting.
+- Home and End go by the rows of a wrapped line; Home inside the indentation goes to the start of the line.
+- Folds: brackets, block comments, indentation, import lists, runs of line comments and `region` markers. The import list folds when a file opens for the first time, and what is folded is kept per file with the scroll and the caret. Fold selection folds whole lines, so a selection inside one line has nothing to fold.
+- Selecting text marks its other occurrences (up to 50, one line, not blank), with ticks in the scroll track.
+- Indent guides are on, with the guide of the caret's scope stronger. The right margin is the `max_line_length` of `.editorconfig` and is off without one. Whitespace is a setting, off.
 
 ## Phases
 
@@ -54,7 +72,7 @@ Find (Cmd+F) and Replace (Cmd+Shift+H) are Ruimte's, for every surface with a fi
 | 4a | Binding, status bar, diagnostics, semantic tokens, inlay hints, hover, completion, signature help, highlights, symbols, Vue | Done |
 | 4b | Workspace edits and commands, code actions, rename, go to definition, peek references, go to symbol, Problems, context menu, clickable names in the hover | Done |
 | Test round | A round of testing the editor without AI before building on it | Now |
-| Platform parity | The gaps a comparison with the platform's sources found: typing and editing (A), code insight (C), then carets, mouse and view (B) with the keymap | Now |
+| Platform parity | The gaps a comparison with the platform's sources found: typing and editing (A), code insight (C), then carets, mouse and view (B) with the keymap | Done, being tested |
 | 5 | AI in the editor | After the test round |
 | 6 | On the device | After 5 |
 | Cleanup | Remove the previous engine, close the known limits | When parity is confirmed |

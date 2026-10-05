@@ -172,6 +172,7 @@ export class EditorView {
     private occurrences: Occurrence[] = [];
     private replacePreview: { text: string; preserveCase: boolean } | null = null;
     private dropCaret: number | null = null;
+    private activeGuideCache: { key: string; guide: { column: number; first: number; last: number } | null } | undefined;
     /* Column mode: a drag or Shift with the arrows selects a box of columns, as Alt does for a drag. */
     columnMode = false;
     /* A scroll on its way: where it started and ends, when, and the frame that moves it. */
@@ -1019,10 +1020,19 @@ export class EditorView {
         return Math.min(nearest(-1), nearest(1));
     }
 
-    /* The run of lines around a caret that the scope guide there goes along, and the column it is at. */
+    /* The scope guide of the caret, worked out again only when the text or the caret's line is not the one it was for. */
     private activeGuide(): { column: number; first: number; last: number } | null {
-        const size = this.settings.tabSize;
         const line = this.model.positionAt(this.model.getPrimary().head).line;
+        const key = `${this.revision}|${line}|${this.settings.tabSize}`;
+        if (this.activeGuideCache?.key !== key) {
+            this.activeGuideCache = { key, guide: this.scopeGuide(line) };
+        }
+        return this.activeGuideCache.guide;
+    }
+
+    /* The run of lines around a line that the scope guide there goes along, and the column it is at. */
+    private scopeGuide(line: number): { column: number; first: number; last: number } | null {
+        const size = this.settings.tabSize;
         const indent = this.effectiveIndent(line);
         const count = this.model.getLineCount();
         const deeper = (at: number, column: number): boolean => at >= 0 && at < count && this.effectiveIndent(at) > column;
