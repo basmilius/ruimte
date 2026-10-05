@@ -13,7 +13,8 @@ export interface ChatSource {
 export function projectChats(source: ChatSource): ProjectChat[] {
     return source.views.flatMap((view): ProjectChat[] => {
         if (view.kind === 'chat') {
-            return [{ id: view.id, title: view.name }];
+            // The chat an inline edit runs in is no chat a person attaches to a message.
+            return view.hidden === true ? [] : [{ id: view.id, title: view.name }];
         }
         if (!isCanvasView(view)) {
             return [];

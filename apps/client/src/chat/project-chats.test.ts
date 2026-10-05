@@ -26,6 +26,12 @@ describe('projectChats', () => {
         ]);
     });
 
+    test('leaves out the chat an inline edit runs in', () => {
+        const withInline: ProjectView[] = [...views, { id: 'inline', kind: 'chat', name: 'Inline edit', node: {}, hidden: true }];
+
+        expect(projectChats({ views: withInline, canvases: {} }).map((chat) => chat.id)).toEqual(['planner', 'notes']);
+    });
+
     test('a canvas open in this window names its chats as they are now', () => {
         const live = { main: [{ id: 'planner', kind: 'chat', title: 'Auth rewrite' }] };
         expect(projectChats({ views, canvases: live })[0]).toEqual({ id: 'planner', title: 'Auth rewrite' });

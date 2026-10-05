@@ -113,6 +113,7 @@ export const KEYMAP = {
     organizeImports: bind('Ctrl+Alt+O'),
     formatDocument: bind('Mod+Alt+L'),
     selectionToChat: bind('Mod+Alt+K'),
+    inlineEdit: bind('Mod+I'),
 
     goToSymbol: bind('Mod+F12'),
     goToDefinition: bind('Alt+Shift+D', 'Alt+Shift+D', {

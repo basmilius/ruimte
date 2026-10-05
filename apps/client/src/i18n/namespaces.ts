@@ -25,7 +25,8 @@ export const NAMESPACES = [
     'computer',
     'onboarding',
     'state',
-    'launches'
+    'launches',
+    'inline-edit'
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];

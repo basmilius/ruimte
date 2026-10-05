@@ -58,6 +58,7 @@ export const CANVAS_SHORTCUTS = {
     organizeImports: requiredShortcut('organizeImports'),
     formatDocument: requiredShortcut('formatDocument'),
     selectionToChat: requiredShortcut('selectionToChat'),
+    inlineEdit: requiredShortcut('inlineEdit'),
     previousMessage: shortcut('Alt+ArrowUp'),
     nextMessage: shortcut('Alt+ArrowDown')
 } as const;

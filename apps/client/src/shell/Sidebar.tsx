@@ -33,7 +33,7 @@ import {
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
-import { isCanvasView, isEmptyChatView, isSessionView, type AgentKind, type AgentStatus, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
+import { isCanvasView, isSessionView, isUnlistedChatView, type AgentKind, type AgentStatus, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction, renameNodeAction, renameViewAction } from '@/actions/client-actions';
 import { useDrafts } from '@ruimte/agents-react/chat/drafts';
@@ -873,7 +873,7 @@ export function Sidebar() {
                     nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
                     // Only a session view is a node of its own; a divider and a drawing have no status.
                     self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, titleSource: view.titleSource, provider }) : null,
-                    hidden: isEmptyChatView(view)
+                    hidden: isUnlistedChatView(view)
                 };
             })
         }),

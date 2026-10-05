@@ -4,6 +4,7 @@ import {
     Copy,
     Lightbulb,
     MessageSquarePlus,
+    Sparkles,
     LocateFixed,
     MapPin,
     Blocks,
@@ -113,6 +114,9 @@ export function EditorContextMenu({ language, view }: { language: EditorLanguage
                     </Fragment>
                 ))}
                 {groups.length > 0 && <ContextMenu.Separator />}
+                <ContextMenu.Item onClick={() => language.inlineEdit.start()}>
+                    <Icon icon={Sparkles} size={14} /> {t('menu.inlineEdit')} <Kbd shortcut={CANVAS_SHORTCUTS.inlineEdit} />
+                </ContextMenu.Item>
                 <ContextMenu.Item onClick={() => language.selectionChat.choose()}>
                     <Icon icon={MessageSquarePlus} size={14} /> {t('menu.selectionToChat')} <Kbd shortcut={CANVAS_SHORTCUTS.selectionToChat} />
                 </ContextMenu.Item>

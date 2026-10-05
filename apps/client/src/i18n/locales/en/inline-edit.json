@@ -1,0 +1,45 @@
+{
+    "prompt": {
+        "input": "Describe the change…",
+        "run": "Run",
+        "cancel": "Cancel",
+        "note": "Runs as a chat in this project. File changes ask for approval.",
+        "agent": "Agent",
+        "lines": "The selected lines",
+        "problems": "Problems on these lines",
+        "noAgent": "No agent that can chat is installed."
+    },
+    "card": {
+        "running": "Working…",
+        "waiting": "Waiting for your approval",
+        "done": "Done · {{duration}}",
+        "failed": "Failed",
+        "noChange": "No change proposed",
+        "stale": "The selected text changed, so this can no longer be applied. Open it as a chat to go on.",
+        "readOnly": "This file is read only, so nothing can be applied.",
+        "followUp": "Ask for another change…",
+        "send": "Send",
+        "openAsChat": "Open as chat",
+        "discard": "Discard",
+        "apply": "Apply",
+        "close": "Close",
+        "removedLines_one": "{{count}} line removed",
+        "removedLines_other": "{{count}} lines removed"
+    },
+    "toast": {
+        "ready": "The edit to {{name}} is ready",
+        "answered": "{{name}} has an answer",
+        "failed": "The edit to {{name}} failed",
+        "apply": "Apply",
+        "show": "Show",
+        "stale": "The selected text changed",
+        "staleHint": "Open the chat to go on from there.",
+        "none": "This file has no inline edit to show."
+    },
+    "error": {
+        "noAnswer": "This edit has no answer yet.",
+        "stopped": "The turn was stopped.",
+        "failed": "The agent could not answer.",
+        "open": "The chat could not be opened."
+    }
+}

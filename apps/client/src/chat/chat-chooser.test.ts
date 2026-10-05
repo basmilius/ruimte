@@ -29,14 +29,15 @@ const views = [
     },
     { kind: 'canvas', id: 'other', name: 'Other', nodes: [chatNode('general', 'Algemeen', 'claude')], texts: [], edges: [], layouts: [] },
     { kind: 'chat', id: 'notes', name: 'Release notes', node: { provider: 'codex' } },
-    { kind: 'chat', id: 'blank', name: 'Blank', node: {}, empty: true }
+    { kind: 'chat', id: 'blank', name: 'Blank', node: {}, empty: true },
+    { kind: 'chat', id: 'inline', name: 'Inline edit', node: {}, hidden: true }
 ] as ProjectView[];
 
 const layoutOf = (...viewIds: string[]): SplitLayout =>
     ({ columns: [{ size: 1, cells: viewIds.map((viewId) => ({ viewId, size: 1 })) }], focus: { column: 0, cell: 0 } }) as SplitLayout;
 
 describe('the chats the chooser lists', () => {
-    test('are the chat nodes and chat views with their agent, and leave out an empty chat nobody wrote in', () => {
+    test('are the chat nodes and chat views with their agent, and leave out an empty chat nobody wrote in and the chat an inline edit runs in', () => {
         expect(chooserChats({ views, canvases: {} })).toEqual([
             { id: 'matcher', title: 'Matcher V2', provider: 'claude' },
             { id: 'ui', title: 'UI', provider: 'codex' },

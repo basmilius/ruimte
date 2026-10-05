@@ -1,0 +1,45 @@
+{
+    "prompt": {
+        "input": "Beschrijf de wijziging…",
+        "run": "Uitvoeren",
+        "cancel": "Annuleren",
+        "note": "Draait als chat in dit project. Bestandswijzigingen vragen om goedkeuring.",
+        "agent": "Agent",
+        "lines": "De geselecteerde regels",
+        "problems": "Problemen op deze regels",
+        "noAgent": "Er is geen agent geïnstalleerd die kan chatten."
+    },
+    "card": {
+        "running": "Bezig…",
+        "waiting": "Wacht op je goedkeuring",
+        "done": "Klaar · {{duration}}",
+        "failed": "Mislukt",
+        "noChange": "Geen wijziging voorgesteld",
+        "stale": "De geselecteerde tekst is veranderd, dus dit kan niet meer worden toegepast. Open het als chat om verder te gaan.",
+        "readOnly": "Dit bestand is alleen-lezen, dus er kan niets worden toegepast.",
+        "followUp": "Vraag om een andere wijziging…",
+        "send": "Versturen",
+        "openAsChat": "Openen als chat",
+        "discard": "Verwerpen",
+        "apply": "Toepassen",
+        "close": "Sluiten",
+        "removedLines_one": "{{count}} regel verwijderd",
+        "removedLines_other": "{{count}} regels verwijderd"
+    },
+    "toast": {
+        "ready": "De wijziging in {{name}} is klaar",
+        "answered": "{{name}} heeft een antwoord",
+        "failed": "De wijziging in {{name}} is mislukt",
+        "apply": "Toepassen",
+        "show": "Tonen",
+        "stale": "De geselecteerde tekst is veranderd",
+        "staleHint": "Open de chat om vanaf daar verder te gaan.",
+        "none": "Dit bestand heeft geen inline wijziging om te tonen."
+    },
+    "error": {
+        "noAnswer": "Deze wijziging heeft nog geen antwoord.",
+        "stopped": "De turn is gestopt.",
+        "failed": "De agent kon niet antwoorden.",
+        "open": "De chat kon niet worden geopend."
+    }
+}

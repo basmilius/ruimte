@@ -55,6 +55,23 @@ describe('the editor key table', () => {
     }
 });
 
+describe('Inline Edit', () => {
+    for (const apple of [true, false]) {
+        test(`is Mod+I on ${apple ? 'macOS' : 'the other platforms'}, a key no other editor command and nothing of Ruimte's holds`, () => {
+            const found = shortcutFor('inlineEdit', apple)!;
+            const mine = signature(found, apple);
+
+            expect(mine).toBe(signature(shortcut('Mod+I'), apple));
+            expect(
+                KEYMAP_IDS.filter(
+                    (id) => id !== 'inlineEdit' && [shortcutFor(id, apple)].some((other) => other !== undefined && signature(other, apple) === mine)
+                )
+            ).toEqual([]);
+            expect(ownShortcuts(apple).some((candidate) => signature(candidate, apple) === mine)).toBe(false);
+        });
+    }
+});
+
 function eventOf(target: Shortcut, apple: boolean): Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'> {
     const letter = /^[A-Z]$/.test(target.key);
     const code: Record<string, string> = { '[': 'BracketLeft', ']': 'BracketRight', '\\': 'Backslash' };

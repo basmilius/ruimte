@@ -24,7 +24,7 @@ export interface ChooserSections {
 export function chooserChats(source: Pick<SidebarSource, 'views' | 'canvases'>): ChooserChat[] {
     return source.views.flatMap((view): ChooserChat[] => {
         if (view.kind === 'chat') {
-            return view.empty === true ? [] : [{ id: view.id, title: view.name, provider: view.node.provider ?? null }];
+            return view.empty === true || view.hidden === true ? [] : [{ id: view.id, title: view.name, provider: view.node.provider ?? null }];
         }
         if (!isCanvasView(view)) {
             return [];

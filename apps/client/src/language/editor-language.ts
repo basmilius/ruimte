@@ -18,6 +18,7 @@ import { RenameFeature } from './rename';
 import { createPopupStore } from './popups';
 import { realTimers, type Timers } from './timers';
 import { InlayHintsFeature } from './inlay-hints';
+import { InlineEditFeature } from '@/editor-ai/inline-edit';
 import { SelectionChatFeature } from './selection-chat';
 import { SelectionRangesFeature } from './selection-ranges';
 import { SemanticTokensFeature } from './semantic-tokens';
@@ -56,6 +57,7 @@ export class EditorLanguage {
     readonly symbols: SymbolsFeature;
     readonly codeVision: CodeVisionFeature;
     readonly selectionChat: SelectionChatFeature;
+    readonly inlineEdit: InlineEditFeature;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -82,6 +84,7 @@ export class EditorLanguage {
         this.symbolPicker = new SymbolPickerFeature(this);
         this.contextMenu = new ContextMenuFeature(this);
         this.selectionChat = new SelectionChatFeature(this);
+        this.inlineEdit = new InlineEditFeature(this);
         this.history = new HistoryFeature(this);
         this.definitionLink = new DefinitionLinkFeature(this);
         this.codeVision = new CodeVisionFeature(this, (listener) => this.symbols.onResult(listener), timers);

@@ -1,6 +1,7 @@
 import { useEffect, useReducer } from 'react';
 import { useStore } from 'zustand';
 import type { EditorLanguage } from './editor-language';
+import { InlineEditLayer } from '@/editor-ai/InlineEditLayer';
 import { AnchoredPopup } from './AnchoredPopup';
 import { CodeAuthorsCard } from './CodeAuthorsCard';
 import { CompletionPopup } from './CompletionPopup';
@@ -55,6 +56,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
             {symbols !== null && <SymbolPicker language={language} view={symbols} />}
             {peek !== null && <PeekPanel language={language} view={peek} />}
             {authors !== null && <CodeAuthorsCard language={language} view={authors} />}
+            <InlineEditLayer language={language} />
             {rename !== null && renameRect !== null && <RenameCard language={language} view={rename} rect={renameRect} endRect={renameEnd} />}
         </>
     );
