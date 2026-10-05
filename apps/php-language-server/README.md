@@ -2,7 +2,7 @@
 
 A language server for PHP, written in Rust. It reads PHP 8.1 through 8.5 with a parser of its own that keeps every byte of a file, comments and whitespace included, and that goes on past a syntax error instead of stopping at it. The aim is the insight a full PHP IDE gives (navigation, completion, rename, inspections, refactors) as a server any editor can talk to over LSP.
 
-Phase 1a is the parser, the syntax tree and a small server on top of it. Phase 1b adds an index of the project, its Composer packages and the standard library, a type layer, and hover, navigation, workspace symbols and completion with auto-import on top of that.
+Phase 1a is the parser, the syntax tree and a small server on top of it. Phase 1b adds an index of the project, its Composer packages and the standard library, a type layer, and hover, navigation, workspace symbols and completion with auto-import on top of that. Phase 2 adds find usages, rename, highlights, signature help, call and type hierarchies, semantic tokens, inlay hints and completion of overridable methods, and keeps the declarations of packages in the cache file until something needs them.
 
 ## Where the code comes from
 
@@ -18,13 +18,13 @@ Nothing was taken from the bytecode or the decompiled classes of any IDE plugin,
 
 ## Layout
 
-A Cargo workspace with three crates.
+A Cargo workspace with four crates.
 
 | Crate | Holds |
 | --- | --- |
 | `crates/syntax` (`php-syntax`) | The lexer, the parser, the tree (on `rowan`), the language level table and the pass that checks a tree against a level. |
-| `crates/index` (`php-index`) | The declarations of a file with their PHPDoc, name resolution, PHPDoc types, Composer metadata, the stubs of the standard library, the persistent cache, the parallel indexer and the class hierarchy. Knows nothing of LSP. |
-| `crates/analysis` (`php-analysis`) | Questions about a tree and an index: document symbols, folding, selection ranges, diagnostics, the type layer, hover, definitions, implementations, workspace symbols, completion and the line index that maps offsets to positions. Knows nothing of LSP. |
+| `crates/index` (`php-index`) | The declarations of a file with their PHPDoc, name resolution, PHPDoc types, Composer metadata, the stubs of the standard library, the persistent cache and the stores that read declarations back from it, the parallel indexer, the class hierarchy and the word index that narrows a search to the files that may hold a name. Knows nothing of LSP. |
+| `crates/analysis` (`php-analysis`) | Questions about a tree and an index: document symbols, folding, selection ranges, diagnostics, the type layer, hover, definitions, implementations, workspace symbols, completion, usages, highlights, rename, signature help, hierarchies, semantic tokens, inlay hints and the line index that maps offsets to positions. Knows nothing of LSP. |
 | `crates/server` (`php-language-server`) | The LSP front end over stdio: documents, incremental sync, workspace folders, background indexing with progress, the requests below, configuration. Library and binary. |
 
 ### The syntax crate
@@ -66,14 +66,15 @@ Supporting PHP 8.6 means adding rows to the table, plus the syntax to the parser
 - `textDocument/foldingRange`: class, function and control structure bodies, arrays, `match` and `switch` bodies, property hooks, attribute lists, heredocs, alternative syntax bodies, multi-line and consecutive line comments (`comment`), runs of `use` statements (`imports`), `// region` and `// endregion` (`region`) and PHP tags between markup. A fold ends on the line before a closing bracket that starts its line, so the bracket stays visible;
 - `textDocument/selectionRange`, growing from the token through every enclosing node to the file.
 
-- `textDocument/hover`, `textDocument/definition`, `textDocument/typeDefinition`, `textDocument/implementation`, `workspace/symbol`, `textDocument/completion` and `completionItem/resolve`, described under "Phase 1b" below.
+- `textDocument/hover`, `textDocument/definition`, `textDocument/typeDefinition`, `textDocument/implementation`, `workspace/symbol`, `textDocument/completion` and `completionItem/resolve`, described under "Phase 1b" below;
+- `textDocument/references`, `textDocument/documentHighlight`, `textDocument/prepareRename`, `textDocument/rename`, `textDocument/signatureHelp`, `textDocument/prepareCallHierarchy` with `callHierarchy/incomingCalls` and `callHierarchy/outgoingCalls`, `textDocument/prepareTypeHierarchy` with `typeHierarchy/supertypes` and `typeHierarchy/subtypes`, `textDocument/semanticTokens/full` and `/range`, and `textDocument/inlayHint`, described under "Phase 2" below.
 
 ### Configuration
 
 Only standard LSP channels are used:
 
-- `initializationOptions`: `{ "phpVersion": "8.4", "storagePath": "/some/folder", "stubsPath": "/some/stubs" }`. `phpVersion` is the language level for a project whose `composer.json` names none. `storagePath` is where the server keeps its cache and the standard library stubs; without it nothing is kept between runs and the stubs are not fetched, so the server then knows the project and nothing of the standard library. `stubsPath` reads a folder of phpstorm-stubs instead of fetching them;
-- `workspace/configuration`, when the client supports it: the server asks for the section `phpLanguageServer` with the document as `scopeUri` and reads `{ "phpVersion": "8.4" }`, so a client can answer differently per project or folder;
+- `initializationOptions`: `{ "phpVersion": "8.4", "storagePath": "/some/folder", "stubsPath": "/some/stubs", "inlayHints": { "parameterNames": true, "closureTypes": true } }`. `phpVersion` is the language level for a project whose `composer.json` names none. `storagePath` is where the server keeps its cache and the standard library stubs; without it nothing is kept between runs and the stubs are not fetched, so the server then knows the project and nothing of the standard library. `stubsPath` reads a folder of phpstorm-stubs instead of fetching them; `inlayHints` switches the two kinds of inlay hint, both on by default;
+- `workspace/configuration`, when the client supports it: the server asks for the section `phpLanguageServer` with the document as `scopeUri` and reads `{ "phpVersion": "8.4", "inlayHints": { ... } }`, so a client can answer differently per project or folder;
 - `workspace/didChangeConfiguration` with the same object, bare or under `phpLanguageServer`.
 
 The level of a document is the answer for its scope, else the default, else the newest version (8.5).
@@ -89,7 +90,7 @@ A change is applied to the text and the whole file is parsed again. That is meas
 `php-index` reads every file into a `FileSymbols`: classes, interfaces, traits and enums with their cases, constants, properties (promoted ones and ones with hooks and asymmetric visibility included) and methods, plus functions and constants (`const` and `define()`). A declaration carries its signature, modifiers, attributes, location, the PHPDoc (summary and description, `@param`, `@return`, `@var`, `@throws`, `@deprecated`, `@template` with bounds and defaults, `@extends`, `@implements`, `@use`, `@mixin`, `@property*`, `@method`, `@see`) and its types with every class name already resolved, so a cached entry needs nothing of the file it came from.
 
 - **Sources.** The project's own files (everything under the folder except `vendor/`, `node_modules`, dot folders and generated caches), the installed packages (only the files Composer would load, from the `autoload` of `vendor/composer/installed.json`), and the standard library stubs. A project file wins over a package, and a package over the stubs.
-- **Cache.** One file per project under `<storagePath>/cache`, keyed by the path of each source file with its size, modification time and a content hash. A file whose stamp matches is not read; one that was only touched is read and hashed but not parsed. The cache is dropped when the sources that decide what an entry means change (a hash of them is in the header). Declarations are serialized with postcard.
+- **Cache.** One file per project under `<storagePath>/cache`, keyed by the path of each source file with its size, modification time and a content hash. A file whose stamp matches is not read; one that was only touched is read and hashed but not parsed. The cache is dropped when the sources that decide what an entry means change (a hash of them is in the header). Its layout is described under "Memory" in the phase 2 section.
 - **Parallel and incremental.** Files are extracted on a rayon pool and reach the server in batches, which reports them as `$/progress` (work done progress, when the client supports it). Open documents are indexed from their text as it changes and win over the disk; `workspace/didChangeWatchedFiles` (registered dynamically for `**/*.php`, `composer.json` and `installed.json`) updates single files, and a change to Composer's files reads the project again. Workspace folders can come and go.
 - **Missing classes.** A class the index has not seen is looked up in the PSR-4 and PSR-0 maps and read on demand, for hover and navigation.
 
@@ -97,11 +98,14 @@ Measured on a project with 9,288 PHP files (its own and the packages Composer lo
 
 | | Cold (no cache) | Warm (cache) |
 | --- | --- | --- |
-| Standard library stubs (547 files, 9 MB) | 170 ms | 25 ms |
-| The project | discover 100 ms, index 440 ms | discover 95 ms, index 35 ms |
-| Resident memory of the whole process | 450 MB | 310 MB |
+| Standard library stubs (547 files, 9 MB) | 140 ms | 8 ms |
+| The project | discover 100 ms, index 340 ms | discover 90 ms, index 11 ms |
+| Resident memory of the whole server after indexing | 125 MB | 35 MB |
+| ... after a find usages, a workspace symbol search, completion and semantic tokens | 130 MB | 45 MB |
 
-`cargo run --release -p php-index --example bench -- <project> <stubs> [cache]` measures this on any project. Single-threaded extraction of all stubs takes about 100 ms (`cargo bench -p php-index`), and adding them to an index 2 ms.
+Before phase 2 the whole process held 440 MB cold and 310 MB warm, since every declaration of every package sat in memory. The numbers above are `scripts/measure-memory.py` on a real server, the ones of the bench example are in the next paragraph.
+
+`cargo run --release -p php-index --example bench -- <project> <stubs> [cache]` measures the indexing on any project and prints the resident size. Single-threaded extraction of all stubs takes about 100 ms (`cargo bench -p php-index`), and adding them to an index 2 ms.
 
 ### The standard library stubs
 
@@ -145,12 +149,82 @@ The word being typed is replaced by a placeholder before the text is parsed agai
 
 A class that needs an import carries an `additionalTextEdits` entry that inserts the `use` line in sorted order in the right block: the block of the file that shares the root namespace, else the one it sorts into, after an existing group at its end, and for a file without imports after the `namespace` or `declare` line with a blank line around it. A class of the current namespace or one already imported needs nothing, and one whose short name is taken is written in full. Items have a `kind`, `labelDetails.description` with the namespace (the class for a member), `detail` with the signature, a deprecated tag from `@deprecated`, and `completionItem/resolve` adds the same documentation hover shows. No call snippets are inserted: the client adds the parentheses. With nothing typed only variables, keywords and members are offered; at most 300 items come back and `isIncomplete` says when there were more. Comments, strings and inline HTML get nothing.
 
+## Phase 2: usages, rename, hierarchies, signatures, tokens and hints
+
+### Names and their usages
+
+A name in a file resolves to a `Symbol` through the same resolution and type layer hover uses: a class, function or constant by its qualified name, a method, property or class constant by the class that declares it, a parameter by the function that owns it, and a local variable by the function or file it lives in. Several declarations are one symbol when they are one thing: a method is one with the methods it overrides and implements, in both directions (an interface method, its implementations, and the classes below them), and a property or class constant works the same way. A private member and a constructor are their own. A promoted constructor parameter is a variable, a parameter and a property at once, so its usages are the variable inside the constructor, the named arguments of `new` and every `$object->name`.
+
+What counts as a usage: a class in every type and expression position (types, `new`, `extends`, `implements`, `instanceof`, `catch`, `Foo::class`, static access, attributes, trait `use` and its `insteadof` and `as` rules), `use` statements and group uses, functions and constants, methods (also through `static::`, `self::`, `parent::`, first-class callables and `?->`), properties (also written as `Foo::$name`), class constants and enum cases, variables with their closures and arrow functions, parameters through their named arguments, and PHPDoc: the classes in the types of every tag, `@param` and `@var` variables, `@property` and `@method` declarations, `@template` names, and the targets of `@see` and `{@see}`. A constructor also counts the `new` that calls it, also for a class below it that has no constructor of its own. A class imported under an alias counts where the alias is written.
+
+How it is found: `php-index` keeps, per file of the project, the sorted hashes of the words in it (`words.rs`), built the first time something asks and kept current from then on (open documents, watched files). A search reads only the files whose words contain the name, in parallel, and resolves the names in them against the index, so a result is never stale when a file elsewhere changed. Open documents are searched as they are in the editor. The resolved references are not stored. In the 798 own files of the project above, finding the 321 usages of a class in 68 files takes 60 ms in the probe (the words took 80 ms the first time) and 25 ms through the server, and a method used in five places takes 2 ms.
+
+Limits: only the project's own files are searched, not the installed packages. A usage whose receiver the type layer cannot name (`mixed`, a dynamic member name, `__get` and `__call`) is not found, and neither is a name inside a string (`'App\Foo'`, `[$this, 'run']`, `compact('x')`). `$$name` and `${name}` are not variables here. A usage in a file that is not on disk and not open is not seen.
+
+`textDocument/documentHighlight` marks the same places inside the open file. Variables and properties and class constants say read or write (an assignment, a compound assignment, `++`, `unset`, a `foreach` target, a destructuring and a by-reference `use` count as writes), the rest says text.
+
+### Rename
+
+`prepareRename` answers the range and the name of what is under the cursor, or says why not: a keyword (`self`, `static`, `parent`, `$this`), a name declared in an installed package or the standard library, a magic method, a name the index does not know. `rename` returns a workspace edit, as `documentChanges` when the client sends them and as `changes` otherwise. It renames:
+
+- classes, interfaces, traits and enums, with their `use` imports (the imported name only, so `use A\B as C` becomes `use A\X as C` and `C` stays), the names in doc comments and the attributes. A class written under an alias keeps the alias. When the file carries the class's name, is the only class in it, and Composer's autoload map agrees that the class lives there, the file is renamed too, as a `RenameFile` after the text edits and only when the client announces resource operations;
+- methods with their overrides, implementations and callers, properties with their `@property` lines, promoted parameters and named arguments, class constants and enum cases, functions and constants with their `use function` and `use const` imports;
+- variables and parameters inside their scope (a `use ($x)` of a closure and the `$x` of an arrow function follow), with the `@param` and inline `@var` of the doc comments, and the named arguments at the call sites;
+- a namespace, from its `namespace` statement: every file with that exact namespace, every `use` of a name in it, group use prefixes and fully qualified names. Names written relative to another namespace are left, and so are sub-namespaces and Composer's `autoload` section.
+
+A new name is checked: it has to be an identifier (a namespace may have backslashes), a class, function or constant may not be a reserved word, a type name or a keyword, a method or property may be named after a keyword, a class constant may not be `class`, a variable may not be `this` or a superglobal. Names that are taken are refused with the place: a method, property or constant of the same name anywhere in the hierarchy, a class or function of that name, a variable in the same scope, a class another class of the same file already imports under that name. The error goes back as a failed request with the message.
+
+Strings and ordinary comments are not changed, and the server says so in a `window/logMessage` with every rename.
+
+### Signature help
+
+`textDocument/signatureHelp` finds the argument list around the cursor (also one that is not closed yet), resolves the callee (functions, methods, static methods, constructors with `new`, attributes, closures with a documented signature) and answers each way the callee can be called: a function or method that is declared more than once, as the stubs do for functions that can be called in different ways, has one signature per declaration that exists at the project's language level. Variants the stubs spell with `#[PhpStormStubsElementAvailable]` are one signature at the level of the project, as before. The active signature is the first that fits the arguments typed so far, the active parameter follows the commas, a variadic parameter takes every extra argument, and a named argument selects the parameter of that name. A signature has the native types of the declaration, the doc comment's summary and description, and each parameter's `@param` text.
+
+### Call hierarchy and type hierarchy
+
+`prepareCallHierarchy` takes a function or method at a declaration or a usage. Incoming calls are the usages of the symbol (so the callers of an interface method include the calls through its implementations, and the `new` of a constructor), grouped by the function or method they sit in; code outside any function is one item for the file. Outgoing calls walk the body, resolve every call and `new` with the type layer and group them by callee, with the called names as ranges. A closure's calls belong to the function around it.
+
+`prepareTypeHierarchy` takes a class at a declaration or a usage. Supertypes are the parent class, the interfaces and the traits it uses, subtypes are the classes that extend, implement or use it directly. `lsp-types` has no field for the capability yet, so `typeHierarchyProvider` is added to the `initialize` answer by hand.
+
+### Semantic tokens
+
+`textDocument/semanticTokens/full` and `/range`. Keywords, strings, numbers and comments are left to the editor's grammar. The legend:
+
+| Types | `namespace`, `class`, `interface`, `enum`, `struct` (traits), `typeParameter` (`@template` names), `parameter`, `variable`, `property`, `enumMember`, `function`, `method`, `keyword` (doc tags) |
+| --- | --- |
+| Modifiers | `declaration`, `readonly`, `static`, `deprecated`, `abstract`, `defaultLibrary` (the standard library), `documentation` (inside a doc comment) |
+
+Classes and the like come from the index (a name it does not know is a plain `class`), constants are `variable` with `readonly`, class constants are `property` with `readonly` and `static`, and the declaration of a name carries `declaration`. A variable is a `parameter` when the function it lives in declares it as one. A qualified name is a `namespace` token for its prefix and the type for its last segment. In doc comments the tags, the classes of the types, the variables, the `@property` and `@method` names, `@see` targets and templates get tokens with `documentation`. A 5,000 line file takes about 60 ms and a typical one 5 to 20 ms. The server asks the client to refresh the tokens when the index changed (`workspace/semanticTokens/refresh`).
+
+### Inlay hints
+
+`textDocument/inlayHint` for a range, with two kinds:
+
+- **Parameter names** in front of positional arguments, as `name:`. They are left out when the argument already says it: a variable, property, constant or call named like the parameter (`$user_id` for `$userId`, `$this->name`, `getName()`), a parameter with a one letter name or one that starts with an underscore, a function that takes one argument unless the argument is a bare `true`, `false` or `null`, an argument after a named or spread one, and the arguments of a variadic parameter. Accepting a hint inserts `name: `. These rules follow the common ones of editors built on the IntelliJ Platform, from what the platform itself documents; the PHP plugin's own rules were not available to compare, so expect small differences.
+- **Closure parameter types** for a closure or arrow function whose parameter has no type, from the `callable(User): bool` or `Closure(...)` that the function being called declares for it, with the templates of the call bound. A type that is only built-in types can be accepted and inserts `type `.
+
+### Completion of overridable methods
+
+After `function ` in a class, enum or trait body, completion offers the methods of the parents, interfaces and abstract traits that the class does not declare yet and that are neither private nor final, with what must be implemented first. The inserted text is the whole method: the name, parameters with native types, defaults, by-reference and variadic markers, the return type, and a body in the indentation of the line (`return parent::name($a);` for a method that has a body above, an empty body for an abstract or interface method, a semicolon after `abstract`). Classes in the signature come with their `use` imports, a missing visibility (and `static`) is added in front of the declaration, and when the parentheses are already typed only the name is completed.
+
+### Memory
+
+The cache file (`<storagePath>/cache/project-<key>.bin`) has a header, an index and the declarations of every file one after the other. The index has, per file, its path, its stamp and hash, the place of its declarations and a summary: the names of its classes (with kind, abstract and deprecated flags, the level they exist at and the classes they extend, implement or use), functions and constants. A warm start reads only the index, which is what the server needs to find a class by name, to list names for completion and workspace symbols, and to know what stands below a class. The declarations of a file are read from the cache file the first time something asks for them (a lookup of one of its classes, a hover, a rename) and stay in memory while they are in use. The server lets go of the ones used longest ago when more than 1,500 are loaded, checked every three seconds, and reads them again when asked. Files that are open, files that changed since the last run, and projects without a storage folder keep their declarations in memory as before. A file whose declarations cannot be read from the cache any more is read from its source, and a class found at a place that no longer holds it (the file changed since it was indexed) is not returned.
+
+On the first run the declarations of a file are not kept at all: the file is read again when something asks, until the cache file is written, and then every file is read from there. The old cache file is released when the new one replaces it.
+
+Open documents keep their syntax tree, and no other tree is kept. Strings are not interned: after this change the declarations that stay resident are a few names per class, which is small next to what was dropped (the signatures, types and doc comments of 9,000 files).
+
+`cargo run --release -p php-index --example bench` prints the resident size next to the indexing times, and `scripts/measure-memory.py` starts the real server on a project and prints it after indexing and after a few requests.
+
 ### Trying it on a real project
 
 ```sh
-cargo run --release -p php-analysis --example probe -- <project> <stubs> <file> <line> <column> [complete|hover|definition]
+cargo run --release -p php-analysis --example probe -- <project> <stubs> <file> <line> <column> [complete|hover|definition|references|rename:<name>|tokens]
+cargo run --release -p php-analysis --example stress -- <project> <stubs> [limit]   # every analysis at every name, looking for panics
 cargo bench -p php-index                  # extraction and index building over the stubs
 cargo bench -p php-analysis               # completion and hover over the stubs
+cargo bench -p php-analysis --bench features   # tokens, hints, signature help, usages and rename
 ```
 
 ## Build, test and run
@@ -162,7 +236,7 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked
 ```
 
-The default test run needs no network and no PHP. It holds, per construct, snapshot tests of the tree in a compact text form (`expect-test`: `UPDATE_EXPECT=1 cargo test` rewrites them), error recovery tests, a round trip test (the text of the tree equals the input for every prefix of a sample file and after every single edit), tests of the language level table, and, for phase 1b, tests of the PHPDoc and type grammar, name resolution, the extractor, Composer metadata, the cache and the parallel indexer (on temporary folders), the hierarchy, type inference cases, completion at about thirty cursor positions over fixture projects (with a fake package and stubs), the placement of `use` lines, hover snapshots, navigation, and end-to-end tests of the server over an in-memory connection against a project on disk with Composer metadata, a vendor package, stubs and a cache (progress, the cache on a second run, completion with an import, level filtering of stubs, hover and definition across files, watched files, open documents over the disk). Tests that read the real stubs use the corpus below and report that they skipped when it is not there.
+The default test run needs no network and no PHP. It holds, per construct, snapshot tests of the tree in a compact text form (`expect-test`: `UPDATE_EXPECT=1 cargo test` rewrites them), error recovery tests, a round trip test (the text of the tree equals the input for every prefix of a sample file and after every single edit), tests of the language level table, and, for phase 1b, tests of the PHPDoc and type grammar, name resolution, the extractor, Composer metadata, the cache and the parallel indexer (on temporary folders), the hierarchy, type inference cases, completion at about thirty cursor positions over fixture projects (with a fake package and stubs), the placement of `use` lines, hover snapshots, navigation, and end-to-end tests of the server over an in-memory connection against a project on disk with Composer metadata, a vendor package, stubs and a cache (progress, the cache on a second run, completion with an import, level filtering of stubs, hover and definition across files, watched files, open documents over the disk). For phase 2 it adds the doc comment scanner, usages over fixture projects (a class with its imports and aliases, a method across its hierarchy, a promoted property with named arguments, variables with closures, strings, enums and traits, reads and writes), rename (a class with its file, a method across a hierarchy, a promoted property, parameters with docs, namespaces, name validation and conflicts), signature help with overloads, named arguments and variadics, call and type hierarchies, snapshots of semantic tokens and inlay hints, overridable method completion, the cache file and the lazy loading and trimming of declarations, and end-to-end tests of every new request over the in-memory connection. Tests that read the real stubs use the corpus below and report that they skipped when it is not there.
 
 ### Corpus
 
@@ -208,7 +282,7 @@ Measured on an Apple Silicon laptop, release build: lexing about 345 MiB/s, pars
 
 1. **Phase 1a (done):** parser, lossless tree, error recovery, language level table and gate, a server with diagnostics, symbols, folding and selection ranges.
 2. **Phase 1b, index and completion (done):** the index, the cache, Composer, the language level per project, name resolution, the type layer, hover, definition, type definition, implementation, workspace symbols and completion with auto-import, as described above.
-3. **Phase 2, references and rename:** find usages (the index has declarations, not yet usages, so this needs a reference index per file), rename across files, document highlights, signature help, call hierarchy and type hierarchy, completion of overridable methods, and the open points of phase 1b: the types a closure argument gives a template, return types inferred from function bodies, the doc and attribute formats of Laravel and Symfony macros, `@psalm-type` aliases, a cheaper memory footprint for large vendor trees (descriptions are kept as text, interning would help), and an on-disk index that can be read without loading everything.
-4. **Phase 3, inspections and fixes:** type-aware diagnostics in the spirit of PHPStan and Psalm, with quick fixes and code actions, formatting, inlay hints and semantic tokens.
-5. **Phase 4, refactors:** extract, inline, move, change signature, built on the lossless tree so formatting and comments survive.
-6. **Phase 5, frameworks:** Composer autoload maps, Laravel, Symfony and similar conventions.
+3. **Phase 2, usages, rename and editing aids (done):** find usages, document highlights, rename, signature help, call and type hierarchies, semantic tokens, inlay hints, completion of overridable methods and a cache that keeps declarations on disk, as described above.
+4. **Phase 3, inspections and fixes:** type-aware diagnostics in the spirit of PHPStan and Psalm (unknown classes and members, wrong argument counts and types, unused imports and variables, missing returns, deprecated usage), with quick fixes and code actions (import a class, implement the missing methods, add a PHPDoc), formatting, and the open points of phase 1b: the types a closure argument gives a template (`array_map` still returns `array`), return types inferred from function bodies, the doc and attribute formats of Laravel and Symfony macros and `@psalm-type` aliases. Also usages in the installed packages, usages found through a reference index that is kept on disk, and interned strings if the memory of the summaries ever matters.
+5. **Phase 4, refactors:** extract, inline, move (a class to another namespace with its file), change signature, built on the lossless tree so formatting and comments survive.
+6. **Phase 5, frameworks:** Composer autoload maps beyond PSR-4, Laravel, Symfony and similar conventions, such as Eloquent attributes, facades, route and view names.

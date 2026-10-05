@@ -171,3 +171,123 @@ fn finds_functions_and_constants() {
         ]
     );
 }
+
+/// Like `find`, marking each place as a read (`r`) or a write (`w`).
+fn find_access(files: &[(&str, &str)], current: &str) -> Vec<String> {
+    let fixture = Fixture::new(files).with_current(current);
+    let (text, root, offset) = split_cursor(current);
+    let sources = Files(fixture.sources.clone());
+    let path = PathBuf::from("/project/current.php");
+    let found = references_at(
+        &fixture.index,
+        &sources,
+        &Current {
+            path: &path,
+            text: &text,
+            root: &root,
+        },
+        offset,
+    );
+    let Some(found) = found else {
+        return vec!["nothing".to_string()];
+    };
+    let mut out = Vec::new();
+    for file in &found.files {
+        let source = if file.path == path {
+            text.clone()
+        } else {
+            fixture.sources[&file.path].clone()
+        };
+        let lines = LineIndex::new(&source);
+        for hit in &file.hits {
+            let line = lines
+                .line_col(&source, hit.range.start(), crate::PositionEncoding::Utf16)
+                .line
+                + 1;
+            let written = &source[usize::from(hit.range.start())..usize::from(hit.range.end())];
+            let access = if hit.access == crate::refs::Access::Write {
+                "w"
+            } else {
+                "r"
+            };
+            out.push(format!("{line}:{written}:{access}"));
+        }
+    }
+    out
+}
+
+#[test]
+fn tells_reads_from_writes() {
+    let current = "<?php\nclass Counter {\n    public int $count = 0;\n    public function bump(): int {\n        $this->count = 1;\n        $this->count += 2;\n        $this->count++;\n        $copy = $this->$0count;\n        return $copy;\n    }\n}\n";
+    assert_eq!(
+        find_access(&[], current),
+        ["3:$count:r", "5:count:w", "6:count:w", "7:count:w", "8:count:r"]
+    );
+    let variables = "<?php\nfunction f(array $items) {\n    foreach ($items as $key => $item) {\n        [$first, $second] = $item;\n        echo $first, $key;\n    }\n    unset($$0items);\n}\n";
+    assert_eq!(find_access(&[], variables), ["2:$items:w", "3:$items:r", "7:$items:w"]);
+}
+
+#[test]
+fn follows_static_self_parent_and_first_class_callables() {
+    let current = "<?php\nclass Base { public function run(): void {} public static function make(): static { return new static(); } const LIMIT = 1; }\nclass Child extends Base {\n    public function go(): void {\n        $this->run();\n        parent::run();\n        $f = $this->run(...);\n        static::make();\n        self::LIMIT;\n        echo static::LIMIT;\n    }\n}\n$c = new Child();\n$c->$0run();\n";
+    assert_eq!(
+        find(&[], current),
+        [
+            "current.php:2:run:Declaration",
+            "current.php:5:run:Reference",
+            "current.php:6:run:Reference",
+            "current.php:7:run:Reference",
+            "current.php:14:run:Reference",
+        ]
+    );
+    let constant = "<?php\nclass Base { const LIMIT = 1; }\nclass Child extends Base {\n    public function go() { return self::LIMIT + static::LIMIT + Base::LIMIT + parent::LIMIT; }\n}\necho Child::$0LIMIT;\n";
+    assert_eq!(find(&[], constant).len(), 6);
+}
+
+#[test]
+fn finds_trait_members_in_the_classes_that_use_them() {
+    let current = "<?php\ntrait Greets { public function hello(): string { return 'hi'; } }\nclass A { use Greets; public function run() { return $this->hello(); } }\nclass B { use Greets { hello as protected greet; } }\n(new A())->he$0llo();\n";
+    let found = find(&[], current);
+    assert!(
+        found.contains(&"current.php:2:hello:Declaration".to_string()),
+        "{found:?}"
+    );
+    assert!(
+        found.contains(&"current.php:3:hello:Reference".to_string()),
+        "{found:?}"
+    );
+    assert!(
+        found.contains(&"current.php:5:hello:Reference".to_string()),
+        "{found:?}"
+    );
+    assert!(
+        found.contains(&"current.php:4:hello:Reference".to_string()),
+        "the trait alias line: {found:?}"
+    );
+}
+
+#[test]
+fn finds_class_names_in_every_position() {
+    let current = "<?php\n#[Marker]\nclass Marker {}\nfinal class Use1 {\n    #[Marker] public Marker $a;\n    public function f(Marker|null $x): Marker {\n        try { new Marker(); } catch (Marker $e) {}\n        return $x instanceof Marker ? Marker::class : Mark$0er::make();\n    }\n}\n";
+    assert_eq!(find(&[], current).len(), 11);
+}
+
+#[test]
+fn variables_inside_strings_count() {
+    let current = "<?php\nfunction f($name) {\n    echo \"hello $name and {$name}\";\n    return <<<TXT\n    $$0name\n    TXT;\n}\n";
+    let found = find(&[], current);
+    assert_eq!(found.len(), 4, "{found:?}");
+}
+
+#[test]
+fn enum_cases_and_methods_resolve() {
+    let current = "<?php\nenum Suit: string {\n    case Hearts = 'h';\n    case Spades = 's';\n    public function label(): string { return $this->name; }\n    public static function default(): self { return self::Hearts; }\n}\n$s = Suit::Hea$0rts;\necho Suit::from('h')->label();\n";
+    assert_eq!(
+        find(&[], current),
+        [
+            "current.php:3:Hearts:Declaration",
+            "current.php:6:Hearts:Reference",
+            "current.php:8:Hearts:Reference",
+        ]
+    );
+}
