@@ -45,6 +45,10 @@ The client and daemon must understand the `apple` provider kind. Older iOS build
 without that contract update cannot use these chats. Native conversation forking
 is not implemented.
 
+## One-shot mode
+
+`ruimte-foundation-models --oneshot` is the same binary without a conversation: no session store, no tools and no network. It answers `availability` once and then reads `generate { id, instructions, prompt, maxTokens?, temperature? }` lines, streaming `text.snapshot` frames and a `done` per request, and a `cancel { id }` ends one. The daemon runs it for the editor's explanations, name suggestions and ghost text (`apps/server/src/ondevice`), where the instructions of each purpose live.
+
 ## Tools and approval
 
 Every file, command, web and MCP call asks for approval in all current

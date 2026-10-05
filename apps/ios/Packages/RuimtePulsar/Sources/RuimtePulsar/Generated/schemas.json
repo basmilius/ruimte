@@ -34912,6 +34912,97 @@
     "type": "object",
     "properties": {}
   },
+  "request.ondevice.status.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.ondevice.status.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "available": {
+        "type": "boolean"
+      },
+      "reason": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "available"
+    ]
+  },
+  "request.ondevice.generate.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80
+      },
+      "purpose": {
+        "type": "string",
+        "enum": [
+          "explain",
+          "names",
+          "ghost"
+        ]
+      },
+      "prompt": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 12000
+      },
+      "stream": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "id",
+      "purpose",
+      "prompt"
+    ]
+  },
+  "request.ondevice.generate.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "state": {
+        "type": "string",
+        "enum": [
+          "done",
+          "aborted"
+        ]
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "state",
+      "text"
+    ]
+  },
+  "request.ondevice.cancel.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "request.ondevice.cancel.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.launches.read.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -53588,6 +53679,22 @@
       "projectId",
       "editId",
       "edit"
+    ]
+  },
+  "event.ondevice.text": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "text"
     ]
   },
   "event.launch.status": {

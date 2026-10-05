@@ -5,6 +5,15 @@ export const AppleFoundationRequestSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('turn'), id: z.string(), prompt: z.string() }),
     z.object({ type: z.literal('cancel'), id: z.string() }),
     z.object({ type: z.literal('compact'), id: z.string() }),
+    // A single generation with no conversation and no tools, which the helper answers with `text.snapshot` and `done` when started with `--oneshot`.
+    z.object({
+        type: z.literal('generate'),
+        id: z.string(),
+        instructions: z.string(),
+        prompt: z.string(),
+        maxTokens: z.number().int().positive().optional(),
+        temperature: z.number().min(0).max(2).optional()
+    }),
     z.object({ type: z.literal('tool.result'), id: z.string(), output: z.string(), outcome: z.enum(['success', 'error', 'denied', 'recoverable_error']) })
 ]);
 export type AppleFoundationRequest = z.infer<typeof AppleFoundationRequestSchema>;

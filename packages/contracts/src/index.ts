@@ -180,6 +180,13 @@ import {
     LanguageStatusResultSchema
 } from './language.ts';
 import {
+    OnDeviceCancelPayloadSchema,
+    OnDeviceGeneratePayloadSchema,
+    OnDeviceGenerateResultSchema,
+    OnDeviceStatusResultSchema,
+    OnDeviceTextEventSchema
+} from './ondevice.ts';
+import {
     LaunchListResultSchema,
     LaunchStartPayloadSchema,
     LaunchStartResultSchema,
@@ -289,6 +296,7 @@ export * from './fs.ts';
 export * from './git.ts';
 export * from './ids.ts';
 export * from './language.ts';
+export * from './ondevice.ts';
 export * from './launches.ts';
 export * from './live-stream.ts';
 export * from './lan-door.ts';
@@ -445,6 +453,10 @@ export const REQUEST_SCHEMAS = {
     'language.request': { payload: LanguageRequestPayloadSchema, result: LanguageRequestResultSchema },
     'language.command': { payload: LanguageCommandPayloadSchema, result: LanguageCommandResultSchema },
     'language.edit.answer': { payload: LanguageEditAnswerPayloadSchema, result: EmptySchema },
+    'ondevice.status': { payload: EmptySchema, result: OnDeviceStatusResultSchema },
+    // The text streams to the asking client as `ondevice.text` while it runs; the result is the whole of it.
+    'ondevice.generate': { payload: OnDeviceGeneratePayloadSchema, result: OnDeviceGenerateResultSchema },
+    'ondevice.cancel': { payload: OnDeviceCancelPayloadSchema, result: EmptySchema },
     'launches.read': { payload: LaunchesTargetPayloadSchema, result: LaunchesDocumentSchema },
     // A person's save; it approves on this machine every launch it adds or changes.
     'launches.save': { payload: LaunchesSavePayloadSchema, result: LaunchesSaveResultSchema },
@@ -585,6 +597,7 @@ export const EVENT_SCHEMAS = {
     'language.custom.changed': LanguageCustomChangedEventSchema,
     'language.providers': LanguageProvidersEventSchema,
     'language.edit': LanguageEditEventSchema,
+    'ondevice.text': OnDeviceTextEventSchema,
     'launch.status': LaunchStatusSchema,
     'launches.changed': LaunchesChangedEventSchema,
     'fs.changed': FsChangedEventSchema,

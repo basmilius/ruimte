@@ -107,6 +107,8 @@ import { registerGitHandlers } from './handlers/git.ts';
 import { registerDiagramHandlers } from './handlers/diagram.ts';
 import { registerLaunchHandlers } from './handlers/launches.ts';
 import { registerLanguageHandlers } from './handlers/language.ts';
+import { registerOnDeviceHandlers } from './handlers/ondevice.ts';
+import { OnDeviceModel } from './ondevice/model.ts';
 import { LanguageHost } from './language/host.ts';
 import { NativePolicy, readNativeCheckout } from './language/native.ts';
 import { agentLaunches } from './launches/agent-host.ts';
@@ -858,6 +860,8 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     await language.load();
     projects.attachLanguage(language);
     registerLanguageHandlers(dispatcher, language);
+    const onDevice = new OnDeviceModel();
+    registerOnDeviceHandlers(dispatcher, onDevice);
     const provenance = new ProvenanceService({
         home: config.home,
         locate: (chatId) => projects.index.locate(chatId),
@@ -1312,6 +1316,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         launches.close();
         launchStore.closeAll();
         await step('Stopping language servers', () => language.close());
+        await step('Stopping the on-device helper', () => onDevice.dispose());
         peers.closeAll();
         lanDoor.stop();
         await relay.stop();

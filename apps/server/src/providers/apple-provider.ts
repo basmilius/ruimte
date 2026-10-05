@@ -1,22 +1,7 @@
-import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { AppleFoundationEventSchema } from '@ruimte/contracts';
 import { AppleBackend } from '../chat/apple-backend.ts';
+import { appleSiliconMac, helperCommand, probeAppleHelper } from './apple-helper.ts';
 import { ModelCatalog } from '@ruimte/agents/providers/catalog';
 import type { ChatProvider } from '@ruimte/agents/providers/provider';
-
-function helperCommand(): string {
-    if (process.env.RUIMTE_APPLE_FOUNDATION_HELPER) {
-        return process.env.RUIMTE_APPLE_FOUNDATION_HELPER;
-    }
-    const packaged = join(dirname(process.execPath), 'native', 'ruimte-foundation-models');
-    if (existsSync(packaged)) {
-        return packaged;
-    }
-    const built = fileURLToPath(new URL('../../../foundation-models/dist/ruimte-foundation-models', import.meta.url));
-    return existsSync(built) ? built : fileURLToPath(new URL('../../../foundation-models/.build/debug/ruimte-foundation-models', import.meta.url));
-}
 
 export function createAppleProvider(enabled: () => boolean = () => false): ChatProvider {
     return {
@@ -50,25 +35,18 @@ export function createAppleProvider(enabled: () => boolean = () => false): ChatP
             if (!enabled()) {
                 return { installed: false, version: 'Disabled in Settings' };
             }
-            if (process.platform !== 'darwin' || process.arch !== 'arm64') {
+            if (!appleSiliconMac()) {
                 return { installed: false, version: 'Requires Apple silicon and macOS 26.4 or later' };
             }
             try {
-                const child = Bun.spawn([command, '--probe'], { env, stdout: 'pipe', stderr: 'ignore' });
-                const timer = setTimeout(() => child.kill(), 10_000);
-                try {
-                    const result = AppleFoundationEventSchema.parse(JSON.parse(await new Response(child.stdout).text()));
-                    const exited = await child.exited;
-                    if (result.type !== 'availability' || exited !== 0) {
-                        return {
-                            installed: false,
-                            version: result.type === 'startup.error' ? result.text : 'The Apple Foundation Models helper could not start'
-                        };
-                    }
-                    return { installed: result.available, version: result.available ? 'On-device' : (result.reason ?? 'The local model is unavailable') };
-                } finally {
-                    clearTimeout(timer);
+                const { result, exited } = await probeAppleHelper(command, env);
+                if (result.type !== 'availability' || exited !== 0) {
+                    return {
+                        installed: false,
+                        version: result.type === 'startup.error' ? result.text : 'The Apple Foundation Models helper could not start'
+                    };
                 }
+                return { installed: result.available, version: result.available ? 'On-device' : (result.reason ?? 'The local model is unavailable') };
             } catch {
                 return { installed: false, version: 'Apple Foundation Models helper is missing or could not start' };
             }

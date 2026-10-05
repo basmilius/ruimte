@@ -2,6 +2,7 @@
 
 exports[`no vocabulary a daemon sends gains or loses a value 1`] = `
 [
+  "aborted, done",
   "aborted, done, error, running",
   "accent, blue, green, ink, muted, orange, pink, purple, red, yellow",
   "active, blocked, done, failed, info, open, skipped, warning",

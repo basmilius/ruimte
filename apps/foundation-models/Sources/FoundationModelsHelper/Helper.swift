@@ -7,6 +7,9 @@ struct Request: Decodable, Sendable {
     let prompt: String?
     let output: String?
     let outcome: ToolOutcome?
+    let instructions: String?
+    let maxTokens: Int?
+    let temperature: Double?
 }
 
 struct Frame: Encodable, Sendable {
@@ -338,6 +341,10 @@ struct Helper {
             case .available: await output.send(Frame(type: "availability", available: true))
             case .unavailable(let reason): await output.send(Frame(type: "availability", available: false, reason: String(describing: reason)))
             }
+            return
+        }
+        if arguments.contains("--oneshot") {
+            await OneShot().serve()
             return
         }
         let runner: Runner
