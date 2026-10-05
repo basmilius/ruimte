@@ -536,7 +536,9 @@ export const ProjectChatViewSchema = ViewBaseSchema.extend({
     node: StandaloneNodeSchema,
     // A chat the daemon made in the machine's Chats project that nobody wrote in yet. It is not listed and the next
     // new chat reuses it; the daemon drops the mark with the first message.
-    empty: z.boolean().optional()
+    empty: z.boolean().optional(),
+    // A chat an inline edit in the editor runs in: no list shows it and no tab offers it, and the card in the editor is how it is found again.
+    hidden: z.boolean().optional()
 });
 export type ProjectChatView = z.infer<typeof ProjectChatViewSchema>;
 
@@ -665,10 +667,19 @@ export function isEmptyChatView(view: ProjectView): view is ProjectChatView {
     return view.kind === 'chat' && view.empty === true;
 }
 
+export function isHiddenChatView(view: ProjectView): view is ProjectChatView {
+    return view.kind === 'chat' && view.hidden === true;
+}
+
+/* A chat view no list shows: one nobody wrote in yet, or one an inline edit runs in. */
+export function isUnlistedChatView(view: ProjectView): view is ProjectChatView {
+    return isEmptyChatView(view) || isHiddenChatView(view);
+}
+
 /* The views a person can put on screen. A divider marks the list rather than standing in it, and
    this version has nothing to draw a view of an unknown kind with. */
 export function isOpenableView(view: ProjectView): boolean {
-    return !isDividerView(view) && view.kind !== UNKNOWN_KIND;
+    return !isDividerView(view) && view.kind !== UNKNOWN_KIND && !isHiddenChatView(view);
 }
 
 /* A view the way the file holds it. */
@@ -1038,6 +1049,33 @@ export const ProjectNewChatResultSchema = z.object({
     viewId: z.string().min(1)
 });
 export type ProjectNewChatResult = z.infer<typeof ProjectNewChatResultSchema>;
+
+/*
+ * A chat view that is hidden, for an edit of the selected lines of one file: the daemon makes the view
+ * and the chat in one write, in the folder of the project or of the worktree the file is in, in the
+ * mode that asks before it changes a file. `path` is the file as a file node keeps it.
+ */
+export const ProjectNewInlineChatPayloadSchema = z.object({
+    projectId: ProjectIdSchema,
+    path: z.string().min(1),
+    provider: AgentKindSchema,
+    model: z.string().min(1).optional(),
+    account: ProviderAccountIdSchema.optional()
+});
+export type ProjectNewInlineChatPayload = z.infer<typeof ProjectNewInlineChatPayloadSchema>;
+
+export const ProjectNewInlineChatResultSchema = z.object({
+    chatId: z.string().min(1),
+    viewId: z.string().min(1)
+});
+export type ProjectNewInlineChatResult = z.infer<typeof ProjectNewInlineChatResultSchema>;
+
+/* Names a hidden chat view of a project: what a card in the editor lists, shows as a chat or takes away. */
+export const ProjectInlineChatTargetPayloadSchema = z.object({
+    projectId: ProjectIdSchema,
+    viewId: z.string().min(1)
+});
+export type ProjectInlineChatTargetPayload = z.infer<typeof ProjectInlineChatTargetPayloadSchema>;
 
 export const ProjectSaveResultSchema = z.object({
     rev: z.number().int().nonnegative()

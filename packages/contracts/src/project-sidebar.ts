@@ -3,8 +3,8 @@ import { AgentKindSchema, AgentStatusSchema } from './agent.ts';
 import { flagOf } from './project-flags.ts';
 import {
     isCanvasView,
-    isEmptyChatView,
     isSessionView,
+    isUnlistedChatView,
     NodeTitleSourceSchema,
     ProjectIconChoiceSchema,
     ProjectSummarySchema,
@@ -50,10 +50,10 @@ export type ProjectSidebarView = z.infer<typeof ProjectSidebarViewSchema>;
 export type ProjectSidebarResult = z.infer<typeof ProjectSidebarResultSchema>;
 
 /* Keep canvas geometry, note text and embedded files off background sidebar requests. A chat nobody
-   wrote in yet is not listed, so the rows a client builds for its own project read the same. */
+   wrote in yet and a chat an inline edit runs in are not listed, so the rows a client builds for its own project read the same. */
 export function projectSidebarViews(views: readonly ProjectView[], shared: readonly string[], flags?: ProjectFlags): ProjectSidebarView[] {
     return views
-        .filter((view): boolean => !isEmptyChatView(view))
+        .filter((view): boolean => !isUnlistedChatView(view))
         .map((view) => {
             const provider = view.kind === 'chat' || view.kind === 'terminal' ? (view.node.provider ?? null) : null;
             const flag = flagOf(flags, view.id);

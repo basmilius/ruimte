@@ -229,6 +229,8 @@ export const ChatInfoSchema = z.object({
     usage: ChatUsageSchema,
     // The name the CLI gave the session, when it gives one; a node that nobody named takes it.
     suggestedTitle: SuggestedTitleSchema.optional(),
+    // A chat that runs an edit inline in an editor: no list shows it, and a client that lists chats skips it.
+    hidden: z.boolean().optional(),
     // The chat this one was forked from and the turn it continues after; absent on a chat nobody forked.
     forkOf: z.object({ chatId: ChatIdSchema, turnId: z.string().min(1), at: z.number() }).optional(),
     // This chat's own switch for being taken up again after a limit; absent follows the machine's `resumeAtReset`.

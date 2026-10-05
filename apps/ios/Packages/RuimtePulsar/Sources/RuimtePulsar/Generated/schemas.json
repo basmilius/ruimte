@@ -9593,6 +9593,9 @@
         "minLength": 1,
         "maxLength": 80
       },
+      "hidden": {
+        "type": "boolean"
+      },
       "forkOf": {
         "type": "object",
         "properties": {
@@ -11226,6 +11229,9 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 80
+          },
+          "hidden": {
+            "type": "boolean"
           },
           "forkOf": {
             "type": "object",
@@ -14921,6 +14927,9 @@
                       "minLength": 1,
                       "maxLength": 80
                     },
+                    "hidden": {
+                      "type": "boolean"
+                    },
                     "forkOf": {
                       "type": "object",
                       "properties": {
@@ -15451,6 +15460,9 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 80
+                    },
+                    "hidden": {
+                      "type": "boolean"
                     },
                     "forkOf": {
                       "type": "object",
@@ -17444,6 +17456,9 @@
         "minLength": 1,
         "maxLength": 80
       },
+      "hidden": {
+        "type": "boolean"
+      },
       "forkOf": {
         "type": "object",
         "properties": {
@@ -18267,6 +18282,9 @@
             "minLength": 1,
             "maxLength": 80
           },
+          "hidden": {
+            "type": "boolean"
+          },
           "forkOf": {
             "type": "object",
             "properties": {
@@ -18910,6 +18928,9 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 80
+              },
+              "hidden": {
+                "type": "boolean"
               },
               "forkOf": {
                 "type": "object",
@@ -24159,6 +24180,9 @@
                     },
                     "empty": {
                       "type": "boolean"
+                    },
+                    "hidden": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -27218,6 +27242,9 @@
                       }
                     },
                     "empty": {
+                      "type": "boolean"
+                    },
+                    "hidden": {
                       "type": "boolean"
                     }
                   },
@@ -30432,6 +30459,107 @@
       "summary",
       "viewId"
     ]
+  },
+  "request.project.newInlineChat.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "provider": {
+        "type": "string",
+        "x-open-enum": [
+          "claude",
+          "codex",
+          "gemini",
+          "copilot",
+          "apple"
+        ]
+      },
+      "model": {
+        "type": "string",
+        "minLength": 1
+      },
+      "account": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+      }
+    },
+    "required": [
+      "projectId",
+      "path",
+      "provider"
+    ]
+  },
+  "request.project.newInlineChat.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "chatId",
+      "viewId"
+    ]
+  },
+  "request.project.showInlineChat.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId"
+    ]
+  },
+  "request.project.showInlineChat.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.project.removeInlineChat.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId"
+    ]
+  },
+  "request.project.removeInlineChat.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
   },
   "request.drawing.paths.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -42429,6 +42557,9 @@
               "minLength": 1,
               "maxLength": 80
             },
+            "hidden": {
+              "type": "boolean"
+            },
             "forkOf": {
               "type": "object",
               "properties": {
@@ -45796,6 +45927,9 @@
                     "minLength": 1,
                     "maxLength": 80
                   },
+                  "hidden": {
+                    "type": "boolean"
+                  },
                   "forkOf": {
                     "type": "object",
                     "properties": {
@@ -46326,6 +46460,9 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 80
+                  },
+                  "hidden": {
+                    "type": "boolean"
                   },
                   "forkOf": {
                     "type": "object",
@@ -47907,6 +48044,9 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 80
+          },
+          "hidden": {
+            "type": "boolean"
           },
           "forkOf": {
             "type": "object",
@@ -49890,6 +50030,9 @@
                       }
                     },
                     "empty": {
+                      "type": "boolean"
+                    },
+                    "hidden": {
                       "type": "boolean"
                     }
                   },
