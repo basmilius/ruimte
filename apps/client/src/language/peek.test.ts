@@ -57,6 +57,20 @@ describe('peek references', () => {
         expect(editor.getCaret()).toEqual(at(1, 4));
     });
 
+    test('leaves the places of a folded file to the arrows and brings them back', async () => {
+        const { editor, language } = await setup([place(uri, 1), place(uri, 0), place(otherUri, 2)]);
+        editor.moveCaret(at(0, 5));
+        await language.peek.open();
+        expect(language.popups.getState().peek!.active).toBe('0:1');
+        language.peek.toggleFile(otherUri);
+        editor.press({ key: 'ArrowDown' });
+        expect(language.popups.getState().peek!.active).toBe('0:1');
+        language.peek.toggleFile(otherUri);
+        expect(language.popups.getState().peek!.collapsed).toEqual([]);
+        editor.press({ key: 'ArrowDown' });
+        expect(language.popups.getState().peek!.active).toBe('1:0');
+    });
+
     test('takes the keyboard when it opens, so the arrows work without a click and leave the caret alone', async () => {
         const { editor, language } = await setup([place(uri, 1), place(otherUri, 2)]);
         editor.moveCaret(at(0, 5));

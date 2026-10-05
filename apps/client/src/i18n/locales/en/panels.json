@@ -614,6 +614,8 @@
             "references_one": "{{formatted}} reference",
             "references_other": "{{formatted}} references",
             "close": "Close",
+            "collapse": "Collapse",
+            "expand": "Expand",
             "definitions_one": "{{formatted}} definition",
             "definitions_other": "{{formatted}} definitions",
             "noDefinition": "No definition found",

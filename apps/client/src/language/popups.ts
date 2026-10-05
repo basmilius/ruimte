@@ -140,6 +140,8 @@ export interface PeekView {
     readonly container: HTMLElement | null;
     readonly files: readonly PeekFile[];
     readonly active: string;
+    /* The files whose places the list leaves out. */
+    readonly collapsed: readonly string[];
     readonly count: number;
     readonly preview: (PeekSnippet & { readonly uri: string }) | null;
 }

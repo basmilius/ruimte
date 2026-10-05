@@ -1,5 +1,11 @@
 import type { Location, Range } from '@ruimte/smart-editor-lsp';
 
+/* A stretch of one line, in characters from its start. */
+export interface NameRange {
+    readonly start: number;
+    readonly end: number;
+}
+
 /* One reference in the list: the line it is on, as the file reads there. */
 export interface PeekPlace {
     readonly id: string;
@@ -7,6 +13,8 @@ export interface PeekPlace {
     /* Zero-based. */
     readonly line: number;
     readonly text: string;
+    /* Where the name stands in `text`; null without a line, or when the line is not what the server read. */
+    readonly name: NameRange | null;
 }
 
 export interface PeekFile {
@@ -17,9 +25,24 @@ export interface PeekFile {
 /* The most files whose text is read for the list; a name used everywhere shows the rest as places without a line. */
 export const PEEK_READ_FILES = 30;
 
-/* The text of one line, without its indentation. */
-export function lineTextOf(text: string, line: number): string {
-    return (text.split(/\r\n|\r|\n/)[line] ?? '').trim();
+/* The part of `line` a range covers, which runs to the end of the line when the range goes on. */
+function columnsOf(range: Range, line: number, length: number): NameRange | null {
+    if (range.start.line !== line) {
+        return null;
+    }
+    const end = Math.min(length, range.end.line === line ? range.end.character : length);
+    return range.start.character < end ? { start: range.start.character, end } : null;
+}
+
+/* The name of a place within its line once the indentation is cut off. */
+function trimmedNameOf(raw: string, range: Range, line: number): NameRange | null {
+    const leading = raw.length - raw.trimStart().length;
+    const columns = columnsOf(range, line, raw.length);
+    const length = raw.trim().length;
+    if (columns === null || columns.start < leading || columns.start >= leading + length) {
+        return null;
+    }
+    return { start: columns.start - leading, end: Math.min(length, columns.end - leading) };
 }
 
 /*
@@ -39,14 +62,20 @@ export function peekFilesOf(locations: readonly Location[], current: string, tex
     const uris = [...order.filter((uri) => uri === current), ...order.filter((uri) => uri !== current)];
     return uris.map((uri, fileIndex) => {
         const text = textOf(uri);
+        const lines = text === null ? null : text.split(/\r\n|\r|\n/);
         const places = [...byFile.get(uri)!]
             .sort((left, right) => left.range.start.line - right.range.start.line || left.range.start.character - right.range.start.character)
-            .map((location, index) => ({
-                id: `${fileIndex}:${index}`,
-                location,
-                line: location.range.start.line,
-                text: text === null ? '' : lineTextOf(text, location.range.start.line)
-            }));
+            .map((location, index) => {
+                const line = location.range.start.line;
+                const raw = lines?.[line] ?? '';
+                return {
+                    id: `${fileIndex}:${index}`,
+                    location,
+                    line,
+                    text: raw.trim(),
+                    name: lines === null ? null : trimmedNameOf(raw, location.range, line)
+                };
+            });
         return { uri, places };
     });
 }
@@ -57,16 +86,18 @@ export interface PeekSnippet {
     readonly text: string;
     /* Zero-based, from the first line of the snippet. */
     readonly active: number;
+    /* The name on the active line, in characters of the line as it stands in `text`. */
+    readonly name: NameRange | null;
 }
 
-const BEFORE = 5;
+const BEFORE = 3;
 const AFTER = 8;
 
-export function snippetOf(text: string, line: number): PeekSnippet {
+export function snippetOf(text: string, line: number, range: Range): PeekSnippet {
     const lines = text.split(/\r\n|\r|\n/);
     const startLine = Math.max(0, line - BEFORE);
     const end = Math.min(lines.length, line + AFTER + 1);
-    return { startLine, text: lines.slice(startLine, end).join('\n'), active: line - startLine };
+    return { startLine, text: lines.slice(startLine, end).join('\n'), active: line - startLine, name: columnsOf(range, line, (lines[line] ?? '').length) };
 }
 
 const DEFINITION_LINES = 24;
@@ -75,11 +106,11 @@ const DEFINITION_LINES = 24;
  * The source of a definition: the lines of the whole declaration when the server gave them, else a stretch
  * from just above the name, cut at a screenful since a class is longer than a peek is tall.
  */
-export function definitionSnippetOf(text: string, line: number, declaration: Range | null): PeekSnippet {
+export function definitionSnippetOf(text: string, line: number, declaration: Range | null, range: Range): PeekSnippet {
     const lines = text.split(/\r\n|\r|\n/);
     const startLine = declaration === null ? Math.max(0, line - 2) : Math.min(declaration.start.line, line);
     const end = Math.min(lines.length - 1, declaration === null ? line + DEFINITION_LINES / 2 : Math.min(declaration.end.line, startLine + DEFINITION_LINES));
-    return { startLine, text: lines.slice(startLine, end + 1).join('\n'), active: line - startLine };
+    return { startLine, text: lines.slice(startLine, end + 1).join('\n'), active: line - startLine, name: columnsOf(range, line, (lines[line] ?? '').length) };
 }
 
 /*
@@ -104,4 +135,13 @@ export function distinguishingFolders(paths: readonly string[]): string[] {
         }
         return mine.join('/');
     });
+}
+
+/* The column a character stands at once tabs are expanded to their stops, which is where a monospace face draws it. */
+export function visualColumnOf(line: string, character: number, tabSize: number): number {
+    let column = 0;
+    for (let i = 0; i < Math.min(character, line.length); i++) {
+        column += line[i] === '\t' ? tabSize - (column % tabSize) : 1;
+    }
+    return column;
 }

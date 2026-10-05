@@ -10,8 +10,8 @@ import type { PeekView } from './popups';
 import { isShortcut } from './shortcut-keys';
 
 const TOAST_ID = 'language-peek';
-/* Tall enough for the code and the list, until the editor has measured it. */
-export const PEEK_HEIGHT = 300;
+/* The block as the panel draws it: a hatched band, the header, eight lines of code and a hatched band, until the editor has measured it. */
+export const PEEK_HEIGHT = 241;
 
 type PeekKind = PeekView['kind'];
 
@@ -132,7 +132,7 @@ export class PeekFeature {
                 ? files[0]!.places[0]!
                 : (files.flatMap((file) => file.places).find((place) => !(place.location.uri === uri && place.line === position.line)) ?? files[0]!.places[0]!);
         this.line = position.line;
-        this.language.popups.setState({ peek: { kind, container: null, files, active: first.id, count: unique.length, preview: null } });
+        this.language.popups.setState({ peek: { kind, container: null, files, active: first.id, collapsed: [], count: unique.length, preview: null } });
         this.select(first.id);
         editor.setWidgets([{ id: 'peek', line: this.line, height: PEEK_HEIGHT, render: (container) => this.mounted(container) }]);
         // The keys come through the editor, which a click on the hover's link or a menu command has taken the focus from.
@@ -177,9 +177,18 @@ export class PeekFeature {
             text === undefined
                 ? null
                 : this.kind === 'definitions'
-                  ? definitionSnippetOf(text, line, this.targets.get(placeKey(location)) ?? null)
-                  : snippetOf(text, line);
+                  ? definitionSnippetOf(text, line, this.targets.get(placeKey(location)) ?? null, location.range)
+                  : snippetOf(text, line, location.range);
         this.language.popups.setState({ peek: { ...view, active: id, preview: snippet === null ? null : { ...snippet, uri: location.uri } } });
+    }
+
+    /* Folds the places of a file away from the list, or brings them back. */
+    toggleFile(uri: string): void {
+        const view = this.language.popups.getState().peek;
+        if (view !== null) {
+            const collapsed = view.collapsed.includes(uri) ? view.collapsed.filter((other) => other !== uri) : [...view.collapsed, uri];
+            this.language.popups.setState({ peek: { ...view, collapsed } });
+        }
     }
 
     /* Goes to a place and closes the peek. */
@@ -203,13 +212,12 @@ export class PeekFeature {
         if (view === null || event.metaKey || event.ctrlKey || event.altKey) {
             return false;
         }
-        const index = this.order.indexOf(view.active);
         switch (event.key) {
             case 'ArrowDown':
-                this.select(this.order[Math.min(this.order.length - 1, index + 1)]!);
+                this.step(view, 1);
                 return true;
             case 'ArrowUp':
-                this.select(this.order[Math.max(0, index - 1)]!);
+                this.step(view, -1);
                 return true;
             case 'Enter':
                 this.go(view.active);
@@ -219,6 +227,18 @@ export class PeekFeature {
                 return true;
             default:
                 return false;
+        }
+    }
+
+    /* The next place in the list a person can see, which a folded file has none of. */
+    private step(view: PeekView, direction: 1 | -1): void {
+        const index = this.order.indexOf(view.active);
+        for (let next = index + direction; next >= 0 && next < this.order.length; next += direction) {
+            const id = this.order[next]!;
+            if (!view.collapsed.includes(this.places.get(id)!.uri)) {
+                this.select(id);
+                return;
+            }
         }
     }
 

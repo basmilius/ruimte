@@ -614,6 +614,8 @@
             "references_one": "{{formatted}} referentie",
             "references_other": "{{formatted}} referenties",
             "close": "Sluit",
+            "collapse": "Inklappen",
+            "expand": "Uitklappen",
             "definitions_one": "{{formatted}} definitie",
             "definitions_other": "{{formatted}} definities",
             "noDefinition": "Geen definitie gevonden",
