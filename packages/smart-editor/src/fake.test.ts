@@ -96,3 +96,16 @@ describe('FakeEditorEngine', () => {
         expect(editor.getCaret()).toEqual({ line: 0, character: 9 });
     });
 });
+
+describe('FakeEditor.trackRange', () => {
+    const range = (from: number, to: number) => ({ start: { line: 0, character: from }, end: { line: 0, character: to } });
+
+    test('follows an edit before the range and returns null once an edit touches it', () => {
+        const editor = new FakeEditorEngine().mount(element, { text: 'alpha beta', theme: 'light' });
+        const tracked = editor.trackRange(range(6, 10));
+        editor.type('xalpha beta');
+        expect(tracked.get()).toEqual(range(7, 11));
+        editor.type('xalpha bXta');
+        expect(tracked.get()).toBeNull();
+    });
+});

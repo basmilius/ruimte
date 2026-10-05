@@ -39,6 +39,7 @@ export type {
     EditorPosition,
     EditorRange,
     EditorTextChange,
+    EditorTrackedRange,
     EditorRunCommand,
     EditorSelectionRanges,
     EditorTheme,

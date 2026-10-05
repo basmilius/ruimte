@@ -14,6 +14,7 @@ import { FindController } from './find.ts';
 import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type LayoutRect, type LayoutRow, RIGHT_PADDING, type TextRow } from './layout.ts';
 import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
 import { mapOffset } from './offsets.ts';
+import { mapTrackedRange } from './tracked-range.ts';
 import { type ScrollKind, scrollPosition } from './scroll.ts';
 import { easeOut, scrollDuration } from './scroll-animation.ts';
 import { Outline, scopeChain, type StickyPlacement, stickyCover, stickyPlacements, structuralEntries } from './outline.ts';
@@ -157,6 +158,7 @@ export class EditorView {
     private scopeKey = '';
     private changeMarks: { kind: EditorChangeKind; from: number; to: number }[] = [];
     private changeVersion = 0;
+    private readonly tracked = new Set<{ from: number; to: number; lost: boolean }>();
     private overviewKey = '';
     private gutterWidth = MIN_GUTTER_WIDTH;
     private frame: number | undefined;
@@ -491,6 +493,7 @@ export class EditorView {
                 this.find.mapBounds(changes);
                 this.changeMarks = this.changeMarks.map((mark) => ({ ...mark, from: mapOffset(mark.from, changes), to: mapOffset(mark.to, changes) }));
                 this.markers = this.markers.map((marker) => ({ ...marker, from: mapOffset(marker.from, changes), to: mapOffset(marker.to, changes) }));
+                this.mapTracked(changes);
                 this.semantic = this.semantic.map((token) => ({ ...token, from: mapOffset(token.from, changes), to: mapOffset(token.to, changes) }));
             }
             this.foldRanges = this.mappedFolds(batches);
@@ -520,6 +523,32 @@ export class EditorView {
             this.rowEndCaret = null;
         }
         this.requestRender();
+    }
+
+    private mapTracked(changes: readonly DocumentChange[]): void {
+        for (const entry of this.tracked) {
+            const mapped = mapTrackedRange(entry.from, entry.to, changes);
+            if (mapped === null) {
+                entry.lost = true;
+                this.tracked.delete(entry);
+            } else {
+                entry.from = mapped.from;
+                entry.to = mapped.to;
+            }
+        }
+    }
+
+    /* A range that follows the text through edits and is lost once one touches it; see `mapTrackedRange`. */
+    trackRange(from: number, to: number): { get(): { from: number; to: number } | null; dispose(): void } {
+        const entry = { from, to, lost: false };
+        this.tracked.add(entry);
+        return {
+            get: () => (entry.lost ? null : { from: entry.from, to: entry.to }),
+            dispose: () => {
+                entry.lost = true;
+                this.tracked.delete(entry);
+            }
+        };
     }
 
     /* The ranges follow the text until the next read of the document, so a fold above an edit stays closed meanwhile. */
@@ -1985,6 +2014,7 @@ export class EditorView {
         this.viewListeners.clear();
         this.hoverListeners.clear();
         this.gutterActionListeners.clear();
+        this.tracked.clear();
         this.painter.clear();
         this.root.remove();
     }

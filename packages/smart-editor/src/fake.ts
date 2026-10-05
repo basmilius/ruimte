@@ -31,11 +31,13 @@ import type {
     EditorSemanticToken,
     EditorSmartKeys,
     EditorTextChange,
+    EditorTrackedRange,
     EditorTheme,
     EditorWidget
 } from './types.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
 import { changedSpan } from '@ruimte/smart-editor-core';
+import { mapTrackedRange } from './tracked-range.ts';
 
 function positionIn(text: string, offset: number): EditorPosition {
     const before = text.slice(0, Math.max(0, offset));
@@ -130,6 +132,7 @@ export class FakeEditor implements Editor {
         if (source !== 'external') {
             this.moveCaret(positionIn(text, span.start + span.text.length));
         }
+        this.followTracked(span.start, span.end, span.text.length);
         const change: EditorTextChange = {
             source,
             changes: [{ range: { start: positionIn(before, span.start), end: positionIn(before, span.end) }, text: span.text }]
@@ -137,6 +140,33 @@ export class FakeEditor implements Editor {
         for (const listener of [...this.textChanges]) {
             listener(change);
         }
+    }
+
+    private readonly tracked = new Set<{ from: number; to: number; lost: boolean }>();
+
+    /* The fake sees one change per edit, the stretch that differs, so a range it tracks is lost a little sooner than the real editor's. */
+    private followTracked(from: number, to: number, insertedLength: number): void {
+        for (const entry of this.tracked) {
+            const mapped = mapTrackedRange(entry.from, entry.to, [{ from, to, insertedLength }]);
+            if (mapped === null) {
+                this.tracked.delete(entry);
+                entry.lost = true;
+            } else {
+                Object.assign(entry, mapped);
+            }
+        }
+    }
+
+    trackRange(range: EditorRange): EditorTrackedRange {
+        const entry = { from: this.offsetAt(range.start), to: this.offsetAt(range.end), lost: false };
+        this.tracked.add(entry);
+        return {
+            get: () => (entry.lost ? null : { start: this.positionAt(entry.from), end: this.positionAt(entry.to) }),
+            dispose: () => {
+                entry.lost = true;
+                this.tracked.delete(entry);
+            }
+        };
     }
 
     onTextChange(listener: (change: EditorTextChange) => void): () => void {
@@ -642,6 +672,7 @@ export class FakeEditor implements Editor {
         this.blurs.clear();
         this.finds.clear();
         this.scopes.clear();
+        this.tracked.clear();
     }
 
     private announceFind(state: EditorFindState): void {

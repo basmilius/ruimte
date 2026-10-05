@@ -1026,3 +1026,41 @@ describe('smart keys', () => {
         expect(editor.getText()).toBe('{\n    \n}');
     });
 });
+
+describe('trackRange', () => {
+    const range = (line: number, from: number, to: number) => ({ start: { line, character: from }, end: { line, character: to } });
+
+    test('follows the range through typing before it and loses it to an edit inside it', () => {
+        const { editor, type } = setup({ text: 'alpha beta\ngamma', line: 1, column: 1 });
+        const tracked = editor.trackRange(range(0, 6, 10));
+        editor.applyEdits([{ range: range(0, 0, 0), text: 'x\n' }]);
+        expect(tracked.get()).toEqual(range(1, 6, 10));
+        editor.setCaret({ line: 1, character: 8 });
+        type('!');
+        expect(tracked.get()).toBeNull();
+    });
+
+    test('survives text inserted at its ends and edits on the other lines', () => {
+        const { editor } = setup({ text: 'alpha beta\ngamma' });
+        const tracked = editor.trackRange(range(0, 6, 10));
+        editor.applyEdits([{ range: range(0, 10, 10), text: '!' }]);
+        expect(tracked.get()).toEqual(range(0, 6, 10));
+        editor.applyEdits([{ range: range(0, 6, 6), text: '>' }]);
+        expect(tracked.get()).toEqual(range(0, 7, 11));
+        editor.setText('alpha >beta!\nGAMMA');
+        expect(tracked.get()).toEqual(range(0, 7, 11));
+        expect(editor.textInRange(tracked.get()!)).toBe('beta');
+    });
+
+    test('stays lost after undo, and a disposed range is null', () => {
+        const { editor, press: key } = setup({ text: 'alpha beta' });
+        const lost = editor.trackRange(range(0, 6, 10));
+        const disposed = editor.trackRange(range(0, 0, 5));
+        disposed.dispose();
+        editor.applyEdits([{ range: range(0, 7, 8), text: 'E' }]);
+        key('z', { ctrlKey: true });
+        expect(editor.getText()).toBe('alpha beta');
+        expect(lost.get()).toBeNull();
+        expect(disposed.get()).toBeNull();
+    });
+});

@@ -34,6 +34,7 @@ import type {
     EditorSemanticToken,
     EditorSmartKeys,
     EditorTextChange,
+    EditorTrackedRange,
     EditorTheme,
     EditorWidget,
     SmartEditorEngineOptions
@@ -523,6 +524,17 @@ class SmartEditor implements Editor {
                 }
             }))
         );
+    }
+
+    trackRange(range: EditorRange): EditorTrackedRange {
+        const tracked = this.view.trackRange(this.offsetAt(range.start), this.offsetAt(range.end));
+        return {
+            get: () => {
+                const offsets = tracked.get();
+                return offsets === null ? null : { start: this.positionAt(offsets.from), end: this.positionAt(offsets.to) };
+            },
+            dispose: () => tracked.dispose()
+        };
     }
 
     setCodeVision(rows: readonly EditorCodeVision[]): void {

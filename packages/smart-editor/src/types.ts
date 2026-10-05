@@ -333,6 +333,17 @@ export interface EditorReplaceOptions {
     readonly preserveCase?: boolean;
 }
 
+/*
+ * A range that follows the text through edits. `get` is the range where it is now, or null once an edit
+ * touched it: one that replaces text inside it or lands strictly between its ends. Text inserted exactly
+ * at an end leaves the text of the range as it was, so the range survives it, moving behind text inserted
+ * at its start and staying put for text inserted at its end. A disposed range is null.
+ */
+export interface EditorTrackedRange {
+    get(): EditorRange | null;
+    dispose(): void;
+}
+
 export interface Editor {
     getText(): string;
     /* A change from outside, such as a reload after `fs.changed` or another surface's edit. It is never
@@ -439,6 +450,8 @@ export interface Editor {
     onKeyDown(handler: EditorKeyHandler): () => void;
     /* Extend Selection grows through these ranges, where the host has them, and Shrink Selection walks back; null returns to the editor's own rule. */
     setSelectionRanges(provider: EditorSelectionRanges | null): void;
+    /* Follows a range through every change of the text, `setText` and undo included, until it is disposed. Costs one mapping of two offsets per change. */
+    trackRange(range: EditorRange): EditorTrackedRange;
     /* Replaces ranges of the current text at once, as one step of the undo history. */
     applyEdits(edits: readonly EditorContentChange[]): boolean;
     setTheme(theme: EditorTheme): void;
