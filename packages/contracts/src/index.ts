@@ -79,6 +79,8 @@ import {
 import {
     GitActionPayloadSchema,
     GitActionResultSchema,
+    GitBlamePayloadSchema,
+    GitBlameResultSchema,
     GitCancelPayloadSchema,
     GitCapabilitiesResultSchema,
     GitChangedEventSchema,
@@ -455,6 +457,7 @@ export const REQUEST_SCHEMAS = {
     'git.watch': { payload: GitCwdPayloadSchema, result: EmptySchema },
     'git.unwatch': { payload: GitCwdPayloadSchema, result: EmptySchema },
     'git.diff': { payload: GitDiffPayloadSchema, result: GitDiffResultSchema },
+    'git.blame': { payload: GitBlamePayloadSchema, result: GitBlameResultSchema },
     'git.stage': { payload: GitStagePayloadSchema, result: EmptySchema },
     'git.discard': { payload: GitDiscardPayloadSchema, result: GitDiscardResultSchema },
     'git.refs': { payload: GitCwdPayloadSchema, result: GitRefsResultSchema },

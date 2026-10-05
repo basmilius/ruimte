@@ -1,5 +1,6 @@
 import { RequestError, sendEvent, translate, type Dispatcher } from '../dispatcher.ts';
 import { GitActions } from '../git/actions.ts';
+import { blameFile } from '../git/blame.ts';
 import { readCapabilities } from '../git/capabilities.ts';
 import { readConflict, readConflicts, resolveConflict, runOperation } from '../git/conflict.ts';
 import { resolveWithAgent } from '../git/resolve-ai.ts';
@@ -96,6 +97,8 @@ export function registerGitHandlers(
             return await diffFile(payload.cwd, payload.path, options, await mergeBaseWith(payload.cwd, payload.base));
         })
     );
+
+    dispatcher.register('git.blame', (payload) => translate(() => blameFile(payload.cwd, payload.path)));
 
     dispatcher.register('git.stage', (payload) =>
         translate(async () => {

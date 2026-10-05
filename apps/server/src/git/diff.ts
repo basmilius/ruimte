@@ -252,7 +252,7 @@ function leaves(inside: string): boolean {
  * way is followed. The file itself may be gone, so the nearest folder of it that exists resolves.
  * A symlink at the end is diffed as its target's name and never read through.
  */
-async function insideCheckout(top: string, path: string): Promise<boolean> {
+export async function insideCheckout(top: string, path: string): Promise<boolean> {
     const root = await realpath(top);
     if (isAbsolute(path) || leaves(relative(root, join(root, path)))) {
         return false;

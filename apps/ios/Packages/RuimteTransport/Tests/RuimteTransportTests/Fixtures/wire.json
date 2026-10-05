@@ -233,6 +233,7 @@
     "git.watch",
     "git.unwatch",
     "git.diff",
+    "git.blame",
     "git.stage",
     "git.discard",
     "git.refs",

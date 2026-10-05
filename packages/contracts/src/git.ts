@@ -217,6 +217,36 @@ export const GitDiffResultSchema = GitDiffFileSchema.extend({
 });
 export type GitDiffResult = z.infer<typeof GitDiffResultSchema>;
 
+// Who wrote each line of a file in the working tree, for the editor's code vision. `path` is relative
+// to the repository root, as `git.status` names it, and is held to the checkout like a diff's.
+export const GitBlamePayloadSchema = z.object({
+    cwd: z.string().min(1),
+    path: z.string().min(1)
+});
+export type GitBlamePayload = z.infer<typeof GitBlamePayloadSchema>;
+
+// A commit that wrote at least one line of the file.
+export const GitBlameCommitSchema = z.object({
+    hash: z.string(),
+    shortHash: z.string(),
+    author: z.string(),
+    email: z.string(),
+    // Seconds since the epoch, the author date.
+    at: z.number().int(),
+    summary: z.string()
+});
+export type GitBlameCommit = z.infer<typeof GitBlameCommitSchema>;
+
+export const GitBlameResultSchema = z.object({
+    commits: z.array(GitBlameCommitSchema),
+    // One entry per line of the working tree's file: an index into `commits`, or -1 for a line no
+    // commit holds yet: typed, or staged and not committed.
+    lines: z.array(z.number().int()),
+    // Why `lines` is empty: git has no history for the file, or it is too large to read.
+    omitted: z.enum(['untracked', 'too-large']).optional()
+});
+export type GitBlameResult = z.infer<typeof GitBlameResultSchema>;
+
 export const GitStagePayloadSchema = z.object({
     cwd: z.string().min(1),
     paths: z.array(z.string().min(1)).min(1),

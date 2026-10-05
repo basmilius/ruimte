@@ -36597,6 +36597,85 @@
       "binary"
     ]
   },
+  "request.git.blame.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "cwd": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "cwd",
+      "path"
+    ]
+  },
+  "request.git.blame.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "commits": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "hash": {
+              "type": "string"
+            },
+            "shortHash": {
+              "type": "string"
+            },
+            "author": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "at": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "summary": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "hash",
+            "shortHash",
+            "author",
+            "email",
+            "at",
+            "summary"
+          ]
+        }
+      },
+      "lines": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "omitted": {
+        "type": "string",
+        "enum": [
+          "untracked",
+          "too-large"
+        ]
+      }
+    },
+    "required": [
+      "commits",
+      "lines"
+    ]
+  },
   "request.git.stage.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

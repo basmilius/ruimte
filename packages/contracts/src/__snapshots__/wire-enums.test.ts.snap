@@ -88,5 +88,6 @@ exports[`no vocabulary a daemon sends gains or loses a value 1`] = `
   "physical, simulator",
   "plugin, project, user",
   "steps, test",
+  "too-large, untracked",
 ]
 `;

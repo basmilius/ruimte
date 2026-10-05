@@ -483,6 +483,16 @@ describe('git', () => {
         expect(payload.safeParse({ cwd: '/repo', path: 'src/main.ts', scope: 'turn' }).success).toBe(false);
     });
 
+    test('a blame answers a commit table and one index per line, with -1 for a line no commit holds', () => {
+        const { payload, result } = REQUEST_SCHEMAS['git.blame'];
+        expect(payload.safeParse({ cwd: '/repo', path: 'src/main.ts' }).success).toBe(true);
+        expect(payload.safeParse({ cwd: '/repo' }).success).toBe(false);
+        const commit = { hash: 'a'.repeat(40), shortHash: 'aaaaaaa', author: 'Ada', email: 'ada@example.com', at: 1700000000, summary: 'Start' };
+        expect(result.safeParse({ commits: [commit], lines: [0, -1, 0] }).success).toBe(true);
+        expect(result.safeParse({ commits: [], lines: [], omitted: 'untracked' }).success).toBe(true);
+        expect(result.safeParse({ commits: [], lines: [], omitted: 'gone' }).success).toBe(false);
+    });
+
     test('staging and discarding both need at least one path', () => {
         expect(REQUEST_SCHEMAS['git.repos'].payload.safeParse({ folder: '/work/apps' }).success).toBe(true);
         expect(
