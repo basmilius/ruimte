@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { LANGUAGE_ERROR_CODES, type LanguageServerKind } from '@ruimte/contracts';
 import { CodedError } from '@ruimte/agents/coded-error';
 import type { SessionEvent } from '../sessions/manager.ts';
+import { CustomLanguageServers } from './custom.ts';
 import { LanguageHost } from './host.ts';
 import { KIND_PROFILES } from './profiles.ts';
 import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
@@ -60,6 +61,10 @@ function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner;
             return 0;
         },
         clock,
+        custom: new CustomLanguageServers({
+            path: join(root, 'custom.json'),
+            resolve: (command) => (['zls', 'taplo'].includes(command) ? `/bin/${command}` : null)
+        }),
         exists: async (path) => (options.files ?? []).includes(path),
         readText: async (path) => (path === '/work/package.json' ? (options.packageJson ?? null) : null)
     });
@@ -404,6 +409,111 @@ describe('several servers on one document', () => {
         const base = { projectId: 'p1', path: 'src/a.ts', params: {} };
         expect((await host.request({ ...base, method: 'textDocument/hover' })).result).toEqual({ contents: ['rule docs'] });
         expect((await host.request({ ...base, method: 'textDocument/definition' })).result).toEqual({ uri: 'file:///a', range: {} });
+    });
+});
+
+describe('language servers of a person', () => {
+    const zig = {
+        name: 'Zig',
+        command: 'zls',
+        args: ['--stdio'],
+        env: { ZLS_LOG: '1' },
+        languages: ['zig'],
+        patterns: [],
+        initializationOptions: { snippets: true }
+    };
+
+    it('starts on the first document it serves, as the command it was saved with, and reports under its id', async () => {
+        const { host, spawner, events } = rig();
+        const saved = await host.customSave(zig);
+        const opened = await open(host, 'src/main.zig', 'const a = 1;', 'client-1', 'zig');
+        expect(opened.servers).toEqual([saved.id]);
+        await ready(host, saved.id);
+        const [process] = spawner.of('zls');
+        expect(process!.spec).toMatchObject({ command: 'zls', args: ['--stdio'], cwd: '/work', env: { ZLS_LOG: '1' } });
+        expect(process!.spec.env.BUN_BE_BUN).toBeUndefined();
+        expect(process!.server.received.find((message) => message.method === 'initialize')?.params).toMatchObject({
+            initializationOptions: { snippets: true }
+        });
+        process!.server.handle('textDocument/hover', () => ({ contents: 'zig hover' }));
+        expect(await host.request({ projectId: 'p1', path: 'src/main.zig', method: 'textDocument/hover', params: {} })).toMatchObject({
+            result: { contents: 'zig hover' },
+            server: saved.id
+        });
+        await process!.server.connection.notify('textDocument/publishDiagnostics', { uri: 'file:///work/src/main.zig', version: 1, diagnostics: [] });
+        await settle();
+        expect(kinds(events['client-1'], 'language.diagnostics').at(-1)).toMatchObject({ payload: { server: saved.id } });
+    });
+
+    it('serves by file pattern, and only the projects it was saved for', async () => {
+        const { host } = rig();
+        const byPattern = await host.customSave({ name: 'Templates', command: 'taplo', args: [], languages: [], patterns: ['*.tpl'] });
+        await host.customSave({ ...zig, projects: ['/elsewhere'] });
+        expect((await open(host, 'views/a.tpl', '', 'client-1', 'plaintext')).servers).toEqual([byPattern.id]);
+        expect((await open(host, 'src/main.zig', '', 'client-1', 'zig')).servers).toEqual([]);
+        const statuses = await host.status('p1');
+        expect(statuses.filter((status) => status.server.startsWith('custom:')).map((status) => status.name)).toEqual(['Templates']);
+    });
+
+    it('starts for the file that is open when it is saved, and stops when it is removed', async () => {
+        const { host, spawner, events } = rig();
+        expect((await open(host, 'src/main.zig', '', 'client-1', 'zig')).servers).toEqual([]);
+        const saved = await host.customSave(zig);
+        await ready(host, saved.id);
+        expect(spawner.of('zls')[0]!.server.documents.has('file:///work/src/main.zig')).toBe(true);
+        expect(kinds(events['client-2'], 'language.custom.changed')).toHaveLength(1);
+        await host.customRemove(saved.id);
+        expect(spawner.of('zls')[0]!.server.exited).toBe(true);
+        expect((await host.status('p1')).some((status) => status.server === saved.id)).toBe(false);
+        expect(kinds(events['client-1'], 'language.providers').at(-1)).toMatchObject({ payload: { path: 'src/main.zig', providers: {} } });
+    });
+
+    it('starts again with what was saved when a server is changed', async () => {
+        const { host, spawner } = rig();
+        const saved = await host.customSave(zig);
+        await open(host, 'src/main.zig', '', 'client-1', 'zig');
+        await ready(host, saved.id);
+        await host.customSave({ ...zig, id: saved.id, args: ['--other'] });
+        await until(() => spawner.of('zls').length === 2);
+        expect(spawner.of('zls')[0]!.server.exited).toBe(true);
+        expect(spawner.of('zls')[1]!.spec.args).toEqual(['--other']);
+    });
+
+    it('never starts a server whose command was changed in the file, and says so', async () => {
+        const { host, spawner } = rig();
+        const saved = await host.customSave(zig);
+        const file = JSON.parse(await readFile(join(root, 'custom.json'), 'utf8')) as { servers: { command: string }[] };
+        file.servers[0]!.command = 'taplo';
+        await writeFile(join(root, 'custom.json'), JSON.stringify(file));
+        const second = new CustomLanguageServers({ path: join(root, 'custom.json'), resolve: (command) => `/bin/${command}` });
+        await second.load();
+        const held = new LanguageHost({
+            root,
+            folderOf: () => '/work',
+            holders: () => [],
+            machineHome: { refuse: async () => undefined },
+            spawn: spawner.spawn,
+            custom: second
+        });
+        expect((await held.open('client-1', { projectId: 'p1', path: 'a.zig', languageId: 'zig', text: '' })).servers).toEqual([]);
+        expect((await held.status('p1')).find((status) => status.server === saved.id)).toMatchObject({ state: 'crashed' });
+        expect(spawner.processes).toHaveLength(0);
+    });
+
+    it('stays crashed when the process ends, and starts again only on a restart', async () => {
+        const { host, spawner } = rig();
+        const saved = await host.customSave(zig);
+        await open(host, 'src/main.zig', '', 'client-1', 'zig');
+        await ready(host, saved.id);
+        await spawner.of('zls')[0]!.crash(2);
+        await settle();
+        expect((await host.status('p1')).find((status) => status.server === saved.id)).toMatchObject({
+            state: 'crashed',
+            message: expect.stringContaining('Zig')
+        });
+        await host.restart('p1', saved.id);
+        await ready(host, saved.id);
+        expect(spawner.of('zls')).toHaveLength(2);
     });
 });
 

@@ -1,5 +1,5 @@
 import { basename } from 'node:path';
-import type { LanguageServerKind, LanguageServerState } from '@ruimte/contracts';
+import type { LanguageServerId, LanguageServerState } from '@ruimte/contracts';
 import {
     bridgeVueTypeScript,
     ErrorCodes,
@@ -18,7 +18,7 @@ import {
 } from '@ruimte/smart-editor-lsp';
 import { errorText } from '../error-text.ts';
 import { LanguageLog } from './log.ts';
-import { KIND_PROFILES, lspLanguageId, resolveTypescriptLib, type ComponentProfile, type LaunchContext } from './profiles.ts';
+import { componentServes, lspLanguageId, resolveTypescriptLib, type ComponentProfile, type KindProfile, type LaunchContext } from './profiles.ts';
 import type { LanguageChild, LanguageExit, LanguageRuntime, SpawnLanguageProcess } from './runtime.ts';
 
 // How long a stopped process may take to go before it is killed.
@@ -43,7 +43,7 @@ export interface SharedDocument {
     readonly absolutePath: string;
     readonly uri: string;
     /* The kinds of server that serve it, the one of its language first; empty for a language none serves, which the daemon still holds so a client's calls stay uniform. */
-    kinds: LanguageServerKind[];
+    kinds: LanguageServerId[];
     /* The stored path a client hears about it under. */
     readonly storedPath: string;
     languageId: string;
@@ -63,7 +63,9 @@ export interface LanguageServerHooks {
 }
 
 export interface LanguageServerOptions {
-    kind: LanguageServerKind;
+    kind: LanguageServerId;
+    /* What the kind runs: the catalog's, or the profile made of a server of a person's own. */
+    profile: KindProfile;
     projectId: string;
     folder: string;
     installDirectory: string;
@@ -94,7 +96,7 @@ type Phase = 'stopped' | 'starting' | 'ready' | 'crashed';
  * the kind crashed, and only `restart` brings it back, since nothing here retries on a clock.
  */
 export class LanguageServer {
-    readonly kind: LanguageServerKind;
+    readonly kind: LanguageServerId;
     readonly projectId: string;
     readonly log = new LanguageLog();
     private readonly options: LanguageServerOptions;
@@ -120,6 +122,11 @@ export class LanguageServer {
         return this.phase;
     }
 
+    /* What a failure of the server calls it. */
+    private get label(): string {
+        return this.options.profile.components[0]?.title ?? this.kind;
+    }
+
     get message(): string | undefined {
         return this.failure;
     }
@@ -140,7 +147,7 @@ export class LanguageServer {
     /* Whether this server serves a document of the language at all. */
     serves(languageId: string): boolean {
         const id = lspLanguageId(languageId);
-        return KIND_PROFILES[this.kind].components.some((component) => component.languages.includes(id));
+        return this.options.profile.components.some((component) => component.languages.includes(id));
     }
 
     attach(document: SharedDocument): void {
@@ -219,7 +226,7 @@ export class LanguageServer {
 
     /* Whether one of the processes of this server goes by this name. */
     hasComponent(name: string): boolean {
-        return KIND_PROFILES[this.kind].components.some((component) => component.name === name);
+        return this.options.profile.components.some((component) => component.name === name);
     }
 
     /* What the document may ask: by method, the options of the first process that supports it. */
@@ -247,7 +254,7 @@ export class LanguageServer {
      */
     async request(document: SharedDocument, method: string, params: object, hint?: string): Promise<{ result: unknown; server: string; version: number }> {
         if (this.phase !== 'ready') {
-            throw new LspError(`The ${this.kind} language server is ${this.state}`, ErrorCodes.ServerNotInitialized);
+            throw new LspError(`The ${this.label} language server is ${this.state}`, ErrorCodes.ServerNotInitialized);
         }
         for (const component of this.orderFor(document, method, params, hint)) {
             const open = component.documents.get(document.absolutePath);
@@ -256,13 +263,13 @@ export class LanguageServer {
                 return { result, server: component.profile.name, version: open.version };
             }
         }
-        throw new LspError(`No ${this.kind} server answers ${method} for this document`, ErrorCodes.MethodNotFound);
+        throw new LspError(`No ${this.label} server answers ${method} for this document`, ErrorCodes.MethodNotFound);
     }
 
     /* Runs a server command for this document, on the process that offered it (`hint`) or the first that supports commands. */
     async executeCommand(document: SharedDocument, command: string, args: unknown[] | undefined, hint?: string): Promise<{ result: unknown; server: string }> {
         if (this.phase !== 'ready') {
-            throw new LspError(`The ${this.kind} language server is ${this.state}`, ErrorCodes.ServerNotInitialized);
+            throw new LspError(`The ${this.label} language server is ${this.state}`, ErrorCodes.ServerNotInitialized);
         }
         for (const component of this.orderFor(document, 'workspace/executeCommand', {}, hint)) {
             if (component.documents.has(document.absolutePath) && component.session.supports('workspace/executeCommand')) {
@@ -270,7 +277,7 @@ export class LanguageServer {
                 return { result, server: component.profile.name };
             }
         }
-        throw new LspError(`No ${this.kind} server runs commands for this document`, ErrorCodes.MethodNotFound);
+        throw new LspError(`No ${this.label} server runs commands for this document`, ErrorCodes.MethodNotFound);
     }
 
     /* A person's restart, the only way out of crashed. */
@@ -309,7 +316,7 @@ export class LanguageServer {
             typescriptLib: await resolveTypescriptLib(this.options.folder, this.options.installDirectory, this.options.exists)
         };
         try {
-            for (const profile of KIND_PROFILES[this.kind].components) {
+            for (const profile of this.options.profile.components) {
                 if (generation !== this.generation) {
                     return;
                 }
@@ -334,19 +341,23 @@ export class LanguageServer {
         } catch (error) {
             // A stop that came while the handshake ran closed the connection under it, which is no crash.
             if (generation === this.generation) {
-                await this.fail(`The ${this.kind} language server did not start: ${errorText(error)}`);
+                await this.fail(`The ${this.label} language server did not start: ${errorText(error)}`);
             }
         }
     }
 
     private spawnComponent(profile: ComponentProfile, context: LaunchContext, generation: number): Component {
         const { runtime } = this.options;
-        const child = this.options.spawn({
-            command: runtime.command,
-            args: [...runtime.args, `${context.installDirectory}/node_modules/${profile.entry}`, ...profile.args(context)],
-            cwd: this.options.folder,
-            env: { ...runtime.env, ...profile.env }
-        });
+        const child = this.options.spawn(
+            profile.command === undefined
+                ? {
+                      command: runtime.command,
+                      args: [...runtime.args, `${context.installDirectory}/node_modules/${profile.entry}`, ...profile.args(context)],
+                      cwd: this.options.folder,
+                      env: { ...runtime.env, ...profile.env }
+                  }
+                : { command: profile.command, args: profile.args(context), cwd: this.options.folder, env: { ...profile.env } }
+        );
         const rootUri = pathToFileUri(this.options.folder);
         const session = new LspSession(child.transport, {
             rootUri,
@@ -378,7 +389,7 @@ export class LanguageServer {
 
     private openInComponents(document: SharedDocument): void {
         for (const component of this.components) {
-            if (!component.profile.languages.includes(lspLanguageId(document.languageId)) || component.documents.has(document.absolutePath)) {
+            if (!componentServes(component.profile, document.languageId, document.storedPath) || component.documents.has(document.absolutePath)) {
                 continue;
             }
             try {
@@ -482,7 +493,7 @@ export class LanguageServer {
               ? `was stopped by ${exit.signal}`
               : `exited with code ${exit.code ?? 'unknown'}`;
         const said = this.log.last('server');
-        void this.fail(`The ${component.profile.name} language server ${reason}${said ? `: ${said}` : ''}`);
+        void this.fail(`The ${component.profile.title ?? component.profile.name} language server ${reason}${said ? `: ${said}` : ''}`);
     }
 
     private async fail(message: string): Promise<void> {

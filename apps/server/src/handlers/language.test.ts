@@ -3,9 +3,11 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
-import { Dispatcher } from '../dispatcher.ts';
+import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
+import { CustomLanguageServers } from '../language/custom.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { LanguageHost } from '../language/host.ts';
+import { KIND_PROFILES } from '../language/profiles.ts';
 import { fakeSpawner } from '../language/test-fakes.ts';
 import { registerLanguageHandlers } from './language.ts';
 
@@ -28,7 +30,11 @@ beforeEach(async () => {
             folderOf: (projectId) => (projectId === 'p1' ? root : null),
             holders: () => [],
             machineHome: new MachineHome(home),
-            spawn: fakeSpawner().spawn
+            spawn: fakeSpawner().spawn,
+            custom: new CustomLanguageServers({
+                path: join(home, 'language-servers', 'custom.json'),
+                resolve: (command) => (command === 'zls' ? '/bin/zls' : null)
+            })
         })
     );
     frames = [];
@@ -38,8 +44,11 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-async function call(type: string, payload: unknown): Promise<ServerFrame> {
-    await dispatcher.handle({ id: 'client-1', send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'r1', type, payload }));
+const OWNER: ClientAccess = { reachability: 'loopback', sessionId: null };
+const GUEST: ClientAccess = { reachability: 'lan', sessionId: 'session-1' };
+
+async function call(type: string, payload: unknown, access?: ClientAccess): Promise<ServerFrame> {
+    await dispatcher.handle({ id: 'client-1', access, send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'r1', type, payload }));
     return frames.at(-1) as ServerFrame;
 }
 
@@ -76,10 +85,46 @@ describe('language handlers', () => {
     test('the status of a project lists every kind, none installed on a fresh machine', async () => {
         const reply = await call('language.status', { projectId: 'p1' });
         expect(reply).toMatchObject({ ok: true });
-        expect((reply as { result: { servers: { server: string; state: string }[] } }).result.servers.map((status) => [status.server, status.state])).toEqual([
-            ['typescript', 'not-installed'],
-            ['vue', 'not-installed'],
-            ['php', 'not-installed']
-        ]);
+        expect((reply as { result: { servers: { server: string; state: string }[] } }).result.servers.map((status) => [status.server, status.state])).toEqual(
+            Object.keys(KIND_PROFILES).map((kind) => [kind, 'not-installed'])
+        );
+    });
+});
+
+describe('language servers of a person', () => {
+    const zig = { name: 'Zig', command: 'zls', args: [], languages: ['zig'], patterns: [] };
+
+    test('only the owner of the machine saves, removes or probes one, and anyone may list them', async () => {
+        for (const access of [undefined, GUEST]) {
+            expect(await call('language.custom.save', { server: zig }, access)).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+            expect(await call('language.custom.remove', { id: 'custom:a' }, access)).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+            expect(await call('language.custom.check', { command: 'zls' }, access)).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        }
+        expect(await call('language.custom.list', {}, GUEST)).toMatchObject({ ok: true, result: { servers: [] } });
+    });
+
+    test('saves, lists and removes a server, and says why one cannot be saved', async () => {
+        expect(await call('language.custom.check', { command: 'zls' }, OWNER)).toMatchObject({ ok: true, result: { found: true, path: '/bin/zls' } });
+        expect(await call('language.custom.check', { command: 'nope' }, OWNER)).toMatchObject({ ok: true, result: { found: false } });
+        expect(await call('language.custom.save', { server: { ...zig, command: 'nope' } }, OWNER)).toMatchObject({
+            ok: false,
+            error: { code: 'invalid-server' }
+        });
+        expect(await call('language.custom.save', { server: { ...zig, languages: [], patterns: [] } }, OWNER)).toMatchObject({
+            ok: false,
+            error: { code: 'bad-request' }
+        });
+        const saved = await call('language.custom.save', { server: zig }, OWNER);
+        expect(saved).toMatchObject({ ok: true, result: { server: { name: 'Zig', command: 'zls' } } });
+        const id = (saved as { result: { server: { id: string } } }).result.server.id;
+        expect(await call('language.custom.list', {}, GUEST)).toMatchObject({ result: { servers: [{ id }] } });
+        const status = await call('language.status', { projectId: 'p1' });
+        expect((status as { result: { servers: { server: string; name?: string; state: string }[] } }).result.servers.at(-1)).toMatchObject({
+            server: id,
+            name: 'Zig',
+            state: 'stopped'
+        });
+        expect(await call('language.custom.remove', { id }, OWNER)).toMatchObject({ ok: true });
+        expect(await call('language.custom.list', {}, OWNER)).toMatchObject({ result: { servers: [] } });
     });
 });

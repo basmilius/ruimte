@@ -33675,6 +33675,21 @@
                 "type": "string"
               },
               "additionalProperties": {}
+            },
+            "name": {
+              "type": "string"
+            },
+            "languages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "patterns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           "required": [
@@ -33755,6 +33770,21 @@
               "type": "string"
             },
             "additionalProperties": {}
+          },
+          "name": {
+            "type": "string"
+          },
+          "languages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -33778,21 +33808,7 @@
         "minLength": 1
       },
       "server": {
-        "type": "string",
-        "enum": [
-          "typescript",
-          "vue",
-          "php",
-          "css",
-          "html",
-          "json",
-          "yaml",
-          "python",
-          "bash",
-          "docker",
-          "eslint",
-          "tailwind"
-        ]
+        "type": "string"
       }
     },
     "required": [
@@ -33839,6 +33855,21 @@
               "type": "string"
             },
             "additionalProperties": {}
+          },
+          "name": {
+            "type": "string"
+          },
+          "languages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -33862,21 +33893,7 @@
         "minLength": 1
       },
       "server": {
-        "type": "string",
-        "enum": [
-          "typescript",
-          "vue",
-          "php",
-          "css",
-          "html",
-          "json",
-          "yaml",
-          "python",
-          "bash",
-          "docker",
-          "eslint",
-          "tailwind"
-        ]
+        "type": "string"
       }
     },
     "required": [
@@ -33920,6 +33937,266 @@
     },
     "required": [
       "lines"
+    ]
+  },
+  "request.language.custom.list.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.language.custom.list.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "servers": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "env": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "languages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "patterns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "initializationOptions": {},
+            "projects": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "held": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "command",
+            "args",
+            "env",
+            "languages",
+            "patterns"
+          ]
+        }
+      }
+    },
+    "required": [
+      "servers"
+    ]
+  },
+  "request.language.custom.save.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "server": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "env": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "languages": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "patterns": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "initializationOptions": {},
+          "projects": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "name",
+          "command",
+          "args",
+          "languages",
+          "patterns"
+        ]
+      }
+    },
+    "required": [
+      "server"
+    ]
+  },
+  "request.language.custom.save.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "server": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "env": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "languages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "initializationOptions": {},
+          "projects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "held": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "command",
+          "args",
+          "env",
+          "languages",
+          "patterns"
+        ]
+      }
+    },
+    "required": [
+      "server"
+    ]
+  },
+  "request.language.custom.remove.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "request.language.custom.remove.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.language.custom.check.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "command": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "command"
+    ]
+  },
+  "request.language.custom.check.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "found": {
+        "type": "boolean"
+      },
+      "path": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "found"
     ]
   },
   "request.language.document.open.payload": {
@@ -52488,6 +52765,21 @@
               "type": "string"
             },
             "additionalProperties": {}
+          },
+          "name": {
+            "type": "string"
+          },
+          "languages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -52501,6 +52793,78 @@
     "required": [
       "projectId",
       "status"
+    ]
+  },
+  "event.language.custom.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "servers": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "env": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "languages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "patterns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "initializationOptions": {},
+            "projects": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "held": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "command",
+            "args",
+            "env",
+            "languages",
+            "patterns"
+          ]
+        }
+      }
+    },
+    "required": [
+      "servers"
     ]
   },
   "event.language.providers": {

@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { EVENT_SCHEMAS, REQUEST_SCHEMAS } from './index.ts';
-import { LANGUAGE_METHODS, LanguageDocumentChangePayloadSchema, LanguageRequestPayloadSchema } from './language.ts';
+import {
+    CustomLanguageServerInputSchema,
+    LANGUAGE_METHODS,
+    LanguageDocumentChangePayloadSchema,
+    LanguageRequestPayloadSchema,
+    LanguageServerIdSchema
+} from './language.ts';
 
 describe('language wire', () => {
     test('every method a client may ask is a request the schemas accept, and nothing else is', () => {
@@ -20,7 +26,17 @@ describe('language wire', () => {
     });
 
     test('the requests and events are in the tables', () => {
-        expect(Object.keys(REQUEST_SCHEMAS).filter((type) => type.startsWith('language.'))).toHaveLength(10);
-        expect(Object.keys(EVENT_SCHEMAS).filter((type) => type.startsWith('language.'))).toHaveLength(4);
+        expect(Object.keys(REQUEST_SCHEMAS).filter((type) => type.startsWith('language.'))).toHaveLength(14);
+        expect(Object.keys(EVENT_SCHEMAS).filter((type) => type.startsWith('language.'))).toHaveLength(5);
+    });
+
+    test('a server of a person needs something to serve, and a language server id is a kind or a custom one', () => {
+        const server = { name: 'Zig', command: 'zls', args: [], languages: [], patterns: [] };
+        expect(CustomLanguageServerInputSchema.safeParse(server).success).toBe(false);
+        expect(CustomLanguageServerInputSchema.safeParse({ ...server, patterns: ['*.zig'] }).success).toBe(true);
+        expect(CustomLanguageServerInputSchema.safeParse({ ...server, languages: ['zig'], name: '  ' }).success).toBe(false);
+        expect(LanguageServerIdSchema.safeParse('typescript').success).toBe(true);
+        expect(LanguageServerIdSchema.safeParse('custom:abc').success).toBe(true);
+        expect(LanguageServerIdSchema.safeParse('nonsense').success).toBe(false);
     });
 });

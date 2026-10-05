@@ -150,6 +150,13 @@ import {
 import {
     LanguageCommandPayloadSchema,
     LanguageCommandResultSchema,
+    LanguageCustomChangedEventSchema,
+    LanguageCustomCheckPayloadSchema,
+    LanguageCustomCheckResultSchema,
+    LanguageCustomListResultSchema,
+    LanguageCustomRemovePayloadSchema,
+    LanguageCustomSavePayloadSchema,
+    LanguageCustomSaveResultSchema,
     LanguageDiagnosticsEventSchema,
     LanguageDocumentChangePayloadSchema,
     LanguageDocumentChangeResultSchema,
@@ -291,6 +298,7 @@ export * from './session.ts';
 export * from './render.ts';
 export * from './push.ts';
 export * from './snooze.ts';
+export * from './language-patterns.ts';
 export * from './stored-path.ts';
 export * from './task.ts';
 export * from './text.ts';
@@ -407,6 +415,11 @@ export const REQUEST_SCHEMAS = {
     'language.install': { payload: LanguageInstallPayloadSchema, result: LanguageServerStatusResultSchema },
     'language.restart': { payload: LanguageServerTargetPayloadSchema, result: LanguageServerStatusResultSchema },
     'language.log': { payload: LanguageServerTargetPayloadSchema, result: LanguageLogResultSchema },
+    'language.custom.list': { payload: EmptySchema, result: LanguageCustomListResultSchema },
+    // Only the local secret saves or removes a server of a person's own: starting what it names is what the save approves.
+    'language.custom.save': { payload: LanguageCustomSavePayloadSchema, result: LanguageCustomSaveResultSchema },
+    'language.custom.remove': { payload: LanguageCustomRemovePayloadSchema, result: EmptySchema },
+    'language.custom.check': { payload: LanguageCustomCheckPayloadSchema, result: LanguageCustomCheckResultSchema },
     'language.document.open': { payload: LanguageDocumentOpenPayloadSchema, result: LanguageDocumentOpenResultSchema },
     'language.document.change': { payload: LanguageDocumentChangePayloadSchema, result: LanguageDocumentChangeResultSchema },
     'language.document.close': { payload: LanguageDocumentTargetPayloadSchema, result: EmptySchema },
@@ -547,6 +560,7 @@ export const EVENT_SCHEMAS = {
     'diagram.changed': DiagramChangedEventSchema,
     'language.diagnostics': LanguageDiagnosticsEventSchema,
     'language.status': LanguageStatusEventSchema,
+    'language.custom.changed': LanguageCustomChangedEventSchema,
     'language.providers': LanguageProvidersEventSchema,
     'language.edit': LanguageEditEventSchema,
     'launch.status': LaunchStatusSchema,

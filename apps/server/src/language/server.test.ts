@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { LanguageServer, type LanguageServerHooks, type SharedDocument } from './server.ts';
+import { KIND_PROFILES } from './profiles.ts';
 import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
 import type { LanguageServerKind } from '@ruimte/contracts';
 import type { Diagnostic, PublishDiagnosticsParams, ServerCapabilities } from '@ruimte/smart-editor-lsp';
@@ -43,6 +44,7 @@ function rig(kind: LanguageServerKind, spawner = fakeSpawner()): Rig {
     };
     const server = new LanguageServer({
         kind,
+        profile: KIND_PROFILES[kind],
         projectId: 'p1',
         folder: '/work',
         installDirectory: `/home/language-servers/${kind}`,

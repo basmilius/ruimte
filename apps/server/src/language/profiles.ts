@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import type { LanguageServerKind } from '@ruimte/contracts';
+import { matchesFilePattern, type LanguageServerId, type LanguageServerKind } from '@ruimte/contracts';
 
 /* What a component needs to know about where it runs. */
 export interface LaunchContext {
@@ -14,10 +14,16 @@ export interface LaunchContext {
 export interface ComponentProfile {
     /* Names the process on the wire, in a diagnostics report and in the capabilities of a status. */
     name: string;
+    /* What the failure of this process is called to a person, where the name on the wire is an id. */
+    title?: string;
     /* The language ids it serves, as LSP names them. */
     languages: readonly string[];
-    /* The script it runs, relative to the `node_modules` of the install. */
+    /* File patterns it serves besides those languages (`matchesFilePattern`). Only a server of a person's own has them. */
+    patterns?: readonly string[];
+    /* The script it runs, relative to the `node_modules` of the install. Empty for a server with a `command`. */
     entry: string;
+    /* A server of a person's own: the command that starts it, run as it is and not under the daemon's runtime. */
+    command?: string;
     args(context: LaunchContext): string[];
     initializationOptions(context: LaunchContext): unknown;
     /* Settings the server reads through `workspace/didChangeConfiguration` and `workspace/configuration`, which are not initialization options. */
@@ -35,7 +41,7 @@ export interface Activation {
 }
 
 export interface KindProfile {
-    kind: LanguageServerKind;
+    kind: LanguageServerId;
     /* In the order they start, since the second may need the first. */
     components: readonly ComponentProfile[];
     /* Set for a kind that serves beside the kind of the language, in the projects that call for it, rather than instead of it. */
@@ -351,20 +357,29 @@ export function documentLanguageId(languageId: string, storedPath: string): stri
     return id === 'json' && JSONC_FILES.test(storedPath) ? 'jsonc' : id;
 }
 
+/* Whether a process serves a document, by its language or by its path. */
+export function componentServes(component: ComponentProfile, languageId: string, storedPath: string): boolean {
+    return component.languages.includes(lspLanguageId(languageId)) || (component.patterns ?? []).some((pattern) => matchesFilePattern(pattern, storedPath));
+}
+
+function catalog(): [LanguageServerKind, KindProfile][] {
+    return Object.entries(KIND_PROFILES) as [LanguageServerKind, KindProfile][];
+}
+
 function serves(profile: KindProfile, languageId: string): boolean {
     return profile.components.some((component) => component.languages.includes(lspLanguageId(languageId)));
 }
 
 /* The kind that serves a language, or null for one no server here knows. */
 export function kindForLanguage(languageId: string): LanguageServerKind | null {
-    return Object.values(KIND_PROFILES).find((profile) => profile.activation === undefined && serves(profile, languageId))?.kind ?? null;
+    return catalog().find(([, profile]) => profile.activation === undefined && serves(profile, languageId))?.[0] ?? null;
 }
 
 /* The kinds that serve a language beside its own, in a project that calls for them, in the order of the catalog. */
 export function additionKindsForLanguage(languageId: string): LanguageServerKind[] {
-    return Object.values(KIND_PROFILES)
-        .filter((profile) => profile.activation !== undefined && serves(profile, languageId))
-        .map((profile) => profile.kind);
+    return catalog()
+        .filter(([, profile]) => profile.activation !== undefined && serves(profile, languageId))
+        .map(([kind]) => kind);
 }
 
 /* What a project says about itself, as far as an addition needs to know. */

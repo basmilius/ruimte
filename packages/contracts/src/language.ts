@@ -13,6 +13,17 @@ import { ProjectIdSchema } from './project.ts';
 export const LanguageServerKindSchema = z.enum(['typescript', 'vue', 'php', 'css', 'html', 'json', 'yaml', 'python', 'bash', 'docker', 'eslint', 'tailwind']);
 export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
 
+/* The id a server of a person's own goes by: this prefix and an id the daemon made. */
+export const CUSTOM_SERVER_PREFIX = 'custom:';
+
+/* A kind of the catalog, or a server of a person's own. */
+export type LanguageServerId = LanguageServerKind | `${typeof CUSTOM_SERVER_PREFIX}${string}`;
+export const LanguageServerIdSchema = z
+    .string()
+    .refine((id): id is LanguageServerId => LanguageServerKindSchema.safeParse(id).success || id.startsWith(CUSTOM_SERVER_PREFIX), {
+        message: 'Not a language server'
+    });
+
 export const LanguageServerStateSchema = z.enum([
     // Nothing is on this machine yet; a person presses Install.
     'not-installed',
@@ -32,14 +43,19 @@ export const LanguageServerStatusSchema = z.object({
     // Open on purpose: a client reading a reply whole must not refuse it for a kind a newer daemon adds.
     server: z.string(),
     state: LanguageServerStateSchema,
-    // The version of the pinned package the kind is named after.
+    // The version of the pinned package the kind is named after; empty for a server of a person's own.
     version: z.string(),
     // Open documents in the project that the server serves.
     documents: z.number().int().nonnegative(),
     // The reason behind `crashed`, or behind a kind that is `not-installed` after a failed install.
     message: z.string().optional(),
     // LSP `ServerCapabilities` of each process the kind runs, by its name (`typescript`, `vue`, `php`, `css`, ...). Once a server answered its handshake.
-    capabilities: z.record(z.string(), z.unknown()).optional()
+    capabilities: z.record(z.string(), z.unknown()).optional(),
+    // Only for a server of a person's own, which has no entry in the catalog to name it.
+    name: z.string().optional(),
+    // What the server serves, as LSP language ids and file patterns. Only for a server of a person's own.
+    languages: z.array(z.string()).optional(),
+    patterns: z.array(z.string()).optional()
 });
 export type LanguageServerStatus = z.infer<typeof LanguageServerStatusSchema>;
 
@@ -50,7 +66,7 @@ export type LanguageStatusResult = z.infer<typeof LanguageStatusResultSchema>;
 /* The kinds install into `$RUIMTE_HOME/language-servers` for the whole machine, so no project is named. */
 export const LanguageInstallPayloadSchema = z.object({ server: LanguageServerKindSchema });
 
-export const LanguageServerTargetPayloadSchema = z.object({ projectId: ProjectIdSchema, server: LanguageServerKindSchema });
+export const LanguageServerTargetPayloadSchema = z.object({ projectId: ProjectIdSchema, server: LanguageServerIdSchema });
 
 /* The status right after the request: an install answers while it runs and its end comes as an event, a restart answers once the server is up again, crashed again, or not installed. */
 export const LanguageServerStatusResultSchema = z.object({ status: LanguageServerStatusSchema });
@@ -65,6 +81,58 @@ export type LanguageLogLine = z.infer<typeof LanguageLogLineSchema>;
 
 /* A bounded tail of the log of the kind in this project, the last install of it included. */
 export const LanguageLogResultSchema = z.object({ lines: z.array(LanguageLogLineSchema) });
+
+/*
+ * A language server a person added: the command that starts it over stdio and what it serves. It runs for
+ * the projects named in `projects`, or for every project without it. Saving it is what approves
+ * starting exactly this command, these arguments and this environment; any change needs a new save.
+ */
+export const CustomLanguageServerInputSchema = z
+    .object({
+        // Absent for a new server.
+        id: LanguageServerIdSchema.optional(),
+        name: z.string().trim().min(1).max(80),
+        // An absolute path, or a command on the PATH of the machine.
+        command: z.string().trim().min(1),
+        args: z.array(z.string()),
+        env: z.record(z.string(), z.string()).optional(),
+        // LSP language ids, such as `zig` or `toml`.
+        languages: z.array(z.string().trim().min(1)),
+        // File patterns, such as `*.zig` or `templates/**` (`language-patterns.ts`).
+        patterns: z.array(z.string().trim().min(1)),
+        initializationOptions: z.unknown().optional(),
+        // The folders of the projects it runs for. Absent: every project.
+        projects: z.array(z.string().min(1)).optional()
+    })
+    .refine((server) => server.languages.length + server.patterns.length > 0, { message: 'A server needs a language or a file pattern to serve' });
+export type CustomLanguageServerInput = z.infer<typeof CustomLanguageServerInputSchema>;
+
+export const CustomLanguageServerSchema = z.object({
+    id: LanguageServerIdSchema,
+    name: z.string(),
+    command: z.string(),
+    args: z.array(z.string()),
+    env: z.record(z.string(), z.string()),
+    languages: z.array(z.string()),
+    patterns: z.array(z.string()),
+    initializationOptions: z.unknown().optional(),
+    projects: z.array(z.string()).optional(),
+    // The file was changed outside Ruimte after it was approved, so the server does not start until it is saved again.
+    held: z.boolean().optional()
+});
+export type CustomLanguageServer = z.infer<typeof CustomLanguageServerSchema>;
+
+export const LanguageCustomListResultSchema = z.object({ servers: z.array(CustomLanguageServerSchema) });
+export const LanguageCustomSavePayloadSchema = z.object({ server: CustomLanguageServerInputSchema });
+export const LanguageCustomSaveResultSchema = z.object({ server: CustomLanguageServerSchema });
+export const LanguageCustomRemovePayloadSchema = z.object({ id: LanguageServerIdSchema });
+export const LanguageCustomCheckPayloadSchema = z.object({ command: z.string() });
+// Whether the command is an executable on this machine, and where.
+export const LanguageCustomCheckResultSchema = z.object({ found: z.boolean(), path: z.string().optional() });
+export type LanguageCustomCheckResult = z.infer<typeof LanguageCustomCheckResultSchema>;
+
+/* To every client: the servers of a person's own changed, so their statuses are asked for again. */
+export const LanguageCustomChangedEventSchema = z.object({ servers: z.array(CustomLanguageServerSchema) });
 
 export const LanguageDocumentTargetPayloadSchema = z.object({ projectId: ProjectIdSchema, path: z.string().min(1) });
 export type LanguageDocumentTargetPayload = z.infer<typeof LanguageDocumentTargetPayloadSchema>;
@@ -129,7 +197,9 @@ export const LANGUAGE_ERROR_CODES = {
     failed: 'language-failed',
     badPath: 'bad-path',
     projectNotFound: 'project-not-found',
-    installFailed: 'install-failed'
+    installFailed: 'install-failed',
+    // A server of a person's own that cannot be saved: the command is not there, or nothing says what it serves.
+    invalidServer: 'invalid-server'
 } as const;
 export type LanguageErrorCode = (typeof LANGUAGE_ERROR_CODES)[keyof typeof LANGUAGE_ERROR_CODES];
 

@@ -7,9 +7,13 @@ import {
     storedPathOf,
     type LanguageCommandResult,
     type LanguageDocumentOpenResult,
+    type CustomLanguageServer,
+    type CustomLanguageServerInput,
+    type LanguageCustomCheckResult,
     type LanguageErrorCode,
     type LanguageLogLine,
     type LanguageRequestResult,
+    type LanguageServerId,
     type LanguageServerKind,
     type LanguageServerStatus
 } from '@ruimte/contracts';
@@ -33,10 +37,21 @@ import {
     type ApplyWorkspaceEditResult
 } from '@ruimte/smart-editor-lsp';
 import { ClientSinks } from '../client-sinks.ts';
+import { CustomLanguageServers, customProfile } from './custom.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LanguageInstaller } from './installer.ts';
 import { MERGED_METHODS, mergeAnswers, mergeProviders } from './merge.ts';
-import { activates, additionKindsForLanguage, documentLanguageId, KIND_PROFILES, kindForLanguage, usesVue, type ProjectFacts } from './profiles.ts';
+import {
+    activates,
+    additionKindsForLanguage,
+    componentServes,
+    documentLanguageId,
+    KIND_PROFILES,
+    kindForLanguage,
+    usesVue,
+    type KindProfile,
+    type ProjectFacts
+} from './profiles.ts';
 import { bunRuntime, runCommand, spawnLanguageProcess, type LanguageRuntime, type RunCommand, type SpawnLanguageProcess } from './runtime.ts';
 import { LanguageServer, realLanguageClock, type LanguageClock, type LanguageServerHooks, type SharedDocument } from './server.ts';
 import { versionOf } from './versions.ts';
@@ -44,6 +59,17 @@ import { versionOf } from './versions.ts';
 export class LanguageError extends CodedError<LanguageErrorCode> {}
 
 const KINDS = Object.keys(KIND_PROFILES) as LanguageServerKind[];
+
+function isCatalogKind(id: LanguageServerId): id is LanguageServerKind {
+    return id in KIND_PROFILES;
+}
+
+const HELD_MESSAGE = 'Its command was changed outside Ruimte. Open it and save it again to start it.';
+
+/* Whether a server of a person's own runs for the project: for every project, or for the folders it names. */
+function runsFor(server: CustomLanguageServer, folder: string): boolean {
+    return server.projects === undefined || server.projects.includes(folder);
+}
 
 export interface LanguageHostOptions {
     /* `$RUIMTE_HOME/language-servers`. */
@@ -61,13 +87,15 @@ export interface LanguageHostOptions {
     /* The text of a file, or null when it cannot be read. */
     readText?: (path: string) => Promise<string | null>;
     now?: () => number;
+    /* The servers of a person's own; by default the file beside the installs. */
+    custom?: CustomLanguageServers;
 }
 
 interface ProjectLanguage {
     projectId: string;
     folder: string;
     documents: Map<string, SharedDocument>;
-    servers: Map<LanguageServerKind, LanguageServer>;
+    servers: Map<LanguageServerId, LanguageServer>;
     /* Whether the project uses Vue, which sends its scripts to the Vue kind; unknown until its `package.json` was read or a `.vue` file opened. */
     vue: boolean | undefined;
     vueCheck: Promise<boolean> | undefined;
@@ -125,6 +153,7 @@ function translated(error: unknown): unknown {
 export class LanguageHost {
     private readonly options: LanguageHostOptions;
     private readonly installer: LanguageInstaller;
+    private readonly custom: CustomLanguageServers;
     private readonly sinks = new ClientSinks((clientId) => this.dropClient(clientId));
     private readonly projects = new Map<string, ProjectLanguage>();
     private readonly edits = new Map<string, PendingEdit>();
@@ -146,7 +175,7 @@ export class LanguageHost {
         providers: (document) => {
             const projectId = this.projectOf(document);
             const project = projectId === null ? undefined : this.projects.get(projectId);
-            if (projectId !== null && project && this.serversOf(project, document).length > 0) {
+            if (projectId !== null && project) {
                 this.toHolders(projectId, {
                     event: 'language.providers',
                     payload: { projectId, path: document.storedPath, providers: this.providersOf(project, document) }
@@ -157,6 +186,7 @@ export class LanguageHost {
 
     constructor(options: LanguageHostOptions) {
         this.options = options;
+        this.custom = options.custom ?? new CustomLanguageServers({ path: join(options.root, 'custom.json') });
         this.installer = new LanguageInstaller({
             root: options.root,
             runtime: options.runtime ?? bunRuntime(),
@@ -170,9 +200,16 @@ export class LanguageHost {
         return this.sinks.subscribe(clientId, sink);
     }
 
+    /* Reads the servers of a person's own. Call before a client can ask. */
+    load(): Promise<void> {
+        return this.custom.load();
+    }
+
     async status(projectId: string): Promise<LanguageServerStatus[]> {
         const project = this.projects.get(projectId) ?? null;
-        return Promise.all(KINDS.map((kind) => this.statusOf(project, kind)));
+        const folder = project?.folder ?? this.options.folderOf(projectId);
+        const own = folder === null ? [] : this.custom.list().filter((server) => runsFor(server, folder));
+        return Promise.all([...KINDS, ...own.map((server) => server.id as LanguageServerId)].map((id) => this.statusOf(project, id)));
     }
 
     /* Starts installing a kind and answers while it runs; the end comes as a `language.status` event. */
@@ -182,21 +219,43 @@ export class LanguageHost {
     }
 
     /* Ends the processes of the kind in the project and starts them again. A crashed kind leaves crashed that way only. */
-    async restart(projectId: string, kind: LanguageServerKind): Promise<LanguageServerStatus> {
+    async restart(projectId: string, id: LanguageServerId): Promise<LanguageServerStatus> {
         const project = this.projects.get(projectId) ?? null;
-        await project?.servers.get(kind)?.restart();
-        return this.statusOf(project, kind);
+        await project?.servers.get(id)?.restart();
+        return this.statusOf(project, id);
     }
 
-    async log(projectId: string, kind: LanguageServerKind): Promise<LanguageLogLine[]> {
-        const server = this.projects.get(projectId)?.servers.get(kind);
-        return [...this.installer.logOf(kind).tail(), ...(server?.log.tail() ?? [])].sort((a, b) => a.at - b.at);
+    async log(projectId: string, id: LanguageServerId): Promise<LanguageLogLine[]> {
+        const server = this.projects.get(projectId)?.servers.get(id);
+        return [...(isCatalogKind(id) ? this.installer.logOf(id).tail() : []), ...(server?.log.tail() ?? [])].sort((a, b) => a.at - b.at);
+    }
+
+    customList(): CustomLanguageServer[] {
+        return this.custom.list();
+    }
+
+    customCheck(command: string): LanguageCustomCheckResult {
+        return this.custom.check(command);
+    }
+
+    /* A person's save: it approves starting what the server names, and a document that waits for it gets it now. */
+    async customSave(input: CustomLanguageServerInput): Promise<CustomLanguageServer> {
+        const saved = await this.custom.save(input);
+        await this.customChanged(saved.id);
+        return saved;
+    }
+
+    async customRemove(id: string): Promise<void> {
+        if (await this.custom.remove(id)) {
+            await this.customChanged(id);
+        }
     }
 
     async open(clientId: string, payload: LanguageDocumentOpenPayload): Promise<LanguageDocumentOpenResult> {
         const project = this.projectFor(payload.projectId);
         const absolutePath = await this.pathOf(project, payload.path);
-        const kinds = await this.kindsFor(project, payload.languageId);
+        const storedPath = storedPathOf(project.folder, absolutePath);
+        const kinds = await this.kindsFor(project, payload.languageId, storedPath);
         let document = project.documents.get(absolutePath);
         if (document) {
             document.clients.add(clientId);
@@ -208,7 +267,6 @@ export class LanguageHost {
                 await Promise.all(this.serversOf(project, document).map((server) => server.change(document!, changes)));
             }
         } else {
-            const storedPath = storedPathOf(project.folder, absolutePath);
             document = {
                 absolutePath,
                 uri: pathToFileUri(absolutePath),
@@ -384,20 +442,29 @@ export class LanguageHost {
     }
 
     /* The kinds that serve a document: the one of its language, then the additions the project calls for. */
-    private async kindsFor(project: ProjectLanguage, languageId: string): Promise<LanguageServerKind[]> {
+    private async kindsFor(project: ProjectLanguage, languageId: string, storedPath: string): Promise<LanguageServerId[]> {
         const primary = await this.primaryKindFor(project, kindForLanguage(languageId));
         const candidates = additionKindsForLanguage(languageId);
-        const kinds: LanguageServerKind[] = primary === null ? [] : [primary];
-        if (candidates.length === 0) {
-            return kinds;
+        const kinds: LanguageServerId[] = primary === null ? [] : [primary];
+        if (candidates.length > 0) {
+            const facts: ProjectFacts = {
+                folder: project.folder,
+                packageJson: await (this.options.readText ?? readTextOrNull)(join(project.folder, 'package.json')),
+                exists: this.options.exists ?? fileExists
+            };
+            const active = await Promise.all(candidates.map((kind) => activates(KIND_PROFILES[kind], facts)));
+            kinds.push(...candidates.filter((_, index) => active[index]));
         }
-        const facts: ProjectFacts = {
-            folder: project.folder,
-            packageJson: await (this.options.readText ?? readTextOrNull)(join(project.folder, 'package.json')),
-            exists: this.options.exists ?? fileExists
-        };
-        const active = await Promise.all(candidates.map((kind) => activates(KIND_PROFILES[kind], facts)));
-        return [...kinds, ...candidates.filter((_, index) => active[index])];
+        return [...kinds, ...this.customKindsFor(project, languageId, storedPath)];
+    }
+
+    /* The servers of a person's own that run for the project and serve the document; one that is held never does. */
+    private customKindsFor(project: ProjectLanguage, languageId: string, storedPath: string): LanguageServerId[] {
+        return this.custom
+            .list()
+            .filter((server) => server.held !== true && runsFor(server, project.folder))
+            .filter((server) => customProfile(server).components.some((component) => componentServes(component, languageId, storedPath)))
+            .map((server) => server.id as LanguageServerId);
     }
 
     private projectUsesVue(project: ProjectLanguage): Promise<boolean> {
@@ -471,15 +538,21 @@ export class LanguageHost {
         return mergeProviders(this.serversOf(project, document).map((server) => server.providers(document, LANGUAGE_METHODS)));
     }
 
-    private ensureServer(project: ProjectLanguage, kind: LanguageServerKind): LanguageServer {
+    private ensureServer(project: ProjectLanguage, kind: LanguageServerId): LanguageServer {
         let server = project.servers.get(kind);
         if (!server) {
+            const catalog = isCatalogKind(kind) ? kind : null;
+            const profile = this.profileOf(kind);
+            if (profile === null) {
+                throw new LanguageError(LANGUAGE_ERROR_CODES.invalidServer, `No language server ${kind}`);
+            }
             server = new LanguageServer({
                 kind,
+                profile,
                 projectId: project.projectId,
                 folder: project.folder,
-                installDirectory: this.installer.directoryOf(kind),
-                isInstalled: () => this.installer.isInstalled(kind),
+                installDirectory: catalog === null ? '' : this.installer.directoryOf(catalog),
+                isInstalled: () => (catalog === null ? Promise.resolve(true) : this.installer.isInstalled(catalog)),
                 runtime: this.options.runtime ?? bunRuntime(),
                 spawn: this.options.spawn ?? spawnLanguageProcess,
                 clock: this.options.clock ?? realLanguageClock,
@@ -499,13 +572,28 @@ export class LanguageHost {
         }
         project.documents.delete(document.absolutePath);
         // A server clears what it reported for a file it was told closed, but no report of it reaches the clients once the file is out of the project's documents.
-        for (const component of document.kinds.flatMap((kind) => KIND_PROFILES[kind].components)) {
+        for (const kind of document.kinds) {
+            this.clearDiagnostics(project, document, kind);
+        }
+        await Promise.all(this.serversOf(project, document).map((server) => server.detach(document)));
+    }
+
+    /* The server of a kind is gone from the document, so what it reported is too. */
+    private clearDiagnostics(project: ProjectLanguage, document: SharedDocument, kind: LanguageServerId): void {
+        for (const component of (isCatalogKind(kind) ? KIND_PROFILES[kind].components : [{ name: kind }]) as readonly { name: string }[]) {
             this.toHolders(project.projectId, {
                 event: 'language.diagnostics',
                 payload: { projectId: project.projectId, path: document.storedPath, server: component.name, diagnostics: [] }
             });
         }
-        await Promise.all(this.serversOf(project, document).map((server) => server.detach(document)));
+    }
+
+    private profileOf(id: LanguageServerId): KindProfile | null {
+        if (isCatalogKind(id)) {
+            return KIND_PROFILES[id];
+        }
+        const server = this.custom.get(id);
+        return server === undefined ? null : customProfile(server);
     }
 
     private dropClient(clientId: string): void {
@@ -561,7 +649,11 @@ export class LanguageHost {
         return null;
     }
 
-    private async statusOf(project: ProjectLanguage | null, kind: LanguageServerKind): Promise<LanguageServerStatus> {
+    private async statusOf(project: ProjectLanguage | null, id: LanguageServerId): Promise<LanguageServerStatus> {
+        if (!isCatalogKind(id)) {
+            return this.customStatus(project, id);
+        }
+        const kind = id;
         const install = await this.installer.state(kind);
         const base = { server: kind, version: versionOf(kind) };
         if (install === 'installing') {
@@ -578,13 +670,73 @@ export class LanguageHost {
     private serverStatus(server: LanguageServer): LanguageServerStatus {
         const capabilities = server.capabilities;
         return {
-            server: server.kind,
+            ...this.identityOf(server.kind),
             state: server.state,
-            version: versionOf(server.kind),
             documents: server.documentCount,
             ...(server.message ? { message: server.message } : {}),
             ...(capabilities ? { capabilities } : {})
         };
+    }
+
+    /* The id and version of a server, and for one of a person's own what the client has no catalog entry to say. */
+    private identityOf(id: LanguageServerId): Pick<LanguageServerStatus, 'server' | 'version' | 'name' | 'languages' | 'patterns'> {
+        if (isCatalogKind(id)) {
+            return { server: id, version: versionOf(id) };
+        }
+        const own = this.custom.get(id);
+        return { server: id, version: '', name: own?.name ?? id, languages: own?.languages ?? [], patterns: own?.patterns ?? [] };
+    }
+
+    private customStatus(project: ProjectLanguage | null, id: LanguageServerId): LanguageServerStatus {
+        const own = this.custom.get(id);
+        if (own?.held) {
+            return { ...this.identityOf(id), state: 'crashed', documents: 0, message: HELD_MESSAGE };
+        }
+        const server = project?.servers.get(id);
+        return server ? this.serverStatus(server) : { ...this.identityOf(id), state: 'stopped', documents: 0 };
+    }
+
+    /*
+     * A server of a person's own was saved or removed. Every client hears of the list, a server that ran
+     * is stopped so the next one starts with what was saved, and each open document takes the servers
+     * it has now, so a saved server starts for the file in front of the person.
+     */
+    private async customChanged(id: string): Promise<void> {
+        this.sinks.emit({ event: 'language.custom.changed', payload: { servers: this.custom.list() } });
+        for (const project of this.projects.values()) {
+            const old = project.servers.get(id as LanguageServerId);
+            if (old) {
+                project.servers.delete(id as LanguageServerId);
+                await old.stop();
+            }
+            for (const document of project.documents.values()) {
+                if (document.kinds.includes(id as LanguageServerId)) {
+                    document.kinds = document.kinds.filter((kind) => kind !== id);
+                    this.clearDiagnostics(project, document, id as LanguageServerId);
+                }
+                await this.reroute(project, document);
+            }
+            this.toHolders(project.projectId, {
+                event: 'language.status',
+                payload: { projectId: project.projectId, status: await this.statusOf(project, id as LanguageServerId) }
+            });
+        }
+    }
+
+    /* Gives a document the servers it has now, which are not the ones it opened with when a server of a person's own was added or removed. */
+    private async reroute(project: ProjectLanguage, document: SharedDocument): Promise<void> {
+        const next = await this.kindsFor(project, document.languageId, document.storedPath);
+        const added = next.filter((kind) => !document.kinds.includes(kind));
+        const removed = document.kinds.filter((kind) => !next.includes(kind));
+        for (const kind of removed) {
+            await project.servers.get(kind)?.detach(document);
+            this.clearDiagnostics(project, document, kind);
+        }
+        document.kinds = next;
+        for (const kind of added) {
+            this.ensureServer(project, kind).attach(document);
+        }
+        this.hooks.providers(document);
     }
 
     /* An install began or ended. Every client hears of it, since it is the machine's; a project with documents waiting then starts. */

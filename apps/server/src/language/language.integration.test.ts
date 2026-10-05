@@ -132,6 +132,9 @@ async function waitReady(kind: LanguageServerKind, projectId = 'p1'): Promise<vo
 }
 
 async function install(kind: LanguageServerKind): Promise<void> {
+    if ((await host.status('p1')).find((status) => status.server === kind)?.state !== 'not-installed') {
+        return;
+    }
     await host.install(kind);
     await eventually(
         `${kind} install`,
@@ -570,6 +573,34 @@ describe('servers that serve beside the server of the language', () => {
         );
         // `@apply` is no problem for a project that uses Tailwind.
         expect(diagnosticsOf('app.css', 'css')).toEqual([]);
+    }, 180_000);
+});
+
+describe('a language server of a person', () => {
+    test('runs the command that was saved, for the files its pattern names', async () => {
+        await install('docker');
+        const script = join(base, 'home', 'language-servers', 'docker', 'node_modules', 'dockerfile-language-server-nodejs', 'bin', 'docker-langserver');
+        const saved = await host.customSave({
+            name: 'Container files',
+            command: runtime.command,
+            args: [script, '--stdio'],
+            env: runtime.env,
+            languages: [],
+            patterns: ['*.dockerx']
+        });
+        const text = OTHER_FILES.Dockerfile;
+        await writeFile(join(project, 'build.dockerx'), text);
+        const opened = await host.open('c1', { projectId: 'p1', path: 'build.dockerx', languageId: 'plaintext', text });
+        expect(opened.servers).toEqual([saved.id]);
+        await waitReady(saved.id as LanguageServerKind);
+        const diagnostics = await eventually(
+            'an unknown instruction',
+            () => diagnosticsOf('build.dockerx', saved.id),
+            (list) => list.length > 0
+        );
+        expect(diagnostics[0]?.message).toContain('FRM');
+        await host.customRemove(saved.id);
+        expect((await host.status('p1')).some((status) => status.server === saved.id)).toBe(false);
     }, 180_000);
 });
 

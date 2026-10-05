@@ -840,6 +840,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         holders: (projectId) => projects.holdersOf(projectId),
         machineHome
     });
+    await language.load();
     projects.attachLanguage(language);
     registerLanguageHandlers(dispatcher, language);
     registerFsHandlers(

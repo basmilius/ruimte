@@ -35,7 +35,8 @@ export interface FakeSpawner {
 
 function nameOf(spec: LanguageProcessSpec): string {
     const components = Object.values(KIND_PROFILES).flatMap((profile) => profile.components);
-    return components.find((component) => spec.args.some((arg) => arg.endsWith(component.entry)))?.name ?? 'typescript';
+    // A server of a person's own is named by its command.
+    return components.find((component) => spec.args.some((arg) => arg.endsWith(component.entry)))?.name ?? spec.command;
 }
 
 /* Starts no process: every `spawn` is a fake language server on the far end of an in-memory transport. */
