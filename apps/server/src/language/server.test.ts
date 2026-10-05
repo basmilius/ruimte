@@ -200,6 +200,50 @@ describe('a language server of one kind in one project', () => {
         expect(server.state).toBe('crashed');
     });
 
+    it('clears the diagnostics of every document a crashed server served, and reports again when it runs', async () => {
+        const { server, spawner, diagnostics } = rig('typescript');
+        server.attach(document('/work/a.ts', 'typescript', 'x'));
+        server.attach(document('/work/b.ts', 'typescript', 'y'));
+        await settle();
+        const problem = { range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } }, message: 'nope' };
+        await spawner.processes[0].server.publishDiagnostics('file:///work/a.ts', [problem], 1);
+        await settle();
+        diagnostics.length = 0;
+        await spawner.processes[0].crash();
+        await settle();
+        expect(diagnostics.every((report) => report.component === 'typescript' && report.params.diagnostics.length === 0)).toBe(true);
+        expect([...new Set(diagnostics.map((report) => report.path))].sort()).toEqual(['a.ts', 'b.ts']);
+        diagnostics.length = 0;
+        await server.restart();
+        await spawner.processes[1].server.publishDiagnostics('file:///work/a.ts', [problem], 1);
+        await settle();
+        expect(diagnostics.filter((report) => report.params.diagnostics.length > 0).map((report) => report.path)).toEqual(['a.ts']);
+    });
+
+    it('clears what the other process of a pair reported when one of them crashes', async () => {
+        const { server, spawner, diagnostics } = rig('vue');
+        server.attach(document('/work/App.vue', 'vue', '<template />'));
+        await settle();
+        const problem = { range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } }, message: 'nope' };
+        await spawner.of('typescript')[0].server.publishDiagnostics('file:///work/App.vue', [problem], 1);
+        await settle();
+        diagnostics.length = 0;
+        await spawner.of('vue')[0].crash();
+        await settle();
+        expect(server.state).toBe('crashed');
+        expect(diagnostics.filter((report) => report.component === 'typescript').map((report) => report.params.diagnostics)).toEqual([[]]);
+    });
+
+    it('clears the diagnostics of a server that is stopped', async () => {
+        const { server, diagnostics } = rig('typescript');
+        server.attach(document('/work/a.ts', 'typescript', 'x'));
+        await settle();
+        diagnostics.length = 0;
+        await server.stop();
+        expect(diagnostics.length).toBeGreaterThan(0);
+        expect(diagnostics.every((report) => report.path === 'a.ts' && report.params.diagnostics.length === 0)).toBe(true);
+    });
+
     it('marks itself crashed when the process dies before the handshake is done', async () => {
         const spawner = fakeSpawner();
         const spawn = spawner.spawn;

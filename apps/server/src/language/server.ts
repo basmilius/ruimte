@@ -584,6 +584,7 @@ export class LanguageServer {
         this.failure = message;
         this.log.push('host', message);
         for (const component of components) {
+            this.clearReports(component);
             component.documents.clear();
             this.release(component);
             component.child.kill('SIGTERM');
@@ -592,6 +593,16 @@ export class LanguageServer {
         this.options.hooks.watching(this);
         for (const document of this.documents.values()) {
             this.options.hooks.providers(document);
+        }
+    }
+
+    /* What a process reported goes with it, so a crashed or stopped server leaves no problems behind in the clients. */
+    private clearReports(component: Component): void {
+        for (const path of component.documents.keys()) {
+            const document = this.documents.get(path);
+            if (document) {
+                this.options.hooks.diagnostics(document, component.profile.name, { uri: document.uri, diagnostics: [] });
+            }
         }
     }
 
