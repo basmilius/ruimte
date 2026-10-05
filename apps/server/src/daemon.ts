@@ -880,7 +880,8 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
             worktreesOf: canvasHost.worktreePaths,
             worktreesRoot: worktrees.root
         }),
-        machineHome
+        machineHome,
+        language
     );
     registerBytesHandlers(
         dispatcher,

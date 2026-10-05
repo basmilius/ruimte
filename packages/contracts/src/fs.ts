@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ProjectIdSchema } from './project.ts';
 
 // What the person typed so far; `~` and a relative path are resolved on the daemon's machine.
 export const FsBrowsePayloadSchema = z.object({
@@ -228,6 +229,26 @@ export const FsDeletePayloadSchema = z.object({
     path: z.string().min(1)
 });
 export type FsDeletePayload = z.infer<typeof FsDeletePayloadSchema>;
+
+/* Moves or renames a file or folder, inside the boundary of `fs.write`; `.git` and `.ruimte` stay closed. A path that is
+   taken is refused as `exists`, and the folders above `to` that are missing are made. With a `projectId` the project's
+   language servers hear of it: they first answer with the edits the move brings (imports, a namespace), which are made
+   before the file moves, and afterwards they are told it moved. A server that is slow or fails changes nothing and
+   holds nothing up. */
+export const FsRenamePayloadSchema = z.object({
+    path: z.string().min(1),
+    to: z.string().min(1),
+    projectId: ProjectIdSchema.optional(),
+    // False when the caller made those edits itself, as a refactor that moves a file does; the servers then only hear that it moved.
+    edits: z.boolean().optional()
+});
+export type FsRenamePayload = z.infer<typeof FsRenamePayloadSchema>;
+
+export const FsRenameResultSchema = z.object({
+    // The files the language servers edited before the move, at the places they had.
+    edited: z.array(z.string()).optional()
+});
+export type FsRenameResult = z.infer<typeof FsRenameResultSchema>;
 
 // What `GET /fs/file` serves; a read result names one of these before the client asks for the bytes.
 // Not every client draws every one: HEIC and TIFF are left to the platform's own decoder.

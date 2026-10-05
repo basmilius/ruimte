@@ -227,6 +227,7 @@
     "fs.read",
     "fs.create",
     "fs.delete",
+    "fs.rename",
     "fs.write",
     "fs.watch",
     "fs.unwatch",

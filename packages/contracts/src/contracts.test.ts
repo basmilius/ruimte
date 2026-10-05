@@ -447,6 +447,18 @@ describe('fs', () => {
     });
 });
 
+describe('fs.rename', () => {
+    test('takes two paths, and only optionally the project whose servers hear of it and whether they may answer with edits', () => {
+        const { payload, result } = REQUEST_SCHEMAS['fs.rename'];
+        expect(payload.safeParse({ path: '/repo/a.php', to: '/repo/b.php' }).success).toBe(true);
+        expect(payload.safeParse({ path: '/repo/a.php', to: '/repo/b.php', projectId: 'p1', edits: false }).success).toBe(true);
+        expect(payload.safeParse({ path: '/repo/a.php' }).success).toBe(false);
+        expect(payload.safeParse({ path: '', to: '/repo/b.php' }).success).toBe(false);
+        expect(result.safeParse({}).success).toBe(true);
+        expect(result.safeParse({ edited: ['/repo/c.php'] }).success).toBe(true);
+    });
+});
+
 describe('git', () => {
     const status = {
         repo: true,

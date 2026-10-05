@@ -1,4 +1,4 @@
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import {
     LANGUAGE_ERROR_CODES,
@@ -31,11 +31,16 @@ import {
     applyContentChanges,
     ErrorCodes,
     LspError,
+    fileUriToPath,
     pathToFileUri,
+    planWorkspaceEdit,
     StaleResultError,
     watchesFile,
     type ApplyWorkspaceEditParams,
-    type ApplyWorkspaceEditResult
+    type ApplyWorkspaceEditResult,
+    type DocumentSnapshot,
+    type RenamedFile,
+    type WorkspaceEdit
 } from '@ruimte/smart-editor-lsp';
 import type { WatchSeams } from '@ruimte/agents/watch-seam';
 import { ClientSinks } from '../client-sinks.ts';
@@ -139,6 +144,12 @@ async function fileExists(path: string): Promise<boolean> {
         () => true,
         () => false
     );
+}
+
+/* What a move of files leaves to the host: the move itself and the writing of a file no client holds open. */
+export interface FileMove {
+    move(): Promise<void>;
+    write(path: string, text: string): Promise<void>;
 }
 
 /* What a failure of the LSP client is on the wire. */
@@ -741,6 +752,11 @@ export class LanguageHost {
         if (!running) {
             return Promise.resolve({ applied: false, failureReason: 'No command of a client is running' });
         }
+        return this.sendEdit(server.projectId, running.clientId, params.edit, params.label);
+    }
+
+    /* Hands an edit to one client, which makes it in its editors and answers with `language.edit.answer`. */
+    private sendEdit(projectId: string, clientId: string, edit: WorkspaceEdit, label?: string): Promise<ApplyWorkspaceEditResult> {
         const editId = `edit-${++this.editCounter}`;
         return new Promise<ApplyWorkspaceEditResult>((resolve) => {
             const cancel = (this.options.clock ?? realLanguageClock).set(
@@ -748,8 +764,8 @@ export class LanguageHost {
                 EDIT_ANSWER_MS
             );
             const pending: PendingEdit = {
-                projectId: server.projectId,
-                clientId: running.clientId,
+                projectId,
+                clientId,
                 settle: (result) => {
                     cancel();
                     this.edits.delete(editId);
@@ -757,11 +773,100 @@ export class LanguageHost {
                 }
             };
             this.edits.set(editId, pending);
-            this.sinks.to(running.clientId, {
-                event: 'language.edit',
-                payload: { projectId: server.projectId, editId, ...(params.label ? { label: params.label } : {}), edit: params.edit }
-            });
+            this.sinks.to(clientId, { event: 'language.edit', payload: { projectId, editId, ...(label ? { label } : {}), edit } });
         });
+    }
+
+    /*
+     * Files that move go past the servers of the project: each says what it would change first (imports, a
+     * namespace), which is made before the move, and is told afterwards that the files moved. A server that is
+     * slow or fails is left out, and the move still happens; an edit that cannot be made ends it before a file moved.
+     * `edits: false` skips the first half, for a caller that moves files as part of an edit it made itself.
+     */
+    async renameFiles(clientId: string, projectId: string, from: string, to: string, edits: boolean, file: FileMove): Promise<string[]> {
+        const project = this.projects.get(projectId);
+        const edited: string[] = [];
+        if (project === undefined) {
+            await file.move();
+            return edited;
+        }
+        const moved: RenamedFile = {
+            oldUri: pathToFileUri(resolve(from)),
+            newUri: pathToFileUri(resolve(to)),
+            directory: (await stat(from).catch(() => null))?.isDirectory() === true
+        };
+        if (edits) {
+            for (const server of project.servers.values()) {
+                await server.willRenameFiles([moved], async (edit) => {
+                    edited.push(...(await this.applyRenameEdit(project, clientId, edit, file)));
+                });
+            }
+        }
+        await file.move();
+        await Promise.all([...project.servers.values()].map((server) => server.didRenameFiles([moved])));
+        return edited;
+    }
+
+    /*
+     * Makes what a server answered to a rename: a document a client holds open takes it in its editor, as one
+     * undo step, and any other file is written. The edit is tried against every text first, so one that does not fit changes nothing.
+     */
+    private async applyRenameEdit(project: ProjectLanguage, clientId: string, edit: WorkspaceEdit, file: FileMove): Promise<string[]> {
+        const documents = new Map<string, SharedDocument>(
+            [...project.documents.values()].filter((document) => document.clients.size > 0).map((document) => [document.uri, document])
+        );
+        const snapshots = new Map<string, DocumentSnapshot>();
+        const uris = new Set([
+            ...(edit.documentChanges ?? []).flatMap((change) => ('textDocument' in change ? [change.textDocument.uri] : [])),
+            ...Object.keys(edit.changes ?? {})
+        ]);
+        for (const uri of uris) {
+            const open = documents.get(uri);
+            const text = open?.text ?? (await (this.options.readText ?? readTextOrNull)(fileUriToPath(uri) ?? ''));
+            if (text === null || text === undefined) {
+                throw new LanguageError(LANGUAGE_ERROR_CODES.failed, `${uri} cannot be read to make the edit of a rename`);
+            }
+            snapshots.set(uri, { text, version: open?.version ?? null });
+        }
+        let planned;
+        try {
+            planned = planWorkspaceEdit(edit, snapshots);
+        } catch (error) {
+            throw new LanguageError(LANGUAGE_ERROR_CODES.failed, error instanceof Error ? error.message : 'The edit of a rename does not fit the files');
+        }
+        const held = new Map<string, WorkspaceEdit>();
+        const closed: Array<{ path: string; text: string }> = [];
+        const edited: string[] = [];
+        for (const change of planned) {
+            if (change.text === change.before) {
+                continue;
+            }
+            const path = fileUriToPath(change.uri) ?? '';
+            edited.push(path);
+            const open = documents.get(change.uri);
+            if (open === undefined) {
+                closed.push({ path, text: change.text });
+                continue;
+            }
+            const target = open.clients.has(clientId) ? clientId : [...open.clients][0]!;
+            const entries = (edit.documentChanges ?? []).filter((entry) => 'textDocument' in entry && entry.textDocument.uri === change.uri);
+            const own = held.get(target) ?? { documentChanges: [] };
+            own.documentChanges = [
+                ...(own.documentChanges ?? []),
+                ...(entries.length > 0 ? entries : [{ textDocument: { uri: change.uri, version: null }, edits: edit.changes?.[change.uri] ?? [] }])
+            ];
+            held.set(target, own);
+        }
+        for (const [target, own] of held) {
+            const result = await this.sendEdit(project.projectId, target, own);
+            if (!result.applied) {
+                throw new LanguageError(LANGUAGE_ERROR_CODES.failed, result.failureReason ?? 'The editor did not make the edit of a rename');
+            }
+        }
+        for (const { path, text } of closed) {
+            await file.write(path, text);
+        }
+        return edited;
     }
 
     private projectOf(document: SharedDocument): string | null {

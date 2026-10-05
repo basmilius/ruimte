@@ -18,7 +18,9 @@ import {
     type FileSystemWatcher,
     type LspDocument,
     type ProgressParams,
-    type PublishDiagnosticsParams
+    type PublishDiagnosticsParams,
+    type RenamedFile,
+    type WorkspaceEdit
 } from '@ruimte/smart-editor-lsp';
 import { errorText } from '../error-text.ts';
 import type { FileChange } from './file-watch.ts';
@@ -40,6 +42,9 @@ export const STOP_GRACE_MS = 3_000;
 
 // How long a server beside the first has to answer a request that merges the answers of several, after which it is left out.
 export const MERGE_DEADLINE_MS = 1_000;
+
+/* What a server has to say about files that are about to move: longer than a merged call, since it may search a whole project, and no longer than a person waits at a rename. */
+export const WILL_RENAME_DEADLINE_MS = 5_000;
 
 // How long the first code action request waits for a sidecar that has to start, which loads the project before it answers.
 export const SIDECAR_START_DEADLINE_MS = 10_000;
@@ -448,6 +453,53 @@ export class LanguageServer {
         } finally {
             cancel();
         }
+    }
+
+    /*
+     * Asks each running process what it would change before the files move, one after the other, and hands
+     * every edit to `apply` before the next process is asked, since each one worked from the text as it was.
+     * A process that is slow, fails or takes none of the files is left out; an `apply` that fails ends it all.
+     */
+    async willRenameFiles(files: readonly RenamedFile[], apply: (edit: WorkspaceEdit) => Promise<void>): Promise<void> {
+        for (const component of [...this.components]) {
+            // A sidecar answers code actions only, and does not watch the files of a project, so its answer would rest on text that is out of date.
+            if (component.session.state !== 'ready' || component.profile.sidecar === true) {
+                continue;
+            }
+            const answer = component.session.willRenameFiles(files);
+            const title = component.profile.title ?? component.profile.name;
+            let edit: WorkspaceEdit | null | 'expired';
+            try {
+                edit = await this.beforeDeadline(answer, WILL_RENAME_DEADLINE_MS);
+            } catch (error) {
+                this.log.push('host', `${title} could not say what a rename changes: ${errorText(error)}`);
+                continue;
+            }
+            if (edit === 'expired') {
+                this.log.push('host', `${title} did not answer workspace/willRenameFiles within ${WILL_RENAME_DEADLINE_MS / 1000} seconds and was left out`);
+                answer.catch(() => undefined);
+                continue;
+            }
+            if (edit !== null) {
+                await apply(edit);
+            }
+        }
+    }
+
+    /* Tells each running process which files moved, those its filters take. */
+    async didRenameFiles(files: readonly RenamedFile[]): Promise<void> {
+        await Promise.all(
+            this.components.map(async (component) => {
+                if (component.session.state !== 'ready' || component.profile.sidecar === true) {
+                    return;
+                }
+                try {
+                    await component.session.didRenameFiles(files);
+                } catch (error) {
+                    this.log.push('host', `Could not tell the server about renamed files: ${errorText(error)}`);
+                }
+            })
+        );
     }
 
     /* Runs a server command for this document, on the process that offered it (`hint`) or the first that supports commands. */

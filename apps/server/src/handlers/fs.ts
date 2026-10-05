@@ -3,8 +3,10 @@ import { browseDirectories } from '../fs/browse.ts';
 import { createEntry } from '../fs/create.ts';
 import { deletePath } from '../fs/delete.ts';
 import { listDirectory } from '../fs/list.ts';
+import type { LanguageHost } from '../language/host.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
 import { readFile } from '../fs/read.ts';
+import { planRename } from '../fs/rename.ts';
 import { revealInFileManager } from '../fs/reveal.ts';
 import { grepFiles } from '../fs/grep.ts';
 import { searchFiles } from '../fs/search.ts';
@@ -15,7 +17,8 @@ export function registerFsHandlers(
     dispatcher: Dispatcher,
     watcher: FolderWatcher,
     boundaryOf: (clientId: string) => Promise<WriteBoundary>,
-    machineHome: MachineHome
+    machineHome: MachineHome,
+    language?: Pick<LanguageHost, 'renameFiles'>
 ): void {
     dispatcher.register('fs.browse', (payload) => translate(() => browseDirectories(payload.partialPath, payload.cwd, { hidden: payload.hidden })));
 
@@ -61,6 +64,28 @@ export function registerFsHandlers(
             await machineHome.refuse(payload.path);
             await deletePath(payload.path, await boundaryOf(client.id));
             return {};
+        })
+    );
+
+    dispatcher.register('fs.rename', (payload, client) =>
+        translate(async () => {
+            await Promise.all([machineHome.refuse(payload.path), machineHome.refuse(payload.to)]);
+            const boundary = await boundaryOf(client.id);
+            const plan = await planRename(payload.path, payload.to, boundary);
+            if (payload.projectId === undefined || language === undefined) {
+                await plan.run();
+                return {};
+            }
+            const edited = await language.renameFiles(client.id, payload.projectId, payload.path, payload.to, payload.edits !== false, {
+                move: plan.run,
+                write: async (path, text) => {
+                    const read = await readFile(path);
+                    if (read.kind === 'text') {
+                        await writeTextFile(path, text, read.mtime, boundary);
+                    }
+                }
+            });
+            return edited.length > 0 ? { edited } : {};
         })
     );
 

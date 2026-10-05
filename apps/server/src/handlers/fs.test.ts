@@ -92,4 +92,17 @@ describe('the machine home', () => {
     test('nor to a delete', async () => {
         expect(await request('fs.delete', { path: join(home, 'command-approvals', 'approval.json') })).toMatchObject(refused);
     });
+
+    test('nor to a move out of the home or into it', async () => {
+        const approval = join(home, 'command-approvals', 'approval.json');
+        expect(await request('fs.rename', { path: approval, to: join(root, 'taken.json') })).toMatchObject(refused);
+        expect(await request('fs.rename', { path: join(home, 'portrait.gif'), to: join(home, 'command-approvals', 'portrait.gif') })).toMatchObject(refused);
+    });
+
+    test('fs.rename moves a file of the project', async () => {
+        await writeFile(join(root, 'a.txt'), 'a');
+        expect(await request('fs.rename', { path: join(root, 'a.txt'), to: join(root, 'moved', 'b.txt') })).toMatchObject({ ok: true, result: {} });
+        expect((await stat(join(root, 'moved', 'b.txt'))).isFile()).toBe(true);
+        expect(await request('fs.rename', { path: join(root, 'a.txt'), to: join(root, 'c.txt') })).toMatchObject({ ok: false, error: { code: 'not-found' } });
+    });
 });

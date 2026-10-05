@@ -11,7 +11,7 @@ import { CustomLanguageServers } from './custom.ts';
 import { LanguageHost } from './host.ts';
 import { NativePolicy, type Download } from './native.ts';
 import { KIND_PROFILES } from './profiles.ts';
-import { fakeSpawner, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
+import { FULL_CAPABILITIES, fakeSpawner, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
 import { tarGz } from './test-archives.ts';
 import { versionOf } from './versions.ts';
 
@@ -55,6 +55,8 @@ function rig(
         platform?: NodeJS.Platform;
         choices?: LanguageChoices;
         native?: NativePolicy;
+        /* The text of files that are no document, by path. */
+        texts?: Record<string, string>;
     } = {}
 ): Rig {
     const spawner = options.spawner ?? fakeSpawner();
@@ -110,7 +112,7 @@ function rig(
             resolve: (command) => (['zls', 'taplo'].includes(command) ? `/bin/${command}` : null)
         }),
         exists: async (path) => (options.files ?? []).includes(path),
-        readText: async (path) => (path === '/work/package.json' ? (options.packageJson ?? null) : null)
+        readText: async (path) => (path === '/work/package.json' ? (options.packageJson ?? null) : (options.texts?.[path] ?? null))
     });
     const events: Record<string, SessionEvent[]> = { 'client-1': [], 'client-2': [] };
     for (const clientId of Object.keys(events)) {
@@ -121,7 +123,15 @@ function rig(
 
 async function installed(
     kinds: LanguageServerKind[] = ['typescript'],
-    options: { packageJson?: string; files?: string[]; spawner?: FakeSpawner; platform?: NodeJS.Platform; intelephense?: boolean; native?: NativePolicy } = {}
+    options: {
+        packageJson?: string;
+        files?: string[];
+        spawner?: FakeSpawner;
+        platform?: NodeJS.Platform;
+        intelephense?: boolean;
+        native?: NativePolicy;
+        texts?: Record<string, string>;
+    } = {}
 ): Promise<Rig> {
     // PHP goes to the server of Ruimte unless the machine picked Intelephense, which these tests stand in with.
     if (options.intelephense) {
@@ -1051,5 +1061,125 @@ describe('the PHP server of Ruimte and Intelephense', () => {
         await until(async () => (await host.status('p1')).find((status) => status.server === 'php-native')?.message !== undefined);
         expect((await host.status('p1')).find((status) => status.server === 'php-native')).toMatchObject({ message: 'Not available in this build yet' });
         expect(installs).toEqual(['typescript']);
+    });
+});
+
+describe('files that move', () => {
+    const filters = [{ scheme: 'file', pattern: { glob: '**/*.ts', matches: 'file' as const } }];
+    const capabilities = { typescript: { ...FULL_CAPABILITIES, workspace: { fileOperations: { willRename: { filters }, didRename: { filters } } } } };
+    const aToC = { from: '/work/src/a.ts', to: '/work/src/c.ts' };
+    const line = (path: string, text: string) => ({
+        textDocument: { uri: `file://${path}`, version: null },
+        edits: [{ range: { start: { line: 0, character: 8 }, end: { line: 0, character: 11 } }, newText: text }]
+    });
+
+    async function moveRig(answer?: (params: unknown) => unknown) {
+        const spawner = fakeSpawner(capabilities, [], answer === undefined ? {} : { typescript: { 'workspace/willRenameFiles': answer } });
+        const result = await installed(['typescript'], { spawner, texts: { '/work/src/b.ts': 'import "./a";\n' } });
+        await openReady(result.host, 'src/a.ts', 'export "./a";\n');
+        const calls: string[] = [];
+        const written: Array<{ path: string; text: string }> = [];
+        const file = {
+            move: async () => void calls.push('move'),
+            write: async (path: string, text: string) => {
+                calls.push('write');
+                written.push({ path, text });
+            }
+        };
+        const server = spawner.processes[0].server;
+        return { ...result, server, calls, written, file };
+    }
+
+    const importEdits = () => ({ documentChanges: [line('/work/src/a.ts', './c'), line('/work/src/b.ts', './c')] });
+
+    it('makes what a server would change before the move, in the open editor and in the file nobody has open, and tells it afterwards', async () => {
+        const { host, server, calls, written, file, events } = await moveRig(importEdits);
+        const moving = host.renameFiles('client-1', 'p1', aToC.from, aToC.to, true, file);
+        await until(() => kinds(events['client-1'], 'language.edit').length > 0);
+        const [asked] = kinds(events['client-1'], 'language.edit');
+        const { editId, edit } = (asked as { payload: { editId: string; edit: { documentChanges: Array<{ textDocument: { uri: string } }> } } }).payload;
+        expect(edit.documentChanges.map((change) => change.textDocument.uri)).toEqual(['file:///work/src/a.ts']);
+        expect(calls).toEqual([]);
+        host.answerEdit('client-1', { projectId: 'p1', editId, applied: true });
+        expect(await moving).toEqual(['/work/src/a.ts', '/work/src/b.ts']);
+        expect(calls).toEqual(['write', 'move']);
+        expect(written).toEqual([{ path: '/work/src/b.ts', text: 'import "./c";\n' }]);
+        expect(server.paramsOf('workspace/willRenameFiles')).toEqual([{ files: [{ oldUri: 'file:///work/src/a.ts', newUri: 'file:///work/src/c.ts' }] }]);
+        expect(server.paramsOf('workspace/didRenameFiles')).toEqual([{ files: [{ oldUri: 'file:///work/src/a.ts', newUri: 'file:///work/src/c.ts' }] }]);
+    });
+
+    it('sends the edit of an open document to the client that asked, and only the files it holds', async () => {
+        const { host, calls, file, events } = await moveRig(importEdits);
+        await open(host, 'src/a.ts', 'export "./a";\n', 'client-2');
+        const moving = host.renameFiles('client-2', 'p1', aToC.from, aToC.to, true, file);
+        await until(() => kinds(events['client-2'], 'language.edit').length > 0);
+        expect(kinds(events['client-1'], 'language.edit')).toHaveLength(0);
+        const [asked] = kinds(events['client-2'], 'language.edit');
+        host.answerEdit('client-2', { projectId: 'p1', editId: (asked as { payload: { editId: string } }).payload.editId, applied: true });
+        await moving;
+        expect(calls).toEqual(['write', 'move']);
+    });
+
+    it('moves anyway when a server is slow, and leaves its late answer out', async () => {
+        const { host, calls, file, clock, server } = await moveRig(() => new Promise(() => undefined));
+        const moving = host.renameFiles('client-1', 'p1', aToC.from, aToC.to, true, file);
+        await until(() => server.paramsOf('workspace/willRenameFiles').length > 0);
+        clock.fire();
+        expect(await moving).toEqual([]);
+        expect(calls).toEqual(['move']);
+        expect(server.paramsOf('workspace/didRenameFiles')).toHaveLength(1);
+        expect((await host.log('p1', 'typescript')).map((entry) => entry.text).join('\n')).toContain('did not answer workspace/willRenameFiles');
+    });
+
+    it('moves anyway when a server fails', async () => {
+        const { host, calls, file } = await moveRig(() => {
+            throw new Error('boom');
+        });
+        expect(await host.renameFiles('client-1', 'p1', aToC.from, aToC.to, true, file)).toEqual([]);
+        expect(calls).toEqual(['move']);
+    });
+
+    it('asks nothing when the caller made the edits itself, and nothing of a file no filter takes', async () => {
+        const { host, calls, file, server } = await moveRig(importEdits);
+        await host.renameFiles('client-1', 'p1', aToC.from, aToC.to, false, file);
+        await host.renameFiles('client-1', 'p1', '/work/notes.md', '/work/todo.md', true, file);
+        expect(server.paramsOf('workspace/willRenameFiles')).toEqual([]);
+        expect(server.paramsOf('workspace/didRenameFiles')).toHaveLength(1);
+        expect(calls).toEqual(['move', 'move']);
+    });
+
+    it('does not move when an edit does not fit the text, or the editor does not make it', async () => {
+        const unfit = await moveRig(() => ({
+            documentChanges: [
+                { ...line('/work/src/b.ts', 'c'), edits: [{ range: { start: { line: 9, character: 0 }, end: { line: 9, character: 1 } }, newText: 'x' }] }
+            ]
+        }));
+        await expect(unfit.host.renameFiles('client-1', 'p1', aToC.from, aToC.to, true, unfit.file)).rejects.toMatchObject({ code: 'language-failed' });
+        expect(unfit.calls).toEqual([]);
+    });
+
+    it('does not move when the editor refuses the edit', async () => {
+        const { host, calls, file, events } = await moveRig(importEdits);
+        const moving = host.renameFiles('client-1', 'p1', aToC.from, aToC.to, true, file);
+        const outcome = moving.then(
+            () => 'moved',
+            (error: { message: string }) => error.message
+        );
+        await until(() => kinds(events['client-1'], 'language.edit').length > 0);
+        const [asked] = kinds(events['client-1'], 'language.edit');
+        host.answerEdit('client-1', {
+            projectId: 'p1',
+            editId: (asked as { payload: { editId: string } }).payload.editId,
+            applied: false,
+            failureReason: 'Read only'
+        });
+        expect(await outcome).toBe('Read only');
+        expect(calls).toEqual([]);
+    });
+
+    it('only moves when no server of the project is up', async () => {
+        const { host, calls, file } = await moveRig(importEdits);
+        expect(await host.renameFiles('client-1', 'other', aToC.from, aToC.to, true, file)).toEqual([]);
+        expect(calls).toEqual(['move']);
     });
 });

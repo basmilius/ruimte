@@ -36118,6 +36118,43 @@
     "type": "object",
     "properties": {}
   },
+  "request.fs.rename.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "to": {
+        "type": "string",
+        "minLength": 1
+      },
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "edits": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "path",
+      "to"
+    ]
+  },
+  "request.fs.rename.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "edited": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
   "request.fs.write.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
