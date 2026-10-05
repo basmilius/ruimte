@@ -135,6 +135,32 @@ describe('Enter in a string', () => {
     });
 });
 
+describe('Enter in a string that is not a string expression', () => {
+    it('breaks the line plainly in a JSX attribute value and still splits a string in an expression', () => {
+        const tsx = { language: 'tsx' };
+        enter('const a = <div className="foo¦bar" />;', 'const a = <div className="foo\n¦bar" />;', tsx);
+        enter("const a = (\n    <Foo\n        title='foo¦bar'\n    />\n);", "const a = (\n    <Foo\n        title='foo\n        ¦bar'\n    />\n);", tsx);
+        enter('const a = <div title={"foo¦bar"} />;', 'const a = <div title={"foo" +\n    "¦bar"} />;', tsx);
+        enter('const a = "foo¦bar";', 'const a = "foo" +\n    "¦bar";', tsx);
+    });
+
+    it('breaks the line plainly in the path of an import, a require or an export from', () => {
+        enter('import x from "./foo¦bar";', 'import x from "./foo\n¦bar";');
+        enter('import "./foo¦bar";', 'import "./foo\n¦bar";');
+        enter("import { a } from './foo¦bar';", "import { a } from './foo\n¦bar';");
+        enter('export * from "./foo¦bar";', 'export * from "./foo\n¦bar";');
+        enter('const x = require("./foo¦bar");', 'const x = require("./foo\n¦bar");');
+        enter('const x = await import("./foo¦bar");', 'const x = await import("./foo\n¦bar");');
+        enter('require_once "foo¦bar.php";', 'require_once "foo\n¦bar.php";', { language: 'php' });
+        enter('import (\n    "foo¦bar"\n)', 'import (\n    "foo\n    ¦bar"\n)', { language: 'go' });
+    });
+
+    it('still splits the string of a call that merely mentions a module name', () => {
+        enter('const a = Array.from("foo¦bar");', 'const a = Array.from("foo" +\n    "¦bar");');
+        enter('const important = "foo¦bar";', 'const important = "foo" +\n    "¦bar";');
+    });
+});
+
 describe('Enter after an opener', () => {
     it.each([
         ['{¦}', '{\n    ¦\n}'],

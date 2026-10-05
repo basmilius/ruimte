@@ -15,6 +15,8 @@ const CLOSERS: Readonly<Record<string, string>> = { '{': '}', '(': ')', '[': ']'
  */
 class JsxScanner {
     readonly ranges: { from: number; to: number }[] = [];
+    /* The quoted values of attributes, quotes included. */
+    readonly values: { from: number; to: number }[] = [];
     private readonly text: string;
     private depth = 0;
     private budget: number;
@@ -237,6 +239,7 @@ class JsxScanner {
                 if (close < 0) {
                     return -1;
                 }
+                this.values.push({ from: at, to: close + 1 });
                 at = close + 1;
             } else if (value === '{') {
                 at = this.code(at + 1, '}');
@@ -280,6 +283,18 @@ export function jsxRanges(text: string): { from: number; to: number }[] {
     return scanner.ranges;
 }
 
+/* Whether a language is one whose scripts can hold JSX. */
+export function hasJsx(language: string): boolean {
+    return JSX_LANGUAGES.test(language);
+}
+
+/* Whether the string that opens at `offset` is the value of a JSX attribute, which is markup and not a string expression. */
+export function isJsxAttributeValue(text: string, offset: number): boolean {
+    const scanner = new JsxScanner(text);
+    scanner.scan();
+    return scanner.values.some((value) => value.from === offset);
+}
+
 /*
  * Whether a line is markup that a command which works from the code around a line must leave as it
  * is: a Vue template and everything outside its script and style blocks, and the elements of JSX
@@ -293,7 +308,7 @@ export function markupGuard(source: EditSource, language: string): (line: number
             return (region !== 'script' && region !== 'style') || /^\s*<\/?(?:script|style|template)\b/.test(source.line(line).text);
         };
     }
-    if (JSX_LANGUAGES.test(id)) {
+    if (hasJsx(id)) {
         const ranges = jsxRanges(source.slice(0, source.line(source.lineCount - 1).end));
         return (line) => {
             const bounds = source.line(line);

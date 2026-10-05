@@ -1,6 +1,7 @@
 import type { EditSource } from './edit-source.ts';
 import { commentSyntax } from './languages.ts';
 import { isBraced, isPhp } from './lexical.ts';
+import { hasJsx, isJsxAttributeValue } from './markup-regions.ts';
 import type { DocumentLine } from './rope.ts';
 import { indentationColumn } from './structure.ts';
 import type { TypingContext } from './typing-context.ts';
@@ -35,6 +36,8 @@ const markupLanguages = /^(html|xml|svg|vue|svelte|astro|mdx|jsx|tsx|javascriptr
 const voidElements = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/i;
 const trailingOperator = /(?:=>|&&|\|\||\?\?|[=*%?|&]|(?<!\+)\+|(?<!-)-)$/;
 const lookBack = 50;
+/* The longest text a JSX attribute is looked for in on an Enter. */
+const jsxScanLimit = 2_000_000;
 /* How far past the caret a comment is searched for its end. */
 const commentReach = 20_000;
 
@@ -285,6 +288,10 @@ class Enter {
             return null;
         }
         const line = source.line(index);
+        const opener = this.stringStart(line, from, quote);
+        if (opener !== null && (this.isModulePath(line, opener, index) || this.isMarkupAttribute(opener))) {
+            return null;
+        }
         let at = from;
         if (context.escaped) {
             at += /^(?:u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|.)/.exec(source.slice(from, line.end))?.[0].length ?? 0;
@@ -300,6 +307,55 @@ class Enter {
         const text = `${quote} ${operator}${newline}${indent}${quote}`;
         const rest = source.slice(at, line.end);
         return { from: at, to: at + whitespaceOf(rest).length, text, caret: text.length };
+    }
+
+    /* Where the string the caret is in opened, when it opened on this line. */
+    private stringStart(line: DocumentLine, from: number, quote: string): number | null {
+        let open: { at: number; quote: string } | null = null;
+        for (let at = line.start; at < from; at++) {
+            const char = this.source.charAt(at);
+            if (open === null) {
+                if (char === '"' || char === "'" || char === '`') {
+                    open = { at, quote: char };
+                }
+            } else if (char === '\\') {
+                at++;
+            } else if (char === open.quote) {
+                open = null;
+            }
+        }
+        return open?.quote === quote ? open.at : null;
+    }
+
+    /* A path an import, a `require` or an `export ... from` names, where a break and a concatenation would name another file. */
+    private isModulePath(line: DocumentLine, opener: number, index: number): boolean {
+        const before = this.source.slice(line.start, opener).trimEnd();
+        if (/(?:^|[^\w$.])(?:import|from|require|require_once|include|include_once)\s*\(?$/.test(before)) {
+            return true;
+        }
+        return /^go$/i.test(this.options.language) && before === '' && this.inGoImportBlock(index);
+    }
+
+    private inGoImportBlock(index: number): boolean {
+        for (let candidate = index - 1; candidate >= 0 && candidate >= index - lookBack; candidate--) {
+            const text = this.source.line(candidate).text.trim();
+            if (/^import\s*\($/.test(text)) {
+                return true;
+            }
+            if (text.startsWith(')')) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /* The value of a JSX attribute, which has to stay one string. */
+    private isMarkupAttribute(opener: number): boolean {
+        if (!hasJsx(this.options.language)) {
+            return false;
+        }
+        const last = this.source.line(this.source.lineCount - 1).end;
+        return last <= jsxScanLimit && isJsxAttributeValue(this.source.slice(0, last), opener);
     }
 
     private closesOnLine(from: number, quote: string, line: DocumentLine): boolean {
