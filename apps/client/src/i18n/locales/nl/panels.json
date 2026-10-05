@@ -181,7 +181,18 @@
             "keepEditing": "Verder bewerken"
         },
         "revealFailed": "Dit bestand kon niet worden getoond",
-        "breadcrumb": "Locatie van de cursor in het project en het bestand"
+        "breadcrumb": "Locatie van de cursor in het project en het bestand",
+        "agent": {
+            "editing": "{{name}} is aan het bewerken",
+            "focusChat": "Toon de chat",
+            "inChat": "in {{chat}}",
+            "openChat": "Open chat",
+            "turn": "Turn {{turn}}",
+            "wrotePossibly_one": "schreef mogelijk regel {{lines}}",
+            "wrotePossibly_other": "schreef mogelijk regels {{lines}}",
+            "wrote_one": "schreef regel {{lines}}",
+            "wrote_other": "schreef regels {{lines}}"
+        }
     },
     "files": {
         "copyMentions": "Mentions kopiëren",

@@ -181,7 +181,18 @@
             "keepEditing": "Keep editing"
         },
         "revealFailed": "Could not show this file",
-        "breadcrumb": "Location of the cursor in the project and the file"
+        "breadcrumb": "Location of the cursor in the project and the file",
+        "agent": {
+            "editing": "{{name}} is editing",
+            "focusChat": "Show the chat",
+            "inChat": "in {{chat}}",
+            "openChat": "Open chat",
+            "turn": "Turn {{turn}}",
+            "wrotePossibly_one": "possibly wrote line {{lines}}",
+            "wrotePossibly_other": "possibly wrote lines {{lines}}",
+            "wrote_one": "wrote line {{lines}}",
+            "wrote_other": "wrote lines {{lines}}"
+        }
     },
     "files": {
         "copyMentions": "Copy mentions",
