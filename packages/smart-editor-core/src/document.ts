@@ -7,6 +7,8 @@ import { planPaste } from './paste.ts';
 import type { EnterOptions, EnterPlan } from './enter.ts';
 import type { EditPlan, EditSource } from './edit-source.ts';
 import { isPlainText, vueRegionAt } from './languages.ts';
+import { blockFolds } from './block-folds.ts';
+import { applyFoldHints, markFileHeader } from './fold-roles.ts';
 import { lexicalFolds } from './lexical-folds.ts';
 import { isQuote, replacesComparison, surround, swapQuotes } from './typing-handlers.ts';
 import { scanBrackets } from './brackets.ts';
@@ -16,7 +18,7 @@ import { clampInteger, TextRope } from './rope.ts';
 import type { DocumentLine } from './rope.ts';
 import { findMatches, replacementText, splitsSurrogate } from './search.ts';
 import type { FindMatch, FindNextOptions, FindOptions } from './search.ts';
-import { deriveFoldingRanges, indentationColumn, scanStructure, tabWidth } from './structure.ts';
+import { dedupeFoldingRanges, deriveFoldingRanges, indentationColumn, scanStructure, tabWidth } from './structure.ts';
 import type { FoldingOptions, FoldingRange, StructureRange } from './structure.ts';
 import type {
     CommandOptions,
@@ -599,23 +601,24 @@ export class DocumentModel {
 
     getFoldingRanges(options: FoldingOptions = {}): FoldingRange[] {
         const ranges = options.brackets === false && options.comments === false ? [] : this.structure();
-        const derived = deriveFoldingRanges(
-            ranges,
-            (offset) => this.rope.lineAt(offset),
-            this.getLineCount(),
-            (line) => this.getLine(line),
-            options
-        );
+        const lineAt = (offset: number): number => this.rope.lineAt(offset);
+        const getLine = (line: number): DocumentLine => this.getLine(line);
+        const slice = (from: number, to: number): string => this.slice(from, to);
+        const derived = deriveFoldingRanges(ranges, lineAt, this.getLineCount(), getLine, options, slice);
         if (options.language === undefined) {
             return derived;
         }
         const minimum = options.minLines === undefined ? 1 : Math.max(1, Math.trunc(options.minLines) || 1);
         // Listed first, so a fold that spans the same lines as a bracket pair is the import list and not the pair.
-        const merged = [...lexicalFolds(this.getLineCount(), (line) => this.getLine(line), options.language, options), ...derived].filter(
-            (range) => range.endLine - range.startLine >= minimum
-        );
+        const merged = [
+            ...lexicalFolds(this.getLineCount(), getLine, options.language, options),
+            ...blockFolds(this.getLineCount(), getLine, options.language),
+            ...derived
+        ].filter((range) => range.endLine - range.startLine >= minimum);
         merged.sort((left, right) => left.startLine - right.startLine || right.endLine - left.endLine);
-        return merged.filter((range, index) => index === 0 || range.startLine !== merged[index - 1]!.startLine || range.endLine !== merged[index - 1]!.endLine);
+        const unique = dedupeFoldingRanges(merged);
+        markFileHeader(unique, getLine, this.getLineCount(), options.language);
+        return options.hints === undefined ? unique : applyFoldHints(unique, options.hints, lineAt, getLine, slice, minimum);
     }
 
     /*

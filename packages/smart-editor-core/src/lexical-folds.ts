@@ -1,5 +1,5 @@
 import { commentSyntax } from './languages.ts';
-import type { FoldingRange } from './structure.ts';
+import type { FoldRole, FoldingRange } from './structure.ts';
 import type { DocumentLine } from './rope.ts';
 
 /* The words a line starts with when it brings another file in, by language. A language not listed here has no import list to fold. */
@@ -20,6 +20,11 @@ register(
 register('python py', 'import|from');
 register('php rust rs perl', 'use');
 register('csharp cs', 'using');
+
+/* Whether a line, without its indentation, brings another file in. */
+export function isImportLine(language: string, trimmed: string): boolean {
+    return IMPORT_WORDS.get(language.toLowerCase())?.test(trimmed) ?? false;
+}
 
 const REGION_START = /^\s*(?:\/\/|#|<!--|\/\*|--)\s*(?:#\s*)?region\b/;
 const REGION_END = /^\s*(?:\/\/|#|<!--|\/\*|--)\s*(?:#\s*)?endregion\b/;
@@ -44,9 +49,22 @@ function bracketDelta(text: string): number {
 }
 
 /* A fold of whole lines, from the end of the first to the end of the last. */
-function rangeOf(startLine: number, endLine: number, getLine: (line: number) => DocumentLine, kind: FoldingRange['kind']): FoldingRange {
+export function rangeOf(
+    startLine: number,
+    endLine: number,
+    getLine: (line: number) => DocumentLine,
+    kind: FoldingRange['kind'],
+    role?: FoldRole
+): FoldingRange {
     const start = getLine(startLine);
-    return { startLine, endLine, from: start.start + (start.text.length - start.text.trimStart().length), to: getLine(endLine).end, kind };
+    return {
+        startLine,
+        endLine,
+        from: start.start + (start.text.length - start.text.trimStart().length),
+        to: getLine(endLine).end,
+        kind,
+        ...(role === undefined ? {} : { role })
+    };
 }
 
 /*
@@ -65,7 +83,7 @@ export function lexicalFolds(lineCount: number, getLine: (line: number) => Docum
     let commentEnd = -1;
     const flushImports = (): void => {
         if (importStart !== -1 && importEnd > importStart) {
-            result.push(rangeOf(importStart, importEnd, getLine, 'imports'));
+            result.push(rangeOf(importStart, importEnd, getLine, 'imports', 'imports'));
         }
         importStart = -1;
     };
@@ -86,7 +104,7 @@ export function lexicalFolds(lineCount: number, getLine: (line: number) => Docum
             } else {
                 const start = regions.pop();
                 if (start !== undefined && line > start) {
-                    result.push(rangeOf(start, line, getLine, 'region'));
+                    result.push(rangeOf(start, line, getLine, 'region', 'region'));
                 }
             }
             continue;

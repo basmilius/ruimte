@@ -1,3 +1,4 @@
+import { bracketRole, commentRole } from './fold-roles.ts';
 import { openers } from './lexical.ts';
 import type { DocumentLine } from './rope.ts';
 
@@ -10,14 +11,39 @@ export interface StructureRange {
     kind: 'bracket' | 'string' | 'comment';
 }
 
-/* Lines are zero-based and the offsets half-open. Fold from the end of `startLine` through `endLine`. */
+/* What a fold is, which the settings choose by to fold it when a file opens. */
+export type FoldRole =
+    | 'file-header'
+    | 'imports'
+    | 'doc-comment'
+    | 'region'
+    | 'function-body'
+    | 'method-body'
+    | 'class-body'
+    | 'object-literal'
+    | 'array-literal'
+    | 'tag'
+    | 'attribute'
+    | 'php-tag'
+    | 'heredoc'
+    | 'front-matter'
+    | 'code-fence'
+    | 'table';
+
+/*
+ * Lines are zero-based and the offsets half-open. Fold from the end of `startLine` through `endLine`.
+ * `kind` is the shape: `imports` is a run of import lines, `line-comments` a run of lines of `//` comments,
+ * `region` what sits between `// region` and `// endregion`, `block` a run of whole lines such as a code
+ * fence, `section` what a Markdown heading holds and `server` a range a language server named.
+ */
 export interface FoldingRange {
     startLine: number;
     endLine: number;
     from: number;
     to: number;
-    /* `imports` is a run of import lines, `line-comments` a run of lines of `//` comments, and `region` what sits between `// region` and `// endregion`. */
-    kind: 'bracket' | 'comment' | 'indentation' | 'imports' | 'line-comments' | 'region';
+    kind: 'bracket' | 'comment' | 'indentation' | 'imports' | 'line-comments' | 'region' | 'block' | 'section' | 'server';
+    /* What the range is, where the text or a language server says; most ranges have none. */
+    role?: FoldRole;
 }
 
 export interface FoldingOptions {
@@ -35,6 +61,29 @@ export interface FoldingOptions {
     tabSize?: number;
     /* How many lines a range spans past its first one before it can fold. */
     minLines?: number;
+    /* What a language server said about the document, in offsets of its text. */
+    hints?: FoldHints;
+}
+
+/* A symbol's range and the kind of body it has. */
+export interface FoldSymbolHint {
+    from: number;
+    to: number;
+    /* `value` is a variable or property, which has a function body when its initializer is a function. */
+    body: 'function' | 'method' | 'class' | 'value';
+}
+
+/* A range a server folds, from any offset on its first line to any offset on its last. */
+export interface FoldRangeHint {
+    from: number;
+    to: number;
+    /* The LSP kind: `comment`, `imports` or `region`. */
+    kind?: string;
+}
+
+export interface FoldHints {
+    symbols?: readonly FoldSymbolHint[];
+    ranges?: readonly FoldRangeHint[];
 }
 
 interface Header {
@@ -131,7 +180,8 @@ export function deriveFoldingRanges(
     lineAt: (offset: number) => number,
     lineCount: number,
     getLine: (line: number) => DocumentLine,
-    options: FoldingOptions = {}
+    options: FoldingOptions = {},
+    slice?: (from: number, to: number) => string
 ): FoldingRange[] {
     const minimum = options.minLines === undefined ? 1 : Math.max(1, Number.isFinite(options.minLines) ? Math.trunc(options.minLines) : 1);
     const result: FoldingRange[] = [];
@@ -142,12 +192,32 @@ export function deriveFoldingRanges(
         const startLine = lineAt(range.from);
         const endLine = lineAt(range.to - 1);
         if (endLine - startLine >= minimum) {
-            result.push({ from: range.from, to: range.to, startLine, endLine, kind: range.kind });
+            const role =
+                slice === undefined
+                    ? undefined
+                    : range.kind === 'comment'
+                      ? commentRole(slice, range.from, range.to)
+                      : bracketRole(slice, range.from, options.language ?? '');
+            result.push({ from: range.from, to: range.to, startLine, endLine, kind: range.kind, ...(role === undefined ? {} : { role }) });
         }
     }
     if (options.indentation) {
         result.push(...indentationFolds(lineCount, getLine, tabWidth(options), minimum));
     }
     result.sort((left, right) => left.startLine - right.startLine || right.endLine - left.endLine);
-    return result.filter((range, index) => index === 0 || range.startLine !== result[index - 1]!.startLine || range.endLine !== result[index - 1]!.endLine);
+    return dedupeFoldingRanges(result);
+}
+
+/* Of ranges that span the same lines, sorted outermost first, the first stays and takes the role of a later one when it has none. */
+export function dedupeFoldingRanges(sorted: readonly FoldingRange[]): FoldingRange[] {
+    const unique: FoldingRange[] = [];
+    for (const range of sorted) {
+        const last = unique.at(-1);
+        if (last === undefined || range.startLine !== last.startLine || range.endLine !== last.endLine) {
+            unique.push(range);
+        } else if (last.role === undefined && range.role !== undefined) {
+            last.role = range.role;
+        }
+    }
+    return unique;
 }
