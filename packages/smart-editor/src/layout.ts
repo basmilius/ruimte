@@ -125,6 +125,8 @@ export interface LayoutRect {
 export const TEXT_PADDING = 0;
 export const BOTTOM_PADDING = 8;
 export const RIGHT_PADDING = 16;
+/* The room the platform keeps past the widest line, in columns of a space. */
+const ADDITIONAL_COLUMNS = 3;
 const DEFAULT_BLOCK_HEIGHT = 40;
 /* How many characters a wrapped line's continuation rows sit in past the line's own indentation. */
 const WRAP_INDENT_STEP = 2;
@@ -315,7 +317,7 @@ export interface LayoutConfig {
 export class EditorLayout {
     rows: LayoutRow[] = [];
     height = 0;
-    /* The widest line drawn so far, which is what a horizontal scroll bar needs. */
+    /* The widest line measured since the text last changed, and the room past it; what a horizontal scroll bar needs. */
     width = 0;
     private lineRows: number[] = [];
     private geometryCache = new Map<number, LineGeometry>();
@@ -554,7 +556,7 @@ export class EditorLayout {
         }
         const result = scanLine(this.document.getLine(row.line), this.metrics, this.wrapWidth, this.inlaysByLine.get(row.line) ?? []);
         if (this.wrapWidth === null) {
-            this.width = Math.max(this.width, result.width + RIGHT_PADDING);
+            this.width = Math.max(this.width, result.width + ADDITIONAL_COLUMNS * this.metrics.charWidth);
         }
         if (this.geometryCache.size >= GEOMETRY_CACHE_SIZE) {
             this.geometryCache.delete(this.geometryCache.keys().next().value!);

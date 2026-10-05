@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { DocumentModel } from '@ruimte/smart-editor-core';
 import { DEFAULT_SMART_KEYS } from './smart-keys.ts';
 import { createPage, pointer } from './testing.ts';
@@ -810,5 +811,79 @@ describe('drawing for the host', () => {
         }
         view.setGutterAction({ line: 0, label: 'Show' });
         expect(reads).toEqual({ clientWidth: 1, clientHeight: 1, scrollTop: 1, scrollLeft: 1 });
+    });
+});
+
+describe('the scroll width', () => {
+    const CHAR = 7.8;
+    const ROOM = 3 * CHAR;
+    const widest = 'x'.repeat(200);
+    const contentWidth = (host: HTMLElement): number => Number.parseFloat((host.querySelector('.se-content') as HTMLElement).style.width);
+    const rule = (selector: string): string => {
+        const css = readFileSync(new URL('./editor.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+        return css.split('}').find((block) => block.split('{')[0]!.trim() === selector) ?? '';
+    };
+
+    test('is the widest line and three columns of room, and nothing more', () => {
+        const { host, view } = mount(`short\n${widest}\nmiddling line`);
+        view.render();
+        expect(contentWidth(host)).toBeCloseTo(200 * CHAR + ROOM, 3);
+    });
+
+    test('shrinks when the widest line gets shorter, and again when it is deleted', () => {
+        const { host, model, view } = mount(`short\n${widest}\n${'y'.repeat(150)}`);
+        view.render();
+        model.applyEdits([{ from: 6 + 100, to: 6 + 200, text: '' }]);
+        expect(contentWidth(host)).toBeCloseTo(150 * CHAR + ROOM, 3);
+        model.applyEdits([{ from: 6 + 100, to: 6 + 100 + 1 + 150, text: '' }]);
+        expect(contentWidth(host)).toBeCloseTo(100 * CHAR + ROOM, 3);
+    });
+
+    test('is the width of the editor when every line is narrower', () => {
+        const { host, model, view } = mount(widest);
+        view.render();
+        model.applyEdits([{ from: 0, to: 200, text: 'short' }]);
+        expect(contentWidth(host)).toBe(800 - 64);
+    });
+
+    test('counts an inlay for what it draws', () => {
+        const { host, view } = mount(widest);
+        view.setInlays([{ id: 'hint', at: 200, text: ': void' }]);
+        const geometry = view.layout.geometry(view.layout.rows[0] as never);
+        expect(geometry.inlays[0]!.width).toBeGreaterThan(0);
+        expect(contentWidth(host)).toBe(geometry.width + ROOM);
+    });
+
+    test('is not widened by a widget, a code vision row or a ghost row', () => {
+        const { host, view } = mount(`${widest}\nfunction a() {}`);
+        view.render();
+        const before = contentWidth(host);
+        view.setBlockWidgets('test', [{ id: 'w', at: 0, placement: 'below', height: 80, render: (container) => (container.textContent = 'x'.repeat(500)) }]);
+        view.setLenses([{ id: 'lens', at: 201, placement: 'above', lens: true, render: (container) => (container.textContent = '3 usages') }]);
+        expect(contentWidth(host)).toBe(before);
+    });
+
+    test('keeps a row of the host inside the content however far the view is scrolled', () => {
+        const { host, view } = mount(`${widest}\nb`);
+        view.setBlockWidgets('test', [{ id: 'w', at: 0, placement: 'below', height: 30, render: (container) => (container.textContent = 'peek') }]);
+        const block = host.querySelector('.se-block') as HTMLElement;
+        const width = contentWidth(host);
+        for (const left of [0, 300, width - 736]) {
+            view.viewport.scrollLeft = left;
+            view.scrolled();
+            expect(Number.parseFloat(block.style.left) + Number.parseFloat(block.style.width)).toBeLessThanOrEqual(left + 736 + 1e-6);
+            expect(Number.parseFloat(block.style.left) + Number.parseFloat(block.style.width)).toBeLessThanOrEqual(width);
+        }
+    });
+
+    test('clips what a host row draws past its own width, so it cannot push the scroll extent along with the view', () => {
+        expect(rule('.se-block.se-widget')).toMatch(/overflow-x:\s*clip/);
+    });
+
+    test('keeps the gutter stuck to the left edge of the scroller', () => {
+        const css = rule('.se-gutter');
+        expect(css).toMatch(/position:\s*sticky/);
+        expect(css).toMatch(/left:\s*0/);
+        expect(rule('.se-scroller')).not.toMatch(/overflow/);
     });
 });
