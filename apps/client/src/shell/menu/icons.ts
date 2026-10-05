@@ -224,6 +224,8 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     'toggle-column-mode': Columns3,
     'organize-imports': ListOrdered,
     'format-document': AlignLeft,
+    'next-agent-change': ArrowDown,
+    'previous-agent-change': ArrowUp,
     'selection-to-chat': MessageSquarePlus,
     'inline-edit': Sparkles,
     'show-inline-edit': ScanSearch,

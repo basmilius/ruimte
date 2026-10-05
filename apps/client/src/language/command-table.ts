@@ -20,6 +20,8 @@ const TABLE = {
     'rename-symbol': { menu: 'code', key: 'renameSymbol', shortcut: CANVAS_SHORTCUTS.rename },
     'organize-imports': { menu: 'code', key: 'organizeImports', shortcut: CANVAS_SHORTCUTS.organizeImports },
     'format-document': { menu: 'code', key: 'formatDocument', shortcut: CANVAS_SHORTCUTS.formatDocument },
+    'next-agent-change': { menu: 'code', key: 'nextAgentChange' },
+    'previous-agent-change': { menu: 'code', key: 'previousAgentChange' },
     'selection-to-chat': { menu: 'code', key: 'selectionToChat', shortcut: CANVAS_SHORTCUTS.selectionToChat },
     'inline-edit': { menu: 'code', key: 'inlineEdit', shortcut: CANVAS_SHORTCUTS.inlineEdit },
     'show-inline-edit': { menu: 'code', key: 'showInlineEdit' },
