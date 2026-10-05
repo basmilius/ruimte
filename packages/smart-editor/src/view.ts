@@ -13,6 +13,7 @@ import {
 import { FindController } from './find.ts';
 import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type LayoutRect, type LayoutRow, RIGHT_PADDING, type TextRow } from './layout.ts';
 import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
+import { type AttributedLines, AttributionRuns } from './attribution.ts';
 import { mapOffset } from './offsets.ts';
 import { mapTrackedRange } from './tracked-range.ts';
 import { type ScrollKind, scrollPosition } from './scroll.ts';
@@ -38,6 +39,10 @@ import type {
     LineTokenizer,
     ScopeColors
 } from './types.ts';
+
+function sameRect(left: EditorRect, right: EditorRect): boolean {
+    return left.left === right.left && left.top === right.top && left.right === right.right && left.bottom === right.bottom;
+}
 
 export interface ViewSettings {
     language: string | undefined;
@@ -69,6 +74,8 @@ const DEFAULT_HEIGHT = 400;
 const DEFAULT_WIDTH = 800;
 const FOLD_LIMIT = 2_000_000;
 const MIN_GUTTER_WIDTH = 64;
+const ATTRIBUTION_WIDTH = 3;
+const ATTRIBUTION_REACH = 3;
 /* The caret stays solid this long after it moved, so holding an arrow key does not blink it between steps. */
 const CARET_SOLID_MS = 500;
 /* A jump moves the view even to something already in view, as the platform does by default. */
@@ -158,6 +165,11 @@ export class EditorView {
     private scopeKey = '';
     private changeMarks: { kind: EditorChangeKind; from: number; to: number }[] = [];
     private changeVersion = 0;
+    private readonly attribution = new AttributionRuns();
+    private readonly attributionListeners = new Set<(hover: { id: string; rect: EditorRect } | null) => void>();
+    private attributionHover: { id: string; rect: EditorRect } | null = null;
+    /* Where the pointer is in the gutter, so the bar under it is found again after the view scrolled or the text moved. */
+    private attributionPointer: { x: number; y: number } | null = null;
     private readonly tracked = new Set<{ from: number; to: number; lost: boolean }>();
     private overviewKey = '';
     private gutterWidth = MIN_GUTTER_WIDTH;
@@ -265,6 +277,7 @@ export class EditorView {
         this.notice.hidden = true;
         this.root.append(this.viewport, this.overview, this.tickTip, this.input, this.notice);
         this.wireOverview();
+        this.wireAttribution();
         container.append(this.root);
 
         this.font = readEditorFont(this.root);
@@ -506,6 +519,7 @@ export class EditorView {
                 this.changeMarks = this.changeMarks.map((mark) => ({ ...mark, from: mapOffset(mark.from, changes), to: mapOffset(mark.to, changes) }));
                 this.markers = this.markers.map((marker) => ({ ...marker, from: mapOffset(marker.from, changes), to: mapOffset(marker.to, changes) }));
                 this.mapTracked(changes);
+                this.attribution.map(changes);
                 this.semantic = this.semantic.map((token) => ({ ...token, from: mapOffset(token.from, changes), to: mapOffset(token.to, changes) }));
             }
             this.foldRanges = this.mappedFolds(batches);
@@ -1633,6 +1647,9 @@ export class EditorView {
             this.paintPreview();
             this.paintSticky();
             this.paintOverview();
+            if (this.attributionPointer !== null) {
+                this.refreshAttributionHover();
+            }
             this.announceScope();
             this.announceView();
             this.colorAhead();
@@ -1649,8 +1666,10 @@ export class EditorView {
         for (const range of this.foldRanges) {
             foldable.set(range.startLine, (foldable.get(range.startLine) ?? false) || this.collapsed.has(range.from));
         }
+        const lastRow = rows.at(-1);
         paintGutter(this.gutterLines, this.layout, rows, {
             changes: this.changedLines(rows),
+            attribution: this.attributedLines(rows[0]?.line ?? 0, lastRow?.kind === 'text' ? lastRow.lastLine : (lastRow?.line ?? 0)),
             activeLines: new Set(selections.map((selection) => this.model.positionAt(selection.head).line)),
             foldable,
             action: this.gutterAction
@@ -1794,6 +1813,77 @@ export class EditorView {
             }
         }
         return lines;
+    }
+
+    /* Bars in the gutter for runs of lines, which follow their text through edits until the host sets them again. */
+    setAttributionMarks(marks: readonly { id: string; startLine: number; endLine: number; color: string }[]): void {
+        this.attribution.set(marks, this.model.getLineCount(), (line) => this.model.getLine(line));
+        this.render();
+    }
+
+    private attributedLines(first: number, last: number): Map<number, AttributedLines> {
+        return this.attribution.linesIn(
+            first,
+            last,
+            this.model.getLine(first).start,
+            this.model.getLine(last).end,
+            (offset) => this.model.positionAt(offset).line
+        );
+    }
+
+    onAttributionHover(listener: (hover: { id: string; rect: EditorRect } | null) => void): () => void {
+        this.attributionListeners.add(listener);
+        return () => {
+            this.attributionListeners.delete(listener);
+        };
+    }
+
+    /* The bar is three pixels wide, so the pointer finds it a few pixels to either side. */
+    private wireAttribution(): void {
+        this.gutter.addEventListener('pointermove', (event) => {
+            this.attributionPointer = { x: event.clientX, y: event.clientY };
+            this.refreshAttributionHover();
+        });
+        this.gutter.addEventListener('pointerleave', () => {
+            this.attributionPointer = null;
+            this.refreshAttributionHover();
+        });
+    }
+
+    private refreshAttributionHover(): void {
+        const next = this.attributionPointer === null ? null : this.attributionUnder(this.attributionPointer.x, this.attributionPointer.y);
+        const before = this.attributionHover;
+        if (before === next || (before !== null && next !== null && before.id === next.id && sameRect(before.rect, next.rect))) {
+            return;
+        }
+        this.attributionHover = next;
+        for (const listener of [...this.attributionListeners]) {
+            listener(next);
+        }
+    }
+
+    private attributionUnder(clientX: number, clientY: number): { id: string; rect: EditorRect } | null {
+        if (this.attribution.size === 0) {
+            return null;
+        }
+        const point = this.contentPoint(clientX, clientY);
+        const fromEdge = this.gutterWidth - (point.x + this.gutterWidth - this.viewport.scrollLeft);
+        if (fromEdge < -ATTRIBUTION_REACH || fromEdge > ATTRIBUTION_REACH + ATTRIBUTION_WIDTH || point.y < 0 || point.y > this.layout.height) {
+            return null;
+        }
+        const row = this.layout.rowAt(point.y);
+        if (row.kind !== 'text') {
+            return null;
+        }
+        const bar = this.attributedLines(row.line, row.line).get(row.line);
+        if (bar === undefined) {
+            return null;
+        }
+        const origin = this.viewport.getBoundingClientRect?.();
+        const scale = origin ? this.screenScale(origin) : { x: 1, y: 1 };
+        const right = (origin?.left ?? 0) + this.gutterWidth * scale.x;
+        const top = (origin?.top ?? 0) + (row.top - this.viewport.scrollTop) * scale.y;
+        return { id: bar.id, rect: { left: right - ATTRIBUTION_WIDTH * scale.x, top, right, bottom: top + row.height * scale.y } };
     }
 
     /* The first and last line in view, zero-based. */
@@ -2027,6 +2117,8 @@ export class EditorView {
         this.hoverListeners.clear();
         this.gutterActionListeners.clear();
         this.tracked.clear();
+        this.attribution.clear();
+        this.attributionListeners.clear();
         this.painter.clear();
         this.root.remove();
     }

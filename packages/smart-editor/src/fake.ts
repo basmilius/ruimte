@@ -1,5 +1,7 @@
 import type {
     Editor,
+    EditorAttributionHover,
+    EditorAttributionMark,
     EditorBlock,
     EditorChangeMark,
     EditorCodeVision,
@@ -291,6 +293,33 @@ export class FakeEditor implements Editor {
 
     setChangeMarks(marks: readonly EditorChangeMark[]): void {
         this.changeMarks = marks;
+    }
+
+    /* What the client marked as written by an agent last. */
+    attributionMarks: readonly EditorAttributionMark[] = [];
+    private readonly attributionHovers = new Set<(hover: EditorAttributionHover | null) => void>();
+
+    setAttributionMarks(marks: readonly EditorAttributionMark[]): void {
+        this.attributionMarks = marks;
+    }
+
+    onAttributionHover(listener: (hover: EditorAttributionHover | null) => void): () => void {
+        this.attributionHovers.add(listener);
+        return () => {
+            this.attributionHovers.delete(listener);
+        };
+    }
+
+    /* The pointer on the bar of a mark, or leaving it. The rect is where `rectAt` puts the mark's first line unless given. */
+    hoverAttribution(id: string | null, rect?: EditorRect): void {
+        const mark = id === null ? undefined : this.attributionMarks.find((candidate) => candidate.id === id);
+        const hover =
+            mark === undefined
+                ? null
+                : { id: mark.id, rect: rect ?? this.rectAt({ line: mark.startLine - 1, character: 0 }) ?? { left: 0, top: 0, right: 0, bottom: 0 } };
+        for (const listener of [...this.attributionHovers]) {
+            listener(hover);
+        }
     }
 
     /* What each owner put next to lines of the text last. */
@@ -675,6 +704,7 @@ export class FakeEditor implements Editor {
         this.textChanges.clear();
         this.carets.clear();
         this.hovers.clear();
+        this.attributionHovers.clear();
         this.views.clear();
         this.keys.clear();
         this.saves.clear();

@@ -1,3 +1,4 @@
+import { type AttributedLines, colorValue } from './attribution.ts';
 import { type BlockWidget, type EditorLayout, type LayoutRect, type LayoutRow, type LineGeometry, scanLine, type TextRow } from './layout.ts';
 import type { EditorChangeKind, LineToken } from './types.ts';
 
@@ -332,6 +333,8 @@ export interface GutterPaint {
     activeLines: ReadonlySet<number>;
     /* How the lines the host marked differ from what it compares against. */
     changes: ReadonlyMap<number, EditorChangeKind>;
+    /* The bar of the agent that wrote each line, which takes the place of the change mark beside it. */
+    attribution: ReadonlyMap<number, AttributedLines>;
     /* Lines a fold can start at, and whether each is collapsed. */
     foldable: ReadonlyMap<number, boolean>;
     /* The line that carries the host's button, and what it is called. */
@@ -362,8 +365,18 @@ export function paintGutter(container: HTMLElement, layout: EditorLayout, rows: 
             button.setAttribute('aria-label', paint.action.label);
             item.append(button);
         }
+        const bar = paint.attribution.get(row.line);
+        if (bar) {
+            const mark = document.createElement('span');
+            mark.className = 'se-attribution';
+            mark.dataset.attributionId = bar.id;
+            mark.style.background = colorValue(bar.color);
+            mark.style.height = `${row.height}px`;
+            item.append(mark);
+        }
         const change = paint.changes.get(row.line);
-        if (change) {
+        // The bar of an agent stands where the mark of a change would, and a removal is a triangle between lines that the bar never hides.
+        if (change && (!bar || change === 'deleted')) {
             const mark = document.createElement('span');
             mark.className = `se-change se-change-${change}`;
             if (change !== 'deleted') {

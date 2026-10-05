@@ -139,6 +139,34 @@ export interface EditorChangeMark {
     readonly endLine: number;
 }
 
+/*
+ * A color for what an agent did: the name of a custom property of the page (`--agent-1`, see
+ * `AGENT_COLORS`), which follows the theme, or any CSS color.
+ */
+export type EditorMarkColor = string;
+
+/*
+ * A run of lines drawn as a bar in the gutter, three pixels wide beside the line numbers where the change
+ * marks are. Where a line has both, the bar stands in the place of the change mark, which the scroll
+ * track still shows. It follows its text through edits until the host sets the marks again.
+ */
+export interface EditorAttributionMark {
+    /* What `onAttributionHover` says when the pointer is on the bar. */
+    readonly id: string;
+    /* One-based, as for the change marks. */
+    readonly startLine: number;
+    /* One-based and inclusive; a line past the end is the last one. */
+    readonly endLine: number;
+    readonly color: EditorMarkColor;
+}
+
+/* The pointer is on the bar of a run. */
+export interface EditorAttributionHover {
+    readonly id: string;
+    /* The bar on the line under the pointer, in the page's pixels, so a card placed by it is right at any canvas zoom. */
+    readonly rect: EditorRect;
+}
+
 /* A place in the text as a language server names it: a zero-based line and a UTF-16 character. */
 export interface EditorPosition {
     readonly line: number;
@@ -400,6 +428,10 @@ export interface Editor {
     setBlocks(blocks: readonly EditorBlock[] | null): void;
     /* The named blocks around the caret, outermost first, said again only when they change. */
     onScope(listener: (scope: readonly EditorBlock[]) => void): () => void;
+    /* Bars in the gutter for the lines an agent wrote, replacing the ones set before. */
+    setAttributionMarks(marks: readonly EditorAttributionMark[]): void;
+    /* The pointer rests on a bar, or null when it left it or the bar is gone. */
+    onAttributionHover(listener: (hover: EditorAttributionHover | null) => void): () => void;
     /* Problems to draw, replacing the ones set before. */
     setMarkers(markers: readonly EditorMarker[]): void;
     /* The other uses of the name at the caret, drawn as soft marks until the next edit. */

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { DocumentModel } from '@ruimte/smart-editor-core';
 import { DEFAULT_SMART_KEYS } from './smart-keys.ts';
-import { createPage } from './testing.ts';
+import { createPage, pointer } from './testing.ts';
 import { EditorView, type ViewSettings } from './view.ts';
 
 const SETTINGS: ViewSettings = {
@@ -639,6 +639,89 @@ describe('change marks', () => {
         expect(kinds).toContain('find');
     });
 });
+
+describe('attribution marks', () => {
+    const text = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join('\n');
+    const barred = (host: HTMLElement): string[] =>
+        [...host.querySelectorAll('.se-line-number')].flatMap((item) => {
+            const bar = item.querySelector('.se-attribution') as HTMLElement | null;
+            return bar ? [`${item.textContent}:${bar.dataset.attributionId}:${bar.style.background}`] : [];
+        });
+
+    test('draw a bar in the gutter on each line of a run, in the color of the mark', () => {
+        const { host, view } = mount(text);
+        view.setAttributionMarks([
+            { id: 'a', startLine: 2, endLine: 3, color: '--agent-1' },
+            { id: 'b', startLine: 6, endLine: 6, color: '#c4602f' }
+        ]);
+        expect(barred(host)).toEqual(['2:a:var(--agent-1)', '3:a:var(--agent-1)', '6:b:#c4602f']);
+    });
+
+    test('stand where the change mark of the same line would, and leave a removal', () => {
+        const { host, view } = mount(text);
+        view.setChangeMarks([
+            { kind: 'added', startLine: 2, endLine: 4 },
+            { kind: 'deleted', startLine: 6, endLine: 6 },
+            { kind: 'modified', startLine: 8, endLine: 8 }
+        ]);
+        view.setAttributionMarks([
+            { id: 'a', startLine: 2, endLine: 3, color: '--agent-1' },
+            { id: 'b', startLine: 6, endLine: 6, color: '--agent-1' }
+        ]);
+        const marks = [...host.querySelectorAll('.se-line-number')].map(
+            (item) =>
+                `${item.textContent}:${[...item.querySelectorAll('.se-attribution, .se-change')].map((mark) => mark.className.replace('se-change se-change-', 'git-')).join('+')}`
+        );
+        expect(marks.slice(1, 6)).toEqual(['2:se-attribution', '3:se-attribution', '4:git-added', '5:', '6:se-attribution+git-deleted']);
+        expect(marks[7]).toBe('8:git-modified');
+    });
+
+    test('follow their lines through an edit above them and are gone once set again', () => {
+        const { host, model, view } = mount(text);
+        view.setAttributionMarks([{ id: 'a', startLine: 5, endLine: 6, color: '--agent-1' }]);
+        model.applyEdits([{ from: 0, to: 0, text: 'new\nnew\n' }]);
+        expect(barred(host).map((bar) => bar.split(':')[0])).toEqual(['7', '8']);
+        view.setAttributionMarks([]);
+        expect(barred(host)).toEqual([]);
+    });
+
+    test('report the bar under the pointer and its leaving', () => {
+        const { view, window, gutterEdge } = hoverable(text);
+        const seen: (string | null)[] = [];
+        view.onAttributionHover((hover) => seen.push(hover === null ? null : `${hover.id}:${hover.rect.top}-${hover.rect.bottom}:${hover.rect.right}`));
+        view.setAttributionMarks([{ id: 'a', startLine: 2, endLine: 3, color: '--agent-1' }]);
+        gutterEdge('pointermove', 1, 2);
+        gutterEdge('pointermove', 1, 4);
+        gutterEdge('pointermove', 2, 2);
+        gutterEdge('pointermove', 2, 20);
+        view.gutterElement.dispatchEvent(new (window as unknown as { Event: typeof Event }).Event('pointerleave'));
+        expect(seen).toEqual(['a:20-40:64', 'a:40-60:64', null]);
+        gutterEdge('pointermove', 1, 6);
+        gutterEdge('pointermove', 1, 7);
+        expect(seen).toEqual(['a:20-40:64', 'a:40-60:64', null, 'a:20-40:64', null]);
+    });
+
+    test('are not hovered once taken away, even under a pointer that has not moved', () => {
+        const { view, gutterEdge } = hoverable(text);
+        const seen: (string | null)[] = [];
+        view.onAttributionHover((hover) => seen.push(hover?.id ?? null));
+        view.setAttributionMarks([{ id: 'a', startLine: 2, endLine: 3, color: '--agent-1' }]);
+        gutterEdge('pointermove', 1, 2);
+        view.setAttributionMarks([]);
+        expect(seen).toEqual(['a', null]);
+    });
+});
+
+function hoverable(text: string) {
+    const mounted = mount(text);
+    mounted.view.render();
+    return {
+        ...mounted,
+        /* A pointer move in the gutter, `fromEdge` pixels left of the text and `line` rows down, zero-based. */
+        gutterEdge: (type: 'pointermove', line: number, fromEdge: number) =>
+            pointer(mounted.window, mounted.view.gutterElement, type, 64 - fromEdge, line * 20 + 5)
+    };
+}
 
 describe('scope', () => {
     test('reports the named blocks around the caret when they change', () => {

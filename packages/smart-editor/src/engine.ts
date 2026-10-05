@@ -4,6 +4,8 @@ import { resolveSmartKeys } from './smart-keys.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
 import type {
     Editor,
+    EditorAttributionHover,
+    EditorAttributionMark,
     EditorBlock,
     EditorChangeMark,
     EditorCodeVision,
@@ -510,6 +512,14 @@ class SmartEditor implements Editor {
 
     setChangeMarks(marks: readonly EditorChangeMark[]): void {
         this.view.setChangeMarks(marks);
+    }
+
+    setAttributionMarks(marks: readonly EditorAttributionMark[]): void {
+        this.view.setAttributionMarks(marks);
+    }
+
+    onAttributionHover(listener: (hover: EditorAttributionHover | null) => void): () => void {
+        return this.view.onAttributionHover(listener);
     }
 
     setWidgets(widgets: readonly EditorWidget[], owner: string = DEFAULT_WIDGET_OWNER): void {

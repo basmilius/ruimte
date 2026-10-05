@@ -141,6 +141,14 @@
     --editor-added: var(--status-idle);
     --editor-modified: var(--accent);
     --editor-deleted: var(--status-error);
+    /* The agent palette: the bar beside the lines an agent wrote and its cursor with its name. Six hues apart from the change colors above, each with enough contrast for `--agent-ink` on it. */
+    --agent-1: #c4602f;
+    --agent-2: #7c4dd8;
+    --agent-3: #0f7f78;
+    --agent-4: #c2255c;
+    --agent-5: #9a6700;
+    --agent-6: #1c6fb0;
+    --agent-ink: #fff;
     /* The soft edge under the headers sticky scroll pins over the code. */
     --editor-sticky-shadow: rgb(0 0 0 / 0.12);
     --note-yellow: #fff3bf;
@@ -238,6 +246,12 @@
     --editor-whitespace: color-mix(in srgb, var(--text) 32%, transparent);
     --editor-hatch: color-mix(in srgb, var(--text) 10%, transparent);
     --editor-sticky-shadow: rgb(0 0 0 / 0.6);
+    --agent-1: #d97757;
+    --agent-2: #8f6df0;
+    --agent-3: #1f9e92;
+    --agent-4: #e0518a;
+    --agent-5: #b8860b;
+    --agent-6: #3b8fd6;
     --note-yellow: #3b3416;
     --note-green: #173a25;
     --note-blue: #182f4b;

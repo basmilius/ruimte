@@ -1,8 +1,12 @@
+export { AGENT_COLORS } from './attribution.ts';
 export { createSmartEditorEngine } from './engine.ts';
 export { DEFAULT_SMART_KEYS } from './smart-keys.ts';
 export { shikiScopeColors, shikiTokenizers } from './shiki.ts';
 export type {
     Editor,
+    EditorAttributionHover,
+    EditorAttributionMark,
+    EditorMarkColor,
     EditorBlock,
     EditorChangeKind,
     EditorChangeMark,

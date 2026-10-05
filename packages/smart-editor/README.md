@@ -41,6 +41,10 @@ Folds are kept by line (`getFolds`, and `folds` on mounting), the way scroll and
 
 `handBack` shortcuts are not handled by the editor and not prevented, so the page's own listeners get them. Mod+S is `onSave`.
 
+## Agent marks
+
+`setAttributionMarks` draws a three pixel bar in the gutter, where the change marks are, for each run of lines (`id`, one-based `startLine` and `endLine`, `color`). The color is a custom property of the page (`--agent-1` to `--agent-6`, `AGENT_COLORS`, defined in the client's `styles.css` for both themes, with `--agent-ink` for text on them) or any CSS color. On a line that has both, the bar stands in the place of the git change mark, which the scroll track still shows; a removal triangle between lines stays. A run follows its text through edits until the host sets the marks again, and an edit costs one mapping of two offsets per run, so thousands of runs stay smooth. `onAttributionHover` reports the id and the bar's box on the line under the pointer (a few pixels either side of the bar count), and null when it leaves.
+
 ## Widgets per owner
 
 `setWidgets(widgets, owner?)` replaces the rows of one owner, `default` without one, and leaves every other owner's alone, so a peek, the review rows of an agent's change and a conflict stand together. Rows next to the same line are ordered by their owners' names and then in the order each owner gave them, not by who set them last, so they never swap places. An empty list takes the owner's rows away.

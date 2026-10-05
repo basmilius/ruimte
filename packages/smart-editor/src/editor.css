@@ -232,6 +232,12 @@
 .se-change-modified {
     background: var(--editor-modified);
 }
+.se-attribution {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 3px;
+}
 .se-change-deleted {
     top: -4px;
     width: 0;
