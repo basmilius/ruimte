@@ -4,6 +4,7 @@
 pub mod cache;
 pub mod composer;
 pub mod extract;
+pub mod framework;
 pub mod hierarchy;
 pub mod index;
 pub mod indexer;

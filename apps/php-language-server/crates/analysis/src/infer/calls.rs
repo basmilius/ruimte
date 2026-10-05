@@ -291,7 +291,7 @@ impl Analyzer<'_> {
                     doc: found.member.doc.clone(),
                     subst: found.subst.as_ref().clone(),
                     self_name: Some(found.self_name.clone()),
-                    receiver: Some(member.clone()),
+                    receiver: Some(found.static_as.clone().unwrap_or_else(|| member.clone())),
                     is_constructor: false,
                     constructed: None,
                     via_mixin: found.mixin,

@@ -40,6 +40,8 @@ pub struct Composer {
     pub packages: Vec<Package>,
     /// `composer.json` requires packages, so a project whose `packages` are empty is not installed.
     pub requires_packages: bool,
+    /// The packages `composer.json` requires, `require-dev` included, lowercase.
+    pub requires: Vec<String>,
 }
 
 impl Composer {
@@ -80,6 +82,11 @@ impl Composer {
                     .any(|key| key != "php" && !key.starts_with("ext-") && !key.starts_with("lib-"))
             })
         });
+        let requires = ["require", "require-dev"]
+            .iter()
+            .filter_map(|section| json.get(section).and_then(Value::as_object))
+            .flat_map(|map| map.keys().map(|key| key.to_ascii_lowercase()))
+            .collect();
         let mut autoload = parse_autoload(json.get("autoload"), root);
         merge(&mut autoload, parse_autoload(json.get("autoload-dev"), root));
         let packages = read_installed(&vendor_dir);
@@ -91,7 +98,27 @@ impl Composer {
             autoload,
             packages,
             requires_packages,
+            requires,
         }
+    }
+
+    /// Whether the project requires a package or has it installed.
+    pub fn has_package(&self, name: &str) -> bool {
+        self.requires.iter().any(|required| required == name)
+            || self
+                .packages
+                .iter()
+                .any(|package| package.name.eq_ignore_ascii_case(name))
+    }
+
+    /// Whether the project requires or has installed a package of a vendor, such as `illuminate`.
+    pub fn has_vendor(&self, vendor: &str) -> bool {
+        let prefix = format!("{vendor}/");
+        self.requires.iter().any(|required| required.starts_with(&prefix))
+            || self
+                .packages
+                .iter()
+                .any(|package| package.name.to_ascii_lowercase().starts_with(&prefix))
     }
 
     /// The files that may define a class, by the PSR-4 and PSR-0 maps of the project and its packages.
@@ -388,6 +415,7 @@ mod tests {
                 ..Autoload::default()
             },
             requires_packages: false,
+            requires: Vec::new(),
             packages: vec![Package {
                 name: "old/lib".into(),
                 path: PathBuf::from("/p/vendor/old/lib"),

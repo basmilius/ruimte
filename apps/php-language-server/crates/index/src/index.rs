@@ -198,6 +198,7 @@ pub struct Index {
     subtypes: HashMap<String, Vec<Slot>>,
     /// The folders of the standard library this index shows, by normalized name.
     pub stub_extensions: Vec<String>,
+    pub(crate) framework: crate::framework::FrameworkState,
 }
 
 fn class_key(name: &str) -> String {
@@ -223,6 +224,7 @@ impl Index {
             constants: HashMap::new(),
             subtypes: HashMap::new(),
             stub_extensions: Vec::new(),
+            framework: crate::framework::FrameworkState::default(),
         }
     }
 
@@ -266,6 +268,9 @@ impl Index {
 
     fn insert(&mut self, entry: FileEntry) {
         self.remove_file(&entry.path);
+        if entry.origin == Origin::Project {
+            self.framework.forget(&entry.path);
+        }
         let id = self.files.len() as FileId;
         for (index, class) in entry.summary.classes.iter().enumerate() {
             let slot = (id, index as u32);
@@ -297,6 +302,9 @@ impl Index {
         let Some(entry) = self.files[id as usize].take() else {
             return;
         };
+        if entry.origin == Origin::Project {
+            self.framework.forget(path);
+        }
         let drop_slots = |map: &mut HashMap<String, Vec<Slot>>, key: String| {
             if let Some(slots) = map.get_mut(&key) {
                 slots.retain(|(file, _)| *file != id);

@@ -43,6 +43,9 @@ pub struct Found<'a, T: Clone> {
     pub self_name: Name,
     /// Found through a `@mixin`, so a call to it goes through the receiver's magic methods.
     pub mixin: bool,
+    /// What `static` and `$this` stand for in the member when it is not the type it was found on: a
+    /// call a model forwards to its builder returns the builder.
+    pub static_as: Option<Type>,
 }
 
 impl<T: Clone> Found<'_, T> {
@@ -257,6 +260,11 @@ impl Index {
 
     /// Every method the type has, the nearest declaration of each name.
     pub fn methods(&self, ty: &Type) -> Vec<Found<'_, Method>> {
+        self.methods_named(ty, None, true)
+    }
+
+    /// The methods of a type, or only the one of this name, which skips the work of the others.
+    fn methods_named(&self, ty: &Type, only: Option<&str>, framework: bool) -> Vec<Found<'_, Method>> {
         let ancestors = self.ancestors(ty);
         let mut out: Vec<Found<'_, Method>> = Vec::new();
         let mut names = HashSet::new();
@@ -267,6 +275,11 @@ impl Index {
                     continue;
                 }
                 let lower = method.name.to_ascii_lowercase();
+                if only.is_some_and(|only| {
+                    !lower.eq_ignore_ascii_case(only) && ancestor.aliases.iter().all(|rule| rule.method != lower)
+                }) {
+                    continue;
+                }
                 for rule in ancestor.aliases.iter().filter(|rule| rule.method == lower) {
                     if let Some(alias) = &rule.alias {
                         let mut aliased = method.clone();
@@ -296,6 +309,9 @@ impl Index {
             }
             if let Some(doc) = &decl.doc {
                 for pseudo in &doc.methods {
+                    if only.is_some_and(|only| !pseudo.name.eq_ignore_ascii_case(only)) {
+                        continue;
+                    }
                     push_method(&mut out, &mut names, ancestor, Cow::Owned(pseudo_method(pseudo, decl)));
                 }
             }
@@ -308,22 +324,39 @@ impl Index {
                 push_method(&mut out, &mut names, first, Cow::Owned(synthetic));
             }
         }
+        if framework && self.framework.frameworks.any() {
+            crate::framework::extend_methods(self, &ancestors, only, &mut out, &mut names);
+        }
         out
     }
 
     pub fn find_method(&self, ty: &Type, name: &str) -> Option<Found<'_, Method>> {
-        self.methods(ty)
+        self.methods_named(ty, Some(name), true)
+            .into_iter()
+            .find(|found| found.member.name.eq_ignore_ascii_case(name))
+    }
+
+    /// A method the code declares, without the ones the frameworks make up at run time.
+    pub fn find_declared_method(&self, ty: &Type, name: &str) -> Option<Found<'_, Method>> {
+        self.methods_named(ty, Some(name), false)
             .into_iter()
             .find(|found| found.member.name.eq_ignore_ascii_case(name))
     }
 
     pub fn properties(&self, ty: &Type) -> Vec<Found<'_, Property>> {
+        self.properties_named(ty, None)
+    }
+
+    fn properties_named(&self, ty: &Type, only: Option<&str>) -> Vec<Found<'_, Property>> {
         let ancestors = self.ancestors(ty);
         let mut out = Vec::new();
         let mut names = HashSet::new();
         for ancestor in &ancestors {
             let decl = ancestor.class.decl;
             for property in &decl.properties {
+                if only.is_some_and(|only| property.name != only) {
+                    continue;
+                }
                 if property.availability.contains(self.level) && names.insert(property.name.clone()) {
                     out.push(found_in(ancestor, Cow::Borrowed(property)));
                 }
@@ -343,11 +376,16 @@ impl Index {
                 }
             }
         }
+        if self.framework.frameworks.any() {
+            crate::framework::extend_properties(self, &ancestors, only, &mut out, &mut names);
+        }
         out
     }
 
     pub fn find_property(&self, ty: &Type, name: &str) -> Option<Found<'_, Property>> {
-        self.properties(ty).into_iter().find(|found| found.member.name == name)
+        self.properties_named(ty, Some(name))
+            .into_iter()
+            .find(|found| found.member.name == name)
     }
 
     pub fn constants_of(&self, ty: &Type) -> Vec<Found<'_, ClassConst>> {
@@ -378,6 +416,7 @@ fn found_in<'a, T: Clone>(ancestor: &Ancestor<'a>, member: Cow<'a, T>) -> Found<
         subst: ancestor.subst.clone(),
         self_name: ancestor.self_name.clone(),
         mixin: ancestor.mixin,
+        static_as: None,
     }
 }
 
@@ -394,6 +433,7 @@ fn push_method<'a>(
             subst: ancestor.subst.clone(),
             self_name: ancestor.self_name.clone(),
             mixin: ancestor.mixin,
+            static_as: None,
         });
     }
 }

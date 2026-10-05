@@ -21,6 +21,10 @@ ureq = "3.4.2"
 walkdir = "2.5.0"
 xxhash-rust = { version = "0.8.19", features = ["xxh3", "const_xxh3"] }
 
+[features]
+# Fixtures for the tests of the crates built on this one.
+testing = []
+
 [dev-dependencies]
 expect-test = "1.5.1"
 tempfile = "3.27.0"

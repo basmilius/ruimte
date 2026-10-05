@@ -54,6 +54,21 @@ impl Fixture {
         }
     }
 
+    /// A project with every framework on and the files held in memory, so what the framework layer
+    /// reads from other files sees the same text.
+    pub fn framework(files: &[(&str, &str)]) -> Fixture {
+        let index = php_index::framework::testing::project(files);
+        let sources = files
+            .iter()
+            .map(|(path, text)| (PathBuf::from(format!("/project/{path}")), text.to_string()))
+            .collect();
+        Fixture {
+            index,
+            sources,
+            disk: None,
+        }
+    }
+
     /// Like `with_level`, with the files on disk too, for what reads a body from the file it is in.
     pub fn on_disk(files: &[(&str, &str)], stubs: &[(&str, &str)]) -> Fixture {
         static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
@@ -87,6 +102,10 @@ impl Fixture {
     pub fn with_current(mut self, text: &str) -> Fixture {
         let clean = text.replace(CURSOR, "");
         let symbols = extract(&parse(&clean).syntax(), ExtractOptions::default());
+        self.index.set_open_text(
+            std::path::Path::new("/project/current.php"),
+            Some(Arc::from(clean.as_str())),
+        );
         self.index.set_file(
             PathBuf::from("/project/current.php"),
             Origin::Project,

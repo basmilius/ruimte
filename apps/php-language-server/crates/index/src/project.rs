@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use php_syntax::PhpVersion;
 
 use crate::composer::Composer;
+use crate::framework::Frameworks;
 use crate::index::{Index, Origin};
 use crate::indexer::IndexedFile;
 use crate::words::WordIndex;
@@ -33,7 +34,7 @@ impl Project {
     pub fn open_in(root: &Path, folder: &Path, default_level: PhpVersion) -> Project {
         let composer = Composer::load(root);
         let (level, level_from_composer) = level_for(composer.as_ref(), default_level);
-        Project {
+        let mut project = Project {
             root: root.to_path_buf(),
             folder: folder.to_path_buf(),
             composer,
@@ -41,7 +42,21 @@ impl Project {
             level_from_composer,
             index: Index::new(level),
             words: WordIndex::default(),
-        }
+        };
+        project.configure_index();
+        project
+    }
+
+    /// Tells the index which frameworks the project has. A new index needs it again.
+    pub fn configure_index(&mut self) {
+        let frameworks = self.composer.as_ref().map(Frameworks::detect).unwrap_or_default();
+        self.index.set_frameworks(&self.root, frameworks);
+    }
+
+    /// An empty index for the same project, after `composer.json` or the packages changed.
+    pub fn reset_index(&mut self) {
+        self.index = Index::new(self.level);
+        self.configure_index();
     }
 
     /// A project of nothing: the files that belong to no folder the client opened.
@@ -66,6 +81,7 @@ impl Project {
         self.level = level;
         self.level_from_composer = from_composer;
         self.index.level = level;
+        self.configure_index();
         changed
     }
 

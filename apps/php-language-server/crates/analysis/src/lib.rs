@@ -12,6 +12,7 @@ mod diagnostics;
 pub mod doc_refs;
 pub mod document;
 mod folding;
+pub mod frameworks;
 pub mod hierarchy;
 mod imports;
 pub mod infer;

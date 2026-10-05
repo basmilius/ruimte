@@ -946,6 +946,11 @@ impl<'a> Server<'a> {
         if origin == php_index::Origin::Project {
             project.words.update(&path, &document.text);
         }
+        if project.index.frameworks().any() {
+            project
+                .index
+                .set_open_text(&path, Some(std::sync::Arc::from(document.text.as_str())));
+        }
         project.index.set_file(path, origin, std::sync::Arc::new(symbols));
     }
 
@@ -959,6 +964,7 @@ impl<'a> Server<'a> {
         if origin == php_index::Origin::Project {
             project.words.update_from_disk(&path);
         }
+        project.index.set_open_text(&path, None);
         match index_file(&path, origin) {
             Some(symbols) => project.index.set_file(path, origin, std::sync::Arc::new(symbols)),
             None => project.index.remove_file(&path),
@@ -1039,7 +1045,7 @@ impl<'a> Server<'a> {
         self.workspace.indexed.remove(root);
         if let Some(project) = self.workspace.project_by_root(root) {
             project.reload_composer(default_level);
-            project.index = php_index::Index::new(project.level);
+            project.reset_index();
             project.words = php_index::words::WordIndex::default();
             if stubs_loaded {
                 let extensions = project.extensions();
