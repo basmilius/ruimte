@@ -293,11 +293,20 @@ export class FakeEditor implements Editor {
         this.changeMarks = marks;
     }
 
-    /* What the client put under lines of the text last. */
-    widgets: readonly EditorWidget[] = [];
+    /* What each owner put next to lines of the text last. */
+    readonly widgetsByOwner = new Map<string, readonly EditorWidget[]>();
 
-    setWidgets(widgets: readonly EditorWidget[]): void {
-        this.widgets = widgets;
+    /* The default owner's rows. */
+    get widgets(): readonly EditorWidget[] {
+        return this.widgetsByOwner.get('default') ?? [];
+    }
+
+    setWidgets(widgets: readonly EditorWidget[], owner = 'default'): void {
+        if (widgets.length === 0) {
+            this.widgetsByOwner.delete(owner);
+        } else {
+            this.widgetsByOwner.set(owner, widgets);
+        }
     }
 
     /* The code vision rows the client set last. */

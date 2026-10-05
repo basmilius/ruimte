@@ -751,6 +751,61 @@ describe('widgets', () => {
         editor.setWidgets([]);
         expect(page.host.querySelectorAll('.se-widget')).toHaveLength(0);
     });
+
+    function mountRows() {
+        jest.useFakeTimers();
+        const mounted = mountEditor({ text: 'one\ntwo\nthree' });
+        jest.runAllTimers();
+        jest.useRealTimers();
+        return mounted;
+    }
+    const row = (id: string, line: number, placement?: 'above' | 'below') => ({
+        id,
+        line,
+        height: 40,
+        placement,
+        render: (container: HTMLElement) => (container.textContent = id)
+    });
+    const drawn = (host: HTMLElement): string[] =>
+        [...host.querySelectorAll('.se-widget')]
+            .sort((left, right) => Number.parseFloat((left as HTMLElement).style.top) - Number.parseFloat((right as HTMLElement).style.top))
+            .map((element) => element.textContent!);
+
+    test('keeps the rows of each owner until that owner sets its own again', () => {
+        const { editor, page } = mountRows();
+        editor.setWidgets([row('peek', 0)]);
+        editor.setWidgets([row('keep', 1)], 'review');
+        expect(drawn(page.host)).toEqual(['peek', 'keep']);
+        editor.setWidgets([row('swap', 1)], 'review');
+        expect(drawn(page.host)).toEqual(['peek', 'swap']);
+        editor.setWidgets([]);
+        expect(drawn(page.host)).toEqual(['swap']);
+        editor.setWidgets([], 'review');
+        expect(drawn(page.host)).toEqual([]);
+    });
+
+    test('orders rows under one line by the name of their owner, whichever set its rows last', () => {
+        const { editor, page } = mountRows();
+        editor.setWidgets([row('second', 0)], 'review');
+        editor.setWidgets([row('third', 0)], 'review-b');
+        editor.setWidgets([row('first', 0), row('first-b', 0)], 'conflict');
+        expect(drawn(page.host)).toEqual(['first', 'first-b', 'second', 'third']);
+        editor.setWidgets([row('first', 0), row('first-b', 0)], 'conflict');
+        editor.setWidgets([row('second', 0)], 'review');
+        expect(drawn(page.host)).toEqual(['first', 'first-b', 'second', 'third']);
+    });
+
+    test('puts a row above its line, and moves the rows of every owner with their lines', () => {
+        const { editor, page, type } = mountRows();
+        editor.setWidgets([row('over', 1, 'above')], 'a');
+        editor.setWidgets([row('under', 1)], 'b');
+        expect(drawn(page.host)).toEqual(['over', 'under']);
+        expect((page.host.querySelector('[data-line="1"]') as HTMLElement).style.top).toBe('60px');
+        editor.setCaret({ line: 0, character: 3 });
+        type('\nnew');
+        expect((page.host.querySelector('[data-line="2"]') as HTMLElement).style.top).toBe('80px');
+        expect(drawn(page.host)).toEqual(['over', 'under']);
+    });
 });
 
 describe('code vision', () => {

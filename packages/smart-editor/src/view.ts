@@ -171,7 +171,8 @@ export class EditorView {
     private rendering = false;
     private disposed = false;
     private inlays: Inlay[] = [];
-    private blocks: BlockWidget[] = [];
+    /* The host's widgets by owner, so one owner setting its rows never takes another's away. */
+    private readonly blocks = new Map<string, BlockWidget[]>();
     private lenses: BlockWidget[] = [];
     private occurrences: Occurrence[] = [];
     private replacePreview: { text: string; preserveCase: boolean } | null = null;
@@ -321,8 +322,12 @@ export class EditorView {
         this.configureText();
     }
 
-    setBlockWidgets(blocks: readonly BlockWidget[]): void {
-        this.blocks = [...blocks];
+    setBlockWidgets(owner: string, blocks: readonly BlockWidget[]): void {
+        if (blocks.length === 0) {
+            this.blocks.delete(owner);
+        } else {
+            this.blocks.set(owner, [...blocks]);
+        }
         this.anchorScroll(() => this.layout.configure({ blocks: this.allBlocks() }));
         this.render();
     }
@@ -334,8 +339,10 @@ export class EditorView {
         this.render();
     }
 
+    /* Rows under the same line go by owner name and then by the order the owner gave them, so they never swap places when another owner sets its own. */
     private allBlocks(): BlockWidget[] {
-        return [...this.blocks, ...this.lenses];
+        const owners = [...this.blocks.keys()].sort();
+        return [...owners.flatMap((owner) => this.blocks.get(owner)!), ...this.lenses];
     }
 
     setOccurrences(occurrences: readonly Occurrence[]): void {
@@ -478,7 +485,12 @@ export class EditorView {
             const batches = snapshot.changes ?? [];
             for (const changes of batches) {
                 this.inlays = this.inlays.map((inlay) => ({ ...inlay, at: mapOffset(inlay.at, changes) }));
-                this.blocks = this.blocks.map((block) => ({ ...block, at: mapOffset(block.at, changes) }));
+                for (const [owner, blocks] of this.blocks) {
+                    this.blocks.set(
+                        owner,
+                        blocks.map((block) => ({ ...block, at: mapOffset(block.at, changes) }))
+                    );
+                }
                 this.lenses = this.lenses.map((lens) => ({ ...lens, at: mapOffset(lens.at, changes) }));
                 this.collapsed = new Set([...this.collapsed].map((anchor) => mapOffset(anchor, changes)));
                 this.settled = new Set([...this.settled].map((anchor) => mapOffset(anchor, changes)));

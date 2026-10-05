@@ -43,6 +43,7 @@ import { fillLens, lensSignature } from './lens.ts';
 import { EditorView, type ViewSettings } from './view.ts';
 
 const DEFAULT_TAB_SIZE = 4;
+const DEFAULT_WIDGET_OWNER = 'default';
 
 class SmartEditor implements Editor {
     private readonly model: DocumentModel;
@@ -511,12 +512,13 @@ class SmartEditor implements Editor {
         this.view.setChangeMarks(marks);
     }
 
-    setWidgets(widgets: readonly EditorWidget[]): void {
+    setWidgets(widgets: readonly EditorWidget[], owner: string = DEFAULT_WIDGET_OWNER): void {
         this.view.setBlockWidgets(
+            owner,
             widgets.map((widget) => ({
-                id: `widget:${widget.id}`,
+                id: `widget:${owner}:${widget.id}`,
                 at: this.offsetAt({ line: widget.line, character: 0 }),
-                placement: 'below' as const,
+                placement: widget.placement ?? 'below',
                 height: widget.height,
                 render: (container: HTMLElement) => {
                     container.classList.add('se-widget');

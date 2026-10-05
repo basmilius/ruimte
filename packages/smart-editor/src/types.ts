@@ -225,8 +225,10 @@ export interface EditorContextMenu {
 /* A row of the host's own DOM under a line of the text, such as the references of a name. It is not part of the document. */
 export interface EditorWidget {
     readonly id: string;
-    /* Zero-based; the widget sits under this line and stays there only as long as the host does not set the widgets again. */
+    /* Zero-based; the widget sits next to this line and stays there only as long as its owner does not set its widgets again. */
     readonly line: number;
+    /* Under the line by default; `above` puts the row over it, which a row at the top of the file needs. */
+    readonly placement?: 'above' | 'below';
     /* The height the row has until it has been measured. */
     readonly height?: number;
     /* Fills the element the row is drawn in, which the editor makes again whenever the row scrolls back into view. */
@@ -438,8 +440,14 @@ export interface Editor {
     getVisibleRange(): EditorRange;
     /* The editor scrolled or changed size, so whatever is placed by `rectAt` is somewhere else. */
     onViewChange(listener: () => void): () => void;
-    /* Rows of the host's own DOM under lines of the text, replacing the ones set before. */
-    setWidgets(widgets: readonly EditorWidget[]): void;
+    /*
+     * Rows of the host's own DOM next to lines of the text, replacing the ones the same owner set before.
+     * Owners never take each other's rows away, so a peek, the review of an agent's change and a conflict
+     * can all be up at once. Without an owner the rows are `default`'s. Rows next to the same line stand
+     * in the order of their owners' names, and within an owner in the order it gave them, whichever owner
+     * set its rows last. An empty list takes the owner's rows away.
+     */
+    setWidgets(widgets: readonly EditorWidget[], owner?: string): void;
     /* The code vision rows above declarations, replacing the ones set before. Separate from the widgets, which they never displace. */
     setCodeVision(rows: readonly EditorCodeVision[]): void;
     /* Handlers see a press of the primary button before the editor does, the first to take it winning. */

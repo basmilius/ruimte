@@ -109,3 +109,16 @@ describe('FakeEditor.trackRange', () => {
         expect(tracked.get()).toBeNull();
     });
 });
+
+describe('FakeEditor.setWidgets', () => {
+    test('keeps the widgets of each owner apart and answers `widgets` with the default owner', () => {
+        const editor = new FakeEditorEngine().mount(element, { text: 'a', theme: 'light' });
+        const row = (id: string) => ({ id, line: 0, render: () => undefined });
+        editor.setWidgets([row('peek')]);
+        editor.setWidgets([row('change')], 'review');
+        expect(editor.widgets.map((widget) => widget.id)).toEqual(['peek']);
+        expect([...editor.widgetsByOwner.keys()]).toEqual(['default', 'review']);
+        editor.setWidgets([], 'review');
+        expect([...editor.widgetsByOwner.keys()]).toEqual(['default']);
+    });
+});
