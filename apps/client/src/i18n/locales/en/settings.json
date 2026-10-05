@@ -71,6 +71,7 @@
             "label": "Editor sections",
             "general": "General",
             "colors": "Colors",
+            "folding": "Code folding",
             "smartKeys": "Smart keys",
             "languageServers": "Language servers"
         },
@@ -122,6 +123,110 @@
                 "authors": {
                     "label": "Authors",
                     "description": "Shows above a class, function or method who wrote it according to git, with a plus for other authors. Press it for the commits."
+                }
+            }
+        },
+        "folding": {
+            "outline": {
+                "title": "Outline",
+                "label": "Show fold arrows",
+                "description": "The arrows in the gutter that fold and open a block. A folded block always shows its marker in the text.",
+                "options": {
+                    "off": "Never",
+                    "hover": "On hover",
+                    "always": "Always"
+                }
+            },
+            "general": {
+                "title": "Fold by default",
+                "description": "What folds when a file opens for the first time. A file you folded or opened yourself keeps what you left. Bodies come from the language servers, so they fold once those have answered.",
+                "fileHeader": {
+                    "label": "File header",
+                    "description": "The comment at the top of a file, such as a license."
+                },
+                "imports": {
+                    "label": "Imports",
+                    "description": "The run of import lines at the top."
+                },
+                "docComments": {
+                    "label": "Documentation comments",
+                    "description": "Blocks that open with /**."
+                },
+                "methodBodies": {
+                    "label": "Function and method bodies",
+                    "description": "What sits between the braces, with the signature left in view. PHP has its own switches."
+                },
+                "customRegions": {
+                    "label": "Custom regions",
+                    "description": "What sits between // region and // endregion."
+                }
+            },
+            "script": {
+                "title": "JavaScript and TypeScript",
+                "description": "Also for JSX and TSX.",
+                "objectLiterals": {
+                    "label": "Object literals",
+                    "description": "Objects written out as a value, such as after an equals sign or in a call."
+                },
+                "arrayLiterals": {
+                    "label": "Array literals",
+                    "description": "Arrays written out as a value."
+                },
+                "xmlLiterals": {
+                    "label": "JSX elements",
+                    "description": "Elements that span several lines, once the language server has answered."
+                }
+            },
+            "php": {
+                "title": "PHP",
+                "description": "Imports, documentation comments and the file header follow the switches above. Bodies come from the language server.",
+                "tags": {
+                    "label": "PHP tags",
+                    "description": "Blocks of PHP between markup, from <?php to ?>, other than the one that opens the file."
+                },
+                "heredocs": {
+                    "label": "Heredocs and nowdocs",
+                    "description": "Text blocks up to their closing line."
+                },
+                "functionBodies": {
+                    "label": "Function bodies",
+                    "description": "Functions outside a class."
+                },
+                "methodBodies": {
+                    "label": "Method bodies",
+                    "description": "Methods of a class, interface, trait or enum."
+                },
+                "classBodies": {
+                    "label": "Class bodies",
+                    "description": "Everything between the braces of a class, interface, trait or enum."
+                },
+                "attributes": {
+                    "label": "Attributes",
+                    "description": "An attribute list that spans several lines."
+                }
+            },
+            "markup": {
+                "title": "HTML and XML",
+                "description": "For HTML, XML, Vue and Svelte, once the language server has answered.",
+                "tags": {
+                    "label": "Tags",
+                    "description": "Elements that span several lines."
+                }
+            },
+            "markdown": {
+                "title": "Markdown",
+                "description": "What folds in a Markdown file. The section under a heading folds by hand.",
+                "frontMatter": {
+                    "label": "Front matter",
+                    "description": "The block between --- lines at the top."
+                },
+                "codeFences": {
+                    "label": "Code fences",
+                    "description": "Fenced blocks of code."
+                },
+                "tables": {
+                    "label": "Tables",
+                    "description": "Tables of several rows."
                 }
             }
         },

@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import { canSwipeBetweenPages, desktop } from '@/desktop/bridge';
 import { closedLidOffered, keepAwakeAvailable } from '@/state/keep-awake';
 import { ALL_SETTINGS_SECTIONS, sectionDescription, sectionLabel } from '@/shell/settings/sections';
+import { FOLDING_GROUPS } from '@/shell/settings/folding-rows';
 import { shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
@@ -131,6 +132,20 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         label: 'settings:editor.general.codeVision.authors.label',
         description: 'settings:editor.general.codeVision.authors.description'
     },
+    {
+        id: 'editor.folding.outline',
+        section: 'editor',
+        label: 'settings:editor.folding.outline.label',
+        description: 'settings:editor.folding.outline.description'
+    },
+    ...FOLDING_GROUPS.flatMap((group) =>
+        group.rows.map((row) => ({
+            id: `editor.folding.${group.id}.${row.words}`,
+            section: 'editor' as const,
+            label: `settings:editor.folding.${group.id}.${row.words}.label`,
+            description: `settings:editor.folding.${group.id}.${row.words}.description`
+        }))
+    ),
     {
         id: 'editor.smartKeys.pairBrackets',
         section: 'editor',

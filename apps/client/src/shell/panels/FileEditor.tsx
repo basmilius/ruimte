@@ -4,6 +4,7 @@ import type { Editor, EditorEngine, EditorIndentation } from '@ruimte/smart-edit
 import { mountDraftEditor } from '@/shell/panels/draft-editor';
 import { useCodeTheme } from '@/state/code-theme';
 import type { RevealLineRequest } from '@/state/files';
+import { foldRolesFor } from '@/state/code-folding';
 import { useSettings } from '@/state/settings';
 import { openingPlace, viewStates } from '@/shell/panels/editor-view-state';
 import { endpointKey } from '@/state/keys';
@@ -61,8 +62,24 @@ export function FileEditor({
     const smartKeys = useSettings((s) => s.smartKeys);
     const guides = useSettings((s) => s.codeIndentGuides);
     const whitespace = useSettings((s) => s.codeWhitespace);
+    const folding = useSettings((s) => s.codeFolding);
+    const foldOutline = useSettings((s) => s.codeFoldOutline);
     // What the editor mounts with; every later change reaches it through the effects below.
-    const initial = useRef({ disk, language, wrap, indentation, rightMargin, guides, whitespace, smartKeys, readOnlyReason, theme, reveal });
+    const initial = useRef({
+        disk,
+        language,
+        wrap,
+        indentation,
+        rightMargin,
+        guides,
+        whitespace,
+        smartKeys,
+        readOnlyReason,
+        theme,
+        reveal,
+        folding,
+        foldOutline
+    });
     const revealed = useRef<number | null>(null);
     const readOnly = readOnlyReason !== null;
 
@@ -88,8 +105,9 @@ export function FileEditor({
                 whitespace: first.whitespace,
                 rightMargin: first.rightMargin,
                 smartKeys: first.smartKeys,
+                foldOutline: first.foldOutline,
                 messages: { noMoreOccurrences: i18next.t('panels:file.edit.noMoreOccurrences') },
-                ...openingPlace(first.reveal, viewStates.get(key), placeholderScroll.current)
+                ...openingPlace(first.reveal, viewStates.get(key), placeholderScroll.current, foldRolesFor(first.language, first.folding))
             }
         );
         revealed.current = first.reveal?.nonce ?? null;
@@ -132,6 +150,10 @@ export function FileEditor({
     useEffect(() => {
         editorRef.current?.setWhitespace(whitespace);
     }, [whitespace]);
+
+    useEffect(() => {
+        editorRef.current?.setFoldOutline(foldOutline);
+    }, [foldOutline]);
 
     useEffect(() => {
         editorRef.current?.setRightMargin(rightMargin);

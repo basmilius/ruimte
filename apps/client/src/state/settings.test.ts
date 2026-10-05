@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
+import { DEFAULT_CODE_FOLDING } from './code-folding';
 import { codeLineHeight, codeThemesOf, iceServersFrom, settingsFrom, useSettings, type KeepAwakeMode, type Settings } from './settings';
 
 describe('a view an agent asks for', () => {
@@ -239,6 +240,20 @@ describe('code vision', () => {
         expect(settingsFrom({ codeVisionUsages: false }).codeVisionUsages).toBe(false);
         expect(settingsFrom({ codeVisionAuthors: false }).codeVisionAuthors).toBe(false);
         expect(settingsFrom({ codeVisionAuthors: 'no' as unknown as boolean }).codeVisionAuthors).toBe(true);
+    });
+});
+
+describe('code folding', () => {
+    test('folds the file header and the imports until a person says otherwise', () => {
+        expect(settingsFrom({}).codeFolding).toEqual(DEFAULT_CODE_FOLDING);
+        expect(settingsFrom({ codeFolding: { imports: false } as never }).codeFolding.imports).toBe(false);
+        expect(settingsFrom({ codeFolding: 'nope' as never }).codeFolding).toEqual(DEFAULT_CODE_FOLDING);
+    });
+
+    test('shows the outline on hover, and reads only an outline it knows', () => {
+        expect(settingsFrom({}).codeFoldOutline).toBe('hover');
+        expect(settingsFrom({ codeFoldOutline: 'always' }).codeFoldOutline).toBe('always');
+        expect(settingsFrom({ codeFoldOutline: 'sometimes' as never }).codeFoldOutline).toBe('hover');
     });
 });
 

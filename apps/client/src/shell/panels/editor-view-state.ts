@@ -15,14 +15,16 @@ export const viewStates = new Map<string, ViewState>();
 
 /*
  * A line asked for wins; otherwise where this file's editor last was, and for a file opened the first time, where the
- * viewer before it was scrolled and with its import list folded. What was folded comes back whichever way it opens.
+ * viewer before it was scrolled and with the kinds of fold the settings choose folded. What was folded comes back
+ * whichever way it opens.
  */
 export function openingPlace(
     reveal: RevealLineRequest | null,
     last: ViewState | undefined,
-    placeholderScroll: number
+    placeholderScroll: number,
+    foldDefaults: readonly FoldRole[]
 ): { line?: number; column?: number; scrollTop?: number; folds?: EditorFolds; foldDefaults?: readonly FoldRole[] } {
-    const folds = last === undefined ? { foldDefaults: ['imports' as const] } : { folds: last.folds };
+    const folds = last === undefined ? { foldDefaults } : { folds: last.folds };
     if (reveal !== null) {
         return { line: reveal.line, ...folds };
     }

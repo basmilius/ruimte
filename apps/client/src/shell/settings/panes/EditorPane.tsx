@@ -3,13 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { ErrorBoundary, Segmented } from '@basmilius/desktop-ui';
 import { useSettingsTarget } from '@basmilius/desktop-ui/settings';
 import { CodeSection } from '@/shell/settings/panes/CodeSection';
+import { EditorFoldingTab } from '@/shell/settings/panes/EditorFoldingTab';
 import { EditorGeneralTab } from '@/shell/settings/panes/EditorGeneralTab';
 import { LanguageServersTab } from '@/shell/settings/panes/LanguageServersTab';
 import { SmartKeysSection } from '@/shell/settings/panes/SmartKeysSection';
 
-type EditorTab = 'general' | 'colors' | 'smartKeys' | 'languageServers';
+type EditorTab = 'general' | 'colors' | 'folding' | 'smartKeys' | 'languageServers';
 
-const TABS: readonly EditorTab[] = ['general', 'colors', 'smartKeys', 'languageServers'];
+const TABS: readonly EditorTab[] = ['general', 'colors', 'folding', 'smartKeys', 'languageServers'];
 
 /* The tab that holds the row a search result names, by the prefix of its id. */
 function tabOfTarget(target: string | null): EditorTab | null {
@@ -21,6 +22,9 @@ function tabOfTarget(target: string | null): EditorTab | null {
     }
     if (target.startsWith('editor.colors.')) {
         return 'colors';
+    }
+    if (target.startsWith('editor.folding.')) {
+        return 'folding';
     }
     if (target.startsWith('editor.smartKeys.')) {
         return 'smartKeys';
@@ -54,6 +58,7 @@ export function EditorPane() {
             />
             {tab === 'general' && <EditorGeneralTab />}
             {tab === 'colors' && <CodeSection />}
+            {tab === 'folding' && <EditorFoldingTab />}
             {tab === 'smartKeys' && <SmartKeysSection />}
             {tab === 'languageServers' && (
                 <ErrorBoundary label={t('editor.servers.failed')} compact className="rounded-xl border border-border">

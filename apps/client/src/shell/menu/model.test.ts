@@ -257,6 +257,26 @@ describe('the menus', () => {
         expect(commandIds(menuModel(context()))).not.toContain('keep-awake-off');
     });
 
+    test('the folding commands sit together in a submenu of Code, the levels and the documentation comments among them', () => {
+        const folding = menu(menuModel(context()), 'Code').find((node) => node.kind === 'submenu' && node.id === 'folding');
+        expect(folding?.kind === 'submenu' ? folding.items.map((node) => (node.kind === 'command' ? node.id : node.kind)) : []).toEqual([
+            'collapse-region',
+            'expand-region',
+            'collapse-region-recursively',
+            'expand-region-recursively',
+            'collapse-all-regions',
+            'expand-all-regions',
+            'fold-selection',
+            'collapse-doc-comments',
+            'expand-doc-comments',
+            'expand-all-to-level-1',
+            'expand-all-to-level-2',
+            'expand-all-to-level-3',
+            'expand-all-to-level-4',
+            'expand-all-to-level-5'
+        ]);
+    });
+
     test('zoom is offered on every view and only works where there is a camera', () => {
         expect(find(menuModel(context({ view: 'drawing' })), 'fit')?.enabled).toBe(true);
         expect(find(menuModel(context({ view: 'terminal' })), 'fit')?.enabled).toBe(false);

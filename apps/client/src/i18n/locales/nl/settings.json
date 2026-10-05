@@ -71,6 +71,7 @@
             "label": "Onderdelen van de editor",
             "general": "Algemeen",
             "colors": "Kleuren",
+            "folding": "Invouwen",
             "smartKeys": "Slimme toetsen",
             "languageServers": "Language servers"
         },
@@ -122,6 +123,110 @@
                 "authors": {
                     "label": "Auteurs",
                     "description": "Toont boven een klasse, functie of methode wie hem volgens git schreef, met een plus voor andere auteurs. Klik erop voor de commits."
+                }
+            }
+        },
+        "folding": {
+            "outline": {
+                "title": "Pijltjes",
+                "label": "Vouwpijltjes tonen",
+                "description": "De pijltjes in de marge waarmee je een blok in- of uitvouwt. Een ingevouwen blok toont zijn markering altijd in de tekst.",
+                "options": {
+                    "off": "Nooit",
+                    "hover": "Bij aanwijzen",
+                    "always": "Altijd"
+                }
+            },
+            "general": {
+                "title": "Standaard invouwen",
+                "description": "Wat ingevouwen is als een bestand voor het eerst opengaat. Een bestand dat je zelf in- of uitvouwde, houdt wat je achterliet. Bodies komen van de language servers en vouwen in zodra die antwoorden.",
+                "fileHeader": {
+                    "label": "Bestandskop",
+                    "description": "De opmerking bovenaan een bestand, zoals een licentie."
+                },
+                "imports": {
+                    "label": "Imports",
+                    "description": "De reeks importregels bovenaan."
+                },
+                "docComments": {
+                    "label": "Documentatiecommentaar",
+                    "description": "Blokken die met /** beginnen."
+                },
+                "methodBodies": {
+                    "label": "Bodies van functies en methoden",
+                    "description": "Wat tussen de accolades staat, met de signatuur in beeld. PHP heeft eigen schakelaars."
+                },
+                "customRegions": {
+                    "label": "Eigen gebieden",
+                    "description": "Wat tussen // region en // endregion staat."
+                }
+            },
+            "script": {
+                "title": "JavaScript en TypeScript",
+                "description": "Ook voor JSX en TSX.",
+                "objectLiterals": {
+                    "label": "Objectliteralen",
+                    "description": "Objecten die als waarde zijn uitgeschreven, zoals na een gelijkteken of in een aanroep."
+                },
+                "arrayLiterals": {
+                    "label": "Arrayliteralen",
+                    "description": "Arrays die als waarde zijn uitgeschreven."
+                },
+                "xmlLiterals": {
+                    "label": "JSX-elementen",
+                    "description": "Elementen die over meerdere regels gaan, zodra de language server heeft geantwoord."
+                }
+            },
+            "php": {
+                "title": "PHP",
+                "description": "Imports, documentatiecommentaar en de bestandskop volgen de schakelaars hierboven. Bodies komen van de language server.",
+                "tags": {
+                    "label": "PHP-tags",
+                    "description": "Blokken PHP tussen markup, van <?php tot ?>, behalve het blok dat het bestand opent."
+                },
+                "heredocs": {
+                    "label": "Heredocs en nowdocs",
+                    "description": "Tekstblokken tot hun sluitende regel."
+                },
+                "functionBodies": {
+                    "label": "Bodies van functies",
+                    "description": "Functies buiten een klasse."
+                },
+                "methodBodies": {
+                    "label": "Bodies van methoden",
+                    "description": "Methoden van een klasse, interface, trait of enum."
+                },
+                "classBodies": {
+                    "label": "Bodies van klassen",
+                    "description": "Alles tussen de accolades van een klasse, interface, trait of enum."
+                },
+                "attributes": {
+                    "label": "Attributen",
+                    "description": "Een lijst attributen die over meerdere regels gaat."
+                }
+            },
+            "markup": {
+                "title": "HTML en XML",
+                "description": "Voor HTML, XML, Vue en Svelte, zodra de language server heeft geantwoord.",
+                "tags": {
+                    "label": "Tags",
+                    "description": "Elementen die over meerdere regels gaan."
+                }
+            },
+            "markdown": {
+                "title": "Markdown",
+                "description": "Wat in een Markdown-bestand invouwt. De sectie onder een kop vouw je zelf in.",
+                "frontMatter": {
+                    "label": "Front matter",
+                    "description": "Het blok tussen de --- regels bovenaan."
+                },
+                "codeFences": {
+                    "label": "Codeblokken",
+                    "description": "Omheinde blokken code."
+                },
+                "tables": {
+                    "label": "Tabellen",
+                    "description": "Tabellen van meerdere rijen."
                 }
             }
         },

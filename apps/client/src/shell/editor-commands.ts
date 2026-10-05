@@ -14,6 +14,8 @@ interface EditorCommandSpec {
     readonly key: string;
     readonly command: EditorRunCommand;
     readonly shortcut?: Shortcut;
+    /* A group the Code menu keeps its own submenu for. */
+    readonly group?: 'folding';
 }
 
 const TABLE = {
@@ -25,13 +27,30 @@ const TABLE = {
     'start-new-line-before': { key: 'startNewLineBefore', command: 'startNewLineBefore', shortcut: editorShortcut('startNewLineBefore') },
     'toggle-case': { key: 'toggleCase', command: 'toggleCase', shortcut: editorShortcut('toggleCase') },
     'auto-indent-lines': { key: 'autoIndentLines', command: 'autoIndentLines', shortcut: editorShortcut('autoIndentLines') },
-    'collapse-region': { key: 'collapseRegion', command: 'collapseRegion', shortcut: editorShortcut('collapse') },
-    'expand-region': { key: 'expandRegion', command: 'expandRegion', shortcut: editorShortcut('expand') },
-    'collapse-region-recursively': { key: 'collapseRegionRecursively', command: 'collapseRegionRecursively', shortcut: editorShortcut('collapseRecursively') },
-    'expand-region-recursively': { key: 'expandRegionRecursively', command: 'expandRegionRecursively', shortcut: editorShortcut('expandRecursively') },
-    'collapse-all-regions': { key: 'collapseAllRegions', command: 'collapseAllRegions', shortcut: editorShortcut('collapseAll') },
-    'expand-all-regions': { key: 'expandAllRegions', command: 'expandAllRegions', shortcut: editorShortcut('expandAll') },
-    'fold-selection': { key: 'foldSelection', command: 'foldSelection', shortcut: editorShortcut('foldSelection') },
+    'collapse-region': { key: 'collapseRegion', command: 'collapseRegion', shortcut: editorShortcut('collapse'), group: 'folding' },
+    'expand-region': { key: 'expandRegion', command: 'expandRegion', shortcut: editorShortcut('expand'), group: 'folding' },
+    'collapse-region-recursively': {
+        key: 'collapseRegionRecursively',
+        command: 'collapseRegionRecursively',
+        shortcut: editorShortcut('collapseRecursively'),
+        group: 'folding'
+    },
+    'expand-region-recursively': {
+        key: 'expandRegionRecursively',
+        command: 'expandRegionRecursively',
+        shortcut: editorShortcut('expandRecursively'),
+        group: 'folding'
+    },
+    'collapse-all-regions': { key: 'collapseAllRegions', command: 'collapseAllRegions', shortcut: editorShortcut('collapseAll'), group: 'folding' },
+    'expand-all-regions': { key: 'expandAllRegions', command: 'expandAllRegions', shortcut: editorShortcut('expandAll'), group: 'folding' },
+    'fold-selection': { key: 'foldSelection', command: 'foldSelection', shortcut: editorShortcut('foldSelection'), group: 'folding' },
+    'collapse-doc-comments': { key: 'collapseDocComments', command: 'collapseDocComments', shortcut: editorShortcut('collapseDocComments'), group: 'folding' },
+    'expand-doc-comments': { key: 'expandDocComments', command: 'expandDocComments', shortcut: editorShortcut('expandDocComments'), group: 'folding' },
+    'expand-all-to-level-1': { key: 'expandAllToLevel1', command: 'expandAllToLevel1', shortcut: editorShortcut('expandAllToLevel1'), group: 'folding' },
+    'expand-all-to-level-2': { key: 'expandAllToLevel2', command: 'expandAllToLevel2', shortcut: editorShortcut('expandAllToLevel2'), group: 'folding' },
+    'expand-all-to-level-3': { key: 'expandAllToLevel3', command: 'expandAllToLevel3', shortcut: editorShortcut('expandAllToLevel3'), group: 'folding' },
+    'expand-all-to-level-4': { key: 'expandAllToLevel4', command: 'expandAllToLevel4', shortcut: editorShortcut('expandAllToLevel4'), group: 'folding' },
+    'expand-all-to-level-5': { key: 'expandAllToLevel5', command: 'expandAllToLevel5', shortcut: editorShortcut('expandAllToLevel5'), group: 'folding' },
     'select-next-occurrence': { key: 'selectNextOccurrence', command: 'selectNextOccurrence', shortcut: editorShortcut('selectNextOccurrence') },
     'unselect-occurrence': { key: 'unselectOccurrence', command: 'unselectOccurrence', shortcut: editorShortcut('unselectOccurrence') },
     'select-all-occurrences': { key: 'selectAllOccurrences', command: 'selectAllOccurrences', shortcut: editorShortcut('selectAllOccurrences') },
@@ -46,6 +65,11 @@ export type EditorCommandId = keyof typeof TABLE;
 export const EDITOR_COMMANDS: Record<EditorCommandId, EditorCommandSpec> = TABLE;
 
 export const EDITOR_COMMAND_IDS = Object.keys(EDITOR_COMMANDS) as EditorCommandId[];
+
+/* The ids of a group, in the order of the table. */
+export function editorCommandsOf(group: 'folding' | undefined): EditorCommandId[] {
+    return EDITOR_COMMAND_IDS.filter((id) => (EDITOR_COMMANDS[id] as EditorCommandSpec).group === group);
+}
 
 export interface EditorCommandRow {
     id: string;

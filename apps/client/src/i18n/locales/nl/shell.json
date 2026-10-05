@@ -574,6 +574,13 @@
             "collapseAllRegions": "Alle gebieden invouwen",
             "expandAllRegions": "Alle gebieden uitvouwen",
             "foldSelection": "Selectie invouwen",
+            "collapseDocComments": "Documentatiecommentaar invouwen",
+            "expandDocComments": "Documentatiecommentaar uitvouwen",
+            "expandAllToLevel1": "Alles uitvouwen tot niveau 1",
+            "expandAllToLevel2": "Alles uitvouwen tot niveau 2",
+            "expandAllToLevel3": "Alles uitvouwen tot niveau 3",
+            "expandAllToLevel4": "Alles uitvouwen tot niveau 4",
+            "expandAllToLevel5": "Alles uitvouwen tot niveau 5",
             "selectNextOccurrence": "Volgende treffer selecteren",
             "unselectOccurrence": "Laatste treffer deselecteren",
             "selectAllOccurrences": "Alle treffers selecteren",
@@ -806,6 +813,13 @@
         "collapseAllRegions": "Alle gebieden invouwen",
         "expandAllRegions": "Alle gebieden uitvouwen",
         "foldSelection": "Selectie invouwen",
+        "collapseDocComments": "Documentatiecommentaar invouwen",
+        "expandDocComments": "Documentatiecommentaar uitvouwen",
+        "expandAllToLevel1": "Alles uitvouwen tot niveau 1",
+        "expandAllToLevel2": "Alles uitvouwen tot niveau 2",
+        "expandAllToLevel3": "Alles uitvouwen tot niveau 3",
+        "expandAllToLevel4": "Alles uitvouwen tot niveau 4",
+        "expandAllToLevel5": "Alles uitvouwen tot niveau 5",
         "selectNextOccurrence": "Volgende treffer selecteren",
         "unselectOccurrence": "Laatste treffer deselecteren",
         "selectAllOccurrences": "Alle treffers selecteren",
@@ -830,6 +844,7 @@
         "peekDefinition": "Definitie bekijken",
         "historyBack": "Terug",
         "historyForward": "Vooruit",
-        "recentLocations": "Recente plekken…"
+        "recentLocations": "Recente plekken…",
+        "folding": "Invouwen"
     }
 }

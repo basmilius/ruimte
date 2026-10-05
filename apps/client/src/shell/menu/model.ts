@@ -3,7 +3,7 @@ import type { ProjectView } from '@ruimte/contracts';
 import type { MenuNode, MenuRole, MenuShellAction, MenuSpec } from '@ruimte/desktop-bridge';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
 import { LANGUAGE_COMMANDS, languageCommandsOf } from '@/language/command-table';
-import { EDITOR_COMMAND_IDS, EDITOR_COMMANDS } from '@/shell/editor-commands';
+import { EDITOR_COMMANDS, editorCommandsOf } from '@/shell/editor-commands';
 import { APP_SHORTCUTS, BROWSER_KEEPS } from '@/shell/shortcuts';
 import type { ViewOffers } from '@/shell/view-offers';
 import type { KeepAwakeMode } from '@/state/settings';
@@ -326,7 +326,12 @@ export function menuModel(context: MenuContext): MenuSpec {
                 workspace && !context.settingsOpen,
                 ...languageCommandsOf('code').map((id) => command(id, t(LANGUAGE_COMMANDS[id].key), { shortcut: LANGUAGE_COMMANDS[id].shortcut })),
                 separator,
-                ...EDITOR_COMMAND_IDS.map((id) => command(id, t(EDITOR_COMMANDS[id].key), { shortcut: EDITOR_COMMANDS[id].shortcut }))
+                ...editorCommandsOf(undefined).map((id) => command(id, t(EDITOR_COMMANDS[id].key), { shortcut: EDITOR_COMMANDS[id].shortcut })),
+                submenu(
+                    'folding',
+                    t('folding'),
+                    editorCommandsOf('folding').map((id) => command(id, t(EDITOR_COMMANDS[id].key), { shortcut: EDITOR_COMMANDS[id].shortcut }))
+                )
             )
         ]
     };

@@ -21,6 +21,11 @@ describe('searching the settings', () => {
         expect(searchSettings('whitespace changes')[0]).toMatchObject({ section: 'files', id: 'files.git.whitespace', label: 'Show whitespace changes' });
     });
 
+    test('finds a fold setting by its words', () => {
+        expect(searchSettings('documentation comments').map((result) => result.id)).toContain('editor.folding.general.docComments');
+        expect(searchSettings('heredocs')[0]).toMatchObject({ section: 'editor', id: 'editor.folding.php.heredocs' });
+    });
+
     test('every word must match, in any case and order', () => {
         expect(searchSettings('DIFF layout').map((result) => result.id)).toEqual(['files.git.layout']);
         expect(searchSettings('layout diff').map((result) => result.id)).toEqual(['files.git.layout']);

@@ -574,6 +574,13 @@
             "collapseAllRegions": "Collapse all regions",
             "expandAllRegions": "Expand all regions",
             "foldSelection": "Fold selection",
+            "collapseDocComments": "Collapse Documentation Comments",
+            "expandDocComments": "Expand Documentation Comments",
+            "expandAllToLevel1": "Expand All to Level 1",
+            "expandAllToLevel2": "Expand All to Level 2",
+            "expandAllToLevel3": "Expand All to Level 3",
+            "expandAllToLevel4": "Expand All to Level 4",
+            "expandAllToLevel5": "Expand All to Level 5",
             "selectNextOccurrence": "Select next occurrence",
             "unselectOccurrence": "Unselect last occurrence",
             "selectAllOccurrences": "Select all occurrences",
@@ -806,6 +813,13 @@
         "collapseAllRegions": "Collapse All Regions",
         "expandAllRegions": "Expand All Regions",
         "foldSelection": "Fold Selection",
+        "collapseDocComments": "Collapse documentation comments",
+        "expandDocComments": "Expand documentation comments",
+        "expandAllToLevel1": "Expand all to level 1",
+        "expandAllToLevel2": "Expand all to level 2",
+        "expandAllToLevel3": "Expand all to level 3",
+        "expandAllToLevel4": "Expand all to level 4",
+        "expandAllToLevel5": "Expand all to level 5",
         "selectNextOccurrence": "Select Next Occurrence",
         "unselectOccurrence": "Unselect Last Occurrence",
         "selectAllOccurrences": "Select All Occurrences",
@@ -830,6 +844,7 @@
         "peekDefinition": "Peek Definition",
         "historyBack": "Back",
         "historyForward": "Forward",
-        "recentLocations": "Recent Locations…"
+        "recentLocations": "Recent Locations…",
+        "folding": "Folding"
     }
 }

@@ -6,6 +6,7 @@ import { CompletionFeature } from './completion';
 import { ContextMenuFeature } from './context-menu';
 import { DefinitionLinkFeature } from './definition-link';
 import { DiagnosticsFeature } from './diagnostics';
+import { FoldingFeature } from './folding';
 import { HighlightsFeature } from './highlights';
 import { HistoryFeature } from './history';
 import { HoverFeature } from './hover';
@@ -81,6 +82,7 @@ export class EditorLanguage {
         this.history = new HistoryFeature(this);
         this.definitionLink = new DefinitionLinkFeature(this);
         this.codeVision = new CodeVisionFeature(this, (listener) => this.symbols.onResult(listener), timers);
+        new FoldingFeature(this, (listener) => this.symbols.onResult(listener), timers);
         this.placeOpenedCaret(editor.getCaret());
         this.onDispose(editor.onCaret((position) => this.placeOpenedCaret(position)));
     }

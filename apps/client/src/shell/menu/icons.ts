@@ -1,6 +1,8 @@
 import type { AgentKind } from '@ruimte/contracts';
 import {
     Activity,
+    Book,
+    BookOpen,
     ArrowDownToLine,
     ArrowUpToLine,
     Columns3,
@@ -204,6 +206,14 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     'collapse-all-regions': ChevronsDownUp,
     'expand-all-regions': ChevronsUpDown,
     'fold-selection': FoldHorizontal,
+    folding: FoldVertical,
+    'collapse-doc-comments': Book,
+    'expand-doc-comments': BookOpen,
+    'expand-all-to-level-1': ListTree,
+    'expand-all-to-level-2': ListTree,
+    'expand-all-to-level-3': ListTree,
+    'expand-all-to-level-4': ListTree,
+    'expand-all-to-level-5': ListTree,
     'select-next-occurrence': ScanSearch,
     'unselect-occurrence': BoxSelect,
     'select-all-occurrences': ListChecks,
