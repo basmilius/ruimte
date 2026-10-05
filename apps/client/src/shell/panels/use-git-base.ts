@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { dirnameOf } from '@/shell/panels/files-tree';
+import { useGitRoot } from '@/shell/panels/use-git-root';
 import { useGitSignal } from '@/state/git-watch';
 import { useEndpointId } from '@/state/keys';
 import { useTransport } from '@/transport/context';
@@ -13,38 +13,18 @@ export function useGitBase(path: string, disk: string): string | null {
     const transport = useTransport();
     const endpointId = useEndpointId();
     const key = `${endpointId}\u0000${path}`;
-    const [repo, setRepo] = useState<{ key: string; root: string | null } | null>(null);
     const [held, setHeld] = useState<{ key: string; base: string | null } | null>(null);
     const latestDisk = useRef(disk);
-    const root = repo?.key === key ? repo.root : null;
+    const root = useGitRoot(path);
     // Goes up when the checkout moved: a commit, a stage or a write of this file all do.
-    const signal = useGitSignal(root);
+    const signal = useGitSignal(root ?? null);
 
     useEffect(() => {
         latestDisk.current = disk;
     }, [disk]);
 
     useEffect(() => {
-        let alive = true;
-        transport
-            .request('git.status', { cwd: dirnameOf(path) })
-            .then((status) => {
-                if (alive) {
-                    setRepo({ key, root: status.repo ? status.root : null });
-                }
-            })
-            .catch(() => {
-                if (alive) {
-                    setRepo({ key, root: null });
-                }
-            });
-        return () => {
-            alive = false;
-        };
-    }, [transport, key, path]);
-
-    useEffect(() => {
-        if (root === null || !path.startsWith(`${root}/`)) {
+        if (root === null || root === undefined || !path.startsWith(`${root}/`)) {
             return;
         }
         let alive = true;

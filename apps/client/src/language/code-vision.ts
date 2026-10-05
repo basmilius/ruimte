@@ -1,7 +1,9 @@
 import { splitLines } from '@ruimte/merge';
-import type { EditorCodeVision, EditorCodeVisionEntry } from '@ruimte/smart-editor';
+import type { GitBlameResult } from '@ruimte/contracts';
+import type { EditorCodeVision, EditorCodeVisionEntry, EditorRect } from '@ruimte/smart-editor';
 import type { DocumentSymbolResult } from '@ruimte/smart-editor-lsp';
 import type { EditorLanguage } from './editor-language';
+import { type CodeAuthorship, authorsText, authorshipOf, mapBlame } from './code-authors';
 import { type CodeVisionDeclaration, declarationsOf, usagesText } from './code-vision-model';
 import { realTimers, type Timers } from './timers';
 
@@ -18,6 +20,14 @@ export interface CodeVisionSettings {
     readonly usages: boolean;
     readonly authors: boolean;
 }
+
+/*
+ * What git says about the file: `pending` while it is being asked, so the rows are held for the authors
+ * that will come, and the blame of the text on disk once it is in. Null where git has nothing to say.
+ */
+export type BlameSource =
+    | { readonly kind: 'pending' }
+    | { readonly kind: 'ready'; readonly blame: GitBlameResult; readonly base: string; openCommit?(hash: string): void };
 
 /*
  * The rows above declarations: how often each is used and, once git has been asked, who wrote it. The
@@ -40,6 +50,11 @@ export class CodeVisionFeature {
     private readonly running = new Map<string, AbortController>();
     /* Declarations a server could not count for this text, which are not asked again until it says it can. */
     private failed = new Set<string>();
+    private blame: BlameSource | null = null;
+    /* The text the declarations were read from, which the lines of their authors are counted in. */
+    private lines: readonly string[] = [];
+    private mapped: { blame: GitBlameResult; lines: Int32Array | null } | null = null;
+    private readonly authorships = new Map<string, CodeAuthorship>();
     private scrollTimer: unknown;
     private publishing = false;
     private disposed = false;
@@ -52,6 +67,7 @@ export class CodeVisionFeature {
             onSymbols((result) => this.read(result)),
             editor.onTextChange(() => {
                 this.edited = true;
+                this.closeAuthors();
             }),
             editor.onViewChange(() => {
                 this.timers.clear(this.scrollTimer);
@@ -75,6 +91,7 @@ export class CodeVisionFeature {
             for (const controller of this.running.values()) {
                 controller.abort();
             }
+            this.closeAuthors();
             editor.setCodeVision([]);
         });
     }
@@ -89,9 +106,20 @@ export class CodeVisionFeature {
         this.plan();
     }
 
+    /* What git says about the file, from the client that asked it. */
+    setBlame(blame: BlameSource | null): void {
+        this.blame = blame;
+        this.mapped = null;
+        this.authorships.clear();
+        this.publish();
+    }
+
     private read(result: DocumentSymbolResult): void {
         const { editor, languageId } = this.language;
         const lines = splitLines(editor.getText());
+        this.lines = lines;
+        this.mapped = null;
+        this.authorships.clear();
         this.edited = false;
         this.declarations =
             lines.length > MAX_LINES ? [] : declarationsOf(result, { lineCount: lines.length, lineAt: (line) => lines[line] ?? '', languageId });
@@ -169,20 +197,67 @@ export class CodeVisionFeature {
         const rows: EditorCodeVision[] = [];
         const taken = new Set<number>();
         const counted = this.canCount;
+        const withAuthors = this.settings.authors && this.blame !== null;
+        const commits = this.blame?.kind === 'ready' ? this.blame.blame.commits : [];
+        const mapped = this.blame?.kind === 'ready' && this.settings.authors ? this.mapOfBlame(this.blame) : null;
         for (const declaration of this.declarations) {
-            const reserved = counted && declaration.usages;
+            const reserved = (counted && declaration.usages) || (withAuthors && declaration.authors);
             if (!reserved || taken.has(declaration.line)) {
                 continue;
             }
             taken.add(declaration.line);
             const entries: EditorCodeVisionEntry[] = [];
             const known = this.counts.get(declaration.id);
-            if (known !== undefined) {
+            if (counted && declaration.usages && known !== undefined) {
                 entries.push({ id: 'usages', text: usagesText(known.count), activate: () => void this.language.peek.open(declaration.position) });
+            }
+            if (mapped !== null && declaration.authors) {
+                let authorship = this.authorships.get(declaration.id);
+                if (authorship === undefined) {
+                    authorship = authorshipOf(commits, mapped, this.lines, declaration.authorFrom, declaration.authorTo);
+                    this.authorships.set(declaration.id, authorship);
+                }
+                const shown = authorship;
+                entries.push({
+                    id: 'authors',
+                    text: authorsText(shown),
+                    ...(shown.authors.length > 0 ? { icon: shown.authors.length > 1 ? ('users' as const) : ('user' as const) } : {}),
+                    activate: (anchor) => this.showAuthors(declaration, shown, anchor)
+                });
             }
             rows.push({ id: declaration.id, line: declaration.line, entries });
         }
         return rows;
+    }
+
+    private mapOfBlame(source: Extract<BlameSource, { kind: 'ready' }>): Int32Array | null {
+        if (this.mapped?.blame !== source.blame) {
+            this.mapped = { blame: source.blame, lines: mapBlame(source.blame, source.base, this.lines) };
+        }
+        return this.mapped.lines;
+    }
+
+    private showAuthors(declaration: CodeVisionDeclaration, authorship: CodeAuthorship, anchor: EditorRect): void {
+        const source = this.blame;
+        const openCommit = source?.kind === 'ready' ? source.openCommit : undefined;
+        this.language.popups.setState({
+            authors: {
+                anchor,
+                name: declaration.name,
+                authorship,
+                openCommit: openCommit === undefined || authorship.latest === null ? null : () => openCommit(authorship.latest!.hash)
+            }
+        });
+    }
+
+    /* Closes the card of the authors; `restoreFocus` is for a close that came from the keyboard, which gives the editor its keys back. */
+    closeAuthors(restoreFocus = false): void {
+        if (this.language.popups.getState().authors !== null) {
+            this.language.popups.setState({ authors: null });
+            if (restoreFocus) {
+                this.language.editor.focus();
+            }
+        }
     }
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useReducer } from 'react';
 import { useStore } from 'zustand';
 import type { EditorLanguage } from './editor-language';
 import { AnchoredPopup } from './AnchoredPopup';
+import { CodeAuthorsCard } from './CodeAuthorsCard';
 import { CompletionPopup } from './CompletionPopup';
 import { EditorContextMenu } from './EditorContextMenu';
 import { HoverCard } from './HoverCard';
@@ -26,6 +27,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
     const peek = useStore(language.popups, (state) => state.peek);
     const symbols = useStore(language.popups, (state) => state.symbols);
     const menu = useStore(language.popups, (state) => state.menu);
+    const authors = useStore(language.popups, (state) => state.authors);
 
     useEffect(() => language.editor.onViewChange(redraw), [language]);
 
@@ -52,6 +54,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
             {menu !== null && <EditorContextMenu language={language} view={menu} />}
             {symbols !== null && <SymbolPicker language={language} view={symbols} />}
             {peek !== null && <PeekPanel language={language} view={peek} />}
+            {authors !== null && <CodeAuthorsCard language={language} view={authors} />}
             {rename !== null && renameRect !== null && <RenameCard language={language} view={rename} rect={renameRect} endRect={renameEnd} />}
         </>
     );

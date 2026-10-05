@@ -622,7 +622,13 @@
         "codeVision": {
             "usagesNone": "No usages",
             "usages_one": "{{formatted}} usage",
-            "usages_other": "{{formatted}} usages"
+            "usages_other": "{{formatted}} usages",
+            "newCode": "new *",
+            "lines_one": "{{formatted}} line",
+            "lines_other": "{{formatted}} lines",
+            "uncommitted": "Not committed yet",
+            "latest": "Latest change",
+            "showCommit": "Show commit"
         },
         "symbols": {
             "unavailable": "No language server knows the symbols of this file",

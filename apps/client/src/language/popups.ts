@@ -1,6 +1,7 @@
 import { createStore, type StoreApi } from 'zustand';
-import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
+import type { EditorPosition, EditorRange, EditorRect } from '@ruimte/smart-editor';
 import type { Location } from '@ruimte/smart-editor-lsp';
+import type { CodeAuthorship } from './code-authors';
 import type { Problem } from './diagnostics-model';
 import type { PeekFile, PeekSnippet } from './peek-model';
 import type { ActionEntry } from './code-actions-model';
@@ -158,6 +159,16 @@ export interface MenuView {
     readonly refactors: readonly ActionEntry[];
 }
 
+/* The card a press on the authors of a declaration opens beside the entry. */
+export interface AuthorsView {
+    /* Where the entry stood when it was pressed, in the page's pixels. */
+    readonly anchor: EditorRect;
+    readonly name: string;
+    readonly authorship: CodeAuthorship;
+    /* Opens the latest commit in the git panel; null where there is no panel to open it in. */
+    readonly openCommit: (() => void) | null;
+}
+
 export interface PopupState {
     readonly hover: HoverView | null;
     readonly completion: CompletionView | null;
@@ -167,10 +178,21 @@ export interface PopupState {
     readonly peek: PeekView | null;
     readonly symbols: SymbolsView | null;
     readonly menu: MenuView | null;
+    readonly authors: AuthorsView | null;
 }
 
 export type PopupStore = StoreApi<PopupState>;
 
 export function createPopupStore(): PopupStore {
-    return createStore<PopupState>(() => ({ hover: null, completion: null, signature: null, pick: null, rename: null, peek: null, symbols: null, menu: null }));
+    return createStore<PopupState>(() => ({
+        hover: null,
+        completion: null,
+        signature: null,
+        pick: null,
+        rename: null,
+        peek: null,
+        symbols: null,
+        menu: null,
+        authors: null
+    }));
 }

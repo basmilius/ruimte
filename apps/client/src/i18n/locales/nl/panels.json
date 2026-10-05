@@ -622,7 +622,13 @@
         "codeVision": {
             "usagesNone": "Niet gebruikt",
             "usages_one": "{{formatted}} keer gebruikt",
-            "usages_other": "{{formatted}} keer gebruikt"
+            "usages_other": "{{formatted}} keer gebruikt",
+            "newCode": "nieuw *",
+            "lines_one": "{{formatted}} regel",
+            "lines_other": "{{formatted}} regels",
+            "uncommitted": "Nog niet gecommit",
+            "latest": "Laatste wijziging",
+            "showCommit": "Commit tonen"
         },
         "symbols": {
             "unavailable": "Geen language server kent de symbolen van dit bestand",

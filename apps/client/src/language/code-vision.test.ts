@@ -30,7 +30,7 @@ interface Setup {
     names: { value: string[] };
 }
 
-async function setup(names: string[], options: { text?: string; hold?: boolean } = {}): Promise<Setup> {
+async function setup(names: string[], options: { text?: string; end?: number } = {}): Promise<Setup> {
     const transport = new FakeLanguageTransport();
     transport.providers = { 'textDocument/documentSymbol': {}, 'textDocument/references': {} };
     const asked: string[] = [];
@@ -39,7 +39,8 @@ async function setup(names: string[], options: { text?: string; hold?: boolean }
     const text = options.text ?? state.value.map((name) => `function ${name}() {}`).join('\n');
     transport.answers.set('language.request', (payload: { method: string; params: { position: { line: number } } }) => {
         if (payload.method === 'textDocument/documentSymbol') {
-            return { result: state.value.map((name, line) => functionSymbol(name, line)), server: 'typescript', version: 1 };
+            const symbols = state.value.map((name, line) => ({ ...functionSymbol(name, line), range: { start: at(line), end: at(options.end ?? line, 20) } }));
+            return { result: symbols, server: 'typescript', version: 1 };
         }
         const name = state.value[payload.params.position.line]!;
         asked.push(name);
@@ -217,5 +218,127 @@ describe('usages', () => {
         await flush();
         language.dispose();
         expect(editor.codeVision).toEqual([]);
+    });
+});
+
+describe('authors', () => {
+    const commit = (author: string, at: number) => ({
+        hash: `${author}`.padEnd(40, '0'),
+        shortHash: author.toLowerCase().padEnd(7, '0'),
+        author,
+        email: `${author.toLowerCase()}@example.com`,
+        at,
+        summary: `By ${author}`
+    });
+    /* The blame of the text a setup opens with, one line per entry of `lines`. */
+    const ready = (
+        lines: number[],
+        opened: string[] = [],
+        base = lines.map((_, index) => ['function alpha() {}', 'function beta() {}'][index] ?? '').join('\n')
+    ) => ({
+        kind: 'ready' as const,
+        blame: { commits: [commit('Ada', 10), commit('Bob', 20)], lines },
+        base,
+        openCommit: (hash: string) => void opened.push(hash)
+    });
+
+    test('hold a row for each declaration while git is asked, and fill it with the author', async () => {
+        const { editor, language } = await setup(['alpha', 'beta']);
+        language.codeVision.configure({ usages: false, authors: true });
+        language.codeVision.setBlame({ kind: 'pending' });
+        await flush();
+        expect(editor.codeVision.map((row) => [row.line, row.entries.length])).toEqual([
+            [0, 0],
+            [1, 0]
+        ]);
+        language.codeVision.setBlame(ready([0, 1]));
+        await flush();
+        expect(wordsOf(editor)).toEqual([['Ada'], ['Bob']]);
+        expect(editor.codeVision[0]!.entries[0]).toMatchObject({ id: 'authors', icon: 'user' });
+    });
+
+    test('put the authors after the usages, and a person icon for one author and several for more', async () => {
+        const { editor, language, places } = await setup(['alpha']);
+        places.set('alpha', 2);
+        language.codeVision.configure({ usages: true, authors: true });
+        language.codeVision.setBlame(ready([0]));
+        await flush();
+        expect(wordsOf(editor)).toEqual([['2 usages', 'Ada']]);
+    });
+
+    test('draw no author where git has nothing to say, and nothing at all when the switch is off', async () => {
+        const { editor, language } = await setup(['alpha']);
+        language.codeVision.configure({ usages: false, authors: true });
+        language.codeVision.setBlame(null);
+        await flush();
+        expect(editor.codeVision).toEqual([]);
+        language.codeVision.setBlame(ready([0, 0]));
+        language.codeVision.configure({ usages: false, authors: false });
+        await flush();
+        expect(editor.codeVision).toEqual([]);
+    });
+
+    test('count a line typed since the file was saved as edited, once the symbols are read again', async () => {
+        const text = 'function alpha() {\n    one();\n    two();\n}';
+        const { editor, language, timers } = await setup(['alpha'], { text, end: 3 });
+        language.codeVision.configure({ usages: false, authors: true });
+        language.codeVision.setBlame(ready([0, 1, 1, 0], [], text));
+        await flush();
+        expect(wordsOf(editor)).toEqual([['Bob +1']]);
+        editor.type('function alpha() {\n    one();\n    typed();\n}');
+        timers.advance(600);
+        await flush();
+        expect(wordsOf(editor)).toEqual([['Ada +1 *']]);
+    });
+
+    test('say several authors with the people icon, the one with most lines first', async () => {
+        const text = 'function alpha() {\n    one();\n    two();\n}';
+        const { editor, language } = await setup(['alpha'], { text, end: 3 });
+        language.codeVision.configure({ usages: false, authors: true });
+        language.codeVision.setBlame(ready([0, 1, 1, 0], [], text));
+        await flush();
+        expect(wordsOf(editor)).toEqual([['Bob +1']]);
+        expect(editor.codeVision[0]!.entries[0]!.icon).toBe('users');
+    });
+
+    test('say new for a declaration written since the last commit', async () => {
+        const { editor, language, timers, names } = await setup(['alpha']);
+        language.codeVision.configure({ usages: false, authors: true });
+        language.codeVision.setBlame(ready([0, 0]));
+        await flush();
+        names.value = ['alpha', 'gamma'];
+        editor.type('function alpha() {}\nfunction gamma() {}\n');
+        timers.advance(600);
+        await flush();
+        expect(wordsOf(editor)).toEqual([['Ada'], ['new *']]);
+        expect(editor.codeVision[1]!.entries[0]!.icon).toBeUndefined();
+    });
+
+    test('open a card with the authors and a way to the latest commit when the entry is pressed', async () => {
+        const { editor, language } = await setup(['alpha']);
+        const opened: string[] = [];
+        language.codeVision.configure({ usages: false, authors: true });
+        language.codeVision.setBlame(ready([1, 1], opened));
+        await flush();
+        const anchor = { left: 4, top: 8, right: 40, bottom: 28 };
+        editor.codeVision[0]!.entries[0]!.activate(anchor);
+        const view = language.popups.getState().authors!;
+        expect(view).toMatchObject({ anchor, name: 'alpha' });
+        expect(view.authorship.authors).toEqual([{ name: 'Bob', email: 'bob@example.com', lines: 1 }]);
+        view.openCommit!();
+        expect(opened).toEqual([commit('Bob', 20).hash]);
+        language.codeVision.closeAuthors();
+        expect(language.popups.getState().authors).toBeNull();
+    });
+
+    test('close the card when the text is edited', async () => {
+        const { editor, language } = await setup(['alpha']);
+        language.codeVision.configure({ usages: false, authors: true });
+        language.codeVision.setBlame(ready([0, 0]));
+        await flush();
+        editor.codeVision[0]!.entries[0]!.activate({ left: 0, top: 0, right: 1, bottom: 1 });
+        expect(language.popups.getState().authors).not.toBeNull();
+        editor.type('x');
+        expect(language.popups.getState().authors).toBeNull();
     });
 });
