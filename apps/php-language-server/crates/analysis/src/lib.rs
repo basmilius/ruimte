@@ -4,14 +4,18 @@
 //! so the same functions serve any front end.
 
 mod ast;
+pub mod completion;
 mod diagnostics;
 mod folding;
+mod imports;
 pub mod infer;
 mod line_index;
+pub mod nav;
 pub mod render;
 mod selection;
 mod symbols;
 pub mod target;
+pub mod workspace_symbols;
 
 pub use diagnostics::{Diagnostic, DiagnosticSeverity, diagnostics};
 pub use folding::{Fold, FoldKind, folding_ranges};
@@ -27,3 +31,9 @@ pub(crate) fn short(name: &str) -> &str {
 
 #[cfg(test)]
 mod testing;
+
+#[cfg(test)]
+mod completion_tests;
+
+#[cfg(test)]
+mod nav_tests;

@@ -1,0 +1,353 @@
+//! Hover, go to definition, go to type definition and go to implementation, all over the targets
+//! that [`Analyzer::targets_at`] finds.
+
+use std::path::{Path, PathBuf};
+
+use php_index::{Class, Doc, FileEntry, Origin, Span, Type};
+use php_syntax::SyntaxKind::*;
+use php_syntax::TextRange;
+
+use crate::infer::Analyzer;
+use crate::render;
+use crate::target::Target;
+
+/// A place in a file. `path` is `None` for the file the question was asked about.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Place {
+    pub path: Option<PathBuf>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HoverResult {
+    pub markdown: String,
+    pub range: TextRange,
+}
+
+/// A declaration described for a person: what it is called, how it is written and what its doc says.
+pub struct Description {
+    pub title: String,
+    pub signature: String,
+    pub doc: Option<Doc>,
+    pub place: Option<Place>,
+    pub defined_in: Option<String>,
+}
+
+fn place_of(file: &FileEntry, span: Span) -> Place {
+    Place {
+        path: Some(file.path.clone()),
+        span,
+    }
+}
+
+fn class_place(class: Class<'_>) -> Place {
+    place_of(class.file, class.decl.name_span)
+}
+
+/// Where a file lives, as a line of text: a path inside the project, or the extension a stub is from.
+pub fn defined_in(file: &FileEntry, root: Option<&Path>) -> String {
+    if file.origin == Origin::Stub {
+        let extension = file
+            .path
+            .parent()
+            .and_then(|parent| parent.file_name())
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        return format!("PHP standard library ({extension})");
+    }
+    match root.and_then(|root| file.path.strip_prefix(root).ok()) {
+        Some(relative) => relative.to_string_lossy().into_owned(),
+        None => file.path.to_string_lossy().into_owned(),
+    }
+}
+
+impl Analyzer<'_> {
+    /// Everything the targets under an offset stand for, ready to show.
+    pub fn describe(&self, target: &Target, root: Option<&Path>) -> Vec<Description> {
+        let level = self.level();
+        match target {
+            Target::Class(name) => self
+                .index
+                .class(name)
+                .map(|class| Description {
+                    title: class.decl.name.clone(),
+                    signature: render::class_signature(class.decl),
+                    doc: class.decl.doc.as_deref().cloned(),
+                    place: Some(class_place(class)),
+                    defined_in: Some(defined_in(class.file, root)),
+                })
+                .into_iter()
+                .collect(),
+            Target::Function(name) => self
+                .index
+                .function(name)
+                .map(|function| Description {
+                    title: function.decl.name.clone(),
+                    signature: render::function_signature(
+                        crate::short(&function.decl.name),
+                        &function.decl.callable,
+                        level,
+                    ),
+                    doc: function.decl.doc.as_deref().cloned(),
+                    place: Some(place_of(function.file, function.decl.name_span)),
+                    defined_in: Some(defined_in(function.file, root)),
+                })
+                .into_iter()
+                .collect(),
+            Target::Constant(name) => self
+                .index
+                .constant(name)
+                .map(|constant| {
+                    let mut signature = format!("const {}", crate::short(&constant.decl.name));
+                    if let Some(value) = &constant.decl.value {
+                        signature.push_str(&format!(" = {value}"));
+                    }
+                    Description {
+                        title: constant.decl.name.clone(),
+                        signature,
+                        doc: constant.decl.doc.as_deref().cloned(),
+                        place: Some(place_of(constant.file, constant.decl.name_span)),
+                        defined_in: Some(defined_in(constant.file, root)),
+                    }
+                })
+                .into_iter()
+                .collect(),
+            Target::Method { receiver, name } => receiver
+                .members()
+                .iter()
+                .filter_map(|member| {
+                    let found = self.index.find_method(member, name)?;
+                    let doc = found
+                        .member
+                        .doc
+                        .as_deref()
+                        .filter(|doc| !doc.summary.is_empty() || !doc.params.is_empty() || doc.ret.is_some())
+                        .cloned()
+                        .or_else(|| self.inherited_method_doc(member, name));
+                    Some(Description {
+                        title: format!("{}::{}", found.class.decl.name, found.member.name),
+                        signature: render::method_signature(&found.member, level),
+                        doc,
+                        place: Some(place_of(found.class.file, found.member.name_span)),
+                        defined_in: Some(defined_in(found.class.file, root)),
+                    })
+                })
+                .collect(),
+            Target::Property { receiver, name } => receiver
+                .members()
+                .iter()
+                .filter_map(|member| {
+                    let found = self.index.find_property(member, name)?;
+                    Some(Description {
+                        title: format!("{}::${}", found.class.decl.name, found.member.name),
+                        signature: render::property_signature(&found.member, level),
+                        doc: found.member.doc.as_deref().cloned(),
+                        place: Some(place_of(found.class.file, found.member.name_span)),
+                        defined_in: Some(defined_in(found.class.file, root)),
+                    })
+                })
+                .collect(),
+            Target::ClassConst { receiver, name } => receiver
+                .members()
+                .iter()
+                .filter_map(|member| {
+                    let found = self.index.find_constant(member, name)?;
+                    Some(Description {
+                        title: format!("{}::{}", found.class.decl.name, found.member.name),
+                        signature: render::constant_signature(&found.member, level),
+                        doc: found.member.doc.as_deref().cloned(),
+                        place: Some(place_of(found.class.file, found.member.name_span)),
+                        defined_in: Some(defined_in(found.class.file, root)),
+                    })
+                })
+                .collect(),
+            Target::Variable { name, ty } => vec![Description {
+                title: format!("${name}"),
+                signature: format!("{} ${name}", ty.display(true)),
+                doc: None,
+                place: None,
+                defined_in: None,
+            }],
+        }
+    }
+
+    /// The doc of a method with the same name further up, for a method that has none of its own.
+    fn inherited_method_doc(&self, receiver: &Type, name: &str) -> Option<Doc> {
+        for ancestor in self.index.ancestors(receiver) {
+            let Some(method) = ancestor.class.decl.method(name) else {
+                continue;
+            };
+            if let Some(doc) = method
+                .doc
+                .as_deref()
+                .filter(|doc| !doc.summary.is_empty() || doc.ret.is_some())
+            {
+                return Some(doc.clone());
+            }
+        }
+        None
+    }
+
+    pub fn hover(&self, offset: u32, root: Option<&Path>) -> Option<HoverResult> {
+        let found = self.targets_at(offset);
+        let range = found.first()?.range;
+        let mut sections = Vec::new();
+        for item in &found {
+            for description in self.describe(&item.target, root) {
+                sections.push(hover_markdown(&description));
+            }
+        }
+        sections.dedup();
+        if sections.is_empty() {
+            return None;
+        }
+        Some(HoverResult {
+            markdown: sections.join("\n\n---\n\n"),
+            range,
+        })
+    }
+
+    pub fn definitions(&self, offset: u32) -> Vec<Place> {
+        let mut places = Vec::new();
+        for found in self.targets_at(offset) {
+            if let Target::Variable { name, .. } = &found.target {
+                if let Some(place) = self.variable_declaration(name, offset) {
+                    places.push(place);
+                }
+                continue;
+            }
+            for description in self.describe(&found.target, None) {
+                places.extend(description.place);
+            }
+        }
+        places.dedup();
+        places
+    }
+
+    /// The first place a variable shows up in its scope, which is where it is declared or first set.
+    fn variable_declaration(&self, name: &str, offset: u32) -> Option<Place> {
+        let scope = self.scope_at(offset);
+        let wanted = format!("${name}");
+        scope
+            .descendants_with_tokens()
+            .filter_map(|element| element.into_token())
+            .find(|token| token.kind() == VARIABLE && token.text() == wanted)
+            .map(|token| Place {
+                path: None,
+                span: Span {
+                    start: u32::from(token.text_range().start()),
+                    end: u32::from(token.text_range().end()),
+                },
+            })
+    }
+
+    pub fn type_definitions(&self, offset: u32) -> Vec<Place> {
+        let mut places = Vec::new();
+        for found in self.targets_at(offset) {
+            let ty = match &found.target {
+                Target::Class(_) => {
+                    for description in self.describe(&found.target, None) {
+                        places.extend(description.place);
+                    }
+                    continue;
+                }
+                Target::Variable { ty, .. } => ty.clone(),
+                Target::Property { receiver, name } => self.property_on(receiver, name),
+                Target::Method { receiver, name } => {
+                    let level = self.level();
+                    Type::union(receiver.members().iter().filter_map(|member| {
+                        let found = self.index.find_method(member, name)?;
+                        let ret = found.member.callable.effective_return(level)?;
+                        Some(self.bind_static(&found.resolve(ret), member))
+                    }))
+                }
+                Target::ClassConst { receiver, name } => {
+                    let level = self.level();
+                    Type::union(receiver.members().iter().filter_map(|member| {
+                        let found = self.index.find_constant(member, name)?;
+                        if found.member.is_case {
+                            return Some(member.clone());
+                        }
+                        found.member.effective_type(level).map(|ty| found.resolve(ty))
+                    }))
+                }
+                Target::Function(name) => {
+                    let level = self.level();
+                    match self
+                        .index
+                        .function(name)
+                        .and_then(|function| function.decl.callable.effective_return(level).cloned())
+                    {
+                        Some(ty) => ty,
+                        None => continue,
+                    }
+                }
+                Target::Constant(_) => continue,
+            };
+            let receiver = self.receiver_type(&ty);
+            let mut names: Vec<String> = receiver.class_names().into_iter().map(str::to_string).collect();
+            names.extend(class_names_in_args(&receiver));
+            for name in names {
+                if let Some(class) = self.index.class(&name) {
+                    places.push(class_place(class));
+                }
+            }
+        }
+        places.dedup();
+        places
+    }
+
+    pub fn implementations(&self, offset: u32) -> Vec<Place> {
+        let mut places = Vec::new();
+        for found in self.targets_at(offset) {
+            match &found.target {
+                Target::Class(name) => {
+                    places.extend(self.index.all_subtypes(name).into_iter().map(class_place));
+                }
+                Target::Method { receiver, name } => {
+                    for member in receiver.members() {
+                        let Some(declaring) = self.index.find_method(member, name) else {
+                            continue;
+                        };
+                        for subtype in self.index.all_subtypes(&declaring.class.decl.name) {
+                            if let Some(method) = subtype.decl.method(name) {
+                                places.push(place_of(subtype.file, method.name_span));
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        places.dedup();
+        places
+    }
+}
+
+fn class_names_in_args(ty: &Type) -> Vec<String> {
+    let mut out = Vec::new();
+    for member in ty.members() {
+        if let Type::Class { args, .. } = member {
+            for arg in args {
+                out.extend(arg.class_names().into_iter().map(str::to_string));
+            }
+        }
+    }
+    out
+}
+
+/// A title line, the signature in a `php` block, the doc and where it is defined.
+pub fn hover_markdown(description: &Description) -> String {
+    let mut out = format!("**{}**\n\n```php\n{}\n```", description.title, description.signature);
+    if let Some(doc) = &description.doc {
+        let text = render::doc_markdown(doc);
+        if !text.is_empty() {
+            out.push_str("\n\n");
+            out.push_str(&text);
+        }
+    }
+    if let Some(defined_in) = &description.defined_in {
+        out.push_str(&format!("\n\n_Defined in `{defined_in}`_"));
+    }
+    out
+}

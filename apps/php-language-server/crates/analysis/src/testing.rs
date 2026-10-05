@@ -12,6 +12,8 @@ pub const CURSOR: &str = "$0";
 
 pub struct Fixture {
     pub index: Index,
+    /// The text of each file by path, for looking at what a span points to.
+    pub sources: std::collections::HashMap<PathBuf, String>,
 }
 
 impl Fixture {
@@ -21,7 +23,9 @@ impl Fixture {
 
     pub fn with_level(level: PhpVersion, files: &[(&str, &str)], stubs: &[(&str, &str)]) -> Fixture {
         let mut index = Index::new(level);
+        let mut sources = std::collections::HashMap::new();
         for (path, text) in files {
+            sources.insert(PathBuf::from(format!("/project/{path}")), text.to_string());
             let symbols = extract(&parse(text).syntax(), ExtractOptions::default());
             index.set_file(
                 PathBuf::from(format!("/project/{path}")),
@@ -33,7 +37,7 @@ impl Fixture {
             let symbols = extract(&parse(text).syntax(), ExtractOptions { stub: true });
             index.set_file(PathBuf::from(format!("/stubs/{path}")), Origin::Stub, Arc::new(symbols));
         }
-        Fixture { index }
+        Fixture { index, sources }
     }
 
     /// Adds the file being edited to the index, the way the server does for an open document.
