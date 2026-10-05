@@ -336,6 +336,8 @@ describe('inlays and widgets', () => {
         expect(rows).toEqual(['    two', '    three']);
         expect(view.layout.rows.map((row) => row.key)).toEqual(['line:0', 'block:__ghost', 'line:1']);
         expect(host.querySelector('.se-line-action')!.textContent).toBe('Tab');
+        expect(host.querySelector('.se-ghost-rows.se-widget')).not.toBeNull();
+        expect(host.querySelector('.se-line-action.se-ghost-accessory')).not.toBeNull();
         model.applyEdits([{ from: 0, to: 0, text: 'x' }]);
         expect(host.querySelector('.se-ghost')).toBeNull();
         expect(host.querySelector('.se-ghost-rows')).toBeNull();

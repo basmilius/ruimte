@@ -659,6 +659,10 @@
     color: var(--text-faint);
     pointer-events: none;
 }
+/* A line action stands 28px after the line, which reads as detached from the suggestion it belongs to. */
+.se-ghost-accessory {
+    margin-left: -12px;
+}
 .se-ghost-rows .se-code-block {
     font-style: italic;
     color: var(--text-faint);

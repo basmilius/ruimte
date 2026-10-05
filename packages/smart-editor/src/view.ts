@@ -671,13 +671,27 @@ export class EditorView {
                           placement: 'below',
                           height: rest.length * this.layout.metrics.lineHeight,
                           render: (container) => {
-                              container.classList.add('se-ghost-rows');
+                              container.classList.add('se-widget', 'se-ghost-rows');
                               renderCodeBlock(container, rest.join('\n'), null, this.settings.tabSize, {});
                           }
                       }
                   ]
         );
-        this.setLineActions(owner, ghost?.accessory === undefined ? [] : [{ id: `ghost-${++this.ghostSerial}`, at: ghost.at, render: ghost.accessory }]);
+        this.setLineActions(
+            owner,
+            ghost?.accessory === undefined
+                ? []
+                : [
+                      {
+                          id: `ghost-${++this.ghostSerial}`,
+                          at: ghost.at,
+                          render: (container) => {
+                              container.classList.add('se-ghost-accessory');
+                              ghost.accessory?.(container);
+                          }
+                      }
+                  ]
+        );
     }
 
     private configureText(): void {
