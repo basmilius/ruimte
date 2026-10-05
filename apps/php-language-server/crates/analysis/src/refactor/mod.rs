@@ -13,6 +13,7 @@ mod extract_method;
 mod extract_variable;
 mod inline_method;
 mod inline_variable;
+mod move_class;
 mod names;
 mod scope;
 mod signature;
@@ -27,6 +28,8 @@ use php_syntax::TextRange;
 
 use crate::inspections::{Cx, InspectionEnv};
 use crate::references::Sources;
+
+pub use move_class::{ClassMove, move_files};
 
 /// What a refactor is for, which is how a client decides where to show it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -150,5 +153,6 @@ pub fn with_refactors<R>(renv: &RefactorEnv<'_>, range: TextRange, run: impl FnO
     extract_member::offer(&rcx, &mut out);
     inline_method::offer(&rcx, &mut out);
     signature::offer(&rcx, &mut out);
+    move_class::offer(&rcx, &mut out);
     run(out)
 }

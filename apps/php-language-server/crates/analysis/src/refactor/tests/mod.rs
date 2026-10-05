@@ -6,6 +6,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 use php_format::FormatOptions;
+use php_index::composer::Composer;
 use php_syntax::{TextRange, parse};
 
 use super::{Change, RefactorEnv, with_refactors};
@@ -18,6 +19,7 @@ mod extract_method;
 mod extract_variable;
 mod inline_method;
 mod inline_variable;
+mod move_class;
 mod signature;
 
 pub(super) const CURSOR: &str = "$0";
@@ -40,6 +42,25 @@ impl Sources for Files {
 
     fn text(&self, path: &Path) -> Option<String> {
         self.0.get(path).cloned()
+    }
+}
+
+/// Where the file under test lives and what Composer says about the project.
+#[derive(Clone, Copy)]
+pub(super) struct Setup {
+    pub current: &'static str,
+    pub composer: Option<&'static str>,
+}
+
+impl Setup {
+    pub(super) const PLAIN: Setup = Setup {
+        current: "current.php",
+        composer: None,
+    };
+
+    fn composer(&self) -> Option<Composer> {
+        let json: serde_json::Value = serde_json::from_str(self.composer?).ok()?;
+        Some(Composer::from_json(Path::new("/project"), &json))
     }
 }
 
@@ -75,17 +96,30 @@ fn name_of(path: &Path) -> String {
         .to_string()
 }
 
-fn findings_of(files: &[(String, String)], current: &str) -> Vec<(String, String)> {
+/// The index of a project: the files, the standard library of the tests, and the file under test.
+fn index_for(files: &[(String, String)], current: &str, current_text: &str) -> php_index::Index {
     let refs: Vec<(&str, &str)> = files
         .iter()
         .map(|(path, text)| (path.as_str(), text.as_str()))
         .collect();
-    let index = index_with(&refs, current);
+    let mut index = index_with(&refs, "");
+    let current_path = PathBuf::from(format!("/project/{current}"));
+    index.remove_file(Path::new("/project/current.php"));
+    let symbols = php_index::extract::extract(
+        &parse(current_text).syntax(),
+        php_index::extract::ExtractOptions::default(),
+    );
+    index.set_file(current_path, php_index::Origin::Project, std::sync::Arc::new(symbols));
+    index
+}
+
+fn findings_of(files: &[(String, String)], current: &str, current_text: &str) -> Vec<(String, String)> {
+    let index = index_for(files, current, current_text);
     let settings = InspectionSettings::default();
     let externals = Externals::none();
     let mut out = Vec::new();
     let mut all: Vec<(String, &str)> = files.iter().map(|(path, text)| (path.clone(), text.as_str())).collect();
-    all.push(("current.php".to_string(), current));
+    all.push((current.to_string(), current_text));
     for (path, text) in all {
         let tree = parse(text);
         let root = tree.syntax();
@@ -113,12 +147,22 @@ fn findings_of(files: &[(String, String)], current: &str) -> Vec<(String, String
 
 /// Runs the refactor with this title at the marker of `source`, or returns what was offered.
 pub(super) fn run(files: &[(&str, &str)], source: &str, title: &str) -> Outcome {
-    run_with(files, source, title, &FormatOptions::default())
+    run_with(Setup::PLAIN, files, source, title, &FormatOptions::default())
 }
 
-pub(super) fn run_with(files: &[(&str, &str)], source: &str, title: &str, format: &FormatOptions) -> Outcome {
+pub(super) fn run_with(
+    setup: Setup,
+    files: &[(&str, &str)],
+    source: &str,
+    title: &str,
+    format: &FormatOptions,
+) -> Outcome {
     let (clean, range) = split_range(source);
-    let index = index_with(files, &clean);
+    let owned: Vec<(String, String)> = files
+        .iter()
+        .map(|(path, text)| ((*path).to_string(), (*text).to_string()))
+        .collect();
+    let index = index_for(&owned, setup.current, &clean);
     let tree = parse(&clean);
     let root = tree.syntax();
     let settings = InspectionSettings::default();
@@ -135,14 +179,15 @@ pub(super) fn run_with(files: &[(&str, &str)], source: &str, title: &str, format
         .iter()
         .map(|(path, text)| (PathBuf::from(format!("/project/{path}")), (*text).to_string()))
         .collect();
-    let current_path = PathBuf::from("/project/current.php");
+    let current_path = PathBuf::from(format!("/project/{}", setup.current));
     texts.insert(current_path.clone(), clean.clone());
     let sources = Files(texts.clone());
+    let composer = setup.composer();
     let renv = RefactorEnv {
         env: &env,
         path: &current_path,
         sources: &sources,
-        composer: None,
+        composer: composer.as_ref(),
         format: format.clone(),
     };
     with_refactors(&renv, range, |refactors| {
@@ -150,34 +195,7 @@ pub(super) fn run_with(files: &[(&str, &str)], source: &str, title: &str, format
         let Some(found) = refactors.iter().find(|refactor| refactor.title == title) else {
             return Outcome { offered, result: None };
         };
-        let result = found.run().map(|change| {
-            let mut files_after: BTreeMap<String, String> = BTreeMap::new();
-            for file in &change.files {
-                let before = texts.get(&file.path).cloned().unwrap_or_default();
-                let edits: Vec<crate::completion::TextEdit> = file
-                    .edits
-                    .iter()
-                    .map(|edit| crate::completion::TextEdit {
-                        start: edit.start,
-                        end: edit.end,
-                        new_text: edit.text.clone(),
-                    })
-                    .collect();
-                files_after.insert(name_of(&file.path), crate::actions::apply(&before, &edits));
-            }
-            let text = files_after.get("current.php").cloned().unwrap_or_else(|| clean.clone());
-            let moves = change
-                .moves
-                .iter()
-                .map(|moved| (name_of(&moved.from), name_of(&moved.to)))
-                .collect();
-            Done {
-                text,
-                files: files_after,
-                moves,
-                change,
-            }
-        });
+        let result = found.run().map(|change| outcome_of(&setup, &texts, &clean, change));
         Outcome {
             offered,
             result: Some(result),
@@ -185,14 +203,50 @@ pub(super) fn run_with(files: &[(&str, &str)], source: &str, title: &str, format
     })
 }
 
+/// The change as the texts of the files it reaches.
+pub(super) fn outcome_of(setup: &Setup, texts: &HashMap<PathBuf, String>, clean: &str, change: Change) -> Done {
+    let mut files_after: BTreeMap<String, String> = BTreeMap::new();
+    for file in &change.files {
+        let before = texts.get(&file.path).cloned().unwrap_or_default();
+        let edits: Vec<crate::completion::TextEdit> = file
+            .edits
+            .iter()
+            .map(|edit| crate::completion::TextEdit {
+                start: edit.start,
+                end: edit.end,
+                new_text: edit.text.clone(),
+            })
+            .collect();
+        files_after.insert(name_of(&file.path), crate::actions::apply(&before, &edits));
+    }
+    let text = files_after
+        .get(setup.current)
+        .cloned()
+        .unwrap_or_else(|| clean.to_string());
+    let moves = change
+        .moves
+        .iter()
+        .map(|moved| (name_of(&moved.from), name_of(&moved.to)))
+        .collect();
+    Done {
+        text,
+        files: files_after,
+        moves,
+        change,
+    }
+}
+
 /// The current file after a refactor, which must parse and trouble the inspections no more than before.
 pub(super) fn applied(files: &[(&str, &str)], source: &str, title: &str) -> String {
-    let done = done(files, source, title);
-    done.text
+    done(files, source, title).text
 }
 
 pub(super) fn done(files: &[(&str, &str)], source: &str, title: &str) -> Done {
-    let outcome = run(files, source, title);
+    done_with(Setup::PLAIN, files, source, title)
+}
+
+pub(super) fn done_with(setup: Setup, files: &[(&str, &str)], source: &str, title: &str) -> Done {
+    let outcome = run_with(setup, files, source, title, &FormatOptions::default());
     let Some(result) = outcome.result else {
         panic!("no refactor '{title}' among {:?}", outcome.offered);
     };
@@ -200,13 +254,17 @@ pub(super) fn done(files: &[(&str, &str)], source: &str, title: &str) -> Done {
         Ok(done) => done,
         Err(reason) => panic!("'{title}' was refused: {reason}"),
     };
-    check_result(files, source, &done);
+    check_result(&setup, files, source, &done);
     done
 }
 
 /// The reason a refactor that is offered cannot be done.
 pub(super) fn refused(files: &[(&str, &str)], source: &str, title: &str) -> String {
-    let outcome = run(files, source, title);
+    refused_with(Setup::PLAIN, files, source, title)
+}
+
+pub(super) fn refused_with(setup: Setup, files: &[(&str, &str)], source: &str, title: &str) -> String {
+    let outcome = run_with(setup, files, source, title, &FormatOptions::default());
     match outcome.result {
         Some(Err(reason)) => reason,
         Some(Ok(done)) => panic!("'{title}' was not refused, it gave {:?}", done.text),
@@ -215,29 +273,38 @@ pub(super) fn refused(files: &[(&str, &str)], source: &str, title: &str) -> Stri
 }
 
 pub(super) fn offered(files: &[(&str, &str)], source: &str) -> Vec<String> {
-    run(files, source, "\u{0}").offered
+    offered_with(Setup::PLAIN, files, source)
 }
 
-fn check_result(files: &[(&str, &str)], source: &str, done: &Done) {
+pub(super) fn offered_with(setup: Setup, files: &[(&str, &str)], source: &str) -> Vec<String> {
+    run_with(setup, files, source, "\u{0}", &FormatOptions::default()).offered
+}
+
+fn check_result(setup: &Setup, files: &[(&str, &str)], source: &str, done: &Done) {
     let (clean, _) = split_range(source);
     let before_files: Vec<(String, String)> = files
         .iter()
         .map(|(p, t)| ((*p).to_string(), (*t).to_string()))
         .collect();
-    let before = findings_of(&before_files, &clean);
-    let mut after_files: Vec<(String, String)> = Vec::new();
-    for (path, text) in &before_files {
-        let moved_to = done
-            .moves
+    let before = findings_of(&before_files, setup.current, &clean);
+    let moved_to = |path: &str| {
+        done.moves
             .iter()
             .find(|(from, _)| from == path)
-            .map(|(_, to)| to.clone());
+            .map(|(_, to)| to.clone())
+    };
+    let mut after_files: Vec<(String, String)> = Vec::new();
+    for (path, text) in &before_files {
         let text = done.files.get(path).cloned().unwrap_or_else(|| text.clone());
-        after_files.push((moved_to.unwrap_or_else(|| path.clone()), text));
+        after_files.push((moved_to(path).unwrap_or_else(|| path.clone()), text));
     }
-    let after_current = done.text.clone();
-    let after = findings_of(&after_files, &after_current);
-    let mut remaining = before.clone();
+    let after_current_name = moved_to(setup.current).unwrap_or_else(|| setup.current.to_string());
+    let before_renamed: Vec<(String, String)> = before
+        .iter()
+        .map(|(path, finding)| (moved_to(path).unwrap_or_else(|| path.clone()), finding.clone()))
+        .collect();
+    let after = findings_of(&after_files, &after_current_name, &done.text);
+    let mut remaining = before_renamed;
     let mut new: Vec<&(String, String)> = Vec::new();
     for item in &after {
         match remaining.iter().position(|old| old == item) {
@@ -249,6 +316,115 @@ fn check_result(files: &[(&str, &str)], source: &str, done: &Done) {
     }
     assert!(
         new.is_empty(),
-        "the refactor brought in new findings: {new:?}\nafter:\n{after_current}"
+        "the refactor brought in new findings: {new:?}\nafter:\n{}\nfiles: {:#?}",
+        done.text,
+        done.files
     );
+}
+
+/// What moving files does to a project: the edits that follow them, checked like any refactor.
+pub(super) fn files_moved(
+    setup: Setup,
+    files: &[(&str, &str)],
+    pairs: &[(&str, &str)],
+) -> Result<Option<Done>, String> {
+    let (_, first_text) = files
+        .iter()
+        .find(|(path, _)| *path == setup.current)
+        .copied()
+        .expect("the current file is among the files");
+    let owned: Vec<(String, String)> = files
+        .iter()
+        .filter(|(path, _)| *path != setup.current)
+        .map(|(path, text)| ((*path).to_string(), (*text).to_string()))
+        .collect();
+    let index = index_for(&owned, setup.current, first_text);
+    let tree = parse(first_text);
+    let root = tree.syntax();
+    let settings = InspectionSettings::default();
+    let externals = Externals::none();
+    let env = InspectionEnv {
+        index: &index,
+        text: first_text,
+        root: &root,
+        settings: &settings,
+        ready: true,
+        externals: &externals,
+    };
+    let texts: HashMap<PathBuf, String> = files
+        .iter()
+        .map(|(path, text)| (PathBuf::from(format!("/project/{path}")), (*text).to_string()))
+        .collect();
+    let sources = Files(texts.clone());
+    let current_path = PathBuf::from(format!("/project/{}", setup.current));
+    let composer = setup.composer();
+    let renv = RefactorEnv {
+        env: &env,
+        path: &current_path,
+        sources: &sources,
+        composer: composer.as_ref(),
+        format: FormatOptions::default(),
+    };
+    let pairs: Vec<(PathBuf, PathBuf)> = pairs
+        .iter()
+        .map(|(from, to)| {
+            (
+                PathBuf::from(format!("/project/{from}")),
+                PathBuf::from(format!("/project/{to}")),
+            )
+        })
+        .collect();
+    let Some(change) = super::move_files(&renv, &pairs, false)? else {
+        return Ok(None);
+    };
+    let done = outcome_of(&setup, &texts, first_text, change);
+    // The files sit at their new places for the check.
+    let mut after: Vec<(String, String)> = Vec::new();
+    for (path, text) in files {
+        let new_name = pairs
+            .iter()
+            .find(|(from, _)| name_of(from) == *path)
+            .map_or_else(|| (*path).to_string(), |(_, to)| name_of(to));
+        after.push((
+            new_name,
+            done.files.get(*path).cloned().unwrap_or_else(|| (*text).to_string()),
+        ));
+    }
+    let before: Vec<(String, String)> = files
+        .iter()
+        .map(|(path, text)| ((*path).to_string(), (*text).to_string()))
+        .collect();
+    let rename = |path: &str| {
+        pairs
+            .iter()
+            .find(|(from, _)| name_of(from) == path)
+            .map_or_else(|| path.to_string(), |(_, to)| name_of(to))
+    };
+    let (first_name, rest_before): (Vec<_>, Vec<_>) =
+        before.iter().cloned().partition(|(path, _)| path == setup.current);
+    let before_findings: Vec<(String, String)> = findings_of(&rest_before, setup.current, &first_name[0].1)
+        .into_iter()
+        .map(|(path, finding)| (rename(&path), finding))
+        .collect();
+    let (first_after, rest_after): (Vec<_>, Vec<_>) = after
+        .iter()
+        .cloned()
+        .partition(|(path, _)| *path == rename(setup.current));
+    let after_findings = findings_of(&rest_after, &rename(setup.current), &first_after[0].1);
+    let mut remaining = before_findings;
+    let mut new: Vec<&(String, String)> = Vec::new();
+    for item in &after_findings {
+        match remaining.iter().position(|old| old == item) {
+            Some(at) => {
+                remaining.remove(at);
+            }
+            None => new.push(item),
+        }
+    }
+    assert!(
+        new.is_empty(),
+        "moving the files brought in new findings: {new:?}\nfiles: {:#?}",
+        done.files
+    );
+    Ok(Some(done))
 }

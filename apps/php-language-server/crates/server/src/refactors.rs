@@ -1,10 +1,11 @@
 //! Refactors as code actions, and the edits that follow a file when it is renamed or moved.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use lsp_types::{CodeActionParams, Range, Uri};
+use lsp_types::{CodeActionParams, Range, RenameFilesParams, Uri};
 use php_analysis::LineIndex;
-use php_analysis::refactor::{Change, FileChange, RefactorEnv, with_refactors};
+use php_analysis::inspections::{Externals, InspectionEnv};
+use php_analysis::refactor::{Change, FileChange, RefactorEnv, move_files, with_refactors};
 use php_format::{FormatOptions, Indent};
 use php_syntax::{TextRange, TextSize};
 use serde_json::{Value, json};
@@ -334,4 +335,97 @@ fn snippet_of(edit: &php_analysis::refactor::Edit, focus_start: u32, focus_end: 
         escape(&edit.text[from..to]),
         escape(&edit.text[to..])
     )
+}
+
+impl Server<'_> {
+    /// The edits that follow files being renamed: the namespace and the name of the class in each,
+    /// and every reference to it. A file that never followed its Composer map is left as it is.
+    pub(crate) fn will_rename_files(&mut self, params: RenameFilesParams) -> Result<Option<Value>, String> {
+        let mut pairs: Vec<(PathBuf, PathBuf)> = Vec::new();
+        for file in &params.files {
+            let (Ok(old_uri), Ok(new_uri)) = (file.old_uri.parse::<Uri>(), file.new_uri.parse::<Uri>()) else {
+                continue;
+            };
+            let (Some(old), Some(new)) = (uri_to_path(&old_uri), uri_to_path(&new_uri)) else {
+                continue;
+            };
+            pairs.extend(self.paths_moved(&old, &new));
+        }
+        let Some((first, _)) = pairs.first().cloned() else {
+            return Ok(None);
+        };
+        self.ensure_words(&first);
+        let open = self.documents.texts();
+        let Some(text) = open.get(&first).cloned().or_else(|| {
+            std::fs::read(&first)
+                .ok()
+                .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
+        }) else {
+            return Ok(None);
+        };
+        let format = FormatOptions {
+            indent: indent_of_text(&text).unwrap_or(Indent::Spaces(4)),
+            ..FormatOptions::default()
+        };
+        let uri = path_to_uri(&first).ok_or("The file has no URI")?;
+        let format = match &self.settings.format {
+            Some(settings) => settings.apply(format),
+            None => format,
+        };
+        let settings = self.settings.inspections.clone().unwrap_or_default();
+        let tree = php_syntax::parse(&text);
+        let root = tree.syntax();
+        self.sync_symbols(&uri);
+        let names = &self.workspace.stub_names;
+        let project = self.workspace.project_for(&first);
+        let has_class = |name: &str| names.has_class(name);
+        let has_function = |name: &str| names.has_function(name);
+        let has_constant = |name: &str| names.has_constant(name);
+        let externals = Externals {
+            class: &has_class,
+            function: &has_function,
+            constant: &has_constant,
+        };
+        let env = InspectionEnv {
+            index: &project.index,
+            text: &text,
+            root: &root,
+            settings: &settings,
+            ready: false,
+            externals: &externals,
+        };
+        let sources = ProjectSources::new(open, &project.words);
+        let renv = RefactorEnv {
+            env: &env,
+            path: &first,
+            sources: &sources,
+            composer: project.composer.as_ref(),
+            format,
+        };
+        let change = move_files(&renv, &pairs, false)?;
+        let Some(change) = change else {
+            return Ok(None);
+        };
+        let (edit, _) = self.change_to_edit(&change, &uri)?;
+        Ok(Some(edit))
+    }
+
+    /// The files a rename of a path moves: the file itself, or every PHP file of the project below a folder.
+    fn paths_moved(&self, old: &Path, new: &Path) -> Vec<(PathBuf, PathBuf)> {
+        if !old.is_dir() {
+            return vec![(old.to_path_buf(), new.to_path_buf())];
+        }
+        let project = self.workspace.project_for(old);
+        let mut found: Vec<(PathBuf, PathBuf)> = project
+            .index
+            .files()
+            .filter(|file| file.origin == php_index::Origin::Project)
+            .filter_map(|file| {
+                let relative = file.path.strip_prefix(old).ok()?;
+                Some((file.path.clone(), new.join(relative)))
+            })
+            .collect();
+        found.sort();
+        found
+    }
 }

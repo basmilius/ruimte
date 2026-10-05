@@ -324,7 +324,29 @@ impl<'a> Server<'a> {
                     supported: Some(true),
                     change_notifications: Some(OneOf::Left(true)),
                 }),
-                file_operations: None,
+                file_operations: Some(lsp_types::WorkspaceFileOperationsServerCapabilities {
+                    will_rename: Some(lsp_types::FileOperationRegistrationOptions {
+                        filters: vec![
+                            lsp_types::FileOperationFilter {
+                                scheme: Some("file".to_string()),
+                                pattern: lsp_types::FileOperationPattern {
+                                    glob: "**/*.php".to_string(),
+                                    matches: Some(lsp_types::FileOperationPatternKind::File),
+                                    options: None,
+                                },
+                            },
+                            lsp_types::FileOperationFilter {
+                                scheme: Some("file".to_string()),
+                                pattern: lsp_types::FileOperationPattern {
+                                    glob: "**".to_string(),
+                                    matches: Some(lsp_types::FileOperationPatternKind::Folder),
+                                    options: None,
+                                },
+                            },
+                        ],
+                    }),
+                    ..Default::default()
+                }),
             }),
             diagnostic_provider: self.pull_diagnostics.then(|| {
                 DiagnosticServerCapabilities::Options(DiagnosticOptions {
@@ -426,6 +448,9 @@ impl<'a> Server<'a> {
             CodeActionRequest::METHOD => self.answer(id, request.params, Self::code_action),
             CodeActionResolveRequest::METHOD => self.answer_checked(id, request.params, Self::resolve_code_action),
             lsp_types::request::ExecuteCommand::METHOD => Response::new_ok(id, Value::Null),
+            lsp_types::request::WillRenameFiles::METHOD => {
+                self.answer_checked(id, request.params, Self::will_rename_files)
+            }
             Formatting::METHOD => self.answer(id, request.params, Self::formatting),
             RangeFormatting::METHOD => self.answer(id, request.params, Self::range_formatting),
             OnTypeFormatting::METHOD => self.answer(id, request.params, Self::on_type_formatting),
