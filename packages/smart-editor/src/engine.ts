@@ -27,6 +27,7 @@ import type {
     EditorGutterMarker,
     EditorHighlight,
     EditorHover,
+    EditorGhostText,
     EditorInlayHint,
     EditorKeyHandler,
     EditorMarker,
@@ -329,6 +330,10 @@ class SmartEditor implements Editor {
 
     setInlayHints(hints: readonly EditorInlayHint[]): void {
         this.view.setInlays(hints.map((hint, index) => ({ id: `hint-${index}`, at: this.offsetAt(hint.position), text: hint.label })));
+    }
+
+    setGhostText(ghost: EditorGhostText | null): void {
+        this.view.setGhost(ghost === null ? null : { at: this.offsetAt(ghost.position), text: ghost.text, accessory: ghost.accessory });
     }
 
     setSemanticTokens(tokens: readonly EditorSemanticToken[] | null): void {

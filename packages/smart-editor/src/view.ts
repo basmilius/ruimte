@@ -226,6 +226,8 @@ export class EditorView {
     private selectionOccurrenceCache: { key: string; ranges: readonly { from: number; to: number }[] } = { key: '', ranges: [] };
     private link: { from: number; to: number } | null = null;
     private composition: string | undefined;
+    private ghost: { at: number; text: string; accessory: ((container: HTMLElement) => void) | undefined } | null = null;
+    private ghostSerial = 0;
     private foldRanges: ViewFold[] = [];
     /* The folds made of a selection, which follow their text through edits. */
     private customFolds: { from: number; to: number }[] = [];
@@ -527,6 +529,10 @@ export class EditorView {
             this.rowEndCaret = null;
             this.hoverOffset = null;
             const batches = snapshot.changes ?? [];
+            if (this.ghost !== null && batches.length > 0) {
+                this.ghost = null;
+                this.layoutGhostParts();
+            }
             for (const changes of batches) {
                 this.inlays = this.inlays.map((inlay) => ({ ...inlay, at: mapOffset(inlay.at, changes) }));
                 for (const [owner, blocks] of this.blocks) {
@@ -636,9 +642,42 @@ export class EditorView {
     }
 
     private displayedInlays(): Inlay[] {
-        return this.composition
+        const inlays = this.composition
             ? [...this.inlays, { id: '__composition', at: this.model.getPrimary().head, text: this.composition, composition: true }]
             : this.inlays;
+        const [first = ''] = this.ghost?.text.split(/\r?\n/) ?? [];
+        return this.ghost === null || first === '' ? inlays : [...inlays, { id: '__ghost', at: this.ghost.at, text: first, ghost: true }];
+    }
+
+    /* A suggestion after the caret: its first line in the text, the rest in rows under the line, and the host's accessory after the first line. */
+    setGhost(ghost: { at: number; text: string; accessory: ((container: HTMLElement) => void) | undefined } | null): void {
+        this.ghost = ghost === null || ghost.text === '' ? null : ghost;
+        this.layoutGhostParts();
+        this.configureText();
+    }
+
+    private layoutGhostParts(): void {
+        const ghost = this.ghost;
+        const [, ...rest] = ghost?.text.split(/\r?\n/) ?? [];
+        const owner = '__ghost';
+        this.setBlockWidgets(
+            owner,
+            ghost === null || rest.length === 0
+                ? []
+                : [
+                      {
+                          id: owner,
+                          at: ghost.at,
+                          placement: 'below',
+                          height: rest.length * this.layout.metrics.lineHeight,
+                          render: (container) => {
+                              container.classList.add('se-ghost-rows');
+                              renderCodeBlock(container, rest.join('\n'), null, this.settings.tabSize, {});
+                          }
+                      }
+                  ]
+        );
+        this.setLineActions(owner, ghost?.accessory === undefined ? [] : [{ id: `ghost-${++this.ghostSerial}`, at: ghost.at, render: ghost.accessory }]);
     }
 
     private configureText(): void {
@@ -1415,7 +1454,7 @@ export class EditorView {
     }
 
     private caretOf(head: number): LayoutRect {
-        return this.layout.caret(head, 'after', head === this.rowEndCaret);
+        return this.layout.caret(head, head === this.ghost?.at ? 'before' : 'after', head === this.rowEndCaret);
     }
 
     /* Where the view is, or where a scroll on its way will leave it, which is what the next scroll goes by. */

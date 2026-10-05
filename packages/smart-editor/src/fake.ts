@@ -21,6 +21,7 @@ import type {
     EditorHighlight,
     EditorHover,
     EditorIndentation,
+    EditorGhostText,
     EditorInlayHint,
     EditorKeyHandler,
     EditorMarker,
@@ -140,6 +141,7 @@ export class FakeEditor implements Editor {
             this.moveCaret(positionIn(text, span.start + span.text.length));
         }
         this.followTracked(span.start, span.end, span.text.length);
+        this.ghost = null;
         const change: EditorTextChange = {
             source,
             changes: [{ range: { start: positionIn(before, span.start), end: positionIn(before, span.end) }, text: span.text }]
@@ -507,6 +509,13 @@ export class FakeEditor implements Editor {
 
     setInlayHints(hints: readonly EditorInlayHint[]): void {
         this.inlayHints = hints;
+    }
+
+    /* The suggestion after the caret now, which any change of the text takes away as the real editor does. */
+    ghost: EditorGhostText | null = null;
+
+    setGhostText(ghost: EditorGhostText | null): void {
+        this.ghost = ghost;
     }
 
     /* What the client classified last. */

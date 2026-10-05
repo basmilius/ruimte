@@ -652,6 +652,17 @@
     text-decoration: underline;
     text-underline-offset: 2px;
 }
+.se-ghost {
+    position: absolute;
+    white-space: pre;
+    font-style: italic;
+    color: var(--text-faint);
+    pointer-events: none;
+}
+.se-ghost-rows .se-code-block {
+    font-style: italic;
+    color: var(--text-faint);
+}
 .se-block {
     position: absolute;
     left: 0;

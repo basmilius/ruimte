@@ -33,6 +33,7 @@ export type {
     EditorHighlight,
     EditorHighlightKind,
     EditorHover,
+    EditorGhostText,
     EditorInlayHint,
     EditorKeyHandler,
     EditorLineAction,

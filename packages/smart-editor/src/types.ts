@@ -370,6 +370,18 @@ export interface EditorInlayHint {
     readonly label: string;
 }
 
+/*
+ * A suggestion drawn after the caret in the editor's ghost color, which is not part of the document. It
+ * may span lines. Any edit of the text takes it away, so the host sets it again for the text it was made for.
+ */
+export interface EditorGhostText {
+    /* Where the suggestion would be inserted; the caret stays in front of it. */
+    readonly position: EditorPosition;
+    readonly text: string;
+    /* Fills the element drawn after the end of the first line's text, such as the keys that take the suggestion. */
+    readonly accessory?: (container: HTMLElement) => void;
+}
+
 /* A button in the gutter on one line, such as the lightbulb that offers code actions. */
 export interface EditorGutterAction {
     /* Zero-based. */
@@ -515,6 +527,8 @@ export interface Editor {
     setSemanticTokens(tokens: readonly EditorSemanticToken[] | null): void;
     /* Hints to draw as soft pills in the text, replacing the ones set before. They follow their text through edits until set again. */
     setInlayHints(hints: readonly EditorInlayHint[]): void;
+    /* A suggestion after the caret, replacing the one before; null takes it away. Any change of the text takes it away as well. */
+    setGhostText(ghost: EditorGhostText | null): void;
     /* One button in the gutter, replacing the one before; null takes it away. It stays on its line until the host sets it again. */
     setGutterAction(action: EditorGutterAction | null): void;
     /* The button was pressed; the zero-based line it is on. */

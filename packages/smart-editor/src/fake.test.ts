@@ -122,3 +122,16 @@ describe('FakeEditor.setWidgets', () => {
         expect([...editor.widgetsByOwner.keys()]).toEqual(['default']);
     });
 });
+
+describe('FakeEditor.setGhostText', () => {
+    test('holds the suggestion until the text changes', () => {
+        const editor = new FakeEditorEngine().mount(element, { text: 'a', theme: 'light' });
+        editor.setGhostText({ position: { line: 0, character: 1 }, text: 'bc' });
+        expect(editor.ghost?.text).toBe('bc');
+        editor.type('ax');
+        expect(editor.ghost).toBeNull();
+        editor.setGhostText({ position: { line: 0, character: 2 }, text: 'bc' });
+        editor.setGhostText(null);
+        expect(editor.ghost).toBeNull();
+    });
+});

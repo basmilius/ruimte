@@ -327,6 +327,33 @@ describe('inlays and widgets', () => {
         expect(view.layout.geometry(view.layout.rows[0] as never).inlays[0]!.inlay.at).toBe(5);
     });
 
+    test('draws a ghost suggestion after the caret, with its other lines in a row under the line, and drops it on an edit', () => {
+        const { host, model, view } = mount('const a = 1;\nreturn a;');
+        model.setSelections([{ anchor: 12, head: 12 }]);
+        view.setGhost({ at: 12, text: ' // one\n    two\n    three', accessory: (container) => (container.textContent = 'Tab') });
+        expect(host.querySelector('.se-ghost')!.textContent).toBe(' // one');
+        const rows = [...host.querySelectorAll('.se-ghost-rows .se-code-row')].map((row) => row.textContent);
+        expect(rows).toEqual(['    two', '    three']);
+        expect(view.layout.rows.map((row) => row.key)).toEqual(['line:0', 'block:__ghost', 'line:1']);
+        expect(host.querySelector('.se-line-action')!.textContent).toBe('Tab');
+        model.applyEdits([{ from: 0, to: 0, text: 'x' }]);
+        expect(host.querySelector('.se-ghost')).toBeNull();
+        expect(host.querySelector('.se-ghost-rows')).toBeNull();
+        expect(host.querySelector('.se-line-action')).toBeNull();
+    });
+
+    test('draws a ghost suggestion in front of the stop after it, and takes it away on null', () => {
+        const { host, view } = mount('foo');
+        const before = view.layout.caret(3, 'after').x;
+        view.setGhost({ at: 3, text: '(bar)', accessory: undefined });
+        expect(host.querySelector('.se-ghost')).not.toBeNull();
+        expect(view.layout.caret(3, 'before').x).toBe(before);
+        expect(view.layout.caret(3, 'after').x).toBeGreaterThan(before);
+        view.setGhost(null);
+        expect(host.querySelector('.se-ghost')).toBeNull();
+        expect(view.layout.caret(3, 'after').x).toBe(before);
+    });
+
     test('draws a widget row above a line', () => {
         const { host, view } = mount('a\nb');
         view.setBlockWidgets('test', [{ id: 'w', at: 2, placement: 'above', text: 'hello', height: 30 }]);

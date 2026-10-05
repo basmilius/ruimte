@@ -24,6 +24,8 @@ export interface Inlay {
     tooltip?: string;
     /* What an input method has composed: drawn as text in the code face, with no padding, so what stands around it does not move. */
     composition?: boolean;
+    /* A suggestion the host drew after the caret: text in the code face with no padding, which the caret stays in front of. */
+    ghost?: boolean;
 }
 
 /* A row of the host's own DOM above or below a line, as tall as the host makes it. */
@@ -270,7 +272,7 @@ export function scanLine(
         while (nextInlay < lineInlays.length && lineInlays[nextInlay]!.at - line.start <= offset) {
             flushRun(offset);
             const inlay = lineInlays[nextInlay++]!;
-            const width = inlay.composition ? metrics.measureText(inlay.text) : Math.max(8, metrics.measureInlay(inlay.text) + 12);
+            const width = inlay.composition || inlay.ghost ? metrics.measureText(inlay.text) : Math.max(8, metrics.measureInlay(inlay.text) + 12);
             geometry.inlays.push({ inlay, x, width, subRow: row });
             x += width;
         }

@@ -114,6 +114,9 @@ export const KEYMAP = {
     formatDocument: bind('Mod+Alt+L'),
     selectionToChat: bind('Mod+Alt+K'),
     inlineEdit: bind('Mod+I'),
+    // Option+\ asks the on-device model for a continuation; Option+] takes it a word at a time (Tab takes all of it).
+    suggestInline: bind('Alt+\\'),
+    acceptGhostWord: bind('Alt+]'),
 
     goToSymbol: bind('Mod+F12'),
     goToDefinition: bind('Alt+Shift+D', 'Alt+Shift+D', {
