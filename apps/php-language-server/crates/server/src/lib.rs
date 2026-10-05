@@ -1,9 +1,13 @@
-//! A PHP language server over LSP: document sync, diagnostics, document symbols, folding and
-//! selection ranges, all read from the syntax tree of `php-syntax`.
+//! A PHP language server over LSP: document sync, diagnostics, symbols, folding and selection ranges,
+//! and, over an index of the project, its packages and the standard library, hover, navigation,
+//! workspace symbols and completion.
 
 mod config;
 mod convert;
 mod documents;
+mod features;
+mod paths;
 mod server;
+mod workspace;
 
 pub use server::run;

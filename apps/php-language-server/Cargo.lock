@@ -612,9 +612,11 @@ dependencies = [
  "lsp-server",
  "lsp-types",
  "php-analysis",
+ "php-index",
  "php-syntax",
  "serde",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]

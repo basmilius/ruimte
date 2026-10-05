@@ -12,6 +12,8 @@ pub struct Document {
     /// The language level of this document alone, when the client gave one.
     pub level: Option<PhpVersion>,
     parsed: Option<Parse>,
+    /// The version whose declarations the index holds.
+    pub indexed_version: Option<i32>,
 }
 
 impl Document {
@@ -23,6 +25,7 @@ impl Document {
             index,
             level: None,
             parsed: None,
+            indexed_version: None,
         }
     }
 
@@ -82,6 +85,10 @@ impl Documents {
 
     pub fn close(&mut self, uri: &Uri) -> Option<Document> {
         self.open.remove(uri)
+    }
+
+    pub fn get(&self, uri: &Uri) -> Option<&Document> {
+        self.open.get(uri)
     }
 
     pub fn get_mut(&mut self, uri: &Uri) -> Option<&mut Document> {

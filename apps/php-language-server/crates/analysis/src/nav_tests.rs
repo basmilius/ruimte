@@ -204,3 +204,10 @@ fn implementations_list_subclasses_and_overrides() {
     methods.sort();
     assert_eq!(methods, vec!["/project/src/User.php name"]);
 }
+
+#[test]
+fn implementations_from_a_declaration_name() {
+    let code = "<?php\nnamespace App;\ninterface Sha$0pe { public function area(): float; }\nclass Circle implements Shape { public function area(): float { return 1.0; } }\n";
+    let found = places(code, |analyzer, offset| analyzer.implementations(offset));
+    assert_eq!(found.len(), 1, "{found:?}");
+}

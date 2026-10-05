@@ -4,7 +4,6 @@
 use std::path::{Path, PathBuf};
 
 use php_syntax::PhpVersion;
-use xxhash_rust::xxh3::xxh3_64;
 
 use crate::composer::Composer;
 use crate::index::{Index, Origin};
@@ -68,7 +67,7 @@ impl Project {
 
     /// Where the extracted declarations of this project are cached inside a storage folder.
     pub fn cache_path(&self, storage: &Path) -> PathBuf {
-        let name = format!("{:016x}", xxh3_64(self.root.to_string_lossy().as_bytes()));
+        let name = crate::cache::path_key(&self.root);
         storage.join("cache").join(format!("project-{name}.bin"))
     }
 

@@ -43,6 +43,11 @@ impl Stamp {
     }
 }
 
+/// A stable name for a path, for the name of a cache file.
+pub fn path_key(path: &Path) -> String {
+    format!("{:016x}", xxh3_64(path.to_string_lossy().as_bytes()))
+}
+
 pub fn content_hash(bytes: &[u8]) -> u64 {
     xxh3_64(bytes)
 }

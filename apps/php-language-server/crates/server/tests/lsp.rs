@@ -18,6 +18,10 @@ struct Client {
 
 impl Client {
     fn start(capabilities: Value, options: Value) -> (Client, Value) {
+        Client::start_in(capabilities, options, Value::Null)
+    }
+
+    fn start_in(capabilities: Value, options: Value, root_uri: Value) -> (Client, Value) {
         let (server_side, client_side) = Connection::memory();
         let server = std::thread::spawn(move || {
             php_language_server::run(server_side).expect("the server runs to the end");
@@ -30,7 +34,7 @@ impl Client {
         };
         let result = client.request(
             "initialize",
-            json!({ "processId": null, "rootUri": null, "capabilities": capabilities, "initializationOptions": options }),
+            json!({ "processId": null, "rootUri": root_uri, "capabilities": capabilities, "initializationOptions": options }),
         );
         client.notify("initialized", json!({}));
         (client, result)
@@ -393,7 +397,7 @@ fn rejects_what_it_does_not_know() {
     let (client, _) = Client::start(json!({}), Value::Null);
     client.send(Request::new(
         RequestId::from(99),
-        "textDocument/hover".to_string(),
+        "textDocument/rename".to_string(),
         json!({}),
     ));
     let response = client.connection.receiver.recv_timeout(TIMEOUT).expect("an answer");
@@ -401,5 +405,404 @@ fn rejects_what_it_does_not_know() {
         panic!("expected a response");
     };
     assert_eq!(response.response_result.expect_err("unsupported").code, -32601);
+    client.shutdown();
+}
+
+// An index over a real folder ------------------------------------------------------------------
+
+struct Disk {
+    dir: tempfile::TempDir,
+}
+
+impl Disk {
+    /// A project with Composer metadata and one installed package, a storage folder and a few stubs.
+    fn new() -> Disk {
+        let disk = Disk {
+            dir: tempfile::tempdir().expect("a temp dir"),
+        };
+        disk.write(
+            "project/composer.json",
+            r#"{
+  "require": { "php": "^8.1", "ext-redis": "*" },
+  "config": { "platform": { "php": "8.1" } },
+  "autoload": { "psr-4": { "App\\": "src/" } }
+}"#,
+        );
+        disk.write(
+            "project/src/Models/User.php",
+            "<?php\nnamespace App\\Models;\n\n/** A person who can log in. */\nclass User\n{\n    public string $name = '';\n\n    /** Finds a user. */\n    public static function find(int $id): ?static\n    {\n        return null;\n    }\n\n    public function posts(): array\n    {\n        return [];\n    }\n}\n",
+        );
+        disk.write(
+            "project/vendor/composer/installed.json",
+            r#"{"packages":[{"name":"acme/lib","install-path":"../acme/lib","autoload":{"psr-4":{"Acme\\Lib\\":"src/"}}}]}"#,
+        );
+        disk.write(
+            "project/vendor/acme/lib/src/Widget.php",
+            "<?php\nnamespace Acme\\Lib;\n\nclass Widget\n{\n    public function render(): string\n    {\n        return '';\n    }\n}\n",
+        );
+        disk.write(
+            "stubs/standard/basic.php",
+            "<?php\nfunction strlen(string $string): int {}\n\n/** @since 8.4 */\nfunction array_find(array $array, callable $callback): mixed {}\n",
+        );
+        disk.write(
+            "stubs/redis/redis.php",
+            "<?php\nclass Redis { public function get(string $key): mixed {} }\n",
+        );
+        disk.write("stubs/swoole/swoole.php", "<?php\nclass SwooleServer {}\n");
+        disk
+    }
+
+    fn write(&self, relative: &str, text: &str) {
+        let path = self.dir.path().join(relative);
+        std::fs::create_dir_all(path.parent().expect("a parent")).expect("created");
+        std::fs::write(path, text).expect("written");
+    }
+
+    fn path(&self, relative: &str) -> std::path::PathBuf {
+        self.dir.path().join(relative)
+    }
+
+    fn uri(&self, relative: &str) -> String {
+        format!("file://{}", self.path(relative).display())
+    }
+
+    fn options(&self) -> Value {
+        json!({
+            "storagePath": self.path("storage"),
+            "stubsPath": self.path("stubs"),
+        })
+    }
+}
+
+const PROGRESS_CAPABILITIES: fn() -> Value = || json!({ "window": { "workDoneProgress": true } });
+
+impl Client {
+    /// Answers the request to create a progress and waits until the progress ends, which is when the
+    /// project and the stubs are indexed.
+    fn wait_for_indexing(&mut self) -> Vec<String> {
+        let mut kinds = Vec::new();
+        loop {
+            let message = self.wait_for(|message| match message {
+                Message::Request(request) if request.method == "window/workDoneProgress/create" => {
+                    Some(Message::Request(request.clone()))
+                }
+                Message::Notification(notification) if notification.method == "$/progress" => {
+                    Some(Message::Notification(notification.clone()))
+                }
+                _ => None,
+            });
+            match message {
+                Message::Request(request) => self.send(Response::new_ok(request.id, Value::Null)),
+                Message::Notification(notification) => {
+                    let kind = notification.params["value"]["kind"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_string();
+                    let done = kind == "end";
+                    kinds.push(kind);
+                    if done {
+                        return kinds;
+                    }
+                }
+                Message::Response(_) => {}
+            }
+        }
+    }
+
+    fn at(&mut self, method: &str, uri: &str, line: u32, character: u32) -> Value {
+        self.request(
+            method,
+            json!({ "textDocument": { "uri": uri }, "position": { "line": line, "character": character } }),
+        )
+    }
+}
+
+fn indexed_server(disk: &Disk) -> Client {
+    let (mut client, _) = Client::start_in(PROGRESS_CAPABILITIES(), disk.options(), json!(disk.uri("project")));
+    let kinds = client.wait_for_indexing();
+    assert_eq!(kinds.first().map(String::as_str), Some("begin"), "{kinds:?}");
+    client
+}
+
+#[test]
+fn indexes_a_project_and_reports_progress() {
+    let disk = Disk::new();
+    let client = indexed_server(&disk);
+    assert!(
+        std::fs::read_dir(disk.path("storage/cache"))
+            .expect("a cache folder")
+            .count()
+            >= 2,
+        "the project and the stubs are cached"
+    );
+    client.shutdown();
+}
+
+#[test]
+fn a_second_run_reads_the_cache() {
+    let disk = Disk::new();
+    indexed_server(&disk).shutdown();
+    let mut client = indexed_server(&disk);
+    let log = client.wait_for(|message| match message {
+        Message::Notification(notification)
+            if notification.method == "window/logMessage"
+                && notification.params["message"]
+                    .as_str()
+                    .is_some_and(|text| text.starts_with("Indexed ")) =>
+        {
+            notification.params["message"].as_str().map(str::to_string)
+        }
+        _ => None,
+    });
+    assert!(log.contains("0 parsed"), "{log}");
+    client.shutdown();
+}
+
+#[test]
+fn completes_a_vendor_class_with_an_import_and_hides_newer_stubs() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Page.php");
+    let text =
+        "<?php\nnamespace App;\n\nclass Page\n{\n    public function show()\n    {\n        $w = new Wid\n    }\n}\n";
+    client.open(&uri, text);
+    let result = client.at("textDocument/completion", &uri, 7, 20);
+    let items = result["items"].as_array().expect("items");
+    let widget = items.iter().find(|item| item["label"] == "Widget").expect("Widget");
+    assert_eq!(widget["kind"], 7);
+    assert_eq!(widget["labelDetails"]["description"], "Acme\\Lib");
+    assert_eq!(widget["textEdit"]["newText"], "Widget");
+    assert_eq!(
+        widget["additionalTextEdits"][0]["newText"],
+        "\nuse Acme\\Lib\\Widget;\n"
+    );
+    assert_eq!(
+        widget["additionalTextEdits"][0]["range"]["start"],
+        json!({ "line": 2, "character": 0 })
+    );
+
+    let resolved = client.request("completionItem/resolve", widget.clone());
+    assert_eq!(resolved["documentation"]["kind"], "markdown");
+
+    let text = "<?php\nnamespace App;\nfunction f() {\n    array_\n}\n";
+    client.notify(
+        "textDocument/didChange",
+        json!({ "textDocument": { "uri": uri, "version": 2 }, "contentChanges": [{ "text": text }] }),
+    );
+    let result = client.at("textDocument/completion", &uri, 3, 10);
+    let labels: Vec<&str> = result["items"]
+        .as_array()
+        .expect("items")
+        .iter()
+        .filter_map(|item| item["label"].as_str())
+        .collect();
+    assert!(
+        !labels.contains(&"array_find"),
+        "an 8.1 project is not offered 8.4 functions: {labels:?}"
+    );
+
+    let text = "<?php\nnamespace App;\nfunction f() {\n    strl\n}\n";
+    client.notify(
+        "textDocument/didChange",
+        json!({ "textDocument": { "uri": uri, "version": 3 }, "contentChanges": [{ "text": text }] }),
+    );
+    let result = client.at("textDocument/completion", &uri, 3, 8);
+    let strlen = result["items"]
+        .as_array()
+        .expect("items")
+        .iter()
+        .find(|item| item["label"] == "strlen")
+        .cloned()
+        .expect("strlen");
+    assert_eq!(strlen["detail"], "(string $string): int");
+    assert!(
+        strlen["additionalTextEdits"].is_null(),
+        "global functions need no import"
+    );
+    client.shutdown();
+}
+
+#[test]
+fn stubs_follow_the_extensions_the_project_requires() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Page.php");
+    client.open(&uri, "<?php\nnew Redi\n");
+    let result = client.at("textDocument/completion", &uri, 1, 8);
+    let labels: Vec<&str> = result["items"]
+        .as_array()
+        .expect("items")
+        .iter()
+        .filter_map(|item| item["label"].as_str())
+        .collect();
+    assert!(labels.contains(&"Redis"), "ext-redis is required: {labels:?}");
+    client.notify(
+        "textDocument/didChange",
+        json!({ "textDocument": { "uri": uri, "version": 2 }, "contentChanges": [{ "text": "<?php\nnew Swoo\n" }] }),
+    );
+    let result = client.at("textDocument/completion", &uri, 1, 8);
+    assert!(
+        result["items"].as_array().expect("items").is_empty(),
+        "ext-swoole is not"
+    );
+    client.shutdown();
+}
+
+#[test]
+fn completes_members_of_an_inferred_type() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Page.php");
+    client.open(
+        &uri,
+        "<?php\nuse App\\Models\\User;\nfunction f() {\n    $user = User::find(1);\n    $user->\n}\n",
+    );
+    let result = client.at("textDocument/completion", &uri, 4, 11);
+    let items = result["items"].as_array().expect("items");
+    let posts = items.iter().find(|item| item["label"] == "posts").expect("posts");
+    assert_eq!(posts["kind"], 2);
+    assert_eq!(posts["detail"], "(): array");
+    assert!(items.iter().any(|item| item["label"] == "name" && item["kind"] == 10));
+    client.shutdown();
+}
+
+#[test]
+fn hovers_and_navigates_across_files() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Page.php");
+    client.open(
+        &uri,
+        "<?php\nuse App\\Models\\User;\nfunction f() {\n    $user = User::find(1);\n    $user->posts();\n}\n",
+    );
+    let hover = client.at("textDocument/hover", &uri, 3, 20);
+    let text = hover["contents"]["value"].as_str().expect("markdown");
+    assert!(
+        text.starts_with(
+            "**App\\Models\\User::find**\n\n```php\npublic static function find(int $id): ?static\n```\n\nFinds a user."
+        ),
+        "{text}"
+    );
+    assert!(text.contains("_Defined in `src/Models/User.php`_"), "{text}");
+    assert_eq!(hover["range"]["start"]["line"], 3);
+
+    let definition = client.at("textDocument/definition", &uri, 3, 20);
+    assert_eq!(definition[0]["uri"], disk.uri("project/src/Models/User.php"));
+    assert_eq!(definition[0]["range"]["start"], json!({ "line": 9, "character": 27 }));
+
+    let type_definition = client.at("textDocument/typeDefinition", &uri, 4, 6);
+    assert_eq!(type_definition[0]["uri"], disk.uri("project/src/Models/User.php"));
+
+    let class_definition = client.at("textDocument/definition", &uri, 3, 14);
+    assert_eq!(
+        class_definition[0]["range"]["start"],
+        json!({ "line": 4, "character": 6 })
+    );
+    client.shutdown();
+}
+
+#[test]
+fn finds_implementations_and_workspace_symbols() {
+    let disk = Disk::new();
+    disk.write(
+        "project/src/Shapes.php",
+        "<?php\nnamespace App;\ninterface Shape { public function area(): float; }\nclass Circle implements Shape { public function area(): float { return 1.0; } }\nclass Square implements Shape { public function area(): float { return 2.0; } }\n",
+    );
+    let mut client = indexed_server(&disk);
+    let shapes = disk.uri("project/src/Shapes.php");
+    client.open(
+        &shapes,
+        &std::fs::read_to_string(disk.path("project/src/Shapes.php")).expect("read"),
+    );
+    let implementations = client.at("textDocument/implementation", &shapes, 2, 12);
+    assert_eq!(implementations.as_array().map(Vec::len), Some(2));
+    let methods = client.at("textDocument/implementation", &shapes, 2, 36);
+    assert_eq!(methods.as_array().map(Vec::len), Some(2));
+
+    let symbols = client.request("workspace/symbol", json!({ "query": "Circ" }));
+    assert_eq!(symbols[0]["name"], "Circle");
+    assert_eq!(symbols[0]["containerName"], "App");
+    assert_eq!(symbols[0]["location"]["uri"], shapes);
+    let widget = client.request("workspace/symbol", json!({ "query": "Widget" }));
+    assert_eq!(
+        widget[0]["location"]["uri"],
+        disk.uri("project/vendor/acme/lib/src/Widget.php")
+    );
+    client.shutdown();
+}
+
+#[test]
+fn the_language_level_follows_composer() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Hooks.php");
+    client.open(&uri, "<?php\nclass A { public int $x { get => 1; } }\n");
+    assert_eq!(
+        messages(&client.diagnostics(&uri)),
+        ["Property hooks are only available since PHP 8.4"],
+        "composer.json says 8.1 and the server's default is the newest"
+    );
+    client.shutdown();
+}
+
+#[test]
+fn watched_files_update_the_index() {
+    let disk = Disk::new();
+    let (mut client, _) = Client::start_in(
+        json!({ "window": { "workDoneProgress": true }, "workspace": { "didChangeWatchedFiles": { "dynamicRegistration": true } } }),
+        disk.options(),
+        json!(disk.uri("project")),
+    );
+    let registration = client.wait_for(|message| match message {
+        Message::Request(request) if request.method == "client/registerCapability" => Some(request.clone()),
+        _ => None,
+    });
+    assert_eq!(
+        registration.params["registrations"][0]["method"],
+        "workspace/didChangeWatchedFiles"
+    );
+    client.send(Response::new_ok(registration.id, Value::Null));
+    client.wait_for_indexing();
+
+    disk.write("project/src/Fresh.php", "<?php\nnamespace App;\nclass Freshly {}\n");
+    client.notify(
+        "workspace/didChangeWatchedFiles",
+        json!({ "changes": [{ "uri": disk.uri("project/src/Fresh.php"), "type": 1 }] }),
+    );
+    let found = client.request("workspace/symbol", json!({ "query": "Freshly" }));
+    assert_eq!(found[0]["name"], "Freshly");
+
+    std::fs::remove_file(disk.path("project/src/Fresh.php")).expect("removed");
+    client.notify(
+        "workspace/didChangeWatchedFiles",
+        json!({ "changes": [{ "uri": disk.uri("project/src/Fresh.php"), "type": 3 }] }),
+    );
+    let gone = client.request("workspace/symbol", json!({ "query": "Freshly" }));
+    assert_eq!(gone.as_array().map(Vec::len), Some(0));
+    client.shutdown();
+}
+
+#[test]
+fn open_documents_win_over_the_disk() {
+    let disk = Disk::new();
+    let mut client = indexed_server(&disk);
+    let uri = disk.uri("project/src/Models/User.php");
+    client.open(
+        &uri,
+        "<?php\nnamespace App\\Models;\nclass User { public function brandNew(): int {} }\n",
+    );
+    let page = disk.uri("project/src/Page.php");
+    client.open(
+        &page,
+        "<?php\nuse App\\Models\\User;\nfunction f(User $u) {\n    $u->\n}\n",
+    );
+    let result = client.at("textDocument/completion", &page, 3, 8);
+    let labels: Vec<&str> = result["items"]
+        .as_array()
+        .expect("items")
+        .iter()
+        .filter_map(|item| item["label"].as_str())
+        .collect();
+    assert!(labels.contains(&"brandNew") && !labels.contains(&"posts"), "{labels:?}");
     client.shutdown();
 }
