@@ -1,6 +1,6 @@
 //! The requests that read the index: hover, navigation, workspace symbols and completion.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use lsp_types::{
@@ -14,8 +14,8 @@ use php_analysis::nav::Place;
 use php_analysis::target::Target;
 use php_analysis::workspace_symbols::workspace_symbols;
 use php_analysis::{Analyzer, LineIndex};
-use php_index::Project;
 use php_index::indexer::index_file;
+use php_index::{Origin, Project};
 use php_syntax::{TextRange, TextSize};
 use serde_json::{Value, json};
 
@@ -260,6 +260,12 @@ impl Server<'_> {
                 break;
             }
         }
+        // Projects that hold the same package or the standard library each report their own copy.
+        let mut shared = HashSet::new();
+        found.retain(|symbol| {
+            symbol.origin == Origin::Project
+                || shared.insert((symbol.kind, symbol.container.clone(), symbol.name.clone()))
+        });
         found.truncate(LIMIT);
         let encoding = self.encoding;
         let mut read: HashMap<PathBuf, Option<(String, LineIndex)>> = HashMap::new();

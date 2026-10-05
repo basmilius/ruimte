@@ -1432,3 +1432,208 @@ fn writes_the_doc_block_after_an_opened_comment_and_enter() {
     );
     client.shutdown();
 }
+
+// Composer projects below the workspace folder -------------------------------------------------
+
+const NESTED_PAGE: &str =
+    "<?php\nnamespace App;\n\nuse Acme\\Lib\\Widget;\n\nfunction page() {\n    return new Widget();\n}\n";
+
+/// A workspace folder with no `composer.json` of its own and two composer projects below it that
+/// install the same package, plus a backup folder and loose PHP that belong to no project.
+fn nested_disk() -> Disk {
+    let disk = Disk {
+        dir: tempfile::tempdir().expect("a temp dir"),
+    };
+    for (name, level, widget) in [("backend", "8.1", "Backend"), ("shop", "8.4", "Shop")] {
+        disk.write(
+            &format!("work/{name}/composer.json"),
+            &format!(r#"{{"config":{{"platform":{{"php":"{level}"}}}},"autoload":{{"psr-4":{{"App\\":"src/"}}}}}}"#),
+        );
+        disk.write(&format!("work/{name}/src/Page.php"), NESTED_PAGE);
+        disk.write(
+            &format!("work/{name}/vendor/composer/installed.json"),
+            r#"{"packages":[{"name":"acme/lib","install-path":"../acme/lib","autoload":{"psr-4":{"Acme\\Lib\\":"src/"}}}]}"#,
+        );
+        disk.write(
+            &format!("work/{name}/vendor/acme/lib/src/Widget.php"),
+            &format!("<?php\nnamespace Acme\\Lib;\n\nclass Widget\n{{\n    public function render{widget}(): string {{}}\n}}\n"),
+        );
+    }
+    disk.write("work/tools/Helper.php", "<?php\nclass LooseHelper {}\n");
+    disk.write("work/~backup/old/composer.json", "{}");
+    disk.write("work/~backup/old/src/Old.php", "<?php\nclass OldBackup {}\n");
+    disk.write(
+        "stubs/standard/basic.php",
+        "<?php\nfunction strlen(string $string): int {}\n",
+    );
+    disk
+}
+
+fn nested_server(disk: &Disk) -> Client {
+    let (mut client, _) = Client::start_in(PROGRESS_CAPABILITIES(), disk.options(), json!(disk.uri("work")));
+    client.wait_for_indexing();
+    client
+}
+
+fn symbol_uris(client: &mut Client, query: &str) -> Vec<String> {
+    client
+        .request("workspace/symbol", json!({ "query": query }))
+        .as_array()
+        .expect("symbols")
+        .iter()
+        .map(|symbol| symbol["location"]["uri"].as_str().expect("uri").to_string())
+        .collect()
+}
+
+#[test]
+fn a_file_sees_the_packages_of_its_nearest_composer_root() {
+    let disk = nested_disk();
+    let mut client = nested_server(&disk);
+    for name in ["backend", "shop"] {
+        let uri = disk.uri(&format!("work/{name}/src/Page.php"));
+        client.open(&uri, NESTED_PAGE);
+        let definition = client.at("textDocument/definition", &uri, 6, 17);
+        assert_eq!(
+            definition[0]["uri"],
+            disk.uri(&format!("work/{name}/vendor/acme/lib/src/Widget.php")),
+            "{name} resolves to its own copy of the package"
+        );
+        let hover = client.at("textDocument/hover", &uri, 6, 17);
+        let text = hover["contents"]["value"].as_str().expect("markdown");
+        assert!(text.contains("_Defined in `vendor/acme/lib/src/Widget.php`_"), "{text}");
+    }
+    client.shutdown();
+}
+
+#[test]
+fn each_composer_root_decides_the_level_of_its_files() {
+    let disk = nested_disk();
+    let mut client = nested_server(&disk);
+    let hooks = "<?php\nclass A { public int $x { get => 1; } }\n";
+    let backend = disk.uri("work/backend/src/Hooks.php");
+    client.open(&backend, hooks);
+    assert_eq!(
+        messages(&client.diagnostics(&backend)),
+        ["Property hooks are only available since PHP 8.4"]
+    );
+    let shop = disk.uri("work/shop/src/Hooks.php");
+    client.open(&shop, hooks);
+    assert!(messages(&client.diagnostics(&shop)).is_empty());
+    client.shutdown();
+}
+
+#[test]
+fn a_package_in_two_roots_is_listed_once() {
+    let disk = nested_disk();
+    let mut client = nested_server(&disk);
+    let widgets = symbol_uris(&mut client, "Widget");
+    assert_eq!(widgets.len(), 1, "{widgets:?}");
+    assert!(widgets[0].contains("/vendor/acme/lib/src/Widget.php"));
+
+    let uri = disk.uri("work/shop/src/Page.php");
+    let text = "<?php\nnamespace App;\nfunction f() {\n    new Wid\n}\n";
+    client.open(&uri, text);
+    let result = client.at("textDocument/completion", &uri, 3, 11);
+    let count = result["items"]
+        .as_array()
+        .expect("items")
+        .iter()
+        .filter(|item| item["label"] == "Widget")
+        .count();
+    assert_eq!(count, 1);
+
+    assert_eq!(
+        symbol_uris(&mut client, "strlen").len(),
+        1,
+        "the standard library is listed once"
+    );
+    client.shutdown();
+}
+
+#[test]
+fn project_files_stay_with_the_project_that_holds_them() {
+    let disk = nested_disk();
+    let mut client = nested_server(&disk);
+    assert_eq!(
+        symbol_uris(&mut client, "page").len(),
+        2,
+        "a function of the project's own is listed for every project that has one"
+    );
+    let loose = symbol_uris(&mut client, "LooseHelper");
+    assert_eq!(loose, [disk.uri("work/tools/Helper.php")]);
+    assert_eq!(
+        symbol_uris(&mut client, "OldBackup").len(),
+        1,
+        "a backup folder is read as part of the folder, without its own packages"
+    );
+    client.shutdown();
+}
+
+#[test]
+fn a_folder_with_its_own_composer_json_stays_one_project() {
+    let disk = nested_disk();
+    disk.write("work/composer.json", r#"{"autoload":{"psr-4":{"Top\\":"top/"}}}"#);
+    disk.write("work/backend/src/Deep.php", "<?php\nclass DeepInBackend {}\n");
+    let mut client = nested_server(&disk);
+    let uri = disk.uri("work/backend/src/Page.php");
+    client.open(&uri, NESTED_PAGE);
+    let hover = client.at("textDocument/hover", &uri, 6, 17);
+    assert!(
+        hover.is_null(),
+        "backend/vendor is not read for a folder that has a composer.json: {hover}"
+    );
+    assert_eq!(symbol_uris(&mut client, "DeepInBackend").len(), 1);
+    client.shutdown();
+}
+
+#[test]
+fn a_composer_json_that_appears_below_the_folder_becomes_a_project() {
+    let disk = nested_disk();
+    let (mut client, _) = Client::start_in(
+        json!({ "window": { "workDoneProgress": true }, "workspace": { "didChangeWatchedFiles": { "dynamicRegistration": true } } }),
+        disk.options(),
+        json!(disk.uri("work")),
+    );
+    let registration = client.wait_for(|message| match message {
+        Message::Request(request) if request.method == "client/registerCapability" => Some(request.clone()),
+        _ => None,
+    });
+    client.send(Response::new_ok(registration.id, Value::Null));
+    client.wait_for_indexing();
+    assert_eq!(symbol_uris(&mut client, "Gadget").len(), 0);
+
+    disk.write(
+        "work/tools/composer.json",
+        r#"{"config":{"platform":{"php":"8.2"}},"autoload":{"psr-4":{"Tools\\":"src/"}}}"#,
+    );
+    disk.write(
+        "work/tools/src/Gadget.php",
+        "<?php\nnamespace Tools;\nclass Gadget {}\n",
+    );
+    client.notify(
+        "workspace/didChangeWatchedFiles",
+        json!({ "changes": [{ "uri": disk.uri("work/tools/composer.json"), "type": 1 }] }),
+    );
+    client.wait_for_indexing();
+    assert_eq!(
+        symbol_uris(&mut client, "Gadget"),
+        [disk.uri("work/tools/src/Gadget.php")]
+    );
+    assert!(
+        symbol_uris(&mut client, "LooseHelper").len() == 1,
+        "files of the folder that are not in a project stay in the folder's own"
+    );
+
+    std::fs::remove_file(disk.path("work/tools/composer.json")).expect("removed");
+    client.notify(
+        "workspace/didChangeWatchedFiles",
+        json!({ "changes": [{ "uri": disk.uri("work/tools/composer.json"), "type": 3 }] }),
+    );
+    client.wait_for_indexing();
+    assert_eq!(
+        symbol_uris(&mut client, "Gadget"),
+        [disk.uri("work/tools/src/Gadget.php")],
+        "the folder reads the files of a root that is gone"
+    );
+    client.shutdown();
+}

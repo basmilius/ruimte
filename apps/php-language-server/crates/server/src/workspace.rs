@@ -63,6 +63,15 @@ impl StubNames {
     }
 }
 
+/// What a change to the projects of a workspace folder asks of the server.
+#[derive(Default)]
+pub struct FolderChange {
+    /// Projects that are new and have to be read.
+    pub start: Vec<PathBuf>,
+    /// Projects that exist and have to be read again.
+    pub restart: Vec<PathBuf>,
+}
+
 pub struct Workspace {
     pub projects: Vec<Project>,
     /// What belongs to no folder the client opened: the standard library and the document itself.
@@ -136,23 +145,83 @@ impl Workspace {
         self.projects.iter_mut().find(|project| project.root == root)
     }
 
-    /// Adds a folder as a project, with the stubs it needs when they are already here.
-    pub fn add_folder(&mut self, root: &Path) -> bool {
-        if self.projects.iter().any(|project| project.root == root) {
-            return false;
+    /// The workspace folder a file is in, for a file that may be a `composer.json` of a nested project.
+    pub fn folder_of(&self, path: &Path) -> Option<PathBuf> {
+        self.projects
+            .iter()
+            .filter(|project| !project.is_nested() && project.contains(path))
+            .max_by_key(|project| project.root.components().count())
+            .map(|project| project.root.clone())
+    }
+
+    /// Adds a workspace folder as a project, and the composer roots below it when the folder has no
+    /// `composer.json` of its own. The projects to read are in `start`, the folder first, and the
+    /// ones whose files changed hands in `restart`.
+    pub fn add_folder(&mut self, root: &Path) -> FolderChange {
+        let mut change = FolderChange::default();
+        if let Some(existing) = self.projects.iter_mut().find(|project| project.root == root) {
+            if existing.is_nested() {
+                change
+                    .restart
+                    .push(std::mem::replace(&mut existing.folder, root.to_path_buf()));
+            }
+            return change;
         }
-        let mut project = Project::open(root, self.default_level);
+        self.insert_project(Project::open(root, self.default_level));
+        change.start.push(root.to_path_buf());
+        change.start.extend(self.sync_nested(root).start);
+        change
+    }
+
+    /// Compares the composer roots below a workspace folder with the projects held for it, adding
+    /// and dropping projects to match. The folder's own project is in `restart` when the set
+    /// changed, since what it skips changed with it.
+    pub fn sync_nested(&mut self, folder: &Path) -> FolderChange {
+        let found = if self.projects.iter().any(|project| project.root == folder) {
+            indexer::discover_composer_roots(folder)
+        } else {
+            Vec::new()
+        };
+        let before = self.projects.len();
+        self.projects.retain(|project| {
+            let stale = project.is_nested() && project.folder == folder && !found.contains(&project.root);
+            if stale {
+                self.indexed.remove(&project.root);
+            }
+            !stale
+        });
+        let dropped = before != self.projects.len();
+        let mut change = FolderChange::default();
+        for root in found {
+            if self.projects.iter().any(|project| project.root == root) {
+                continue;
+            }
+            self.insert_project(Project::open_in(&root, folder, self.default_level));
+            change.start.push(root);
+        }
+        if dropped || !change.start.is_empty() {
+            change.restart.push(folder.to_path_buf());
+        }
+        change
+    }
+
+    fn insert_project(&mut self, mut project: Project) {
         if self.stubs_loaded {
             let extensions = project.extensions();
             project.index.set_stubs(&self.stubs, &extensions);
         }
         self.projects.push(project);
-        true
     }
 
+    /// Drops a workspace folder with the composer roots found below it.
     pub fn remove_folder(&mut self, root: &Path) {
-        self.indexed.remove(root);
-        self.projects.retain(|project| project.root != root);
+        self.projects.retain(|project| {
+            let gone = project.folder == root;
+            if gone {
+                self.indexed.remove(&project.root);
+            }
+            !gone
+        });
     }
 
     /// A new default level reaches every project that did not get its level from `composer.json`.
@@ -184,10 +253,16 @@ impl Workspace {
         };
         let root = project.root.clone();
         let composer = project.composer.clone();
+        let nested: Vec<PathBuf> = self
+            .projects
+            .iter()
+            .filter(|other| other.is_nested() && other.folder == root)
+            .map(|other| other.root.clone())
+            .collect();
         let cache = self.storage.as_ref().map(|storage| project.cache_path(storage));
         let sender = sender.clone();
         std::thread::spawn(move || {
-            let files = indexer::discover_project(&root, composer.as_ref());
+            let files = indexer::discover_project(&root, composer.as_ref(), &nested);
             let threads = std::thread::available_parallelism().map_or(4, usize::from);
             indexer::run(files, cache.as_deref(), None, threads, &|event| {
                 let _ = sender.send(Internal::Project {

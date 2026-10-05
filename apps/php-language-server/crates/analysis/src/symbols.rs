@@ -1,7 +1,7 @@
 use php_syntax::SyntaxKind::*;
 use php_syntax::{SyntaxElement, SyntaxKind, SyntaxNode, TextRange};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SymbolKind {
     Namespace,
     Class,

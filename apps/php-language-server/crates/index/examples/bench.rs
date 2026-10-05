@@ -63,7 +63,7 @@ fn main() {
         project.level, project.level_from_composer
     );
     let started = Instant::now();
-    let files = indexer::discover_project(&project.root, project.composer.as_ref());
+    let files = indexer::discover_project(&project.root, project.composer.as_ref(), &[]);
     println!("discovered {} files in {:?}", files.len(), started.elapsed());
     let started = Instant::now();
     let collected = Mutex::new(Vec::new());

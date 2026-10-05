@@ -60,7 +60,7 @@ fn main() {
         constants.extend(stub.summary.constants.iter().map(|constant| constant.name.clone()));
     }
     let mut project = Project::open(Path::new(&args[0]), PhpVersion::V8_4);
-    let files = indexer::discover_project(&project.root, project.composer.as_ref());
+    let files = indexer::discover_project(&project.root, project.composer.as_ref(), &[]);
     let collected = Mutex::new(Vec::new());
     indexer::run(files, None, None, threads, &|event| {
         if let IndexEvent::Files(batch) = event {

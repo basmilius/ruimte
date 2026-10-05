@@ -12,6 +12,9 @@ use crate::words::WordIndex;
 
 pub struct Project {
     pub root: PathBuf,
+    /// The workspace folder that brought this project in. It is `root` itself unless the project is
+    /// a composer root found below a folder that has no `composer.json`.
+    pub folder: PathBuf,
     pub composer: Option<Composer>,
     pub level: PhpVersion,
     /// The level came from `composer.json` and not from the settings.
@@ -23,10 +26,16 @@ pub struct Project {
 
 impl Project {
     pub fn open(root: &Path, default_level: PhpVersion) -> Project {
+        Project::open_in(root, root, default_level)
+    }
+
+    /// A composer root below a workspace folder.
+    pub fn open_in(root: &Path, folder: &Path, default_level: PhpVersion) -> Project {
         let composer = Composer::load(root);
         let (level, level_from_composer) = level_for(composer.as_ref(), default_level);
         Project {
             root: root.to_path_buf(),
+            folder: folder.to_path_buf(),
             composer,
             level,
             level_from_composer,
@@ -39,6 +48,7 @@ impl Project {
     pub fn loose(default_level: PhpVersion) -> Project {
         Project {
             root: PathBuf::new(),
+            folder: PathBuf::new(),
             composer: None,
             level: default_level,
             level_from_composer: false,
@@ -57,6 +67,11 @@ impl Project {
         self.level_from_composer = from_composer;
         self.index.level = level;
         changed
+    }
+
+    /// Whether this project was found below its workspace folder instead of being one.
+    pub fn is_nested(&self) -> bool {
+        self.root != self.folder
     }
 
     pub fn contains(&self, path: &Path) -> bool {

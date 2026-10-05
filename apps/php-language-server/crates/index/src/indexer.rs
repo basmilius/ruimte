@@ -64,9 +64,45 @@ fn is_php(path: &Path) -> bool {
         .is_some_and(|extension| extension.eq_ignore_ascii_case("php"))
 }
 
-/// The PHP files of a project: everything under its folder except the vendor folder and generated
-/// caches, then the files of the installed packages that Composer would load.
-pub fn discover_project(root: &Path, composer: Option<&Composer>) -> Vec<(PathBuf, Origin)> {
+/// How deep below a workspace folder a `composer.json` is looked for.
+const MAX_COMPOSER_DEPTH: usize = 4;
+
+/// The folders below a workspace folder that hold a `composer.json` of their own, for a workspace
+/// folder that has none. The search stops at the first one on every branch and skips folders that
+/// hold packages, tooling or dependencies. A folder starting with `~` is a backup by convention and
+/// is left out, since indexing a copy of a project and its `vendor` costs as much as the project.
+pub fn discover_composer_roots(folder: &Path) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    if folder.join("composer.json").is_file() {
+        return roots;
+    }
+    let mut walker = WalkDir::new(folder)
+        .follow_links(false)
+        .max_depth(MAX_COMPOSER_DEPTH)
+        .into_iter();
+    while let Some(entry) = walker.next() {
+        let Ok(entry) = entry else {
+            continue;
+        };
+        if entry.depth() == 0 || !entry.file_type().is_dir() {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy();
+        if skipped_dir(&name) || name.starts_with('~') {
+            walker.skip_current_dir();
+        } else if entry.path().join("composer.json").is_file() {
+            roots.push(entry.into_path());
+            walker.skip_current_dir();
+        }
+    }
+    roots.sort();
+    roots
+}
+
+/// The PHP files of a project: everything under its folder except the vendor folder, generated
+/// caches and the `skip` folders (composer projects of their own), then the files of the installed
+/// packages that Composer would load.
+pub fn discover_project(root: &Path, composer: Option<&Composer>, skip: &[PathBuf]) -> Vec<(PathBuf, Origin)> {
     let vendor_dir = composer.map(|composer| composer.vendor_dir.clone());
     let mut found: BTreeSet<PathBuf> = BTreeSet::new();
     let walker = WalkDir::new(root)
@@ -77,10 +113,10 @@ pub fn discover_project(root: &Path, composer: Option<&Composer>) -> Vec<(PathBu
                 return true;
             }
             let name = entry.file_name().to_string_lossy();
-            if vendor_dir.as_deref() == Some(entry.path()) || skipped_dir(&name) {
+            let path = entry.path();
+            if vendor_dir.as_deref() == Some(path) || skipped_dir(&name) || skip.iter().any(|skipped| skipped == path) {
                 return false;
             }
-            let path = entry.path();
             !(path.ends_with("storage/framework") || path.ends_with("bootstrap/cache") || path.ends_with("var/cache"))
         });
     for entry in walker.flatten() {
@@ -350,12 +386,61 @@ mod tests {
             fs::create_dir_all(file.parent().expect("a parent")).expect("created");
             fs::write(file, "<?php class X {}").expect("written");
         }
-        let found = discover_project(root, None);
+        let found = discover_project(root, None, &[]);
         let names: Vec<String> = found
             .iter()
             .map(|(path, _)| path.strip_prefix(root).expect("inside").to_string_lossy().into_owned())
             .collect();
         assert_eq!(names, vec!["src/A.php", "tests/ATest.php"]);
+    }
+
+    fn touch(root: &Path, relative: &str) {
+        let file = root.join(relative);
+        fs::create_dir_all(file.parent().expect("a parent")).expect("created");
+        fs::write(file, "{}").expect("written");
+    }
+
+    #[test]
+    fn finds_the_composer_roots_below_a_folder_without_one() {
+        let dir = tempfile::tempdir().expect("a temp dir");
+        let root = dir.path();
+        for path in [
+            "backend/composer.json",
+            "backend/packages/inner/composer.json",
+            "shop/api/composer.json",
+            "~backup/old/composer.json",
+            "frontend/node_modules/lib/composer.json",
+            "backend/vendor/acme/composer.json",
+            ".hidden/composer.json",
+            "a/b/c/d/e/composer.json",
+        ] {
+            touch(root, path);
+        }
+        let names: Vec<String> = discover_composer_roots(root)
+            .iter()
+            .map(|path| path.strip_prefix(root).expect("inside").to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, vec!["backend", "shop/api"]);
+
+        touch(root, "composer.json");
+        assert!(
+            discover_composer_roots(root).is_empty(),
+            "a folder with a composer.json is one project"
+        );
+    }
+
+    #[test]
+    fn a_project_skips_the_composer_roots_that_are_projects_of_their_own() {
+        let dir = tempfile::tempdir().expect("a temp dir");
+        let root = dir.path();
+        for path in ["tools/Tool.php", "backend/src/B.php"] {
+            let file = root.join(path);
+            fs::create_dir_all(file.parent().expect("a parent")).expect("created");
+            fs::write(file, "<?php class X {}").expect("written");
+        }
+        let found = discover_project(root, None, &[root.join("backend")]);
+        assert_eq!(found.len(), 1);
+        assert!(found[0].0.ends_with("tools/Tool.php"));
     }
 
     #[test]

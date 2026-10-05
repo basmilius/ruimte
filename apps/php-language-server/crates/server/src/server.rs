@@ -48,7 +48,7 @@ use crate::config::{SECTION, Settings};
 use crate::convert::{self, Mapper};
 use crate::documents::Documents;
 use crate::paths::uri_to_path;
-use crate::workspace::{Internal, Workspace};
+use crate::workspace::{FolderChange, Internal, Workspace};
 
 /// How many files read from the cache file stay in memory, the most recently used ones.
 const KEEP_LOADED_FILES: usize = 1500;
@@ -674,9 +674,17 @@ impl<'a> Server<'a> {
     }
 
     fn open_folder(&mut self, root: &Path) {
-        if self.workspace.add_folder(root) {
-            self.workspace.start_project_job(root, &self.internal_sender);
+        let change = self.workspace.add_folder(root);
+        self.apply_folder_change(change);
+    }
+
+    fn apply_folder_change(&mut self, change: FolderChange) {
+        for root in change.start {
+            self.workspace.start_project_job(&root, &self.internal_sender);
             self.job_started();
+        }
+        for root in change.restart {
+            self.restart_project(&root);
         }
     }
 
@@ -891,6 +899,7 @@ impl<'a> Server<'a> {
 
     fn watched_files_changed(&mut self, params: DidChangeWatchedFilesParams) -> Result<(), BoxError> {
         let mut composer_roots: Vec<PathBuf> = Vec::new();
+        let mut folders: Vec<PathBuf> = Vec::new();
         for change in params.changes {
             let Some(path) = uri_to_path(&change.uri) else {
                 continue;
@@ -900,6 +909,13 @@ impl<'a> Server<'a> {
                 .map(|name| name.to_string_lossy().into_owned())
                 .unwrap_or_default();
             if name == "composer.json" || name == "installed.json" {
+                if name == "composer.json" {
+                    if let Some(folder) = self.workspace.folder_of(&path) {
+                        if !folders.contains(&folder) {
+                            folders.push(folder);
+                        }
+                    }
+                }
                 if let Some(position) = self.workspace.project_position(&path) {
                     let root = self.workspace.projects[position].root.clone();
                     if !composer_roots.contains(&root) {
@@ -928,14 +944,27 @@ impl<'a> Server<'a> {
                 project.index.set_file(path, origin, std::sync::Arc::new(symbols));
             }
         }
-        for root in composer_roots {
-            self.restart_project(&root);
+        let mut change = FolderChange::default();
+        for folder in folders {
+            let found = self.workspace.sync_nested(&folder);
+            change.start.extend(found.start);
+            change.restart.extend(found.restart);
         }
+        for root in composer_roots {
+            let known = self.workspace.projects.iter().any(|project| project.root == root);
+            if known && !change.start.contains(&root) && !change.restart.contains(&root) {
+                change.restart.push(root);
+            }
+        }
+        self.apply_folder_change(change);
         Ok(())
     }
 
     /// `composer.json` or the installed packages changed: read them again and index from scratch.
     fn restart_project(&mut self, root: &Path) {
+        if !self.workspace.projects.iter().any(|project| project.root == root) {
+            return;
+        }
         let default_level = self.workspace.default_level;
         let stubs: Vec<StubFile> = std::mem::take(&mut self.workspace.stubs);
         let stubs_loaded = self.workspace.stubs_loaded;
