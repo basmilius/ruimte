@@ -7,7 +7,8 @@
         "agent": "Agent",
         "lines": "De geselecteerde regels",
         "problems": "Problemen op deze regels",
-        "noAgent": "Er is geen agent geïnstalleerd die kan chatten."
+        "noAgent": "Er is geen agent geïnstalleerd die kan chatten.",
+        "account": "Account voor {{provider}}"
     },
     "card": {
         "running": "Bezig…",
@@ -24,7 +25,11 @@
         "apply": "Toepassen",
         "close": "Sluiten",
         "removedLines_one": "{{count}} regel verwijderd",
-        "removedLines_other": "{{count}} regels verwijderd"
+        "removedLines_other": "{{count}} regels verwijderd",
+        "stop": "Stoppen",
+        "stopped": "Gestopt",
+        "stoppedEmpty": "Gestopt voordat de agent iets voorstelde.",
+        "runAgain": "Opnieuw uitvoeren"
     },
     "toast": {
         "ready": "De wijziging in {{name}} is klaar",
@@ -38,8 +43,11 @@
     },
     "error": {
         "noAnswer": "Deze wijziging heeft nog geen antwoord.",
-        "stopped": "De turn is gestopt.",
         "failed": "De agent kon niet antwoorden.",
-        "open": "De chat kon niet worden geopend."
+        "open": "De chat kon niet worden geopend.",
+        "stop": "De turn kon niet worden gestopt."
+    },
+    "marker": {
+        "show": "Toon de inline wijziging van deze regels"
     }
 }

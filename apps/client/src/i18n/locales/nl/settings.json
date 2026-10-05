@@ -139,8 +139,7 @@
             "title": "AI",
             "inlineAgent": {
                 "label": "Inline edit",
-                "description": "De agent die inline edits uitvoert. Hij draait als chat in het project.",
-                "none": "Er is geen agent ingesteld"
+                "description": "De agent die inline edits uitvoert, en het account waaronder hij draait als je er meer dan één hebt. Hij draait als chat in het project."
             },
             "agentChanges": {
                 "label": "Wijzigingen van agents in open bestanden",

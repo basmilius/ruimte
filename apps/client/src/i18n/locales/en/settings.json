@@ -139,8 +139,7 @@
             "title": "AI",
             "inlineAgent": {
                 "label": "Inline edit",
-                "description": "The agent that handles inline edits. It runs as a chat in the project.",
-                "none": "No agent is set up"
+                "description": "The agent that handles inline edits, and the account it runs under when you have more than one. It runs as a chat in the project."
             },
             "agentChanges": {
                 "label": "Agent changes in open files",

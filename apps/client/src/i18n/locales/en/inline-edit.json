@@ -7,7 +7,8 @@
         "agent": "Agent",
         "lines": "The selected lines",
         "problems": "Problems on these lines",
-        "noAgent": "No agent that can chat is installed."
+        "noAgent": "No agent that can chat is installed.",
+        "account": "Account for {{provider}}"
     },
     "card": {
         "running": "Working…",
@@ -24,7 +25,11 @@
         "apply": "Apply",
         "close": "Close",
         "removedLines_one": "{{count}} line removed",
-        "removedLines_other": "{{count}} lines removed"
+        "removedLines_other": "{{count}} lines removed",
+        "stop": "Stop",
+        "stopped": "Stopped",
+        "stoppedEmpty": "Stopped before the agent proposed anything.",
+        "runAgain": "Run again"
     },
     "toast": {
         "ready": "The edit to {{name}} is ready",
@@ -38,8 +43,11 @@
     },
     "error": {
         "noAnswer": "This edit has no answer yet.",
-        "stopped": "The turn was stopped.",
         "failed": "The agent could not answer.",
-        "open": "The chat could not be opened."
+        "open": "The chat could not be opened.",
+        "stop": "The turn could not be stopped."
+    },
+    "marker": {
+        "show": "Show the inline edit of these lines"
     }
 }

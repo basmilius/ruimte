@@ -1,10 +1,7 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Segmented, Switch } from '@basmilius/desktop-ui';
 import { SettingsRow } from '@basmilius/desktop-ui/settings';
-import { ModelPicker } from '@ruimte/agents-react/chat/ui/Pickers';
-import { useProviders } from '@ruimte/agents-react/state/providers';
-import { availableAgents } from '@/agents/creation';
+import { InlineAgentPicker } from '@/editor-ai/InlineAgentPicker';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { AGENT_CHANGES_MODES, type AgentChangesMode } from '@/state/ai-settings';
 import { useSettings } from '@/state/settings';
@@ -16,10 +13,6 @@ export function EditorAiTab() {
     const changes = useSettings((s) => s.aiAgentChanges);
     const attribution = useSettings((s) => s.aiAttribution);
     const update = useSettings((s) => s.update);
-    const providers = useProviders((s) => s.providers);
-    const [open, setOpen] = useState(false);
-    const offered = availableAgents(providers, 'chat');
-    const owner = providers.find((provider) => provider.kind === inline.provider);
 
     return (
         <SettingsSection title={t('editor.ai.title')}>
@@ -28,20 +21,20 @@ export function EditorAiTab() {
                 label={t('editor.ai.inlineAgent.label')}
                 description={t('editor.ai.inlineAgent.description')}
                 control={
-                    offered.length === 0 ? (
-                        <span className="text-sm text-text-muted">{t('editor.ai.inlineAgent.none')}</span>
-                    ) : (
-                        <ModelPicker
-                            providers={offered}
-                            provider={inline.provider}
-                            selection={{ model: inline.model ?? owner?.defaultModel ?? '', options: {} }}
-                            open={open}
-                            onOpenChange={setOpen}
-                            onChange={(provider, model) => update({ aiInlineAgent: { provider, model } })}
-                            kbd={null}
-                            side="bottom"
+                    <div className="flex items-center gap-1.5">
+                        <InlineAgentPicker
+                            agent={inline}
+                            onChange={(agent) =>
+                                update({
+                                    aiInlineAgent: {
+                                        provider: agent.provider,
+                                        model: agent.model,
+                                        ...(agent.account === undefined ? {} : { account: agent.account })
+                                    }
+                                })
+                            }
                         />
-                    )
+                    </div>
                 }
             />
             <SettingsRow
