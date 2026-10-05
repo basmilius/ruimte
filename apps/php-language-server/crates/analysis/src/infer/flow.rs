@@ -3,8 +3,8 @@
 
 use std::collections::HashMap;
 
-use php_index::Type;
 use php_index::phpdoc::{TypeContext, parse_var_comment};
+use php_index::{AssertWhen, Type};
 use php_syntax::SyntaxKind::*;
 use php_syntax::{SyntaxElement, SyntaxNode};
 
@@ -34,9 +34,9 @@ impl Analyzer<'_> {
     fn init_scope(&self, scope: &SyntaxNode, env: &mut Env, offset: u32) {
         match scope.kind() {
             SOURCE_FILE => {}
-            FUNCTION_DECLARATION | METHOD_DECLARATION => self.bind_params(scope, env),
+            FUNCTION_DECLARATION | METHOD_DECLARATION => self.bind_params(scope, env, &[]),
             PROPERTY_HOOK => {
-                self.bind_params(scope, env);
+                self.bind_params(scope, env, &[]);
                 if !env.vars.contains_key("value") {
                     env.set("value", self.hook_value_type(scope));
                 }
@@ -48,6 +48,7 @@ impl Analyzer<'_> {
                 } else {
                     self.env_at(outer_offset)
                 };
+                let hints = self.closure_param_hints(scope, &outer);
                 if let Some(uses) = child_of(scope, CLOSURE_USE) {
                     for variable in uses.children().filter(|child| child.kind() == CLOSURE_USE_VARIABLE) {
                         let Some(token) = first_token(&variable, VARIABLE) else {
@@ -58,14 +59,15 @@ impl Analyzer<'_> {
                         env.set(name, ty);
                     }
                 }
-                self.bind_params(scope, env);
+                self.bind_params(scope, env, &hints);
             }
             ARROW_FUNCTION_EXPR => {
                 let outer_offset = start(scope).saturating_sub(1);
                 if outer_offset != offset {
                     *env = self.env_at(outer_offset);
                 }
-                self.bind_params(scope, env);
+                let hints = self.closure_param_hints(scope, env);
+                self.bind_params(scope, env, &hints);
             }
             _ => {}
         }
@@ -94,7 +96,9 @@ impl Analyzer<'_> {
             .map_or(Type::Unknown, |ty| php_index::extract::native_type(&ty, &cx))
     }
 
-    fn bind_params(&self, function: &SyntaxNode, env: &mut Env) {
+    /// Binds the parameters of a function-like node. A closure parameter with no type of its own gets
+    /// the one its call gives it (`hints`, by position).
+    fn bind_params(&self, function: &SyntaxNode, env: &mut Env, hints: &[Type]) {
         let class_scope = self.class.as_ref().map(|class| php_index::extract::ClassScope {
             name: class.name.clone(),
             parent: class.parent.clone(),
@@ -114,7 +118,8 @@ impl Analyzer<'_> {
                     self.narrows(param.native_type(level), narrower)
                         .then(|| narrower.clone())
                 })
-                .or_else(|| param.effective_type(level).cloned());
+                .or_else(|| param.effective_type(level).cloned())
+                .or_else(|| hints.get(position).filter(|hint| !hint.is_unknown()).cloned());
             let mut ty = declared.unwrap_or(Type::Unknown);
             if param
                 .default
@@ -583,6 +588,7 @@ impl Analyzer<'_> {
                         }
                     }
                 }
+                self.narrow_by_asserts(expr, None, env);
             }
             _ => {
                 for child in expr.children() {
@@ -615,37 +621,31 @@ impl Analyzer<'_> {
         }
     }
 
-    /// Records `$a[] = x` and `$a[key] = x` as what `$a` holds.
+    /// Records `$a[] = x`, `$a[key] = x` and `$a[key][] = x` as what `$a` holds.
     fn bind_index_target(&self, target: &SyntaxNode, value: &Type, env: &mut Env) {
-        let mut parts = target.children();
-        let (Some(base), key) = (parts.next(), parts.next()) else {
-            return;
-        };
+        let mut keys: Vec<Option<SyntaxNode>> = Vec::new();
+        let mut base = target.clone();
+        while base.kind() == INDEX_EXPR {
+            let mut parts = base.children();
+            let (Some(inner), key) = (parts.next(), parts.next()) else {
+                return;
+            };
+            keys.push(key);
+            base = inner;
+        }
         if base.kind() != VARIABLE_EXPR {
             return;
         }
+        keys.reverse();
         let name = text_of(&base).trim_start_matches('$').to_string();
         let current = env.get(&name).cloned().unwrap_or(Type::Unknown);
-        let key_type = key.as_ref().map(|key| self.type_of(key, env));
-        let empty =
-            matches!(&current, Type::Array(k, v) if **k == Type::Never && **v == Type::Never) || current.is_unknown();
-        let updated = match (&current, key_type) {
-            (_, key_type) if empty => match key_type {
-                Some(key_type) => Type::Array(Box::new(key_type), Box::new(value.clone())),
-                None => Type::List(Box::new(value.clone())),
-            },
-            (Type::List(existing), None) => Type::List(Box::new(Type::union([(**existing).clone(), value.clone()]))),
-            (Type::Array(existing_key, existing), Some(key_type)) => Type::Array(
-                Box::new(Type::union([(**existing_key).clone(), key_type])),
-                Box::new(Type::union([(**existing).clone(), value.clone()])),
-            ),
-            (Type::Array(existing_key, existing), None) => Type::Array(
-                existing_key.clone(),
-                Box::new(Type::union([(**existing).clone(), value.clone()])),
-            ),
-            _ => return,
-        };
-        env.set(name, updated);
+        let key_types: Vec<Option<Type>> = keys
+            .iter()
+            .map(|key| key.as_ref().map(|key| self.type_of(key, env)))
+            .collect();
+        if let Some(updated) = assign_into(&current, &key_types, value) {
+            env.set(name, updated);
+        }
     }
 
     pub(super) fn bind_target(&self, target: &SyntaxNode, ty: &Type, env: &mut Env) {
@@ -784,6 +784,7 @@ impl Analyzer<'_> {
     }
 
     fn narrow_call(&self, call: &SyntaxNode, truth: bool, env: &mut Env) {
+        self.narrow_by_asserts(call, Some(truth), env);
         let Some(callee) = call.children().next().filter(|callee| callee.kind() == NAME) else {
             return;
         };
@@ -808,6 +809,104 @@ impl Analyzer<'_> {
         };
         let current = env.get(&variable).cloned().unwrap_or(Type::Unknown);
         env.set(variable, narrow_kind(&current, truth, kind));
+    }
+
+    /// Applies the `@assert` tags of the function or method a call names to the variables it was
+    /// given. `truth` is the value the call has as a condition, `None` for a call that stands alone.
+    fn narrow_by_asserts(&self, call: &SyntaxNode, truth: Option<bool>, env: &mut Env) {
+        if call.kind() != CALL_EXPR || super::calls::is_first_class_callable(call) {
+            return;
+        }
+        let callees = self.callees(call, env);
+        let [callee] = callees.as_slice() else {
+            return;
+        };
+        let Some(doc) = &callee.doc else {
+            return;
+        };
+        if doc.asserts.is_empty() {
+            return;
+        }
+        let args = arguments(call);
+        let (map, _) = self.bind_call(callee, &args, env);
+        let params: Vec<&php_index::Param> = callee.callable.params_at(self.level()).collect();
+        for assert in &doc.asserts {
+            let holds = match assert.when {
+                AssertWhen::Always => true,
+                AssertWhen::IfTrue => truth == Some(true),
+                AssertWhen::IfFalse => truth == Some(false),
+            };
+            if !holds {
+                continue;
+            }
+            let subject = if assert.subject == "$this" {
+                call.children()
+                    .next()
+                    .filter(|callee| callee.kind() == PROPERTY_FETCH_EXPR)
+                    .and_then(|callee| callee.children().next())
+            } else {
+                let name = assert.subject.trim_start_matches('$');
+                params
+                    .iter()
+                    .position(|param| param.name == name)
+                    .and_then(|position| {
+                        args.iter()
+                            .find(|arg| arg.name.as_deref() == Some(name))
+                            .or_else(|| args.get(position).filter(|arg| arg.name.is_none() && !arg.spread))
+                    })
+                    .and_then(|arg| arg.expr.clone())
+            };
+            let Some(variable) = subject.as_ref().and_then(condition_variable) else {
+                continue;
+            };
+            let ty = assert
+                .ty
+                .substitute(&map, callee.receiver.as_ref(), callee.self_name.as_deref());
+            if ty.has_template() {
+                continue;
+            }
+            let current = env.get(&variable).cloned().unwrap_or(Type::Unknown);
+            env.set(variable, self.narrow_to_type(&current, &ty, !assert.negated));
+        }
+    }
+
+    /// A type narrowed to a given type, or with that type taken out.
+    pub fn narrow_to_type(&self, current: &Type, ty: &Type, positive: bool) -> Type {
+        if positive {
+            let narrowed = ty.members().iter().map(|member| self.narrow_to_member(current, member));
+            return Type::union(narrowed);
+        }
+        let mut result = current.clone();
+        for member in ty.members() {
+            result = self.remove_member(&result, member);
+        }
+        result
+    }
+
+    fn narrow_to_member(&self, current: &Type, ty: &Type) -> Type {
+        let kind = kind_of(ty);
+        match (ty, kind) {
+            (Type::Class { .. }, _) => self.narrow_instanceof(current, ty, true),
+            (_, Some(kind)) => {
+                let narrowed = narrow_kind(current, true, kind);
+                let is_array = matches!(kind, Kind::Array);
+                if is_array && narrowed == Type::plain_array() {
+                    ty.clone()
+                } else {
+                    narrowed
+                }
+            }
+            _ => ty.clone(),
+        }
+    }
+
+    fn remove_member(&self, current: &Type, ty: &Type) -> Type {
+        match (ty, kind_of(ty)) {
+            (Type::Class { .. }, _) => self.narrow_instanceof(current, ty, false),
+            (Type::True | Type::False, _) => current.filter(|member| member != ty),
+            (_, Some(kind)) => narrow_kind(current, false, kind),
+            _ => current.clone(),
+        }
     }
 
     /// A type narrowed by `instanceof class`, or by its absence.
@@ -846,6 +945,47 @@ impl Analyzer<'_> {
     }
 }
 
+/// What an array type becomes when `value` is stored under a chain of keys, `None` for a key a
+/// literal-free type cannot follow. A key of `None` is `[]`.
+fn assign_into(current: &Type, keys: &[Option<Type>], value: &Type) -> Option<Type> {
+    let Some((first, rest)) = keys.split_first() else {
+        return Some(value.clone());
+    };
+    let empty = matches!(current, Type::Array(key, element) if **key == Type::Never && **element == Type::Never)
+        || current.is_unknown();
+    match (current, first) {
+        _ if empty => {
+            let element = assign_into(&Type::Unknown, rest, value)?;
+            Some(match first {
+                Some(key_type) => Type::Array(Box::new(key_type.clone()), Box::new(element)),
+                None => Type::List(Box::new(element)),
+            })
+        }
+        (Type::List(existing), None) => {
+            let element = stored_element(existing, rest, value)?;
+            Some(Type::List(Box::new(element)))
+        }
+        (Type::Array(existing_key, existing), Some(key_type)) => {
+            let element = stored_element(existing, rest, value)?;
+            Some(Type::Array(
+                Box::new(Type::union([(**existing_key).clone(), key_type.clone()])),
+                Box::new(element),
+            ))
+        }
+        (Type::Array(existing_key, existing), None) => {
+            let element = stored_element(existing, rest, value)?;
+            Some(Type::Array(existing_key.clone(), Box::new(element)))
+        }
+        _ => None,
+    }
+}
+
+/// The element type of an array after storing `value` below it by the remaining keys.
+fn stored_element(existing: &Type, rest: &[Option<Type>], value: &Type) -> Option<Type> {
+    let added = assign_into(&Type::Unknown, rest, value)?;
+    Some(Type::union([existing.clone(), added]))
+}
+
 /// The type groups the `is_*` functions test for.
 #[derive(Clone, Copy)]
 enum Kind {
@@ -858,6 +998,22 @@ enum Kind {
     Object,
     Callable,
     Numeric,
+}
+
+/// The group of types `is_*` tests for that a type belongs to.
+fn kind_of(ty: &Type) -> Option<Kind> {
+    match ty {
+        Type::Null => Some(Kind::Null),
+        Type::String | Type::StringLiteral(_) => Some(Kind::String),
+        Type::Int | Type::IntLiteral(_) => Some(Kind::Int),
+        Type::Float => Some(Kind::Float),
+        Type::Bool => Some(Kind::Bool),
+        Type::Array(..) | Type::List(_) | Type::Shape(_) => Some(Kind::Array),
+        Type::Object => Some(Kind::Object),
+        Type::Callable(_) => Some(Kind::Callable),
+        Type::Numeric => Some(Kind::Numeric),
+        _ => None,
+    }
 }
 
 fn narrow_kind(current: &Type, positive: bool, kind: Kind) -> Type {

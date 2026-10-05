@@ -60,7 +60,9 @@ impl Analyzer<'_> {
                 for member in arg.members() {
                     if let Type::Callable(Some(actual)) = member {
                         for (param_param, actual_param) in signature.params.iter().zip(&actual.params) {
-                            self.bind_templates(&param_param.ty, &actual_param.ty, map);
+                            if !matches!(actual_param.ty, Type::Mixed) {
+                                self.bind_templates(&param_param.ty, &actual_param.ty, map);
+                            }
                         }
                         if let (Some(expected), Some(actual)) = (&signature.ret, &actual.ret) {
                             self.bind_templates(expected, actual, map);

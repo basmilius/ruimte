@@ -12,6 +12,7 @@ pub mod phpdoc;
 pub mod project;
 pub mod resolve;
 pub mod store;
+pub mod stub_overlay;
 pub mod stubs;
 pub mod types;
 pub mod words;

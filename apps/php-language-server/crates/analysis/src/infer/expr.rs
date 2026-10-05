@@ -42,7 +42,7 @@ impl Analyzer<'_> {
                 .children()
                 .next()
                 .map_or(Type::Unknown, |inner| self.type_of(&inner, env)),
-            CLOSURE_EXPR | ARROW_FUNCTION_EXPR => self.closure_type(node),
+            CLOSURE_EXPR | ARROW_FUNCTION_EXPR => self.closure_type(node, env),
             MATCH_EXPR => Type::union(
                 node.children()
                     .filter(|arm| arm.kind() == MATCH_ARM)
@@ -392,21 +392,30 @@ impl Analyzer<'_> {
         }
     }
 
-    fn closure_type(&self, node: &SyntaxNode) -> Type {
+    fn closure_type(&self, node: &SyntaxNode, env: &Env) -> Type {
         let (callable, _) = php_index::extract::callable_at(node, &self.resolver, None);
         let level = self.level();
+        let hints = self.closure_param_hints(node, env);
         let params = callable
             .params
             .iter()
-            .map(|param| php_index::types::CallableParam {
-                ty: param.effective_type(level).cloned().unwrap_or(Type::Mixed),
+            .enumerate()
+            .map(|(position, param)| php_index::types::CallableParam {
+                ty: param
+                    .effective_type(level)
+                    .cloned()
+                    .or_else(|| hints.get(position).filter(|hint| !hint.is_unknown()).cloned())
+                    .unwrap_or(Type::Mixed),
                 optional: param.default.is_some(),
                 variadic: param.variadic,
                 by_ref: param.by_ref,
                 name: Some(param.name.clone()),
             })
             .collect();
-        let ret = callable.effective_return(level).cloned();
+        let ret = callable.effective_return(level).cloned().or_else(|| {
+            let inferred = self.infer_body_return(node);
+            (!inferred.is_unknown()).then_some(inferred)
+        });
         Type::Callable(Some(Box::new(php_index::types::CallableType {
             closure: true,
             params,

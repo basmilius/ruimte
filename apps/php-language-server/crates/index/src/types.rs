@@ -135,6 +135,25 @@ impl Type {
         if flat.iter().any(|ty| matches!(ty, Type::Mixed)) {
             return Type::Mixed;
         }
+        // `A|(A&B)` is `A`.
+        let plain: Vec<Type> = flat
+            .iter()
+            .filter(|ty| !matches!(ty, Type::Intersection(_)))
+            .cloned()
+            .collect();
+        flat.retain(|ty| match ty {
+            Type::Intersection(parts) => !parts.iter().any(|part| plain.contains(part)),
+            _ => true,
+        });
+        let is_empty_array =
+            |ty: &Type| matches!(ty, Type::Array(key, value) if **key == Type::Never && **value == Type::Never);
+        if flat.iter().any(is_empty_array)
+            && flat
+                .iter()
+                .any(|ty| matches!(ty, Type::Array(..) | Type::List(_) | Type::Shape(_)) && !is_empty_array(ty))
+        {
+            flat.retain(|ty| !is_empty_array(ty));
+        }
         if flat.contains(&Type::True) && flat.contains(&Type::False) {
             flat.retain(|ty| !matches!(ty, Type::True | Type::False));
             flat.push(Type::Bool);

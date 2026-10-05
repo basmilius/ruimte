@@ -363,3 +363,48 @@ function f() {
     assert_eq!(var(&fixture, code, "map"), "array<string, Post>");
     assert_eq!(var(&fixture, code, "unknown"), "mixed");
 }
+
+#[test]
+fn nested_array_writes_build_the_element_type() {
+    let fixture = models();
+    let code = r#"<?php
+namespace App;
+/** @param list<Post> $posts */
+function f(array $posts) {
+    $byUser = [];
+    foreach ($posts as $post) {
+        $byUser[1][] = $post;
+    }
+    $grid = [];
+    $grid['a']['b'] = new User();
+    $0
+}
+"#;
+    assert_eq!(var(&fixture, code, "byUser"), "array<int, list<Post>>");
+    assert_eq!(var(&fixture, code, "grid"), "array<string, array<string, User>>");
+}
+
+#[test]
+fn nested_array_writes_survive_a_later_loop() {
+    let fixture = models();
+    let code = r#"<?php
+namespace App;
+/** @param list<Post> $posts @param list<string> $ids */
+function f(array $posts, array $ids, User $user) {
+    $byUser = [];
+    foreach ($posts as $post) {
+        $byUser[$user->name][] = $post;
+    }
+    foreach ($ids as $id) {
+        if (!isset($ids[$id])) {
+            throw new \Exception();
+        }
+        foreach ($byUser[$id] ?? [] as $item) {
+            $0
+        }
+    }
+}
+"#;
+    assert_eq!(var(&fixture, code, "byUser"), "array<string, list<Post>>");
+    assert_eq!(var(&fixture, code, "item"), "Post");
+}

@@ -127,6 +127,28 @@ pub struct DocMethod {
     pub description: String,
 }
 
+/// When an `@assert` tag holds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AssertWhen {
+    /// The call returned at all.
+    Always,
+    IfTrue,
+    IfFalse,
+}
+
+/// `@psalm-assert Type $subject` and its `phpstan-` and `-if-true` and `-if-false` forms.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DocAssert {
+    pub when: AssertWhen,
+    /// `$param`, `$this` or `$param->property`, as written.
+    pub subject: String,
+    pub ty: Type,
+    /// `!Type`: the subject is not of the type.
+    pub negated: bool,
+    /// `=Type`: the subject is the type itself and not only a subtype.
+    pub equality: bool,
+}
+
 /// A tag without a structure of its own, kept for display.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RawTag {
@@ -157,6 +179,7 @@ pub struct Doc {
     pub since: Option<u16>,
     pub removed: Option<u16>,
     pub see: Vec<String>,
+    pub asserts: Vec<DocAssert>,
     pub tags: Vec<RawTag>,
 }
 

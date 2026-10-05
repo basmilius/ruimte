@@ -25,6 +25,9 @@ pub fn extract(root: &SyntaxNode, options: ExtractOptions) -> FileSymbols {
     };
     extractor.statements(root);
     extractor.out.dynamic_define = extractor.has_dynamic_define(root);
+    if options.stub {
+        crate::stub_overlay::apply(&mut extractor.out);
+    }
     extractor.out
 }
 

@@ -1,9 +1,10 @@
 //! Calls: which function or method a call names, and what it returns once the templates are bound.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use php_index::types::CallableParam;
-use php_index::{Callable, Doc, Name, Param, Type};
+use php_index::{Callable, Doc, Name, Origin, Param, Type};
 use php_syntax::SyntaxKind::*;
 use php_syntax::SyntaxNode;
 
@@ -17,6 +18,14 @@ pub struct Arg {
     pub name: Option<String>,
     pub expr: Option<SyntaxNode>,
     pub spread: bool,
+}
+
+/// Where a function or method is declared, to read its body when it declares no return type.
+#[derive(Clone, Debug)]
+pub struct DeclRef {
+    pub path: PathBuf,
+    /// The offset of the name in the declaration.
+    pub name_start: u32,
 }
 
 /// A function or method a call resolves to, with what its types need to be read from the call site.
@@ -36,6 +45,7 @@ pub struct ResolvedCallable {
     pub constructed: Option<Name>,
     /// Lent by a `@mixin`: the call reaches it through `__call`, which takes anything.
     pub via_mixin: bool,
+    pub decl: Option<DeclRef>,
 }
 
 /// The arguments of a call or `new` node.
@@ -111,6 +121,7 @@ impl Analyzer<'_> {
             is_constructor: true,
             constructed: Some(name.clone()),
             via_mixin: false,
+            decl: None,
         };
         let (map, _) = self.bind_call(&callable, &arguments(node), env);
         let args = templates
@@ -175,6 +186,7 @@ impl Analyzer<'_> {
                     is_constructor: true,
                     constructed: Some(found.class.decl.name.clone()),
                     via_mixin: false,
+                    decl: None,
                 });
             }
         }
@@ -196,6 +208,10 @@ impl Analyzer<'_> {
                         is_constructor: false,
                         constructed: None,
                         via_mixin: false,
+                        decl: (function.file.origin != Origin::Stub).then(|| DeclRef {
+                            path: function.file.path.clone(),
+                            name_start: function.decl.name_span.start,
+                        }),
                     }],
                     None => Vec::new(),
                 }
@@ -251,6 +267,7 @@ impl Analyzer<'_> {
                             is_constructor: false,
                             constructed: None,
                             via_mixin: false,
+                            decl: None,
                         }),
                         Type::Class { .. } => out.extend(self.methods_named(member, "__invoke")),
                         _ => {}
@@ -278,6 +295,10 @@ impl Analyzer<'_> {
                     is_constructor: false,
                     constructed: None,
                     via_mixin: found.mixin,
+                    decl: (found.class.file.origin != Origin::Stub).then(|| DeclRef {
+                        path: found.class.file.path.clone(),
+                        name_start: found.member.name_span.start,
+                    }),
                 });
             }
         }
@@ -312,28 +333,41 @@ impl Analyzer<'_> {
     }
 
     /// Binds the templates of a callable from the arguments of a call, and collects what is known
-    /// of each parameter's argument by name for conditional types.
+    /// of each parameter's argument by name for conditional types. Closures go last: what they
+    /// return is read with the parameter types the other arguments gave them.
     pub fn bind_call(
         &self,
         callee: &ResolvedCallable,
         args: &[Arg],
         env: &Env,
     ) -> (HashMap<String, Type>, HashMap<String, Type>) {
-        let level = self.level();
         let mut map = callee.subst.clone();
         let mut by_name: HashMap<String, Type> = HashMap::new();
+        self.bind_args(callee, args, env, ArgPass::Plain, &mut map, &mut by_name);
+        self.bind_args(callee, args, env, ArgPass::Closures, &mut map, &mut by_name);
+        (map, by_name)
+    }
+
+    fn bind_args(
+        &self,
+        callee: &ResolvedCallable,
+        args: &[Arg],
+        env: &Env,
+        pass: ArgPass,
+        map: &mut HashMap<String, Type>,
+        by_name: &mut HashMap<String, Type>,
+    ) {
+        let level = self.level();
         let params: Vec<&Param> = callee.callable.params_at(level).collect();
         for (position, arg) in args.iter().enumerate() {
             let Some(expr) = &arg.expr else {
                 continue;
             };
-            let param = match &arg.name {
-                Some(name) => params.iter().find(|param| &param.name == name),
-                None => params
-                    .get(position)
-                    .or_else(|| params.last().filter(|param| param.variadic)),
-            };
-            let Some(param) = param else {
+            let is_closure = matches!(expr.kind(), CLOSURE_EXPR | ARROW_FUNCTION_EXPR);
+            if is_closure != (pass == ArgPass::Closures) {
+                continue;
+            }
+            let Some(param) = param_for(&params, arg, position) else {
                 continue;
             };
             let arg_type = self.type_of(expr, env);
@@ -343,11 +377,78 @@ impl Analyzer<'_> {
                 } else {
                     expected.clone()
                 };
-                self.bind_templates(&expected, &arg_type, &mut map);
+                self.bind_templates(&expected, &arg_type, map);
             }
             by_name.insert(format!("${}", param.name), arg_type);
         }
-        (map, by_name)
+    }
+
+    /// The types a call gives the parameters of a closure it is handed, by position: the parameter
+    /// the closure is passed for says `callable(T): U`, and `T` is what the other arguments bound.
+    pub(super) fn closure_param_hints(&self, closure: &SyntaxNode, outer: &Env) -> Vec<Type> {
+        let key = crate::ast::start(closure);
+        if let Some(found) = self.hints.borrow().get(&key) {
+            return found.clone();
+        }
+        self.hints.borrow_mut().insert(key, Vec::new());
+        let hints = self.compute_hints(closure, outer);
+        self.hints.borrow_mut().insert(key, hints.clone());
+        hints
+    }
+
+    fn compute_hints(&self, closure: &SyntaxNode, outer: &Env) -> Vec<Type> {
+        let Some(call) = closure
+            .parent()
+            .filter(|parent| parent.kind() == ARGUMENT)
+            .and_then(|argument| argument.parent())
+            .and_then(|list| list.parent())
+            .filter(|call| matches!(call.kind(), CALL_EXPR | NEW_EXPR))
+        else {
+            return Vec::new();
+        };
+        let args = arguments(&call);
+        let Some(position) = args.iter().position(|arg| arg.expr.as_ref() == Some(closure)) else {
+            return Vec::new();
+        };
+        let level = self.level();
+        for callee in self.callees(&call, outer) {
+            let params: Vec<&Param> = callee.callable.params_at(level).collect();
+            let Some(param) = param_for(&params, &args[position], position) else {
+                continue;
+            };
+            let Some(signature) = param.effective_type(level).and_then(|expected| {
+                expected.members().iter().find_map(|member| match member {
+                    Type::Callable(Some(signature)) => Some(signature.clone()),
+                    _ => None,
+                })
+            }) else {
+                continue;
+            };
+            let mut map = callee.subst.clone();
+            let mut by_name = HashMap::new();
+            self.bind_args(&callee, &args, outer, ArgPass::Plain, &mut map, &mut by_name);
+            let mut hints: Vec<Type> = signature
+                .params
+                .iter()
+                .map(|param| {
+                    let ty = param
+                        .ty
+                        .substitute(&map, callee.receiver.as_ref(), callee.self_name.as_deref());
+                    if ty.has_template() { Type::Unknown } else { ty }
+                })
+                .collect();
+            // With ARRAY_FILTER_USE_KEY the callback gets the key alone, which no signature says.
+            if callee.name.eq_ignore_ascii_case("array_filter")
+                && args
+                    .get(2)
+                    .and_then(|mode| mode.expr.as_ref())
+                    .is_some_and(|mode| text_of(mode).ends_with("ARRAY_FILTER_USE_KEY"))
+            {
+                hints = vec![hints.get(1).cloned().unwrap_or(Type::Unknown)];
+            }
+            return hints;
+        }
+        Vec::new()
     }
 
     /// What a call returns: the declared or documented return type with templates bound and
@@ -364,8 +465,14 @@ impl Analyzer<'_> {
         let declared = callee.callable.effective_return(level).cloned();
         let ret = match declared {
             Some(ret) => ret,
-            None if callee.callable.is_generator => Type::class("Generator"),
-            None => return Type::Unknown,
+            None => {
+                let inferred = self.inferred_return(callee);
+                match inferred {
+                    Type::Unknown if callee.callable.is_generator => Type::class("Generator"),
+                    Type::Unknown => return Type::Unknown,
+                    inferred => inferred,
+                }
+            }
         };
         let ret = self.resolve_conditionals(&ret, &by_name, &map);
         let mut leftover = Vec::new();
@@ -387,6 +494,23 @@ impl Analyzer<'_> {
             (Type::Static, None) => self.this_type(),
             _ => resolved,
         }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ArgPass {
+    Plain,
+    Closures,
+}
+
+/// The parameter a call's argument is for.
+fn param_for<'p>(params: &[&'p Param], arg: &Arg, position: usize) -> Option<&'p Param> {
+    match &arg.name {
+        Some(name) => params.iter().find(|param| &param.name == name).copied(),
+        None => params
+            .get(position)
+            .or_else(|| params.last().filter(|param| param.variadic))
+            .copied(),
     }
 }
 

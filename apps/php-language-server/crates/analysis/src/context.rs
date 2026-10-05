@@ -10,12 +10,13 @@ use php_syntax::SyntaxKind::*;
 use php_syntax::SyntaxNode;
 
 use crate::ast::{is_class_like, start};
-use crate::infer::Analyzer;
+use crate::infer::{Analyzer, SharedCache};
 
 pub struct FileContext<'a> {
     pub index: &'a Index,
     pub root: SyntaxNode,
     analyzers: RefCell<HashMap<(u32, u32), Rc<Analyzer<'a>>>>,
+    shared: Rc<SharedCache>,
 }
 
 impl<'a> FileContext<'a> {
@@ -24,6 +25,7 @@ impl<'a> FileContext<'a> {
             index,
             root: root.clone(),
             analyzers: RefCell::new(HashMap::new()),
+            shared: Rc::default(),
         }
     }
 
@@ -34,7 +36,12 @@ impl<'a> FileContext<'a> {
         if let Some(found) = self.analyzers.borrow().get(&key) {
             return found.clone();
         }
-        let analyzer = Rc::new(Analyzer::new(self.index, &self.root, start(node) + 1));
+        let analyzer = Rc::new(Analyzer::with_shared(
+            self.index,
+            &self.root,
+            start(node) + 1,
+            Rc::clone(&self.shared),
+        ));
         self.analyzers.borrow_mut().insert(key, analyzer.clone());
         analyzer
     }

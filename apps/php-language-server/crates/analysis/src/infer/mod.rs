@@ -1,16 +1,24 @@
 //! A type layer good enough to complete members: what a variable or an expression is at a point of a
 //! file. Declared types, PHPDoc types, assignments, `new`, calls with template arguments bound from
 //! their arguments, `instanceof` and null checks, `foreach` and destructuring are followed. What is
-//! not followed (references, loops reaching a fixed point, dynamic names, return types inferred from
-//! bodies) comes out as `Type::Unknown`.
+//! not followed (references, loops reaching a fixed point, dynamic names) comes out as
+//! `Type::Unknown`.
 
 mod calls;
 mod expr;
 mod flow;
+mod returns;
 mod unify;
 
+#[cfg(test)]
+mod assert_tests;
+
+#[cfg(test)]
+mod closure_tests;
+
 use std::cell::{Cell, RefCell};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use php_index::extract::resolver_at;
@@ -20,7 +28,7 @@ use php_syntax::SyntaxNode;
 
 use crate::ast::{self, child_of, node_at, text_of};
 
-pub use calls::{Arg, ResolvedCallable, arguments, is_first_class_callable};
+pub use calls::{Arg, DeclRef, ResolvedCallable, arguments, is_first_class_callable};
 pub use expr::literal_string;
 pub use unify::template_names;
 
@@ -49,6 +57,16 @@ pub struct ClassContext {
     pub anonymous: bool,
 }
 
+/// What analyzers working on one file share: bodies read from other files and the return types
+/// worked out from them.
+#[derive(Default)]
+pub struct SharedCache {
+    returns: RefCell<HashMap<(PathBuf, u32), Type>>,
+    trees: RefCell<HashMap<PathBuf, Option<SyntaxNode>>>,
+    in_progress: RefCell<HashSet<(PathBuf, u32)>>,
+    depth: Cell<u32>,
+}
+
 pub struct Analyzer<'a> {
     pub index: &'a Index,
     pub root: SyntaxNode,
@@ -58,12 +76,21 @@ pub struct Analyzer<'a> {
     depth: Cell<u32>,
     /// The variables at the start of a statement, by the offset of that start.
     envs: RefCell<HashMap<u32, Rc<Env>>>,
+    /// The parameter types a call gives a closure, by the start of the closure.
+    hints: RefCell<HashMap<u32, Vec<Type>>>,
+    /// What a closure without a declared return type returns, by the start of the closure.
+    closure_returns: RefCell<HashMap<u32, Type>>,
+    shared: Rc<SharedCache>,
 }
 
 const MAX_DEPTH: u32 = 48;
 
 impl<'a> Analyzer<'a> {
     pub fn new(index: &'a Index, root: &SyntaxNode, offset: u32) -> Analyzer<'a> {
+        Analyzer::with_shared(index, root, offset, Rc::default())
+    }
+
+    pub fn with_shared(index: &'a Index, root: &SyntaxNode, offset: u32, shared: Rc<SharedCache>) -> Analyzer<'a> {
         let resolver = resolver_at(root, offset);
         let class = class_context(root, offset, &resolver);
         Analyzer {
@@ -73,6 +100,9 @@ impl<'a> Analyzer<'a> {
             class,
             depth: Cell::new(0),
             envs: RefCell::new(HashMap::new()),
+            hints: RefCell::new(HashMap::new()),
+            closure_returns: RefCell::new(HashMap::new()),
+            shared,
         }
     }
 

@@ -3,7 +3,7 @@
 
 use php_syntax::PhpVersion;
 
-use crate::model::{Doc, DocMethod, DocParam, DocProperty, RawTag, Template, encode_version};
+use crate::model::{AssertWhen, Doc, DocAssert, DocMethod, DocParam, DocProperty, RawTag, Template, encode_version};
 use crate::resolve::NameResolver;
 use crate::types::{CallableParam, CallableType, Conditional, ShapeField, Type};
 
@@ -849,6 +849,16 @@ pub fn parse_doc(raw: &str, cx: &TypeContext, stub: bool) -> Doc {
             "since" if stub => doc.since = first_version(text),
             "removed" if stub => doc.removed = first_version(text),
             "see" | "link" => doc.see.push(text.trim().to_string()),
+            "assert" | "assert-if-true" | "assert-if-false" => {
+                let when = match tag {
+                    "assert-if-true" => AssertWhen::IfTrue,
+                    "assert-if-false" => AssertWhen::IfFalse,
+                    _ => AssertWhen::Always,
+                };
+                if let Some(assert) = parse_assert_tag(text, when, &scoped) {
+                    doc.asserts.push(assert);
+                }
+            }
             "template" | "template-covariant" | "template-contravariant" => {}
             _ => doc.tags.push(RawTag {
                 name: name.clone(),
@@ -967,6 +977,26 @@ fn parse_param_tag(text: &str, cx: &TypeContext) -> Option<DocParam> {
         description: after[end..].trim().to_string(),
         variadic,
         by_ref,
+    })
+}
+
+fn parse_assert_tag(text: &str, when: AssertWhen, cx: &TypeContext) -> Option<DocAssert> {
+    let mut text = text.trim_start();
+    let negated = text.starts_with('!');
+    let equality = text.starts_with('=') || text.starts_with("!=");
+    text = text.trim_start_matches(['!', '=']);
+    let (ty, used) = parse_type_prefix(text, cx)?;
+    let rest = text[used..].trim_start();
+    if !rest.starts_with('$') {
+        return None;
+    }
+    let end = rest.find(|c: char| c.is_whitespace()).unwrap_or(rest.len());
+    Some(DocAssert {
+        when,
+        subject: rest[..end].to_string(),
+        ty,
+        negated,
+        equality,
     })
 }
 
@@ -1152,6 +1182,36 @@ mod tests {
         assert_eq!(doc.deprecated.as_deref(), Some("use find()"));
         assert_eq!(doc.since, Some(801));
         assert_eq!(doc.see, vec!["Foo::bar()"]);
+    }
+
+    #[test]
+    fn reads_assert_tags_in_every_form() {
+        let doc = doc(
+            "/**\n * @template E of object\n * @param class-string<E> $expected\n * @phpstan-assert =E $actual\n * @psalm-assert !null $value\n * @phpstan-assert-if-true list<mixed> $this->items\n * @psalm-assert-if-false int|string $key\n */",
+        );
+        let shown: Vec<String> = doc
+            .asserts
+            .iter()
+            .map(|assert| {
+                format!(
+                    "{:?} {}{}{} {}",
+                    assert.when,
+                    if assert.negated { "!" } else { "" },
+                    if assert.equality { "=" } else { "" },
+                    assert.ty.display(false),
+                    assert.subject
+                )
+            })
+            .collect();
+        assert_eq!(
+            shown,
+            vec![
+                "Always =E $actual",
+                "Always !null $value",
+                "IfTrue list<mixed> $this->items",
+                "IfFalse int|string $key",
+            ]
+        );
     }
 
     #[test]
