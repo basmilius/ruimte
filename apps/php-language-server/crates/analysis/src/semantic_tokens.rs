@@ -27,6 +27,7 @@ pub const TOKEN_TYPES: &[&str] = &[
     "function",
     "method",
     "keyword",
+    "decorator",
 ];
 
 /// The modifiers of the legend: bit `n` of a token's `modifiers` is entry `n` here.
@@ -56,6 +57,7 @@ enum Kind {
     Function,
     Method,
     Keyword,
+    Decorator,
 }
 
 const DECLARATION: u32 = 1;
@@ -238,6 +240,10 @@ fn name_token(ctx: &FileContext, token: &SyntaxToken, out: &mut Vec<SemanticToke
         push(out, token.text_range(), Kind::Namespace, 0);
         return;
     }
+    if owner_kind == Some(ATTRIBUTE) {
+        attribute_name_token(ctx, token, out);
+        return;
+    }
     let written = token.text();
     if BUILTIN.contains(&written.to_ascii_lowercase().as_str()) {
         return;
@@ -260,6 +266,16 @@ fn name_token(ctx: &FileContext, token: &SyntaxToken, out: &mut Vec<SemanticToke
         push(out, range_of(token_start + lead, name_start - 1), Kind::Namespace, 0);
     }
     push(out, name_range, kind, modifiers);
+}
+
+/// The name of an attribute is one token of a single type from its first character to its last,
+/// whatever namespace it is written in, so an editor draws all of it as the attribute it names.
+fn attribute_name_token(ctx: &FileContext, token: &SyntaxToken, out: &mut Vec<SemanticToken>) {
+    let modifiers = symbols_of_token(ctx, token)
+        .first()
+        .and_then(|symbol| describe(ctx.index, symbol))
+        .map_or(0, |(_, modifiers)| modifiers & (DEPRECATED | DEFAULT_LIBRARY));
+    push(out, token.text_range(), Kind::Decorator, modifiers);
 }
 
 fn is_alias_declaration(name: &SyntaxNode) -> bool {

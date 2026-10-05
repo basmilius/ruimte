@@ -31,6 +31,7 @@ describe('scopesOf', () => {
         expect(scopesOf('method', new Set(['static']))).toEqual(['entity.name.function.static']);
         expect(scopesOf('property', new Set(['static']))).toEqual(['variable.other.property.static']);
         expect(scopesOf('typeParameter', new Set())).toEqual(['entity.name.type.parameter']);
+        expect(scopesOf('decorator', new Set())).toEqual(['meta.decorator']);
     });
 
     test('draws a variable of a server that marks locals as a global unless it is local', () => {
@@ -52,6 +53,7 @@ describe('the colors of what a language server classifies', () => {
         { type: 'typeParameter', modifiers: [], role: 'typeParameter' },
         { type: 'parameter', modifiers: [], role: 'parameter' },
         { type: 'class', modifiers: [], role: 'type' },
+        { type: 'decorator', modifiers: [], role: 'decorator' },
         { type: 'variable', modifiers: ['defaultLibrary'], scoped: true, role: 'constant' }
     ];
 

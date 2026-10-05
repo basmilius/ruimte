@@ -40,6 +40,8 @@ export function scopesOf(type: string, modifiers: ReadonlySet<string>, scoped = 
                 return ['entity.name.function'];
             }
             return [type === 'method' ? 'entity.name.function.method' : 'entity.name.function.call'];
+        case 'decorator':
+            return ['meta.decorator'];
         case 'macro':
             return ['entity.name.function.macro'];
         case 'variable':

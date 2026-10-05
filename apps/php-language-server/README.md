@@ -193,11 +193,11 @@ Strings and ordinary comments are not changed, and the server says so in a `wind
 
 `textDocument/semanticTokens/full` and `/range`. Keywords, strings, numbers and comments are left to the editor's grammar. The legend:
 
-| Types | `namespace`, `class`, `interface`, `enum`, `struct` (traits), `typeParameter` (`@template` names), `parameter`, `variable`, `property`, `enumMember`, `function`, `method`, `keyword` (doc tags) |
+| Types | `namespace`, `class`, `interface`, `enum`, `struct` (traits), `typeParameter` (`@template` names), `parameter`, `variable`, `property`, `enumMember`, `function`, `method`, `keyword` (doc tags), `decorator` (the name of an attribute) |
 | --- | --- |
 | Modifiers | `declaration`, `readonly`, `static`, `deprecated`, `abstract`, `defaultLibrary` (the standard library), `documentation` (inside a doc comment) |
 
-Classes and the like come from the index (a name it does not know is a plain `class`), constants are `variable` with `readonly`, class constants are `property` with `readonly` and `static`, and the declaration of a name carries `declaration`. A variable is a `parameter` when the function it lives in declares it as one. A qualified name is a `namespace` token for its prefix and the type for its last segment. In doc comments the tags, the classes of the types, the variables, the `@property` and `@method` names, `@see` targets and templates get tokens with `documentation`. A 5,000 line file takes about 60 ms and a typical one 5 to 20 ms. The server asks the client to refresh the tokens when the index changed (`workspace/semanticTokens/refresh`).
+Classes and the like come from the index (a name it does not know is a plain `class`), constants are `variable` with `readonly`, class constants are `property` with `readonly` and `static`, and the declaration of a name carries `declaration`. A variable is a `parameter` when the function it lives in declares it as one. A qualified name is a `namespace` token for its prefix and the type for its last segment, except the name of an attribute, which is one `decorator` token from its first character to its last so an editor draws all of it as the attribute; its arguments keep their own tokens. In doc comments the tags, the classes of the types, the variables, the `@property` and `@method` names, `@see` targets and templates get tokens with `documentation`. A 5,000 line file takes about 60 ms and a typical one 5 to 20 ms. The server asks the client to refresh the tokens when the index changed (`workspace/semanticTokens/refresh`).
 
 ### Inlay hints
 

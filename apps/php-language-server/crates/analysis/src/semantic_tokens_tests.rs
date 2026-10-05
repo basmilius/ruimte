@@ -104,6 +104,29 @@ fn colors_uses_of_members_variables_and_functions() {
 }
 
 #[test]
+fn colors_the_whole_name_of_an_attribute_as_a_decorator() {
+    let lib = "<?php\nnamespace Lib\\Meta;\n\n#[\\Attribute]\nfinal class Model {}\n";
+    let text = "<?php\nnamespace App;\n\nuse Lib\\Meta\\Model;\n\n#[Meta\\Model(Model::class, 'x')]\n#[\\Lib\\Meta\\Model, Missing]\nfinal class Team\n{\n    #[Model]\n    public int $id = 1;\n}\n";
+    check(
+        &[("lib.php", lib)],
+        &[],
+        text,
+        expect![[r#"
+            App namespace
+            Lib\Meta namespace
+            Model class
+            Meta\Model decorator
+            Model class
+            \Lib\Meta\Model decorator
+            Missing decorator
+            Team class [declaration]
+            Model decorator
+            $id property [declaration]
+        "#]],
+    );
+}
+
+#[test]
 fn colors_the_tags_and_types_of_doc_comments() {
     let text = "<?php\nnamespace App;\n\nuse Lib\\Base;\n\n/**\n * @template T of Base\n * @property-read int $size\n */\nclass Box\n{\n    /**\n     * Packs things.\n     *\n     * @param T $item The item\n     * @param array<int, \\Lib\\Shape> $others\n     * @return Base|null\n     * @see Base::draw()\n     */\n    public function pack($item, array $others) {}\n}\n";
     check(

@@ -164,6 +164,15 @@ fn definitions_point_at_declaration_names() {
 }
 
 #[test]
+fn definition_and_hover_work_on_the_name_of_an_attribute() {
+    let found = places("<?php\n#[\\App\\Us$0er]\nclass A {}\n", |analyzer, offset| {
+        analyzer.definitions(offset)
+    });
+    assert_eq!(found, vec!["/project/src/User.php User"]);
+    assert!(hover("<?php\nuse App\\User;\n#[Us$0er]\nclass A {}\n").contains("class User"));
+}
+
+#[test]
 fn type_definitions_follow_the_type_of_the_expression() {
     let variable = places(
         "<?php\nuse App\\User;\nfunction f(User $u) { $u$0; }\n",
