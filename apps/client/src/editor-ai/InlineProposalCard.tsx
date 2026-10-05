@@ -10,7 +10,7 @@ import { Button, Icon, IconButton, Input, Kbd, Spinner, shortcut } from '@basmil
 import { formatDuration } from '@basmilius/desktop-ui/format';
 import type { EditorLanguage } from '@/language/editor-language';
 import { isShortcut } from '@/language/shortcut-keys';
-import { diffSegments } from './inline-edit-model';
+import { diffSegments, emphasisOf } from './inline-edit-model';
 import type { ApplyOutcome, InlineEditSession } from './inline-edit-session';
 
 const APPLY = shortcut('Mod+Enter');
@@ -40,11 +40,13 @@ function Proposal({ language, session }: { language: EditorLanguage; session: In
         }
         element.replaceChildren();
         for (const segment of segments) {
+            const emphasis = emphasisOf(segment);
             language.editor.renderCode(element, segment.text, {
                 ...(segment.firstLine === undefined ? {} : { firstLine: segment.firstLine }),
                 ...(segment.kind === 'same'
                     ? {}
-                    : { sign: segment.kind === 'added' ? '+' : '-', color: segment.kind === 'added' ? '--status-idle' : '--status-error' })
+                    : { sign: segment.kind === 'added' ? '+' : '-', color: segment.kind === 'added' ? '--status-idle' : '--status-error' }),
+                ...(emphasis === undefined ? {} : { emphasis })
             });
         }
     }, [language, segments]);

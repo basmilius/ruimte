@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
     diffSegments,
+    emphasisOf,
     endOfInsertion,
     fitReplacement,
     inlineMessage,
@@ -144,9 +145,9 @@ describe('the diff of a proposal', () => {
         const segments = diffSegments(selected, 'function a(x, y = 2) {\n  if (x) return 1;\n  return y;\n}', 24);
 
         expect(segments).toEqual([
-            { kind: 'added', text: 'function a(x, y = 2) {', firstLine: 24 },
+            { kind: 'added', text: 'function a(x, y = 2) {', firstLine: 24, replaces: 'function a(x) {' },
             { kind: 'same', text: '  if (x) return 1;', firstLine: 25 },
-            { kind: 'added', text: '  return y;', firstLine: 26 },
+            { kind: 'added', text: '  return y;', firstLine: 26, replaces: '  return 2;' },
             { kind: 'same', text: '}', firstLine: 27 }
         ]);
     });
@@ -192,5 +193,22 @@ describe('finding the selection in a text', () => {
     test('gives up when the text is gone or stands in two places', () => {
         expect(locateSelection('one\nthree', { start: at(1, 0), end: at(1, 3) }, 'two')).toBeNull();
         expect(locateSelection('ab\nab', { start: at(0, 0), end: at(0, 0) }, 'ab')).toBeNull();
+    });
+});
+
+describe('the words of a proposal that differ', () => {
+    test('are the ranges of an added line that its old line did not have', () => {
+        const [segment] = diffSegments('function a(x) {', 'function a(x, y = 2) {', 1);
+
+        expect(emphasisOf(segment!)).toEqual([[[12, 19]]]);
+    });
+
+    test('are left out for lines that stand where nothing stood, for lines that stayed, and for a change with no pairing of lines', () => {
+        const [added] = diffSegments('a', 'a\nb', 1).filter((segment) => segment.kind === 'added');
+        expect(emphasisOf(added!)).toBeUndefined();
+        const [same] = diffSegments('a', 'a', 1);
+        expect(emphasisOf(same!)).toBeUndefined();
+        const [many] = diffSegments('one', 'two\nthree', 1);
+        expect(emphasisOf(many!)).toBeUndefined();
     });
 });

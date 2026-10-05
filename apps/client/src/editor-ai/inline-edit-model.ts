@@ -1,6 +1,7 @@
 import { diffLines } from '@ruimte/merge';
 import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
 import { fenceOf, lineRangeLabel } from '@/chat/selection-to-chat';
+import { replacedWords } from './word-diff';
 
 /* The one-based lines a range covers; a selection that ends at the start of a line did not take that line. */
 export interface LineSpan {
@@ -187,6 +188,8 @@ export interface DiffSegment {
     readonly text: string;
     /* One-based number of its first line in the proposal; absent for lines the proposal drops. */
     readonly firstLine?: number;
+    /* For added lines, the selected lines they take the place of; absent for lines that stand where nothing stood. */
+    readonly replaces?: string;
 }
 
 function linesOf(text: string): string[] {
@@ -212,7 +215,12 @@ export function diffSegments(selected: string, proposal: string, startLine: numb
     for (const change of diffLines(base, other)) {
         same(change.otherStart);
         if (change.otherEnd > change.otherStart) {
-            segments.push({ kind: 'added', text: other.slice(change.otherStart, change.otherEnd).join('\n'), firstLine: startLine + change.otherStart });
+            segments.push({
+                kind: 'added',
+                text: other.slice(change.otherStart, change.otherEnd).join('\n'),
+                firstLine: startLine + change.otherStart,
+                ...(change.baseEnd > change.baseStart ? { replaces: base.slice(change.baseStart, change.baseEnd).join('\n') } : {})
+            });
         } else {
             segments.push({ kind: 'removed', text: base.slice(change.baseStart, change.baseEnd).join('\n') });
         }
@@ -220,6 +228,15 @@ export function diffSegments(selected: string, proposal: string, startLine: numb
     }
     same(other.length);
     return segments;
+}
+
+/* Per line of an added stretch, the character ranges of the words that differ from the line it replaces, for the stronger tint; undefined when none do. */
+export function emphasisOf(segment: DiffSegment): Array<Array<[number, number]>> | undefined {
+    if (segment.kind !== 'added' || segment.replaces === undefined) {
+        return undefined;
+    }
+    const ranges = replacedWords(linesOf(segment.text), linesOf(segment.replaces));
+    return ranges.some((line) => line.length > 0) ? ranges : undefined;
 }
 
 /* The offset of a position in a text whose lines end in `\n` or `\r\n`; null when the text is not that long. */
