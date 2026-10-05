@@ -127,11 +127,11 @@ fn call_of_name(name: &SyntaxNode) -> Option<SyntaxNode> {
 }
 
 /// The symbol a declaration is, as the index knows it.
-fn symbol_of(cx: &Cx, function: &SyntaxNode) -> Result<Symbol, String> {
+fn symbol_of(cx: &Cx, root: &SyntaxNode, function: &SyntaxNode) -> Result<Symbol, String> {
     let name = child_of(function, NAME)
         .map(|name| text_of(&name))
         .ok_or("The declaration has no name")?;
-    let analyzer = cx.file.analyzer(function);
+    let analyzer = crate::context::FileContext::new(cx.index, root).analyzer(function);
     if function.kind() == FUNCTION_DECLARATION {
         return Ok(Symbol::Function(analyzer.resolver.qualify(&name)));
     }
@@ -154,8 +154,18 @@ fn symbol_of(cx: &Cx, function: &SyntaxNode) -> Result<Symbol, String> {
 
 /// Finds the declarations and the calls that belong together with a function.
 pub(crate) fn family(rcx: &Rcx<'_>, function: &SyntaxNode) -> Result<Family, String> {
+    let here = Loaded {
+        path: rcx.renv.path.to_path_buf(),
+        text: rcx.cx.text.to_string(),
+        root: rcx.cx.root.clone(),
+    };
+    family_in(rcx, &here, function)
+}
+
+/// Like [`family`], for a function of any file.
+pub(crate) fn family_in(rcx: &Rcx<'_>, home: &Loaded, function: &SyntaxNode) -> Result<Family, String> {
     let cx = &rcx.cx;
-    let symbol = symbol_of(cx, function)?;
+    let symbol = symbol_of(cx, &home.root, function)?;
     let query = Query::new(cx.index, symbol.clone());
     if let Some(outside) = declarations(cx.index, &query)
         .iter()
@@ -228,19 +238,12 @@ pub(crate) fn family(rcx: &Rcx<'_>, function: &SyntaxNode) -> Result<Family, Str
     }
     if !declared
         .iter()
-        .any(|known| files[known.file].path == rcx.renv.path && known.function == *function)
+        .any(|known| files[known.file].path == home.path && known.function.text_range() == function.text_range())
     {
-        let index = files
-            .iter()
-            .position(|file| file.path == rcx.renv.path)
-            .unwrap_or_else(|| {
-                files.push(Loaded {
-                    path: rcx.renv.path.to_path_buf(),
-                    text: cx.text.to_string(),
-                    root: cx.root.clone(),
-                });
-                files.len() - 1
-            });
+        let index = files.iter().position(|file| file.path == home.path).unwrap_or_else(|| {
+            files.push(home.clone());
+            files.len() - 1
+        });
         declared.push(Declared {
             file: index,
             function: function.clone(),

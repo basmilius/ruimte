@@ -291,7 +291,34 @@ fn is_atomic(kind: php_syntax::SyntaxKind) -> bool {
     )
 }
 
-fn needs_parentheses(value: &SyntaxNode, place: &SyntaxNode) -> bool {
+/// How tightly an expression binds: higher goes first. `None` for what stands on its own.
+fn rank_of(node: &SyntaxNode) -> Option<i32> {
+    match node.kind() {
+        BINARY_EXPR => Some(match super::exprs::binary_operator(node)? {
+            POW => 13,
+            STAR | SLASH | PERCENT => 12,
+            PLUS | MINUS => 11,
+            SHL | SHR => 10,
+            DOT => 9,
+            LT | GT | LE | GE => 8,
+            EQ | NEQ | IDENTICAL | NOT_IDENTICAL | SPACESHIP => 7,
+            AMP => 6,
+            CARET => 5,
+            PIPE => 4,
+            AND_AND => 3,
+            OR_OR => 2,
+            COALESCE => 1,
+            INSTANCEOF_KW => 14,
+            AND_KW | XOR_KW | OR_KW => -2,
+            _ => return None,
+        }),
+        TERNARY_EXPR => Some(0),
+        ASSIGN_EXPR => Some(-1),
+        _ => None,
+    }
+}
+
+pub(super) fn needs_parentheses(value: &SyntaxNode, place: &SyntaxNode) -> bool {
     let Some(parent) = place.parent() else {
         return false;
     };
@@ -319,6 +346,16 @@ fn needs_parentheses(value: &SyntaxNode, place: &SyntaxNode) -> bool {
     }
     if is_atomic(value.kind()) {
         return false;
+    }
+    if parent.kind() == BINARY_EXPR {
+        if let (Some(inner), Some(outer)) = (rank_of(value), rank_of(&parent)) {
+            let right_associative = matches!(super::exprs::binary_operator(&parent), Some(POW | COALESCE));
+            return if first {
+                inner < outer || inner == outer && right_associative
+            } else {
+                inner < outer || inner == outer && !right_associative
+            };
+        }
     }
     let delimited = match parent.kind() {
         ARGUMENT | ARRAY_ITEM | EXPR_STATEMENT | RETURN_STATEMENT | ECHO_STATEMENT | PAREN_EXPR | MATCH_ARM

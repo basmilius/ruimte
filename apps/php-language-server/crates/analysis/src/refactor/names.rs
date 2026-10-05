@@ -237,6 +237,69 @@ pub(crate) fn lowercase_first(text: &str) -> String {
     lower_first(text)
 }
 
+/// The fully qualified name a written name stands for where the resolver reads it, with the
+/// leading backslash, or `None` for what is not a class, function or constant name.
+pub(crate) fn fully_qualified(
+    index: &php_index::Index,
+    resolver: &php_index::NameResolver,
+    name: &SyntaxNode,
+) -> Option<String> {
+    let parent = name.parent()?;
+    let written = text_of(name);
+    if written.starts_with('\\')
+        || matches!(
+            written.to_ascii_lowercase().as_str(),
+            "true"
+                | "false"
+                | "null"
+                | "self"
+                | "static"
+                | "parent"
+                | "int"
+                | "float"
+                | "string"
+                | "bool"
+                | "array"
+                | "callable"
+                | "iterable"
+                | "object"
+                | "mixed"
+                | "void"
+                | "never"
+                | "false"
+                | "numeric"
+        )
+    {
+        return None;
+    }
+    let first = parent.children().next().as_ref() == Some(name);
+    let resolved = match parent.kind() {
+        NEW_EXPR | NAMED_TYPE | CATCH_CLAUSE | ATTRIBUTE | EXTENDS_CLAUSE | IMPLEMENTS_CLAUSE => {
+            resolver.resolve_class(&written)
+        }
+        SCOPED_ACCESS_EXPR | STATIC_PROPERTY_EXPR if first => resolver.resolve_class(&written),
+        BINARY_EXPR if !first => resolver.resolve_class(&written),
+        CALL_EXPR if first => {
+            let candidates = resolver.function_candidates(&written);
+            candidates
+                .iter()
+                .find(|candidate| index.function(candidate).is_some())
+                .or(candidates.last())
+                .cloned()?
+        }
+        _ if super::exprs::is_expression(name) => {
+            let candidates = resolver.constant_candidates(&written);
+            candidates
+                .iter()
+                .find(|candidate| index.constant(candidate).is_some())
+                .or(candidates.last())
+                .cloned()?
+        }
+        _ => return None,
+    };
+    Some(format!("\\{}", resolved.trim_start_matches('\\')))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

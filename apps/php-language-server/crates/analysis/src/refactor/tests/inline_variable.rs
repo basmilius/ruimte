@@ -14,7 +14,7 @@ fn inline(body: &str) -> String {
 fn replaces_every_read_with_the_value_and_drops_the_assignment() {
     assert_eq!(
         inline("        $sum$0 = $a + $b;\n        $x = $sum * 2;\n        return $sum - $x;\n"),
-        method("        $x = ($a + $b) * 2;\n        return ($a + $b) - $x;\n")
+        method("        $x = ($a + $b) * 2;\n        return $a + $b - $x;\n")
     );
 }
 

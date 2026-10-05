@@ -16,6 +16,7 @@ use crate::references::Sources;
 mod extract_member;
 mod extract_method;
 mod extract_variable;
+mod inline_method;
 mod inline_variable;
 mod signature;
 

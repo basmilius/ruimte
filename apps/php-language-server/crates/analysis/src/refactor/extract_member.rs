@@ -539,39 +539,9 @@ fn portable_text(rcx: &Rcx<'_>, expr: &SyntaxNode) -> String {
     let mut names: Vec<SyntaxNode> = expr.descendants().filter(|node| node.kind() == NAME).collect();
     names.sort_by_key(|node| std::cmp::Reverse(start(node)));
     for name in names {
-        let Some(parent) = name.parent() else {
+        let Some(replacement) = super::names::fully_qualified(cx.index, &analyzer.resolver, &name) else {
             continue;
         };
-        let written = text_of(&name);
-        if written.starts_with('\\') || matches!(written.to_ascii_lowercase().as_str(), "true" | "false" | "null") {
-            continue;
-        }
-        let first = parent.children().next().as_ref() == Some(&name);
-        let resolved = match parent.kind() {
-            NEW_EXPR => Some(analyzer.resolver.resolve_class(&written)),
-            SCOPED_ACCESS_EXPR | STATIC_PROPERTY_EXPR if first => Some(analyzer.resolver.resolve_class(&written)),
-            CALL_EXPR if first => {
-                let candidates = analyzer.resolver.function_candidates(&written);
-                candidates
-                    .iter()
-                    .find(|candidate| cx.index.function(candidate).is_some())
-                    .or(candidates.last())
-                    .cloned()
-            }
-            _ if super::exprs::is_expression(&name) => {
-                let candidates = analyzer.resolver.constant_candidates(&written);
-                candidates
-                    .iter()
-                    .find(|candidate| cx.index.constant(candidate).is_some())
-                    .or(candidates.last())
-                    .cloned()
-            }
-            _ => None,
-        };
-        let Some(resolved) = resolved else {
-            continue;
-        };
-        let replacement = format!("\\{}", resolved.trim_start_matches('\\'));
         let from = (start(&name) - base) as usize;
         let to = (end(&name) - base) as usize;
         text.replace_range(from..to, &replacement);
