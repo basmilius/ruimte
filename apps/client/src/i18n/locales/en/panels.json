@@ -189,6 +189,8 @@
             "focusChat": "Show the chat",
             "inChat": "in {{chat}}",
             "openChat": "Open chat",
+            "openChatAtTurn": "Open chat at turn {{turn}}",
+            "showTurnChanges": "Show turn changes",
             "turn": "Turn {{turn}}",
             "wrotePossibly_one": "possibly wrote line {{lines}}",
             "wrotePossibly_other": "possibly wrote lines {{lines}}",

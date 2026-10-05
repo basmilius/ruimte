@@ -189,6 +189,8 @@
             "focusChat": "Toon de chat",
             "inChat": "in {{chat}}",
             "openChat": "Open chat",
+            "openChatAtTurn": "Open chat bij turn {{turn}}",
+            "showTurnChanges": "Toon wijzigingen van de turn",
             "turn": "Turn {{turn}}",
             "wrotePossibly_one": "schreef mogelijk regel {{lines}}",
             "wrotePossibly_other": "schreef mogelijk regels {{lines}}",
