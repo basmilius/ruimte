@@ -172,6 +172,17 @@ describe('a collapsed fold as one unit', () => {
     });
 });
 
+describe('copying a line without a selection', () => {
+    test('pastes as whole lines in another editor too', () => {
+        const source = setup({ text: 'one\ntwo', line: 2, column: 2 });
+        const copied = source.clip('copy');
+        expect(copied).toBe('two\n');
+        const target = setup({ text: 'a\nb', line: 2, column: 2 });
+        target.clip('paste', copied);
+        expect(target.editor.getText()).toBe('a\ntwo\nb');
+    });
+});
+
 describe('setText', () => {
     test('is not reported as a change', () => {
         const { editor } = setup();

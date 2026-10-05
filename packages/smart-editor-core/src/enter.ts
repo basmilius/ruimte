@@ -1,6 +1,6 @@
 import type { EditSource } from './edit-source.ts';
 import { commentSyntax } from './languages.ts';
-import { isBraced, isPhp } from './lexical.ts';
+import { hasHashComments, isBraced, isPhp } from './lexical.ts';
 import { hasJsx, isJsxAttributeValue } from './markup-regions.ts';
 import type { DocumentLine } from './rope.ts';
 import { indentationColumn } from './structure.ts';
@@ -250,10 +250,14 @@ class Enter {
         const line = source.line(index);
         const commentStart = context.commentStart;
         const syntax = commentSyntax(options.language, source.region(index));
-        if (commentStart === undefined || commentStart < line.start || syntax.line === null) {
+        // A hash comment of a language that has both, as in PHP, continues with its own marker.
+        const token = commentStart !== undefined && hasHashComments(options.language) && source.charAt(commentStart) === '#' ? '#' : syntax.line;
+        if (commentStart === undefined || commentStart < line.start || token === null) {
             return null;
         }
-        const marker = new RegExp(`^${escapeForPattern(syntax.line)}${syntax.line === '//' ? '[/!]?' : ''}`).exec(source.slice(commentStart, line.end))?.[0];
+        const marker = new RegExp(`^${escapeForPattern(token)}${token === '//' ? '[/!]?' : token === '#' ? '#*' : ''}`).exec(
+            source.slice(commentStart, line.end)
+        )?.[0];
         if (marker === undefined || from < commentStart + marker.length) {
             return null;
         }
@@ -264,7 +268,7 @@ class Enter {
         }
         const newline = source.newline(index);
         const leading = whitespaceOf(source.slice(line.start, from));
-        if (source.slice(textStart, textStart + syntax.line.length) === syntax.line) {
+        if (source.slice(textStart, textStart + token.length) === token) {
             return { from, to: textStart, text: newline + leading, caret: newline.length + leading.length };
         }
         const code = source.slice(line.start, commentStart);
@@ -400,6 +404,11 @@ class Enter {
                 return { from, to: line.end, text, caret: newline.length + star.length };
             }
             return { from, to: textStart, text: newline + star, caret: newline.length + star.length };
+        }
+        if (isDoc && onOpener && source.lineAt(closeAt) === index && isBlank(source.slice(to, closeAt)) && isBlank(source.slice(closeAt + 2, line.end))) {
+            // Nothing left to say after the caret: the closer gets a line of its own, under the opener's star.
+            const star = this.starPrefix(line, lead, false, isDoc);
+            return { from, to: line.end, text: `${newline}${star}${newline}${lead} */`, caret: newline.length + star.length };
         }
         const second = source.line(startIndex + 1).text.trimStart();
         const continuesStars = onOpener ? isDoc : second.startsWith('*') && !second.startsWith('*/');

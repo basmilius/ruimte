@@ -20,6 +20,28 @@ function enter(source: string, expected: string, options: CommandOptions = {}): 
     expect(model.getSelections()).toEqual([{ anchor: result.offset, head: result.offset }]);
 }
 
+describe('Enter in a doc comment that closes on its line', () => {
+    it('puts the closer on a line of its own under the star of the opener', () => {
+        enter('/** foo¦ */', '/** foo\n * ¦\n */');
+        enter('    /** foo ¦*/', '    /** foo \n     * ¦\n     */');
+        enter('/**¦ */', '/**\n * ¦\n */');
+        enter('const a = 1; /** foo¦ */', 'const a = 1; /** foo\n              * ¦\n              */');
+    });
+
+    it('keeps the closer after the text that follows the caret', () => {
+        enter('/** foo¦ bar */', '/** foo\n * ¦bar */');
+    });
+});
+
+describe('Enter in a hash comment', () => {
+    it('continues the marker the comment starts with, in PHP and Python', () => {
+        enter('# foo¦bar', '# foo\n# ¦bar', { language: 'php' });
+        enter('## foo¦ bar', '## foo\n## ¦bar', { language: 'python' });
+        enter('    ### foo¦bar', '    ### foo\n    ### ¦bar', { language: 'python' });
+        enter('// foo¦bar', '// foo\n// ¦bar', { language: 'php' });
+    });
+});
+
 describe('Enter after code that a comment trails', () => {
     it('indents and closes as if the comment were not there', () => {
         enter('function f() { // note¦', 'function f() { // note\n    ¦\n}');

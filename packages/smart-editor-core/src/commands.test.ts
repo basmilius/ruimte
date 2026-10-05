@@ -455,3 +455,29 @@ describe('delete line and duplicate', () => {
         expect(model.getSelections()).toEqual([{ anchor: 9, head: 9 }]);
     });
 });
+
+describe('Tab with several carets on one line', () => {
+    it('puts every caret on a tab stop of its own, counting the spaces the carets before it added', () => {
+        const model = new DocumentModel('xy');
+        model.setSelections([
+            { anchor: 1, head: 1 },
+            { anchor: 2, head: 2 }
+        ]);
+        model.execute('insertTab', { tabSize: 4 });
+        expect(model.getText()).toBe('x   y   ');
+        expect(model.getSelections().map((selection) => selection.head)).toEqual([4, 8]);
+    });
+});
+
+describe('paste line endings', () => {
+    it('takes the line ending of the document, whatever the text came with', () => {
+        const crlf = new DocumentModel('a\r\nb');
+        crlf.setSelections([{ anchor: 1, head: 1 }]);
+        crlf.paste('x\ny\rz\r\nw');
+        expect(crlf.getText()).toBe('ax\r\ny\r\nz\r\nw\r\nb');
+        const lf = new DocumentModel('a\nb');
+        lf.setSelections([{ anchor: 1, head: 1 }]);
+        lf.paste('x\r\ny');
+        expect(lf.getText()).toBe('ax\ny\nb');
+    });
+});

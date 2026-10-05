@@ -675,7 +675,7 @@ export class DocumentModel {
      */
     paste(text: string, options: CommandOptions & { wholeLines?: boolean } = {}): boolean {
         const tabSize = tabWidth(options);
-        const plan = planPaste(this.editSource(options.language ?? 'typescript'), this.selections, text, {
+        const plan = planPaste(this.editSource(options.language ?? 'typescript'), this.selections, text.replace(/\r\n|\r|\n/g, this.newlineAt(0)), {
             tabSize,
             insertSpaces: options.insertSpaces !== false,
             wholeLines: options.wholeLines === true,
@@ -951,13 +951,26 @@ export class DocumentModel {
             return this.changeLineIndentation('indent', tabSize, options);
         }
         const tabOut = options.tabOutOfClosers !== false;
+        // A caret further along a line stands where the spaces of the carets before it moved it to.
+        const moved = new Map<number, number>();
+        const widths = new Map<Selection, number>();
+        for (const selection of [...this.selections].sort((left, right) => left.head - right.head)) {
+            if (tabOut && this.closers.isCloserAt(selection.head)) {
+                continue;
+            }
+            const line = this.rope.lineAt(selection.head);
+            const column = this.columnOf(selection.head, tabSize) + (moved.get(line) ?? 0);
+            const width = tabSize - (column % tabSize);
+            widths.set(selection, width);
+            moved.set(line, (moved.get(line) ?? 0) + width);
+        }
         return this.applySelectionEdits(
             this.selections.map((selection) => {
                 const offset = selection.head;
                 if (tabOut && this.closers.isCloserAt(offset)) {
                     return { from: offset, to: offset, text: '', anchor: 1, head: 1, skip: true };
                 }
-                const text = options.insertSpaces === false ? '\t' : ' '.repeat(tabSize - (this.columnOf(offset, tabSize) % tabSize));
+                const text = options.insertSpaces === false ? '\t' : ' '.repeat(widths.get(selection)!);
                 return { from: offset, to: offset, text, anchor: text.length, head: text.length };
             }),
             { source: 'command' }

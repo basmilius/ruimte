@@ -70,6 +70,9 @@ const VIEW_COMMANDS = new Set<EditorViewCommand>([
     'toggleColumnMode'
 ]);
 
+/* The clipboard text of the last copy or cut of a bare caret, which pastes back as whole lines. Shared, since it can be pasted in another editor. */
+let lineClip: string | null = null;
+
 /* Typing in the same stretch is one undo step until a pause this long. */
 const TYPING_PAUSE_MS = 750;
 const PAIR_CHARACTER = /^[()[\]{}'"`;<]$/;
@@ -88,8 +91,6 @@ export class InputController {
     private readonly contextListeners = new Set<(menu: EditorContextMenu) => void>();
     private readonly subscription: { dispose(): void };
     private historyGroup = 0;
-    /* The clipboard text of the last copy or cut of a bare caret, which pastes back as whole lines. */
-    private lineClip: string | null = null;
     /* The two corners of a box being grown with the keys, and the selections it made, which say whether it is still the one on screen. */
     private block: { anchor: { x: number; y: number }; head: { x: number; y: number }; signature: string } | null = null;
     private selectionRanges: EditorSelectionRanges | null = null;
@@ -272,7 +273,7 @@ export class InputController {
             this.view.ensureVisible(selection.head);
         }
         this.historyGroup++;
-        model.paste(this.native.normalizeNewlines(text), { ...this.commandOptions(), wholeLines: text !== '' && text === this.lineClip });
+        model.paste(this.native.normalizeNewlines(text), { ...this.commandOptions(), wholeLines: text !== '' && text === lineClip });
         this.historyGroup++;
         this.view.revealCaret();
     }
@@ -730,7 +731,7 @@ export class InputController {
                   .join('')
             : selections.map((selection) => model.slice(Math.min(selection.anchor, selection.head), Math.max(selection.anchor, selection.head))).join('\n');
         event.clipboardData?.setData('text/plain', text);
-        this.lineClip = empty ? text : null;
+        lineClip = empty ? text : null;
         if (!cut || this.blockedByReadOnly()) {
             return;
         }
