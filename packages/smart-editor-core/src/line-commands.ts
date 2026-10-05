@@ -2,6 +2,7 @@ import type { EditPlan, EditSource } from './edit-source.ts';
 import { commentSyntax } from './languages.ts';
 import { continues } from './enter.ts';
 import { indentsByBrackets } from './lexical.ts';
+import { markupGuard } from './markup-regions.ts';
 import { mapOffset } from './offsets.ts';
 import type { Selection, TextEdit } from './types.ts';
 import type { TypingContext } from './typing-context.ts';
@@ -261,10 +262,11 @@ export function planAutoIndent(source: EditSource, lines: readonly number[], opt
     const indents = new Map<number, string>();
     const indentOf = (line: number): string => indents.get(line) ?? whitespaceOf(source.line(line).text);
     const edits: TextEdit[] = [];
+    const isMarkup = markupGuard(source, options.language);
     for (const line of lines) {
         const bounds = source.line(line);
         const context = source.context(bounds.start);
-        if (isBlank(bounds.text) || context.mode !== 'code') {
+        if (isBlank(bounds.text) || context.mode !== 'code' || isMarkup(line)) {
             continue;
         }
         const target = targetIndent(source, options, line, context, indentOf);

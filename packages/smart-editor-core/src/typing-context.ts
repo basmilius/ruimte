@@ -27,7 +27,8 @@ export interface TypingBracket {
     block?: boolean;
 }
 
-type Mode = 'code' | 'line-comment' | 'block-comment' | 'html-comment' | 'quote' | 'template' | 'regex';
+/* `html` is the markup of a PHP file around its tags, and `heredoc` the body of a heredoc or nowdoc, which `quote` holds the label of. */
+type Mode = 'code' | 'line-comment' | 'block-comment' | 'html-comment' | 'quote' | 'template' | 'regex' | 'html' | 'heredoc';
 
 /* What the lexer knows at one offset. Bracket stacks are immutable, so states share them. */
 export interface TypingContext {
@@ -55,6 +56,8 @@ interface Rules {
     markup: boolean;
 }
 
+const PHP_HEREDOC = /^<<<[ \t]*(["']?)([A-Za-z_]\w*)\1[ \t]*$/;
+const PHP_OPEN = /<\?(?:php\b|=)/;
 const controlWords = /^(for|for-await|if|while|switch|catch|with)$/;
 const blockWords = /^(else|try|finally|do)$/;
 
@@ -146,6 +149,18 @@ function scanCode(state: TypingContext, rules: Rules, text: string, at: number, 
         state.commentStart = offset + at;
         return at + 1;
     }
+    if (rules.php && char === '<' && text.startsWith('<<<', at)) {
+        const opener = PHP_HEREDOC.exec(text.slice(at));
+        if (opener !== null) {
+            state.mode = 'heredoc';
+            state.quote = opener[2];
+            return text.length;
+        }
+    }
+    if (rules.php && char === '?' && next === '>') {
+        state.mode = 'html';
+        return at + 1;
+    }
     if (char === '"' || char === "'" || char === '`') {
         state.mode = rules.script && char === '`' ? 'template' : 'quote';
         state.quote = char;
@@ -211,9 +226,33 @@ function scan(text: string, end: number, start: TypingContext, rules: Rules, off
     const state = { ...start };
     for (let at = 0; at < end; at++) {
         if (state.mode === 'line-comment') {
-            break;
-        }
-        if (state.mode === 'block-comment' || state.mode === 'html-comment') {
+            // A PHP line comment ends at its line break and at a closing tag.
+            const tag = rules.php ? text.indexOf('?>', at) : -1;
+            if (tag < 0 || tag >= end) {
+                break;
+            }
+            state.mode = 'html';
+            state.commentStart = undefined;
+            at = tag + 1;
+        } else if (state.mode === 'html') {
+            const open = PHP_OPEN.exec(text.slice(at));
+            if (open === null || at + open.index >= end) {
+                break;
+            }
+            state.mode = 'code';
+            state.expression = true;
+            state.word = '';
+            at += open.index + open[0].length - 1;
+        } else if (state.mode === 'heredoc') {
+            const closing = new RegExp(`^[\\t ]*${state.quote}(?![\\w])`).exec(text);
+            if (closing === null) {
+                break;
+            }
+            state.mode = 'code';
+            state.quote = undefined;
+            state.expression = false;
+            at = closing[0].length - 1;
+        } else if (state.mode === 'block-comment' || state.mode === 'html-comment') {
             at = scanComment(state, text, at, end);
         } else if (state.mode === 'code') {
             at = scanCode(state, rules, text, at, end, offset);
@@ -249,13 +288,25 @@ export class TypingContexts {
 
     invalidate(line = 0): void {
         this.states.length = Math.min(this.states.length, Math.max(1, line + 1));
+        if (line === 0) {
+            this.language = '';
+        }
+    }
+
+    /* A PHP file that opens with markup, and not with a tag, starts outside the PHP. */
+    private initialState(language: string): TypingContext {
+        const state = initial();
+        if (language === 'php' && /^\s*<(?![?<])/.test(this.line(0).text)) {
+            state.mode = 'html';
+        }
+        return state;
     }
 
     at(line: number, column: number, language: string): TypingContext {
         const id = language.toLowerCase();
         if (this.language !== id) {
             this.language = id;
-            this.states = [initial()];
+            this.states = [this.initialState(id)];
         }
         const rules = rulesOf(id);
         while (this.states.length <= line) {

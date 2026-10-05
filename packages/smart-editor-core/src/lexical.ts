@@ -92,7 +92,7 @@ export function isBraced(language: string): boolean {
 
 /* Languages whose indentation follows their brackets, which Auto-indent Lines can work out. */
 export function indentsByBrackets(language: string): boolean {
-    return isBraced(language) || /^css$/i.test(language);
+    return (isBraced(language) && !/^(svelte|astro)$/i.test(language)) || /^css$/i.test(language);
 }
 
 export function hasSmartSemicolon(language: string): boolean {
