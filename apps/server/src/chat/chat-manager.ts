@@ -28,6 +28,7 @@ import { errorText } from '../error-text.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { continueOnWake, continuedInForkNote } from './continue-on.ts';
 import { ChatError } from './errors.ts';
+import { InlineEditNotes } from './inline-edit.ts';
 
 export type { InterruptedRun } from '@ruimte/agents/chat/chat-core';
 
@@ -71,6 +72,8 @@ interface ChatManagerOptions extends ChatCoreOptions {
     firstPrompt?: (chatId: string) => Promise<string | null>;
     // When stopping the agent that opened a chat ended it too; a turn from before that is never resumed.
     endedAt?: (chatId: string) => number | null;
+    // Whether the chat is the hidden one an inline edit runs in, which hears how to answer and is no list's business.
+    inlineChat?: (chatId: string) => boolean;
     // The tasks a chat gave, so a chat loaded from disk shows a row for each even when a crash lost the write of one.
     taskRows?: (chatId: string) => Task[];
     // A cleared chat is a conversation that gave no task, so what it gave before wakes it no more; the rows stay for a person.
@@ -196,6 +199,7 @@ export class ChatManager extends ChatCore {
     private readonly messageNotes: ((chatId: string) => PromptNotes) | null;
     private readonly unshownMessages: (chatId: string) => Promise<string[]>;
     private readonly firstPrompt: (chatId: string) => Promise<string | null>;
+    private readonly inlineChat: (chatId: string) => boolean;
     private readonly modeCeiling: (chatId: string) => RuntimeMode | null;
     private readonly checkCwd: (chatId: string, cwd: string) => Promise<void>;
     private readonly ended: (chatId: string) => number | null;
@@ -221,6 +225,7 @@ export class ChatManager extends ChatCore {
         this.messageNotes = options.messageNotes ?? null;
         this.unshownMessages = options.unshownMessages ?? (() => Promise.resolve([]));
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
+        this.inlineChat = options.inlineChat ?? (() => false);
         this.modeCeiling = options.modeCeiling ?? (() => null);
         this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
         this.ended = options.endedAt ?? (() => null);
@@ -428,7 +433,12 @@ export class ChatManager extends ChatCore {
     }
 
     protected override promptNotesFor(chatId: string): PromptNotes {
-        return new ContextNotes(() => this.contextSources(chatId), this.messageNotes?.(chatId) ?? null);
+        const notes = new ContextNotes(() => this.contextSources(chatId), this.messageNotes?.(chatId) ?? null);
+        return this.inlineChat(chatId) ? new InlineEditNotes(notes) : notes;
+    }
+
+    protected override hiddenFor(chatId: string): boolean {
+        return this.inlineChat(chatId);
     }
 
     protected override referencesFor(chatId: string): ChatReferences {

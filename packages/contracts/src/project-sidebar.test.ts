@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { projectSidebarViews, ProjectSidebarResultSchema } from './project-sidebar';
-import type { ProjectView } from './project';
+import { isOpenableView, type ProjectView } from './project';
 
 test('the sidebar projection keeps navigation and session identity but excludes canvas content', () => {
     const views: ProjectView[] = [
@@ -57,4 +57,13 @@ test('a chat nobody wrote in yet is not listed', () => {
         { id: 'empty', kind: 'chat', name: 'New chat', node: {}, empty: true }
     ];
     expect(projectSidebarViews(views, []).map((view) => view.id)).toEqual(['written']);
+});
+
+test('a chat an inline edit runs in is not listed, and no view picker opens it', () => {
+    const views: ProjectView[] = [
+        { id: 'written', kind: 'chat', name: 'Plan', node: {} },
+        { id: 'inline', kind: 'chat', name: 'Inline edit', node: {}, hidden: true }
+    ];
+    expect(projectSidebarViews(views, []).map((view) => view.id)).toEqual(['written']);
+    expect(views.filter(isOpenableView).map((view) => view.id)).toEqual(['written']);
 });

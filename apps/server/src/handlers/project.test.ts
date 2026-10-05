@@ -6,6 +6,7 @@ import type { ProjectCanvasView, ProjectContent, ProjectDocument, ServerFrame } 
 import { connectionOpener, type ClientChannel, type ConnectionServices, type OpenConnection } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import type { InlineChatHost } from '../projects/inline-chat.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { registerProjectHandlers } from './project.ts';
 
@@ -57,9 +58,9 @@ afterEach(async () => {
 });
 
 /* Two clients of one daemon. A socket and, beside it, a channel that got in the way a direct connection does. */
-function twoClients() {
+function twoClients(inline?: InlineChatHost) {
     const dispatcher = new Dispatcher();
-    registerProjectHandlers(dispatcher, store);
+    registerProjectHandlers(dispatcher, store, undefined, inline);
     const services: ConnectionServices = {
         dispatcher,
         sessions: { ...quiet, get: () => undefined },
@@ -168,6 +169,40 @@ describe('a save in one client', () => {
 
         const kinds = clients.b.channel.frames.map((frame) => ('event' in frame ? frame.event : 'reply'));
         expect(kinds).toEqual(['project.changed', 'reply']);
+    });
+});
+
+describe('an inline chat', () => {
+    test('lands as a hidden view in every client of the project and is taken away again on request', async () => {
+        const ended: string[] = [];
+        const clients = twoClients({ start: async () => undefined, end: async (chatId) => void ended.push(chatId), worktreePaths: async () => [folder] });
+        const { projectId } = await openOnBoth(clients);
+
+        const { chatId, viewId } = await request<{ chatId: string; viewId: string }>(clients.a, 'project.newInlineChat', {
+            projectId,
+            path: 'src/a.ts',
+            provider: 'claude'
+        });
+
+        const [made] = changesIn(clients.b.channel);
+        expect(made?.views.find((view) => view.id === viewId)).toMatchObject({ kind: 'chat', hidden: true });
+        expect(chatId).toBe(viewId);
+
+        await request(clients.a, 'project.removeInlineChat', { projectId, viewId });
+
+        expect(ended).toEqual([viewId]);
+        expect(
+            changesIn(clients.b.channel)
+                .at(-1)
+                ?.views.map((view) => view.id)
+        ).toEqual(['main', 'notes']);
+    });
+
+    test('is a request a daemon without chats does not know', async () => {
+        const clients = twoClients();
+        const { projectId } = await openOnBoth(clients);
+
+        await expect(request(clients.a, 'project.newInlineChat', { projectId, path: 'a.ts', provider: 'claude' })).rejects.toThrow();
     });
 });
 

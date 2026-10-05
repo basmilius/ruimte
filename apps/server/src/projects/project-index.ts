@@ -2,6 +2,7 @@ import {
     deriveProjectContextSources,
     flagOf,
     isCanvasView,
+    isHiddenChatView,
     isSessionView,
     sessionNodesOfView,
     type ContextSource,
@@ -209,6 +210,11 @@ export class ProjectIndex {
     projectsPlacing(id: string): string[] {
         const hidden = this.hiddenAgents?.get(id);
         return [...this.projects].filter(([projectId, project]) => project.places.has(id) || hidden?.projectId === projectId).map(([projectId]) => projectId);
+    }
+
+    /* Whether a view of this id is a chat an inline edit runs in. */
+    isHiddenChat(id: string): boolean {
+        return [...this.projects.values()].some((project) => project.content.views.some((view) => view.id === id && isHiddenChatView(view)));
     }
 
     locate(id: string): IndexedPlace | null {

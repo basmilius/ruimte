@@ -65,6 +65,11 @@ export interface InterruptedRun {
 type BookmarkableItem = Extract<ChatItem, { kind: 'user' | 'assistant' }>;
 
 /* A message a person or the agent wrote in the chat's own thread; a subagent's words belong to its row. */
+function withoutHidden(info: ChatInfo): ChatInfo {
+    const { hidden: _hidden, ...rest } = info;
+    return rest;
+}
+
 function isBookmarkable(item: ChatItem): item is BookmarkableItem {
     return item.kind === 'user' || (item.kind === 'assistant' && (item.parentToolUseId ?? null) === null);
 }
@@ -344,9 +349,12 @@ export class ChatCore {
         if (!stored) {
             this.requireAccount(kind, account);
         }
+        // Asked again for a chat on disk, since the host may have listed it since.
+        const hidden = this.hiddenFor(payload.chatId) ? { hidden: true } : {};
         const info: ChatInfo = stored?.info
-            ? { ...stored.info, runtimeMode: this.runtimeModeFor(payload.chatId, stored.info.runtimeMode) }
+            ? { ...withoutHidden(stored.info), runtimeMode: this.runtimeModeFor(payload.chatId, stored.info.runtimeMode), ...hidden }
             : {
+                  ...hidden,
                   chatId: payload.chatId,
                   provider: kind,
                   ...(account === undefined ? {} : { account }),
@@ -960,6 +968,11 @@ export class ChatCore {
      */
     protected foldersFor(_chatId: string): readonly string[] {
         return [];
+    }
+
+    /* Whether no list of chats shows this one, which `ChatInfo.hidden` says to every client. */
+    protected hiddenFor(_chatId: string): boolean {
+        return false;
     }
 
     /* What the host says in front of a chat's next real prompt, beside what the chat keeps itself. */

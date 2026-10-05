@@ -15,6 +15,7 @@ import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
 import { BookmarkStore } from '@ruimte/agents/chat/bookmark-store';
 import { chatReferenceNote } from '../context/chat-references.ts';
 import { ChatManager } from './chat-manager.ts';
+import { INLINE_EDIT_PREAMBLE } from './inline-edit.ts';
 import { ChatRecorder, FakeCheckpoints, RecordingStore } from './chat-test-helpers.ts';
 import { fakeClaude } from '@ruimte/agents/chat/fake-claude';
 import { inProcess, type InProcessCli } from '@ruimte/agents/chat/fake-cli';
@@ -1399,6 +1400,72 @@ describe('a message another node left', () => {
         await manager.send('chat-again', 'what happened');
         await recorder.until(idle);
         expect(recorder.ofKind('assistant')[0]?.text).toBe(`echo: ${heard}\n\nwhat happened`);
+    });
+});
+
+/*
+ * A chat an inline edit runs in is told how to answer once, in front of its first prompt, and a person
+ * reading its thread sees only what they asked. It is flagged hidden for every client that lists chats.
+ */
+describe('a chat an inline edit runs in', () => {
+    const inline = (): ChatManager => makeManager({ inlineChat: (chatId) => chatId === 'chat-inline' });
+
+    beforeEach(async () => {
+        await retire(manager);
+        manager = inline();
+        recorder = new ChatRecorder();
+        manager.subscribe('c1', recorder.sink());
+    });
+
+    test('hears the answer format once in front of its first prompt, and none of it shows in the thread', async () => {
+        await manager.create({ chatId: 'chat-inline', cwd: home });
+        manager.attach('chat-inline', 'c1');
+        await manager.send('chat-inline', 'make it shorter');
+        await recorder.until(idle);
+        await manager.send('chat-inline', 'and rename it');
+        await recorder.until(() => recorder.info?.usage.turns === 2 && idle());
+
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual([`echo: ${INLINE_EDIT_PREAMBLE}\n\nmake it shorter`, 'echo: and rename it']);
+        expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['make it shorter', 'and rename it']);
+        expect(recorder.ofKind('note')).toEqual([]);
+    });
+
+    test('says so again after the chat started over', async () => {
+        await manager.create({ chatId: 'chat-inline', cwd: home });
+        manager.attach('chat-inline', 'c1');
+        await manager.send('chat-inline', 'first');
+        await recorder.until(idle);
+        await manager.clear('chat-inline');
+        await manager.send('chat-inline', 'second');
+        await recorder.until(() => recorder.ofKind('assistant').some((item) => item.text.endsWith('second')));
+
+        expect(recorder.ofKind('assistant').at(-1)?.text).toBe(`echo: ${INLINE_EDIT_PREAMBLE}\n\nsecond`);
+    });
+
+    test('is hidden in the list and no other chat is', async () => {
+        const hidden = await manager.create({ chatId: 'chat-inline', cwd: home });
+        const listed = await manager.create({ chatId: 'chat-plain', cwd: home });
+
+        expect(hidden.hidden).toBe(true);
+        expect(listed.hidden).toBeUndefined();
+        expect(manager.list().map((info) => [info.chatId, info.hidden])).toEqual([
+            ['chat-inline', true],
+            ['chat-plain', undefined]
+        ]);
+    });
+
+    test('is listed like any chat once its view is, and the record forgets it was hidden', async () => {
+        await manager.create({ chatId: 'chat-inline', cwd: home });
+        manager.attach('chat-inline', 'c1');
+        await manager.send('chat-inline', 'first');
+        await recorder.until(idle);
+        await store.written('chat-inline', (record) => record.info.hidden === true);
+
+        await retire(manager);
+        manager = makeManager();
+        const info = await manager.create({ chatId: 'chat-inline', cwd: home });
+
+        expect(info.hidden).toBeUndefined();
     });
 });
 

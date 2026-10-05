@@ -34,7 +34,9 @@ import { restartBackgroundLimits } from '@ruimte/agents/tasks/background-limit';
 import { TaskStore } from '@ruimte/agents/tasks/task-store';
 import { registerTaskHandlers } from './handlers/tasks.ts';
 import { registerPlanHandlers } from './handlers/plan.ts';
+import { registerProvenanceHandlers } from './handlers/provenance.ts';
 import { isPlanFileName, PlanStore } from './plans/plan-store.ts';
+import { ProvenanceService } from './provenance/provenance-service.ts';
 import type { AgentStart, WorktreeWant } from './canvas/verb.ts';
 import { addWanted } from './canvas/worktree.ts';
 import { SOCKET_BACKPRESSURE_LIMIT } from './backpressure.ts';
@@ -375,6 +377,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         contextSources: (chatId) => context.list(chatId),
         chatTitle: (chatId, id) => projects.index.chatTitleBeside(chatId, id),
         standalone: (chatId) => projects.index.locate(chatId)?.canvasId === null,
+        inlineChat: (chatId) => projects.index.isHiddenChat(chatId),
         openingSelection: (chatId, provider) => {
             const entry = outbox.list().find((entry) => entry.kind === 'start-agent' && entry.target === chatId);
             return entry?.kind === 'start-agent' && entry.payload.provider === provider ? entry.payload.selection : undefined;
@@ -776,7 +779,15 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     });
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
     registerPlanHandlers(dispatcher, plans);
-    registerProjectHandlers(dispatcher, projects, async (chatId) => (await chats.readChat(chatId))?.items.some((item) => item.kind === 'user') ?? false);
+    registerProjectHandlers(dispatcher, projects, async (chatId) => (await chats.readChat(chatId))?.items.some((item) => item.kind === 'user') ?? false, {
+        start: (payload) => chats.create(payload),
+        // Loaded first: a chat nobody opened since a restart has no session to end, only a record to remove.
+        end: async (chatId) => {
+            await chats.create({ chatId }).catch(() => undefined);
+            await endSession('chat', chatId);
+        },
+        worktreePaths: (folder) => canvasHost.worktreePaths(folder)
+    });
     registerDrawingHandlers(dispatcher, drawings);
     registerDiagramHandlers(dispatcher, diagrams);
     registerLaunchHandlers(dispatcher, launchStore, launches);
@@ -843,6 +854,15 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     await language.load();
     projects.attachLanguage(language);
     registerLanguageHandlers(dispatcher, language);
+    const provenance = new ProvenanceService({
+        home: config.home,
+        locate: (chatId) => projects.index.locate(chatId),
+        folderOf: (projectId) => projects.index.folderOf(projectId),
+        holders: (projectId) => projects.holdersOf(projectId),
+        chat: (chatId) => provenanceChat(chats, chatId)
+    });
+    chats.observe((event) => provenance.consume(event));
+    registerProvenanceHandlers(dispatcher, provenance, machineHome);
     registerFsHandlers(
         dispatcher,
         folders,
@@ -1006,6 +1026,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         tasks,
         worktrees,
         plans,
+        provenance,
         computer
     });
 

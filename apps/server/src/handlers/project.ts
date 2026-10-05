@@ -1,8 +1,9 @@
 import { translate, type Dispatcher } from '../dispatcher.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
+import { newInlineChat, removeInlineChat, showInlineChat, type InlineChatHost } from '../projects/inline-chat.ts';
 import { newScratchChat, type ChatWritten } from '../projects/scratch-project.ts';
 
-export function registerProjectHandlers(dispatcher: Dispatcher, store: ProjectStore, written?: ChatWritten): void {
+export function registerProjectHandlers(dispatcher: Dispatcher, store: ProjectStore, written?: ChatWritten, inline?: InlineChatHost): void {
     dispatcher.register('project.sidebar', () => translate(() => store.sidebar()));
     dispatcher.register('project.list', () => translate(async () => ({ projects: await store.list() })));
 
@@ -47,6 +48,22 @@ export function registerProjectHandlers(dispatcher: Dispatcher, store: ProjectSt
     dispatcher.register('project.setIdentity', (payload) => translate(async () => ({ summary: await store.setIdentity(payload) })));
 
     dispatcher.register('project.newChat', (payload) => translate(() => newScratchChat(store, payload, written)));
+
+    if (inline !== undefined) {
+        dispatcher.register('project.newInlineChat', (payload) => translate(() => newInlineChat(store, payload, inline)));
+        dispatcher.register('project.showInlineChat', (payload) =>
+            translate(async () => {
+                await showInlineChat(store, payload);
+                return {};
+            })
+        );
+        dispatcher.register('project.removeInlineChat', (payload) =>
+            translate(async () => {
+                await removeInlineChat(store, payload, inline);
+                return {};
+            })
+        );
+    }
 
     dispatcher.register('project.delete', (payload) =>
         translate(async () => {
