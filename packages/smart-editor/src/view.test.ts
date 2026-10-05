@@ -880,6 +880,22 @@ describe('the scroll width', () => {
         expect(rule('.se-block.se-widget')).toMatch(/overflow-x:\s*clip/);
     });
 
+    test('is not stretched by a right margin the text and the view never reach', () => {
+        const { host, view } = mount(`${'x'.repeat(100)}\nshort`, { rightMargin: 999 });
+        view.render();
+        expect(host.querySelector('.se-margin')).toBeNull();
+        expect(contentWidth(host)).toBeCloseTo(100 * CHAR + ROOM, 3);
+    });
+
+    test('shows the right margin once a line or the view reaches it', () => {
+        const wide = mount(`${'x'.repeat(150)}\nshort`, { rightMargin: 120 });
+        wide.view.render();
+        expect((wide.host.querySelector('.se-margin') as HTMLElement).style.left).toBe(`${120 * CHAR}px`);
+        const short = mount('short', { rightMargin: 80 });
+        short.view.render();
+        expect(short.host.querySelector('.se-margin')).not.toBeNull();
+    });
+
     test('keeps the gutter stuck to the left edge of the scroller', () => {
         const css = rule('.se-gutter');
         expect(css).toMatch(/position:\s*sticky/);

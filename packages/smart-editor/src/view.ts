@@ -1816,11 +1816,10 @@ export class EditorView {
                 });
             }
         }
-        if (this.settings.rightMargin !== null) {
-            marks.push({
-                className: 'se-margin',
-                rects: [{ x: this.settings.rightMargin * this.layout.metrics.charWidth, y: 0, width: 1, height: this.layout.height }]
-            });
+        const marginX = this.settings.rightMargin === null ? null : this.settings.rightMargin * this.layout.metrics.charWidth;
+        // A margin past the content would stretch the scroll extent to itself, so it shows only where the text or the view reaches it.
+        if (marginX !== null && marginX < Math.max(this.layout.width, this.viewportWidth)) {
+            marks.push({ className: 'se-margin', rects: [{ x: marginX, y: 0, width: 1, height: this.layout.height }] });
         }
         if (this.settings.guides) {
             const guides = this.guideRects(rows);
