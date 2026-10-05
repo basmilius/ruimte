@@ -9,16 +9,19 @@ import {
     pathToFileUri,
     StaleResultError,
     vueServerOrder,
+    watchesFile,
     type ApplyWorkspaceEditParams,
     type ApplyWorkspaceEditResult,
     type ContentChange,
     type Disposable,
     type DocumentDiagnosticReport,
+    type FileSystemWatcher,
     type LspDocument,
     type ProgressParams,
     type PublishDiagnosticsParams
 } from '@ruimte/smart-editor-lsp';
 import { errorText } from '../error-text.ts';
+import type { FileChange } from './file-watch.ts';
 import { LanguageLog } from './log.ts';
 import {
     componentServes,
@@ -68,6 +71,8 @@ export interface LanguageServerHooks {
     diagnostics(document: SharedDocument, component: string, params: PublishDiagnosticsParams): void;
     /* What a document may ask changed. */
     providers(document: SharedDocument): void;
+    /* The files a process asked to hear about changed, or the process went. */
+    watching(server: LanguageServer): void;
     /* The server asks for an edit, which only the client that ran a command can be asked to make. */
     applyEdit(server: LanguageServer, params: ApplyWorkspaceEditParams): Promise<ApplyWorkspaceEditResult>;
 }
@@ -155,6 +160,32 @@ export class LanguageServer {
         }
         const ready = this.components.filter((component) => component.session.state === 'ready');
         return ready.length === 0 ? undefined : Object.fromEntries(ready.map((component) => [component.profile.name, component.session.capabilities]));
+    }
+
+    /* What the processes registered to hear about when files change on disk. */
+    watchedFiles(): FileSystemWatcher[] {
+        return this.components.filter((component) => component.session.state === 'ready').flatMap((component) => component.session.watchedFiles());
+    }
+
+    /* Tells each process the changes its own patterns name. */
+    async filesChanged(changes: readonly FileChange[]): Promise<void> {
+        await Promise.all(
+            this.components.map(async (component) => {
+                if (component.session.state !== 'ready') {
+                    return;
+                }
+                const watchers = component.session.watchedFiles();
+                const named = changes.filter((change) => watchesFile(watchers, this.options.folder, change.path, change.type));
+                if (named.length === 0) {
+                    return;
+                }
+                try {
+                    await component.session.didChangeWatchedFiles(named.map((change) => ({ uri: pathToFileUri(change.path), type: change.type })));
+                } catch (error) {
+                    this.log.push('host', `Could not tell the server about changed files: ${errorText(error)}`);
+                }
+            })
+        );
     }
 
     /* Whether this server serves a document of the language at all. */
@@ -311,6 +342,7 @@ export class LanguageServer {
         for (const component of components) {
             component.documents.clear();
         }
+        this.options.hooks.watching(this);
         // The Vue server first, since it leans on the TypeScript one.
         for (const component of [...components].reverse()) {
             await this.shutdown(component);
@@ -461,6 +493,7 @@ export class LanguageServer {
     }
 
     private refreshed(): void {
+        this.options.hooks.watching(this);
         if (this.phase !== 'ready') {
             return;
         }
@@ -556,6 +589,7 @@ export class LanguageServer {
             component.child.kill('SIGTERM');
         }
         this.notify();
+        this.options.hooks.watching(this);
         for (const document of this.documents.values()) {
             this.options.hooks.providers(document);
         }

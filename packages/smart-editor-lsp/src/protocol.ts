@@ -370,6 +370,17 @@ export interface DocumentFilter {
     pattern?: string;
 }
 
+/* What a server asks to hear about: a glob relative to the project, or one relative to a folder. `kind` is a bit set of create (1), change (2) and delete (4), all three when absent. */
+export interface FileSystemWatcher {
+    globPattern: string | { baseUri: string | WorkspaceFolder; pattern: string };
+    kind?: number;
+}
+
+export interface FileEvent {
+    uri: string;
+    type: 1 | 2 | 3;
+}
+
 export interface Registration {
     id: string;
     method: string;
@@ -383,6 +394,7 @@ export interface ProviderOptions {
     triggerCharacters?: string[];
     retriggerCharacters?: string[];
     commands?: string[];
+    watchers?: FileSystemWatcher[];
     codeActionKinds?: string[];
     legend?: SemanticTokensLegend;
     range?: boolean | object;

@@ -1,5 +1,6 @@
 import { ErrorCodes, JsonRpcConnection, LspError, type RequestHandler } from './connection.ts';
 import { LspDocument } from './document.ts';
+import { globMatch } from './glob.ts';
 import type {
     ApplyWorkspaceEditParams,
     ApplyWorkspaceEditResult,
@@ -7,6 +8,8 @@ import type {
     ConfigurationItem,
     Disposable,
     DocumentItem,
+    FileEvent,
+    FileSystemWatcher,
     InitializeResult,
     LspTransport,
     ProgressParams,
@@ -85,46 +88,6 @@ const REGISTRATION_METHODS: Record<string, string> = {
 };
 
 const REFRESH_REQUESTS = ['workspace/semanticTokens/refresh', 'workspace/inlayHint/refresh', 'workspace/diagnostic/refresh', 'workspace/codeLens/refresh'];
-
-function escapeRegex(char: string): string {
-    return char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/* The glob of a `DocumentFilter`: `*`, `**`, `?` and `{a,b}`. */
-function globMatch(path: string, pattern: string): boolean {
-    let expression = '';
-    for (let i = 0; i < pattern.length; i++) {
-        const char = pattern[i];
-        if (char === '*') {
-            if (pattern[i + 1] === '*') {
-                i++;
-                if (pattern[i + 1] === '/') {
-                    expression += '(?:.*/)?';
-                    i++;
-                } else {
-                    expression += '.*';
-                }
-            } else {
-                expression += '[^/]*';
-            }
-        } else if (char === '?') {
-            expression += '[^/]';
-        } else if (char === '{') {
-            expression += '(?:';
-        } else if (char === '}') {
-            expression += ')';
-        } else if (char === ',') {
-            expression += '|';
-        } else {
-            expression += escapeRegex(char);
-        }
-    }
-    try {
-        return new RegExp(`^${expression}$`).test(path);
-    } catch {
-        return false;
-    }
-}
 
 function matches(options: ProviderOptions, document?: Pick<DocumentItem, 'uri' | 'languageId'>): boolean {
     if (options.documentSelector == null) {
@@ -383,6 +346,18 @@ export class LspSession {
         };
     }
 
+    /* What the server registered to hear about, which is nothing until it registers for `workspace/didChangeWatchedFiles`. */
+    watchedFiles(): FileSystemWatcher[] {
+        return [...this.registrations.values()]
+            .filter((registration) => registration.method === 'workspace/didChangeWatchedFiles')
+            .flatMap((registration) => registration.registerOptions?.watchers ?? []);
+    }
+
+    /* Tells the server which files changed on disk. The caller holds back what its patterns do not name. */
+    didChangeWatchedFiles(changes: readonly FileEvent[]): Promise<void> {
+        return this.notify('workspace/didChangeWatchedFiles', { changes });
+    }
+
     /* Registrations and the refresh requests of the server both land here, since each can change what a document may ask. */
     onCapabilitiesChanged(listener: () => void): Disposable {
         this.capabilityListeners.add(listener);
@@ -479,6 +454,7 @@ function clientCapabilities(options: LspSessionOptions): object {
             configuration: true,
             workspaceFolders: true,
             executeCommand: dynamic,
+            didChangeWatchedFiles: { ...dynamic, relativePatternSupport: true },
             symbol: { ...dynamic, symbolKind, tagSupport: { valueSet: [1] }, resolveSupport: { properties: ['location.range'] } },
             semanticTokens: { refreshSupport: true },
             inlayHint: { refreshSupport: true },

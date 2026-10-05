@@ -13,11 +13,11 @@ export class FakeDirectoryWatcher implements DirectoryWatcher {
     }
 
     /* What the platform would report for a write to `filename`, relative to the watched directory. */
-    emit(filename: string | null): void {
+    emit(filename: string | null, event: 'change' | 'rename' = 'change'): void {
         if (this.closed) {
             return;
         }
-        this.listener('change', filename);
+        this.listener(event, filename);
     }
 
     on(): this {

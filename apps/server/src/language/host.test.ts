@@ -4,11 +4,12 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { LANGUAGE_ERROR_CODES, type LanguageServerKind } from '@ruimte/contracts';
 import { CodedError } from '@ruimte/agents/coded-error';
+import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { CustomLanguageServers } from './custom.ts';
 import { LanguageHost } from './host.ts';
 import { KIND_PROFILES } from './profiles.ts';
-import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
+import { fakeSpawner, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
 import { versionOf } from './versions.ts';
 
 let root = '';
@@ -30,14 +31,21 @@ interface Rig {
     events: Record<string, SessionEvent[]>;
     installs: LanguageServerKind[];
     clock: ManualClock;
+    /* The project's file watching, and the paths that exist on the fake disk. */
+    watch: FakeWatch;
+    disk: Set<string>;
 }
 
 /* The install of a kind is played by `run`, which leaves the scripts where bun would. */
-function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner; packageJson?: string; files?: string[] } = {}): Rig {
+function rig(
+    options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner; packageJson?: string; files?: string[]; platform?: NodeJS.Platform } = {}
+): Rig {
     const spawner = options.spawner ?? fakeSpawner();
     const holders = new Set(['client-1']);
     const installs: LanguageServerKind[] = [];
     const clock = new ManualClock();
+    const watch = new FakeWatch();
+    const disk = new Set<string>();
     const host = new LanguageHost({
         root,
         folderOf: (projectId) => (projectId === 'p1' ? '/work' : null),
@@ -66,6 +74,7 @@ function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner;
             return 0;
         },
         clock,
+        watch: { platform: options.platform ?? 'darwin', seams: watch, stat: async (path) => (disk.has(path) ? 'file' : null) },
         custom: new CustomLanguageServers({
             path: join(root, 'custom.json'),
             resolve: (command) => (['zls', 'taplo'].includes(command) ? `/bin/${command}` : null)
@@ -77,12 +86,12 @@ function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner;
     for (const clientId of Object.keys(events)) {
         host.subscribe(clientId, (event) => events[clientId].push(event));
     }
-    return { host, spawner, holders, events, installs, clock };
+    return { host, spawner, holders, events, installs, clock, watch, disk };
 }
 
 async function installed(
     kinds: LanguageServerKind[] = ['typescript'],
-    options: { packageJson?: string; files?: string[]; spawner?: FakeSpawner } = {}
+    options: { packageJson?: string; files?: string[]; spawner?: FakeSpawner; platform?: NodeJS.Platform } = {}
 ): Promise<Rig> {
     const result = rig(options);
     for (const kind of kinds) {
@@ -699,5 +708,129 @@ describe('install and status', () => {
         expect(lines.map((line) => [line.stream, line.text])).toContainEqual(['server', 'server says hi']);
         expect(lines[0].stream).toBe('install');
         expect(lines.map((line) => line.at)).toEqual([...lines.map((line) => line.at)].sort((a, b) => a - b));
+    });
+});
+
+/* What a server does when it asks to hear about files: a `client/registerCapability` for `workspace/didChangeWatchedFiles`. */
+async function registerWatchers(process: FakeProcess, id: string, globs: { globPattern: string; kind?: number }[]): Promise<void> {
+    await process.server.request('client/registerCapability', {
+        registrations: [{ id, method: 'workspace/didChangeWatchedFiles', registerOptions: { watchers: globs } }]
+    });
+    await settle();
+}
+
+describe('files that change on disk', () => {
+    it('reaches a PHP server for a file created beside the one that is open', async () => {
+        const { host, spawner, watch, disk } = await installed(['php']);
+        await open(host, 'main.php', '<?php\nnew Gener;\n', 'client-1', 'php');
+        await ready(host, 'php');
+        const [php] = spawner.of('php');
+        expect(watch.watchers).toHaveLength(0);
+
+        await registerWatchers(php, 'php-files', [{ globPattern: '**/*.{php,phtml}' }]);
+        expect(watch.openOn('/work')).toHaveLength(1);
+
+        disk.add('/work/Generated.php');
+        watch.on('/work').emit('Generated.php', 'rename');
+        watch.on('/work').emit('notes.txt', 'rename');
+        expect(watch.pending).toBe(1);
+        await watch.settle();
+        expect(php.server.paramsOf('workspace/didChangeWatchedFiles')).toEqual([{ changes: [{ uri: 'file:///work/Generated.php', type: 1 }] }]);
+    });
+
+    it('tells a server that a file changed or went, in one batch per burst', async () => {
+        const { host, spawner, watch, disk } = await installed(['php']);
+        await open(host, 'main.php', '<?php', 'client-1', 'php');
+        await ready(host, 'php');
+        const [php] = spawner.of('php');
+        await registerWatchers(php, 'php-files', [{ globPattern: '**/*.php' }]);
+
+        disk.add('/work/src/Kept.php');
+        watch.on('/work').emit('src/Kept.php', 'change');
+        watch.on('/work').emit('src/Gone.php', 'rename');
+        watch.on('/work').emit('src/Kept.php', 'change');
+        await watch.settle();
+        expect(php.server.paramsOf('workspace/didChangeWatchedFiles')).toEqual([
+            {
+                changes: [
+                    { uri: 'file:///work/src/Gone.php', type: 3 },
+                    { uri: 'file:///work/src/Kept.php', type: 2 }
+                ]
+            }
+        ]);
+    });
+
+    it('leaves dependency folders alone unless a server named them, and skips a directory that appeared', async () => {
+        const { host, spawner, watch } = await installed(['php']);
+        await open(host, 'main.php', '<?php', 'client-1', 'php');
+        await ready(host, 'php');
+        const [php] = spawner.of('php');
+        await registerWatchers(php, 'php-files', [{ globPattern: '**/*.php' }]);
+
+        watch.on('/work').emit('vendor/acme/Thing.php', 'change');
+        watch.on('/work').emit('node_modules/x/Thing.php', 'change');
+        expect(watch.pending).toBe(0);
+
+        await registerWatchers(php, 'vendor-files', [{ globPattern: 'vendor/composer/installed.json' }]);
+        watch.on('/work').emit('vendor/composer/installed.json', 'change');
+        expect(watch.pending).toBe(1);
+    });
+
+    it('sends the change of an ESLint or Tailwind config only to the server that registered for it', async () => {
+        const { host, spawner, watch, disk } = await installed(['typescript', 'eslint', 'tailwind'], {
+            files: ['/work/eslint.config.js', '/work/tailwind.config.js']
+        });
+        await open(host, 'src/a.ts', 'let a = 1;\n');
+        await until(async () => spawner.of('eslint').length > 0 && spawner.of('tailwind').length > 0 && spawner.of('typescript').length > 0);
+        await settle();
+        const [eslint] = spawner.of('eslint');
+        const [tailwind] = spawner.of('tailwind');
+        const [typescript] = spawner.of('typescript');
+        await registerWatchers(eslint, 'eslint-config', [{ globPattern: '**/eslint.config.*' }, { globPattern: '**/package.json' }]);
+        await registerWatchers(tailwind, 'tailwind-config', [{ globPattern: '**/tailwind.config.{js,cjs,mjs,ts}' }]);
+
+        disk.add('/work/eslint.config.js');
+        disk.add('/work/tailwind.config.js');
+        watch.on('/work').emit('eslint.config.js', 'change');
+        watch.on('/work').emit('tailwind.config.js', 'change');
+        await watch.settle();
+        expect(eslint.server.paramsOf('workspace/didChangeWatchedFiles')).toEqual([{ changes: [{ uri: 'file:///work/eslint.config.js', type: 2 }] }]);
+        expect(tailwind.server.paramsOf('workspace/didChangeWatchedFiles')).toEqual([{ changes: [{ uri: 'file:///work/tailwind.config.js', type: 2 }] }]);
+        expect(typescript.server.paramsOf('workspace/didChangeWatchedFiles')).toEqual([]);
+    });
+
+    it('stops watching when no server asks any more, and when the project closes', async () => {
+        const { host, spawner, watch } = await installed(['php']);
+        await open(host, 'main.php', '<?php', 'client-1', 'php');
+        await ready(host, 'php');
+        const [php] = spawner.of('php');
+        await registerWatchers(php, 'php-files', [{ globPattern: '**/*.php' }]);
+        expect(watch.openOn('/work')).toHaveLength(1);
+
+        await php.server.request('client/unregisterCapability', { unregisterations: [{ id: 'php-files', method: 'workspace/didChangeWatchedFiles' }] });
+        await settle();
+        expect(watch.openOn('/work')).toHaveLength(0);
+
+        await registerWatchers(php, 'php-again', [{ globPattern: '**/*.php' }]);
+        expect(watch.openOn('/work')).toHaveLength(1);
+        await host.end('p1');
+        expect(watch.openOn('/work')).toHaveLength(0);
+    });
+
+    it('watches the directories of the open documents where a tree cannot be watched in one call', async () => {
+        const { host, spawner, watch, disk } = await installed(['php'], { platform: 'linux' });
+        await open(host, 'src/Models/User.php', '<?php', 'client-1', 'php');
+        await ready(host, 'php');
+        const [php] = spawner.of('php');
+        await registerWatchers(php, 'php-files', [{ globPattern: '**/*.php' }]);
+        expect(watch.openOn('/work')[0]?.recursive).toBe(false);
+        await open(host, 'src/Http/Controller.php', '<?php', 'client-1', 'php');
+        expect(watch.openOn('/work/src/Models')).toHaveLength(1);
+        expect(watch.openOn('/work/src/Http')).toHaveLength(1);
+
+        disk.add('/work/src/Models/Post.php');
+        watch.on('/work/src/Models').emit('Post.php', 'rename');
+        await watch.settle();
+        expect(php.server.paramsOf('workspace/didChangeWatchedFiles')).toEqual([{ changes: [{ uri: 'file:///work/src/Models/Post.php', type: 1 }] }]);
     });
 });

@@ -423,6 +423,30 @@ describe('PHP', () => {
             (list) => list.some((item) => /unknown_function_for_smoke/.test(item.message) || item.severity === 1)
         );
     }, 180_000);
+
+    test('learns of a class created on disk after it started, in workspace symbols and in completion', async () => {
+        await install('php');
+        const text = '<?php\nnew Gener;\n';
+        await writeFile(join(project, 'watched.php'), text);
+        await host.open('c1', { projectId: 'p1', path: 'watched.php', languageId: 'php', text });
+        await waitReady('php');
+        // Intelephense registers for file changes once it has indexed, and the daemon watches from then on, so a file made earlier is never reported. Each try makes a file and looks once after a pause.
+        let created = 0;
+        const symbols = await eventually(
+            'the new class in workspace symbols',
+            async () => {
+                await writeFile(join(project, `Generated${++created}.php`), `<?php\n\nclass Generated${created}\n{\n}\n`);
+                await Bun.sleep(2000);
+                return ask('watched.php', 'workspace/symbol', { query: 'Generated' });
+            },
+            (reply) => JSON.stringify(reply.result).includes('Generated'),
+            60_000
+        );
+        expect(JSON.stringify(symbols.result)).toContain('Generated');
+        // Intelephense keeps the answer to the first completion at a position, so this is the only one asked.
+        const completion = await ask('watched.php', 'textDocument/completion', { position: positionOf(text, 'Gener;', 5) });
+        expect(JSON.stringify(completion.result)).toContain('Generated');
+    }, 180_000);
 });
 
 async function openAndWait(path: string, languageId: string, kind: LanguageServerKind, text: string): Promise<void> {

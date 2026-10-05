@@ -1,5 +1,5 @@
 import { access, readFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import {
     LANGUAGE_ERROR_CODES,
     LANGUAGE_METHODS,
@@ -33,10 +33,13 @@ import {
     LspError,
     pathToFileUri,
     StaleResultError,
+    watchesFile,
     type ApplyWorkspaceEditParams,
     type ApplyWorkspaceEditResult
 } from '@ruimte/smart-editor-lsp';
+import type { WatchSeams } from '@ruimte/agents/watch-seam';
 import { ClientSinks } from '../client-sinks.ts';
+import { ProjectFileWatcher, type StatPath } from './file-watch.ts';
 import { CustomLanguageServers, customProfile } from './custom.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LanguageInstaller } from './installer.ts';
@@ -89,6 +92,8 @@ export interface LanguageHostOptions {
     /* The text of a file, or null when it cannot be read. */
     readText?: (path: string) => Promise<string | null>;
     now?: () => number;
+    /* What the project's file watching reaches the platform and the clock through; the system's by default. */
+    watch?: { platform?: NodeJS.Platform; seams?: WatchSeams; stat?: StatPath };
     /* The servers of a person's own; by default the file beside the installs. */
     custom?: CustomLanguageServers;
 }
@@ -103,6 +108,8 @@ interface ProjectLanguage {
     vueCheck: Promise<boolean> | undefined;
     /* The clients whose command is running, newest last: the one a server's request for an edit goes to. */
     commands: Array<{ clientId: string }>;
+    /* Watches the project's files while a server of it asked to hear about them. */
+    watcher: ProjectFileWatcher | null;
 }
 
 /* An edit a server asked for and a client has not answered yet. */
@@ -174,6 +181,7 @@ export class LanguageHost {
             }
         },
         applyEdit: (server, params) => this.askForEdit(server, params),
+        watching: (server) => this.syncWatcher(server.projectId),
         providers: (document) => {
             const projectId = this.projectOf(document);
             const project = projectId === null ? undefined : this.projects.get(projectId);
@@ -280,6 +288,7 @@ export class LanguageHost {
                 clients: new Set([clientId])
             };
             project.documents.set(absolutePath, document);
+            project.watcher?.addDirectory(dirname(absolutePath));
             for (const kind of kinds) {
                 this.ensureServer(project, kind).attach(document);
             }
@@ -407,6 +416,8 @@ export class LanguageHost {
             return;
         }
         this.projects.delete(projectId);
+        project.watcher?.close();
+        project.watcher = null;
         project.documents.clear();
         await Promise.all([...project.servers.values()].map((server) => server.stop()));
     }
@@ -425,7 +436,16 @@ export class LanguageHost {
         if (folder === null) {
             throw new LanguageError(LANGUAGE_ERROR_CODES.projectNotFound, `No project ${projectId}`);
         }
-        const project: ProjectLanguage = { projectId, folder, documents: new Map(), servers: new Map(), vue: undefined, vueCheck: undefined, commands: [] };
+        const project: ProjectLanguage = {
+            projectId,
+            folder,
+            documents: new Map(),
+            servers: new Map(),
+            vue: undefined,
+            vueCheck: undefined,
+            commands: [],
+            watcher: null
+        };
         this.projects.set(projectId, project);
         return project;
     }
@@ -612,6 +632,43 @@ export class LanguageHost {
                 }
             }
         }
+    }
+
+    /* The project's files are watched exactly while some server of it registered to hear about them. */
+    private syncWatcher(projectId: string): void {
+        const project = this.projects.get(projectId);
+        if (!project) {
+            return;
+        }
+        const wanted = [...project.servers.values()].some((server) => server.watchedFiles().length > 0);
+        if (!wanted) {
+            project.watcher?.close();
+            project.watcher = null;
+            return;
+        }
+        if (project.watcher !== null) {
+            return;
+        }
+        const { platform, seams, stat } = this.options.watch ?? {};
+        const watcher = new ProjectFileWatcher({
+            folder: project.folder,
+            platform,
+            seams,
+            stat,
+            wants: (path) =>
+                [...project.servers.values()].some((server) =>
+                    [1, 2, 3].some((type) => watchesFile(server.watchedFiles(), project.folder, path, type as 1 | 2 | 3))
+                ),
+            onChanges: (changes) => {
+                for (const server of project.servers.values()) {
+                    void server.filesChanged(changes);
+                }
+            }
+        });
+        for (const document of project.documents.values()) {
+            watcher.addDirectory(dirname(document.absolutePath));
+        }
+        project.watcher = watcher;
     }
 
     /* The edit goes to the client whose command is running, which makes it or says why not; a request with no command to answer for is refused. */

@@ -40,7 +40,8 @@ function rig(kind: LanguageServerKind, spawner = fakeSpawner()): Rig {
         status: (server) => states.push(server.state),
         diagnostics: (doc, component, params) => diagnostics.push({ path: doc.storedPath, component, params }),
         providers: (doc) => providers.push(doc.storedPath),
-        applyEdit: async () => ({ applied: false })
+        applyEdit: async () => ({ applied: false }),
+        watching: () => undefined
     };
     const server = new LanguageServer({
         kind,

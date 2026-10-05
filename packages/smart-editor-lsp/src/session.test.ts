@@ -103,6 +103,45 @@ describe('capabilities and server requests', () => {
         await session.shutdown();
     });
 
+    it('advertises watched files and hears what the server registers for, as nothing before it does', async () => {
+        const { session, transport } = await sessionWith({});
+        const initialize = transport.request('initialize').params as { capabilities: { workspace: Record<string, unknown> } };
+        expect(initialize.capabilities.workspace.didChangeWatchedFiles).toEqual({ dynamicRegistration: true, relativePatternSupport: true });
+        expect(session.watchedFiles()).toEqual([]);
+        transport.emit({
+            jsonrpc: '2.0',
+            id: 150,
+            method: 'client/registerCapability',
+            params: {
+                registrations: [
+                    {
+                        id: 'watch-a',
+                        method: 'workspace/didChangeWatchedFiles',
+                        registerOptions: { watchers: [{ globPattern: '**/*.php' }, { globPattern: '**/tsconfig.json', kind: 2 }] }
+                    },
+                    { id: 'watch-b', method: 'workspace/didChangeWatchedFiles', registerOptions: { watchers: [{ globPattern: '**/eslint.config.*' }] } }
+                ]
+            }
+        });
+        await flush();
+        expect(session.watchedFiles().map((watcher) => watcher.globPattern)).toEqual(['**/*.php', '**/tsconfig.json', '**/eslint.config.*']);
+        transport.emit({
+            jsonrpc: '2.0',
+            id: 151,
+            method: 'client/unregisterCapability',
+            params: { unregisterations: [{ id: 'watch-a', method: 'workspace/didChangeWatchedFiles' }] }
+        });
+        await flush();
+        expect(session.watchedFiles().map((watcher) => watcher.globPattern)).toEqual(['**/eslint.config.*']);
+        await session.didChangeWatchedFiles([{ uri: 'file:///work/Generated.php', type: 1 }]);
+        expect(transport.sent).toContainEqual({
+            jsonrpc: '2.0',
+            method: 'workspace/didChangeWatchedFiles',
+            params: { changes: [{ uri: 'file:///work/Generated.php', type: 1 }] }
+        });
+        await session.shutdown();
+    });
+
     it('queries and resolves workspace symbols only when advertised', async () => {
         const { session, transport } = await sessionWith({ workspaceSymbolProvider: { resolveProvider: true } });
         const symbols = session.workspaceSymbols('greet');
