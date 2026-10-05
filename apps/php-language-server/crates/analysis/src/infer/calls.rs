@@ -1,0 +1,400 @@
+//! Calls: which function or method a call names, and what it returns once the templates are bound.
+
+use std::collections::HashMap;
+
+use php_index::types::CallableParam;
+use php_index::{Callable, Doc, Name, Param, Type};
+use php_syntax::SyntaxKind::*;
+use php_syntax::SyntaxNode;
+
+use super::unify::template_names;
+use super::{Analyzer, Env};
+use crate::ast::{child_of, has_token, text_of, tokens};
+
+/// One argument of a call.
+#[derive(Clone, Debug)]
+pub struct Arg {
+    pub name: Option<String>,
+    pub expr: Option<SyntaxNode>,
+    pub spread: bool,
+}
+
+/// A function or method a call resolves to, with what its types need to be read from the call site.
+#[derive(Clone, Debug)]
+pub struct ResolvedCallable {
+    /// As the call names it: `strlen`, `User::find`.
+    pub name: String,
+    pub callable: Callable,
+    pub doc: Option<Box<Doc>>,
+    /// The template arguments of the class the method was found through.
+    pub subst: HashMap<String, Type>,
+    pub self_name: Option<Name>,
+    /// The type `static` stands for.
+    pub receiver: Option<Type>,
+    pub is_constructor: bool,
+    /// The class the constructor belongs to, with its template names.
+    pub constructed: Option<Name>,
+}
+
+/// The arguments of a call or `new` node.
+pub fn arguments(node: &SyntaxNode) -> Vec<Arg> {
+    let Some(list) = child_of(node, ARGUMENT_LIST) else {
+        return Vec::new();
+    };
+    list.children()
+        .filter(|child| child.kind() == ARGUMENT)
+        .map(|argument| {
+            let name = has_token(&argument, COLON).then(|| {
+                tokens(&argument)
+                    .find(|token| !token.kind().is_trivia() && token.kind() != COLON)
+                    .map(|token| token.text().to_string())
+                    .unwrap_or_default()
+            });
+            Arg {
+                name,
+                expr: argument.children().last(),
+                spread: has_token(&argument, ELLIPSIS),
+            }
+        })
+        .collect()
+}
+
+impl Analyzer<'_> {
+    pub(super) fn new_type(&self, node: &SyntaxNode, env: &Env) -> Type {
+        let Some(class_node) = node.children().find(|child| child.kind() != ARGUMENT_LIST) else {
+            return Type::Unknown;
+        };
+        if class_node.kind() == ANONYMOUS_CLASS {
+            return self.anonymous_class_type(&class_node);
+        }
+        let class = match class_node.kind() {
+            NAME => self.class_type(&text_of(&class_node)),
+            _ => match self.type_of(&class_node, env) {
+                Type::ClassString(Some(inner)) => *inner,
+                Type::Class { .. } => Type::Object,
+                _ => return Type::Unknown,
+            },
+        };
+        let class = match class {
+            Type::Static => return Type::Static,
+            other => other,
+        };
+        let Type::Class { name, .. } = &class else {
+            return class;
+        };
+        let templates: Vec<String> = self
+            .index
+            .class(name)
+            .and_then(|found| {
+                found
+                    .decl
+                    .doc
+                    .as_ref()
+                    .map(|doc| doc.templates.iter().map(|template| template.name.clone()).collect())
+            })
+            .unwrap_or_default();
+        if templates.is_empty() {
+            return class;
+        }
+        let Some(found) = self.index.find_method(&class, "__construct") else {
+            return class;
+        };
+        let callable = ResolvedCallable {
+            name: format!("{name}::__construct"),
+            callable: found.member.callable.clone(),
+            doc: found.member.doc.clone(),
+            subst: HashMap::new(),
+            self_name: Some(found.self_name.clone()),
+            receiver: Some(class.clone()),
+            is_constructor: true,
+            constructed: Some(name.clone()),
+        };
+        let (map, _) = self.bind_call(&callable, &arguments(node), env);
+        let args = templates
+            .iter()
+            .map(|template| map.get(template).cloned().unwrap_or(Type::Unknown))
+            .collect();
+        Type::Class {
+            name: name.clone(),
+            args,
+        }
+    }
+
+    fn anonymous_class_type(&self, node: &SyntaxNode) -> Type {
+        let first_name = |kind| {
+            child_of(node, kind)
+                .and_then(|clause| clause.descendants().find(|child| child.kind() == NAME))
+                .map(|name| self.resolver.resolve_class(&text_of(&name)))
+        };
+        match first_name(EXTENDS_CLAUSE).or_else(|| first_name(IMPLEMENTS_CLAUSE)) {
+            Some(name) => Type::class(name),
+            None => Type::Object,
+        }
+    }
+
+    /// Every function or method a call node may be calling.
+    pub fn callees(&self, call: &SyntaxNode, env: &Env) -> Vec<ResolvedCallable> {
+        match call.kind() {
+            NEW_EXPR => self.constructors(call, env),
+            CALL_EXPR => {
+                let Some(callee) = call.children().next() else {
+                    return Vec::new();
+                };
+                self.callees_of_expression(&callee, env)
+            }
+            _ => Vec::new(),
+        }
+    }
+
+    fn constructors(&self, node: &SyntaxNode, env: &Env) -> Vec<ResolvedCallable> {
+        let Some(class_node) = node.children().find(|child| child.kind() != ARGUMENT_LIST) else {
+            return Vec::new();
+        };
+        let class = match class_node.kind() {
+            NAME => self.class_type(&text_of(&class_node)),
+            ANONYMOUS_CLASS => self.anonymous_class_type(&class_node),
+            _ => match self.type_of(&class_node, env) {
+                Type::ClassString(Some(inner)) => *inner,
+                other => other,
+            },
+        };
+        let receiver = self.receiver_type(&class);
+        let mut out = Vec::new();
+        for member in receiver.members() {
+            if let Some(found) = self.index.find_method(member, "__construct") {
+                out.push(ResolvedCallable {
+                    name: format!("{}::__construct", found.class.decl.name),
+                    callable: found.member.callable.clone(),
+                    doc: found.member.doc.clone(),
+                    subst: found.subst.as_ref().clone(),
+                    self_name: Some(found.self_name.clone()),
+                    receiver: Some(member.clone()),
+                    is_constructor: true,
+                    constructed: Some(found.class.decl.name.clone()),
+                });
+            }
+        }
+        out
+    }
+
+    pub fn callees_of_expression(&self, callee: &SyntaxNode, env: &Env) -> Vec<ResolvedCallable> {
+        match callee.kind() {
+            NAME => {
+                let candidates = self.resolver.function_candidates(&text_of(callee));
+                match self.index.first_function(&candidates) {
+                    Some(function) => vec![ResolvedCallable {
+                        name: function.decl.name.clone(),
+                        callable: function.decl.callable.clone(),
+                        doc: function.decl.doc.clone(),
+                        subst: HashMap::new(),
+                        self_name: None,
+                        receiver: None,
+                        is_constructor: false,
+                        constructed: None,
+                    }],
+                    None => Vec::new(),
+                }
+            }
+            PROPERTY_FETCH_EXPR => {
+                let (Some(object), Some(name)) = (callee.children().next(), child_of(callee, NAME)) else {
+                    return Vec::new();
+                };
+                let receiver = self.receiver_type(&self.type_of(&object, env));
+                self.methods_named(&receiver, &text_of(&name))
+            }
+            SCOPED_ACCESS_EXPR => {
+                let Some(qualifier) = callee.children().next() else {
+                    return Vec::new();
+                };
+                let Some(name) = callee
+                    .children()
+                    .filter(|child| child.kind() == NAME)
+                    .last()
+                    .filter(|name| name != &qualifier)
+                else {
+                    return Vec::new();
+                };
+                let class = self.qualifier_type(&qualifier, env);
+                let receiver = self.receiver_type(&class);
+                self.methods_named(&receiver, &text_of(&name))
+            }
+            _ => {
+                let ty = self.type_of(callee, env);
+                let mut out = Vec::new();
+                for member in ty.members() {
+                    match member {
+                        Type::Callable(Some(signature)) => out.push(ResolvedCallable {
+                            name: "closure".to_string(),
+                            callable: Callable {
+                                params: signature
+                                    .params
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(index, param)| param_of_signature(param, index))
+                                    .collect(),
+                                ret: None,
+                                doc_ret: signature.ret.clone(),
+                                leveled_ret: None,
+                                by_ref_return: false,
+                                is_generator: false,
+                            },
+                            doc: None,
+                            subst: HashMap::new(),
+                            self_name: None,
+                            receiver: None,
+                            is_constructor: false,
+                            constructed: None,
+                        }),
+                        Type::Class { .. } => out.extend(self.methods_named(member, "__invoke")),
+                        _ => {}
+                    }
+                }
+                out
+            }
+        }
+    }
+
+    fn methods_named(&self, receiver: &Type, name: &str) -> Vec<ResolvedCallable> {
+        let mut out = Vec::new();
+        for member in receiver.members() {
+            let Type::Class { .. } = member else {
+                continue;
+            };
+            if let Some(found) = self.index.find_method(member, name) {
+                out.push(ResolvedCallable {
+                    name: format!("{}::{}", found.class.decl.name, found.member.name),
+                    callable: found.member.callable.clone(),
+                    doc: found.member.doc.clone(),
+                    subst: found.subst.as_ref().clone(),
+                    self_name: Some(found.self_name.clone()),
+                    receiver: Some(member.clone()),
+                    is_constructor: false,
+                    constructed: None,
+                });
+            }
+        }
+        out
+    }
+
+    pub(super) fn call_type(&self, node: &SyntaxNode, env: &Env) -> Type {
+        let Some(callee_node) = node.children().next() else {
+            return Type::Unknown;
+        };
+        let callees = self.callees(node, env);
+        if callees.is_empty() {
+            return Type::Unknown;
+        }
+        let args = arguments(node);
+        let mut results = Vec::new();
+        for callee in &callees {
+            results.push(self.return_type_of(callee, &args, env));
+        }
+        let result = Type::union(results);
+        let nullsafe = callee_node.kind() == PROPERTY_FETCH_EXPR && has_token(&callee_node, NULLSAFE_ARROW);
+        if nullsafe {
+            let receiver = callee_node.children().next().map(|object| self.type_of(&object, env));
+            if receiver.is_some_and(|receiver| receiver.contains_null()) {
+                return result.nullable();
+            }
+        }
+        result
+    }
+
+    /// Binds the templates of a callable from the arguments of a call, and collects what is known
+    /// of each parameter's argument by name for conditional types.
+    pub fn bind_call(
+        &self,
+        callee: &ResolvedCallable,
+        args: &[Arg],
+        env: &Env,
+    ) -> (HashMap<String, Type>, HashMap<String, Type>) {
+        let level = self.level();
+        let mut map = callee.subst.clone();
+        let mut by_name: HashMap<String, Type> = HashMap::new();
+        let params: Vec<&Param> = callee.callable.params_at(level).collect();
+        for (position, arg) in args.iter().enumerate() {
+            let Some(expr) = &arg.expr else {
+                continue;
+            };
+            let param = match &arg.name {
+                Some(name) => params.iter().find(|param| &param.name == name),
+                None => params
+                    .get(position)
+                    .or_else(|| params.last().filter(|param| param.variadic)),
+            };
+            let Some(param) = param else {
+                continue;
+            };
+            let arg_type = self.type_of(expr, env);
+            if let Some(expected) = param.effective_type(level) {
+                let expected = if param.variadic && arg.spread {
+                    Type::List(Box::new(expected.clone()))
+                } else {
+                    expected.clone()
+                };
+                self.bind_templates(&expected, &arg_type, &mut map);
+            }
+            by_name.insert(format!("${}", param.name), arg_type);
+        }
+        (map, by_name)
+    }
+
+    /// What a call returns: the declared or documented return type with templates bound and
+    /// conditional types decided.
+    pub fn return_type_of(&self, callee: &ResolvedCallable, args: &[Arg], env: &Env) -> Type {
+        let level = self.level();
+        let (mut map, by_name) = self.bind_call(callee, args, env);
+        if callee.is_constructor {
+            return match &callee.receiver {
+                Some(receiver) => receiver.clone(),
+                None => Type::Unknown,
+            };
+        }
+        let declared = callee.callable.effective_return(level).cloned();
+        let ret = match declared {
+            Some(ret) => ret,
+            None if callee.callable.is_generator => Type::class("Generator"),
+            None => return Type::Unknown,
+        };
+        let ret = self.resolve_conditionals(&ret, &by_name, &map);
+        let mut leftover = Vec::new();
+        template_names(&ret, &mut leftover);
+        for name in leftover {
+            if map.contains_key(&name) {
+                continue;
+            }
+            let bound = callee
+                .doc
+                .as_ref()
+                .and_then(|doc| doc.templates.iter().find(|template| template.name == name))
+                .and_then(|template| template.bound.clone());
+            map.insert(name, bound.unwrap_or(Type::Mixed));
+        }
+        let static_type = callee.receiver.as_ref();
+        let resolved = ret.substitute(&map, static_type, callee.self_name.as_deref());
+        match (&resolved, static_type) {
+            (Type::Static, None) => self.this_type(),
+            _ => resolved,
+        }
+    }
+}
+
+fn param_of_signature(param: &CallableParam, index: usize) -> Param {
+    Param {
+        name: param.name.clone().map_or_else(
+            || format!("arg{index}"),
+            |name| name.trim_start_matches('$').to_string(),
+        ),
+        ty: None,
+        doc_ty: Some(param.ty.clone()),
+        leveled: None,
+        default: param.optional.then(|| "...".to_string()),
+        variadic: param.variadic,
+        by_ref: param.by_ref,
+        promoted: None,
+        description: String::new(),
+        attributes: Vec::new(),
+        availability: Default::default(),
+        span: Default::default(),
+    }
+}

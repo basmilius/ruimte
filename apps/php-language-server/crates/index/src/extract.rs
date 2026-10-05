@@ -33,11 +33,13 @@ struct Extractor {
     out: FileSymbols,
 }
 
-struct ClassScope {
-    name: Name,
-    parent: Option<Name>,
-    is_trait: bool,
-    templates: Vec<String>,
+/// The class a declaration is inside, as far as reading its types is concerned.
+#[derive(Clone, Debug, Default)]
+pub struct ClassScope {
+    pub name: Name,
+    pub parent: Option<Name>,
+    pub is_trait: bool,
+    pub templates: Vec<String>,
 }
 
 fn span(range: TextRange) -> Span {
@@ -235,10 +237,25 @@ impl Extractor {
     }
 
     fn parse_doc(&self, node: &SyntaxNode, scope: Option<&ClassScope>) -> Option<Box<Doc>> {
+        self.parse_doc_with(node, scope, &[])
+    }
+
+    fn parse_doc_with(&self, node: &SyntaxNode, scope: Option<&ClassScope>, extra: &[String]) -> Option<Box<Doc>> {
         let token = doc_of(node)?;
-        let cx = self.type_context(scope);
+        let mut cx = self.type_context(scope);
+        cx.templates.extend(extra.iter().cloned());
         let doc = parse_doc(token.text(), &cx, self.options.stub);
         (!doc.is_empty()).then(|| Box::new(doc))
+    }
+
+    /// The doc of a function or method, read again with its own `@template` names in scope.
+    fn doc_with_templates(&self, node: &SyntaxNode, scope: Option<&ClassScope>) -> Option<Box<Doc>> {
+        let first = self.parse_doc(node, scope)?;
+        if first.templates.is_empty() {
+            return Some(first);
+        }
+        let names: Vec<String> = first.templates.iter().map(|template| template.name.clone()).collect();
+        self.parse_doc_with(node, scope, &names)
     }
 
     fn native_type(&self, node: &SyntaxNode, scope: Option<&ClassScope>) -> Type {
@@ -392,7 +409,7 @@ impl Extractor {
         let Some(name) = name_child(node) else {
             return;
         };
-        let doc = self.parse_doc(node, None);
+        let doc = self.doc_with_templates(node, None);
         let attributes = self.attributes(node);
         let callable = self.callable(node, doc.as_deref(), &attributes, None);
         let availability = self.availability(doc.as_deref(), &attributes);
@@ -583,24 +600,8 @@ impl Extractor {
         let (visibility, _) = modifiers.as_ref().map(visibility_of).unwrap_or((None, None));
         let has_modifier = |kind: SyntaxKind| modifiers.as_ref().is_some_and(|list| has_token(list, kind));
         let attributes = self.attributes(node);
-        let mut method_scope = ClassScope {
-            name: scope.name.clone(),
-            parent: scope.parent.clone(),
-            is_trait: scope.is_trait,
-            templates: scope.templates.clone(),
-        };
-        let doc = self.parse_doc(node, Some(&method_scope));
-        if let Some(doc) = &doc {
-            method_scope
-                .templates
-                .extend(doc.templates.iter().map(|template| template.name.clone()));
-        }
-        let doc = if method_scope.templates.len() > scope.templates.len() {
-            self.parse_doc(node, Some(&method_scope))
-        } else {
-            doc
-        };
-        let callable = self.callable(node, doc.as_deref(), &attributes, Some(&method_scope));
+        let doc = self.doc_with_templates(node, Some(scope));
+        let callable = self.callable(node, doc.as_deref(), &attributes, Some(scope));
         let has_body = node.children().any(|child| child.kind() == BLOCK);
         Some(Method {
             name: name.text().to_string(),
@@ -1024,6 +1025,24 @@ pub fn native_type(node: &SyntaxNode, cx: &TypeContext) -> Type {
             .map_or(Type::Unknown, |inner| native_type(&inner, cx)),
         _ => Type::Unknown,
     }
+}
+
+/// The parameters and return type of a function or method node, with the doc comment above it read
+/// at the namespace and imports of `resolver`.
+pub fn callable_at(
+    node: &SyntaxNode,
+    resolver: &NameResolver,
+    scope: Option<&ClassScope>,
+) -> (Callable, Option<Box<Doc>>) {
+    let extractor = Extractor {
+        options: ExtractOptions::default(),
+        resolver: resolver.clone(),
+        out: FileSymbols::default(),
+    };
+    let doc = extractor.doc_with_templates(node, scope);
+    let attributes = extractor.attributes(node);
+    let callable = extractor.callable(node, doc.as_deref(), &attributes, scope);
+    (callable, doc)
 }
 
 /// The resolver in effect at an offset of a file: the namespace around it and the imports above it.

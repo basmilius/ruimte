@@ -1,6 +1,6 @@
 [package]
 name = "php-analysis"
-description = "Syntax-tree queries for the PHP language server"
+description = "Syntax-tree and index queries for the PHP language server"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,6 +10,7 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+php-index = { version = "0.1.0", path = "../index" }
 php-syntax = { version = "0.1.0", path = "../syntax" }
 
 [dev-dependencies]
