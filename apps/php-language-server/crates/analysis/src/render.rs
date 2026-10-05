@@ -300,8 +300,127 @@ fn tag_line(name: &str, code: Option<&str>, text: &str) -> String {
 }
 
 /// The HTML some doc comments are written in, as markdown. Tags that are not HTML stay as they are,
-/// since `array<int>` is a type and not a tag.
+/// since `array<int>` is a type and not a tag. A `<pre>` or `<code>` over several lines becomes a
+/// `php` block with its indentation kept, and a fenced block the author wrote stays as written.
 fn html_to_markdown(text: &str) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    for segment in code_segments(text) {
+        let part = match segment {
+            Segment::Prose(prose) => prose_to_markdown(prose),
+            Segment::Html(code) => format!("```php\n{}\n```", dedent(&decode_entities(&code))),
+            Segment::Fenced(block) => block.trim().to_string(),
+        };
+        if !part.is_empty() {
+            parts.push(part);
+        }
+    }
+    parts.join("\n\n")
+}
+
+enum Segment<'a> {
+    Prose(&'a str),
+    Html(String),
+    Fenced(&'a str),
+}
+
+/// Splits the code blocks off the prose around them, in order.
+fn code_segments(text: &str) -> Vec<Segment<'_>> {
+    let mut segments = Vec::new();
+    let mut rest = text;
+    while let Some((start, end, segment)) = next_code_block(rest) {
+        segments.push(Segment::Prose(&rest[..start]));
+        segments.push(segment);
+        rest = &rest[end..];
+    }
+    segments.push(Segment::Prose(rest));
+    segments
+}
+
+/// The first code block in `text` as its byte range and segment. An inline `<code>` on one line is
+/// not a block: it stays in the prose as inline code.
+fn next_code_block(text: &str) -> Option<(usize, usize, Segment<'_>)> {
+    let lower = text.to_ascii_lowercase();
+    let mut html = None;
+    let mut from = 0;
+    while let Some(found) = lower[from..].find('<') {
+        let open = from + found;
+        from = open + 1;
+        let Some(name) = ["pre", "code"].into_iter().find(|name| {
+            lower[open + 1..].starts_with(name)
+                && lower[open + 1 + name.len()..].starts_with(|c: char| c == '>' || c.is_whitespace())
+        }) else {
+            continue;
+        };
+        let Some(inner_start) = lower[open..].find('>').map(|close| open + close + 1) else {
+            break;
+        };
+        let closing = format!("</{name}>");
+        let Some(inner_end) = lower[inner_start..].find(&closing).map(|at| inner_start + at) else {
+            continue;
+        };
+        let inner = &text[inner_start..inner_end];
+        if inner.trim().contains('\n') {
+            let code = inner.replace("<code>", "").replace("</code>", "");
+            html = Some((open, inner_end + closing.len(), Segment::Html(code)));
+            break;
+        }
+    }
+    let fence = fenced_block(text);
+    match (html, fence) {
+        (Some(html), Some(fence)) => Some(if fence.0 < html.0 { fence } else { html }),
+        (html, fence) => html.or(fence),
+    }
+}
+
+/// A block the author fenced with three backticks, each at the start of a line.
+fn fenced_block(text: &str) -> Option<(usize, usize, Segment<'_>)> {
+    let mut offset = 0;
+    let mut open = None;
+    for line in text.split_inclusive('\n') {
+        if line.trim_start().starts_with("```") {
+            match open {
+                None => open = Some(offset),
+                Some(start) => {
+                    let end = offset + line.len();
+                    return Some((start, end, Segment::Fenced(&text[start..end])));
+                }
+            }
+        }
+        offset += line.len();
+    }
+    None
+}
+
+/// The lines of a block without the blank ones around them and without the indentation they share.
+fn dedent(code: &str) -> String {
+    let lines: Vec<&str> = code.lines().map(str::trim_end).collect();
+    let first = lines.iter().position(|line| !line.is_empty()).unwrap_or(lines.len());
+    let last = lines.iter().rposition(|line| !line.is_empty()).map_or(first, |last| last + 1);
+    let lines = &lines[first..last];
+    let indent = lines
+        .iter()
+        .filter(|line| !line.is_empty())
+        .map(|line| line.len() - line.trim_start().len())
+        .min()
+        .unwrap_or(0);
+    lines
+        .iter()
+        .map(|line| line.get(indent..).unwrap_or(""))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn decode_entities(text: &str) -> String {
+    text.replace("&nbsp;", " ")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
+        .replace("&amp;", "&")
+}
+
+fn prose_to_markdown(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(open) = rest.find('<') {
@@ -342,14 +461,7 @@ fn html_to_markdown(text: &str) -> String {
         }
     }
     out.push_str(rest);
-    let decoded = out
-        .replace("&nbsp;", " ")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
-        .replace("&apos;", "'")
-        .replace("&amp;", "&");
+    let decoded = decode_entities(&out);
     let mut collapsed = String::with_capacity(decoded.len());
     let mut blank_run = 0;
     for line in decoded.lines() {
@@ -468,6 +580,34 @@ function &helper(string $x): void {}
             inline_tags("Formats like {@link https://php.net/date date()} does"),
             "Formats like [date()](https://php.net/date) does"
         );
+    }
+
+    #[test]
+    fn turns_code_over_several_lines_into_a_php_block() {
+        expect![[r#"
+            For example:
+
+            ```php
+            class User extends Model {
+                #[Column]
+                public string $name;
+            }
+            ```
+
+            Or `inline()` code.
+
+            ```php
+            if ($a &lt; $b) {
+                return;
+            }
+            ```
+
+            ```js
+              kept();
+            ```"#]]
+        .assert_eq(&html_to_markdown(
+            "For example:\n<code>\nclass User extends Model {\n    #[Column]\n    public string $name;\n}\n</code>\nOr <code>inline()</code> code.\n<pre><code>\n    if ($a &amp;lt; $b) {\n        return;\n    }\n</code></pre>\n```js\n  kept();\n```",
+        ));
     }
 
     #[test]
