@@ -39,6 +39,8 @@ pub struct FormatSettings {
     pub align_assignments: Option<bool>,
     pub align_array_arrows: Option<bool>,
     pub line_length: Option<usize>,
+    /// Whether the `.editorconfig` of a project sets the indent and the line length.
+    pub editorconfig: Option<bool>,
 }
 
 impl FormatSettings {
@@ -62,6 +64,7 @@ impl FormatSettings {
             align_assignments: flag("alignAssignments"),
             align_array_arrows: flag("alignArrayArrows"),
             line_length: number("lineLength"),
+            editorconfig: flag("editorconfig"),
         }
     }
 

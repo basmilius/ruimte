@@ -461,3 +461,148 @@ fn typing_anywhere_in_a_file_never_panics() {
         let _ = try_format(&text[..end], &options);
     }
 }
+
+fn wrapped(width: usize) -> FormatOptions {
+    FormatOptions {
+        line_length: width,
+        ..FormatOptions::default()
+    }
+}
+
+#[test]
+fn a_long_concatenation_breaks_before_its_operators() {
+    check_with(
+        "<?php\n$message = 'The quick brown fox' . $this->describe($animal) . ' jumps over the lazy dog ' . $another . ' and runs';\n",
+        &wrapped(80),
+        expect![[r#"
+            <?php
+            $message = 'The quick brown fox'
+                . $this->describe($animal)
+                . ' jumps over the lazy dog '
+                . $another
+                . ' and runs';
+        "#]],
+    );
+}
+
+#[test]
+fn a_long_condition_goes_on_lines_of_its_own() {
+    check_with(
+        "<?php\nif ($this->isEnabled($feature) && $user->hasPermission('some-long-permission-name') || $request->isSecure()) {\n    run();\n}\n",
+        &wrapped(80),
+        expect![[r#"
+            <?php
+            if (
+                $this->isEnabled($feature)
+                && $user->hasPermission('some-long-permission-name')
+                || $request->isSecure()
+            ) {
+                run();
+            }
+        "#]],
+    );
+}
+
+#[test]
+fn a_long_method_chain_breaks_before_its_arrows() {
+    check_with(
+        "<?php\n$query = $this->repository->createQueryBuilder('alias')->where('alias.name = :name')->setParameter('name', $name)->getQuery();\n",
+        &wrapped(80),
+        expect![[r#"
+            <?php
+            $query = $this->repository
+                ->createQueryBuilder('alias')
+                ->where('alias.name = :name')
+                ->setParameter('name', $name)
+                ->getQuery();
+        "#]],
+    );
+}
+
+#[test]
+fn a_chain_of_one_call_breaks_its_arguments_instead() {
+    check_with(
+        "<?php\nreturn $this->service->doSomething($argumentNumberOne, ['key' => 'value', 'other' => $thing], $argumentThree);\n",
+        &wrapped(80),
+        expect![[r#"
+            <?php
+            return $this->service->doSomething(
+                $argumentNumberOne,
+                ['key' => 'value', 'other' => $thing],
+                $argumentThree
+            );
+        "#]],
+    );
+}
+
+#[test]
+fn a_long_array_has_an_item_on_each_line() {
+    check_with(
+        "<?php\n$items = ['first' => 'value of the first item', 'second' => 'value of the second item', 'third' => 'value'];\n",
+        &wrapped(80),
+        expect![[r#"
+            <?php
+            $items = [
+                'first' => 'value of the first item',
+                'second' => 'value of the second item',
+                'third' => 'value'
+            ];
+        "#]],
+    );
+}
+
+#[test]
+fn a_long_ternary_breaks_before_its_question_mark_and_colon() {
+    check_with(
+        "<?php\n$value = $condition ? $this->computeTheFirstValue($argumentOne, $argumentTwo) : $this->computeTheSecondValue($argumentOne);\n",
+        &wrapped(80),
+        expect![[r#"
+            <?php
+            $value = $condition
+                ? $this->computeTheFirstValue($argumentOne, $argumentTwo)
+                : $this->computeTheSecondValue($argumentOne);
+        "#]],
+    );
+}
+
+#[test]
+fn a_short_ternary_keeps_its_question_mark_and_colon_together() {
+    check_with(
+        "<?php\n$value = $this->computeTheFirstValue($argumentOne, $argumentTwo, $argumentThree) ?: $this->computeTheSecond($argumentOne);\n",
+        &wrapped(80),
+        expect![[r#"
+            <?php
+            $value = $this->computeTheFirstValue($argumentOne, $argumentTwo, $argumentThree)
+                ?: $this->computeTheSecond($argumentOne);
+        "#]],
+    );
+}
+
+#[test]
+fn nothing_is_broken_that_fits_or_when_wrapping_is_off() {
+    let text = "<?php\n$message = 'The quick brown fox' . $this->describe($animal) . ' jumps over the lazy dog ' . $another;\n";
+    check_with(
+        text,
+        &wrapped(0),
+        expect![[r#"
+        <?php
+        $message = 'The quick brown fox' . $this->describe($animal) . ' jumps over the lazy dog ' . $another;
+    "#]],
+    );
+    check_with(
+        text,
+        &wrapped(200),
+        expect![[r#"
+        <?php
+        $message = 'The quick brown fox' . $this->describe($animal) . ' jumps over the lazy dog ' . $another;
+    "#]],
+    );
+}
+
+#[test]
+fn wrapping_changes_no_token_of_a_comment_laden_chain() {
+    let text = "<?php\n$x = $this->first() /* one */ ->second($argumentNumberOne, $argumentNumberTwo) // two\n    ->third($argumentNumberThree);\n";
+    let formatted = format(text, &wrapped(40)).expect("formatted");
+    assert!(crate::same_tokens(text, &formatted));
+    assert_eq!(format(&formatted, &wrapped(40)).as_deref(), Some(formatted.as_str()));
+}

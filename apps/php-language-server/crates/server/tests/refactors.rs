@@ -265,3 +265,56 @@ fn a_moved_folder_moves_every_class_in_it() {
     );
     client.shutdown();
 }
+
+#[test]
+fn a_rewrite_is_offered_with_its_edit_and_formatted_on_its_lines() {
+    let (mut client, _) = Client::start(json!({}), Value::Null);
+    let uri = "file:///project/page.php";
+    client.open(
+        uri,
+        "<?php\nfunction f($a)\n{\n    $v = array(1, 2);\n    return $v;\n}\n",
+    );
+    client.diagnostics(uri);
+    let actions = client.request(
+        "textDocument/codeAction",
+        json!({ "textDocument": { "uri": uri }, "range": range_at(3, 12, 12), "context": { "diagnostics": [], "only": ["refactor.rewrite"] } }),
+    );
+    let rewrite = action(&actions, "Convert array() to []");
+    assert_eq!(rewrite["kind"], "refactor.rewrite");
+    let edits = &rewrite["edit"]["changes"][uri];
+    assert_eq!(edits[0]["newText"], "[");
+    assert_eq!(edits[1]["newText"], "]");
+    client.shutdown();
+}
+
+#[test]
+fn the_editorconfig_of_a_project_sets_the_indent_and_the_line_length() {
+    let disk = Disk::new();
+    disk.write(
+        "project/.editorconfig",
+        "root = true\n\n[*.php]\nindent_style = tab\nmax_line_length = 60\n",
+    );
+    let (mut client, _) = Client::start_in(json!({}), disk.options(), json!(disk.uri("project")));
+    let uri = disk.uri("project/src/Page.php");
+    client.open(
+        &uri,
+        "<?php\nfunction f()\n{\n    return strlen('aaaaaaaaaaaaaaaaaaaa') + strlen('bbbbbbbbbbbbbbbbbbbbbbb') + strlen('cccc');\n}\n",
+    );
+    client.diagnostics(&uri);
+    let edits = client.request(
+        "textDocument/formatting",
+        json!({ "textDocument": { "uri": uri }, "options": { "tabSize": 4, "insertSpaces": true } }),
+    );
+    let texts: Vec<&str> = edits
+        .as_array()
+        .expect("edits")
+        .iter()
+        .filter_map(|edit| edit["newText"].as_str())
+        .collect();
+    assert!(texts.iter().any(|text| text.contains('\t')), "{texts:?}");
+    assert!(
+        texts.iter().any(|text| text.contains('\n')),
+        "the long line is broken: {texts:?}"
+    );
+    client.shutdown();
+}

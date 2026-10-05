@@ -1,20 +1,22 @@
 //! A PHP formatter that only ever changes whitespace: it decides the text between two tokens and
 //! leaves the tokens alone. The defaults are PER Coding Style 2.0.
 
+mod editorconfig;
 mod layout;
 mod model;
 mod options;
 mod rules;
-
-use std::collections::HashSet;
+mod wrap;
 
 use php_syntax::SyntaxKind::*;
 use php_syntax::{SyntaxKind, parse};
 
+pub use crate::editorconfig::{EditorConfig, IndentSize, IndentStyle, LineLength};
 use crate::layout::{Layout, lay_out};
 use crate::model::Model;
 pub use crate::model::Refusal;
 pub use crate::options::{BraceStyle, FormatOptions, Indent};
+use crate::wrap::Forced;
 
 /// A replacement of a byte range of the text.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -99,7 +101,7 @@ fn new_line_edits(text: &str, offset: usize, options: &FormatOptions) -> Option<
     let model = Model::build(text, true).ok()?;
     let before = model.sig.partition_point(|&leaf| model.leaves[leaf].end <= line_start);
     let previous = before.checked_sub(1)?;
-    let layout = lay_out(&model, options, &HashSet::new(), Some(previous));
+    let layout = lay_out(&model, options, &Forced::new(), Some(previous));
     let level = layout.probe_level?;
     let indent = options.indent.unit().repeat(level);
     if text[line_start..line_end] == indent {
@@ -129,13 +131,13 @@ impl<'a> Run<'a> {
         if model.sig.iter().all(|&leaf| model.leaves[leaf].kind == INLINE_HTML) {
             return Err(Refusal::Empty);
         }
-        let mut forced = HashSet::new();
+        let mut forced = Forced::new();
         let mut layout = lay_out(&model, options, &forced, probe);
         for _ in 0..MAX_WRAP_PASSES {
             if options.line_length == 0 {
                 break;
             }
-            let wrapped = lists_to_break(&model, &layout, options, &forced);
+            let wrapped = breaks_to_add(&model, &layout, options, &forced);
             if wrapped.is_empty() {
                 break;
             }
@@ -218,8 +220,8 @@ pub fn same_tokens(left: &str, right: &str) -> bool {
     tokens(&left) == tokens(&right)
 }
 
-/// The argument and parameter lists to put on lines of their own so that the long lines get shorter.
-fn lists_to_break(model: &Model, layout: &Layout, options: &FormatOptions, forced: &HashSet<usize>) -> Vec<usize> {
+/// The constructs to break over lines so that the long lines get shorter, one for each long line.
+fn breaks_to_add(model: &Model, layout: &Layout, options: &FormatOptions, forced: &Forced) -> Vec<(wrap::Wrap, usize)> {
     let limit = options.line_length;
     let count = model.sig.len();
     let mut found = Vec::new();
@@ -232,50 +234,13 @@ fn lists_to_break(model: &Model, layout: &Layout, options: &FormatOptions, force
         }
         let single = (start..=end).all(|position| layout.end_line[position] == line);
         if single && layout.end_column[end] > limit {
-            if let Some(list) = widest_list(model, layout, start, end, limit, forced) {
-                found.push(list);
+            if let Some(choice) = wrap::choose(model, layout, forced, start, end, limit) {
+                found.push(choice);
             }
         }
         start = end + 1;
     }
     found
-}
-
-fn widest_list(
-    model: &Model,
-    layout: &Layout,
-    start: usize,
-    end: usize,
-    limit: usize,
-    forced: &HashSet<usize>,
-) -> Option<usize> {
-    let mut best: Option<(usize, usize)> = None;
-    for position in start..=end {
-        let leaf = model.leaf(position);
-        if leaf.kind != LPAREN || !matches!(leaf.parent.kind(), ARGUMENT_LIST | PARAMETER_LIST) {
-            continue;
-        }
-        let list = &leaf.parent;
-        let key = usize::from(list.text_range().start());
-        let has_items = list
-            .children()
-            .any(|child| matches!(child.kind(), ARGUMENT | PARAMETER));
-        if forced.contains(&key) || !has_items || layout.column[position] >= limit {
-            continue;
-        }
-        let list_end = usize::from(list.text_range().end());
-        let closing = model
-            .sig
-            .partition_point(|&leaf| model.leaves[leaf].end <= list_end)
-            .checked_sub(1)?;
-        if closing > end || layout.end_column[closing] <= limit {
-            continue;
-        }
-        if best.is_none_or(|(column, _)| layout.column[position] < column) {
-            best = Some((layout.column[position], key));
-        }
-    }
-    best.map(|(_, key)| key)
 }
 
 /// Pads the marks of neighboring lines to one column.

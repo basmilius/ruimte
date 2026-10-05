@@ -20,11 +20,29 @@ fn indent_of(options: &FormattingOptions) -> Indent {
 }
 
 impl Server<'_> {
+    /// The options with what the `.editorconfig` of the file's project asks for, unless the
+    /// settings turn that off. The client's indentation is only what the editor happens to be
+    /// set to, so the project's own file goes before it.
+    pub(crate) fn with_editorconfig(&self, uri: &Uri, options: FormatOptions) -> FormatOptions {
+        let wanted = self
+            .settings
+            .format
+            .as_ref()
+            .and_then(|settings| settings.editorconfig)
+            .unwrap_or(true);
+        let Some(path) = crate::paths::uri_to_path(uri).filter(|_| wanted) else {
+            return options;
+        };
+        let config = php_format::EditorConfig::for_path(&path, &|file| std::fs::read_to_string(file).ok());
+        options.with_editorconfig(&config)
+    }
+
     fn format_options_for(&self, uri: &Uri, asked: &FormattingOptions) -> FormatOptions {
         let mut options = FormatOptions {
             indent: indent_of(asked),
             ..FormatOptions::default()
         };
+        options = self.with_editorconfig(uri, options);
         if let Some(settings) = &self.settings.format {
             options = settings.apply(options);
         }

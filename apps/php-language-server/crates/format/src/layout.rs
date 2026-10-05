@@ -1,14 +1,13 @@
 //! Lays a token stream out: decides every gap between two significant tokens and writes it as text.
 //! Only the gaps are ever produced, so the tokens themselves cannot change.
 
-use std::collections::HashSet;
-
 use php_syntax::SyntaxKind;
 use php_syntax::SyntaxKind::*;
 
 use crate::model::Model;
 use crate::options::FormatOptions;
 use crate::rules::{Braces, Rule, braces, rule};
+use crate::wrap::Forced;
 
 /// An item that began on a line of its own and may continue on the next ones.
 struct Item {
@@ -57,7 +56,7 @@ pub(crate) struct Layout {
 struct Writer<'a, 'b> {
     m: &'b Model<'a>,
     options: &'b FormatOptions,
-    forced: &'b HashSet<usize>,
+    forced: &'b Forced,
     eol: &'static str,
     unit: String,
     frames: Vec<Frame>,
@@ -67,7 +66,7 @@ struct Writer<'a, 'b> {
     indent: usize,
 }
 
-pub(crate) fn lay_out(m: &Model, options: &FormatOptions, forced: &HashSet<usize>, probe: Option<usize>) -> Layout {
+pub(crate) fn lay_out(m: &Model, options: &FormatOptions, forced: &Forced, probe: Option<usize>) -> Layout {
     let eol = if m.text.contains("\r\n") { "\r\n" } else { "\n" };
     let mut writer = Writer {
         m,

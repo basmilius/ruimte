@@ -48,6 +48,7 @@ impl Server<'_> {
                 options.indent = indent;
             }
         }
+        options = self.with_editorconfig(uri, options);
         if let Some(settings) = &self.settings.format {
             options = settings.apply(options);
         }
@@ -368,6 +369,7 @@ impl Server<'_> {
             ..FormatOptions::default()
         };
         let uri = path_to_uri(&first).ok_or("The file has no URI")?;
+        let format = self.with_editorconfig(&uri, format);
         let format = match &self.settings.format {
             Some(settings) => settings.apply(format),
             None => format,

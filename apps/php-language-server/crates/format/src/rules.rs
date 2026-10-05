@@ -1,13 +1,12 @@
 //! What goes between two tokens: a space, nothing, a line break, or what the code has. Only
 //! whitespace is decided here, so no rule can change what a program means.
 
-use std::collections::HashSet;
-
 use php_syntax::SyntaxKind;
 use php_syntax::SyntaxKind::*;
 
 use crate::model::Model;
 use crate::options::{BraceStyle, FormatOptions};
+use crate::wrap::{Forced, Wrap, broken_before};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Rule {
@@ -174,17 +173,19 @@ fn is_control_keyword(kind: SyntaxKind) -> bool {
 }
 
 /// The start of the argument or parameter list a token begins an item of, or closes.
-fn list_broken_before(m: &Model, forced: &HashSet<usize>, n: usize) -> bool {
+fn list_broken_before(m: &Model, forced: &Forced, n: usize) -> bool {
     if forced.is_empty() {
         return false;
     }
     let list_start = |node: &php_syntax::SyntaxNode| usize::from(node.text_range().start());
     if m.kind(n) == RPAREN && matches!(m.parent(n), ARGUMENT_LIST | PARAMETER_LIST) {
-        return forced.contains(&list_start(&m.leaf(n).parent));
+        return forced.contains(&(Wrap::List, list_start(&m.leaf(n).parent)));
     }
     m.starts[n].iter().any(|node| {
         matches!(node.kind(), ARGUMENT | PARAMETER)
-            && node.parent().is_some_and(|list| forced.contains(&list_start(&list)))
+            && node
+                .parent()
+                .is_some_and(|list| forced.contains(&(Wrap::List, list_start(&list))))
     })
 }
 
@@ -198,7 +199,7 @@ fn is_empty_body(m: &Model, n: usize) -> bool {
 }
 
 /// Whether the parameters of the function a brace opens run over more than one line.
-fn multiline_parameters(m: &Model, forced: &HashSet<usize>, n: usize) -> bool {
+fn multiline_parameters(m: &Model, forced: &Forced, n: usize) -> bool {
     let Some(function) = m.leaf(n).parent.parent() else {
         return false;
     };
@@ -206,11 +207,12 @@ fn multiline_parameters(m: &Model, forced: &HashSet<usize>, n: usize) -> bool {
         .children()
         .find(|child| child.kind() == PARAMETER_LIST)
         .is_some_and(|list| {
-            forced.contains(&usize::from(list.text_range().start())) || list.text().to_string().contains('\n')
+            forced.contains(&(Wrap::List, usize::from(list.text_range().start())))
+                || list.text().to_string().contains('\n')
         })
 }
 
-pub(crate) fn rule(m: &Model, options: &FormatOptions, forced: &HashSet<usize>, p: usize, n: usize) -> Rule {
+pub(crate) fn rule(m: &Model, options: &FormatOptions, forced: &Forced, p: usize, n: usize) -> Rule {
     let (pl, nl) = (m.leaf(p), m.leaf(n));
     if let (Some(left), Some(right)) = (pl.opaque, nl.opaque) {
         if left == right {
@@ -229,7 +231,7 @@ pub(crate) fn rule(m: &Model, options: &FormatOptions, forced: &HashSet<usize>, 
     if nk == CLOSE_TAG {
         return Rule::Break;
     }
-    if list_broken_before(m, forced, n) {
+    if list_broken_before(m, forced, n) || broken_before(m, forced, n) {
         return Rule::BreakTight;
     }
     if let Some(boundary) = m.boundaries[n] {
@@ -414,7 +416,7 @@ fn boundary_rule(options: &FormatOptions, kind: SyntaxKind, previous: SyntaxKind
     Rule::Break
 }
 
-fn brace_before(m: &Model, options: &FormatOptions, forced: &HashSet<usize>, p: usize, n: usize) -> Rule {
+fn brace_before(m: &Model, options: &FormatOptions, forced: &Forced, p: usize, n: usize) -> Rule {
     let own_line = |style: BraceStyle| match style {
         BraceStyle::NextLine => Rule::BreakTight,
         BraceStyle::SameLine => Rule::Join,

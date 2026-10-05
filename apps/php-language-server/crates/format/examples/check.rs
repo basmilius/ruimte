@@ -2,7 +2,7 @@
 //! tokens stay, and a second pass changes nothing. Prints the files that break one and a summary.
 //!
 //! `cargo run --release -p php-format --example check -- <folder>... [--tabs] [--wrap] [--nowrap]
-//! [--align] [--typing] [--show <file>]`. `--wrap` breaks lines at 80, `--align` aligns arrows and
+//! [--align] [--width <n>] [--typing] [--show <file>]`. `--wrap` breaks lines at 80, `--align` aligns arrows and
 //! assignments, `--typing` types a newline, a brace and a semicolon at points in every file to see
 //! that nothing panics, and `--show` prints one file formatted.
 
@@ -36,6 +36,9 @@ fn main() {
     if args.iter().any(|arg| arg == "--wrap") {
         options.line_length = 80;
     }
+    if let Some(at) = args.iter().position(|arg| arg == "--width") {
+        options.line_length = args[at + 1].parse().expect("a number after --width");
+    }
     if args.iter().any(|arg| arg == "--nowrap") {
         options.line_length = 0;
     }
@@ -59,7 +62,11 @@ fn main() {
         return;
     }
     let mut files = Vec::new();
-    for arg in args.iter().filter(|arg| !arg.starts_with("--")) {
+    let width_at = args.iter().position(|arg| arg == "--width");
+    for (at, arg) in args.iter().enumerate() {
+        if arg.starts_with("--") || width_at.is_some_and(|width| at == width + 1) {
+            continue;
+        }
         walk(Path::new(arg), &mut files);
     }
     if args.iter().any(|arg| arg == "--typing") {
