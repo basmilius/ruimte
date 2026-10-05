@@ -210,6 +210,7 @@ export class EditorView {
     private layoutVersion = 0;
     private revision: number;
     private rendering = false;
+    private frameGeometry: { top: number; left: number; width: number; height: number } | null = null;
     private disposed = false;
     private inlays: Inlay[] = [];
     /* The host's widgets by owner, so one owner setting its rows never takes another's away. */
@@ -392,6 +393,9 @@ export class EditorView {
     }
 
     setOccurrences(occurrences: readonly Occurrence[]): void {
+        if (occurrences.length === 0 && this.occurrences.length === 0) {
+            return;
+        }
         this.occurrences = [...occurrences];
         this.render();
     }
@@ -508,7 +512,24 @@ export class EditorView {
     }
 
     get viewportHeight(): number {
-        return this.viewport.clientHeight || DEFAULT_HEIGHT;
+        return this.clientHeight || DEFAULT_HEIGHT;
+    }
+
+    /* Read once at the start of a render: a read after the first write of the frame makes the browser lay the page out again. */
+    private get scrollTop(): number {
+        return this.frameGeometry?.top ?? this.viewport.scrollTop;
+    }
+
+    private get scrollLeft(): number {
+        return this.frameGeometry?.left ?? this.viewport.scrollLeft;
+    }
+
+    private get clientWidth(): number {
+        return this.frameGeometry?.width ?? this.viewport.clientWidth;
+    }
+
+    private get clientHeight(): number {
+        return this.frameGeometry?.height ?? this.viewport.clientHeight;
     }
 
     /* A viewport of rows on each side, so a fling the compositor runs ahead of this thread still lands on drawn rows. */
@@ -518,7 +539,7 @@ export class EditorView {
 
     /* The width the text has, which is what the viewport has left of the gutter. */
     private get viewportWidth(): number {
-        return Math.max(1, (this.viewport.clientWidth || DEFAULT_WIDTH) - this.gutterWidth);
+        return Math.max(1, (this.clientWidth || DEFAULT_WIDTH) - this.gutterWidth);
     }
 
     private modelChanged(snapshot: EditorSnapshot): void {
@@ -1457,7 +1478,7 @@ export class EditorView {
     }
 
     private announceView(): void {
-        const key = `${this.viewport.scrollTop}|${this.viewport.scrollLeft}|${this.viewport.clientWidth}|${this.viewport.clientHeight}|${this.layout.height}`;
+        const key = `${this.scrollTop}|${this.scrollLeft}|${this.clientWidth}|${this.clientHeight}|${this.layout.height}`;
         if (key === this.viewKey) {
             return;
         }
@@ -1648,7 +1669,7 @@ export class EditorView {
             return;
         }
         clearTimeout(this.colorTimer);
-        const target = this.layout.rowAt(this.viewport.scrollTop + this.viewportHeight).line + COLOR_MARGIN;
+        const target = this.layout.rowAt(this.scrollTop + this.viewportHeight).line + COLOR_MARGIN;
         if (this.tokens.covers(target)) {
             return;
         }
@@ -1709,13 +1730,19 @@ export class EditorView {
         try {
             this.syncGutter();
             this.syncWrap();
-            let rows = this.layout.visibleRows(this.viewport.scrollTop, this.viewportHeight, this.overscan);
+            this.frameGeometry = {
+                top: this.viewport.scrollTop,
+                left: this.viewport.scrollLeft,
+                width: this.viewport.clientWidth,
+                height: this.viewport.clientHeight
+            };
+            let rows = this.layout.visibleRows(this.scrollTop, this.viewportHeight, this.overscan);
             if (this.layout.syncRows(rows)) {
-                rows = this.layout.visibleRows(this.viewport.scrollTop, this.viewportHeight, this.overscan);
+                rows = this.layout.visibleRows(this.scrollTop, this.viewportHeight, this.overscan);
             }
             const lastLine = rows.at(-1)?.line ?? 0;
-            const firstRow = this.layout.rowAt(this.viewport.scrollTop);
-            this.topAnchor = { offset: this.model.getLine(firstRow.line).start, delta: this.viewport.scrollTop - firstRow.top };
+            const firstRow = this.layout.rowAt(this.scrollTop);
+            this.topAnchor = { offset: this.model.getLine(firstRow.line).start, delta: this.scrollTop - firstRow.top };
             if (lastLine - this.tokens.colored <= COLOR_MARGIN * 4) {
                 this.tokens.advance(lastLine, FIRST_PAINT_MS);
             }
@@ -1724,17 +1751,17 @@ export class EditorView {
                 whitespace: this.settings.whitespace,
                 tokensOf: (line: number) => this.styledTokensOf(line),
                 viewportWidth: this.viewportWidth - RIGHT_PADDING,
-                hostLeft: this.viewport.scrollLeft - this.gutterWidth,
+                hostLeft: this.scrollLeft - this.gutterWidth,
                 hostWidth: this.viewportWidth + this.gutterWidth,
                 onUnfold: (line: number) => this.toggleFold(line, false)
             };
             if (this.painter.paint(rows, paint)) {
-                rows = this.layout.visibleRows(this.viewport.scrollTop, this.viewportHeight, this.overscan);
+                rows = this.layout.visibleRows(this.scrollTop, this.viewportHeight, this.overscan);
                 this.painter.paint(rows, paint);
             }
             this.content.style.height = `${this.layout.height}px`;
             this.content.style.width = `${Math.max(this.layout.width, this.viewportWidth)}px`;
-            this.renderedScroll = { top: this.viewport.scrollTop, left: this.viewport.scrollLeft };
+            this.renderedScroll = { top: this.scrollTop, left: this.scrollLeft };
             this.paintDecorations(rows);
             this.paintPreview();
             this.paintSticky();
@@ -1748,6 +1775,7 @@ export class EditorView {
             this.announceView();
             this.colorAhead();
         } finally {
+            this.frameGeometry = null;
             this.rendering = false;
         }
     }
@@ -1859,7 +1887,7 @@ export class EditorView {
             { className: 'se-struck', rects: struck },
             { className: 'se-link', rects: this.link === null ? [] : this.layout.rectangles(this.link.from, this.link.to, rows) }
         ]);
-        const top = this.viewport.scrollTop;
+        const top = this.scrollTop;
         const caretRects = focused
             ? selections
                   .map((selection) => ({ ...this.caretOf(selection.head), primary: selection === selections.at(-1) }))
@@ -1874,7 +1902,7 @@ export class EditorView {
         }
         paintCarets(this.carets, [...caretRects, ...(this.dropCaret === null ? [] : [{ ...this.layout.caret(this.dropCaret), primary: false, drop: true }])]);
         const caret = this.caretOf(primary.head);
-        this.input.style.left = `${this.gutterWidth + Math.max(0, Math.min(this.viewportWidth - 2, caret.x - this.viewport.scrollLeft))}px`;
+        this.input.style.left = `${this.gutterWidth + Math.max(0, Math.min(this.viewportWidth - 2, caret.x - this.scrollLeft))}px`;
         this.input.style.top = `${Math.max(0, Math.min(this.viewportHeight - this.layout.metrics.lineHeight, caret.y - top))}px`;
         this.input.style.height = `${this.layout.metrics.lineHeight}px`;
         this.root.dataset.carets = String(selections.length);
@@ -1923,7 +1951,7 @@ export class EditorView {
 
     private paintRemote(): void {
         const lineHeight = this.layout.metrics.lineHeight;
-        const top = this.viewport.scrollTop;
+        const top = this.scrollTop;
         const cover = this.stickyHeightAt(top);
         const carets: RemoteCaret[] = [];
         for (const remote of this.remoteCarets) {
@@ -1950,6 +1978,9 @@ export class EditorView {
     /* The host's own DOM after the end of a line, which stays on its line through edits until the owner sets its actions again. */
     setLineActions(owner: string, actions: readonly { id: string; at: number; render: (container: HTMLElement) => void }[]): void {
         if (actions.length === 0) {
+            if (!this.lineActions.has(owner)) {
+                return;
+            }
             this.lineActions.delete(owner);
         } else {
             this.lineActions.set(owner, [...actions]);
@@ -1966,7 +1997,7 @@ export class EditorView {
 
     private paintLineActions(): void {
         const lineHeight = this.layout.metrics.lineHeight;
-        const top = this.viewport.scrollTop;
+        const top = this.scrollTop;
         for (const [owner, entries] of this.lineActions) {
             for (const entry of entries) {
                 const key = `${owner}\0${entry.id}`;
@@ -2112,7 +2143,7 @@ export class EditorView {
 
     /* The first and last line in view, zero-based. */
     visibleLines(): { first: number; last: number } {
-        const top = this.viewport.scrollTop;
+        const top = this.scrollTop;
         return { first: this.layout.rowAt(top).line, last: this.layout.rowAt(top + this.viewportHeight).line };
     }
 
@@ -2252,7 +2283,7 @@ export class EditorView {
     /* Pins the headers of the blocks that have scrolled out of sight above the first visible line, and pushes the last one out as its block ends. */
     private paintSticky(): void {
         const lineHeight = this.layout.metrics.lineHeight;
-        const placements = this.viewport.scrollTop <= 0 ? [] : this.stickyAt(this.viewport.scrollTop);
+        const placements = this.scrollTop <= 0 ? [] : this.stickyAt(this.scrollTop);
         const entries = placements.map((placement): StickyEntry => {
             const row = this.layout.rowForLine(placement.block.startLine) as TextRow;
             return { line: placement.block.startLine, geometry: this.layout.geometry(row), tokens: this.styledTokensOf(placement.block.startLine) };
@@ -2264,8 +2295,8 @@ export class EditorView {
                 return entry.line !== before.line || entry.geometry !== before.geometry || entry.tokens !== before.tokens;
             });
         this.sticky.hidden = entries.length === 0;
-        this.sticky.style.setProperty('--se-scroll-left', `${this.viewport.scrollLeft}px`);
-        this.sticky.style.width = `${this.viewport.clientWidth}px`;
+        this.sticky.style.setProperty('--se-scroll-left', `${this.scrollLeft}px`);
+        this.sticky.style.width = `${this.clientWidth}px`;
         if (changed) {
             this.stickyEntries = entries;
             paintSticky(this.sticky, entries, lineHeight);
@@ -2290,6 +2321,9 @@ export class EditorView {
     }
 
     setGutterAction(action: { line: number; label: string } | null): void {
+        if (action?.line === this.gutterAction?.line && action?.label === this.gutterAction?.label) {
+            return;
+        }
         this.gutterAction = action;
         this.render();
     }
@@ -2302,6 +2336,13 @@ export class EditorView {
     }
 
     setGutterMarkers(owner: string, markers: readonly { id: string; line: number; label: string }[]): void {
+        const before = this.gutterMarkers.get(owner) ?? [];
+        if (
+            before.length === markers.length &&
+            before.every((marker, index) => marker.id === markers[index]!.id && marker.line === markers[index]!.line && marker.label === markers[index]!.label)
+        ) {
+            return;
+        }
         if (markers.length === 0) {
             this.gutterMarkers.delete(owner);
         } else {

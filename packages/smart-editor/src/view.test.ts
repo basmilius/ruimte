@@ -764,3 +764,51 @@ describe('scope', () => {
         expect(seen).toEqual([['A'], ['A', 'run'], []]);
     });
 });
+
+describe('drawing for the host', () => {
+    const firstNumber = (host: HTMLElement): Element | null => host.querySelector('.se-line-number');
+
+    test('does not draw again for a setter that has nothing new to say', () => {
+        const { host, view } = mount('one\ntwo\nthree');
+        view.render();
+        let drawn = firstNumber(host);
+        const unchanged = (call: () => void): void => {
+            call();
+            expect(firstNumber(host)).toBe(drawn);
+        };
+        const changed = (call: () => void): void => {
+            call();
+            expect(firstNumber(host)).not.toBe(drawn);
+            drawn = firstNumber(host);
+        };
+        unchanged(() => view.setGutterAction(null));
+        changed(() => view.setGutterAction({ line: 1, label: 'Show' }));
+        unchanged(() => view.setGutterAction({ line: 1, label: 'Show' }));
+        changed(() => view.setGutterAction(null));
+        unchanged(() => view.setGutterMarkers('inline', []));
+        changed(() => view.setGutterMarkers('inline', [{ id: 'a', line: 0, label: 'Open' }]));
+        unchanged(() => view.setGutterMarkers('inline', [{ id: 'a', line: 0, label: 'Open' }]));
+        changed(() => view.setGutterMarkers('inline', [{ id: 'a', line: 2, label: 'Open' }]));
+        unchanged(() => view.setLineActions('ghost', []));
+        unchanged(() => view.setOccurrences([]));
+    });
+
+    test('reads the size and scroll of the viewport once for a draw, however much it draws', () => {
+        const { host, view } = mount('one\ntwo\nthree');
+        view.render();
+        const viewport = host.querySelector('.se-viewport') as HTMLElement;
+        const reads: Record<string, number> = { clientWidth: 0, clientHeight: 0, scrollTop: 0, scrollLeft: 0 };
+        for (const name of Object.keys(reads)) {
+            Object.defineProperty(viewport, name, {
+                get: () => {
+                    reads[name]!++;
+                    return 0;
+                },
+                set: () => undefined,
+                configurable: true
+            });
+        }
+        view.setGutterAction({ line: 0, label: 'Show' });
+        expect(reads).toEqual({ clientWidth: 1, clientHeight: 1, scrollTop: 1, scrollLeft: 1 });
+    });
+});
