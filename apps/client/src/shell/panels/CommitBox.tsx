@@ -131,6 +131,7 @@ export function CommitBox({ messageKey, checkouts, named, capabilities, busy, on
                 size="sm"
                 rows={3}
                 spellCheck={false}
+                aria-label={t('git.commit.label')}
                 placeholder={t('git.commit.placeholder')}
                 value={message}
                 onChange={(event) => useGit.getState().setMessage(messageKey, event.target.value)}

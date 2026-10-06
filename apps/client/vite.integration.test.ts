@@ -11,7 +11,7 @@ const browser = existsSync(macChrome) ? macChrome : (Bun.which('google-chrome') 
 const node = Bun.which('node');
 
 test.skipIf(browser === null || node === null)(
-    'the shared Markdown component imports in a browser with a fresh Vite cache',
+    'shared Markdown imports and editor labels follow the app language in a browser',
     async () => {
         const temporary = await mkdtemp(join(tmpdir(), 'ruimte-vite-import-'));
         const server = await createServer({
@@ -32,12 +32,26 @@ test.skipIf(browser === null || node === null)(
             const source = await fetch(`http://localhost:${address.port}/@fs${core}`);
             expect(source.status).toBe(200);
             const process = Bun.spawn(
-                [node!, fileURLToPath(new URL('./testing/dev-import-smoke.mjs', import.meta.url)), `http://localhost:${address.port}`, browser!],
+                [
+                    node!,
+                    fileURLToPath(new URL('./testing/dev-import-smoke.mjs', import.meta.url)),
+                    `http://localhost:${address.port}`,
+                    browser!,
+                    'editor-labels'
+                ],
                 { stdout: 'pipe', stderr: 'pipe' }
             );
             const [output, errors, exitCode] = await Promise.all([new Response(process.stdout).text(), new Response(process.stderr).text(), process.exited]);
             expect(exitCode, `${output}\n${errors}`).toBe(0);
-            expect(JSON.parse(output).probe.ok).toBe(true);
+            const result = JSON.parse(output).probe;
+            expect(result.ok).toBe(true);
+            expect(result.labels).toEqual({
+                english: 'Code file /work/app/example.ts',
+                dutch: 'Codebestand /work/app/example.ts',
+                sameEditor: true,
+                sameWords: true,
+                featureWords: 'Niet gebruikt'
+            });
         } finally {
             await server.close();
             await rm(temporary, { recursive: true, force: true });

@@ -1,5 +1,6 @@
 import i18next from 'i18next';
 import { type RefObject, useEffect, useLayoutEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Editor, EditorEngine, EditorIndentation } from '@adecore/editor';
 import { mountDraftEditor } from '@/shell/panels/draft-editor';
 import { useCodeTheme } from '@/state/code-theme';
@@ -53,6 +54,8 @@ export function FileEditor({
     reveal,
     onEditor
 }: FileEditorProps) {
+    const { t } = useTranslation('panels');
+    const label = t('file.edit.label', { path });
     const host = useRef<HTMLDivElement>(null);
     const editorRef = useRef<Editor | null>(null);
     const theme = useCodeTheme();
@@ -68,6 +71,7 @@ export function FileEditor({
     // What the editor mounts with; every later change reaches it through the effects below.
     const initial = useRef({
         disk,
+        label,
         language,
         wrap,
         indentation,
@@ -100,6 +104,7 @@ export function FileEditor({
             {
                 ...(first.language === undefined ? {} : { language: first.language }),
                 theme: first.theme,
+                label: first.label,
                 ...(first.readOnlyReason === null ? {} : { readOnly: true, readOnlyReason: first.readOnlyReason }),
                 wrap: first.wrap,
                 indentation: first.indentation,
@@ -132,6 +137,10 @@ export function FileEditor({
     useEffect(() => {
         editorRef.current?.setTheme(theme);
     }, [theme]);
+
+    useEffect(() => {
+        editorRef.current?.setLabel(label);
+    }, [label]);
 
     // The settings wrote the tokens on the root before the store told anyone, so the editor reads the new face.
     useEffect(() => {

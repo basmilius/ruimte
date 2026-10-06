@@ -151,6 +151,7 @@
             "invalidFrontmatter": "Frontmatter could not be read as YAML. The original text is shown below."
         },
         "edit": {
+            "label": "Code file {{path}}",
             "readOnly": "Read only",
             "outsideProject": "Only files in this project and its worktrees can be edited",
             "ruimteState": "Ruimte keeps its own state here, so it is not edited by hand",
@@ -376,6 +377,7 @@
         },
         "commit": {
             "commit": "Commit",
+            "label": "Commit message",
             "commitAndPush": "Commit and push",
             "commitAndPushHint": "Commit and push",
             "commitStagedHint": "Commit what is staged",

@@ -151,6 +151,7 @@
             "invalidFrontmatter": "De frontmatter kon niet als YAML worden gelezen. Hieronder staat de oorspronkelijke tekst."
         },
         "edit": {
+            "label": "Codebestand {{path}}",
             "readOnly": "Alleen lezen",
             "outsideProject": "Alleen bestanden in dit project en zijn worktrees kun je bewerken",
             "ruimteState": "Hier bewaart Ruimte zijn eigen staat, die bewerk je niet met de hand",
@@ -376,6 +377,7 @@
         },
         "commit": {
             "commit": "Commit",
+            "label": "Commitbericht",
             "commitAndPush": "Committen en pushen",
             "commitAndPushHint": "Committen en pushen",
             "commitStagedHint": "Committen wat gestaged is",

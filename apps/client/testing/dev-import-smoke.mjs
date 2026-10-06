@@ -106,6 +106,22 @@ try {
         sessionId
     );
     const result = probe.result.value ?? { ok: false, message: probe.exceptionDetails?.text };
+    if (process.argv[4] === 'editor-labels') {
+        const labels = await send(
+            'Runtime.evaluate',
+            {
+                expression: `import('/testing/editor-label-probe.ts').then((probe) => probe.probeEditorLabels())`,
+                awaitPromise: true,
+                returnByValue: true
+            },
+            sessionId
+        );
+        result.labels = labels.result.value;
+        if (labels.exceptionDetails) {
+            result.ok = false;
+            result.message = labels.exceptionDetails.exception?.description ?? labels.exceptionDetails.text;
+        }
+    }
     console.log(JSON.stringify({ boot: boot.result?.value, probe: result }, null, 2));
     if (!result.ok) {
         process.exitCode = 1;
