@@ -1,4 +1,4 @@
-import { UsagePane as Pane } from '@ruimte/agents-react/usage/UsagePane';
+import { UsagePane as Pane } from '@adecore/agents-react/usage/UsagePane';
 import { useUi } from '@/state/ui';
 
 // The usage page is a dialog of its own, so settings step aside rather than stack two dialogs.

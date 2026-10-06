@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { GitFork } from 'lucide-react';
 import { CHAT_FORK_TITLE_MAX, clipText, type ChatForkInfoResult } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
-import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
-import { canContinueOn } from '@ruimte/agents-react/agents/accounts';
-import { useAccountChoice } from '@ruimte/agents-react/chat/account-choice';
+import { AccountDot } from '@adecore/agents-react/agents/AccountDot';
+import { canContinueOn } from '@adecore/agents-react/agents/accounts';
+import { useAccountChoice } from '@adecore/agents-react/chat/account-choice';
 import {
     branchRefusal,
     FORKABLE_PROVIDERS,
@@ -16,17 +16,17 @@ import {
     forkShapes,
     type ForkCliChoice,
     type ForkShape
-} from '@ruimte/agents-react/chat/logic/fork';
-import { accountFor, readChatPreferences, selectionFor } from '@ruimte/agents-react/chat/preferences';
+} from '@adecore/agents-react/chat/logic/fork';
+import { accountFor, readChatPreferences, selectionFor } from '@adecore/agents-react/chat/preferences';
 import { forkOriginIn } from '@/chat/fork-origin';
-import { ModelPicker } from '@ruimte/agents-react/chat/ui/Pickers';
-import { useProviders } from '@ruimte/agents-react/state/providers';
+import { ModelPicker } from '@adecore/agents-react/chat/ui/Pickers';
+import { useProviders } from '@adecore/agents-react/state/providers';
 import { Switch, Button, ErrorBoundary, FieldHint, FormError, Icon, Input, Select, Dialog } from '@adecore/ui';
 import { canvasOfNode } from '@/state/canvas';
-import { useChatRow } from '@ruimte/agents-react/state/chats';
+import { useChatRow } from '@adecore/agents-react/state/chats';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
-import { knownAccounts, providerAccountsOf } from '@ruimte/agents-react/state/provider-accounts';
+import { knownAccounts, providerAccountsOf } from '@adecore/agents-react/state/provider-accounts';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
 

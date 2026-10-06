@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
+import { FakeEditorEngine } from '@adecore/editor/fake';
 import { planConflict } from './conflict-model';
 import { replaceAllLines, replaceLines } from './line-edits';
 

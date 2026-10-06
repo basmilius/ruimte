@@ -1,7 +1,7 @@
 import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { hitKey, hitRow, indexRows, placeOfHit, searchChat, type ChatHit, type ChatSearch } from '@/chat/search';
-import type { FindReveal } from '@ruimte/agents-react/chat/ui/find-reveal';
-import type { TimelineFind, TimelineFindOptions } from '@ruimte/agents-react/host';
+import type { FindReveal } from '@adecore/agents-react/chat/ui/find-reveal';
+import type { TimelineFind, TimelineFindOptions } from '@adecore/agents-react/host';
 import { findRanges } from '@/find/dom-text';
 import { FindBar } from '@/find/FindBar';
 import { clearFindHighlights, setFindHighlights } from '@/find/highlights';

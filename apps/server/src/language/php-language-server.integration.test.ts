@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { LanguageRequestResult } from '@ruimte/contracts';
-import type { Diagnostic, Position } from '@ruimte/smart-editor-lsp';
+import type { Diagnostic, Position } from '@adecore/lsp';
 import { MachineHome } from '../fs/machine-home.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { LanguageHost } from './host.ts';

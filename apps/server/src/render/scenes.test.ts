@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { EMPTY_DIAGRAM, EMPTY_DRAWING, RenderSceneResultSchema, type DiagramDocument, type DrawingDocument, type DrawingElement } from '@ruimte/contracts';
-import { layoutOf, shapePaths, textLinesOf } from '@ruimte/diagram';
-import { pathsOfElement } from '@ruimte/drawing';
+import { layoutOf, shapePaths, textLinesOf } from '@adecore/diagram';
+import { pathsOfElement } from '@adecore/drawing';
 import { renderDiagram, renderDrawing } from './scenes.ts';
 
 const base = { x: 40, y: 60, w: 160, h: 80, stroke: 'blue' as const, strokeWidth: 2 as const, seed: 28 };

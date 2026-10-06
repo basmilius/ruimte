@@ -1,10 +1,10 @@
 import { ChevronRight, Bot, LoaderCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ProviderInfo } from '@ruimte/contracts';
-import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
-import { modelName } from '@ruimte/agents-react/agents/model-name';
-import { startingSelection, useChatPreferences } from '@ruimte/agents-react/chat/preferences';
-import { useProviders } from '@ruimte/agents-react/state/providers';
+import { AgentIcon } from '@adecore/agents-react/agents/AgentIcon';
+import { modelName } from '@adecore/agents-react/agents/model-name';
+import { startingSelection, useChatPreferences } from '@adecore/agents-react/chat/preferences';
+import { useProviders } from '@adecore/agents-react/state/providers';
 import { Icon, SectionLabel } from '@adecore/ui';
 import { availableAgents } from './creation';
 import { useUi } from '@/state/ui';

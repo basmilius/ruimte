@@ -3,7 +3,7 @@ import i18next from 'i18next';
 import type { EndpointInfo } from '@ruimte/contracts';
 import { canKeepAwake, desktop, type DesktopBridge, type KeepAwakeRequest } from '@/desktop/bridge';
 import { agentsWorking } from '@/state/agent-work';
-import { useChats, type ChatsById } from '@ruimte/agents-react/state/chats';
+import { useChats, type ChatsById } from '@adecore/agents-react/state/chats';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { serverInfoOf, useServers, type ServerInfo } from '@/state/server';

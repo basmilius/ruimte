@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { DocumentSymbol } from '@ruimte/smart-editor-lsp';
+import type { DocumentSymbol } from '@adecore/lsp';
 import { declarationsOf, startAfterComments, usagesText, type DeclarationSource } from './code-vision-model';
 
 const at = (line: number, character = 0) => ({ line, character });

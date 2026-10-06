@@ -1,5 +1,5 @@
 import { isAgentKind, type ContextSource, type ProjectCanvasView } from '@ruimte/contracts';
-import type { ParsedRefusal } from '@ruimte/agents/context/refusal';
+import type { ParsedRefusal } from '@adecore/agents/context/refusal';
 
 function body(code: string, message: string, ...lines: string[]): ParsedRefusal {
     return { code, message, lines };

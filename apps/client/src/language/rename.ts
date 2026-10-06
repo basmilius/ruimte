@@ -1,6 +1,6 @@
 import i18next from 'i18next';
-import { StaleResultError, type Location, type PrepareRenameResult, type WorkspaceEdit } from '@ruimte/smart-editor-lsp';
-import type { EditorRange } from '@ruimte/smart-editor';
+import { StaleResultError, type Location, type PrepareRenameResult, type WorkspaceEdit } from '@adecore/lsp';
+import type { EditorRange } from '@adecore/editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { parseNames } from '@/ondevice/names-model';
 import { onDeviceClientFor } from '@/ondevice/ondevice-client';

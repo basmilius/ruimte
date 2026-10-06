@@ -1,5 +1,5 @@
-import type { DocumentSymbol, DocumentSymbolResult, SymbolInformation, WorkspaceSymbol, WorkspaceSymbolResult } from '@ruimte/smart-editor-lsp';
-import type { EditorRange } from '@ruimte/smart-editor';
+import type { DocumentSymbol, DocumentSymbolResult, SymbolInformation, WorkspaceSymbol, WorkspaceSymbolResult } from '@adecore/lsp';
+import type { EditorRange } from '@adecore/editor';
 
 export type SymbolGroup = 'namespaces' | 'classes' | 'interfaces' | 'enums' | 'functions' | 'methods' | 'properties' | 'variables' | 'constants' | 'other';
 

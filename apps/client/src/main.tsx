@@ -36,7 +36,7 @@ import { useTheme } from '@/state/theme';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
 import { reloadOnStaleChunk } from '@/stale-chunks';
 import { onLazyOpenError, prefetcher } from '@adecore/ui';
-import { onLazyOpenError as onChatLazyOpenError } from '@ruimte/agents-react/lazy';
+import { onLazyOpenError as onChatLazyOpenError } from '@adecore/agents-react/lazy';
 import '@/state/theme';
 import '@/state/settings';
 import '@fontsource-variable/geist';

@@ -1,4 +1,4 @@
-import { diffLines } from '@ruimte/merge';
+import { diffLines } from '@adecore/merge';
 
 /* A word, a run of spaces or one other character, so a change inside a line is found by word and not by letter. */
 const TOKEN = /\w+|\s+|[^\w\s]/g;

@@ -1,16 +1,16 @@
 import i18next from 'i18next';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { EditorPosition } from '@ruimte/smart-editor';
+import type { EditorPosition } from '@adecore/editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { cleanGhost, firstWord } from '@/ondevice/ghost-model';
 import { onDeviceClientFor, type OnDeviceClient } from '@/ondevice/ondevice-client';
 import { ghostPrompt } from '@/ondevice/prompts';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import type { EditorLanguage } from './editor-language';
+import type { HostLanguage as EditorLanguage } from './host-language';
 import { GhostHint } from './GhostHint';
-import { shikiLanguageOf } from './language-ids';
+import { shikiLanguageOf } from './language-ids-host';
 import { isShortcut } from './shortcut-keys';
 
 const TOAST_ID = 'language-ghost';
@@ -42,12 +42,12 @@ export class GhostTextFeature {
     private accepting = false;
     private hints: Root[] = [];
 
-    constructor(language: EditorLanguage, client: OnDeviceClient = onDeviceClientFor(language.project.transport)) {
+    constructor(language: EditorLanguage, client: OnDeviceClient = onDeviceClientFor(language.project.transport), listenForKeys = true) {
         this.language = language;
         this.client = client;
         const { editor } = language;
         const offs = [
-            editor.onKeyDown((event) => this.key(event)),
+            ...(listenForKeys ? [editor.onKeyDown((event) => this.handleKey(event))] : []),
             editor.onTextChange(() => {
                 if (!this.accepting) {
                     this.revision++;
@@ -81,7 +81,7 @@ export class GhostTextFeature {
         return useSettings.getState().aiGhostText === 'request';
     }
 
-    private key(event: KeyboardEvent): boolean {
+    handleKey(event: KeyboardEvent): boolean {
         if (isShortcut(CANVAS_SHORTCUTS.suggestInline, event)) {
             if (!this.enabled) {
                 return false;

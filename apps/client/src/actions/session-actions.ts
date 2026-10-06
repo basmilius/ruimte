@@ -16,23 +16,23 @@ import {
     type RequestMap,
     type RequestType
 } from '@ruimte/contracts';
-import { effectiveChecks, findItem } from '@ruimte/plan';
+import { effectiveChecks, findItem } from '@adecore/plan';
 import type { StoreApi } from 'zustand';
 import { asksFirst, asRefusal } from '@/actions/developer-actions';
 import { agentsEndedWith } from '@/agents/end-children';
-import { forkRefusal, lastSettledTurn, summaryRefusal } from '@ruimte/agents-react/chat/logic/fork';
-import { recentSubagentMessages } from '@ruimte/agents-react/chat/recent-messages';
-import { stopOf, subagentTitle } from '@ruimte/agents-react/chat/subagent-list';
+import { forkRefusal, lastSettledTurn, summaryRefusal } from '@adecore/agents-react/chat/logic/fork';
+import { recentSubagentMessages } from '@adecore/agents-react/chat/recent-messages';
+import { stopOf, subagentTitle } from '@adecore/agents-react/chat/subagent-list';
 import { readNodeHost, updateHost, type NodeHost } from '@/nodes/node-host';
 import { PlanClient } from '@/plan/plan-client';
 import { showViewWhenItLands } from '@/project/views';
 import { revealWhenItLands } from '@/state/canvas';
-import { useChats, type ChatState } from '@ruimte/agents-react/state/chats';
+import { useChats, type ChatState } from '@adecore/agents-react/state/chats';
 import { chatSinkFor } from '@/state/chats';
 import type { DocumentState } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { usePlans } from '@/state/plans';
-import { providersOf } from '@ruimte/agents-react/state/providers';
+import { providersOf } from '@adecore/agents-react/state/providers';
 import { useSessions, type SessionState } from '@/state/sessions';
 import { screenOf } from '@/terminal/registry';
 import { chatClient, machineFor, sessionClient } from '@/transport/connections';

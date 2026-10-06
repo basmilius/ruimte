@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FsReadText } from '@ruimte/contracts';
-import type { EditorEngine, EditorIndentation } from '@ruimte/smart-editor';
+import type { EditorEngine, EditorIndentation } from '@adecore/editor';
 import { type EditBlock, editBlockOf, isCoarsePointer, useFileNodeGate } from '@/shell/panels/edit-gate';
 import { DEFAULT_INDENTATION, editorConfigDirs, type EditorStyle, editorStyleFor } from '@/shell/panels/editor-config';
 import { loadEditorEngine, loadedEditorEngine } from '@/shell/panels/editor-engine';

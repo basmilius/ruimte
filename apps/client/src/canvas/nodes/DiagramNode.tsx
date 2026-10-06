@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Workflow } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { layoutOf } from '@ruimte/diagram';
+import { layoutOf } from '@adecore/diagram';
 import { DiagramScene } from '@/diagram/DiagramScene';
 import { useDiagramMirror } from '@/diagram/mirror';
 import { showView } from '@/project/views';

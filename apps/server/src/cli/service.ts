@@ -2,19 +2,11 @@ import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, rmSync } from '
 import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
 import { homedir, userInfo } from 'node:os';
 import { dirname, join } from 'node:path';
-import {
-    commandLineServiceProgram,
-    daemonServiceSpec,
-    definitionRunsProgram,
-    diskFiles,
-    platformServiceManager,
-    serviceDefinition,
-    type ServiceFiles,
-    type ServiceManager
-} from '@ruimte/service';
+import { definitionRunsProgram, diskFiles, serviceDefinition, type ServiceFiles, type ServiceManager } from '@adecore/service';
+import { commandLineServiceProgram, daemonServiceSpec, platformServiceManager } from '@ruimte/service/host';
 import { buildFileOf, readBuildFile } from '../service/self-update.ts';
 import { describeError } from '../error-text.ts';
-import { replaceSync, tempNameFor } from '@ruimte/agents/fs';
+import { replaceSync, tempNameFor } from '@adecore/agents/fs';
 
 /*
  * `ruimte service install|uninstall|status`: the background service for a machine without the app.

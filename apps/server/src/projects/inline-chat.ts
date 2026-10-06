@@ -8,7 +8,7 @@ import type {
     ProjectNewInlineChatResult
 } from '@ruimte/contracts';
 import { isHiddenChatView } from '@ruimte/contracts';
-import { CodedError } from '@ruimte/agents/coded-error';
+import { CodedError } from '@adecore/agents/coded-error';
 import { isInside } from '../canvas/project-paths.ts';
 import type { ProjectStore } from './project-store.ts';
 

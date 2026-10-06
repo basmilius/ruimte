@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
-import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
+import { isNotFound, writeAtomic } from '@adecore/agents/fs';
+import { claudeProjectSlug } from '@adecore/agents/chat/claude-transcript';
 import { ChatError } from './errors.ts';
 
 /* The Claude Code whose transcript this cut was checked against; the file is undocumented, so a change there is a refusal here. */

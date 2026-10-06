@@ -4,14 +4,14 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
-import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
+import { ManualClock } from '@adecore/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
-import type { ProviderAccountsService } from '@ruimte/agents/providers/accounts/service';
-import { testAccounts } from '@ruimte/agents/providers/accounts/test-accounts';
-import type { LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
+import type { ProviderAccountsService } from '@adecore/agents/providers/accounts/service';
+import { testAccounts } from '@adecore/agents/providers/accounts/test-accounts';
+import type { LimitsUpdate } from '@adecore/agents/usage/limits/normalize';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
-import { ChatStore } from '@ruimte/agents/chat/chat-store';
-import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
+import { ChatStore } from '@adecore/agents/chat/chat-store';
+import { claudeProjectSlug } from '@adecore/agents/chat/claude-transcript';
 
 function content(): ProjectContent {
     return {

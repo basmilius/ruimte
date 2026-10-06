@@ -1,5 +1,5 @@
 import type { AgentStatus } from '@ruimte/contracts';
-import { chatSink, useChats, type ChatSink } from '@ruimte/agents-react/state/chats';
+import { chatSink, useChats, type ChatSink } from '@adecore/agents-react/state/chats';
 import { nodeWork, type AgentWork } from '@/state/agent-work';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';

@@ -2,6 +2,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import i18next from 'i18next';
 import { UI_NAMESPACE, UI_RESOURCES } from '@adecore/ui';
+import { AGENTS_LOCALES } from '@adecore/agents-react/locales';
+import editorWords from '@adecore/editor-react/locales/en.json' with { type: 'json' };
 import { connectFormat } from './src/format/source';
 import { FALLBACK_LANGUAGE } from './src/i18n/languages';
 
@@ -29,7 +31,7 @@ function namespacesIn(folder: string): Record<string, Record<string, unknown>> {
 const resources = namespacesIn(dir);
 
 // The chat's namespaces are named after their files, one per surface, the way the client's are.
-const agentsWords = namespacesIn(join(here, '..', '..', 'packages', 'agents-react', 'src', 'locales', FALLBACK_LANGUAGE));
+const agentsWords = await AGENTS_LOCALES[FALLBACK_LANGUAGE]!();
 
 // Awaited, so the first test already has the words: nothing here waits for a network or a file.
 await i18next.init({
@@ -37,7 +39,7 @@ await i18next.init({
     fallbackLng: FALLBACK_LANGUAGE,
     defaultNS: 'common',
     interpolation: { escapeValue: false },
-    resources: { [FALLBACK_LANGUAGE]: { ...resources, ...agentsWords, [UI_NAMESPACE]: UI_RESOURCES.en } }
+    resources: { [FALLBACK_LANGUAGE]: { ...resources, ...agentsWords, [UI_NAMESPACE]: UI_RESOURCES.en, editor: editorWords } }
 });
 
 // The formatters of @adecore/ui read the client's settings, which the tests set.

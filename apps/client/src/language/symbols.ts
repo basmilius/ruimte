@@ -1,5 +1,5 @@
-import type { EditorBlock } from '@ruimte/smart-editor';
-import type { DocumentSymbol, DocumentSymbolResult, SymbolInformation } from '@ruimte/smart-editor-lsp';
+import type { EditorBlock } from '@adecore/editor';
+import type { DocumentSymbol, DocumentSymbolResult, SymbolInformation } from '@adecore/lsp';
 import type { EditorLanguage } from './editor-language';
 import { Refresher } from './refresher';
 import { realTimers, type Timers } from './timers';

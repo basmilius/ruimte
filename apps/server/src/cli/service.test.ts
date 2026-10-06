@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { definitionRunsProgram, type ServiceFiles, type ServiceManager } from '@ruimte/service';
+import { definitionRunsProgram, type ServiceFiles, type ServiceManager } from '@adecore/service';
 import type { BuildIdentity } from '@ruimte/contracts';
 import { copyServiceBinaries, removeServiceBinaries, runServiceAction, servicePath, servicePlan, type ServiceDeps, type ServiceFacts } from './service.ts';
 

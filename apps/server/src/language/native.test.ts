@@ -2,7 +2,19 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fetchStubs, installRelease, NativePolicy, nativeStubsOf, readNativeCheckout, type Download, type NativeAsset, type NativeRelease } from './native.ts';
+import {
+    fetchStubs,
+    installRelease,
+    NativePolicy,
+    nativeStubsOf,
+    phpLanguageServerCheckout,
+    readNativeCheckout,
+    type Download,
+    type NativeAsset,
+    type NativeRelease
+} from './native.ts';
+import { PHP_LANGUAGE_SERVER_METADATA } from '@adecore/php-language-server';
+import descriptor from './php-native-release.json' with { type: 'json' };
 import { sha256, tarGz, zip } from './test-archives.ts';
 
 let folder = '';
@@ -35,6 +47,8 @@ describe('native checkout', () => {
         await writeFile(join(folder, 'Cargo.toml'), '[workspace]\nmembers = ["crates/index"]\n\n[workspace.package]\nversion = "0.3.1"\nedition = "2024"\n');
         await writeFile(join(folder, 'crates', 'index', 'src', 'stubs.rs'), `pub const STUBS_COMMIT: &str = "${COMMIT}";\n`);
         expect(readNativeCheckout(folder)).toEqual({ folder, version: '0.3.1', stubsCommit: COMMIT });
+        expect(phpLanguageServerCheckout(false, folder)).toEqual({ folder, version: '0.3.1', stubsCommit: COMMIT });
+        expect(phpLanguageServerCheckout(true, folder)).toBeNull();
     });
 
     it('is nothing for a folder that is not the checkout', async () => {
@@ -50,6 +64,21 @@ describe('native policy', () => {
         stubsCommit: COMMIT,
         assets: { 'darwin-arm64': { url: 'https://example.test/a.tar.gz', sha256: 'f'.repeat(64), format: 'tar.gz', executable: 'php-language-server' } }
     };
+
+    it('pins the Adecore beta artifacts without replacing the native version', () => {
+        expect(descriptor.version).toBe(PHP_LANGUAGE_SERVER_METADATA.version);
+        expect(descriptor.stubsCommit).toBe(PHP_LANGUAGE_SERVER_METADATA.stubsCommit);
+        expect(descriptor.adecoreVersion).toBe('0.17.0-beta.1');
+        for (const [target, asset] of Object.entries(descriptor.assets)) {
+            const [platform, arch] = target.split('-');
+            const plan = new NativePolicy({ checkout: null, platform: platform as NodeJS.Platform, arch }).plan('php-native', folder);
+            expect(plan).toMatchObject({ source: 'release', version: descriptor.version, asset });
+            expect(asset.sha256).toMatch(/^[a-f0-9]{64}$/);
+            expect(asset.url).toBe(
+                `https://github.com/basmilius/adecore/releases/download/v${descriptor.adecoreVersion}/php-language-server-v${descriptor.adecoreVersion}-${target}.${asset.format}`
+            );
+        }
+    });
 
     it('runs the checkout the daemon is in, whatever a release says', () => {
         const policy = new NativePolicy({
@@ -82,7 +111,7 @@ describe('native policy', () => {
     });
 
     it('has nothing to install in a release build with no release pinned', () => {
-        expect(new NativePolicy({ checkout: null }).plan('php-native', '/home/php-native')).toBeNull();
+        expect(new NativePolicy({ checkout: null, releases: {} }).plan('php-native', '/home/php-native')).toBeNull();
     });
 });
 

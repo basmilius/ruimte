@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ModelCatalogData } from '@ruimte/contracts';
-import { ModelCatalog } from '@ruimte/agents/providers/catalog';
+import { ModelCatalog } from '@adecore/agents/providers/catalog';
 import type { ModelCatalogsResult } from '@ruimte/pulsar';
 import { ModelCatalogFeed } from './model-catalogs.ts';
 

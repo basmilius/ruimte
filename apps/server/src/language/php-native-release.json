@@ -1,0 +1,32 @@
+{
+    "version": "0.1.0",
+    "stubsCommit": "e4f5f6c3de39f3bab3e9f3fca4b8cdb8b061e681",
+    "adecoreVersion": "0.17.0-beta.1",
+    "sourceRevision": "648108a9cc7c7bf387eff40d329ddb3bd9837b04",
+    "assets": {
+        "darwin-arm64": {
+            "url": "https://github.com/basmilius/adecore/releases/download/v0.17.0-beta.1/php-language-server-v0.17.0-beta.1-darwin-arm64.tar.gz",
+            "sha256": "61a35764488a34b02f564b91054f1b95096e3af0122a803938f97fa2633c0cf9",
+            "format": "tar.gz",
+            "executable": "php-language-server"
+        },
+        "linux-arm64": {
+            "url": "https://github.com/basmilius/adecore/releases/download/v0.17.0-beta.1/php-language-server-v0.17.0-beta.1-linux-arm64.tar.gz",
+            "sha256": "1d0281eeaca7f5c7aba3d2ba4e406a8b36e73716967c2cd5422a809293c79207",
+            "format": "tar.gz",
+            "executable": "php-language-server"
+        },
+        "linux-x64": {
+            "url": "https://github.com/basmilius/adecore/releases/download/v0.17.0-beta.1/php-language-server-v0.17.0-beta.1-linux-x64.tar.gz",
+            "sha256": "cfe377203d06bd32a4b34f8ad08b9dfec280612f52f018e51cc181d54e6887ce",
+            "format": "tar.gz",
+            "executable": "php-language-server"
+        },
+        "win32-x64": {
+            "url": "https://github.com/basmilius/adecore/releases/download/v0.17.0-beta.1/php-language-server-v0.17.0-beta.1-win32-x64.zip",
+            "sha256": "1bc927d61aa435fdd4c753df7957948fc53bb9b6ed18fd08de4dff04773e95a3",
+            "format": "zip",
+            "executable": "php-language-server.exe"
+        }
+    }
+}

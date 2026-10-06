@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
-import type { CompletionItem } from '@ruimte/smart-editor-lsp';
+import { FakeEditorEngine } from '@adecore/editor/fake';
+import type { CompletionItem } from '@adecore/lsp';
 import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './project-language';

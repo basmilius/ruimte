@@ -36,7 +36,7 @@ import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { isCanvasView, isSessionView, isUnlistedChatView, type AgentKind, type AgentStatus, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction, renameNodeAction, renameViewAction } from '@/actions/client-actions';
-import { useDrafts } from '@ruimte/agents-react/chat/drafts';
+import { useDrafts } from '@adecore/agents-react/chat/drafts';
 import { nodeWork, type AgentWork } from '@/state/agent-work';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
@@ -44,7 +44,7 @@ import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canva
 import { finderPaths } from '@/canvas/finder-drop';
 import { askDeleteView, askViewSettings, newFileViewsAfter, revealNode, showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
-import { useChats } from '@ruimte/agents-react/state/chats';
+import { useChats } from '@adecore/agents-react/state/chats';
 import { useDocument } from '@/state/document';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { ViewMenuItems } from '@/shell/ViewMenuItems';
@@ -66,7 +66,7 @@ import {
     type SidebarViewRow
 } from '@/shell/sidebar-rows';
 import { useSidebarSource } from '@/shell/sidebar-source';
-import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
+import { AgentIcon } from '@adecore/agents-react/agents/AgentIcon';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { WorkingMark } from '@/attention/WorkingMark';
 import { TaskMark } from '@/tasks/TaskMark';
@@ -86,7 +86,7 @@ import { IS_STATION } from '@/station';
 import { NewViewItems } from '@/shell/ViewMenu';
 import { draggedViewId, dragging as draggedView, setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useInstantWidth } from '@/shell/useInstantWidth';
-import { UsageLimitsCard } from '@ruimte/agents-react/usage/UsageLimitsCard';
+import { UsageLimitsCard } from '@adecore/agents-react/usage/UsageLimitsCard';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { FolderMenuItems } from '@/shell/FolderMenuItems';
 import { canOpenWindows, moveToNewWindow, openInNewWindow } from '@/project/windows';

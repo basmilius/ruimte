@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
 import { CircleX, Cpu, Info, TriangleAlert } from 'lucide-react';
-import { fileUriToPath } from '@ruimte/smart-editor-lsp';
-import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
+import { fileUriToPath } from '@adecore/lsp';
+import { AgentIcon } from '@adecore/agents-react/agents/AgentIcon';
 import { Button, Icon, Tooltip } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import { basenameOf } from '@/shell/panels/files-tree';
-import type { EditorPosition } from '@ruimte/smart-editor';
+import type { EditorPosition } from '@adecore/editor';
 import { useAskAgents } from './ask-agents';
 import type { EditorLanguage } from './editor-language';
 import type { ExplainView } from './explain';

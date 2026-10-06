@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import i18next from 'i18next';
 import { I18nextProvider } from 'react-i18next';
-import { emptyPromptDraft } from '@ruimte/agents-react/prompts/logic/prompts';
+import { emptyPromptDraft } from '@adecore/agents-react/prompts/logic/prompts';
 import { computerPrompt } from '@/prompts/ruimte-prompts';
 import { RuimtePromptView } from '@/prompts/RuimtePromptView';
 

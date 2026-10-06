@@ -3,8 +3,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { LANGUAGE_ERROR_CODES, type LanguageServerKind } from '@ruimte/contracts';
-import { CodedError } from '@ruimte/agents/coded-error';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { CodedError } from '@adecore/agents/coded-error';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { LanguageChoices } from './choices.ts';
 import { CustomLanguageServers } from './custom.ts';
@@ -1051,7 +1051,7 @@ describe('the PHP server of Ruimte and Intelephense', () => {
     });
 
     it('says a build with nothing to install is unavailable, and starts no install for it', async () => {
-        const { host, installs } = await installed(['typescript'], { native: new NativePolicy({ checkout: null }) });
+        const { host, installs } = await installed(['typescript'], { native: new NativePolicy({ checkout: null, releases: {} }) });
         expect((await host.status('p1')).find((status) => status.server === 'php-native')).toMatchObject({
             state: 'not-installed',
             version: '',

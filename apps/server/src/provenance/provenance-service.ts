@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
-import { CodedError } from '@ruimte/agents/coded-error';
-import type { AgentEvent } from '@ruimte/agents/events';
-import { KeyedSerializer } from '@ruimte/agents/serializer';
-import { splitLines } from '@ruimte/merge';
+import { CodedError } from '@adecore/agents/coded-error';
+import type { AgentEvent } from '@adecore/agents/events';
+import { KeyedSerializer } from '@adecore/agents/serializer';
+import { splitLines } from '@adecore/merge';
 import {
     PROVENANCE_LIMITS,
     type AgentKind,

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import type { EditorRect } from '@ruimte/smart-editor';
+import type { EditorRect } from '@adecore/editor';
 import type { EditorLanguage } from './editor-language';
 import { PathText } from './PathText';
 import { placePopup } from './popup-placement';

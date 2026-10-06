@@ -2,36 +2,27 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { LIBRARIES } from '../src/libraries';
 import { latestFromView, planPublish, publishedFromView, type PackageToPublish } from '../src/publish-plan';
 import { LAUNCHER_NAME, targetId, TARGETS } from '../src/targets';
 
-/*
- * Publishes what `build.ts` and `build-libraries.ts` laid out: the libraries in dependency order,
- * then the platform packages, and `ruimte` last, skipping every
- * version the registry already has. With `--libraries` only the libraries, which is all
- * `build-libraries.ts` lays out on its own. Run by `.github/workflows/npm.yml`, where npm
- * authenticates through the workflow's OIDC token; there is no token to pass.
- *
- *   bun scripts/publish.ts --out <dir> [--libraries] [--dry-run]
- */
+/* Publishes the platform binaries before the launcher, skipping versions already on npm.
+   Shared libraries are published by Adecore's workflow. */
 const { values } = parseArgs({
     args: process.argv.slice(2),
     options: {
         out: { type: 'string' },
-        libraries: { type: 'boolean', default: false },
         'dry-run': { type: 'boolean', default: false }
     },
     strict: true
 });
 
 if (!values.out) {
-    console.error('Usage: bun scripts/publish.ts --out <dir> [--libraries] [--dry-run]');
+    console.error('Usage: bun scripts/publish.ts --out <dir> [--dry-run]');
     process.exit(1);
 }
 
 const out = resolve(values.out);
-const dirs = values.libraries ? [...LIBRARIES] : [...LIBRARIES, ...TARGETS.map(targetId), LAUNCHER_NAME];
+const dirs = [...TARGETS.map(targetId), LAUNCHER_NAME];
 const packages: PackageToPublish[] = [];
 let version: string | null = null;
 for (const dir of dirs) {

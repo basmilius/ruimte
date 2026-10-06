@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
+import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeOnDeviceModel } from '@/ondevice/fake-model';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { EditorLanguage } from './editor-language';
+import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { eventOf } from './key-events';
-import { ProjectLanguage } from './project-language';
+import { ProjectLanguage } from './ruimte-project-language';
+import { ManualTimers } from './timers';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });
@@ -25,11 +26,12 @@ async function setup(options: { available?: boolean; text?: string; caret?: { li
     const model = new FakeOnDeviceModel(transport, options.available === false ? { available: false, reason: 'Apple Intelligence is turned off.' } : {});
     const project = new ProjectLanguage(transport, 'p1', '/work/app');
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: options.text ?? TEXT, theme: 'light' });
-    const language = new EditorLanguage(project, editor, uri, 'typescript');
+    const timers = new ManualTimers();
+    const language = new EditorLanguage(project, editor, uri, 'typescript', timers);
     await language.document.ready;
     editor.moveCaret(options.caret ?? at(1, 4));
     const suggest = (): boolean => editor.press(eventOf(CANVAS_SHORTCUTS.suggestInline));
-    return { transport, model, editor, language, suggest };
+    return { transport, model, editor, language, project, timers, suggest };
 }
 
 const key = (name: string, extra: Record<string, boolean> = {}) => ({ key: name, ...extra });
@@ -199,5 +201,33 @@ describe('ghost text on request', () => {
         editor.setSelection({ start: at(0, 0), end: at(0, 6) });
         await language.ghost.request();
         expect(model.requests).toEqual([]);
+    });
+});
+
+describe('ghost text with shared completions', () => {
+    test('Tab accepts the app suggestion before the language completion menu', async () => {
+        const { transport, model, editor, language, project, timers } = await setup();
+        try {
+            transport.providers = { 'textDocument/completion': {} };
+            transport.answers.set('language.request', () => ({
+                result: { isIncomplete: false, items: [{ label: 'rank' }, { label: 'reduce' }] },
+                server: 'typescript',
+                version: 1
+            }));
+            void language.ghost.request();
+            await settle();
+            model.answer('return null;');
+            await settle();
+            language.completion.invoke();
+            timers.advance(20);
+            await settle();
+            expect(language.popups.getState().completion).not.toBeNull();
+            expect(language.ghost.active).toBe(true);
+            expect(editor.press(key('Tab'))).toBe(true);
+            expect(editor.getText()).toContain('return null;');
+        } finally {
+            language.dispose();
+            project.dispose();
+        }
     });
 });

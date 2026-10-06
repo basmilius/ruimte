@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CornerUpRight, ImageOff } from 'lucide-react';
 import { isImageMime, type FsReadResult } from '@ruimte/contracts';
-import { ImageThumb } from '@ruimte/agents-react/chat/ui/ImageView';
+import { ImageThumb } from '@adecore/agents-react/chat/ui/ImageView';
 import { drawsImageMime, imageFormatName } from '@/shell/panels/file-kind';
 import { useEndpointId } from '@/state/keys';
 import { fileManagerName, useServer } from '@/state/server';

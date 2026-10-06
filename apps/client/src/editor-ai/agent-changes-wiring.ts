@@ -1,12 +1,12 @@
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
-import type { Editor } from '@ruimte/smart-editor';
-import { useChats } from '@ruimte/agents-react/state/chats';
+import type { Editor } from '@adecore/editor';
+import { useChats } from '@adecore/agents-react/state/chats';
 import { endpointKey } from '@/state/keys';
 import { type TextDraft, useTextDrafts } from '@/state/text-drafts';
 import type { Transport } from '@/transport/transport';
 import { AgentChanges } from './agent-changes';
 import { AgentReview, type ReviewSource } from './agent-review';
-import { joinReviewGroup } from './review-group';
+import { joinReviewGroup } from '@adecore/editor-react';
 import { providerNameOf } from './use-chat-identity';
 
 export interface AgentChangesFile {

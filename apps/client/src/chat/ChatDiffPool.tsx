@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import DiffPool from '@ruimte/agents-react/chat/ui/DiffPool';
+import DiffPool from '@adecore/agents-react/chat/ui/DiffPool';
 // Vite's `?worker`, not a bare import in a worker entry. The package marks itself side-effect free, so a bare import there gets tree-shaken to nothing.
 import DiffWorker from '@pierre/diffs/worker/worker.js?worker';
 

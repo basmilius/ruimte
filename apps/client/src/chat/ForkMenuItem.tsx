@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { GitFork, MessageSquareShare, Undo2 } from 'lucide-react';
 import { performAsPerson } from '@/actions/client-actions';
-import { forkRefusal, lastSettledTurn, summaryRefusal } from '@ruimte/agents-react/chat/logic/fork';
+import { forkRefusal, lastSettledTurn, summaryRefusal } from '@adecore/agents-react/chat/logic/fork';
 import { useChatPlace } from '@/chat/use-chat-place';
-import { useChatRow } from '@ruimte/agents-react/state/chats';
+import { useChatRow } from '@adecore/agents-react/state/chats';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { DisabledReason, Icon, ContextMenu } from '@adecore/ui';

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { EMPTY_DRAWING, duplicateElementIdIn, migrateDrawing, type DrawingDocument, type DrawingElement } from './drawing.ts';
+import { EMPTY_DRAWING, duplicateElementIdIn, migrateDrawing, type DrawingDocument, type DrawingElement } from './drawing-host.ts';
 import { ProjectDocumentSchema } from './project.ts';
 import { duplicateIdIn } from './project-migrate.ts';
 import { REQUEST_SCHEMAS } from './index.ts';

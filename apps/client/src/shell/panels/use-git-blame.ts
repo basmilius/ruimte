@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { EditorLanguage } from '@/language/editor-language';
+import type { EditorLanguage } from '@/language/ruimte-editor-language';
 import { useGitSignal } from '@/state/git-watch';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';

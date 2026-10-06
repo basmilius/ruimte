@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { DIAGRAM_LIMITS, EMPTY_DIAGRAM, diagramProblemIn, migrateDiagram, type DiagramDocument } from './diagram.ts';
+import { DIAGRAM_LIMITS, EMPTY_DIAGRAM, diagramProblemIn, migrateDiagram, type DiagramDocument } from './diagram-host.ts';
 import { ProjectDocumentSchema, isDiagramView, isOpenableView, isSessionView } from './project.ts';
 import { REQUEST_SCHEMAS } from './index.ts';
 

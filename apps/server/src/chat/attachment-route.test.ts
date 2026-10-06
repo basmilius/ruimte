@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatAttachment } from '@ruimte/contracts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from './attachment-route.ts';
-import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
+import { AttachmentStore } from '@adecore/agents/chat/attachment-store';
 
 // What the desktop app on this machine presents; a loopback address alone gets nothing.
 const LOCAL_SECRET = 'the-local-secret';

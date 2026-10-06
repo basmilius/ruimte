@@ -1,14 +1,14 @@
 import i18next from 'i18next';
 import { storedPathOf, type AgentKind } from '@ruimte/contracts';
-import { fileUriToPath } from '@ruimte/smart-editor-lsp';
-import type { EditorRange } from '@ruimte/smart-editor';
+import { fileUriToPath } from '@adecore/lsp';
+import type { EditorRange } from '@adecore/editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { lineRangeLabel, offerSelection, selectionBlock, startLinkedChatOrTell, type SelectionOffer } from '@/chat/selection-to-chat';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useProject } from '@/state/project';
-import type { EditorLanguage } from './editor-language';
+import type { HostLanguage as EditorLanguage } from './host-language';
 import type { Problem } from './diagnostics-model';
-import { shikiLanguageOf } from './language-ids';
+import { shikiLanguageOf } from './language-ids-host';
 import { isShortcut } from './shortcut-keys';
 
 const PLAIN_IDS = new Set(['plaintext', 'text']);

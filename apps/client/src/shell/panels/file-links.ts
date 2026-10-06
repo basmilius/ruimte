@@ -1,4 +1,4 @@
-import type { FileRef } from '@ruimte/agents-react/host';
+import type { FileRef } from '@adecore/agents-react/host';
 import { runAsPerson } from '@/actions/client-actions';
 import { absoluteOf, basenameOf, isAbsolutePath } from '@/shell/panels/files-tree';
 

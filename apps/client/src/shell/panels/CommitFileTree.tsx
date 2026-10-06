@@ -1,23 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import type { FileTreeRowDecoration, FileTreeRowDecorationContext } from '@pierre/trees';
-import { FileTree, useFileTree } from '@pierre/trees/react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import type { FileTreeVisibleRow } from '@pierre/trees';
+import { FileTree, useFileTree } from '@adecore/ui';
+import { useTranslation } from 'react-i18next';
+import { GitTreeMarks } from './GitTreeMarks';
 import type { GitDiffFile } from '@ruimte/contracts';
 import { diffFileParts, firstFile, folderParts } from '@/shell/panels/commit-tree';
-import { decorationOfParts, dirPathOf, mergeCollapsedPaths } from '@/shell/panels/git-tree';
-import {
-    applyExpansion,
-    CHANGE_TREE_CSS,
-    directoryHandle,
-    focusRow,
-    followFocus,
-    movesFocus,
-    pathOfRow,
-    selectOnly,
-    visibleRows,
-    PANEL_TREE_ROW_HEIGHT
-} from '@/shell/panels/panel-tree';
-import { usePanelTreeShift } from '@/shell/panels/use-panel-tree-shift';
-import { FILE_TREE_ICONS } from '@adecore/ui';
+import { dirPathOf, mergeCollapsedPaths } from '@/shell/panels/git-tree';
+const { applyExpansion, focusRow, selectOnly, visibleRows } = FileTree;
 
 interface CommitFileTreeProps {
     files: readonly GitDiffFile[];
@@ -32,6 +21,7 @@ interface CommitFileTreeProps {
  * diff, by the pointer or by the arrow keys, and the keyboard stays here while it does.
  */
 export function CommitFileTree({ files, shown, onPick }: CommitFileTreeProps) {
+    const { t } = useTranslation('panels');
     const filesRef = useRef(files);
     const byPathRef = useRef<ReadonlyMap<string, GitDiffFile>>(new Map());
     const onPickRef = useRef(onPick);
@@ -42,47 +32,39 @@ export function CommitFileTree({ files, shown, onPick }: CommitFileTreeProps) {
     /* The paths the tree was last built from: a checkout is read again on every write in it. */
     const builtRef = useRef('');
 
-    /* The tree keeps the renderer it was made with, so this reads the files of the moment. */
-    const decorate = useCallback(({ item }: FileTreeRowDecorationContext): FileTreeRowDecoration | null => {
-        if (item.kind === 'directory') {
-            const parts = folderParts(filesRef.current, dirPathOf(item.path));
-            return parts === null ? null : decorationOfParts(parts);
-        }
-        const file = byPathRef.current.get(item.path);
-        return file === undefined ? null : decorationOfParts(diffFileParts(file));
-    }, []);
+    const byPath = useMemo(() => new Map(files.map((file) => [file.path, file])), [files]);
+
+    const decorate = useCallback(
+        (item: FileTreeVisibleRow) => {
+            if (item.kind === 'directory') {
+                const parts = folderParts(files, dirPathOf(item.path));
+                return parts === null ? null : <GitTreeMarks parts={parts} />;
+            }
+            const file = byPath.get(item.path);
+            return file === undefined ? null : <GitTreeMarks parts={diffFileParts(file)} />;
+        },
+        [byPath, files]
+    );
 
     const { model } = useFileTree({
         paths: [],
-        composition: { contextMenu: { enabled: false } },
-        density: 'compact',
-        itemHeight: PANEL_TREE_ROW_HEIGHT,
         flattenEmptyDirectories: true,
-        icons: FILE_TREE_ICONS,
         initialExpansion: 'open',
         onSelectionChange: (paths) => {
             const path = paths.length === 1 ? paths[0]! : null;
             if (path !== null && byPathRef.current.has(path)) {
                 onPickRef.current(path);
             }
-        },
-        renderRowDecoration: decorate,
-        search: false,
-        stickyFolders: false,
-        unsafeCSS: CHANGE_TREE_CSS
+        }
     });
-
-    const { attach: attachShift, bar: shiftBar } = usePanelTreeShift(model);
 
     /* Before the paint, so a tab that opens draws its first file at once and not a frame later. */
     useLayoutEffect(() => {
         filesRef.current = files;
-        byPathRef.current = new Map(files.map((file) => [file.path, file]));
+        byPathRef.current = byPath;
         const paths = files.map((file) => file.path);
         const key = paths.join('\n');
         if (builtRef.current === key) {
-            // The same files with other counts, after a checkout was read again.
-            model.setComposition(model.getComposition());
             return;
         }
         builtRef.current = key;
@@ -100,7 +82,7 @@ export function CommitFileTree({ files, shown, onPick }: CommitFileTreeProps) {
         if (next !== null) {
             focusRow(model, next);
         }
-    }, [files, model]);
+    }, [byPath, files, model]);
 
     useEffect(() => {
         onPickRef.current = onPick;
@@ -130,33 +112,13 @@ export function CommitFileTree({ files, shown, onPick }: CommitFileTreeProps) {
         [model]
     );
 
-    const onKeyDownCapture = (event: ReactKeyboardEvent<HTMLElement>): void => {
-        if (event.altKey || event.metaKey || event.ctrlKey) {
-            return;
-        }
-        if (event.key === 'Enter') {
-            const index = model.getFocusedIndex();
-            const row = index < 0 ? undefined : model.getVisibleRows(index, index)[0];
-            if (row === undefined) {
-                return;
-            }
-            event.preventDefault();
-            event.stopPropagation();
-            const path = pathOfRow(row);
-            if (row.kind === 'directory') {
-                directoryHandle(model, path)?.toggle();
-            } else {
-                selectOnly(model, path);
-            }
-        } else if (movesFocus(event)) {
-            followFocus(model);
-        }
-    };
-
     return (
-        <div ref={attachShift} className="min-h-0 grow overflow-hidden" onKeyDownCapture={onKeyDownCapture}>
-            <FileTree model={model} className="panel-tree" />
-            {shiftBar}
-        </div>
+        <FileTree.Root
+            model={model}
+            className="min-h-0 grow overflow-hidden"
+            label={t('git.list.openChanges')}
+            onActivate={(path) => selectOnly(model, path)}
+            renderDecoration={decorate}
+        />
     );
 }

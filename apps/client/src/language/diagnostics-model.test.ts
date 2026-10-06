@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { Diagnostic } from '@ruimte/smart-editor-lsp';
+import type { Diagnostic } from '@adecore/lsp';
 import { codeLabelOf, markerOf, neighborProblem, problemsAt, shiftPosition, shiftRange, type Problem } from './diagnostics-model';
 
 const at = (line: number, character: number) => ({ line, character });

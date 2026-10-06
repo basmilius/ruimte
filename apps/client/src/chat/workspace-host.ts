@@ -1,5 +1,5 @@
 import { createElement, useMemo } from 'react';
-import { setChatHost } from '@ruimte/agents-react/host';
+import { setChatHost } from '@adecore/agents-react/host';
 import { answerComputerAsPerson } from '@/actions/client-actions';
 import { ComposerDictation } from '@/chat/ComposerDictation';
 import { useProjectChats } from '@/chat/project-chats';

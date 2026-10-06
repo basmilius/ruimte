@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { Editor, EditorFindState } from '@ruimte/smart-editor';
+import type { Editor, EditorFindState } from '@adecore/editor';
 import { compileFind, type FindQuery } from '@/find/query';
 import { openFocusedFind } from '@/find/hosts';
 import { lastFindQuery, type FindSeed, type FindState } from '@/find/use-find';

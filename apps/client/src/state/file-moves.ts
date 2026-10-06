@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { Transport } from '@/transport/transport';
-import { followViewStates } from '@/shell/panels/editor-view-state';
+import { followViewStates } from '@/shell/panels/editor-view-state-host';
 import { useFiles } from '@/state/files';
 import { endpointKey, splitKey } from '@/state/keys';
 import { isUnsavedDraft, textDrafts, useTextDrafts, type TextDrafts } from '@/state/text-drafts';

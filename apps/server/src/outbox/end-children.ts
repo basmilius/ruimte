@@ -1,9 +1,9 @@
-import type { AgentLineageStore } from '@ruimte/agents/lineage';
-import { endChildren } from '@ruimte/agents/tasks/end-children';
+import type { AgentLineageStore } from '@adecore/agents/lineage';
+import { endChildren } from '@adecore/agents/tasks/end-children';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionManager } from '../sessions/manager.ts';
-import type { TaskStore } from '@ruimte/agents/tasks/task-store';
+import type { TaskStore } from '@adecore/agents/tasks/task-store';
 import type { EndChildrenEntry, OutboxEntry, OutboxStore, OutboxWork } from './outbox.ts';
 
 /* What a chat child's thread and a cancelled task say about why they ended. */

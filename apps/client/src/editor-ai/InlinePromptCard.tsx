@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { CircleX, Info, Sparkles, TriangleAlert } from 'lucide-react';
 import { FileIcon, Icon, Tooltip } from '@adecore/ui';
 import { lineRangeLabel } from '@/chat/selection-to-chat';
-import type { EditorLanguage } from '@/language/editor-language';
+import type { EditorLanguage as RuimteEditorLanguage } from '@/language/ruimte-editor-language';
+
+type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
 import { basenameOf } from '@/shell/panels/files-tree';
 import { InlineAgentPicker } from './InlineAgentPicker';
 import type { InlineEditFeature, InlinePrompt } from './inline-edit';

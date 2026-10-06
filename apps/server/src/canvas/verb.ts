@@ -22,15 +22,15 @@ import { z } from 'zod';
 import type { DriveOutcome, ShotOutcome } from '../browser/drive.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
 import type { DeviceDriver } from '../devices/agent-driver.ts';
-import type { Notice } from '@ruimte/agents/messages/notice-store';
+import type { Notice } from '@adecore/agents/messages/notice-store';
 import type { NoticeDelivery } from '../context/notices.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { HiddenAgentStore } from '../agents/hidden-agents.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
-import { field } from '@ruimte/agents/context/refusal';
-import type { ChatRequests } from '@ruimte/agents/tasks/waiting-child';
-import type { TaskVerbs } from '@ruimte/agents/tasks/wiring';
+import { field } from '@adecore/agents/context/refusal';
+import type { ChatRequests } from '@adecore/agents/tasks/waiting-child';
+import type { TaskVerbs } from '@adecore/agents/tasks/wiring';
 import {
     REVISION_FLAG,
     VerbRefusal,
@@ -41,10 +41,10 @@ import {
     type Noun as RegistryNoun,
     type Verb as RegistryVerb,
     type VerbEntry as RegistryVerbEntry
-} from '@ruimte/agents/context/verb';
+} from '@adecore/agents/context/verb';
 
 // The verbs reach the one sanitizer and the registry through the toolkit they already import.
-export { field } from '@ruimte/agents/context/refusal';
+export { field } from '@adecore/agents/context/refusal';
 export {
     DRY_RUN_FLAG,
     DRY_RUN_PREVIEW,
@@ -55,7 +55,7 @@ export {
     requiredField,
     type ContextVerb,
     type VerbHelp
-} from '@ruimte/agents/context/verb';
+} from '@adecore/agents/context/verb';
 
 /* A worktree a verb asks for: a new branch named after a title, or the branch it was given. */
 export type WorktreeWant = { fresh: string } | { branch: string };

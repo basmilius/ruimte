@@ -24,7 +24,7 @@ import {
 import { nodesInWorktree } from '@/shell/panels/worktree-rows';
 import { Segmented, Switch, Button, Dialog, Field, FieldHint, Input } from '@adecore/ui';
 import { nodeWorking } from '@/state/agent-work';
-import { useChats, type ChatStatuses } from '@ruimte/agents-react/state/chats';
+import { useChats, type ChatStatuses } from '@adecore/agents-react/state/chats';
 import { useEndpointId, endpointKey } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';

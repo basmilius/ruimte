@@ -1,3 +1,5 @@
+import release from './php-native-release.json' with { type: 'json' };
+import { phpLanguageServerSourcePath } from '@adecore/php-language-server';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { access, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
@@ -31,16 +33,19 @@ export interface NativeRelease {
     assets: Partial<Record<string, NativeAsset>>;
 }
 
-/*
- * The releases a native kind installs from, pinned here the way the npm packages are in `versions.ts`.
- * The PHP server has none yet: it moves to a repository of its own with releases, and until then a
- * release build of Ruimte has nothing to install and says so. A checkout runs the server it builds.
- */
-export const NATIVE_RELEASES: Partial<Record<NativeKind, NativeRelease>> = {};
+function releaseAsset(asset: { url: string; sha256: string; format: string; executable: string }): NativeAsset {
+    if (asset.format !== 'tar.gz' && asset.format !== 'zip') {
+        throw new Error(`Unsupported native archive format: ${asset.format}`);
+    }
+    return { ...asset, format: asset.format };
+}
 
-/* What the daemon knows about a checkout of Ruimte it runs from. */
+export const NATIVE_RELEASES: Partial<Record<NativeKind, NativeRelease>> = {
+    'php-native': { ...release, assets: Object.fromEntries(Object.entries(release.assets).map(([platform, asset]) => [platform, releaseAsset(asset)])) }
+};
+
+/* The native sources selected by the daemon host. */
 export interface NativeCheckout {
-    /* `apps/php-language-server`. */
     folder: string;
     version: string;
     stubsCommit: string;
@@ -66,6 +71,13 @@ export function readNativeCheckout(folder: string): NativeCheckout | null {
     } catch {
         return null;
     }
+}
+
+export function phpLanguageServerCheckout(compiled: boolean, sourcePath = process.env.RUIMTE_PHP_LANGUAGE_SERVER_SOURCE): NativeCheckout | null {
+    if (compiled) {
+        return null;
+    }
+    return readNativeCheckout(sourcePath ?? phpLanguageServerSourcePath());
 }
 
 /* What an install of a native kind does, and what it ends up running. */

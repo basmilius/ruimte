@@ -13,7 +13,10 @@ const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4211';
 const port = 4212;
 
 // Where the @adecore packages really live: a linked checkout sits outside this repository.
-const adecore = ['ui', 'terminal'].map((name) => realpathSync(fileURLToPath(new URL(`./node_modules/@adecore/${name}`, import.meta.url))));
+const adecore = ['ui', 'terminal', 'agents-react', 'editor-core', 'editor', 'editor-react', 'lsp', 'drawing', 'diagram', 'merge', 'plan']
+    .map((name) => fileURLToPath(new URL(`./node_modules/@adecore/${name}`, import.meta.url)))
+    .filter(existsSync)
+    .map((path) => realpathSync(path));
 
 /*
  * The web client at `station.ruimte.app` (`vite build --mode station`). It is the same page, plus what
@@ -134,6 +137,8 @@ export default defineConfig(({ mode }) => ({
         dedupe: ['react', 'react-dom', 'i18next', 'react-i18next', '@base-ui-components/react']
     },
     optimizeDeps: {
+        // Source exports in the shared React packages are TSX and can import CommonJS dependencies.
+        extensions: ['.tsx'],
         include: ['@base-ui-components/react/menu', '@base-ui-components/react/dialog', 'lucide-react', 'clsx']
     },
     server: {

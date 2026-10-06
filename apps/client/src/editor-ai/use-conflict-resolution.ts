@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import type { Editor } from '@ruimte/smart-editor';
-import { createHolder } from '@/shell/panels/use-editor-language';
+import type { Editor } from '@adecore/editor';
+import { createHolder } from '@adecore/editor-react';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useTransport } from '@/transport/context';

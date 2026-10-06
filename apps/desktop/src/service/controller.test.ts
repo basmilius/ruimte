@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServiceController, type ServiceControllerDeps } from './controller';
 import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
-import type { ServiceManager } from '@ruimte/service';
+import type { ServiceManager } from '@adecore/service';
 import type { ServiceSupport, ShellServiceState } from '@ruimte/desktop-bridge';
 import { keepRunningSetting, serviceSupport, type KeepRunningSetting } from './settings';
 

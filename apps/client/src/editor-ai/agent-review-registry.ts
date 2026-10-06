@@ -1,4 +1,4 @@
-import type { Editor } from '@ruimte/smart-editor';
+import type { Editor } from '@adecore/editor';
 import type { AgentReview } from './agent-review';
 
 const reviews = new WeakMap<Editor, AgentReview>();

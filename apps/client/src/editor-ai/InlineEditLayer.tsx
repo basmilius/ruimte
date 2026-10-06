@@ -1,6 +1,8 @@
 import { createPortal } from 'react-dom';
 import { useStore } from 'zustand';
-import type { EditorLanguage } from '@/language/editor-language';
+import type { EditorLanguage as RuimteEditorLanguage } from '@/language/ruimte-editor-language';
+
+type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
 import { InlinePromptCard } from './InlinePromptCard';
 import { InlineProposalCard } from './InlineProposalCard';
 

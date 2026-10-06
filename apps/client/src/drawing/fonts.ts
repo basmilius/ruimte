@@ -1,4 +1,4 @@
-import { DEFAULT_FONT_STACKS } from '@ruimte/drawing';
+import { DEFAULT_FONT_STACKS } from '@adecore/drawing';
 
 let loaded: Promise<void> | null = null;
 

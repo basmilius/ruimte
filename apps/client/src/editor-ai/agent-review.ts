@@ -1,14 +1,14 @@
-import { splitLines } from '@ruimte/merge';
+import { splitLines } from '@adecore/merge';
 import { createStore, type StoreApi } from 'zustand';
 import type { ProvenanceReviewState, ProvenanceRun } from '@ruimte/contracts';
-import type { Editor } from '@ruimte/smart-editor';
+import type { Editor } from '@adecore/editor';
 import { lineRangeLabel, selectionBlock } from '@/chat/selection-to-chat';
 import type { AgentChanges, DrawFrame } from './agent-changes';
 import { registerAgentReview } from './agent-review-registry';
-import { highlightLayers } from './highlight-layers';
+import { highlightLayers } from '@adecore/editor-react';
 import { replaceAllLines, type LineReplacement } from './line-edits';
-import { ReviewGroup, type ReviewMember } from './review-group';
-import { LineActionHost, RowHost, type HostedAction, type HostedRow } from './row-host';
+import { ReviewGroup, type ReviewMember } from '@adecore/editor-react';
+import { LineActionHost, RowHost, type HostedAction, type HostedRow } from '@adecore/editor-react';
 import { replacedWords } from './word-diff';
 
 const ROW_OWNER = 'review';

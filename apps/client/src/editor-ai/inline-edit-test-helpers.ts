@@ -1,5 +1,5 @@
 import type { ChatInfo, ChatItem, ProjectNewInlineChatPayload } from '@ruimte/contracts';
-import type { ChatState } from '@ruimte/agents-react/state/chats';
+import type { ChatState } from '@adecore/agents-react/state/chats';
 import type { DiskText } from '@/state/text-drafts';
 import type { InlineEditRecord } from './inline-edit-record';
 import type { InlineEditDeps } from './inline-edit-session';

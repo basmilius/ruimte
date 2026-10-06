@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectDocument } from '@ruimte/contracts';
-import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
-import { EMPTY_DRAFT, readDraft, writeDraft } from '@ruimte/agents-react/chat/drafts';
+import { FakeEditorEngine } from '@adecore/editor/fake';
+import { EMPTY_DRAFT, readDraft, writeDraft } from '@adecore/agents-react/chat/drafts';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useChatChooser } from '@/chat/chat-chooser';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
-import { EditorLanguage } from './editor-language';
+import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { eventOf } from './key-events';
 import { LANGUAGE_COMMANDS } from './command-table';
-import { ProjectLanguage } from './project-language';
+import { ProjectLanguage } from './ruimte-project-language';
 
 const uri = 'file:///work/app/src/score.ts';
 const at = (line: number, character: number) => ({ line, character });

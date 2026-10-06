@@ -1,5 +1,5 @@
-import type { Diagnostic } from '@ruimte/smart-editor-lsp';
-import type { EditorContentChange, EditorPosition } from '@ruimte/smart-editor';
+import type { Diagnostic } from '@adecore/lsp';
+import type { EditorContentChange, EditorPosition } from '@adecore/editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import type { EditorLanguage } from './editor-language';
 import { isShortcut } from './shortcut-keys';

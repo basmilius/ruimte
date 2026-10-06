@@ -12,7 +12,7 @@ import {
     visibleNodes,
     type AttentionPass
 } from '@/state/attention';
-import type { ChatState } from '@ruimte/agents-react/state/chats';
+import type { ChatState } from '@adecore/agents-react/state/chats';
 import type { SessionState, StatusOf } from '@/state/sessions';
 
 function pass(input: Partial<AttentionPass>): AttentionPass {

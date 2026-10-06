@@ -3,7 +3,7 @@ import { ProjectError } from '../projects/project-store.ts';
 import { VerbRefusal, type CanvasHost } from './verb.ts';
 import { verbNamed, verbSummaryLines } from './verbs.ts';
 import { errorText } from '../error-text.ts';
-import { refusalBody } from '@ruimte/agents/context/refusal';
+import { refusalBody } from '@adecore/agents/context/refusal';
 
 export const CANVAS_PATH = '/canvas';
 

@@ -1,5 +1,5 @@
-import type { EditorSemanticToken } from '@ruimte/smart-editor';
-import type { SemanticTokens, SemanticTokensLegend } from '@ruimte/smart-editor-lsp';
+import type { EditorSemanticToken } from '@adecore/editor';
+import type { SemanticTokens, SemanticTokensLegend } from '@adecore/lsp';
 
 /*
  * The TextMate scopes a classification stands for, so the editor's theme colors it the way its own

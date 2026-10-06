@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import type { Shortcut } from '@adecore/ui';
 import { agentReviewOf } from '@/editor-ai/agent-review-registry';
 import { LANGUAGE_COMMANDS, LANGUAGE_COMMAND_IDS, type LanguageCommandId } from './command-table';
-import type { EditorLanguage } from './editor-language';
+import type { EditorLanguage } from './ruimte-editor-language';
 import { focusedLanguage } from './focused-language';
 
 const RUNNERS: Record<LanguageCommandId, (language: EditorLanguage) => void> = {

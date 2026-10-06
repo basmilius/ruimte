@@ -18,7 +18,7 @@ import {
     X
 } from 'lucide-react';
 import { canShareView, isCanvasView, type ProjectView } from '@ruimte/contracts';
-import { BookmarkSubmenu } from '@ruimte/agents-react/chat/ui/BookmarkSubmenu';
+import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui/BookmarkSubmenu';
 import { ForkMenuItem } from '@/chat/ForkMenuItem';
 import { useOffersFork } from '@/chat/use-offers-fork';
 import { closeCellAction, duplicateViewAction, placeViewOnCanvasAction, showViewOnCanvasAction, splitAction } from '@/actions/client-actions';
@@ -28,10 +28,10 @@ import { sessionHandoffs, viewOffers } from '@/shell/view-offers';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, maximizedCell, type CellAt } from '@/shell/split';
-import { useChatRow } from '@ruimte/agents-react/state/chats';
+import { useChatRow } from '@adecore/agents-react/state/chats';
 import { cellViewOf, hasActiveCanvas, useDocument } from '@/state/document';
 import { isScratchProject, useProject } from '@/state/project';
-import { useProviders } from '@ruimte/agents-react/state/providers';
+import { useProviders } from '@adecore/agents-react/state/providers';
 import { useSessionRow } from '@/state/sessions';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';

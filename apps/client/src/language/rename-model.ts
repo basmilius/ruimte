@@ -1,5 +1,5 @@
-import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
-import type { Location, PrepareRenameResult, TextEdit, WorkspaceEdit } from '@ruimte/smart-editor-lsp';
+import type { EditorPosition, EditorRange } from '@adecore/editor';
+import type { Location, PrepareRenameResult, TextEdit, WorkspaceEdit } from '@adecore/lsp';
 import { isIdentifierCharacter } from './completion-model';
 import { entriesOf } from './workspace-edit';
 

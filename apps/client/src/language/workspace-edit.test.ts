@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
-import type { WorkspaceEdit } from '@ruimte/smart-editor-lsp';
+import { FakeEditorEngine } from '@adecore/editor/fake';
+import type { WorkspaceEdit } from '@adecore/lsp';
 import type { DiskText } from '@/state/text-drafts';
 import { applyWorkspaceEdit, entriesOf, renamesOf, type ProjectFiles, type StagedFile } from './workspace-edit';
 

@@ -1,9 +1,9 @@
 import { DRAWING_VERSION, EMPTY_DRAWING, duplicateElementIdIn, type DrawingContent, type DrawingDocument, type DrawingElement } from '@ruimte/contracts';
-import type { WatchSeams } from '@ruimte/agents/watch-seam';
+import type { WatchSeams } from '@adecore/agents/watch-seam';
 import { drawingsDirOf, privateDrawingsDirOf, readDrawing, tooNewMessage, viewFilePathOf, writeDrawing } from './project-files.ts';
 import type { ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';
-import { CodedError } from '@ruimte/agents/coded-error';
+import { CodedError } from '@adecore/agents/coded-error';
 
 type DrawingErrorCode = 'project-not-found' | 'drawing-not-found' | 'drawing-invalid' | 'rev-conflict';
 

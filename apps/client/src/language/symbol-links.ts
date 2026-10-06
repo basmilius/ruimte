@@ -1,4 +1,4 @@
-import type { Location, SymbolInformation, WorkspaceSymbol, WorkspaceSymbolResult } from '@ruimte/smart-editor-lsp';
+import type { Location, SymbolInformation, WorkspaceSymbol, WorkspaceSymbolResult } from '@adecore/lsp';
 
 /* The classes a name in a signature has: a pointer and an underline on hover, and the accent only then, so the signature stays calm. */
 export const SYMBOL_LINK_CLASS = 'cursor-pointer hover:text-accent hover:underline';

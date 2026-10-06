@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { AgentKind } from '@ruimte/contracts';
-import { providerAccountsOf } from '@ruimte/agents-react/state/provider-accounts';
+import { providerAccountsOf } from '@adecore/agents-react/state/provider-accounts';
 import { createNodeAction } from '@/actions/client-actions';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';

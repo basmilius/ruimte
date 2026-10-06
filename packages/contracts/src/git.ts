@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
-import { WorktreeSchema } from '@ruimte/agent-contracts/worktree';
+import { WorktreeSchema } from '@adecore/agent-contracts/worktree';
 
 // A worktree for a branch of the repository; made under the app data dir when it does not exist yet.
 export const WorktreeAddPayloadSchema = z.object({
@@ -568,4 +568,4 @@ export const WorktreeMergeResultSchema = GitActionResultSchema.extend({
 });
 export type WorktreeMergeResult = z.infer<typeof WorktreeMergeResultSchema>;
 
-export { WorktreeSchema, WorktreeWorkSchema, type Worktree, type WorktreeWork } from '@ruimte/agent-contracts/worktree';
+export { WorktreeSchema, WorktreeWorkSchema, type Worktree, type WorktreeWork } from '@adecore/agent-contracts/worktree';

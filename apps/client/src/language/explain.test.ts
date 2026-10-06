@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
+import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeOnDeviceModel } from '@/ondevice/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { TransportError } from '@/transport/transport';
-import { EditorLanguage } from './editor-language';
+import { EditorLanguage } from './ruimte-editor-language';
 import { innermostFunction } from './explain';
 import { FakeLanguageTransport } from './fake-daemon';
 import type { HoverInfo } from './popups';
-import { ProjectLanguage } from './project-language';
+import { ProjectLanguage } from './ruimte-project-language';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });

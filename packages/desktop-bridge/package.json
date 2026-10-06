@@ -1,20 +1,20 @@
 {
-  "name": "@ruimte/desktop-bridge",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@adecore/shell": "^0.15.0",
-    "@ruimte/contracts": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.4.2",
-    "typescript": "^7.0.2"
-  }
+    "name": "@ruimte/desktop-bridge",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@adecore/shell": "0.17.0-beta.1",
+        "@ruimte/contracts": "workspace:*"
+    },
+    "devDependencies": {
+        "@types/bun": "^1.4.2",
+        "typescript": "^7.0.2"
+    }
 }

@@ -25,7 +25,7 @@ import { doneVerb, taskListAction, taskNewAction } from './task-verbs.ts';
 import { teamVerb } from './team-verb.ts';
 import { VIEW_ACTIONS, VIEW_DETAIL, VIEW_SUMMARY } from './view-verb.ts';
 import { worktreeVerb } from './worktree-verb.ts';
-import { summaryLines } from '@ruimte/agents/context/verb';
+import { summaryLines } from '@adecore/agents/context/verb';
 import { SCOPE_LINE, defineHelp, defineNoun, dryRunLine, type ContextVerb, type VerbCall, type VerbEntry } from './verb.ts';
 
 /* The one line about failure every help output ends with; the codes are the CLI's, which is what runs the verb. */

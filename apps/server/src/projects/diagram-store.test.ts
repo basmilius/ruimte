@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DIAGRAM_LIMITS, EMPTY_DIAGRAM, type DiagramContent, type DiagramNode, type ProjectContent } from '@ruimte/contracts';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';

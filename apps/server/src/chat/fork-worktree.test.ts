@@ -6,11 +6,11 @@ import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate } from '../git/test-repo.ts';
 import { Worktrees } from '../git/worktrees.ts';
-import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
+import { ManualClock } from '@adecore/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
-import { ChatStore } from '@ruimte/agents/chat/chat-store';
-import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
+import { ChatStore } from '@adecore/agents/chat/chat-store';
+import { claudeProjectSlug } from '@adecore/agents/chat/claude-transcript';
 
 function content(): ProjectContent {
     return {

@@ -1,4 +1,4 @@
-import type { EditorPosition } from '@ruimte/smart-editor';
+import type { EditorPosition } from '@adecore/editor';
 import type { EditorLanguage } from './editor-language';
 import type { PickGroup, PickPreview } from './popups';
 import { realTimers, type Timers } from './timers';

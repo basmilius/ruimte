@@ -1,4 +1,4 @@
-import type { EditorLanguage } from './editor-language';
+import type { EditorLanguage } from './ruimte-editor-language';
 
 interface Entry {
     language: EditorLanguage;

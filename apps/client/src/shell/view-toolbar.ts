@@ -1,10 +1,10 @@
 import type { ProjectViewKind, RuntimeMode } from '@ruimte/contracts';
-import { RUNTIME_MODES } from '@ruimte/agents-react/chat/runtime-modes';
-import { useSubagentTrail } from '@ruimte/agents-react/chat/subagent-view';
+import { RUNTIME_MODES } from '@adecore/agents-react/chat/runtime-modes';
+import { useSubagentTrail } from '@adecore/agents-react/chat/subagent-view';
 import { useDictation } from '@/dictation/controller';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
 import { isFilesView, type CellView } from '@/shell/files-view';
-import { useChatRow } from '@ruimte/agents-react/state/chats';
+import { useChatRow } from '@adecore/agents-react/state/chats';
 import { useHasPlans } from '@/state/plans';
 
 /* The kinds that put something in the toolbar; the bar draws its separators around that part. */

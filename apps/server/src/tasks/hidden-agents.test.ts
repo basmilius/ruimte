@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
+import { ManualClock } from '@adecore/agents/outbox/manual-clock';
 import { MAX_OPENED_PER_CALLER } from '../canvas/depth.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from './test-daemon.ts';

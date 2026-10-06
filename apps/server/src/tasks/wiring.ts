@@ -1,11 +1,11 @@
 import type { Task } from '@ruimte/contracts';
-import type { TaskCoordinator, TaskCoordinatorDeps } from '@ruimte/agents/tasks/task-coordinator';
-import type { TaskStore } from '@ruimte/agents/tasks/task-store';
-import type { WaitingObserver } from '@ruimte/agents/tasks/waiting-child';
-import { wireTasks as wireTaskCore, type TaskVerbs } from '@ruimte/agents/tasks/wiring';
+import type { TaskCoordinator, TaskCoordinatorDeps } from '@adecore/agents/tasks/task-coordinator';
+import type { TaskStore } from '@adecore/agents/tasks/task-store';
+import type { WaitingObserver } from '@adecore/agents/tasks/waiting-child';
+import { wireTasks as wireTaskCore, type TaskVerbs } from '@adecore/agents/tasks/wiring';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { OutboxEntry, OutboxWork, StartAgentEntry } from '../outbox/outbox.ts';
-import type { OutboxHandlers } from '@ruimte/agents/outbox/outbox-worker';
+import type { OutboxHandlers } from '@adecore/agents/outbox/outbox-worker';
 import { parkedNote } from './parked-note.ts';
 import { terminalTasks, type TerminalTasks } from './terminal-tasks.ts';
 import { TASK_WORDS } from './words.ts';
@@ -47,7 +47,7 @@ export interface TaskWiring {
 }
 
 /*
- * Ruimte's binding of the tasks in @ruimte/agents: its terminals beside the chats, the rows a task draws
+ * Ruimte's binding of the tasks in @adecore/agents: its terminals beside the chats, the rows a task draws
  * in its parent, the words of `ruimte-context`, and a note about work the outbox gave up on.
  */
 export function wireTasks(deps: TaskWiringDeps): TaskWiring {

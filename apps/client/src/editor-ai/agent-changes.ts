@@ -1,6 +1,6 @@
-import { splitLines } from '@ruimte/merge';
+import { splitLines } from '@adecore/merge';
 import type { AgentKind, ProvenanceChangedEvent, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
-import type { Editor, EditorRect } from '@ruimte/smart-editor';
+import type { Editor, EditorRect } from '@adecore/editor';
 import type { Timers } from '@/language/timers';
 import { realTimers } from '@/language/timers';
 import type { AgentChangesMode } from '@/state/ai-settings';

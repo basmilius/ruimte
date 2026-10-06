@@ -16,7 +16,7 @@ import {
     ClipboardPaste,
     Wand2
 } from 'lucide-react';
-import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
+import { AgentIcon } from '@adecore/agents-react/agents/AgentIcon';
 import { ContextMenu, Icon, Kbd } from '@adecore/ui';
 import type { Shortcut } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';

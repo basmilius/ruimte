@@ -1,15 +1,18 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Glob } from 'bun';
 import { describe, expect, test } from 'bun:test';
 import { parseSync, Visitor, type ImportExpression, type JSXElement, type JSXElementName, type JSXFragment, type Program } from 'oxc-parser';
 
 const HERE = new URL('.', import.meta.url).pathname;
 
-/* The chat, its providers and its usage, which the client draws as its own; their files read as `@ruimte/agents-react/<file>`. */
-const AGENTS_PREFIX = '@ruimte/agents-react/';
+/* The chat, its providers and its usage, which the client draws as its own; their files read as `@adecore/agents-react/<file>`. */
+const AGENTS_PREFIX = '@adecore/agents-react/';
 
-const PACKAGES: ReadonlyArray<{ prefix: string; source: string }> = [{ prefix: AGENTS_PREFIX, source: join(HERE, '../../../packages/agents-react/src') }];
+const PACKAGES: ReadonlyArray<{ prefix: string; source: string }> = [
+    { prefix: AGENTS_PREFIX, source: dirname(fileURLToPath(import.meta.resolve('@adecore/agents-react/host'))) }
+];
 
 function fileOf(path: string): string {
     const owner = PACKAGES.find(({ prefix }) => path.startsWith(prefix));

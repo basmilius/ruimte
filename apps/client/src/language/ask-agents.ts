@@ -1,5 +1,5 @@
 import type { ProviderInfo } from '@ruimte/contracts';
-import { useProviders } from '@ruimte/agents-react/state/providers';
+import { useProviders } from '@adecore/agents-react/state/providers';
 import { availableAgents } from '@/agents/creation';
 
 /* The two CLIs the editor offers a question to; the chooser lists every agent the app has. */

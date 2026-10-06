@@ -1,5 +1,5 @@
-import type { EditorRange } from '@ruimte/smart-editor';
-import type { Hover, Location, LocationLink, MarkedString, NavigationResult } from '@ruimte/smart-editor-lsp';
+import type { EditorRange } from '@adecore/editor';
+import type { Hover, Location, LocationLink, MarkedString, NavigationResult } from '@adecore/lsp';
 
 export interface SignatureBlock {
     readonly language: string;

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitConflictResult } from '@ruimte/contracts';
-import { fingerprint, splitBlocks, splitLines } from '@ruimte/merge';
+import { fingerprint, splitBlocks, splitLines } from '@adecore/merge';
 import {
     answerInto,
     carryDraft,

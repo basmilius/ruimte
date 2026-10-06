@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { keychainService, variablesProblem } from '@ruimte/agents/providers/accounts/variables';
+import { keychainService, variablesProblem } from '@adecore/agents/providers/accounts/variables';
 import { RUIMTE_ACCOUNTS_HOST } from './accounts-host.ts';
 
 test('the values a person saved stay under the keychain service they were written to', () => {

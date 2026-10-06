@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { ProviderAccounts, ProviderInfo } from '@ruimte/contracts';
-import { accountsOfKind, type AccountEntry } from '@ruimte/agents-react/agents/accounts';
+import { accountsOfKind, type AccountEntry } from '@adecore/agents-react/agents/accounts';
 import type { ComputerSetupPhase } from '@/computer/setup';
 
 export type OnboardingTask = 'intro' | 'providers' | 'computer';

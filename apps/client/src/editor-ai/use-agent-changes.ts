@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import type { Editor } from '@ruimte/smart-editor';
-import { offerDraft } from '@ruimte/agents-react/chat/drafts';
-import { useProviders } from '@ruimte/agents-react/state/providers';
+import type { Editor } from '@adecore/editor';
+import { offerDraft } from '@adecore/agents-react/chat/drafts';
+import { useProviders } from '@adecore/agents-react/state/providers';
 import { chooserChats } from '@/chat/chat-chooser';
 import { focusChat } from '@/plan/plan-actions';
-import { createHolder } from '@/shell/panels/use-editor-language';
+import { createHolder } from '@adecore/editor-react';
 import { useSidebarSource } from '@/shell/sidebar-source';
 import { useGitRoot } from '@/shell/panels/use-git-root';
 import { useEndpointId } from '@/state/keys';

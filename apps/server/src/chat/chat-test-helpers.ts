@@ -1,7 +1,7 @@
 import type { ChatCheckpointDiff, ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { ChatStore } from '@ruimte/agents/chat/chat-store';
+import { ChatStore } from '@adecore/agents/chat/chat-store';
 
 type Check = () => boolean;
 

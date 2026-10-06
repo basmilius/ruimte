@@ -1,5 +1,5 @@
-import { diffLines, splitLines } from '@ruimte/merge';
-import type { EditorChangeMark } from '@ruimte/smart-editor';
+import { diffLines, splitLines } from '@adecore/merge';
+import type { EditorChangeMark } from '@adecore/editor';
 
 /*
  * Where a text differs from the version it is compared against, as the marks the editor draws. A

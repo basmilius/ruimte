@@ -13,7 +13,7 @@ import { localTimeZone } from '@adecore/ui/format';
 import { projectNodes } from '@/project/views';
 import { currentEndpointId } from '@/state/keys';
 import { useProcesses, useProcessWarnings } from '@/state/processes';
-import { dayOf, useUsageStore } from '@ruimte/agents-react/state/usage';
+import { dayOf, useUsageStore } from '@adecore/agents-react/state/usage';
 import type { Transport } from '@/transport/transport';
 import { machineFor } from '@/transport/connections';
 

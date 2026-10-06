@@ -110,6 +110,7 @@ const DELETED_COLOR = 'var(--color-term-red)';
 export interface DecorationPart {
     text: string;
     color?: string;
+    kind?: 'count' | 'branch';
 }
 
 /* The checkbox a row starts with. Its color is the color of the mark, and the name of the property

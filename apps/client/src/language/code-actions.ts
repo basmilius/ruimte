@@ -1,6 +1,6 @@
 import i18next from 'i18next';
-import { ErrorCodes, LspError, StaleResultError, type CodeAction, type Command, type Diagnostic, type Position } from '@ruimte/smart-editor-lsp';
-import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
+import { ErrorCodes, LspError, StaleResultError, type CodeAction, type Command, type Diagnostic, type Position } from '@adecore/lsp';
+import type { EditorPosition, EditorRange } from '@adecore/editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useToasts } from '@/state/toasts';
 import {

@@ -1,4 +1,4 @@
-import type { FoldRole } from '@ruimte/smart-editor';
+import type { FoldRole } from '@adecore/editor';
 
 /* What folds by itself when a file opens, one switch per kind of fold. The names before a language are the ones that language adds. */
 export interface CodeFolding {

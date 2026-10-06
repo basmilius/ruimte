@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ProviderInfo } from '@ruimte/contracts';
-import { useProvidersStore } from '@ruimte/agents-react/state/providers';
+import { useProvidersStore } from '@adecore/agents-react/state/providers';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';

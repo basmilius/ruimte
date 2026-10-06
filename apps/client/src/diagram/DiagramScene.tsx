@@ -12,7 +12,7 @@ import {
     shapePaths,
     textLinesOf,
     type DiagramLayout
-} from '@ruimte/diagram';
+} from '@adecore/diagram';
 
 // The palette names resolve through the theme's own tokens, so a diagram follows light and dark.
 function ink(tone: DrawingColor): string {

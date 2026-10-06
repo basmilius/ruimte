@@ -1,5 +1,5 @@
 import { escapeText } from '../canvas/text-escapes.ts';
-import { parseRefusalBody, refusalBody, type ParsedRefusal } from '@ruimte/agents/context/refusal';
+import { parseRefusalBody, refusalBody, type ParsedRefusal } from '@adecore/agents/context/refusal';
 
 // Exit codes distinguish daemon failures, stale sessions and command refusals for callers that script this CLI.
 export async function runContext(args: string[], env: Environment = process.env, stdin: () => Promise<string> = () => Bun.stdin.text()): Promise<number> {

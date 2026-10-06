@@ -1,4 +1,4 @@
-import { splitLines } from '@ruimte/merge';
+import { splitLines } from '@adecore/merge';
 import { git, runGit } from '../git/run.ts';
 
 /* Past this a file is not read for its lines, here or in the editor. */

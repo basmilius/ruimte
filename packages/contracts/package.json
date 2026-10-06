@@ -1,23 +1,26 @@
 {
-  "name": "@ruimte/contracts",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit && bun run check:swift",
-    "generate:swift": "bun scripts/generate-swift.ts && bun ../../apps/ios/Scripts/generate-renderer.ts",
-    "check:swift": "bun scripts/generate-swift.ts --check && bun ../../apps/ios/Scripts/generate-renderer.ts --check"
-  },
-  "dependencies": {
-    "@ruimte/agent-contracts": "workspace:*",
-    "@ruimte/pulsar": "workspace:*",
-    "zod": "^4.6.5"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.4.2",
-    "typescript": "^7.0.2"
-  }
+    "name": "@ruimte/contracts",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc --noEmit && bun run check:swift",
+        "generate:swift": "bun scripts/generate-swift.ts && bun ../../apps/ios/Scripts/generate-renderer.ts",
+        "check:swift": "bun scripts/generate-swift.ts --check && bun ../../apps/ios/Scripts/generate-renderer.ts --check"
+    },
+    "dependencies": {
+        "@adecore/agent-contracts": "0.17.0-beta.1",
+        "@ruimte/pulsar": "workspace:*",
+        "zod": "^4.6.5",
+        "@adecore/drawing": "0.17.0-beta.1",
+        "@adecore/diagram": "0.17.0-beta.1",
+        "@adecore/plan": "0.17.0-beta.1"
+    },
+    "devDependencies": {
+        "@types/bun": "^1.4.2",
+        "typescript": "^7.0.2"
+    }
 }

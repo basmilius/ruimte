@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { useTranslation } from 'react-i18next';
 import { GitCommitHorizontal, GitCompare, Pin, X } from 'lucide-react';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
-import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
+import { writeMentionDrag } from '@adecore/agents-react/chat/mentions';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { isCheckoutDiff, useFiles } from '@/state/files';
@@ -121,7 +121,7 @@ export function FileTabs() {
                                     draggable={tab.view === undefined}
                                     onDragStart={(event) => {
                                         event.dataTransfer.setData(PATHS_DRAG_TYPE, tab.path);
-                                        event.dataTransfer.setData(MENTION_DRAG_TYPE, tab.path);
+                                        writeMentionDrag(event.dataTransfer, [tab.path]);
                                         event.dataTransfer.effectAllowed = 'copy';
                                     }}
                                     onClick={() => useFiles.getState().activate(tab.key)}

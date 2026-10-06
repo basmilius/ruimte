@@ -1,5 +1,5 @@
 import { useEffect, useState, type MouseEvent } from 'react';
-import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
+import { Markdown } from '@adecore/agents-react/chat/ui/Markdown';
 import { Tooltip } from '@adecore/ui';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useCodeTheme } from '@/state/code-theme';

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { isCanvasView, RuntimeModeSchema, type AgentKind, type ProjectView, type RuntimeMode } from '@ruimte/contracts';
 import { z } from 'zod';
-import { RecordDirectory } from '@ruimte/agents/record-directory';
+import { RecordDirectory } from '@adecore/agents/record-directory';
 import { launchedMode } from '../providers/launch.ts';
 
 const ApprovalSchema = z.object({

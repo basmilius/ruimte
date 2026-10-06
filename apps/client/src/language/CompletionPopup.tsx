@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import type { EditorRect } from '@ruimte/smart-editor';
+import type { EditorRect } from '@adecore/editor';
 import type { EditorLanguage } from './editor-language';
 import { kindLetterOf, kindToneOf, rowWindow, type KindTone } from './completion-model';
 import { SourceLine, SymbolSections } from './HoverSections';

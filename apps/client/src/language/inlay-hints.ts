@@ -1,5 +1,5 @@
-import type { EditorInlayHint, EditorPosition, EditorRange } from '@ruimte/smart-editor';
-import type { InlayHint } from '@ruimte/smart-editor-lsp';
+import type { EditorInlayHint, EditorPosition, EditorRange } from '@adecore/editor';
+import type { InlayHint } from '@adecore/lsp';
 import type { EditorLanguage } from './editor-language';
 import { Refresher } from './refresher';
 import { realTimers, type Timers } from './timers';

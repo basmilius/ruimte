@@ -1,7 +1,7 @@
 import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
 import type { DaemonCrash, DaemonOwner, PendingRestart, ServiceSupport, ShellServiceState } from '@ruimte/desktop-bridge';
 import { decideRestart, decideStart, sameBuild } from './decide';
-import { definitionRunsProgram, type ServiceManager } from '@ruimte/service';
+import { definitionRunsProgram, type ServiceManager } from '@adecore/service';
 import type { KeepRunningSetting } from './settings';
 
 export interface ServiceControllerDeps {

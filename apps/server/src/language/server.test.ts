@@ -3,7 +3,7 @@ import { INITIALIZE_TIMEOUT_MS, LanguageServer, STABLE_AFTER_MS, type LanguageSe
 import { KIND_PROFILES } from './profiles.ts';
 import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
 import type { LanguageServerKind } from '@ruimte/contracts';
-import type { Diagnostic, PublishDiagnosticsParams, RequestHandler, ServerCapabilities } from '@ruimte/smart-editor-lsp';
+import type { Diagnostic, PublishDiagnosticsParams, RequestHandler, ServerCapabilities } from '@adecore/lsp';
 
 const runtime = { command: '/ruimte', args: [], env: { BUN_BE_BUN: '1' } };
 

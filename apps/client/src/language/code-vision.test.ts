@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { type FakeEditor, FakeEditorEngine } from '@ruimte/smart-editor/fake';
-import { EditorLanguage } from './editor-language';
+import { type FakeEditor, FakeEditorEngine } from '@adecore/editor/fake';
+import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
-import { ProjectLanguage } from './project-language';
+import { ProjectLanguage } from './ruimte-project-language';
 import { ManualTimers } from './timers';
 
 const uri = 'file:///work/app/src/a.ts';

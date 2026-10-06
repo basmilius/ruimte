@@ -1,5 +1,5 @@
-import type { DocumentHighlight } from '@ruimte/smart-editor-lsp';
-import type { EditorHighlight, EditorHighlightKind, EditorPosition, EditorRange } from '@ruimte/smart-editor';
+import type { DocumentHighlight } from '@adecore/lsp';
+import type { EditorHighlight, EditorHighlightKind, EditorPosition, EditorRange } from '@adecore/editor';
 import { comparePositions, rangeHolds } from './diagnostics-model';
 import { isIdentifierCharacter } from './completion-model';
 import type { EditorLanguage } from './editor-language';

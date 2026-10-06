@@ -20,7 +20,7 @@ let loading: Promise<Highlight> | null = null;
    folder holds Go, Rust and TOML as readily as it holds TypeScript, and a grammar is fetched only
    when a file asks for it. */
 function loadHighlighter(): Promise<Highlight> {
-    loading ??= Promise.all([import('shiki'), import('@ruimte/smart-editor/shiki')]).then(
+    loading ??= Promise.all([import('shiki'), import('@adecore/editor/shiki')]).then(
         ([{ bundledLanguages, getSingletonHighlighter }, { documentLanguageOf, loadGrammar }]) =>
             async (code, language, theme, document) => {
                 const grammar = document ? documentLanguageOf(language) : language;

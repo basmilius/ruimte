@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectDocument, ProviderInfo } from '@ruimte/contracts';
-import { EMPTY_DRAFT, readDraft, writeDraft } from '@ruimte/agents-react/chat/drafts';
-import { providerSinkFor } from '@ruimte/agents-react/state/providers';
+import { EMPTY_DRAFT, readDraft, writeDraft } from '@adecore/agents-react/chat/drafts';
+import { providerSinkFor } from '@adecore/agents-react/state/providers';
 import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';

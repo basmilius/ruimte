@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { matchesShortcut, shortcut, type Shortcut } from '@adecore/ui';
-import { KEYMAP, KEYMAP_IDS, type KeymapId } from '@ruimte/smart-editor/keymap';
+import { KEYMAP_IDS, type KeymapId } from '@adecore/editor/keymap';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { shortcutFor } from '@/shell/editor-keymap';
+import { shortcutFor, RUIMTE_EDITOR_KEYMAP as KEYMAP } from '@/shell/editor-keymap';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { shellShortcuts } from '@/terminal/keymap';
 

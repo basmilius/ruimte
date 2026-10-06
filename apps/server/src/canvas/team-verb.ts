@@ -4,7 +4,7 @@ import { defineStandaloneActionVerb, runAction } from './action-verb.ts';
 import { AGENT_KINDS, chatKinds } from './agents.ts';
 import { DEPTH_LIMIT_LINES, MAX_TEAM_DEPTH } from './depth.ts';
 import { readsFlag, readsLines } from './link-verb.ts';
-import { modeFlag } from '@ruimte/agents/modes';
+import { modeFlag } from '@adecore/agents/modes';
 import { MODE_LINES } from './mode.ts';
 import { modelFlag, modelLines } from './model.ts';
 import { MAX_CANVAS_NODES, idList } from './nodes.ts';

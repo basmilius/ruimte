@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ContextSource, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
-import { refusalRows } from '@ruimte/agents/context/refusal';
+import { refusalRows } from '@adecore/agents/context/refusal';
 import { readRefusal } from './read-refusal.ts';
 
 /* The refusal as the CLI prints it, which is what these sentences are written for. */

@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatItem, ProjectCanvasView } from '@ruimte/contracts';
-import { AgentLineageStore } from '@ruimte/agents/lineage';
+import { AgentLineageStore } from '@adecore/agents/lineage';
 import { ProjectIndex } from '../projects/project-index.ts';
 import { ContextRefusal, ContextStore } from './context-store.ts';
 import { openedChildSource } from './opened-child.ts';

@@ -1,7 +1,7 @@
-import { splitLines } from '@ruimte/merge';
+import { splitLines } from '@adecore/merge';
 import type { GitBlameResult } from '@ruimte/contracts';
-import type { EditorCodeVision, EditorCodeVisionEntry, EditorRect } from '@ruimte/smart-editor';
-import type { DocumentSymbolResult } from '@ruimte/smart-editor-lsp';
+import type { EditorCodeVision, EditorCodeVisionEntry, EditorRect } from '@adecore/editor';
+import type { DocumentSymbolResult } from '@adecore/lsp';
 import type { EditorLanguage } from './editor-language';
 import { type CodeAuthorship, authorsText, authorshipOf, mapBlame } from './code-authors';
 import { type CodeVisionDeclaration, declarationsOf, usagesText } from './code-vision-model';

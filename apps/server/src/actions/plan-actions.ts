@@ -1,6 +1,6 @@
 import type { ActionActor, ActionHandlers } from '@ruimte/actions';
 import type { Plan, PlanActor, PlanOp } from '@ruimte/contracts';
-import { parsePlanDraft, parsePlanMarkdown, progressText, type PlanApplied, type PlanRefusal } from '@ruimte/plan';
+import { parsePlanDraft, parsePlanMarkdown, progressText, type PlanApplied, type PlanRefusal } from '@adecore/plan';
 import { callerKind } from '../canvas/tasks.ts';
 import { VerbRefusal, field, orNote, type CanvasHost } from '../canvas/verb.ts';
 import type { ServerActionContext } from './context.ts';

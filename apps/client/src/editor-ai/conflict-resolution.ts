@@ -1,12 +1,12 @@
 import { createStore, type StoreApi } from 'zustand';
 import type { AgentKind, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
-import type { Editor, EditorContentChange, EditorTrackedRange } from '@ruimte/smart-editor';
+import type { Editor, EditorContentChange, EditorTrackedRange } from '@adecore/editor';
 import type { DiskText } from '@/state/text-drafts';
 import { useConflictInfo } from './conflict-info';
 import { planConflict, type ConflictStretch } from './conflict-model';
-import { highlightLayers } from './highlight-layers';
+import { highlightLayers } from '@adecore/editor-react';
 import { replaceAllLines, replaceLines } from './line-edits';
-import { RowHost, type HostedRow } from './row-host';
+import { RowHost, type HostedRow } from '@adecore/editor-react';
 
 const ROW_OWNER = 'conflict';
 const LAYER_OWNER = 'conflict';

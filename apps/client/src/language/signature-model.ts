@@ -1,4 +1,4 @@
-import type { SignatureHelp, SignatureInformation } from '@ruimte/smart-editor-lsp';
+import type { SignatureHelp, SignatureInformation } from '@adecore/lsp';
 import { documentationText } from './completion-model';
 
 /* The signature help of a call, ready to draw: the label with the active parameter marked, and what is said about it. */

@@ -36,7 +36,7 @@ import { messageOf, Segmented, Button, Icon, IconButton, ListRow, Menu, Tooltip,
 import { projectNodes, revealNode } from '@/project/views';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { ProcessChart } from '@/shell/panels/ProcessChart';
-import { niceScale } from '@ruimte/agents-react/usage/summary';
+import { niceScale } from '@adecore/agents-react/usage/summary';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';

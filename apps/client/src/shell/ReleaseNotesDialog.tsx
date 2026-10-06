@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ExternalLink } from 'lucide-react';
-import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
+import { Markdown } from '@adecore/agents-react/chat/ui/Markdown';
 import { formatDay, formatDayWithYear } from '@adecore/ui/format';
 import { Button, ErrorBoundary, CloseButton, Icon, Pill, Dialog } from '@adecore/ui';
 import { UpdateAction } from '@/shell/settings/panes/AboutPane';

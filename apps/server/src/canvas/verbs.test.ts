@@ -37,7 +37,7 @@ import { documentOnDisk, rawPrivateViews, setPrivateViews } from '../projects/pr
 import { ProjectStore } from '../projects/project-store.ts';
 import { DiagramStore } from '../projects/diagram-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { AgentLineageStore } from '@ruimte/agents/lineage';
+import { AgentLineageStore } from '@adecore/agents/lineage';
 import { DIAGRAM_EXAMPLE } from './diagram-verb.ts';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from './canvas-route.ts';
@@ -48,11 +48,11 @@ import { MAX_CANVAS_NODES } from './node-verb.ts';
 import { PLACEMENT_GAP, TEAM_COLUMNS } from './placement.ts';
 import { MAX_ROLES, ROLES_SHAPE } from './team-verb.ts';
 import { MAX_PROJECT_VIEWS, VIEW_KINDS } from './view-verb.ts';
-import type { Notice } from '@ruimte/agents/messages/notice-store';
+import type { Notice } from '@adecore/agents/messages/notice-store';
 import { MAX_NOTICE_LENGTH, type NoticeDelivery } from '../context/notices.ts';
 import { MAX_TITLE_LENGTH, NEW_NODE, OPENING_OFF_CANVAS, type AgentStart, type CanvasHost, type Noun } from './verb.ts';
 import { VERBS } from './verbs.ts';
-import { TaskStore } from '@ruimte/agents/tasks/task-store';
+import { TaskStore } from '@adecore/agents/tasks/task-store';
 import { freeBranch } from '../git/worktrees.ts';
 import { MAX_TASK_PROMPT_LENGTH, nextLine, taskBrief } from './task-verbs.ts';
 

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import type { PromptViewProps } from '@ruimte/agents-react/prompts/logic/subjects';
-import { ApprovalActions, PromptPrimary } from '@ruimte/agents-react/prompts/ui/PromptActions';
-import { PromptCard } from '@ruimte/agents-react/prompts/ui/PromptCard';
+import type { PromptViewProps } from '@adecore/agents-react/prompts/logic/subjects';
+import { ApprovalActions, PromptPrimary } from '@adecore/agents-react/prompts/ui/PromptActions';
+import { PromptCard } from '@adecore/agents-react/prompts/ui/PromptCard';
 import { isRuimteApp } from '@/computer/ruimte-app';
 import { computerButtons, type RuimtePrompt } from '@/prompts/ruimte-prompts';
 

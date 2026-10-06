@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { StaleResultError, type Location } from '@ruimte/smart-editor-lsp';
+import { StaleResultError, type Location } from '@adecore/lsp';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useToasts } from '@/state/toasts';

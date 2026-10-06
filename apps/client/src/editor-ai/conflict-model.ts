@@ -1,4 +1,4 @@
-import { splitBlocks, splitLines, type MergeBlock } from '@ruimte/merge';
+import { splitBlocks, splitLines, type MergeBlock } from '@adecore/merge';
 import type { LineReplacement } from './line-edits';
 
 /* A stretch both sides changed, as the lines each has of it. */

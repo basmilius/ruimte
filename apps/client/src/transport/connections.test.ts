@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, spyOn, test, type Mock } from 'bun:test';
 import type { AgentInfo, ProjectSummary, RequestMap, RequestType } from '@ruimte/contracts';
-import { useChats } from '@ruimte/agents-react/state/chats';
+import { useChats } from '@adecore/agents-react/state/chats';
 import { switchRun, type SwitchDeps } from '@/project/open';
 import { ProjectClient } from '@/project/project-client';
 import { ProjectSwitch } from '@/project/project-switch';

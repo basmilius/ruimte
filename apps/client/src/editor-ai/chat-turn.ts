@@ -1,4 +1,4 @@
-import { jumpToTimelineTurn, type TurnTarget } from '@ruimte/agents-react/chat/timeline-scroll';
+import { jumpToTimelineTurn, type TurnTarget } from '@adecore/agents-react/chat/timeline-scroll';
 import { focusChat } from '@/plan/plan-actions';
 import { endpointKey } from '@/state/keys';
 

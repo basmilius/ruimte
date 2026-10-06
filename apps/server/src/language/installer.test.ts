@@ -94,7 +94,13 @@ describe('language installer', () => {
     });
 
     it('fails when the packages are not where the servers run from', async () => {
-        const installer = new LanguageInstaller({ root, runtime, run: async () => 0, onChange: () => undefined });
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run: async () => 0,
+            native: new NativePolicy({ checkout: null, releases: {} }),
+            onChange: () => undefined
+        });
         await installer.install('php');
         expect(installer.failureOf('php')).toContain('did not leave');
         expect(await installer.state('php')).toBe('missing');
@@ -361,7 +367,13 @@ describe('native install', () => {
     });
 
     it('has nothing to install in a build with neither a checkout nor a release', async () => {
-        const installer = new LanguageInstaller({ root, runtime, run: async () => 0, onChange: () => undefined });
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run: async () => 0,
+            native: new NativePolicy({ checkout: null, releases: {} }),
+            onChange: () => undefined
+        });
         expect(installer.isUnavailable('php-native')).toBe(true);
         expect(installer.isUnavailable('php')).toBe(false);
         expect(installer.versionOf('php-native')).toBe('');

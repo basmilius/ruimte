@@ -1,5 +1,5 @@
-import type { Editor, EditorPosition } from '@ruimte/smart-editor';
-import type { Location } from '@ruimte/smart-editor-lsp';
+import type { Editor, EditorPosition } from '@adecore/editor';
+import type { Location } from '@adecore/lsp';
 import { CodeActionsFeature } from './code-actions';
 import { CodeVisionFeature } from './code-vision';
 import { CompletionFeature } from './completion';

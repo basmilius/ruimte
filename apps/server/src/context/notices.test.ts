@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { NoticeStore, type Notice } from '@ruimte/agents/messages/notice-store';
+import { NoticeStore, type Notice } from '@adecore/agents/messages/notice-store';
 import type { AgentInfo } from '@ruimte/contracts';
 import { deliverNotice, messageLabel, messageText, NO_REPLY_NOTICE, noticeNote, renderNotice, type NoticeTargets } from './notices.ts';
 

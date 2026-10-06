@@ -1,5 +1,5 @@
-import { diffLines } from '@ruimte/merge';
-import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
+import { diffLines } from '@adecore/merge';
+import type { EditorPosition, EditorRange } from '@adecore/editor';
 import { fenceOf, lineRangeLabel } from '@/chat/selection-to-chat';
 import { replacedWords } from './word-diff';
 

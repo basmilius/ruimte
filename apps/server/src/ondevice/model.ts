@@ -1,7 +1,7 @@
 import type { AppleFoundationEvent, AppleFoundationRequest, OnDeviceGenerateResult, OnDevicePurpose, OnDeviceStatusResult } from '@ruimte/contracts';
 import { AppleFoundationEventSchema } from '@ruimte/contracts';
-import { CodedError } from '@ruimte/agents/coded-error';
-import { ChatChild, type SpawnChatProcess } from '@ruimte/agents/chat/chat-process';
+import { CodedError } from '@adecore/agents/coded-error';
+import { ChatChild, type SpawnChatProcess } from '@adecore/agents/chat/chat-process';
 import { appleSiliconMac, helperCommand, probeAppleHelper } from '../providers/apple-helper.ts';
 import { PURPOSES } from './instructions.ts';
 

@@ -1,5 +1,5 @@
 import { isAbsolute, resolve } from 'node:path';
-import { splitLines } from '@ruimte/merge';
+import { splitLines } from '@adecore/merge';
 import type { ChatToolItem } from '@ruimte/contracts';
 import type { WriteSignature } from './runs.ts';
 

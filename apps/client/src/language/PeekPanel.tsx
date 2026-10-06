@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
-import { fileUriToPath } from '@ruimte/smart-editor-lsp';
+import { fileUriToPath } from '@adecore/lsp';
 import { FileIcon, IconButton, Tooltip } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import { highlightDocument } from '@/shell/panels/highlight';

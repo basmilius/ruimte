@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import { connectionOpener, socketChannel, type OpenConnection, type SocketChannel } from '../connection.ts';
 import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
 import { registerDrawingHandlers } from '../handlers/drawing.ts';

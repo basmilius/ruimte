@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
-import type { CompletionItem } from '@ruimte/smart-editor-lsp';
+import { FakeEditorEngine } from '@adecore/editor/fake';
+import type { CompletionItem } from '@adecore/lsp';
 import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './project-language';
-import { useToasts } from '@/state/toasts';
 import { forgetRecentChoices } from './recent-choices';
+import { useToasts } from '@/state/toasts';
 import { ManualTimers } from './timers';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { eventOf } from './key-events';

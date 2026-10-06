@@ -22,8 +22,8 @@ import {
     layoutOf,
     shapePaths,
     textLinesOf
-} from '@ruimte/diagram';
-import { LINE_HEIGHT, approximateMeasure, centerOf, fontOf, linesOf, pathsOfElement, rotatePoint, unionOf, writingFrameOf } from '@ruimte/drawing';
+} from '@adecore/diagram';
+import { LINE_HEIGHT, approximateMeasure, centerOf, fontOf, linesOf, pathsOfElement, rotatePoint, unionOf, writingFrameOf } from '@adecore/drawing';
 
 function color(tone: DrawingColor, palette: RenderColor['palette'] = 'ink'): RenderColor {
     return { tone, palette };

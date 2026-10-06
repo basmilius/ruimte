@@ -1,5 +1,5 @@
 import type { ProviderInfo } from '@ruimte/contracts';
-import { ProvidersPane as Pane } from '@ruimte/agents-react/providers/ProvidersPane';
+import { ProvidersPane as Pane } from '@adecore/agents-react/providers/ProvidersPane';
 import { AppleFoundationSection } from '@/shell/settings/providers/AppleFoundationSection';
 import { useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';

@@ -5,7 +5,7 @@ import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 import { FORMAT_LANGUAGE, formatRegionFrom } from '@adecore/ui/format';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
-import type { EditorFoldOutline, EditorSmartKeys } from '@ruimte/smart-editor';
+import type { EditorFoldOutline, EditorSmartKeys } from '@adecore/editor';
 import {
     agentChangesModeFrom,
     DEFAULT_AGENT_CHANGES_MODE,

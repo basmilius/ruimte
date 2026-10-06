@@ -1,4 +1,4 @@
-import type { ChatCore } from '@ruimte/agents/chat/chat-core';
+import type { ChatCore } from '@adecore/agents/chat/chat-core';
 import type { ProvenanceChat } from './provenance-service.ts';
 
 /* What a chat that is loaded says about its turns; null for one that is not, since a turn is only recorded while its chat runs. */

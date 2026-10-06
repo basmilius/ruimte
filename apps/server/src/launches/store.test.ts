@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { LaunchConfigEntry } from '@ruimte/contracts';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import { CommandApprovals } from '../sessions/command-approvals.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { LaunchStore } from './store.ts';

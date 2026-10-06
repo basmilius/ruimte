@@ -1,5 +1,5 @@
-import { createMemoryTransportPair, FakeLanguageServer } from '@ruimte/smart-editor-lsp/testing';
-import type { RequestHandler, ServerCapabilities } from '@ruimte/smart-editor-lsp';
+import { createMemoryTransportPair, FakeLanguageServer } from '@adecore/lsp/testing';
+import type { RequestHandler, ServerCapabilities } from '@adecore/lsp';
 import type { LanguageChild, LanguageExit, LanguageProcessSpec, SpawnLanguageProcess } from './runtime.ts';
 import { KIND_PROFILES } from './profiles.ts';
 import type { LanguageClock } from './server.ts';

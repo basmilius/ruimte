@@ -3,7 +3,7 @@ import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Columns2, FileWarning, GitCompare, RefreshCw, Rows2 } from 'lucide-react';
 import type { ActionInput } from '@ruimte/actions';
-import type { DiffContents } from '@ruimte/agents-react/chat/ui/full-diff';
+import type { DiffContents } from '@adecore/agents-react/chat/ui/full-diff';
 import type { GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
@@ -20,7 +20,7 @@ import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
 import { ButtonGroup, ColumnResizeHandle, EmptyState, ErrorBoundary, Menu, Separator, lazyNamed, useColumnResize, useNow } from '@adecore/ui';
 
-const UnifiedDiff = lazyNamed(() => import('@ruimte/agents-react/chat/ui/UnifiedDiff'), 'default');
+const UnifiedDiff = lazyNamed(() => import('@adecore/agents-react/chat/ui/UnifiedDiff'), 'default');
 
 const MINUTE_MS = 60_000;
 

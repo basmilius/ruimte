@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type ChatCreatePayload, type ProjectChatView } from '@ruimte/contracts';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import { newInlineChat, removeInlineChat, showInlineChat, type InlineChatHost } from './inline-chat.ts';
 import { ProjectStore } from './project-store.ts';
 

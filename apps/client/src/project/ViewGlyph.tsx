@@ -14,7 +14,7 @@ import {
     type LucideIcon
 } from 'lucide-react';
 import type { AgentKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/contracts';
-import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
+import { AgentIcon } from '@adecore/agents-react/agents/AgentIcon';
 import { Favicon } from '@/browser/Favicon';
 import { projectIconGlyphOf } from '@/project/project-icons';
 import { FileIcon, Icon } from '@adecore/ui';

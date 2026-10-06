@@ -1,4 +1,4 @@
-import type { EditorFolds, FoldRole } from '@ruimte/smart-editor';
+import type { EditorFolds, FoldRole } from '@adecore/editor';
 import type { RevealLineRequest } from '@/state/files';
 import { endpointKey } from '@/state/keys';
 

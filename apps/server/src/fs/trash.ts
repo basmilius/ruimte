@@ -1,7 +1,7 @@
 import { link, lstat, mkdir, rename, unlink, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, extname, join } from 'node:path';
-import { CodedError } from '@ruimte/agents/coded-error';
+import { CodedError } from '@adecore/agents/coded-error';
 
 type TrashErrorCode = 'trash-unsupported' | 'trash-failed';
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ServerFrame } from '@ruimte/contracts';
-import { inProcess, type FakeIo } from '@ruimte/agents/chat/fake-cli';
+import { inProcess, type FakeIo } from '@adecore/agents/chat/fake-cli';
 import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
 import { OnDeviceModel } from '../ondevice/model.ts';
 import { registerOnDeviceHandlers } from './ondevice.ts';

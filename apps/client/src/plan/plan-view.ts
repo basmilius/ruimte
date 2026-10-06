@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { AgentKind, Plan, PlanItem, PlanSection, PlanStep, PlanStepState, PlanText } from '@ruimte/contracts';
-import { allItems, isParentStep, leafSteps, planProgress, stepState, type PlanProgress } from '@ruimte/plan';
+import { allItems, isParentStep, leafSteps, planProgress, stepState, type PlanProgress } from '@adecore/plan';
 
 /* Which steps the panel lists; local to this client, never part of the plan. */
 export type PlanFilter = 'all' | 'open' | 'issues';
@@ -256,7 +256,7 @@ export function stepMarkdown(kind: Plan['meta']['kind'], step: PlanStep): string
 }
 
 /*
- * The plan header, counted out in words. `progressText` in `@ruimte/plan` writes the same numbers
+ * The plan header, counted out in words. `progressText` in `@adecore/plan` writes the same numbers
  * for an agent, which reads English whatever the person in front of the screen reads, so the two
  * are separate rather than one with a language argument.
  */

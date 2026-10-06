@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS } from '@ruimte/agent-contracts/protocol';
+import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS } from '@adecore/agent-contracts/protocol';
 import { EndpointInfoSchema } from './auth.ts';
 import { DirectChallengeFrameSchema, DirectVerdictFrameSchema } from './direct.ts';
 import { EVENT_SCHEMAS, REQUEST_SCHEMAS } from './index.ts';

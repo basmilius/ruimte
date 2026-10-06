@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { EditorHover, EditorPosition, EditorRange } from '@ruimte/smart-editor';
+import type { EditorHover, EditorPosition, EditorRange } from '@adecore/editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useToasts } from '@/state/toasts';
 import type { EditorLanguage } from './editor-language';

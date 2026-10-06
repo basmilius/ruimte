@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, realpath, rm, stat, symlink, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import { readServedFile } from '../fs/read.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { FolderWatcher } from '../fs/watch.ts';

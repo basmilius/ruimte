@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises';
 import { type BytesReadHeader, type BytesReadPayload, type ByteResource, type ChatAttachment } from '@ruimte/contracts';
-import { CodedError } from '@ruimte/agents/coded-error';
+import { CodedError } from '@adecore/agents/coded-error';
 
 type BytesErrorCode = 'not-found' | 'bad-offset';
 

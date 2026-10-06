@@ -1,5 +1,5 @@
 import type { FsReadResult } from '@ruimte/contracts';
-import type { EditorIndentation } from '@ruimte/smart-editor';
+import type { EditorIndentation } from '@adecore/editor';
 import { dirnameOf } from '@/shell/panels/files-tree';
 import { isUnderFolder } from '@/state/fs-watch';
 

@@ -1,4 +1,4 @@
-import type { Location, Range } from '@ruimte/smart-editor-lsp';
+import type { Location, Range } from '@adecore/lsp';
 
 /* A stretch of one line, in characters from its start. */
 export interface NameRange {

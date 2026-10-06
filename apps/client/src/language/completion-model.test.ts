@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { CompletionItem } from '@ruimte/smart-editor-lsp';
+import type { CompletionItem } from '@adecore/lsp';
 import {
     completionDocsOf,
     identifierPrefix,

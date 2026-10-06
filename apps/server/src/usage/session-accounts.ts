@@ -1,5 +1,5 @@
 import type { AgentInfo, AgentLaunch, ChatInfo } from '@ruimte/contracts';
-import { chatSessionAccounts } from '@ruimte/agents/usage/accounts';
+import { chatSessionAccounts } from '@adecore/agents/usage/accounts';
 
 /* The account every CLI session a chat or a terminal here ran was under, by `<provider>\0<sessionId>`, for the transcripts accounts share. */
 export function sessionAccountsOf(

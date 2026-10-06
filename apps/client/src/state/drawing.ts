@@ -17,7 +17,7 @@ import type {
 } from '@ruimte/contracts';
 import { cameraOfView, intersects, type Rect } from '@/canvas/math';
 import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
-import { boundsOfElements } from '@ruimte/drawing';
+import { boundsOfElements } from '@adecore/drawing';
 import { fitTextBox } from '@/drawing/paint';
 
 /* Every tool in the dock, in the order the dock lists them. */

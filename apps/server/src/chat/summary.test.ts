@@ -3,10 +3,10 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatItem, ChatNoteItem, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
-import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
+import { ManualClock } from '@adecore/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
-import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
+import { claudeProjectSlug } from '@adecore/agents/chat/claude-transcript';
 import { SUMMARY_MAX_BYTES, summaryNoteId, summaryPrompt, summaryTexts } from './summary.ts';
 
 function content(): ProjectContent {

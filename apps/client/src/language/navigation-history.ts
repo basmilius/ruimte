@@ -1,4 +1,4 @@
-import type { EditorPosition } from '@ruimte/smart-editor';
+import type { EditorPosition } from '@adecore/editor';
 
 /* A place in a file of the project, as a caret stood there. */
 export interface Place {

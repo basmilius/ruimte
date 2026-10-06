@@ -1,5 +1,5 @@
 import { isCanvasView, type ProjectView } from '@ruimte/contracts';
-import type { ForkShape } from '@ruimte/agents-react/chat/logic/fork';
+import type { ForkShape } from '@adecore/agents-react/chat/logic/fork';
 
 /* Where a chat stands in the project: a node on a canvas or a view of its own, under the name it goes by. */
 export interface ForkOrigin {

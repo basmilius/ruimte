@@ -4,19 +4,19 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatInfo, ChatItem, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
-import { AgentLineageStore } from '@ruimte/agents/lineage';
+import { AgentLineageStore } from '@adecore/agents/lineage';
 import type { CanvasHost } from '../canvas/verb.ts';
-import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
+import { ManualClock } from '@adecore/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
-import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
+import { AttachmentStore } from '@adecore/agents/chat/attachment-store';
 import { ChatManager } from './chat-manager.ts';
-import { ChatStore } from '@ruimte/agents/chat/chat-store';
+import { ChatStore } from '@adecore/agents/chat/chat-store';
 import { verbsNote } from '../context/context-note.ts';
-import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
-import { inProcess } from '@ruimte/agents/chat/fake-cli';
-import { fakeCodex, fakeCodexForks } from '@ruimte/agents/chat/fake-codex';
+import { claudeProjectSlug } from '@adecore/agents/chat/claude-transcript';
+import { inProcess } from '@adecore/agents/chat/fake-cli';
+import { fakeCodex, fakeCodexForks } from '@adecore/agents/chat/fake-codex';
 import { chatForkDeps, forkChat, itemsThrough, type ChatForkDeps } from './fork.ts';
 
 function content(): ProjectContent {

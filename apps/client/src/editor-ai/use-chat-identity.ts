@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
-import { useProviders } from '@ruimte/agents-react/state/providers';
+import { useProviders } from '@adecore/agents-react/state/providers';
 import { chooserChats } from '@/chat/chat-chooser';
 import { useSidebarSource } from '@/shell/sidebar-source';
 

@@ -48,8 +48,8 @@ import { addAgentView, agentNodeOptions, type AgentSession, type AgentTarget } f
 import { LOCK_KEYS } from '@/canvas/locks';
 import { toWorld, type Point } from '@/canvas/math';
 import { nearestFreeNodeRect } from '@/canvas/place-node';
-import type { ChatSendExtras } from '@ruimte/agents-react/chat/chat-client';
-import { recentChatMessages } from '@ruimte/agents-react/chat/recent-messages';
+import type { ChatSendExtras } from '@adecore/agents-react/chat/chat-client';
+import { recentChatMessages } from '@adecore/agents-react/chat/recent-messages';
 import {
     liveViewDeletion,
     nodeDeletionFacts,
@@ -62,19 +62,19 @@ import {
 import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';
 import { offerViewUndo } from '@/project/view-trash';
 import { openInNewWindow, wantsNewWindow } from '@/project/windows';
-import type { ChatPromptClients } from '@ruimte/agents-react/prompts/logic/subjects';
+import type { ChatPromptClients } from '@adecore/agents-react/prompts/logic/subjects';
 import { FILES_VIEW_ID } from '@/shell/files-view';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { canSplit, cellAt, cellCount, focusedViewId, freeViewFor, isSameCell, locateView, type SplitDirection, type SplitZone } from '@/shell/split';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { defaultCanvases, focusedCanvas, liveCanvas, NODE_SIZE, type AddNodeOptions, type CanvasState, type Locks, type NodeKind } from '@/state/canvas';
-import { useChats } from '@ruimte/agents-react/state/chats';
+import { useChats } from '@adecore/agents-react/state/chats';
 import { liveDiagram } from '@/state/diagram';
 import { activeViewOf, cellViewOf, useDocument, viewOfNode, type DocumentState } from '@/state/document';
 import { liveDrawing } from '@/state/drawing';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { providersOf } from '@ruimte/agents-react/state/providers';
+import { providersOf } from '@adecore/agents-react/state/providers';
 import { chatClient, diagramClient, drawingClient, sessionClient } from '@/transport/connections';
 
 function kindOf(view: ProjectView): ActionOutput<'view.focus'>['kind'] {

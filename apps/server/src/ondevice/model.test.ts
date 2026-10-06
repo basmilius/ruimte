@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { AppleFoundationRequest } from '@ruimte/contracts';
-import { inProcess, type FakeIo } from '@ruimte/agents/chat/fake-cli';
+import { inProcess, type FakeIo } from '@adecore/agents/chat/fake-cli';
 import { OnDeviceModel, describeReason } from './model.ts';
 
 type Frame = Record<string, unknown>;

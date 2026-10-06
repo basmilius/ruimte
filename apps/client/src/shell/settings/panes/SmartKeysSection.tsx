@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { EditorSmartKeys } from '@ruimte/smart-editor';
+import type { EditorSmartKeys } from '@adecore/editor';
 import { SettingsRow } from '@adecore/ui/settings';
 import { Switch } from '@adecore/ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';

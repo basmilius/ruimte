@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { MAX_KEY_COMBOS, MAX_TYPED_LENGTH } from '@ruimte/actions';
 import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
 import { computerSetup, SAMPLE_STATE, turnEnded, until, type ComputerSetup } from '../computer/computer-test-helpers.ts';
-import { refusalBody } from '@ruimte/agents/context/refusal';
+import { refusalBody } from '@adecore/agents/context/refusal';
 import { VerbRefusal, type CanvasHost, type Noun } from './verb.ts';
 import { verbNamed } from './verbs.ts';
 

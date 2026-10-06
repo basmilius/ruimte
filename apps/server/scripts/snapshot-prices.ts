@@ -1,11 +1,7 @@
-/*
- * Refreshes `packages/agents/src/usage/prices-snapshot.json`, the price table the app falls back to when it has
- * never reached LiteLLM. Only the Anthropic and OpenAI chat and responses entries are kept, and
- * only the five fields the pricing code reads, which is what holds the file to a few dozen KB.
- * Run it by hand now and then: `bun run --cwd apps/server snapshot-prices`.
- */
+/* Retained during cutover validation. Pricing snapshots are maintained in Adecore;
+   this script is no longer exposed by Ruimte's package commands. */
 import { join } from 'node:path';
-import { LITELLM_URL } from '@ruimte/agents/usage/pricing';
+import { LITELLM_URL } from '@adecore/agents/usage/pricing';
 
 const PROVIDERS = new Set(['anthropic', 'openai']);
 const MODES = new Set(['chat', 'responses']);

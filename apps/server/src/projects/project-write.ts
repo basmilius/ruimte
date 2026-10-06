@@ -1,7 +1,7 @@
 import { mkdir, open, readFile, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { z } from 'zod';
-import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
+import { isNotFound, writeAtomic } from '@adecore/agents/fs';
 import { privateDirOf, privatePathOf, viewFilePathOf } from './project-files.ts';
 
 const MoveSchema = z.object({ kind: z.enum(['drawing', 'diagram']), viewId: z.string(), shared: z.boolean(), bytes: z.string() });

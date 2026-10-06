@@ -1,1 +1,1 @@
-export * from '@ruimte/agent-contracts/chat';
+export * from '@adecore/agent-contracts/chat';

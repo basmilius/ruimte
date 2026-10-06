@@ -3,10 +3,10 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PushSubscribePayloadSchema, type AuthSession, type PushSubscribePayload } from '@ruimte/contracts';
 import { z } from 'zod';
-import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
+import { isNotFound, writeAtomic } from '@adecore/agents/fs';
 import { isPublicKey } from '@ruimte/pulsar/verify-node';
 import { errorText } from '../error-text.ts';
-import { Serializer } from '@ruimte/agents/serializer';
+import { Serializer } from '@adecore/agents/serializer';
 
 /*
  * A client a statement let in, by the key it proves per connection. A record of a pairing link from

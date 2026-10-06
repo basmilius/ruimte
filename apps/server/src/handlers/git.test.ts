@@ -3,7 +3,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import { Dispatcher } from '../dispatcher.ts';
 import { GitStatusWatcher } from '../git/status-watcher.ts';
 import { initRepo } from '../git/test-repo.ts';

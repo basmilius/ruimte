@@ -1,5 +1,5 @@
-import type { EditorContentChange, EditorPosition, EditorRange } from '@ruimte/smart-editor';
-import type { CompletionItem, CompletionList, CompletionResult, InsertReplaceEdit, MarkupContent, TextEdit } from '@ruimte/smart-editor-lsp';
+import type { EditorContentChange, EditorPosition, EditorRange } from '@adecore/editor';
+import type { CompletionItem, CompletionList, CompletionResult, InsertReplaceEdit, MarkupContent, TextEdit } from '@adecore/lsp';
 import { comparePositions } from './diagnostics-model';
 import { isEmptyHover, splitSignatures, type HoverText } from './hover-content';
 import type { CompletionDocs } from './popups';

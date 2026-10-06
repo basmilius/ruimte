@@ -1,5 +1,5 @@
-import type { Editor, EditorContentChange } from '@ruimte/smart-editor';
-import { applyTextEdits, fileUriToPath, type ApplyWorkspaceEditResult, type RenameFile, type TextEdit, type WorkspaceEdit } from '@ruimte/smart-editor-lsp';
+import type { Editor, EditorContentChange } from '@adecore/editor';
+import { applyTextEdits, fileUriToPath, type ApplyWorkspaceEditResult, type RenameFile, type TextEdit, type WorkspaceEdit } from '@adecore/lsp';
 import type { DiskText } from '@/state/text-drafts';
 
 /* A file that changed without an editor of this project holding it: its new text waits as an unsaved draft. */

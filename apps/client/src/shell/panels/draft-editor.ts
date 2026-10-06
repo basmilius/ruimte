@@ -1,4 +1,4 @@
-import type { Editor, EditorEngine, EditorOptions } from '@ruimte/smart-editor';
+import type { Editor, EditorEngine, EditorOptions } from '@adecore/editor';
 import { endpointKey } from '@/state/keys';
 import { blankLineEdits } from '@/shell/panels/blank-lines';
 import { type DiskText, type TextDrafts, useTextDrafts } from '@/state/text-drafts';

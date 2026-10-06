@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Editor, EditorBlock } from '@ruimte/smart-editor';
+import type { Editor, EditorBlock } from '@adecore/editor';
 
 const NOTHING: readonly EditorBlock[] = [];
 

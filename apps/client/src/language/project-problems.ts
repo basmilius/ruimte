@@ -1,4 +1,4 @@
-import type { Diagnostic } from '@ruimte/smart-editor-lsp';
+import type { Diagnostic } from '@adecore/lsp';
 import type { Transport } from '@/transport/transport';
 import { comparePositions, severityOf } from './diagnostics-model';
 import type { ProblemCounts } from './diagnostics';

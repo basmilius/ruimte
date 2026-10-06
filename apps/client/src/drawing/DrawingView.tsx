@@ -2,7 +2,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { DrawingElement } from '@ruimte/contracts';
-import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, type Point, type Rect, type ResizeHandle } from '@ruimte/drawing';
+import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, type Point, type Rect, type ResizeHandle } from '@adecore/drawing';
 import { isSpaceDown } from '@/canvas/space-pan';
 import { GRID, toWorld } from '@/canvas/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';

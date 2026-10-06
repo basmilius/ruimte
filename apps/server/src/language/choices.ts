@@ -1,7 +1,7 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { LanguageServerKind } from '@ruimte/contracts';
-import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
+import { isNotFound, writeAtomic } from '@adecore/agents/fs';
 import { KIND_PROFILES, type LanguagePreferences } from './profiles.ts';
 
 /*

@@ -1,4 +1,4 @@
-import type { EditorContentChange } from '@ruimte/smart-editor';
+import type { EditorContentChange } from '@adecore/editor';
 
 const BLANK = /^[ \t]+$/;
 

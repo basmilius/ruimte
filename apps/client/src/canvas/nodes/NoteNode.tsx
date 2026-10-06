@@ -3,7 +3,7 @@ import { DictationError } from '@/dictation/engine';
 import { useEffect, useRef, useState } from 'react';
 import { ClipboardPaste, Copy, Scan, Scissors } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
+import { Markdown } from '@adecore/agents-react/chat/ui/Markdown';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { copyText, readClipboardText, Icon, EDIT_SHORTCUTS, Kbd, ContextMenu } from '@adecore/ui';
 

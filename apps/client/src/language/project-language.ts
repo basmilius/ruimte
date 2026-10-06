@@ -1,5 +1,5 @@
-import { fileUriToPath, type ApplyWorkspaceEditResult, type ContentChange, type LanguageService, type WorkspaceEdit } from '@ruimte/smart-editor-lsp';
-import type { Editor, EditorPosition } from '@ruimte/smart-editor';
+import { fileUriToPath, type ApplyWorkspaceEditResult, type ContentChange, type LanguageService, type WorkspaceEdit } from '@adecore/lsp';
+import type { Editor, EditorPosition } from '@adecore/editor';
 import { openFileLink } from '@/shell/panels/file-links';
 import type { Transport } from '@/transport/transport';
 import { NavigationHistory, type Place } from './navigation-history';

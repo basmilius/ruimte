@@ -3,7 +3,7 @@ import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
 import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
 import { providerFor } from '../providers/registry.ts';
 import { MAX_LINKS } from './links.ts';
-import { narrowerMode } from '@ruimte/agents/modes';
+import { narrowerMode } from '@adecore/agents/modes';
 import type { placeInGroup, Rect } from './placement.ts';
 import { readPromptFile } from './project-paths.ts';
 import { VerbRefusal, field, orNote, type CanvasHost, type VerbCall } from './verb.ts';

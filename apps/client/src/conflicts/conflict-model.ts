@@ -1,5 +1,5 @@
 import type { GitConflictKind, GitConflictResult, GitResolveBlock } from '@ruimte/contracts';
-import { draftOf, fingerprint, joinLines, shapeOf, splitBlocks, splitLines, type MergeBlock, type MergeSpan, type TextShape } from '@ruimte/merge';
+import { draftOf, fingerprint, joinLines, shapeOf, splitBlocks, splitLines, type MergeBlock, type MergeSpan, type TextShape } from '@adecore/merge';
 import type { ConflictDraft, LiveSpan } from '@/conflicts/editor';
 
 /* One unmerged file as the overlay works on it: the three versions split into stretches, the merged

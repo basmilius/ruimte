@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { Task } from '@ruimte/contracts';
-import { RESULT_PREVIEW_BYTES, wakePrompt } from '@ruimte/agents/tasks/wake-parent';
+import { RESULT_PREVIEW_BYTES, wakePrompt } from '@adecore/agents/tasks/wake-parent';
 import { TASK_WORDS } from './words.ts';
 
 function task(id: string, overrides: Partial<Task> = {}): Task {

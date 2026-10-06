@@ -1,5 +1,5 @@
-import type { EditorContentChange, EditorMarker, EditorMarkerSeverity, EditorPosition, EditorRange } from '@ruimte/smart-editor';
-import type { Diagnostic } from '@ruimte/smart-editor-lsp';
+import type { EditorContentChange, EditorMarker, EditorMarkerSeverity, EditorPosition, EditorRange } from '@adecore/editor';
+import type { Diagnostic } from '@adecore/lsp';
 
 /* A diagnostic and the language server process that reported it. */
 export interface Problem {

@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { GitFork } from 'lucide-react';
-import { forkPointOf } from '@ruimte/agents-react/chat/logic/fork';
+import { forkPointOf } from '@adecore/agents-react/chat/logic/fork';
 import { formatDayClock } from '@adecore/ui/format';
 import { Icon, Pill, Tooltip } from '@adecore/ui';
 import { useChatPlace } from '@/chat/use-chat-place';
-import { useChatRow } from '@ruimte/agents-react/state/chats';
+import { useChatRow } from '@adecore/agents-react/state/chats';
 
 /*
  * Where a forked chat came from, in its node's header or its view's toolbar. Pressing it leads back

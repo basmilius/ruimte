@@ -1,4 +1,4 @@
-import type { EditorPosition } from '@ruimte/smart-editor';
+import type { EditorPosition } from '@adecore/editor';
 import { isApplePlatform } from '@/desktop/bridge';
 import { isIdentifierCharacter } from './completion-model';
 import type { EditorLanguage } from './editor-language';

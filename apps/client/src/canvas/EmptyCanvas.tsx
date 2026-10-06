@@ -3,7 +3,7 @@ import { FileText, Globe, LayoutGrid, LayoutTemplate, MessageSquare, PenTool, St
 import { Trans, useTranslation } from 'react-i18next';
 import { applyLayoutAction, createNodeAction, createTextAction, showViewOnCanvasAction } from '@/actions/client-actions';
 import { ProviderRows } from '@/agents/ProviderRows';
-import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
+import { AgentIcon } from '@adecore/agents-react/agents/AgentIcon';
 import { emptyCanvasSections, type EmptyCanvasTile } from '@/canvas/empty-canvas';
 import { toWorld } from '@/canvas/math';
 import { ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
@@ -11,7 +11,7 @@ import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';
-import { useProviders } from '@ruimte/agents-react/state/providers';
+import { useProviders } from '@adecore/agents-react/state/providers';
 import { useUi } from '@/state/ui';
 import { Icon, Kbd, SectionLabel, Tile } from '@adecore/ui';
 import type { Shortcut } from '@adecore/ui';

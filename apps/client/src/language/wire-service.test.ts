@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { TransportError } from '@/transport/transport';
 import { FakeLanguageTransport } from './fake-daemon';
 import { WireLanguageService } from './wire-service';
-import type { DiagnosticsReport } from '@ruimte/smart-editor-lsp';
+import type { DiagnosticsReport } from '@adecore/lsp';
 
 const folder = '/work/app';
 const uri = 'file:///work/app/src/a.ts';

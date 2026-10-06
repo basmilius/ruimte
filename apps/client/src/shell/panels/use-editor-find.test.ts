@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { Editor, EditorRange } from '@ruimte/smart-editor';
+import type { Editor, EditorRange } from '@adecore/editor';
 import { EMPTY_FIND_QUERY } from '@/find/query';
 import { seedFromSelection } from '@/shell/panels/use-editor-find';
 

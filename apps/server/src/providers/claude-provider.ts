@@ -1,4 +1,4 @@
-import { createClaudeProvider } from '@ruimte/agents/providers/claude-provider';
+import { createClaudeProvider } from '@adecore/agents/providers/claude-provider';
 
 /*
  * Every `ruimte-context` call goes through without a prompt, in every mode: the daemon already enforces each

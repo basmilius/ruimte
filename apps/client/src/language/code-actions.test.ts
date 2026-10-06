@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
+import { FakeEditorEngine } from '@adecore/editor/fake';
 import { useToasts } from '@/state/toasts';
-import { EditorLanguage } from './editor-language';
+import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
-import { ProjectLanguage } from './project-language';
+import { ProjectLanguage } from './ruimte-project-language';
 import type { ProjectFiles } from './workspace-edit';
 import { TransportError } from '@/transport/transport';
 import { ManualTimers } from './timers';

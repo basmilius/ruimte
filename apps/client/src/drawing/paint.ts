@@ -9,7 +9,7 @@ import {
     type ElementPath,
     type MeasureLine,
     type WrittenElement
-} from '@ruimte/drawing';
+} from '@adecore/drawing';
 import { readEdge, readFontStacks, readPaper, readPalette, type DrawingPalette } from '@/drawing/palette';
 
 export interface PaintOptions {

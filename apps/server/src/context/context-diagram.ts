@@ -1,5 +1,5 @@
 import type { DiagramDocument } from '@ruimte/contracts';
-import { readingOrder, toSvg } from '@ruimte/diagram';
+import { readingOrder, toSvg } from '@adecore/diagram';
 
 /*
  * A diagram as an agent reads it, in the shape of a drawing's: the reading order first and the SVG

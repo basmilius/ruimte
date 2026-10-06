@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
+import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeLanguageTransport } from './fake-daemon';
-import { acquireProjectLanguage, ProjectLanguage } from './project-language';
+import { acquireProjectLanguage, ProjectLanguage } from './ruimte-project-language';
 
 const folder = '/work/app';
 const uri = 'file:///work/app/src/a.ts';

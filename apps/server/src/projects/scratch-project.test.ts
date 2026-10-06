@@ -3,7 +3,7 @@ import { mkdtemp, readdir, realpath, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ProjectChatView } from '@ruimte/contracts';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import { initRepo } from '../git/test-repo.ts';
 import { ProjectStore } from './project-store.ts';
 import { dropEmptyMark, newScratchChat, reusableChat, scratchFolderOf } from './scratch-project.ts';

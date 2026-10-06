@@ -1,10 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { DIAGRAM_VERSION, EMPTY_DIAGRAM, diagramProblemIn, isDiagramView, type DiagramContent, type DiagramDocument } from '@ruimte/contracts';
-import type { WatchSeams } from '@ruimte/agents/watch-seam';
+import type { WatchSeams } from '@adecore/agents/watch-seam';
 import { diagramsDirOf, parseDiagram, privateDiagramsDirOf, readDiagram, tooNewMessage, viewFilePathOf, writeDiagram } from './project-files.ts';
 import { ProjectError, type ProjectPlace, type ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';
-import { CodedError } from '@ruimte/agents/coded-error';
+import { CodedError } from '@adecore/agents/coded-error';
 
 type DiagramErrorCode = 'project-not-found' | 'diagram-not-found' | 'diagram-invalid' | 'rev-conflict';
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { followViewStates, forgetMovesFrom, openingPlace, viewStateKey, viewStates } from './editor-view-state';
+import { followViewStates, forgetMovesFrom, openingPlace, viewStateKey, viewStates } from './editor-view-state-host';
 
 describe('where a file editor opens', () => {
     const last = { scrollTop: 840, line: 52, column: 7, folds: { collapsed: [{ startLine: 3, endLine: 9 }], custom: [] } };

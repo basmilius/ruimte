@@ -1,47 +1,43 @@
 name: Address book
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/pulsar-worker/**'
-      - 'packages/pulsar/**'
-      - 'packages/agent-contracts/src/model.ts'
-      # The catalog schema in model.ts takes its agent kinds from here.
-      - 'packages/agent-contracts/src/agent.ts'
-      # The worker hands these out as the model catalogs.
-      - 'packages/agents/src/providers/*-models.json'
+    push:
+        branches: [main]
+        paths:
+            - 'apps/pulsar-worker/**'
+            - 'packages/pulsar/**'
+            - 'bun.lock'
 
 # One deploy at a time, so two pushes never apply migrations over each other.
 concurrency:
-  group: pulsar-worker
-  cancel-in-progress: false
+    group: pulsar-worker
+    cancel-in-progress: false
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    # The API token only reaches the steps that deploy, never the install, the typecheck or the tests.
-    env:
-      CLOUDFLARE_ACCOUNT_ID: 5e565cf9fa55b0eae1f8131903da2ca9
-    defaults:
-      run:
-        working-directory: apps/pulsar-worker
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version-file: package.json
-      - run: bun install --frozen-lockfile
-        working-directory: .
-      - run: bun run typecheck
-      - run: bun test
-      - run: bun test
-        working-directory: packages/pulsar
-      # Migrations first: a new Worker may read a column the old one never wrote, never the other way round.
-      - run: bunx wrangler d1 migrations apply ruimte-pulsar --remote
+    deploy:
+        runs-on: ubuntu-latest
+        # The API token only reaches the steps that deploy, never the install, the typecheck or the tests.
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      - run: bunx wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      - run: curl --fail --silent --show-error --max-time 20 https://pulsar.ruimte.app/health
+            CLOUDFLARE_ACCOUNT_ID: 5e565cf9fa55b0eae1f8131903da2ca9
+        defaults:
+            run:
+                working-directory: apps/pulsar-worker
+        steps:
+            - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+            - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+              with:
+                  bun-version-file: package.json
+            - run: bun install --frozen-lockfile
+              working-directory: .
+            - run: bun run typecheck
+            - run: bun test
+            - run: bun test
+              working-directory: packages/pulsar
+            # Migrations first: a new Worker may read a column the old one never wrote, never the other way round.
+            - run: bunx wrangler d1 migrations apply ruimte-pulsar --remote
+              env:
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+            - run: bunx wrangler deploy
+              env:
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+            - run: curl --fail --silent --show-error --max-time 20 https://pulsar.ruimte.app/health

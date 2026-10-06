@@ -1,4 +1,4 @@
-import type { DocumentSymbol, DocumentSymbolResult, Position, SymbolInformation } from '@ruimte/smart-editor-lsp';
+import type { DocumentSymbol, DocumentSymbolResult, Position, SymbolInformation } from '@adecore/lsp';
 import { formatNumber } from '@adecore/ui/format';
 import i18next from 'i18next';
 

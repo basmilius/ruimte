@@ -1,6 +1,6 @@
 import { createStore, type StoreApi } from 'zustand';
-import type { EditorPosition, EditorRange, EditorRect } from '@ruimte/smart-editor';
-import type { Location } from '@ruimte/smart-editor-lsp';
+import type { EditorPosition, EditorRange, EditorRect } from '@adecore/editor';
+import type { Location } from '@adecore/lsp';
 import type { CodeAuthorship } from './code-authors';
 import type { Problem } from './diagnostics-model';
 import type { PeekFile, PeekSnippet } from './peek-model';

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ComputerApprovalChoice } from '@ruimte/contracts';
-import { isBlockingSubject, promptCreatedAt, promptIdOf, type PromptSubject } from '@ruimte/agents-react/prompts/logic/subjects';
+import { isBlockingSubject, promptCreatedAt, promptIdOf, type PromptSubject } from '@adecore/agents-react/prompts/logic/subjects';
 import { answerRuimtePrompt, computerButtons, computerPrompt, ruimtePayloadOf, waitingPrompt } from '@/prompts/ruimte-prompts';
 
 const request = {

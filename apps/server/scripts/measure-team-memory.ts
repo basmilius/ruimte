@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { heapStats } from 'bun:jsc';
 import type { ProjectContent } from '@ruimte/contracts';
-import { ChatStore } from '@ruimte/agents/chat/chat-store';
-import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
+import { ChatStore } from '@adecore/agents/chat/chat-store';
+import { ManualClock } from '@adecore/agents/outbox/manual-clock';
 import { ProjectStore } from '../src/projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../src/tasks/test-daemon.ts';
 

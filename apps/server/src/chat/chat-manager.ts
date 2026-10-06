@@ -15,13 +15,13 @@ import type {
     RuntimeMode,
     Task
 } from '@ruimte/contracts';
-import { ChatCore, type ChatCoreOptions } from '@ruimte/agents/chat/chat-core';
-import type { ChatReferences, ChatSession, PromptNotes, ResumeWords } from '@ruimte/agents/chat/chat-session';
-import type { ChatRecord, ChatRecordExtras } from '@ruimte/agents/chat/chat-store';
-import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
-import { limitedTurn } from '@ruimte/agents/chat/limit-resume';
-import { storedAccount } from '@ruimte/agents/providers/accounts/launch';
-import { narrowerMode } from '@ruimte/agents/modes';
+import { ChatCore, type ChatCoreOptions } from '@adecore/agents/chat/chat-core';
+import type { ChatReferences, ChatSession, PromptNotes, ResumeWords } from '@adecore/agents/chat/chat-session';
+import type { ChatRecord, ChatRecordExtras } from '@adecore/agents/chat/chat-store';
+import { claudeProjectSlug } from '@adecore/agents/chat/claude-transcript';
+import { limitedTurn } from '@adecore/agents/chat/limit-resume';
+import { storedAccount } from '@adecore/agents/providers/accounts/launch';
+import { narrowerMode } from '@adecore/agents/modes';
 import { chatReferenceNote, resolveChatReferences } from '../context/chat-references.ts';
 import { chatPrompt, contextChangeNote, contextPrompt } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
@@ -30,7 +30,7 @@ import { continueOnWake, continuedInForkNote } from './continue-on.ts';
 import { ChatError } from './errors.ts';
 import { InlineEditNotes } from './inline-edit.ts';
 
-export type { InterruptedRun } from '@ruimte/agents/chat/chat-core';
+export type { InterruptedRun } from '@adecore/agents/chat/chat-core';
 
 // Why a task a person stopped from the list of the chat that gave it ended, in that chat's note and the child's thread.
 export const STOPPED_TASK_REASON = 'a person stopped it';

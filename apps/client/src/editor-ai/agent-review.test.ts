@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProvenanceReadResult, ProvenanceReviewState, ProvenanceRun } from '@ruimte/contracts';
-import { type FakeEditor, FakeEditorEngine } from '@ruimte/smart-editor/fake';
+import { type FakeEditor, FakeEditorEngine } from '@adecore/editor/fake';
 import { ManualTimers } from '@/language/timers';
 import { AgentChanges } from './agent-changes';
 import { AgentReview, commentRowId, revertNote } from './agent-review';
 import { agentReviewOf } from './agent-review-registry';
-import { ReviewGroup } from './review-group';
+import { ReviewGroup } from '@adecore/editor-react';
 
 const DISK = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'].join('\n') + '\n';
 

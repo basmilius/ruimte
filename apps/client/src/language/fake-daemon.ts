@@ -1,5 +1,5 @@
 import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
-import { applyContentChanges, type ContentChange } from '@ruimte/smart-editor-lsp';
+import { applyContentChanges, type ContentChange } from '@adecore/lsp';
 import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
 
 interface Call {
@@ -77,7 +77,7 @@ export class FakeLanguageTransport implements Transport {
 
     private daemon(
         type: string,
-        payload: { path: string; text: string; languageId: string; baseVersion: number; version?: number; changes: ContentChange[] }
+        payload: { path: string; text: string; languageId: string; baseVersion: number; version?: number; changes: ContentChange[]; method?: string }
     ): unknown {
         if (type === 'language.document.open') {
             const held = this.documents.get(payload.path);
@@ -112,7 +112,11 @@ export class FakeLanguageTransport implements Transport {
             if (payload.version !== undefined && payload.version !== held.version) {
                 throw new TransportError('stale-document', 'stale');
             }
-            return { result: { contents: `hover at ${held.version}` }, server: 'typescript', version: held.version };
+            return {
+                result: payload.method === 'textDocument/hover' ? { contents: `hover at ${held.version}` } : null,
+                server: 'typescript',
+                version: held.version
+            };
         }
         throw new Error(`The fake daemon does not know ${type}`);
     }

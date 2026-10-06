@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { isCanvasView, type ProjectView } from '@ruimte/contracts';
-import type { ProjectChat } from '@ruimte/agents-react/chat/chat-references';
+import type { ProjectChat } from '@adecore/agents-react/chat/chat-references';
 import { useSidebarSource } from '@/shell/sidebar-source';
 
 /* The views of a project, with the nodes of every canvas that is live in this window, whose titles run ahead of the document's. */

@@ -5,24 +5,24 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ChatBookmark, ChatCheckpointDiff, ChatInfo, ChatItem, ChatSubagentItem, ContextSource } from '@ruimte/contracts';
 import { chatPrompt, verbsNote } from '../context/context-note.ts';
-import { showNotices } from '@ruimte/agents/messages/deliver-notice';
-import { NoticeNotes, unshownNotes } from '@ruimte/agents/messages/notice-notes';
-import { NoticeStore, type Notice } from '@ruimte/agents/messages/notice-store';
+import { showNotices } from '@adecore/agents/messages/deliver-notice';
+import { NoticeNotes, unshownNotes } from '@adecore/agents/messages/notice-notes';
+import { NoticeStore, type Notice } from '@adecore/agents/messages/notice-store';
 import { deliverNotice, MESSAGE_WORDS } from '../context/notices.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { AttachmentStore } from '@ruimte/agents/chat/attachment-store';
-import { BookmarkStore } from '@ruimte/agents/chat/bookmark-store';
+import { AttachmentStore } from '@adecore/agents/chat/attachment-store';
+import { BookmarkStore } from '@adecore/agents/chat/bookmark-store';
 import { chatReferenceNote } from '../context/chat-references.ts';
 import { ChatManager } from './chat-manager.ts';
 import { INLINE_EDIT_PREAMBLE } from './inline-edit.ts';
 import { ChatRecorder, FakeCheckpoints, RecordingStore } from './chat-test-helpers.ts';
-import { fakeClaude } from '@ruimte/agents/chat/fake-claude';
-import { inProcess, type InProcessCli } from '@ruimte/agents/chat/fake-cli';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { fakeClaude } from '@adecore/agents/chat/fake-claude';
+import { inProcess, type InProcessCli } from '@adecore/agents/chat/fake-cli';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 
 // The transcripts the package's own subagent tests read.
-const FIXTURE = join(dirname(fileURLToPath(import.meta.resolve('@ruimte/agents/chat/subagent-reader'))), 'fixtures', 'claude-projects');
+const FIXTURE = join(dirname(fileURLToPath(import.meta.resolve('@adecore/agents/chat/subagent-reader'))), 'fixtures', 'claude-projects');
 
 let home: string;
 let store: RecordingStore;

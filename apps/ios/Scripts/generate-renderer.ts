@@ -1,5 +1,7 @@
-import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import type { DiagramDocument, DrawingDocument } from '@ruimte/contracts';
 import { renderDiagram, renderDrawing } from '../../server/src/render/scenes.ts';
 
@@ -65,11 +67,31 @@ const fixtures = [
     { kind: 'diagram', document: diagram, scene: renderDiagram(diagram) },
     { kind: 'drawing', document: { version: 1, rev: 0, elements: [] }, scene: renderDrawing({ version: 1, rev: 0, elements: [] }) }
 ];
-const roughRoot = await realpath(resolve(root, '../../packages/drawing/node_modules/roughjs'));
+function packageDirectory(name: string, from: string): string {
+    const require = createRequire(from);
+    let folder = dirname(require.resolve(name));
+    while (true) {
+        const manifest = resolve(folder, 'package.json');
+        if (existsSync(manifest) && JSON.parse(readFileSync(manifest, 'utf8')).name === name) {
+            return folder;
+        }
+        const parent = dirname(folder);
+        if (parent === folder) {
+            throw new Error(`Could not find the license of ${name}`);
+        }
+        folder = parent;
+    }
+}
+
+const drawingEntry = createRequire(resolve(root, '../server/package.json')).resolve('@adecore/drawing');
+const roughRoot = packageDirectory('roughjs', drawingEntry);
 const libraries = [
     ['roughjs', roughRoot],
-    ['perfect-freehand', resolve(root, '../../packages/drawing/node_modules/perfect-freehand')],
-    ...['hachure-fill', 'path-data-parser', 'points-on-curve', 'points-on-path'].map((name) => [name, resolve(roughRoot, '..', name)])
+    ['perfect-freehand', packageDirectory('perfect-freehand', drawingEntry)],
+    ...['hachure-fill', 'path-data-parser', 'points-on-curve', 'points-on-path'].map((name) => [
+        name,
+        packageDirectory(name, resolve(roughRoot, 'package.json'))
+    ])
 ];
 const licenses = await Promise.all(libraries.map(async ([name, path]) => `${name}\n\n${await readFile(resolve(path!, 'LICENSE'), 'utf8')}`));
 const outputs = new Map([

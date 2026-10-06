@@ -1,5 +1,5 @@
-import type { SignatureHelp, SignatureHelpContext } from '@ruimte/smart-editor-lsp';
-import type { EditorPosition, EditorTextChange } from '@ruimte/smart-editor';
+import type { SignatureHelp, SignatureHelpContext } from '@adecore/lsp';
+import type { EditorPosition, EditorTextChange } from '@adecore/editor';
 import type { EditorLanguage } from './editor-language';
 import { signatureViewOf } from './signature-model';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';

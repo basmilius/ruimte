@@ -1,6 +1,6 @@
 import type { Reachability } from '@ruimte/contracts';
 import type { Point } from '@/canvas/math';
-import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
+import { carriesMentions, droppedMentions } from '@adecore/agents-react/chat/mentions';
 
 /*
  * What a drag inside the app carries for the canvas: the same list the mention type holds, with the
@@ -24,7 +24,7 @@ export interface DragPayload {
  * Finder carries bytes and no path, so it is not one of these.
  */
 export function carriesPaths(types: readonly string[]): boolean {
-    return types.includes(PATHS_DRAG_TYPE) || types.includes(MENTION_DRAG_TYPE);
+    return types.includes(PATHS_DRAG_TYPE) || carriesMentions(types);
 }
 
 /* Both types spell a list the same way: space separated, which is what the `@` picker settled on
@@ -44,7 +44,7 @@ export function droppedPaths(data: DragPayload): string[] {
     if (marked !== '') {
         return splitPaths(marked).filter((path) => !path.endsWith('/') && !path.endsWith('\\'));
     }
-    return splitPaths(data.getData(MENTION_DRAG_TYPE));
+    return droppedMentions(data);
 }
 
 /*

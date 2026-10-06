@@ -1,6 +1,6 @@
 import i18next from 'i18next';
-import { StaleResultError, fileUriToPath, type Location, type LocationLink, type NavigationResult, type Range } from '@ruimte/smart-editor-lsp';
-import type { EditorPosition } from '@ruimte/smart-editor';
+import { StaleResultError, fileUriToPath, type Location, type LocationLink, type NavigationResult, type Range } from '@adecore/lsp';
+import type { EditorPosition } from '@adecore/editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useToasts } from '@/state/toasts';

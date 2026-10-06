@@ -1,11 +1,12 @@
+import { createHolder as createLanguageHolder } from '@adecore/editor-react';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { storedPathOf } from '@ruimte/contracts';
-import { pathToFileUri } from '@ruimte/smart-editor-lsp';
-import type { Editor } from '@ruimte/smart-editor';
-import { EditorLanguage } from '@/language/editor-language';
-import { customLanguageIdOf, lspLanguageIdOf } from '@/language/language-ids';
+import { pathToFileUri } from '@adecore/lsp';
+import type { Editor } from '@adecore/editor';
+import { EditorLanguage } from '@/language/ruimte-editor-language';
+import { customLanguageIdOf, lspLanguageIdOf } from '@/language/language-ids-host';
 import { draftFiles } from '@/language/project-files';
-import { acquireProjectLanguage } from '@/language/project-language';
+import { acquireProjectLanguage } from '@/language/ruimte-project-language';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useTransport } from '@/transport/context';
@@ -40,7 +41,7 @@ function useOwnLanguageId(enabled: boolean, path: string, language: string | und
     const endpointId = useEndpointId();
     const projectId = useProject((s) => s.current?.projectId ?? null);
     const folder = useProject((s) => s.current?.folder ?? null);
-    const holder = useMemo(() => createHolder<string>(), []);
+    const holder = useMemo(() => createLanguageHolder<string>(), []);
 
     useEffect(() => {
         if (!enabled || projectId === null || folder === null) {
@@ -71,7 +72,7 @@ export function useEditorLanguage(editor: Editor | null, path: string, language:
     const endpointId = useEndpointId();
     const projectId = useProject((s) => s.current?.projectId ?? null);
     const folder = useProject((s) => s.current?.folder ?? null);
-    const holder = useMemo(() => createHolder<EditorLanguage>(), []);
+    const holder = useMemo(() => createLanguageHolder<EditorLanguage>(), []);
     const builtIn = lspLanguageIdOf(language);
     const ownId = useOwnLanguageId(editor !== null && builtIn === null, path, language);
     const languageId = builtIn ?? ownId;

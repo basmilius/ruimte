@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { ChatItem, ChatToolItem } from '@ruimte/contracts';
 import { EMPTY_FIND_QUERY, type FindQuery } from '@/find/query';
 import { hitRow, indexRows, placeOfHit, searchChat } from './search';
-import { deriveTimelineRows } from '@ruimte/agents-react/chat/logic/timeline';
+import { deriveTimelineRows } from '@adecore/agents-react/chat/logic/timeline';
 
 function tool(id: string, input: unknown, output: string, extra: Partial<ChatToolItem> = {}): ChatToolItem {
     return {

@@ -40,7 +40,7 @@ import { openOnboarding } from '@/onboarding/open';
 import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
 import { windowWorkspace } from '@/state/window';
 import { hasLocalMachine } from '@/state/local-machine';
-import { providersOf } from '@ruimte/agents-react/state/providers';
+import { providersOf } from '@adecore/agents-react/state/providers';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useTheme } from '@/state/theme';
 import { useFiles } from '@/state/files';

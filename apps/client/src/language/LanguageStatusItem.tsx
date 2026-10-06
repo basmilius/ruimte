@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LanguageServerStatus } from '@ruimte/contracts';
 import { Button, Popover, Spinner, Tooltip } from '@adecore/ui';
-import type { EditorLanguage } from './editor-language';
+import type { EditorLanguage } from './ruimte-editor-language';
 import { Dot, LogDialog } from './ServerParts';
 import { report, serverDetail, sidecarDetails, useStatuses } from './server-status';
 import type { LanguageStatusTracker } from './status';
@@ -41,16 +41,9 @@ export function LanguageStatusItem({ language, name }: { language: EditorLanguag
                         aria-label={t('language.chip')}
                         className="inline-flex h-5 shrink-0 items-center gap-1.5 rounded-md px-1.5 hover:bg-surface-hover hover:text-text aria-expanded:bg-surface-active aria-expanded:text-text"
                     >
-                        {shown === null ? null : shown.state === 'installing' ? <Spinner size={12} /> : <Dot tone={toneOf(shown.state)} />}
+                        {shown === null ? null : toneOf(shown.state) === 'busy' ? <Spinner size={12} /> : <Dot tone={toneOf(shown.state)} />}
                         {name}
-                        {busy !== undefined && (
-                            <>
-                                <Spinner size={12} />
-                                <span className="text-text-faint">
-                                    {nameOf(busy.server, statuses)} {t(`language.state.${busy.state}`).toLowerCase()}
-                                </span>
-                            </>
-                        )}
+                        {busy !== undefined && <span className="text-text-faint">· {t(`language.state.${busy.state}`)}</span>}
                     </Popover.Trigger>
                 </Tooltip>
                 <Popover.Popup side="top" align="end" sideOffset={6} className="flex w-80 flex-col gap-1 p-2">

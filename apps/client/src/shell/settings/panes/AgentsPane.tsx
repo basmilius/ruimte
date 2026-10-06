@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { CLOSED_LID_BATTERY_FLOOR, type RuntimeMode } from '@ruimte/contracts';
-import { rememberChatPreferences, useChatPreferences } from '@ruimte/agents-react/chat/preferences';
-import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@ruimte/agents-react/chat/runtime-modes';
+import { rememberChatPreferences, useChatPreferences } from '@adecore/agents-react/chat/preferences';
+import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@adecore/agents-react/chat/runtime-modes';
 import {
     setClosedLidRule,
     setKeepAwake,

@@ -1,5 +1,5 @@
 import { DIAGRAM_LIMITS, DiagramEdgeSchema, DiagramGroupSchema, DiagramMetaSchema, DiagramNodeSchema } from '@ruimte/contracts';
-import { DEFAULT_EDGE_TONE, DEFAULT_GROUP_TONE, DEFAULT_NODE_TONE } from '@ruimte/diagram';
+import { DEFAULT_EDGE_TONE, DEFAULT_GROUP_TONE, DEFAULT_NODE_TONE } from '@adecore/diagram';
 import { z } from 'zod';
 import { defineActionVerb, runAction } from './action-verb.ts';
 

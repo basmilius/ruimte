@@ -1,4 +1,4 @@
-import { useChats } from '@ruimte/agents-react/state/chats';
+import { useChats } from '@adecore/agents-react/state/chats';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';

@@ -1,4 +1,4 @@
-import type { ChatScope } from '@ruimte/agents-react/scope';
+import type { ChatScope } from '@adecore/agents-react/scope';
 import { endpointKey, isOfEndpoint } from '@/state/keys';
 import { machineTransport } from '@/transport';
 import { chatClient, chatClientFor } from '@/transport/connections';

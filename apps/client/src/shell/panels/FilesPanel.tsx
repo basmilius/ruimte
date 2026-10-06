@@ -1,20 +1,10 @@
 import { revealFile } from './reveal-file';
 import { ActionRefusal } from '@ruimte/actions';
 import { performAsPerson } from '@/actions/client-actions';
-import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type DragEvent as ReactDragEvent,
-    type KeyboardEvent as ReactKeyboardEvent,
-    type MouseEvent as ReactMouseEvent,
-    type ReactNode
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FileTreeDropResult } from '@pierre/trees';
-import { FileTree, useFileTree } from '@pierre/trees/react';
+import { FileTree, useFileTree } from '@adecore/ui';
 import {
     ChevronsDownUp,
     ChevronsUpDown,
@@ -34,7 +24,7 @@ import {
     Trash2
 } from 'lucide-react';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
-import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
+import { writeMentionDrag } from '@adecore/agents-react/chat/mentions';
 import { createViewAction } from '@/actions/client-actions';
 import { showFileOnCanvas } from '@/project/views';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
@@ -70,18 +60,7 @@ import {
     withoutClosedBranches,
     type EntryCache
 } from '@/shell/panels/files-tree';
-import {
-    directoryHandle,
-    extendsSelection,
-    followFocus,
-    menuTargetsOf,
-    movesFocus,
-    resetExpandedPaths,
-    rowPathOf,
-    PANEL_TREE_CSS,
-    PANEL_TREE_ROW_HEIGHT
-} from '@/shell/panels/panel-tree';
-import { usePanelTreeShift } from '@/shell/panels/use-panel-tree-shift';
+const { directoryHandle, menuTargetsOf, resetExpandedPaths, rowPathOf } = FileTree;
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { folderWatches } from '@/state/fs-watch';
@@ -94,7 +73,7 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { Button, ButtonGroup, EmptyState, FILE_TREE_ICONS, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu, PromptDialog } from '@adecore/ui';
+import { Button, ButtonGroup, EmptyState, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu, PromptDialog } from '@adecore/ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
 const SEARCH_DEBOUNCE_MS = 150;
@@ -117,7 +96,6 @@ const FILES_TREE_CSS = `
         border-radius: 9999px;
         background: currentColor;
     }
-    ${PANEL_TREE_CSS}
     ${PLACEHOLDER_CSS}
 `;
 
@@ -188,18 +166,13 @@ export function FilesPanel() {
 
     const { model } = useFileTree({
         paths: [],
-        composition: { contextMenu: { enabled: false } },
-        density: 'compact',
-        itemHeight: PANEL_TREE_ROW_HEIGHT,
         // A row dropped on a folder is a move, which the machine makes; the tree's own move is put right by the listing that follows.
         dragAndDrop: { canDrag: () => true, canDrop: () => true, onDropComplete: (event) => dropRef.current(event) },
         flattenEmptyDirectories: false,
-        icons: FILE_TREE_ICONS,
         initialExpansion: 'closed',
         onSelectionChange: (paths) => {
             selectionRef.current = paths;
         },
-        search: false,
         sort: compareRows,
         unsafeCSS: FILES_TREE_CSS
     });
@@ -208,23 +181,17 @@ export function FilesPanel() {
        a flat result list would otherwise fight over the same rows. */
     const { model: searchModel } = useFileTree({
         paths: [],
-        composition: { contextMenu: { enabled: false } },
-        density: 'compact',
-        itemHeight: PANEL_TREE_ROW_HEIGHT,
         dragAndDrop: { canDrag: () => true, canDrop: () => false },
-        icons: FILE_TREE_ICONS,
         initialExpansion: 'open',
         onSelectionChange: (paths) => {
             selectionRef.current = paths;
         },
-        search: false,
         sort: compareRows,
         unsafeCSS: FILES_TREE_CSS
     });
 
     const searching = query.trim() !== '';
     const activeModel = searching ? searchModel : model;
-    const { attach: attachShift, bar: shiftBar } = usePanelTreeShift(activeModel, folder ?? '');
     /* The rows the tree is fed, kept here as well because what they add up to is what says whether
        the panel has anything to show. */
     const listedInput = useMemo(() => buildTreeInput(folder ?? '', cache, showHidden), [cache, folder, showHidden]);
@@ -487,45 +454,16 @@ export function FilesPanel() {
         useFiles.getState().open(absoluteOf(folder, treePath), tabLimit, undefined, undefined, { focus: false });
     };
 
-    /* One click opens a file, the way every row in this app opens what it points at. A directory
-       is left to the tree, which folds it open on the same click. */
-    const onClick = (event: ReactMouseEvent<HTMLElement>): void => {
-        if (extendsSelection(event)) {
+    const onDragStart = (_path: string, paths: readonly string[], event: DragEvent): void => {
+        if (event.dataTransfer === null) {
             return;
         }
-        openPath(rowPathOf(event));
-    };
-
-    const onKeyDown = (event: ReactKeyboardEvent<HTMLElement>): void => {
-        if (event.key !== 'Enter') {
-            return;
-        }
-        // A row is a button, and Enter would also click it: a folder would fold and unfold again.
-        event.preventDefault();
-        const focused = activeModel.getFocusedPath();
-        if (focused !== null && isDirectoryPath(focused)) {
-            directoryHandle(activeModel, focused)?.toggle();
-            return;
-        }
-        openPath(focused);
-    };
-
-    const onKeyDownCapture = (event: ReactKeyboardEvent<HTMLElement>): void => {
-        if (movesFocus(event)) {
-            followFocus(activeModel);
-        }
-    };
-
-    const onDragStart = (event: ReactDragEvent<HTMLElement>): void => {
-        const path = rowPathOf(event);
-        if (!path) {
-            return;
-        }
-        const selected = selectionRef.current;
-        const paths = selected.includes(path) && selected.length > 1 ? [...selected] : [path];
-        // The canvas needs the trailing slash to leave a directory alone; a mention has no use for it.
+        // The canvas needs directory slashes; a chat mention only needs the path.
         event.dataTransfer.setData(PATHS_DRAG_TYPE, paths.join(' '));
-        event.dataTransfer.setData(MENTION_DRAG_TYPE, paths.map((entry) => (isDirectoryPath(entry) ? entry.slice(0, -1) : entry)).join(' '));
+        writeMentionDrag(
+            event.dataTransfer,
+            paths.map((entry) => (isDirectoryPath(entry) ? entry.slice(0, -1) : entry))
+        );
     };
 
     const expandAll = (): void => {
@@ -819,12 +757,10 @@ export function FilesPanel() {
                 <div className="relative flex min-h-0 grow flex-col overflow-hidden">
                     <ContextMenu.Root>
                         <ContextMenu.Trigger
-                            ref={attachShift}
                             render={<div />}
                             /* The padding is on the frame, not the scroller, so the first row keeps its
                            distance from the toolbar instead of sliding under it. */
                             className="min-h-0 grow overflow-hidden pt-2"
-                            onKeyDownCapture={onKeyDownCapture}
                             onContextMenu={(event) => {
                                 const path = rowPathOf(event);
                                 setMenuPath(path);
@@ -843,15 +779,15 @@ export function FilesPanel() {
                                 setMenuTargets(targets);
                             }}
                         >
-                            <FileTree
+                            <FileTree.Root
                                 key={searching ? 'search' : 'tree'}
                                 model={activeModel}
-                                className="panel-tree"
-                                onClick={onClick}
-                                onKeyDown={onKeyDown}
-                                onDragStart={onDragStart}
+                                className="h-full min-h-0"
+                                label={t('shell:panel.names.files')}
+                                resetKey={folder ?? ''}
+                                onActivate={openPath}
+                                onRowDragStart={onDragStart}
                             />
-                            {shiftBar}
                         </ContextMenu.Trigger>
                         <ContextMenu.Popup
                             // A menu that started an entry has nothing to give the keyboard back to: the field has it.

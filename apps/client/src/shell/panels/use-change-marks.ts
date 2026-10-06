@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { Editor } from '@ruimte/smart-editor';
+import type { Editor } from '@adecore/editor';
 import { changeMarksOf } from '@/shell/panels/change-marks';
 
 /* A pause in typing this long before the margin is worked out again, since a diff reads both texts. */

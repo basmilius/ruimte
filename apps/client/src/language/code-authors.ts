@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { diffLines, splitLines } from '@ruimte/merge';
+import { diffLines, splitLines } from '@adecore/merge';
 import type { GitBlameCommit, GitBlameResult } from '@ruimte/contracts';
 import { formatNumber } from '@adecore/ui/format';
 

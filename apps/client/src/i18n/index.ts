@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { AGENTS_LOCALES, AGENTS_NAMESPACES } from '@ruimte/agents-react/locales';
+import { AGENTS_LOCALES, AGENTS_NAMESPACES } from '@adecore/agents-react/locales';
 import { UI_NAMESPACE } from '@adecore/ui';
 import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';
@@ -10,9 +10,16 @@ import { useSettings } from '@/state/settings';
 
 /* Every translation file, by its path, loaded only when a language is actually asked for. Vite
    splits these into a chunk per language, so a Dutch window never downloads the English words. */
+const editorBundles = {
+    en: () => import('@adecore/editor-react/locales/en.json'),
+    nl: () => import('@adecore/editor-react/locales/nl.json')
+};
+
 const bundles = import.meta.glob<{ default: Record<string, unknown> }>('./locales/*/*.json');
 
 async function load(language: AppLanguage): Promise<void> {
+    const editor = await editorBundles[language]();
+    i18next.addResourceBundle(language, 'editor', editor.default, true, true);
     const prefix = `./locales/${language}/`;
     await Promise.all(
         Object.entries(bundles)

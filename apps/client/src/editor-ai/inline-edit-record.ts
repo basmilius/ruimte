@@ -1,5 +1,5 @@
 import type { AgentKind } from '@ruimte/contracts';
-import type { EditorRange } from '@ruimte/smart-editor';
+import type { EditorRange } from '@adecore/editor';
 import { browserStorage, type LastProjectStorage } from '@/project/last-project';
 
 /* How long an inline edit that nobody opened as a chat stays findable, and then its hidden chat goes with its record. */

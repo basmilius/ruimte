@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { CircleX, GitBranch, TriangleAlert } from 'lucide-react';
-import type { Editor, EditorBlock, EditorIndentation } from '@ruimte/smart-editor';
+import type { Editor, EditorBlock, EditorIndentation } from '@adecore/editor';
 import { ErrorBoundary, Icon, Tooltip } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
-import type { EditorLanguage } from '@/language/editor-language';
+import type { EditorLanguage } from '@/language/ruimte-editor-language';
 import { LanguageStatusItem } from '@/language/LanguageStatusItem';
-import { useProblemCounts } from '@/language/use-problem-counts';
+import { useProblemCounts } from '@adecore/editor-react';
 import { encodingLabelOf, languageNameOf, symbolBadgeOf } from '@/shell/panels/status-bar-model';
 import { useEditorCaret } from '@/shell/panels/use-editor-caret';
 import { useFileBranch } from '@/shell/panels/use-file-branch';

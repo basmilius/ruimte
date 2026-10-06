@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DrawingAlignSchema, DrawingColorSchema } from './drawing.ts';
+import { DrawingAlignSchema, DrawingColorSchema } from './drawing-host.ts';
 import { DrawingFontSchema } from './font.ts';
 
 export const RenderBoundsSchema = z.object({ x: z.number(), y: z.number(), w: z.number().nonnegative(), h: z.number().nonnegative() });

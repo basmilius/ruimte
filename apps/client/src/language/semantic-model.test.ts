@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { shikiScopeColors } from '@ruimte/smart-editor';
+import { shikiScopeColors } from '@adecore/editor';
 import { createHighlighter } from 'shiki';
 import { CODE_PALETTES, CODE_THEMES, type CodeRole } from '@/shell/panels/code-themes';
 import { decodeSemanticTokens, scopesOf } from './semantic-model';

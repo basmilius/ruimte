@@ -1,7 +1,7 @@
 import { AppleBackend } from '../chat/apple-backend.ts';
 import { appleSiliconMac, helperCommand, probeAppleHelper } from './apple-helper.ts';
-import { ModelCatalog } from '@ruimte/agents/providers/catalog';
-import type { ChatProvider } from '@ruimte/agents/providers/provider';
+import { ModelCatalog } from '@adecore/agents/providers/catalog';
+import type { ChatProvider } from '@adecore/agents/providers/provider';
 
 export function createAppleProvider(enabled: () => boolean = () => false): ChatProvider {
     return {

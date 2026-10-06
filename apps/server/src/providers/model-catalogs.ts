@@ -1,8 +1,8 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { ModelCatalogDataSchema, type AgentKind } from '@ruimte/contracts';
-import type { ModelCatalog } from '@ruimte/agents/providers/catalog';
-import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
+import type { ModelCatalog } from '@adecore/agents/providers/catalog';
+import { isNotFound, writeAtomic } from '@adecore/agents/fs';
 import { AddressBookClient, type ModelCatalogsResult } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';

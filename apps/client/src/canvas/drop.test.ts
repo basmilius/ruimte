@@ -10,7 +10,7 @@ import {
     PATHS_DRAG_TYPE,
     type DragPayload
 } from '@/canvas/drop';
-import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
+import { LEGACY_MENTION_DRAG_TYPE, MENTION_DRAG_TYPE, writeMentionDrag } from '@adecore/agents-react/chat/mentions';
 
 function drag(values: Record<string, string>): DragPayload {
     return {
@@ -24,6 +24,26 @@ describe('carriesPaths', () => {
         expect(carriesPaths([PATHS_DRAG_TYPE])).toBe(true);
         expect(carriesPaths([MENTION_DRAG_TYPE])).toBe(true);
         expect(carriesPaths(['text/plain', PATHS_DRAG_TYPE, MENTION_DRAG_TYPE])).toBe(true);
+    });
+
+    test('accepts mentions dragged by an older Ruimte window', () => {
+        expect(carriesPaths([LEGACY_MENTION_DRAG_TYPE])).toBe(true);
+        expect(droppedPaths(drag({ [LEGACY_MENTION_DRAG_TYPE]: 'src/main.ts a.txt' }))).toEqual(['src/main.ts', 'a.txt']);
+    });
+
+    test('writes a drag that both old and new windows can consume', () => {
+        const values: Record<string, string> = {};
+        writeMentionDrag(
+            {
+                setData: (type, value) => {
+                    values[type] = value;
+                }
+            },
+            ['src/main.ts', 'a.txt']
+        );
+        expect(droppedPaths(drag(values))).toEqual(['src/main.ts', 'a.txt']);
+        expect(values[LEGACY_MENTION_DRAG_TYPE]).toBe('src/main.ts a.txt');
+        expect(values[MENTION_DRAG_TYPE]).toBe('src/main.ts a.txt');
     });
 
     test('leaves every other drag alone, a file out of Finder among them', () => {

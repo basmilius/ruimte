@@ -4,7 +4,7 @@ import { ChatIdSchema } from './chat.ts';
 /*
  * A plan belongs to a chat: a tree of steps an agent writes and a person checks off. The limits are
  * part of the contract so every side refuses the same plan; depth and item count need the whole tree
- * and are checked in `@ruimte/plan`.
+ * and are checked in `@adecore/plan`.
  */
 export const PLAN_LIMITS = {
     idLength: 64,

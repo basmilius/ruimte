@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectDocument, ProviderInfo } from '@ruimte/contracts';
-import { useDrafts } from '@ruimte/agents-react/chat/drafts';
+import { useDrafts } from '@adecore/agents-react/chat/drafts';
 import { focusedCanvas } from '../state/canvas';
 import { useDocument } from '../state/document';
 import { currentEndpointId } from '../state/keys';
-import { providerSinkFor } from '@ruimte/agents-react/state/providers';
+import { providerSinkFor } from '@adecore/agents-react/state/providers';
 import { askAgentAboutDiagram, newFileViewsAfter, openSessionInKind } from './views';
 
 function installed(kind: string, name: string) {

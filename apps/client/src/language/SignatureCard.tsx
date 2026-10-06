@@ -1,4 +1,4 @@
-import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
+import { Markdown } from '@adecore/agents-react/chat/ui/Markdown';
 import type { SignatureViewModel } from './signature-model';
 
 /* The signature with the parameter being typed underlined, and what is said about that parameter below it. */

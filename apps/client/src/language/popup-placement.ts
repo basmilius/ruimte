@@ -1,4 +1,4 @@
-import type { EditorRect } from '@ruimte/smart-editor';
+import type { EditorRect } from '@adecore/editor';
 
 export interface PopupSize {
     readonly width: number;

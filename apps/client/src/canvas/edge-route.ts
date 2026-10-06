@@ -1,5 +1,5 @@
 import type { NodeSide } from '@ruimte/contracts';
-import { centerOf } from '@ruimte/drawing';
+import { centerOf } from '@adecore/drawing';
 import type { Point, Rect } from '@/canvas/math';
 
 /* The edge of a node a connector leaves from or lands on. */

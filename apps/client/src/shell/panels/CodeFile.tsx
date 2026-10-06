@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FS_READ_MAX_TEXT_BYTES, type FsReadText } from '@ruimte/contracts';
-import type { Editor } from '@ruimte/smart-editor';
+import type { Editor } from '@adecore/editor';
 import { FindBar } from '@/find/FindBar';
 import { registerFocusedLanguage } from '@/language/focused-language';
 import { registerFocusedEditor } from '@/shell/panels/focused-editor';
-import { LanguagePopups } from '@/language/LanguagePopups';
+import { LanguagePopups } from '@/language/RuimteLanguagePopups';
 import { useFind } from '@/find/use-find';
 import { formatBytes, formatNumber } from '@adecore/ui/format';
 import { Button, ErrorBoundary, Pill, Tooltip } from '@adecore/ui';

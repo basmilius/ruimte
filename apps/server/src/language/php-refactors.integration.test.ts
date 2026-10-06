@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, realpath, rename, rm, stat, symlink, writeFil
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import type { LanguageRequestResult } from '@ruimte/contracts';
-import { applyTextEdits, fileUriToPath, type CodeAction, type Position, type WorkspaceEdit } from '@ruimte/smart-editor-lsp';
+import { applyTextEdits, fileUriToPath, type CodeAction, type Position, type WorkspaceEdit } from '@adecore/lsp';
 import { MachineHome } from '../fs/machine-home.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { LanguageHost } from './host.ts';

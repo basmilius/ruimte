@@ -38,8 +38,8 @@ import {
 } from '@ruimte/contracts';
 import { revisionConflictMessage } from '@ruimte/actions';
 import { z } from 'zod';
-import { fileExists, isNotFound, writeAtomic } from '@ruimte/agents/fs';
-import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '@ruimte/agents/watch-seam';
+import { fileExists, isNotFound, writeAtomic } from '@adecore/agents/fs';
+import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '@adecore/agents/watch-seam';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import {
     diagramsDirOf,
@@ -70,9 +70,9 @@ import { placesOf, ProjectIndex } from './project-index.ts';
 import { HiddenAgentStore } from '../agents/hidden-agents.ts';
 import { IdentityCache, readIdeaName, servedIcon, sniffIconMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 import { errorText } from '../error-text.ts';
-import { CodedError } from '@ruimte/agents/coded-error';
+import { CodedError } from '@adecore/agents/coded-error';
 import { ClientSinks } from '../client-sinks.ts';
-import { Serializer } from '@ruimte/agents/serializer';
+import { Serializer } from '@adecore/agents/serializer';
 import { scratchFolderOf } from './scratch-project.ts';
 
 type ProjectErrorCode =

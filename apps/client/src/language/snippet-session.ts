@@ -1,4 +1,4 @@
-import type { EditorPosition, EditorRange, EditorTextChange } from '@ruimte/smart-editor';
+import type { EditorPosition, EditorRange, EditorTextChange } from '@adecore/editor';
 import { comparePositions, rangeHolds, shiftRange } from './diagnostics-model';
 import type { EditorLanguage } from './editor-language';
 import type { SnippetStop } from './snippet';

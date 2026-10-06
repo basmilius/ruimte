@@ -40,7 +40,7 @@ import {
     type TextEdit,
     type WorkspaceEdit,
     type WorkspaceSymbolResult
-} from '@ruimte/smart-editor-lsp';
+} from '@adecore/lsp';
 import { TransportError, type Transport } from '@/transport/transport';
 
 export interface WireLanguageServiceOptions {

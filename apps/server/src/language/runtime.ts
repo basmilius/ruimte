@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { createStreamTransport, type LspTransport } from '@ruimte/smart-editor-lsp';
+import { createStreamTransport, type LspTransport } from '@adecore/lsp';
 
 /*
  * How a Node-based server runs without a Node on the machine. A daemon compiled with `bun build

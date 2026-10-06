@@ -2,7 +2,7 @@ import { homedir, hostname } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { DEFAULT_STUN_SERVER, brokerUrlProblem, type BrokerOverride } from '@ruimte/pulsar';
-import { RUIMTE_SESSION_VARIABLES } from '@ruimte/agents/host/environment';
+import { RUIMTE_SESSION_VARIABLES } from '@adecore/agents/host/environment';
 
 export interface ServerConfig {
     host: string;

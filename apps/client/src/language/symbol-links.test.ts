@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { SymbolKind } from '@ruimte/smart-editor-lsp';
+import type { SymbolKind } from '@adecore/lsp';
 import { declaredNameOf, isTypeName, linkTypeNames, placesOfName } from './symbol-links';
 
 const range = (line: number) => ({ start: { line, character: 0 }, end: { line, character: 3 } });

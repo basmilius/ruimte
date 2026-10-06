@@ -1,4 +1,4 @@
-import type { Editor, EditorLineHighlight } from '@ruimte/smart-editor';
+import type { Editor, EditorLineHighlight } from '@adecore/editor';
 
 type Provider = () => readonly EditorLineHighlight[];
 

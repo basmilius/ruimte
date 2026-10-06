@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Tooltip } from '@adecore/ui';
-import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
+import { ProviderLogo } from '@adecore/agents-react/agents/ProviderLogo';
 import type { AgentKind } from '@ruimte/contracts';
 import { chooserChats } from '@/chat/chat-chooser';
 import { focusChat } from '@/plan/plan-actions';

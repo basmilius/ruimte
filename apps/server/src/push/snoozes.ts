@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { writeAtomicSync } from '@ruimte/agents/fs';
-import { systemClock, type OutboxClock } from '@ruimte/agents/outbox/outbox-worker';
+import { writeAtomicSync } from '@adecore/agents/fs';
+import { systemClock, type OutboxClock } from '@adecore/agents/outbox/outbox-worker';
 import { SnoozeListSchema, type Snooze } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';

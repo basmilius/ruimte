@@ -1,17 +1,9 @@
 import { revealFile } from './reveal-file';
-import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type DragEvent as ReactDragEvent,
-    type KeyboardEvent as ReactKeyboardEvent,
-    type MouseEvent as ReactMouseEvent
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { FileTreeRowDecoration, FileTreeRowDecorationContext } from '@pierre/trees';
-import { FileTree, useFileTree } from '@pierre/trees/react';
+import type { FileTreeVisibleRow } from '@pierre/trees';
+import { FileTree, useFileTree } from '@adecore/ui';
+import { GitTreeMarks } from './GitTreeMarks';
 import { ChevronsDownUp, ChevronsUpDown, CornerUpRight, EyeOff, FileDiff, FileText, FileX, Folder, GitBranch, Minus, Plus, Trash2 } from 'lucide-react';
 import type { GitFile } from '@ruimte/contracts';
 import { FileCopyRow } from '@/shell/panels/FileCopyRow';
@@ -21,9 +13,7 @@ import {
     byCheckout,
     checkOf,
     checkOfItems,
-    checkPart,
     compareGitRows,
-    decorationOfParts,
     entriesOf,
     entryParts,
     fileId,
@@ -33,7 +23,6 @@ import {
     nodeOf,
     shownFile,
     toggleItems,
-    type CheckState,
     type DecorationPart,
     type FoldKeyOf,
     type GitEntry,
@@ -41,21 +30,6 @@ import {
     type GitTreeLayout,
     type GitTreeNode
 } from '@/shell/panels/git-tree';
-import {
-    applyExpansion,
-    CHANGE_TREE_CSS,
-    directoryHandle,
-    extendsSelection,
-    focusRow,
-    followFocus,
-    menuTargetsOf,
-    movesFocus,
-    rowPathOf,
-    selectOnly,
-    visibleRows,
-    PANEL_TREE_ROW_HEIGHT
-} from '@/shell/panels/panel-tree';
-import { usePanelTreeShift } from '@/shell/panels/use-panel-tree-shift';
 import { setDragging } from '@/shell/view-drag';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
@@ -63,75 +37,15 @@ import type { GitCheckout } from '@/state/git-repos';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { FILE_TREE_ICONS, Icon, PanelEmpty, ContextMenu } from '@adecore/ui';
+import { Icon, PanelEmpty, ContextMenu } from '@adecore/ui';
 
-/* The marks of a checkbox, drawn in the color of its part. */
-function svgMask(path: string): string {
-    return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23000' stroke-width='0.875' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='${path}'/%3E%3C/svg%3E")`;
-}
-const CHECK_MASK = svgMask('M2.5 6.25 4.75 8.5 9.5 3.5');
-const MIXED_MASK = svgMask('M3 6h6');
+const { applyExpansion, directoryHandle, focusRow, menuTargetsOf, rowPathOf, selectOnly, visibleRows } = FileTree;
 
-/* The parts a group and a repository row carry after the name, named by the property of their color. */
-const COUNT_COLOR = 'var(--git-count)';
-const BRANCH_COLOR = 'var(--git-branch)';
+const COUNT_COLOR = 'var(--text-faint)';
+const BRANCH_COLOR = 'var(--text-muted)';
 
-/*
- * This panel's own rules, over those of a tree of changes. The tree has no place for a checkbox, so
- * the first part of the decoration is the box, moved in front of the icon, and the rest stay at the
- * end. A part names what it is in the custom property its color comes from (`checkPart`, the count
- * and the branch of a group or a repository), which is the one thing about a part this stylesheet
- * can see. A group is the top level of the tree.
- */
 const GIT_TREE_CSS = `
-    ${CHANGE_TREE_CSS}
-    :host {
-        --git-check-checked: var(--accent-text);
-        --git-check-mixed: var(--accent-text);
-        --git-check-unchecked: transparent;
-        --git-count: var(--text-faint);
-        --git-branch: var(--text-muted);
-    }
     [data-type="item"][aria-level="1"] [data-item-section="content"] { font-weight: 500; }
-    [data-item-section="spacing"] { order: -2; }
-    [data-item-section="decoration"] [style*="--git-check-"] {
-        order: -1;
-        box-sizing: border-box;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 16px;
-        height: 16px;
-        border: 1px solid var(--border-strong);
-        border-radius: var(--radius-sm);
-        background: var(--surface);
-    }
-    [data-item-section="decoration"] :is([style*="--git-check-checked"], [style*="--git-check-mixed"]) {
-        border-color: var(--accent);
-        background: var(--accent);
-    }
-    [data-item-section="decoration"] :is([style*="--git-check-checked"], [style*="--git-check-mixed"])::after {
-        content: "";
-        width: 12px;
-        height: 12px;
-        background: currentColor;
-        mask: ${CHECK_MASK} center / 12px 12px no-repeat;
-    }
-    [data-item-section="decoration"] [style*="--git-check-mixed"]::after { mask-image: ${MIXED_MASK}; }
-    [data-item-section="decoration"] span[style*="--git-count"] { font-family: inherit; font-size: inherit; font-variant-numeric: tabular-nums; }
-    [data-item-section="decoration"] span[style*="--git-branch"] {
-        flex: 0 1 auto;
-        min-width: 0;
-        max-width: 128px;
-        overflow: hidden;
-        padding: 0 6px;
-        border-radius: var(--radius-sm);
-        background: var(--surface-active);
-        font-family: inherit;
-        line-height: 18px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
 `;
 
 /* A file git no longer has on disk: opening it or revealing it would point at nothing. */
@@ -142,16 +56,6 @@ function isGone(entry: GitEntry): boolean {
 /* What moving a new file to the trash names: the index side first, so it is taken out of the index too. */
 function newFileOf(entry: GitEntry): GitFile {
     return (entry.staged ?? entry.worktree)!;
-}
-
-/* Whether a click landed on a row's checkbox, which lives in the tree's shadow root. */
-function onCheckbox(event: { nativeEvent: Event }): boolean {
-    return event.nativeEvent.composedPath().some((node) => node instanceof HTMLElement && node.style.color.startsWith('var(--git-check-'));
-}
-
-/* The decoration of one row: its box, unless it is a conflict, and what follows the name. */
-function decorationOf(box: CheckState | null, parts: DecorationPart[]): FileTreeRowDecoration {
-    return decorationOfParts(box === null ? parts : [checkPart(box), ...parts]);
 }
 
 type FileNode = Extract<GitTreeNode, { kind: 'file' }>;
@@ -242,7 +146,6 @@ function GitTree({ layout, branches, collapsed, reading, busy, onOpen, onOpenFil
     const [menuPaths, setMenuPaths] = useState<string[]>([]);
     /* What the tree's callbacks read, since it keeps the ones it was made with. */
     const layoutRef = useRef(layout);
-    const decorRef = useRef({ branches, files: (count: number): string => t('git.list.files', { count }) });
     const collapsedRef = useRef<ReadonlySet<string>>(new Set());
     /* Set while this component folds the tree, so the folding is not read back as a person's doing. */
     const applyingRef = useRef(false);
@@ -257,31 +160,30 @@ function GitTree({ layout, branches, collapsed, reading, busy, onOpen, onOpenFil
         return node === undefined || node.kind === 'file' ? null : node.key;
     }, []);
 
-    const decorate = useCallback(({ item }: FileTreeRowDecorationContext): FileTreeRowDecoration | null => {
-        const node = nodeOf(layoutRef.current, item.path);
-        if (node === undefined) {
-            return null;
-        }
-        const conflict = node.group === 'conflicts';
-        if (node.kind === 'file') {
-            return decorationOf(conflict ? null : checkOf(node.item.entry), entryParts(node.item.entry));
-        }
-        if (node.kind === 'folder') {
-            return decorationOf(conflict ? null : checkOfItems(node.items), [{ text: String(node.items.length) }]);
-        }
-        const parts: DecorationPart[] = [{ text: decorRef.current.files(node.items.length), color: COUNT_COLOR }];
-        const branch = node.kind === 'repo' ? (decorRef.current.branches.get(node.cwd) ?? null) : null;
-        if (branch !== null) {
-            parts.push({ text: branch, color: BRANCH_COLOR });
-        }
-        return decorationOf(conflict ? null : checkOfItems(node.items), parts);
-    }, []);
+    const decorate = useCallback(
+        (item: FileTreeVisibleRow) => {
+            const node = nodeOf(layout, item.path);
+            if (node === undefined) {
+                return null;
+            }
+            if (node.kind === 'file') {
+                return <GitTreeMarks parts={entryParts(node.item.entry)} />;
+            }
+            if (node.kind === 'folder') {
+                return <GitTreeMarks parts={[{ text: String(node.items.length), kind: 'count' }]} />;
+            }
+            const parts: DecorationPart[] = [{ text: t('git.list.files', { count: node.items.length }), color: COUNT_COLOR, kind: 'count' }];
+            const branch = node.kind === 'repo' ? (branches.get(node.cwd) ?? null) : null;
+            if (branch !== null) {
+                parts.push({ text: branch, color: BRANCH_COLOR, kind: 'branch' });
+            }
+            return <GitTreeMarks parts={parts} />;
+        },
+        [branches, layout, t]
+    );
 
     const { model } = useFileTree({
         paths: [],
-        composition: { contextMenu: { enabled: false } },
-        density: 'compact',
-        itemHeight: PANEL_TREE_ROW_HEIGHT,
         // One file at a time, and never a conflict: its three versions are no diff to open.
         dragAndDrop: {
             canDrag: (paths) => {
@@ -291,15 +193,10 @@ function GitTree({ layout, branches, collapsed, reading, busy, onOpen, onOpenFil
             canDrop: () => false
         },
         flattenEmptyDirectories: false,
-        icons: FILE_TREE_ICONS,
         initialExpansion: 'open',
-        renderRowDecoration: decorate,
-        search: false,
         sort: (left, right) => compareGitRows(layoutRef.current, left, right),
-        stickyFolders: false,
         unsafeCSS: GIT_TREE_CSS
     });
-    const { attach: attachShift, bar: shiftBar } = usePanelTreeShift(model, folder ?? '');
 
     useEffect(() => {
         collapsedRef.current = new Set(collapsed);
@@ -307,11 +204,8 @@ function GitTree({ layout, branches, collapsed, reading, busy, onOpen, onOpenFil
 
     useEffect(() => {
         layoutRef.current = layout;
-        decorRef.current = { branches, files: (count) => t('git.list.files', { count }) };
         const key = layout.paths.join('\n');
         if (builtRef.current === key) {
-            // The same rows in another state: a box that was ticked, a count that moved.
-            model.setComposition(model.getComposition());
             return;
         }
         builtRef.current = key;
@@ -392,71 +286,54 @@ function GitTree({ layout, branches, collapsed, reading, busy, onOpen, onOpenFil
         onOpen(node.cwd, shownFile(node.item.entry));
     };
 
-    /* Enter opens a file and folds every other row; Space ticks the selection, or the row alone. */
     const onKeyDownCapture = (event: ReactKeyboardEvent<HTMLElement>): void => {
-        if (event.altKey || event.metaKey || event.ctrlKey) {
+        if (
+            event.nativeEvent.composedPath().some((node) => node instanceof HTMLElement && node.hasAttribute('data-tree-control')) ||
+            event.key !== ' ' ||
+            event.altKey ||
+            event.metaKey ||
+            event.ctrlKey
+        ) {
             return;
         }
-        const focused = model.getFocusedPath();
-        if (focused === null) {
-            return;
-        }
-        if (event.key === 'Enter' || event.key === ' ') {
-            // A row is a button, and either key would also click it: a folder would fold and unfold again.
+        const path = model.getFocusedPath();
+        if (path !== null) {
             event.preventDefault();
             event.stopPropagation();
-            const node = nodeOf(layout, focused);
-            if (event.key === ' ') {
-                toggleRows(menuTargetsOf(focused, model.getSelectedPaths()));
-            } else if (isFile(node)) {
-                openNode(node);
-            } else {
-                directoryHandle(model, focused)?.toggle();
-            }
-        } else if (movesFocus(event)) {
-            followFocus(model, (path) => {
-                const node = nodeOf(layoutRef.current, path);
-                // A conflict opens an overlay that would take the keyboard out of the list.
-                if (isFile(node) && node.group !== 'conflicts') {
-                    openNode(node);
-                }
-            });
+            toggleRows(menuTargetsOf(path, model.getSelectedPaths()));
         }
     };
 
-    /* A click on a box ticks that row alone and is kept from the tree, which would select the row and fold it. */
-    const onClickCapture = (event: ReactMouseEvent<HTMLElement>): void => {
-        if (!onCheckbox(event)) {
-            return;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        const path = rowPathOf(event);
-        if (path !== null) {
-            toggleRows([path]);
-        }
-    };
-
-    /* A row that folds is left to the tree, which folds it on the same click. */
-    const onClick = (event: ReactMouseEvent<HTMLElement>): void => {
-        if (extendsSelection(event)) {
-            return;
-        }
-        const path = rowPathOf(event);
-        const node = path === null ? undefined : nodeOf(layout, path);
+    const openPath = (path: string): void => {
+        const node = nodeOf(layout, path);
         if (isFile(node)) {
             openNode(node);
         }
     };
 
-    const onDragStart = (event: ReactDragEvent<HTMLElement>): void => {
-        const path = rowPathOf(event);
-        const node = path === null ? undefined : nodeOf(layout, path);
-        if (isFile(node) && node.group !== 'conflicts') {
-            // The tree wrote its own path for the row, which names the group and joins folders with a lookalike.
+    const onDragStart = (path: string, _targets: readonly string[], event: DragEvent): void => {
+        const node = nodeOf(layout, path);
+        if (isFile(node) && node.group !== 'conflicts' && event.dataTransfer !== null) {
             event.dataTransfer.setData('text/plain', node.path);
             onDrag(node.cwd, shownFile(node.item.entry), event.dataTransfer);
         }
+    };
+
+    const renderControl = (row: FileTreeVisibleRow) => {
+        const node = nodeOf(layout, row.path);
+        if (node === undefined || node.group === 'conflicts') {
+            return null;
+        }
+        const state = node.kind === 'file' ? checkOf(node.item.entry) : checkOfItems(node.items);
+        return (
+            <FileTree.Checkbox
+                label={state === 'checked' ? t('git.list.unstage') : t('git.list.stage')}
+                checked={state === 'checked'}
+                indeterminate={state === 'mixed'}
+                disabled={busy}
+                onCheckedChange={() => toggleRows([row.path])}
+            />
+        );
     };
 
     const menuNodes = nodesOf(menuPaths);
@@ -508,18 +385,31 @@ function GitTree({ layout, branches, collapsed, reading, busy, onOpen, onOpenFil
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
-                ref={attachShift}
                 render={<div />}
                 className="min-h-0 grow overflow-hidden pt-1"
                 onKeyDownCapture={onKeyDownCapture}
-                onClickCapture={onClickCapture}
                 onContextMenu={(event) => {
                     const row = rowPathOf(event);
                     setMenuPaths(row === null ? [] : menuTargetsOf(row, model.getSelectedPaths()));
                 }}
             >
-                <FileTree model={model} className="panel-tree" onClick={onClick} onDragStart={onDragStart} onDragEnd={() => setDragging(null)} />
-                {shiftBar}
+                <FileTree.Root
+                    model={model}
+                    className="h-full min-h-0"
+                    label={t('shell:panel.names.git')}
+                    resetKey={folder ?? ''}
+                    onActivate={openPath}
+                    onFocusMove={(path) => {
+                        const node = nodeOf(layout, path);
+                        if (isFile(node) && node.group !== 'conflicts') {
+                            openNode(node);
+                        }
+                    }}
+                    onRowDragStart={onDragStart}
+                    onDragEnd={() => setDragging(null)}
+                    renderControl={renderControl}
+                    renderDecoration={decorate}
+                />
             </ContextMenu.Trigger>
             <ContextMenu.Popup>
                 {manyTargets && menuItems.length > 0 && (

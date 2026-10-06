@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { FsReadResult, FsWriteResult, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
-import { type FakeEditor, FakeEditorEngine } from '@ruimte/smart-editor/fake';
+import { type FakeEditor, FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { bindDraftEditor } from '@/shell/panels/draft-editor';
 import { endpointKey } from '@/state/keys';

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { ProjectCanvasView, ProjectContent, ProjectDocument, ServerFrame } from '@ruimte/contracts';
 import { connectionOpener, type ClientChannel, type ConnectionServices, type OpenConnection } from '../connection.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import type { InlineChatHost } from '../projects/inline-chat.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { registerProjectHandlers } from './project.ts';

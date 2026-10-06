@@ -1,4 +1,4 @@
-import type { ChatPlace } from '@ruimte/agents-react/host';
+import type { ChatPlace } from '@adecore/agents-react/host';
 import { focusNodeAction } from '@/actions/client-actions';
 import { forkOriginIn } from '@/chat/fork-origin';
 import { revealNode, showView } from '@/project/views';

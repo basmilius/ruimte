@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Bot, Braces, FileJson, MoreHorizontal, Pencil, RotateCcw, Sparkles } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import type { ActionInput } from '@ruimte/actions';
-import { DEFAULT_NODE_TONE } from '@ruimte/diagram';
+import { DEFAULT_NODE_TONE } from '@adecore/diagram';
 import { GRID, type Point } from '@/canvas/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { DiagramDock } from '@/diagram/DiagramDock';

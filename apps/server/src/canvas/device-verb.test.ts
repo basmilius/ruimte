@@ -7,7 +7,7 @@ import { ManualTimers } from '../computer/computer-test-helpers.ts';
 import { DeviceDriver } from '../devices/agent-driver.ts';
 import { ReadingBackend, RecordingBackend, SIMULATOR, pngOf } from '../devices/device-test-helpers.ts';
 import { DeviceManager } from '../devices/manager.ts';
-import { refusalBody } from '@ruimte/agents/context/refusal';
+import { refusalBody } from '@adecore/agents/context/refusal';
 import { VerbRefusal, type CanvasHost, type Noun } from './verb.ts';
 import { verbNamed } from './verbs.ts';
 

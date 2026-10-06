@@ -1,7 +1,8 @@
-import type { EditorEngine } from '@ruimte/smart-editor';
+import type { EditorEngine } from '@adecore/editor';
 import { isApplePlatform } from '@/desktop/bridge';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
 import { shellShortcuts } from '@/terminal/keymap';
+import { RUIMTE_EDITOR_KEYMAP } from '@/shell/editor-keymap';
 
 let loading: Promise<EditorEngine> | null = null;
 let loaded: EditorEngine | null = null;
@@ -27,7 +28,7 @@ export function loadEditorEngine(): Promise<EditorEngine> {
 
 async function createEngine(): Promise<EditorEngine> {
     const apple = isApplePlatform();
-    const { createSmartEditorEngine, shikiScopeColors, shikiTokenizers } = await import('@ruimte/smart-editor');
+    const { createSmartEditorEngine, shikiScopeColors, shikiTokenizers } = await import('@adecore/editor');
     // Ours go in up front, since the editor loads a theme it has not seen by a bundled id.
     const highlighter = () =>
         import('shiki').then(async ({ getSingletonHighlighter }) => {
@@ -39,6 +40,7 @@ async function createEngine(): Promise<EditorEngine> {
         tokenizer: shikiTokenizers(highlighter),
         scopeColors: shikiScopeColors(highlighter),
         handBack: shellShortcuts(apple),
+        keymap: RUIMTE_EDITOR_KEYMAP,
         apple
     });
 }

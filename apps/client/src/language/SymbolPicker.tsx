@@ -8,7 +8,7 @@ import { formatNumber } from '@adecore/ui/format';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { fileUriToPath } from '@ruimte/smart-editor-lsp';
+import { fileUriToPath } from '@adecore/lsp';
 import type { EditorLanguage } from './editor-language';
 import type { SymbolsView } from './popups';
 import { filterEntries, groupEntries, letterOfKind, modeOf, toneOfKind, type SymbolEntry, type SymbolTone, type WorkspaceEntry } from './symbol-picker-model';

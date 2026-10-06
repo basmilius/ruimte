@@ -11,7 +11,7 @@ import {
     isParentStep,
     progressText,
     renderPlanText
-} from '@ruimte/plan';
+} from '@adecore/plan';
 import { z } from 'zod';
 import { defineActionVerb, runAction } from './action-verb.ts';
 import { fieldLines } from './diagram-verb.ts';

@@ -12,7 +12,7 @@ import { generateKeyPair, signMessage } from '../auth/keys.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerPushHandlers } from '../handlers/push.ts';
 import { makeHarness } from '../sessions/test-helpers.ts';
-import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
+import { ManualClock } from '@adecore/agents/outbox/manual-clock';
 import { PushService } from './service.ts';
 import { SnoozeStore } from './snoozes.ts';
 

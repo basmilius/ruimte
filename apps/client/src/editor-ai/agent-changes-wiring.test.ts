@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { ProvenanceReadResult } from '@ruimte/contracts';
-import { useChats } from '@ruimte/agents-react/state/chats';
-import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
+import { useChats } from '@adecore/agents-react/state/chats';
+import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { endpointKey } from '@/state/keys';
 import { useTextDrafts } from '@/state/text-drafts';

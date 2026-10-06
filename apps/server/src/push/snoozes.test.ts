@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
+import { ManualClock } from '@adecore/agents/outbox/manual-clock';
 import type { ServerFrame } from '@ruimte/contracts';
 import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
 import { registerSnoozeHandlers } from '../handlers/snooze.ts';

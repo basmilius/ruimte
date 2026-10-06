@@ -1,4 +1,4 @@
-import type { CompletionItem } from '@ruimte/smart-editor-lsp';
+import type { CompletionItem } from '@adecore/lsp';
 import { qualifierOf } from './completion-model';
 
 const LIMIT = 200;

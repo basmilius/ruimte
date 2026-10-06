@@ -1,6 +1,6 @@
 import { EditorState, StateEffect, StateField, type Extension, type Text, type TransactionSpec } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
-import type { MergeBlockKind, MergeSpan } from '@ruimte/merge';
+import type { MergeBlockKind, MergeSpan } from '@adecore/merge';
 import { replacementOf } from '@/conflicts/conflict-model';
 
 /* Where a block sits in the document being edited, and whether anyone has settled it yet. */

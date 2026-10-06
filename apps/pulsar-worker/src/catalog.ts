@@ -1,5 +1,5 @@
-import claude from '@ruimte/agents/providers/claude-models.json' with { type: 'json' };
-import codex from '@ruimte/agents/providers/codex-models.json' with { type: 'json' };
+import claude from '@adecore/agents/providers/claude-models.json' with { type: 'json' };
+import codex from '@adecore/agents/providers/codex-models.json' with { type: 'json' };
 import type { ModelCatalogsResult } from '@ruimte/pulsar';
 import { json } from './http.ts';
 

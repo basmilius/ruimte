@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import type { ComputerApproval, ComputerApprovalChoice } from '@ruimte/contracts';
-import type { PromptAction } from '@ruimte/agents-react/prompts/logic/prompts';
-import type { ApprovalButtonSpec, HostPrompt, PromptSubject } from '@ruimte/agents-react/prompts/logic/subjects';
+import type { PromptAction } from '@adecore/agents-react/prompts/logic/prompts';
+import type { ApprovalButtonSpec, HostPrompt, PromptSubject } from '@adecore/agents-react/prompts/logic/subjects';
 
 /*
  * What Ruimte asks beside a chat's own prompts: the machine's approval for an agent to operate an app,

@@ -1,7 +1,7 @@
 import type { AgentKind, ProviderCapabilities } from '@ruimte/contracts';
-import { ModelCatalog } from '@ruimte/agents/providers/catalog';
-import { detectCli } from '@ruimte/agents/providers/detect';
-import type { ChatProvider } from '@ruimte/agents/providers/provider';
+import { ModelCatalog } from '@adecore/agents/providers/catalog';
+import { detectCli } from '@adecore/agents/providers/detect';
+import type { ChatProvider } from '@adecore/agents/providers/provider';
 
 // A CLI Ruimte only starts in a shell: no chat backend, no hooks, so no status beyond the session's own.
 const TERMINAL_ONLY_CAPABILITIES: ProviderCapabilities = {

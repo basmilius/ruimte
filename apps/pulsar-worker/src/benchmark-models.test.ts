@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import claude from '@adecore/agents/providers/claude-models.json' with { type: 'json' };
+import codex from '@adecore/agents/providers/codex-models.json' with { type: 'json' };
 import { BENCHMARK_MODELS, type BenchmarkProvider } from './benchmark-models.ts';
 
 interface ManifestOption {
@@ -14,7 +14,7 @@ interface Manifest {
     models: { slug: string; name: string; profile: string; legacy?: boolean }[];
 }
 
-const PROVIDERS = join(import.meta.dir, '../../../packages/agents/src/providers');
+const PROVIDERS = { claude, codex };
 
 // Asked for in the prompt itself, so Artificial Analysis has nothing that measures them.
 const PROMPT_ONLY = ['ultrathink', 'ultra'];
@@ -29,7 +29,7 @@ function effortsOf(options: ManifestOption[]): string[] {
 }
 
 function manifestModels(provider: BenchmarkProvider) {
-    const manifest = JSON.parse(readFileSync(join(PROVIDERS, `${provider}-models.json`), 'utf8')) as Manifest;
+    const manifest = PROVIDERS[provider] as Manifest;
     return manifest.models.map((model) => ({
         slug: model.slug,
         name: model.name,

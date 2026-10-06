@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promi
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { LaunchConfigEntry, LaunchStartResult, LaunchStatus } from '@ruimte/contracts';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import { checkCwd } from '../canvas/project-paths.ts';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';

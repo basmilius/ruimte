@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
 import { Square, X } from 'lucide-react';
 import type { AgentKind } from '@ruimte/contracts';
-import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
-import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';
-import { useProviders } from '@ruimte/agents-react/state/providers';
+import { AgentIcon } from '@adecore/agents-react/agents/AgentIcon';
+import { ProviderLogo } from '@adecore/agents-react/agents/ProviderLogo';
+import { useProviders } from '@adecore/agents-react/state/providers';
 import { Button, Icon, IconButton, Input, Kbd, Spinner, shortcut } from '@adecore/ui';
 import { formatDuration } from '@adecore/ui/format';
-import type { EditorLanguage } from '@/language/editor-language';
+import type { EditorLanguage as RuimteEditorLanguage } from '@/language/ruimte-editor-language';
+
+type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
 import { isShortcut } from '@/language/shortcut-keys';
 import { diffSegments, emphasisOf } from './inline-edit-model';
 import type { ApplyOutcome, InlineEditSession } from './inline-edit-session';

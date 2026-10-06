@@ -7,14 +7,14 @@ import { codexIndexIn } from '../agents/codex-title.ts';
 import { modeOfHook, normalizeHook, settleWaiting } from '../agents/hooks.ts';
 import { isTerminalReply } from './terminal-replies.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
-import { narrowerMode } from '@ruimte/agents/modes';
-import { launchEnv, storedAccount, type AccountLaunches } from '@ruimte/agents/providers/accounts/launch';
+import { narrowerMode } from '@adecore/agents/modes';
+import { launchEnv, storedAccount, type AccountLaunches } from '@adecore/agents/providers/accounts/launch';
 import { contextHint, verbsNote } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
 import type { SessionSnapshot, SnapshotStore } from './snapshot-store.ts';
 import { errorText } from '../error-text.ts';
-import { CodedError } from '@ruimte/agents/coded-error';
+import { CodedError } from '@adecore/agents/coded-error';
 import { ClientSinks } from '../client-sinks.ts';
 
 type SessionErrorCode =

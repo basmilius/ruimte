@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { AppleFoundationEventSchema, clipText, type AppleFoundationEvent, type AppleFoundationRequest } from '@ruimte/contracts';
 import { closeAppleNetworkTools } from './apple-network-tools.ts';
 import { APPLE_TOOL_NAMES, appleToolInput, executeAppleTool, type AppleToolCall, type AppleToolContext, type AppleToolResult } from './apple-tools.ts';
-import type { ApprovalDecision, BackendHost, BackendLaunch, ChatBackend, TurnInput } from '@ruimte/agents/chat/backend';
-import { ChatChild } from '@ruimte/agents/chat/chat-process';
+import type { ApprovalDecision, BackendHost, BackendLaunch, ChatBackend, TurnInput } from '@adecore/agents/chat/backend';
+import { ChatChild } from '@adecore/agents/chat/chat-process';
 
 export interface AppleBackendOptions {
     enabled?: () => boolean;

@@ -1,9 +1,9 @@
 import { join } from 'node:path';
-import { RecordDirectory } from '@ruimte/agents/record-directory';
+import { RecordDirectory } from '@adecore/agents/record-directory';
 import { ProjectNodeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
-import type { AgentLineageStore } from '@ruimte/agents/lineage';
-import type { TaskStore } from '@ruimte/agents/tasks/task-store';
+import type { AgentLineageStore } from '@adecore/agents/lineage';
+import type { TaskStore } from '@adecore/agents/tasks/task-store';
 import type { OutboxStore } from '../outbox/outbox.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { SessionManager } from '../sessions/manager.ts';

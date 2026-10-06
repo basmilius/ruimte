@@ -1,5 +1,5 @@
-import type { EditorRange } from '@ruimte/smart-editor';
-import type { SelectionRange } from '@ruimte/smart-editor-lsp';
+import type { EditorRange } from '@adecore/editor';
+import type { SelectionRange } from '@adecore/lsp';
 import type { EditorLanguage } from './editor-language';
 
 const METHOD = 'textDocument/selectionRange';

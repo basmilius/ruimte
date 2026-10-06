@@ -1,7 +1,8 @@
 import { createElement } from 'react';
 import i18next from 'i18next';
-import { setChatHost, type ChatActions } from '@ruimte/agents-react/host';
-import { setLazyPrefetch } from '@ruimte/agents-react/lazy';
+import { configureChatStorage } from '@adecore/agents-react/storage';
+import { setChatHost, type ChatActions } from '@adecore/agents-react/host';
+import { setLazyPrefetch } from '@adecore/agents-react/lazy';
 import { performAsPerson, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas/accents';
@@ -63,6 +64,7 @@ const PERSON_CHAT_ACTIONS: ChatActions = {
  * none of it reaches the first chunk.
  */
 export function connectChatHost(): void {
+    configureChatStorage({ namespace: 'ruimte' });
     setLazyPrefetch((load) => prefetcher.register(load));
     setChatHost({
         accents: {

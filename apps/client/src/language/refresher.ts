@@ -1,4 +1,4 @@
-import { StaleResultError } from '@ruimte/smart-editor-lsp';
+import { StaleResultError } from '@adecore/lsp';
 import { realTimers, type Timers } from './timers';
 
 /*

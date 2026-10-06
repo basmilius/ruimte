@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { LaunchStartResult, LaunchStatus } from '@ruimte/contracts';
-import { refusalBody } from '@ruimte/agents/context/refusal';
+import { refusalBody } from '@adecore/agents/context/refusal';
 import { agentLaunches } from '../launches/agent-host.ts';
 import type { LaunchStartOptions } from '../launches/runner.ts';
 import type { ResolvedLaunch } from '../launches/store.ts';

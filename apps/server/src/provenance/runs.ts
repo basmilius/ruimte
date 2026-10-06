@@ -1,4 +1,4 @@
-import { diffLines, type Change } from '@ruimte/merge';
+import { diffLines, type Change } from '@adecore/merge';
 import { PROVENANCE_LIMITS, type ProvenanceRun } from '@ruimte/contracts';
 import { hashLine } from './line-hash.ts';
 

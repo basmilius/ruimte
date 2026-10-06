@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { viewStateKey, viewStates } from '@/shell/panels/editor-view-state';
+import { viewStateKey, viewStates } from '@/shell/panels/editor-view-state-host';
 import type { Transport } from '@/transport/transport';
 import { followMove, moveFile, saveBeforeMove } from './file-moves.ts';
 import { useFiles } from './files.ts';

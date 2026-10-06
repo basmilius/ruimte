@@ -14,7 +14,7 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-// Files exactly as a daemon before the outbox moved into @ruimte/agents wrote them, so one updated in place reads them.
+// Files exactly as a daemon before the outbox moved into @adecore/agents wrote them, so one updated in place reads them.
 const WRITTEN = {
     'start-agent-0a1b2c3d4e5f':
         '{"kind":"start-agent","payload":{"node":"chat","provider":"claude","cwd":"/work","runtimeMode":"auto","ceiling":"auto","account":"claude-work"},"id":"start-agent-0a1b2c3d4e5f","projectId":"project-1","target":"chat-2","createdAt":1000,"attempts":0,"notBefore":1000}',

@@ -1,4 +1,4 @@
-import type { Editor } from '@ruimte/smart-editor';
+import type { Editor } from '@adecore/editor';
 import { endpointKey } from '@/state/keys';
 import { type TextDrafts, textDrafts, useTextDrafts } from '@/state/text-drafts';
 import type { Transport } from '@/transport/transport';

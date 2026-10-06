@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ProviderAccountsService } from '@ruimte/agents/providers/accounts/service';
-import { testAccounts } from '@ruimte/agents/providers/accounts/test-accounts';
+import type { ProviderAccountsService } from '@adecore/agents/providers/accounts/service';
+import { testAccounts } from '@adecore/agents/providers/accounts/test-accounts';
 import { makeHarness, type Harness } from './test-helpers.ts';
 
 let harness: Harness;

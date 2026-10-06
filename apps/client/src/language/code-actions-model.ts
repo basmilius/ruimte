@@ -1,4 +1,4 @@
-import { applyTextEdits, type CodeAction, type Command, type Diagnostic, type Range, type WorkspaceEdit } from '@ruimte/smart-editor-lsp';
+import { applyTextEdits, type CodeAction, type Command, type Diagnostic, type Range, type WorkspaceEdit } from '@adecore/lsp';
 import { comparePositions } from './diagnostics-model';
 import { entriesOf, renamesOf } from './workspace-edit';
 

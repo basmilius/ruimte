@@ -1,5 +1,5 @@
 import type { RuntimeMode } from '@ruimte/contracts';
-import { MODE_ORDER, ceilingForOpening } from '@ruimte/agents/modes';
+import { MODE_ORDER, ceilingForOpening } from '@adecore/agents/modes';
 import type { VerbCall } from './verb.ts';
 
 export const MODE_LINES: readonly string[] = [

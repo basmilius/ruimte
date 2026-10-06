@@ -1,4 +1,4 @@
-import type { TaskCoordinator } from '@ruimte/agents/tasks/task-coordinator';
+import type { TaskCoordinator } from '@adecore/agents/tasks/task-coordinator';
 import type { SessionEvent } from '../sessions/manager.ts';
 
 const TERMINAL_ENDED = 'It ended without a result: a terminal reports back with ruimte-context done.';

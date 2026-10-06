@@ -21,7 +21,7 @@ import {
     type PublishDiagnosticsParams,
     type RenamedFile,
     type WorkspaceEdit
-} from '@ruimte/smart-editor-lsp';
+} from '@adecore/lsp';
 import { errorText } from '../error-text.ts';
 import type { FileChange } from './file-watch.ts';
 import { LanguageLog } from './log.ts';

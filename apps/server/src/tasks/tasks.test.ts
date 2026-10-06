@@ -4,12 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatItem, ChatSubagentItem, ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import { nextLine } from '../canvas/task-verbs.ts';
-import { claudeStoppingOnResume } from '@ruimte/agents/chat/fake-claude';
-import type { FakeCli } from '@ruimte/agents/chat/fake-cli';
-import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
+import { claudeStoppingOnResume } from '@adecore/agents/chat/fake-claude';
+import type { FakeCli } from '@adecore/agents/chat/fake-cli';
+import { ManualClock } from '@adecore/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from './test-daemon.ts';
-import { WAITING_GRACE_MS } from '@ruimte/agents/tasks/waiting-child';
+import { WAITING_GRACE_MS } from '@adecore/agents/tasks/waiting-child';
 
 type Daemon = TestDaemon;
 

@@ -1,6 +1,6 @@
 import i18next from 'i18next';
-import { StaleResultError, type CompletionContext, type CompletionItem } from '@ruimte/smart-editor-lsp';
-import type { EditorContentChange, EditorPosition, EditorRange, EditorTextChange } from '@ruimte/smart-editor';
+import { StaleResultError, type CompletionContext, type CompletionItem } from '@adecore/lsp';
+import type { EditorContentChange, EditorPosition, EditorRange, EditorTextChange } from '@adecore/editor';
 import { useToasts } from '@/state/toasts';
 import { comparePositions, shiftPosition } from './diagnostics-model';
 import type { EditorLanguage } from './editor-language';

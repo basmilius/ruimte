@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
+import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeOnDeviceModel } from '@/ondevice/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { EditorLanguage } from './editor-language';
+import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { eventOf } from './key-events';
-import { ProjectLanguage } from './project-language';
+import { ProjectLanguage } from './ruimte-project-language';
 
 const uri = 'file:///work/app/src/a.ts';
 const otherUri = 'file:///work/app/src/b.ts';

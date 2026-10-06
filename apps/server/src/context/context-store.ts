@@ -13,9 +13,9 @@ import type {
     ProjectCanvasView
 } from '@ruimte/contracts';
 import { workflowAgentRef } from '@ruimte/contracts';
-import { renderPlanText } from '@ruimte/plan';
+import { renderPlanText } from '@adecore/plan';
 import { contextChangeNote } from './context-note.ts';
-import { CodedError } from '@ruimte/agents/coded-error';
+import { CodedError } from '@adecore/agents/coded-error';
 import { readRefusal } from './read-refusal.ts';
 import type { PageReading } from '../browser/drive.ts';
 import { renderPage } from './context-browser.ts';

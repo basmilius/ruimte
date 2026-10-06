@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { EditorLanguage } from '@/language/editor-language';
+import type { EditorLanguage } from '@/language/ruimte-editor-language';
 import { useSettings } from '@/state/settings';
 
 /* Hands the rows above declarations what the person asked of them in the settings. */

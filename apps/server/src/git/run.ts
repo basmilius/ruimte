@@ -1,4 +1,4 @@
-import { CodedError } from '@ruimte/agents/coded-error';
+import { CodedError } from '@adecore/agents/coded-error';
 
 export interface GitResult<Output = string> {
     code: number;

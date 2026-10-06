@@ -1,4 +1,4 @@
-import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS, EmptySchema } from '@ruimte/agent-contracts/protocol';
+import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS, EmptySchema } from '@adecore/agent-contracts/protocol';
 import { ProjectSidebarResultSchema } from './project-sidebar.ts';
 import { z } from 'zod';
 import {
@@ -142,7 +142,7 @@ import {
     DrawingSavePayloadSchema,
     DrawingSaveResultSchema,
     DrawingTargetPayloadSchema
-} from './drawing.ts';
+} from './drawing-host.ts';
 import {
     DiagramChangedEventSchema,
     DiagramCopyPayloadSchema,
@@ -150,7 +150,7 @@ import {
     DiagramSavePayloadSchema,
     DiagramSaveResultSchema,
     DiagramTargetPayloadSchema
-} from './diagram.ts';
+} from './diagram-host.ts';
 import {
     LanguageCommandPayloadSchema,
     LanguageCommandResultSchema,
@@ -209,7 +209,7 @@ import {
     PlanListPayloadSchema,
     PlanListResultSchema,
     PlanRemovedEventSchema
-} from './plan.ts';
+} from './plan-host.ts';
 import {
     ProvenanceChangedEventSchema,
     ProvenanceReadPayloadSchema,
@@ -290,8 +290,8 @@ export * from './direct.ts';
 export * from './direct-liveness.ts';
 export * from './device.ts';
 export * from './context-sources.ts';
-export * from './diagram.ts';
-export * from './drawing.ts';
+export * from './diagram-host.ts';
+export * from './drawing-host.ts';
 export * from './envelope.ts';
 export * from './font.ts';
 export * from './fs.ts';
@@ -306,7 +306,7 @@ export * from './machine-http.ts';
 export * from './machine-update.ts';
 export * from './model.ts';
 export * from './node-defaults.ts';
-export * from './plan.ts';
+export * from './plan-host.ts';
 export * from './processes.ts';
 export * from './provenance.ts';
 export * from './project.ts';

@@ -1,6 +1,6 @@
 import { ActionRefusal } from '@ruimte/actions';
 import type { Plan, PlanPersonOp } from '@ruimte/contracts';
-import { applyPlanOps } from '@ruimte/plan';
+import { applyPlanOps } from '@adecore/plan';
 import { endpointKey } from '@/state/keys';
 import { usePlans } from '@/state/plans';
 import { TransportError, type Transport } from '@/transport/transport';

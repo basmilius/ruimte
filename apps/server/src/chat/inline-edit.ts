@@ -1,4 +1,4 @@
-import type { PromptNotes } from '@ruimte/agents/chat/chat-session';
+import type { PromptNotes } from '@adecore/agents/chat/chat-session';
 
 /*
  * What an inline edit's chat hears once, in front of its first prompt and never in the thread: the

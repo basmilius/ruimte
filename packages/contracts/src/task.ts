@@ -1,7 +1,7 @@
-import { TaskSchema } from '@ruimte/agent-contracts/task';
+import { TaskSchema } from '@adecore/agent-contracts/task';
 import { z } from 'zod';
 
-export * from '@ruimte/agent-contracts/task';
+export * from '@adecore/agent-contracts/task';
 
 export const TaskListPayloadSchema = z.object({ projectId: z.string().min(1) });
 export type TaskListPayload = z.infer<typeof TaskListPayloadSchema>;

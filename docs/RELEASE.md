@@ -19,48 +19,22 @@ computer use app is assembled with that version before signing and notarization.
 
 ## npm
 
-Publishing a release also publishes `ruimte` on npm, Ruimte for a machine without the app, with the
-same version, and beside it the libraries another app builds on: `@ruimte/agent-contracts`,
-`@ruimte/agents` and `@ruimte/agents-react`. The components they draw with are not among them:
-`@adecore/ui` lives in its own repository and releases on its own, and `@ruimte/agents-react`
-names it as a peer and compiles against its published declarations. `.github/workflows/npm.yml` runs on `release: published`, on the dispatch the
-`publish` job of `release.yml` sends (a release that job publishes starts no workflow by itself) and
-by hand (`gh workflow run npm.yml -f version=0.2.0`, for a tag that exists). It compiles the daemon for
-`darwin-arm64` on macOS (Apple silicon only, no Intel build) and for `linux-x64` and `linux-arm64`
-on Ubuntu, lays out the packages with `packages/npm/scripts/build.ts` and the libraries with
-`packages/npm/scripts/build-libraries.ts` (JavaScript and declarations compiled by `tsc`, each library
-against the declarations of the ones before it, a workspace dependency pinned to the release) and
-publishes them with `packages/npm/scripts/publish.ts`: the libraries in dependency order, then the
-three `@ruimte/<os>-<cpu>` packages, and `ruimte` last,
-a version already on the registry skipped, and a prerelease under the `next` tag. A run that failed
-halfway can run again.
+Publishing a release also publishes `ruimte` and its three platform binary packages at the application version. Shared libraries are consumed from Adecore at the version pinned in the manifests and `bun.lock`; Ruimte's application version advances independently.
 
-The libraries can also go out on their own, between two releases of Ruimte. Ruimte and the
-libraries count up one series of versions: after Ruimte 0.7.0 the libraries go out as 0.7.1, and
-the next release of Ruimte is 0.7.2, which publishes the libraries again at its own version. A tag
-starts it:
+`.github/workflows/npm.yml` runs on `release: published`, on the dispatch sent by `release.yml`, or by hand (`gh workflow run npm.yml -f version=0.2.0`, for an existing tag). It compiles the daemon for `darwin-arm64` on macOS and `linux-x64`/`linux-arm64` on Ubuntu, then uses `packages/npm/scripts/build.ts` to prepare the packages. `publish.ts` publishes the platform binaries before the launcher, skips versions already on npm and uses `next` for prereleases.
 
-```sh
-git tag libraries-v0.7.1 && git push origin libraries-v0.7.1
-```
-
-The tag starts `npm.yml` and never `release.yml`, which only takes `v*`. The run refuses a version
-that already has a `v` tag, runs `ci.yml` on the tagged commit, and publishes the four libraries
-with `publish.ts --libraries`, without compiling a daemon. Again by hand:
-`gh workflow run npm.yml --ref libraries-v0.7.1 -f version=0.7.1 -f libraries=true`; the `--ref`
-is what `ci.yml` checks out. The other way round nothing stops a release of Ruimte on a version
-the libraries already took, and then npm skips them, so a release of Ruimte picks the next version
-after the last tag of either kind (`git tag --sort=-v:refname | head -3`).
+The `libraries-v*` trigger and library publication jobs have been removed. The old library sources, build script and placeholders remain during consumer validation; they are no longer part of Ruimte's publication workflow. Adecore owns library builds and Trusted Publishing for its npm names.
 
 There is no npm token. Every package trusts the workflow through Trusted Publishing, set on
 npmjs.com per package under Settings, Trusted publishing: GitHub Actions, owner `basmilius`,
 repository `ruimte`, workflow `npm.yml`, environment `npm`. npm only offers that setting for a
 package that exists, which is what the `0.0.0` folders in `packages/npm/placeholders` were published
-for, by hand and once. A new platform package or library needs the same two steps before its first release:
+for, by hand and once. A new platform package needs the same two steps before its first release:
 
 ```sh
 npm login
-for dir in packages/npm/placeholders/*/; do (cd "$dir" && npm publish --access public); done   # a name already on npm refuses, which is fine
+cd packages/npm/placeholders/linux-x64
+npm publish --access public
 ```
 
 A macOS binary is compiled on macOS: Bun writes the bundle after it signs, and a darwin binary that
@@ -71,9 +45,7 @@ To try the packages without publishing:
 ```sh
 RUIMTE_VERSION=0.0.0-local bun apps/server/scripts/compile.ts --target darwin-arm64 --outdir /tmp/npm/binaries/darwin-arm64
 bun packages/npm/scripts/build.ts --version 0.0.0-local --binaries /tmp/npm/binaries --out /tmp/npm/out --only darwin-arm64
-bun packages/npm/scripts/build-libraries.ts --version 0.0.0-local --out /tmp/npm/out
 bun packages/npm/scripts/publish.ts --out /tmp/npm/out --dry-run    # wants all three platforms
-bun packages/npm/scripts/publish.ts --out /tmp/npm/out --libraries --dry-run
 ```
 
 `bun run test:integration` does the first two and runs `node <launcher> --version` against the result.
@@ -188,13 +160,13 @@ so every client refused every machine as older.
 `.github/workflows/release.yml` signs and notarizes every release, and stops before building when
 one of these five repository secrets is empty, so the draft stays a draft:
 
-| Secret | What it is |
-| --- | --- |
-| `CSC_LINK` | the Developer ID certificate as a base64 `.p12` |
-| `CSC_KEY_PASSWORD` | the password of that `.p12` |
-| `APPLE_API_KEY_P8` | the contents of the `.p8`, newlines and all |
-| `APPLE_API_KEY_ID` | the key id |
-| `APPLE_API_ISSUER` | the issuer id |
+| Secret             | What it is                                      |
+| ------------------ | ----------------------------------------------- |
+| `CSC_LINK`         | the Developer ID certificate as a base64 `.p12` |
+| `CSC_KEY_PASSWORD` | the password of that `.p12`                     |
+| `APPLE_API_KEY_P8` | the contents of the `.p8`, newlines and all     |
+| `APPLE_API_KEY_ID` | the key id                                      |
+| `APPLE_API_ISSUER` | the issuer id                                   |
 
 The workflow creates the draft release before electron-builder starts. Left to itself, two artifacts
 that finish at the same moment both see no release, both create one, and the upload behind the race

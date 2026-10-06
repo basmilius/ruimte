@@ -1,4 +1,4 @@
-import type { Editor } from '@ruimte/smart-editor';
+import type { Editor } from '@adecore/editor';
 
 export interface HostedRow {
     id: string;

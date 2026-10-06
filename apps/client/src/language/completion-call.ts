@@ -1,4 +1,4 @@
-import type { CompletionItem } from '@ruimte/smart-editor-lsp';
+import type { CompletionItem } from '@adecore/lsp';
 import { CLASS_KIND, CONSTRUCTOR_KIND, FUNCTION_KIND, METHOD_KIND, SNIPPET_FORMAT, type Insertion } from './completion-model';
 
 /* What the platform's editors send to ask for parameter info once an item is in; the card is ours to open. */

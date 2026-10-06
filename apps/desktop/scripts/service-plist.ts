@@ -2,7 +2,7 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { launchAgentPlist } from '@ruimte/service';
+import { launchAgentPlist } from '@adecore/service';
 
 /*
  * Prints the LaunchAgent the packaged app writes, pointed at a daemon compiled in this checkout, so
@@ -28,6 +28,7 @@ const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
 process.stdout.write(
     launchAgentPlist({
         label: values.label,
+        description: 'Ruimte machine',
         program: join(repo, 'apps', 'server', 'dist', `mac-${arch}`, 'ruimte'),
         args: ['--port', values.port, '--serve', join(repo, 'apps', 'client', 'dist')],
         environment: { RUIMTE_HOME: values.home, PATH: process.env.PATH ?? '/usr/bin:/bin' },

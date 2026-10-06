@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { writeAtomicSync } from '@ruimte/agents/fs';
+import { writeAtomicSync } from '@adecore/agents/fs';
 import { PushAttentionResultSchema, type PushAttentionEntry } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 

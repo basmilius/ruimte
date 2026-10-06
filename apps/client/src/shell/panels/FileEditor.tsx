@@ -1,12 +1,12 @@
 import i18next from 'i18next';
 import { type RefObject, useEffect, useLayoutEffect, useRef } from 'react';
-import type { Editor, EditorEngine, EditorIndentation } from '@ruimte/smart-editor';
+import type { Editor, EditorEngine, EditorIndentation } from '@adecore/editor';
 import { mountDraftEditor } from '@/shell/panels/draft-editor';
 import { useCodeTheme } from '@/state/code-theme';
 import type { RevealLineRequest } from '@/state/files';
 import { foldRolesFor } from '@/state/code-folding';
 import { useSettings } from '@/state/settings';
-import { forgetMovesFrom, openingPlace, viewStateKey, viewStates } from '@/shell/panels/editor-view-state';
+import { forgetMovesFrom, openingPlace, viewStateKey, viewStates } from '@/shell/panels/editor-view-state-host';
 import { endpointKey } from '@/state/keys';
 import { type DiskText, textDrafts } from '@/state/text-drafts';
 

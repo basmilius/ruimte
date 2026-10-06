@@ -1,5 +1,5 @@
-import { CHAT_PREFERENCES_KEY, reloadChatPreferences } from '@ruimte/agents-react/chat/preferences';
-import { reloadUsagePreferences, USAGE_PREFERENCES_KEY } from '@ruimte/agents-react/state/usage';
+import { CHAT_PREFERENCES_KEY, reloadChatPreferences } from '@adecore/agents-react/chat/preferences';
+import { reloadUsagePreferences, USAGE_PREFERENCES_KEY } from '@adecore/agents-react/state/usage';
 import { ENDPOINTS_STORAGE_KEY, useEndpoints } from '@/state/endpoints';
 import { followOtherWindows, type StorageTarget } from '@/state/other-windows';
 import { SETTINGS_STORAGE_KEY, useSettings } from '@/state/settings';

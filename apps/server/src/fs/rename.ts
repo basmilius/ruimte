@@ -1,6 +1,6 @@
 import { lstat, mkdir, realpath, rename, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { CodedError } from '@ruimte/agents/coded-error';
+import { CodedError } from '@adecore/agents/coded-error';
 import { isInside } from '../canvas/project-paths.ts';
 import { realRoots, type WriteBoundary } from './write.ts';
 

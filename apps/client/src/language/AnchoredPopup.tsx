@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import type { EditorRect } from '@ruimte/smart-editor';
+import type { EditorRect } from '@adecore/editor';
 import { placePopup, type PlaceOptions } from './popup-placement';
 
 export interface AnchoredPopupProps {

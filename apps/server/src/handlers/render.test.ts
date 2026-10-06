@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { RenderSceneResultSchema, type ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import { DiagramStore } from '../projects/diagram-store.ts';
 import { DrawingStore } from '../projects/drawing-store.ts';
 import { ProjectStore } from '../projects/project-store.ts';

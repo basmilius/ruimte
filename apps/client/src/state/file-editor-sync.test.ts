@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { EventMap, EventType, RequestMap, RequestType, ServerFrame } from '@ruimte/contracts';
-import { FakeWatch } from '../../../../packages/agents/src/watch-test-helpers.ts';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import { DrawingClient } from '../drawing/drawing-client';
 import { DiagramClient } from '../diagram/diagram-client';
 import { TransportError, type Transport } from '../transport/transport';

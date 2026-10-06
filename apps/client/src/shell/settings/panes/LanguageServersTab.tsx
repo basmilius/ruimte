@@ -10,10 +10,10 @@ import { CustomServersTracker, useCustomServers } from '@/language/custom-server
 import { Dot, LogDialog } from '@/language/ServerParts';
 import { report, serverDetail, sidecarDetails, useStatuses } from '@/language/server-status';
 import { draftFiles } from '@/language/project-files';
-import { acquireProjectLanguage, type ProjectLanguage } from '@/language/project-language';
+import { acquireProjectLanguage, type ProjectLanguage } from '@/language/ruimte-project-language';
 import { actionsOf, groupedStatuses, isOwn, kindOf, nameOf, packageOf, toneOf } from '@/language/status-view';
 import type { LanguageStatusTracker } from '@/language/status';
-import { createHolder } from '@/shell/panels/use-editor-language';
+import { createHolder } from '@adecore/editor-react';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useProject } from '@/state/project';
 import { useWindow, workspaceOf } from '@/state/window';

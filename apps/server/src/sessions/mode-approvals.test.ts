@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ProjectNode, ProjectView, RuntimeMode } from '@ruimte/contracts';
-import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
+import { FakeWatch } from '@adecore/agents/watch-test-helpers';
 import { documentPathInFolder, privatePathOf } from '../projects/project-files.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { ModeApprovals, modesSet, personModeOf } from './mode-approvals.ts';

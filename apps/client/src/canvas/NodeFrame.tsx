@@ -27,7 +27,7 @@ import {
     type LucideIcon
 } from 'lucide-react';
 import { focusNodeAction, renameNodeAction } from '@/actions/client-actions';
-import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
+import { AgentIcon } from '@adecore/agents-react/agents/AgentIcon';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { WorkingMark } from '@/attention/WorkingMark';
 import { TaskMark } from '@/tasks/TaskMark';
@@ -56,11 +56,11 @@ import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canva
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { ForkPill } from '@/chat/ForkPill';
-import { AccountPill } from '@ruimte/agents-react/chat/ui/AccountPill';
-import { LimitPill } from '@ruimte/agents-react/chat/ui/LimitState';
+import { AccountPill } from '@adecore/agents-react/chat/ui/AccountPill';
+import { LimitPill } from '@adecore/agents-react/chat/ui/LimitState';
 import { PlanPill } from '@/plan/PlanPill';
-import { SubagentBreadcrumb, SubagentTitleCrumb } from '@ruimte/agents-react/chat/ui/SubagentControls';
-import { useSubagentTrail } from '@ruimte/agents-react/chat/subagent-view';
+import { SubagentBreadcrumb, SubagentTitleCrumb } from '@adecore/agents-react/chat/ui/SubagentControls';
+import { useSubagentTrail } from '@adecore/agents-react/chat/subagent-view';
 import { BrowserBody } from '@/nodes/BrowserBody';
 import { DeviceBody, DevicePlate, DeviceToolbar } from '@/devices/DeviceBody';
 import { NoteNode } from '@/canvas/nodes/NoteNode';

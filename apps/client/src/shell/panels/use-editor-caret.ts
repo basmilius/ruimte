@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import type { Editor, EditorPosition } from '@ruimte/smart-editor';
+import type { Editor, EditorPosition } from '@adecore/editor';
 
 const START: EditorPosition = { line: 0, character: 0 };
 

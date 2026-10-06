@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { Ban, Check, ChevronDown, ChevronUp, FileWarning, LoaderCircle, Sparkles, Wand2 } from 'lucide-react';
 import type { GitConflictFile, GitConflictsResult, GitOperation } from '@ruimte/contracts';
-import { bothLines, sideLines, wandLines, type MergeSide } from '@ruimte/merge';
+import { bothLines, sideLines, wandLines, type MergeSide } from '@adecore/merge';
 import { ConflictEditor, type EditorHandle } from '@/conflicts/ConflictEditor';
 import { ConflictSides } from '@/conflicts/ConflictSides';
 import {

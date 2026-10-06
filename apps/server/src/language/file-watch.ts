@@ -1,6 +1,6 @@
 import { lstat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@ruimte/agents/watch-seam';
+import { settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents/watch-seam';
 
 // A save, a checkout and an install all touch many files at once; one batch per burst is enough.
 const SETTLE_MS = 200;

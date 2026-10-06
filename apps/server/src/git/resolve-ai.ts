@@ -1,6 +1,6 @@
 import type { AgentKind, GitResolveAiResult, GitResolveBlock } from '@ruimte/contracts';
-import { fingerprint, splitBlocks, splitLines, type MergeBlock } from '@ruimte/merge';
-import type { ChatProvider } from '@ruimte/agents/providers/provider';
+import { fingerprint, splitBlocks, splitLines, type MergeBlock } from '@adecore/merge';
+import type { ChatProvider } from '@adecore/agents/providers/provider';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { readConflict } from './conflict.ts';
 import { streamCommand, toplevel, GitError } from './run.ts';

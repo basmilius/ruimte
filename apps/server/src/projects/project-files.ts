@@ -25,7 +25,7 @@ import {
     type ProjectView,
     type SharedFileRead
 } from '@ruimte/contracts';
-import { fileExists, isNotFound, writeAtomic } from '@ruimte/agents/fs';
+import { fileExists, isNotFound, writeAtomic } from '@adecore/agents/fs';
 
 export const PROJECT_DIR = '.ruimte';
 export const PROJECT_FILE = 'project.json';

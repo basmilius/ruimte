@@ -26,7 +26,7 @@ import type {
     LanguageEditAnswerPayload,
     LanguageRequestPayload
 } from '@ruimte/contracts';
-import { CodedError } from '@ruimte/agents/coded-error';
+import { CodedError } from '@adecore/agents/coded-error';
 import {
     applyContentChanges,
     ErrorCodes,
@@ -41,8 +41,8 @@ import {
     type DocumentSnapshot,
     type RenamedFile,
     type WorkspaceEdit
-} from '@ruimte/smart-editor-lsp';
-import type { WatchSeams } from '@ruimte/agents/watch-seam';
+} from '@adecore/lsp';
+import type { WatchSeams } from '@adecore/agents/watch-seam';
 import { ClientSinks } from '../client-sinks.ts';
 import { ProjectFileWatcher, type StatPath } from './file-watch.ts';
 import { CustomLanguageServers, customProfile } from './custom.ts';

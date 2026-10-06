@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ActionRegistry, type ActionResult } from '@ruimte/actions';
 import type { ChatForkResult, ChatInfo, ChatItem, Plan, PlanPersonOp, ProviderInfo, RequestMap, RequestType } from '@ruimte/contracts';
-import { applyPlanOps } from '@ruimte/plan';
+import { applyPlanOps } from '@adecore/plan';
 import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import { sessionActions, type SessionMachine } from './session-actions';
-import type { ChatState } from '@ruimte/agents-react/state/chats';
+import type { ChatState } from '@adecore/agents-react/state/chats';
 import { useDocument } from '@/state/document';
 import type { SessionState } from '@/state/sessions';
 import { TransportError, type Transport } from '@/transport/transport';
