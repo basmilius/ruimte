@@ -3328,6 +3328,17 @@ export const ACTION_DEFINITIONS = {
         input: z.object({ pid: z.number().int().positive(), startTime: z.number(), name: z.string(), signal: ProcessSignalSchema }),
         output: z.object({ pid: z.number().int(), name: z.string(), signal: ProcessSignalSchema })
     },
+    /* The machine checks the request whole (`database.request`), so this passes it on as it stands, and a grid that pages is one parse of nothing. */
+    'database.request': {
+        title: 'Ask a database',
+        description:
+            'Sends one request of the database views to the machine of this project: a table, a page of rows, a query or a change a person made in a view, and its answer.',
+        effect: 'external',
+        domain: 'developer',
+        actors: PERSON,
+        input: z.object({ request: z.unknown().describe('A request of the database views, as they made it') }),
+        output: z.object({ response: z.unknown() })
+    },
     'usage.summary': {
         title: 'Read AI usage',
         description:

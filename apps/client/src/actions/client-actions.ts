@@ -1,4 +1,5 @@
 import { contentActions, type ContentMachine } from '@/actions/content-actions';
+import { databaseActions, type DatabaseMachine } from '@/actions/database-actions';
 import { asksFirst, asRefusal, developerActions, GIT_OPERATION, type DeveloperMachine } from '@/actions/developer-actions';
 import { filesActions, projectPathOf, type FilesMachine } from '@/actions/files-actions';
 import { inspectionActions } from '@/actions/inspection-actions';
@@ -386,6 +387,7 @@ export interface ClientActionMachine {
     sessions: Partial<SessionMachine>;
     content: Partial<ContentMachine>;
     files: Partial<FilesMachine>;
+    database: Partial<DatabaseMachine>;
     pages: Partial<PageMachine>;
     projects: Partial<ProjectMachine>;
     machine: Partial<MachineReach>;
@@ -402,13 +404,14 @@ const LIVE_MACHINE: ClientActionMachine = {
     sessions: {},
     content: {},
     files: {},
+    database: {},
     pages: {},
     projects: {},
     machine: {}
 };
 
 export function createClientActionRegistry(document: StoreApi<DocumentState>, machine: Partial<ClientActionMachine> = {}): ActionRegistry<void> {
-    const { sendChat, clearChat, clearTerminal, providers, copyViewContent, viewDeletion, developer, sessions, content, files, pages, projects } = {
+    const { sendChat, clearChat, clearTerminal, providers, copyViewContent, viewDeletion, developer, sessions, content, files, database, pages, projects } = {
         ...LIVE_MACHINE,
         ...machine
     };
@@ -418,6 +421,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         ...sessionActions(document, sessions),
         ...contentActions(document, content),
         ...filesActions(files),
+        ...databaseActions(database),
         ...pageActions(document, pages),
         ...projectActions(document, projects),
         ...machineActions(machine.machine),
