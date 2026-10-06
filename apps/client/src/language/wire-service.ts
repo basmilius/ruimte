@@ -186,7 +186,7 @@ export class WireLanguageService implements LanguageService {
         });
         open.version = reply.version;
         open.servers = reply.servers;
-        this.setProviders(open, reply.providers);
+        open.providers = reply.providers;
     }
 
     async changeDocument(uri: string, changes: readonly ContentChange[]): Promise<void> {
