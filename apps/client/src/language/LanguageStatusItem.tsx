@@ -83,6 +83,8 @@ function ServerRow({
     const { t } = useTranslation('panels');
     const kind = kindOf(status.server);
     const actions = actionsOf(status);
+    // Here the step back is for a server that broke; the settings offer it at any time.
+    const rollback = actions.rollback && status.state === 'crashed';
     const fail = (error: unknown): void => report(error, t);
     const detail = serverDetail(status, t);
     const alternative = alternativeTo(status, statuses);
@@ -103,11 +105,21 @@ function ServerRow({
                     {line}
                 </div>
             ))}
-            {(actions.install || actions.restart || actions.log || alternativeKind !== null) && (
+            {(actions.install || actions.update || rollback || actions.restart || actions.log || alternativeKind !== null) && (
                 <div className="flex flex-wrap gap-2 pl-4">
                     {kind !== null && actions.install && (
                         <Button size="xs" variant="secondary" onClick={() => void tracker.install(kind).catch(fail)}>
                             {t('language.install')}
+                        </Button>
+                    )}
+                    {kind !== null && actions.update && status.update !== undefined && (
+                        <Button size="xs" variant="secondary" onClick={() => void tracker.install(kind).catch(fail)}>
+                            {status.update.rebuild === true ? t('language.rebuild') : t('language.update', { version: status.update.version })}
+                        </Button>
+                    )}
+                    {kind !== null && rollback && status.previous !== undefined && (
+                        <Button size="xs" variant="secondary" onClick={() => void tracker.rollback(kind).catch(fail)}>
+                            {t('language.rollback', { version: status.previous.version })}
                         </Button>
                     )}
                     {actions.restart && (

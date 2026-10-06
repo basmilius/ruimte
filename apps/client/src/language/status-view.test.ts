@@ -35,6 +35,14 @@ describe('the two PHP servers', () => {
         expect(actionsOf(status('php-native', 'not-installed', { unavailable: true })).install).toBe(false);
         expect(actionsOf(status('php-native', 'not-installed')).install).toBe(true);
     });
+
+    test('offer an update and a step back where the machine has them, and neither while it installs', () => {
+        const both = { update: { version: '0.4.1' }, previous: { version: '0.3.0' } };
+        expect(actionsOf(status('php-native', 'ready', both))).toMatchObject({ update: true, rollback: true, install: false });
+        expect(actionsOf(status('php-native', 'installing', both))).toMatchObject({ update: false, rollback: false });
+        expect(actionsOf(status('php-native', 'ready'))).toMatchObject({ update: false, rollback: false });
+        expect(actionsOf(status('custom:zls', 'ready', both))).toMatchObject({ update: false, rollback: false });
+    });
 });
 
 describe('chipServer', () => {
@@ -48,9 +56,9 @@ describe('chipServer', () => {
 
 describe('what a person can do', () => {
     test('offers Install only for a server that is not installed, and Restart for one that runs or crashed', () => {
-        expect(actionsOf(status('typescript', 'not-installed'))).toEqual({ install: true, restart: false, log: false });
+        expect(actionsOf(status('typescript', 'not-installed'))).toEqual({ install: true, update: false, rollback: false, restart: false, log: false });
         expect(actionsOf(status('typescript', 'not-installed', { message: 'bun install failed' })).log).toBe(true);
-        expect(actionsOf(status('typescript', 'crashed'))).toEqual({ install: false, restart: true, log: true });
+        expect(actionsOf(status('typescript', 'crashed'))).toEqual({ install: false, update: false, rollback: false, restart: true, log: true });
         expect(actionsOf(status('typescript', 'installing')).restart).toBe(false);
     });
 
@@ -76,7 +84,7 @@ describe('the servers of a person of their own', () => {
     });
 
     test('are restarted and read in a log, and never installed', () => {
-        expect(actionsOf(status('custom:a', 'crashed', { name: 'Zig' }))).toEqual({ install: false, restart: true, log: true });
+        expect(actionsOf(status('custom:a', 'crashed', { name: 'Zig' }))).toEqual({ install: false, update: false, rollback: false, restart: true, log: true });
         expect(actionsOf(status('custom:a', 'not-installed')).install).toBe(false);
     });
 });

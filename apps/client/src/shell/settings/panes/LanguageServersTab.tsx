@@ -116,6 +116,16 @@ function ServerRow({ status, statuses, tracker, searchId, onLog }: ServerRowProp
                             {t('language.install')}
                         </Button>
                     )}
+                    {kind !== null && actions.update && status.update !== undefined && (
+                        <Button size="sm" variant="secondary" onClick={() => void tracker.install(kind).catch(fail)}>
+                            {status.update.rebuild === true ? t('language.rebuild') : t('language.update', { version: status.update.version })}
+                        </Button>
+                    )}
+                    {kind !== null && actions.rollback && status.previous !== undefined && (
+                        <Button size="sm" onClick={() => void tracker.rollback(kind).catch(fail)}>
+                            {t('language.rollback', { version: status.previous.version })}
+                        </Button>
+                    )}
                     {actions.restart && (
                         <Button size="sm" variant="secondary" onClick={() => void tracker.restart(status.server).catch(fail)}>
                             {t('language.restart')}

@@ -31,6 +31,12 @@ export function serverDetail(status: LanguageServerStatus, t: TFunction<'panels'
     if (status.state === 'not-installed') {
         return t('language.installDetail', { name: nameOf(status.server, [status]), version: status.version });
     }
+    // Why the last update did not come, or what it brings.
+    if (status.update !== undefined) {
+        return (
+            status.message ?? (status.update.rebuild === true ? t('language.rebuildDetail') : t('language.updateDetail', { version: status.update.version }))
+        );
+    }
     return status.documents > 0 ? t('language.documents', { count: status.documents, formatted: formatNumber(status.documents) }) : '';
 }
 

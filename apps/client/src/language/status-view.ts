@@ -102,10 +102,13 @@ export function chipServer(statuses: readonly LanguageServerStatus[], serving: r
     return statuses.find((status) => isActive(status.state)) ?? null;
 }
 
-/* What can be done to a server in this state, and only that. A server of a person's own is never installed. */
-export function actionsOf(status: LanguageServerStatus): { install: boolean; restart: boolean; log: boolean } {
+/* What can be done to a server in this state, and only that. A server of a person's own is never installed, updated or set back. */
+export function actionsOf(status: LanguageServerStatus): { install: boolean; update: boolean; rollback: boolean; restart: boolean; log: boolean } {
+    const catalog = !isOwn(status) && status.state !== 'installing';
     return {
         install: status.state === 'not-installed' && !isOwn(status) && status.unavailable !== true,
+        update: catalog && status.update !== undefined,
+        rollback: catalog && status.previous !== undefined,
         restart: status.state === 'crashed' || status.state === 'ready' || status.state === 'indexing',
         log: status.state !== 'not-installed' || status.message !== undefined
     };
