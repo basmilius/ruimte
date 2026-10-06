@@ -194,8 +194,8 @@ const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
 const LEGACY_PAIRING_PATHS = new Set(['/auth/pair', '/auth/pairing-token', '/auth/challenge', '/auth/ticket']);
 const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });
 
-// Past anything a hook or a verb sends, and the ceiling on what an unauthenticated request can make the daemon buffer.
-const MAX_REQUEST_BODY_BYTES = 8 * 1024 * 1024;
+// Past anything a hook or a verb sends, a visual of 16 MiB with its JSON escaping included, and the ceiling on what an unauthenticated request can make the daemon buffer.
+const MAX_REQUEST_BODY_BYTES = 24 * 1024 * 1024;
 
 // Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
 
