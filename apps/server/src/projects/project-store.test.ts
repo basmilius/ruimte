@@ -466,6 +466,12 @@ describe('ProjectStore', () => {
         expect(summaries.at(-1)).toMatchObject({ event: 'project.summary', payload: { summary: { projectId, closedAt: null } } });
     });
 
+    test('a folder opened for the first time is told to every client, so another window lists it', async () => {
+        const opened = await store.openProject({ folder });
+        await summarySent();
+        expect(summaries.at(-1)).toMatchObject({ event: 'project.summary', payload: { summary: { projectId: opened.summary.projectId, closedAt: null } } });
+    });
+
     test('a project that is closed while it is open is let go of as well', async () => {
         const { summary } = await store.openProject({ folder });
         await store.closeProject(summary.projectId, 'c1');
@@ -489,6 +495,7 @@ describe('ProjectStore', () => {
         const { summary } = await store.openProject({ folder });
         store.hold('c1', summary.projectId);
         store.hold('c2', summary.projectId);
+        await summarySent();
         summaries.length = 0;
 
         expect(await store.closeProject(summary.projectId, 'c1')).toEqual({ ended: 0, otherClients: 1 });
@@ -603,6 +610,7 @@ describe('ProjectStore', () => {
         const { summary } = await store.openProject({ folder });
         const other = store.subscribe('c2', () => undefined);
         store.hold('c2', summary.projectId);
+        await summarySent();
         summaries.length = 0;
 
         other();
@@ -613,6 +621,7 @@ describe('ProjectStore', () => {
 
     test('letting go of a project leaves the list where it was', async () => {
         const { summary } = await store.openProject({ folder });
+        await summarySent();
         summaries.length = 0;
         store.release(summary.projectId);
         expect(store.openProjectIds()).toEqual([]);

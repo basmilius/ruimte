@@ -77,6 +77,18 @@ describe('the union of the machines that are known', () => {
         expect(useProjectList.getState().projects.map((row) => `${row.endpointId}:${row.summary.name}`)).toEqual(['daemon-a:p1', 'daemon-b:Renamed']);
     });
 
+    test('a project another window opened joins the list of its own machine', () => {
+        const state = useProjectList.getState();
+        state.setProjects('daemon-a', [summary('p1')]);
+        state.setProjects('daemon-b', [summary('p1')]);
+        state.patchProject('daemon-a', summary('p2'));
+        expect(useProjectList.getState().projects.map((row) => `${row.endpointId}:${row.summary.projectId}`)).toEqual([
+            'daemon-a:p1',
+            'daemon-b:p1',
+            'daemon-a:p2'
+        ]);
+    });
+
     test('a machine that is forgotten takes its rows with it', () => {
         const state = useProjectList.getState();
         state.setProjects('daemon-a', [summary('p1')]);

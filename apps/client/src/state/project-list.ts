@@ -17,7 +17,7 @@ interface ProjectListStore {
     projects: ProjectRow[];
     /* One machine's answer, replacing whatever that machine had listed before. */
     setProjects(endpointId: string, summaries: ProjectSummary[]): void;
-    /* One row of one machine, for a rename or an icon that changed under the list. */
+    /* One row of one machine, for a rename, an icon, or a project another client just opened there. */
     patchProject(endpointId: string, summary: ProjectSummary): void;
     /* Every row of a machine this client no longer knows. */
     forgetProjects(endpointId: string): void;
@@ -34,12 +34,13 @@ export const useProjectList = create<ProjectListStore>((set, get) => ({
         set({ projects: [...others, ...summaries.map((summary) => ({ endpointId, summary: withClientClosedProject(endpointId, summary) }))] });
     },
     patchProject(endpointId, summary) {
+        const projects = get().projects;
+        const patched = { endpointId, summary: withClientClosedProject(endpointId, summary) };
+        const known = projects.some((row) => row.endpointId === endpointId && row.summary.projectId === summary.projectId);
         set({
-            projects: get().projects.map((row) =>
-                row.endpointId === endpointId && row.summary.projectId === summary.projectId
-                    ? { ...row, summary: withClientClosedProject(endpointId, summary) }
-                    : row
-            )
+            projects: known
+                ? projects.map((row) => (row.endpointId === endpointId && row.summary.projectId === summary.projectId ? patched : row))
+                : [...projects, patched]
         });
     },
     forgetProjects(endpointId) {

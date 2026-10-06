@@ -577,12 +577,10 @@ export class ProjectStore {
         const document: ProjectDocument = { version: PROJECT_VERSION, rev: loaded.rev, ...content, shared: loaded.shared };
 
         // Opening is what takes a project back out of Recent, wherever the open came from.
-        const wasRecent = entry.closedAt !== null && entry.closedAt !== undefined;
         entry = { ...entry, name: document.name, color: document.color, icon: document.icon ?? null, lastOpenedAt: Date.now(), closedAt: null };
         await this.saveRegistry([...entries.filter((candidate) => candidate.projectId !== entry!.projectId), entry]);
-        if (wasRecent) {
-            this.publish(entry);
-        }
+        // Every other client lists it too: a project new to this machine, or one moving to the top.
+        this.publish(entry);
 
         this.release(entry.projectId);
         this.index.set(entry.projectId, entry.folder, fromPortable(document, entry.folder));

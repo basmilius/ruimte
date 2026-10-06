@@ -2,6 +2,7 @@ import { isRecentProject, type ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList, type ProjectRow } from '@/state/project-list';
 import { pool, transportFor, type ConnectionState } from '@/transport';
+import { watchPool } from '@/transport/pool-watch';
 import { rememberClosedProject } from './closed-projects';
 import { readLastProject, rememberProject } from './last-project';
 
@@ -52,14 +53,19 @@ export function foldList(endpointId: string, summaries: ProjectSummary[]): void 
     writeCachedList(endpointId, summaries);
 }
 
-export function closeListedProjectLocally(endpointId: string, summary: ProjectSummary): void {
-    rememberClosedProject(endpointId, summary.projectId);
-    useProjectList.getState().patchProject(endpointId, { ...summary, closedAt: Date.now() });
+/* One project of one machine into the union, and into the list it is remembered by. */
+export function foldSummary(endpointId: string, summary: ProjectSummary): void {
+    useProjectList.getState().patchProject(endpointId, summary);
     const projects = useProjectList
         .getState()
         .projects.filter((row) => row.endpointId === endpointId)
         .map((row) => row.summary);
     writeCachedList(endpointId, projects);
+}
+
+export function closeListedProjectLocally(endpointId: string, summary: ProjectSummary): void {
+    rememberClosedProject(endpointId, summary.projectId);
+    foldSummary(endpointId, { ...summary, closedAt: Date.now() });
     const last = readLastProject(browserStorage());
     if (last?.endpointId === endpointId && last.projectId === summary.projectId) {
         rememberProject(endpointId, null);
@@ -204,5 +210,13 @@ export function watchOpenLists(source: OpenListSource, refresh: () => void): () 
  */
 export function startProjectList(): () => void {
     primeCachedLists();
-    return watchOpenLists(pool, () => void refreshAllLists());
+    const offLists = watchOpenLists(pool, () => void refreshAllLists());
+    // Another window or device that opens, closes or renames a project on a machine tells every socket of it.
+    const offSummaries = watchPool((link, endpointId) => ({
+        subscriptions: [link.on('project.summary', ({ summary }) => foldSummary(endpointId, summary))]
+    }));
+    return () => {
+        offLists();
+        offSummaries();
+    };
 }
