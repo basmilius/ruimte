@@ -1,12 +1,13 @@
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createDatabaseHost, helperPath, spawnHelper, type DatabaseHost, type HelperProcess } from '@adecore/database/host';
 import type { ConnectionConfig, DatabaseResponse } from '@adecore/database/protocol';
 import type { MachineHome } from '../fs/machine-home.ts';
 
 const HELPER_FILE = process.platform === 'win32' ? 'adecore-database.exe' : 'adecore-database';
 
-/* The database helper this daemon starts: the override, the one packaged beside the daemon, or the installed package's. Null without one. */
+/* The database helper this daemon starts: the override, the one packaged beside the daemon, the installed package's, or a linked checkout's own build. Null without one. */
 export function databaseHelperPath(): string | null {
     if (process.env.RUIMTE_DATABASE_HELPER) {
         return process.env.RUIMTE_DATABASE_HELPER;
@@ -15,7 +16,18 @@ export function databaseHelperPath(): string | null {
     if (existsSync(packaged)) {
         return packaged;
     }
-    return helperPath();
+    return helperPath() ?? linkedHelperPath();
+}
+
+/* A linked ADE CORE checkout has no platform package with a binary in it, only what `helper:build` left in its target folder. */
+function linkedHelperPath(): string | null {
+    try {
+        const entry = fileURLToPath(import.meta.resolve('@adecore/database/host'));
+        const built = join(dirname(entry), '..', '..', 'helper', 'target', 'release', HELPER_FILE);
+        return existsSync(built) ? built : null;
+    } catch {
+        return null;
+    }
 }
 
 /* Never a request in the log: `open` and `test` carry the password. */
