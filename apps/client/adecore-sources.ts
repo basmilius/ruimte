@@ -2,6 +2,33 @@ import { existsSync, realpathSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { normalizePath, type Plugin, type ViteDevServer } from 'vite';
 
+const DYNAMIC_JSON_ATTRIBUTES = /(import\(\s*(["'])[^"'\n]+\.json\2)\s*,\s*\{\s*with\s*:\s*\{\s*type\s*:\s*(["'])json\3\s*\}\s*\}\s*\)/g;
+const STATIC_JSON_ATTRIBUTES = /(from\s*(["'])[^"'\n]+\.json\2)\s+with\s*\{\s*type\s*:\s*(["'])json\3\s*\}/g;
+
+/* The source with every `{ type: 'json' }` import attribute on a `.json` specifier taken out. */
+export function stripJsonImportAttributes(code: string): string {
+    return code.replace(DYNAMIC_JSON_ATTRIBUTES, '$1)').replace(STATIC_JSON_ATTRIBUTES, '$1');
+}
+
+/*
+ * Vite serves a JSON module as JavaScript, so a browser refuses an import that asserts JSON. A package
+ * from npm is pre-bundled and never reaches the browser with the attribute; a linked source does.
+ */
+export function adecoreJsonImports(): Plugin {
+    return {
+        name: 'ruimte-adecore-json-imports',
+        apply: 'serve',
+        enforce: 'pre',
+        transform: {
+            filter: { id: { include: /\.[cm]?[jt]sx?(?:\?.*)?$/, exclude: /\/node_modules\// }, code: /type\s*:\s*["']json["']/ },
+            handler(code) {
+                const stripped = stripJsonImportAttributes(code);
+                return stripped === code ? null : { code: stripped, map: null };
+            }
+        }
+    };
+}
+
 export function adecoreSources(): Plugin {
     const stylesheets = new Map<string, Set<string>>();
     let server: ViteDevServer | undefined;

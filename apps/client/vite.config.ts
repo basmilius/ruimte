@@ -5,7 +5,7 @@ import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { build, defaultClientConditions, defineConfig, searchForWorkspaceRoot, type Plugin } from 'vite';
-import { adecoreSources } from './adecore-sources.ts';
+import { adecoreJsonImports, adecoreSources } from './adecore-sources.ts';
 
 // The dev daemon sits on 4211 so an installed Ruimte can keep 4210.
 const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4211';
@@ -131,7 +131,7 @@ function pdfjsAssets(): Plugin {
 }
 
 export default defineConfig(({ mode }) => ({
-    plugins: [adecoreSources(), react(), tailwindcss(), bytesWorker(), pdfjsAssets(), ...(mode === 'station' ? [stationHead()] : [])],
+    plugins: [adecoreSources(), adecoreJsonImports(), react(), tailwindcss(), bytesWorker(), pdfjsAssets(), ...(mode === 'station' ? [stationHead()] : [])],
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url))
