@@ -167,7 +167,9 @@ describe('a save in one client', () => {
         await request(clients.a, 'project.save', { projectId, baseRev: rev, content: { ...start, views: [...start.views, canvas('third', 'Third')] } });
         await expect(request(clients.b, 'project.save', { projectId, baseRev: rev, content: start })).rejects.toThrow(`rev ${rev + 1}`);
 
-        const kinds = clients.b.channel.frames.map((frame) => ('event' in frame ? frame.event : 'reply'));
+        const kinds = clients.b.channel.frames
+            .filter((frame) => !('event' in frame && frame.event === 'project.summary'))
+            .map((frame) => ('event' in frame ? frame.event : 'reply'));
         expect(kinds).toEqual(['project.changed', 'reply']);
     });
 });

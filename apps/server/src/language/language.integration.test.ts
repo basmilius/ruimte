@@ -753,7 +753,11 @@ describe('the project closing', () => {
         const results = await Promise.all(exits);
         expect(results.length).toBeGreaterThanOrEqual(4);
         for (const projectId of ['p1', 'p2', 'p3']) {
-            expect((await host.status(projectId)).every((status) => status.state === 'stopped')).toBe(true);
+            for (const status of await host.status(projectId)) {
+                // The catalogue also reports alternatives this fixture never installed.
+                expect(['stopped', 'not-installed']).toContain(status.state);
+                expect(status.documents).toBe(0);
+            }
         }
     }, 60_000);
 });

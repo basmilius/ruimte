@@ -447,6 +447,8 @@ describe('ProjectStore', () => {
         const opened = await store.openProject({ folder });
         const { projectId } = opened.summary;
         expect(opened.summary.closedAt).toBeNull();
+        await summarySent();
+        summaries.length = 0;
 
         await store.closeProject(projectId, 'c1');
         const listed = (await store.list()).find((project) => project.projectId === projectId)!;
