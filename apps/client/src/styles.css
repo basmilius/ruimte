@@ -106,7 +106,6 @@
     --term-dim: #8e8e96;
     --term-green: #15803d;
     --term-blue: #1d4ed8;
-    --term-yellow: #b45309;
     --term-red: #b91c1c;
     /* A find: every match a dim yellow, the one the bar is on a bright one with dark text on it in either theme. */
     --find-match: rgb(250 204 21 / 0.35);
@@ -196,7 +195,6 @@
     --term-dim: #6b6b76;
     --term-green: #4ade80;
     --term-blue: #7dd3fc;
-    --term-yellow: #fbbf24;
     --term-red: #f87171;
     --find-match: rgb(250 204 21 / 0.24);
     --find-current: #f5c542;
@@ -250,9 +248,7 @@
     --color-term-dim: var(--term-dim);
     --color-term-green: var(--term-green);
     --color-term-blue: var(--term-blue);
-    --color-term-yellow: var(--term-yellow);
     --color-term-red: var(--term-red);
-    --color-find-match: var(--find-match);
     --color-find-current: var(--find-current);
     --color-note-yellow: var(--note-yellow);
     --color-note-green: var(--note-green);
