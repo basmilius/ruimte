@@ -886,11 +886,12 @@ describe('files that change on disk', () => {
         await open(host, 'src/a.php', '<?php', 'client-1', 'php');
         await ready(host, 'php-native');
         const [php] = spawner.of('php-native');
-        // What the server registers in its release 0.2.0.
+        // What the server registers in its release 0.3.0.
         const globs = [
             '**/*.php',
             '**/composer.json',
             '**/vendor/composer/installed.json',
+            '**/vendor/composer/autoload_classmap.php',
             '**/.env',
             '**/.env.*',
             '**/lang/**',
@@ -914,7 +915,8 @@ describe('files that change on disk', () => {
             'resources/js/Pages/Settings.svelte',
             'templates/base.html.twig',
             'config/packages/doctrine.yaml',
-            'vendor/composer/installed.json'
+            'vendor/composer/installed.json',
+            'vendor/composer/autoload_classmap.php'
         ];
         for (const path of changed) {
             disk.add(`/work/${path}`);
