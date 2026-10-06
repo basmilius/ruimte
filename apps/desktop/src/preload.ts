@@ -1,4 +1,4 @@
-import type { KeepAwakeRequest, MenuSpec } from '@ruimte/desktop-bridge';
+import type { KeepAwakeRequest, MenuSpec, OpenPathRequest, SavePathRequest } from '@ruimte/desktop-bridge';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
 const { contextBridge, ipcRenderer, webUtils } = require('electron') as typeof import('electron');
@@ -72,6 +72,8 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
     setAgentActivity: (activity: { working: number; attention: number }): void => ipcRenderer.send('agents:activity', activity),
     saveFile: (suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null> =>
         ipcRenderer.invoke('dialog:save-file', suggestedName, bytes, mime),
+    chooseSavePath: (request: SavePathRequest): Promise<string | null> => ipcRenderer.invoke('dialog:choose-save-path', request),
+    chooseOpenPath: (request: OpenPathRequest): Promise<string | null> => ipcRenderer.invoke('dialog:choose-open-path', request),
     /* Only where the shell knows the file manager's clipboard formats (`file-clipboard.ts`), so elsewhere the client offers no copy. */
     copyFiles:
         process.platform === 'darwin' || process.platform === 'linux'
@@ -95,6 +97,10 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
         saveApiKey: (apiKey: string): Promise<unknown> => ipcRenderer.invoke('openai:save-api-key', apiKey),
         clearApiKey: (): Promise<unknown> => ipcRenderer.invoke('openai:clear-api-key'),
         createLiveSession: (sdp: string, preferences: unknown): Promise<unknown> => ipcRenderer.invoke('openai:create-live-session', sdp, preferences)
+    },
+    databaseSecrets: {
+        read: (key: string): Promise<string | null> => ipcRenderer.invoke('database:secret-read', key),
+        write: (key: string, secret: string | null): Promise<void> => ipcRenderer.invoke('database:secret-write', key, secret)
     },
     speech: {
         state: (): Promise<unknown> => ipcRenderer.invoke('speech:state'),

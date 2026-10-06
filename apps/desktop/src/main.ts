@@ -27,6 +27,7 @@ import { type AgentActivity, type BackgroundServiceState, type KeepAwakeRequest,
 import { isWindowKey, isWindowView, totalActivity, windowUrl } from './app-windows';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { copyablePaths, fileClipboard, osClipboardFormat } from './file-clipboard';
+import { allFilesLabel, databaseSecretFile, openDialogPlan, parseOpenPathRequest, parseSavePathRequest, parseSecret, parseSecretKey } from './database-bridge';
 import { editFrameOf, runGuestEdit } from './guest-edit';
 import { askDaemonWork, proveDaemon, type DaemonPort } from './daemon-proof';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from './keep-awake';
@@ -942,6 +943,38 @@ handleFromApp('dialog:save-file', async (event, suggestedName: string, bytes: Ui
     return result.filePath;
 });
 
+/* Where a database export goes. Only the path comes back: the machine writes the file, and only for a page on this computer. */
+handleFromApp('dialog:choose-save-path', async (event, request: unknown) => {
+    const { suggestedName, extension } = parseSavePathRequest(request);
+    const window = senderWindow(event);
+    if (!window) {
+        return null;
+    }
+    const result = await dialog.showSaveDialog(window, {
+        defaultPath: suggestedName,
+        filters: [
+            { name: extension.toUpperCase(), extensions: [extension] },
+            { name: allFilesLabel(interfaceLanguage ?? undefined), extensions: ['*'] }
+        ]
+    });
+    return result.canceled || !result.filePath ? null : result.filePath;
+});
+
+/* A file to import, a SQLite database or an SSH key. Only the path comes back; nothing is read here. */
+handleFromApp('dialog:choose-open-path', async (event, request: unknown) => {
+    const plan = openDialogPlan(parseOpenPathRequest(request), app.getPath('home'), allFilesLabel(interfaceLanguage ?? undefined));
+    const window = senderWindow(event);
+    if (!window) {
+        return null;
+    }
+    const result = await dialog.showOpenDialog(window, {
+        properties: plan.showHiddenFiles ? ['openFile', 'showHiddenFiles'] : ['openFile'],
+        filters: plan.filters,
+        ...(plan.defaultPath === undefined ? {} : { defaultPath: plan.defaultPath })
+    });
+    return result.canceled ? null : (result.filePaths[0] ?? null);
+});
+
 handleFromApp('shell:open-external', async (_event, url: string) => {
     if (/^https?:\/\//.test(url)) {
         await shell.openExternal(url);
@@ -1025,6 +1058,23 @@ async function openAiCredentialStatus(): Promise<OpenAiCredentialStatus> {
 }
 
 handleFromApp('openai:credential-status', () => openAiCredentialStatus());
+
+/* The passwords of database connections, one file per key. Kept so a store without encryption still holds its secrets in memory until the app quits. */
+const databaseSecretStores = new Map<string, SecretStore>();
+
+function databaseSecrets(key: string): SecretStore {
+    const path = databaseSecretFile(join(app.getPath('userData'), 'database-secrets'), key);
+    let store = databaseSecretStores.get(path);
+    if (store === undefined) {
+        store = fileSecretStore(path, safeStorage);
+        databaseSecretStores.set(path, store);
+    }
+    return store;
+}
+
+handleFromApp('database:secret-read', (_event, key: unknown) => databaseSecrets(parseSecretKey(key)).read());
+
+handleFromApp('database:secret-write', (_event, key: unknown, secret: unknown) => databaseSecrets(parseSecretKey(key)).write(parseSecret(secret)));
 
 handleFromApp('openai:save-api-key', async (_event, apiKey: unknown) => {
     if (typeof apiKey !== 'string' || apiKey.trim() === '') {

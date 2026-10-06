@@ -1,11 +1,14 @@
 import type {
     AgentActivity,
     BackgroundServiceState,
+    DatabaseSecretsBridge,
     KeepAwakeRequest,
     MenuSpec,
     MicrophoneBridge,
     OpenAiLivePreferences,
+    OpenPathRequest,
     ReleaseNotesState,
+    SavePathRequest,
     SpeechBridge,
     UpdateState
 } from '@ruimte/desktop-bridge';
@@ -18,11 +21,15 @@ export type {
     BackgroundServiceState,
     DaemonCrash,
     DaemonOwner,
+    DatabaseSecretsBridge,
     KeepAwakeRequest,
     OpenAiLivePreferences,
+    OpenPathPurpose,
+    OpenPathRequest,
     PendingRestart,
     Release,
     ReleaseNotesState,
+    SavePathRequest,
     ServiceSupport,
     UpdateState
 } from '@ruimte/desktop-bridge';
@@ -191,6 +198,12 @@ export interface DesktopBridge {
     /* A native save dialog for bytes the client made (an exported drawing). Optional for the same
        reason `onBrowserContextMenu` is; without it the client falls back to a browser download. */
     saveFile?(suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null>;
+    /* Where a person wants a file written, chosen in a native save dialog that writes nothing itself.
+       Optional for the same reason `onBrowserContextMenu` is; without it a database offers no export. */
+    chooseSavePath?(request: SavePathRequest): Promise<string | null>;
+    /* A file a person picked in a native open dialog, as its path; nothing is read. Optional for the
+       same reason `onBrowserContextMenu` is; without it a database offers no import and no browse button. */
+    chooseOpenPath?(request: OpenPathRequest): Promise<string | null>;
     /* Puts files of this machine on the clipboard the way its file manager pastes them, with the paths
        as text beside them. False when a path is not absolute or no longer exists. Optional for the same
        reason `onBrowserContextMenu` is, and absent on a platform the shell has no format for. */
@@ -221,6 +234,9 @@ export interface DesktopBridge {
     /* The API key stays in the shell; the page can replace it and learn whether one exists, but it
        can never read the value back. Optional until the running shell has restarted onto this API. */
     openAi?: OpenAiBridge;
+    /* The passwords of database connections, kept by the shell and never in a project's files. Optional
+       for the same reason `onBrowserContextMenu` is; without it a password lasts as long as the page. */
+    databaseSecrets?: DatabaseSecretsBridge;
     /* Speech to text in a helper beside the app, on this machine. Optional for the same reason
        `onBrowserContextMenu` is; without it dictation is not offered. */
     speech?: SpeechBridge;
