@@ -144,10 +144,10 @@ describe('native policy', () => {
         assets: { 'darwin-arm64': { url: 'https://example.test/a.tar.gz', sha256: 'f'.repeat(64), format: 'tar.gz', executable: 'php-language-server' } }
     };
 
-    it('pins the standalone v0.1.0 artifacts and their native version', () => {
-        expect(descriptor.version).toBe('0.1.0');
+    it('pins the standalone v0.2.0 artifacts and their native version', () => {
+        expect(descriptor.version).toBe('0.2.0');
         expect(descriptor.stubsCommit).toBe('e4f5f6c3de39f3bab3e9f3fca4b8cdb8b061e681');
-        expect(descriptor.sourceRevision).toBe('3b49cba6b108fb64700e0ebad50908ce577cf40d');
+        expect(descriptor.sourceRevision).toBe('bd14168840fc64a361147791cb594b81e93e4987');
         expect(descriptor).not.toHaveProperty('adecoreVersion');
         expect(Object.keys(descriptor.assets).sort()).toEqual(['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-x64']);
         for (const [target, asset] of Object.entries(descriptor.assets)) {
