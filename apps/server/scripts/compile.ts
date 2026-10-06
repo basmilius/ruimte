@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { downloadScrcpyServer } from '../src/devices/scrcpy-server.ts';
+import { placeDatabaseHelper } from './database-helper.ts';
 
 /*
  * Compiles the daemon into one executable per platform, with the `ruimte-context` script next
@@ -31,6 +32,7 @@ const [targetOs = '', targetArch = ''] = flags.target?.split('-') ?? [];
 const values = flags.target ? { os: nodeOs[targetOs] ?? targetOs, arch: targetArch } : { os: flags.os, arch: flags.arch };
 
 const bunOs: Record<string, string> = { mac: 'darwin', linux: 'linux', win: 'windows' };
+const nodePlatform: Record<string, string> = { mac: 'darwin', linux: 'linux', win: 'win32' };
 if (!(values.os in bunOs) || !['x64', 'arm64'].includes(values.arch)) {
     console.error(`Unsupported target ${values.os}-${values.arch}`);
     process.exit(1);
@@ -134,6 +136,13 @@ if (values.os === 'mac') {
     if (computerUseBuild.exitCode !== 0) {
         process.exit(computerUseBuild.exitCode);
     }
+}
+
+try {
+    await placeDatabaseHelper(root, join(outDir, 'native'), nodePlatform[values.os]!, values.arch);
+} catch (e) {
+    console.error(`The database helper could not be placed: ${e instanceof Error ? e.message : String(e)}`);
+    process.exit(1);
 }
 
 if (values.os === 'mac' || values.os === 'linux') {

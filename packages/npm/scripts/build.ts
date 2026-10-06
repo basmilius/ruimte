@@ -69,6 +69,14 @@ for (const target of targets) {
         await copyFile(`${foundationHelper}.NOTICES`, `${targetHelper}.NOTICES`);
         await chmod(targetHelper, 0o755);
     }
+    const databaseHelper = join(source, 'native', 'adecore-database');
+    if (existsSync(databaseHelper)) {
+        await mkdir(join(dir, 'bin', 'native'), { recursive: true });
+        const targetHelper = join(dir, 'bin', 'native', 'adecore-database');
+        await copyFile(databaseHelper, targetHelper);
+        await copyFile(`${databaseHelper}.LICENSE`, `${targetHelper}.LICENSE`);
+        await chmod(targetHelper, 0o755);
+    }
     // An artifact download drops the mode, and npm packs the mode it finds.
     await chmod(join(dir, 'bin', 'ruimte'), 0o755);
     await chmod(join(dir, 'bin', 'ruimte-context'), 0o755);
