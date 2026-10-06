@@ -232,6 +232,15 @@ struct MachineAgentsPage: View {
                 Toggle("Agents may delete any view or node", isOn: endpointBinding("agentsDeleteAnyView"))
                     .disabled(model.state.busy)
             }
+            if model.endpoint?["visualReplies"]?.boolValue != nil {
+                Toggle(isOn: endpointBinding("visualReplies")) {
+                    Text("Visual replies")
+                    Text(
+                        "On, an agent may show a chart, table or mockup above its reply, as a page. Off, it answers in text. Visuals already in a chat stay."
+                    )
+                }
+                .disabled(model.state.busy)
+            }
         } header: {
             Text("Defaults")
         } footer: {

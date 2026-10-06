@@ -1128,6 +1128,10 @@ struct ChatEntryView: View {
                 if let item = entry.items.first {
                     ChatObservedRow(record: item, client: client, chatID: chatID, presentation: presentation)
                 }
+            case .visual:
+                if let visual = entry.visual {
+                    ChatVisualCard(visual: visual, presentation: presentation, client: client, chatID: chatID)
+                }
             case .tools:
                 if entry.items.count == 1, let item = entry.items.first {
                     ChatObservedRow(record: item, client: client, chatID: chatID, presentation: presentation)

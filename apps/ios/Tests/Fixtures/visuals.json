@@ -1,0 +1,248 @@
+{
+  "page": "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><style data-visual-theme>:root{color-scheme:dark;\n--background:#18181b;\n--foreground:#fafafa;\n--muted:#27272a;\n--muted-foreground:#a1a1aa;\n--card:#1f1f23;\n--card-foreground:#fafafa;\n--popover:#27272a;\n--popover-foreground:#fafafa;\n--secondary:#27272a;\n--secondary-foreground:#fafafa;\n--border:rgba(250, 250, 250, 0.12);\n--input:rgba(250, 250, 250, 0.16);\n--ring:rgba(250, 250, 250, 0.4);\n--primary:#fafafa;\n--primary-foreground:#18181b;\n--accent:#27272a;\n--accent-foreground:#fafafa;\n--destructive:#ef4444;\n--destructive-foreground:#ffffff;\n--warning:#f59e0b;\n--warning-foreground:#18181b;\n--success:#22c55e;\n--success-foreground:#18181b;\n--info:#3b82f6;\n--info-foreground:#ffffff;\n--code-background:#27272a;\n--code-foreground:#fafafa;\n--chart-1:#60a5fa;\n--chart-2:#fb923c;\n--chart-3:#2dd4bf;\n--chart-4:#c084fc;\n--chart-5:#f472b6;\n--chart-6:#facc15;\n--radius:8px;\n--font-sans:system-ui, sans-serif;\n--font-mono:ui-monospace, monospace;\n}\n@media (prefers-color-scheme: light){\n:root{color-scheme:light;\n--background:#ffffff;\n--foreground:#18181b;\n--muted:#f4f4f5;\n--muted-foreground:#71717a;\n--card:#ffffff;\n--card-foreground:#18181b;\n--popover:#ffffff;\n--popover-foreground:#18181b;\n--secondary:#f4f4f5;\n--secondary-foreground:#18181b;\n--border:rgba(24, 24, 27, 0.12);\n--input:rgba(24, 24, 27, 0.16);\n--ring:rgba(24, 24, 27, 0.4);\n--primary:#18181b;\n--primary-foreground:#fafafa;\n--accent:#f4f4f5;\n--accent-foreground:#18181b;\n--destructive:#dc2626;\n--destructive-foreground:#ffffff;\n--warning:#d97706;\n--warning-foreground:#ffffff;\n--success:#16a34a;\n--success-foreground:#ffffff;\n--info:#2563eb;\n--info-foreground:#ffffff;\n--code-background:#f4f4f5;\n--code-foreground:#18181b;\n--chart-1:#2563eb;\n--chart-2:#ea580c;\n--chart-3:#0d9488;\n--chart-4:#9333ea;\n--chart-5:#db2777;\n--chart-6:#ca8a04;\n--radius:8px;\n--font-sans:system-ui, sans-serif;\n--font-mono:ui-monospace, monospace;\n}\n}\nhtml{background:var(--background);color:var(--foreground);font-family:var(--font-sans);font-size:14px;line-height:1.5;-webkit-text-size-adjust:100%;text-size-adjust:100%;scrollbar-width:none}\nhtml::-webkit-scrollbar{display:none}\nbody{margin:0}</style><script>(function () {\nvar script = document.currentScript;\nvar style = script && script.previousElementSibling;\nif (!style) { return; }\nvar first = document.querySelector('style[data-visual-theme]');\nif (first && first !== style) { style.remove(); script.remove(); return; }\nvar config = {\"base\":\"html{background:var(--background);color:var(--foreground);font-family:var(--font-sans);font-size:14px;line-height:1.5;-webkit-text-size-adjust:100%;text-size-adjust:100%;scrollbar-width:none}\\nhtml::-webkit-scrollbar{display:none}\\nbody{margin:0}\",\"defaults\":{\"light\":{\"--background\":\"#ffffff\",\"--foreground\":\"#18181b\",\"--muted\":\"#f4f4f5\",\"--muted-foreground\":\"#71717a\",\"--card\":\"#ffffff\",\"--card-foreground\":\"#18181b\",\"--popover\":\"#ffffff\",\"--popover-foreground\":\"#18181b\",\"--secondary\":\"#f4f4f5\",\"--secondary-foreground\":\"#18181b\",\"--border\":\"rgba(24, 24, 27, 0.12)\",\"--input\":\"rgba(24, 24, 27, 0.16)\",\"--ring\":\"rgba(24, 24, 27, 0.4)\",\"--primary\":\"#18181b\",\"--primary-foreground\":\"#fafafa\",\"--accent\":\"#f4f4f5\",\"--accent-foreground\":\"#18181b\",\"--destructive\":\"#dc2626\",\"--destructive-foreground\":\"#ffffff\",\"--warning\":\"#d97706\",\"--warning-foreground\":\"#ffffff\",\"--success\":\"#16a34a\",\"--success-foreground\":\"#ffffff\",\"--info\":\"#2563eb\",\"--info-foreground\":\"#ffffff\",\"--code-background\":\"#f4f4f5\",\"--code-foreground\":\"#18181b\",\"--chart-1\":\"#2563eb\",\"--chart-2\":\"#ea580c\",\"--chart-3\":\"#0d9488\",\"--chart-4\":\"#9333ea\",\"--chart-5\":\"#db2777\",\"--chart-6\":\"#ca8a04\",\"--radius\":\"8px\",\"--font-sans\":\"system-ui, sans-serif\",\"--font-mono\":\"ui-monospace, monospace\"},\"dark\":{\"--background\":\"#18181b\",\"--foreground\":\"#fafafa\",\"--muted\":\"#27272a\",\"--muted-foreground\":\"#a1a1aa\",\"--card\":\"#1f1f23\",\"--card-foreground\":\"#fafafa\",\"--popover\":\"#27272a\",\"--popover-foreground\":\"#fafafa\",\"--secondary\":\"#27272a\",\"--secondary-foreground\":\"#fafafa\",\"--border\":\"rgba(250, 250, 250, 0.12)\",\"--input\":\"rgba(250, 250, 250, 0.16)\",\"--ring\":\"rgba(250, 250, 250, 0.4)\",\"--primary\":\"#fafafa\",\"--primary-foreground\":\"#18181b\",\"--accent\":\"#27272a\",\"--accent-foreground\":\"#fafafa\",\"--destructive\":\"#ef4444\",\"--destructive-foreground\":\"#ffffff\",\"--warning\":\"#f59e0b\",\"--warning-foreground\":\"#18181b\",\"--success\":\"#22c55e\",\"--success-foreground\":\"#18181b\",\"--info\":\"#3b82f6\",\"--info-foreground\":\"#ffffff\",\"--code-background\":\"#27272a\",\"--code-foreground\":\"#fafafa\",\"--chart-1\":\"#60a5fa\",\"--chart-2\":\"#fb923c\",\"--chart-3\":\"#2dd4bf\",\"--chart-4\":\"#c084fc\",\"--chart-5\":\"#f472b6\",\"--chart-6\":\"#facc15\",\"--radius\":\"8px\",\"--font-sans\":\"system-ui, sans-serif\",\"--font-mono\":\"ui-monospace, monospace\"}},\"fragment\":\"visual-theme\",\"name\":\"^--[a-z0-9-]{1,64}$\",\"unsafe\":\"[;{}\\u003c>\\\\\\\\\\\\r\\\\n]|\\\\/\\\\*|\\\\*\\\\/\",\"maxValue\":512,\"hostContext\":\"ui/notifications/host-context-changed\",\"sizeChanged\":\"ui/notifications/size-changed\",\"openLink\":\"ui/open-link\"};\nvar NAME = new RegExp(config.name);\nvar UNSAFE = new RegExp(config.unsafe);\nvar framed = window.parent !== window;\nvar current = { appearance: null, variables: {} };\nfunction isObject(value) { return typeof value === 'object' && value !== null && !Array.isArray(value); }\nfunction clean(input) {\n    var output = {};\n    if (!isObject(input)) { return output; }\n    Object.keys(input).forEach(function (name) {\n        var value = input[name];\n        if (NAME.test(name) && typeof value === 'string' && value.length <= config.maxValue && !UNSAFE.test(value) && value.trim() !== '') { output[name] = value.trim(); }\n    });\n    return output;\n}\nfunction prefersLight() { return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: light)').matches; }\nfunction apply(appearance, variables) {\n    if (appearance !== 'light' && appearance !== 'dark') { appearance = current.appearance || (prefersLight() ? 'light' : 'dark'); }\n    current = { appearance: appearance, variables: variables || current.variables };\n    var merged = Object.assign({}, config.defaults[appearance], current.variables);\n    var lines = Object.keys(merged).map(function (name) { return name + ':' + merged[name] + ';'; });\n    style.textContent = ':root{color-scheme:' + appearance + ';\\n' + lines.join('\\n') + '\\n}\\n' + config.base;\n}\nvar hash = location.hash;\nvar match = new RegExp('(?:^#|&)' + config.fragment + '=([^&]*)').exec(hash);\nif (match) {\n    try {\n        var theme = JSON.parse(decodeURIComponent(match[1]));\n        if (isObject(theme)) { apply(theme.appearance, clean(theme.variables)); }\n    } catch (e) {}\n    var rest = hash.slice(1).split('&').filter(function (part) { return part.indexOf(config.fragment + '=') !== 0; }).join('&');\n    try { history.replaceState(history.state, '', rest ? '#' + rest : location.href.split('#')[0]); } catch (e) {}\n}\nwindow.addEventListener('message', function (event) {\n    var data = event.data;\n    if (event.source !== window.parent || !isObject(data) || data.method !== config.hostContext) { return; }\n    var params = isObject(data.params) ? data.params : {};\n    var styles = isObject(params.styles) ? params.styles : {};\n    apply(params.theme, isObject(styles.variables) ? clean(styles.variables) : null);\n});\nvar nextId = 1;\nfunction hrefOf(node) {\n    if (!node || typeof node.tagName !== 'string' || node.tagName.toLowerCase() !== 'a' || typeof node.getAttribute !== 'function') { return null; }\n    var href = node.getAttribute('href');\n    return href === null ? node.getAttribute('xlink:href') : href;\n}\nfunction follow(event, anchor, href) {\n    var url;\n    try { url = new URL(href, document.baseURI); } catch (e) { return; }\n    if (url.protocol !== 'http:' && url.protocol !== 'https:') { return; }\n    if (url.href.split('#')[0] === location.href.split('#')[0]) { return; }\n    if (framed) {\n        event.preventDefault();\n        window.parent.postMessage({ jsonrpc: '2.0', id: nextId++, method: config.openLink, params: { url: url.href } }, '*');\n    } else {\n        anchor.setAttribute('target', '_blank');\n        anchor.setAttribute('rel', 'noopener');\n    }\n}\nwindow.addEventListener('click', function (event) {\n    if (!event.isTrusted) { return; }\n    var path = typeof event.composedPath === 'function' ? event.composedPath() : [];\n    for (var i = 0; i < path.length; i++) {\n        var href = hrefOf(path[i]);\n        if (href !== null) { follow(event, path[i], href); return; }\n    }\n}, true);\nif (framed && typeof ResizeObserver === 'function') {\n    var root = document.documentElement;\n    var reported = '';\n    var scheduled = false;\n    var measure = function () {\n        scheduled = false;\n        var box = root.getBoundingClientRect();\n        var width = Math.ceil(box.width);\n        var height = Math.ceil(box.height);\n        if (width + 'x' + height === reported) { return; }\n        reported = width + 'x' + height;\n        window.parent.postMessage({ jsonrpc: '2.0', method: config.sizeChanged, params: { width: width, height: height } }, '*');\n    };\n    new ResizeObserver(function () {\n        if (!scheduled) { scheduled = true; requestAnimationFrame(measure); }\n    }).observe(root);\n}\n})();</script><title>Chart</title></head><body><div style=\"height: 320px; background: var(--chart-1)\"></div></body></html>",
+  "theme": {
+    "appearance": "dark",
+    "variables": [
+      [
+        "--background",
+        "#131316"
+      ],
+      [
+        "--border",
+        "rgb(255 255 255 / 0.07)"
+      ],
+      [
+        "--radius",
+        "12px"
+      ],
+      [
+        "--font-sans",
+        "\"Ünïcode Sans\", -apple-system, sans-serif"
+      ],
+      [
+        "--chart-1",
+        "#ffffff"
+      ]
+    ]
+  },
+  "fragment": "#visual-theme=%7B%22appearance%22%3A%22dark%22%2C%22variables%22%3A%7B%22--background%22%3A%22%23131316%22%2C%22--border%22%3A%22rgb(255%20255%20255%20%2F%200.07)%22%2C%22--radius%22%3A%2212px%22%2C%22--font-sans%22%3A%22%5C%22%C3%9Cn%C3%AFcode%20Sans%5C%22%2C%20-apple-system%2C%20sans-serif%22%2C%22--chart-1%22%3A%22%23ffffff%22%7D%7D",
+  "hostContext": {
+    "jsonrpc": "2.0",
+    "method": "ui/notifications/host-context-changed",
+    "params": {
+      "theme": "dark",
+      "styles": {
+        "variables": {
+          "--background": "#131316",
+          "--border": "rgb(255 255 255 / 0.07)",
+          "--radius": "12px",
+          "--font-sans": "\"Ünïcode Sans\", -apple-system, sans-serif",
+          "--chart-1": "#ffffff"
+        }
+      }
+    }
+  },
+  "heights": [
+    {
+      "visual": {
+        "maxHeight": 2000,
+        "heights": [
+          [
+            320,
+            500.2
+          ],
+          [
+            480,
+            800
+          ],
+          [
+            800,
+            300
+          ]
+        ]
+      },
+      "width": 200,
+      "height": 501
+    },
+    {
+      "visual": {
+        "maxHeight": 2000,
+        "heights": [
+          [
+            320,
+            500.2
+          ],
+          [
+            480,
+            800
+          ],
+          [
+            800,
+            300
+          ]
+        ]
+      },
+      "width": 320,
+      "height": 501
+    },
+    {
+      "visual": {
+        "maxHeight": 2000,
+        "heights": [
+          [
+            320,
+            500.2
+          ],
+          [
+            480,
+            800
+          ],
+          [
+            800,
+            300
+          ]
+        ]
+      },
+      "width": 400,
+      "height": 800
+    },
+    {
+      "visual": {
+        "maxHeight": 2000,
+        "heights": [
+          [
+            320,
+            500.2
+          ],
+          [
+            480,
+            800
+          ],
+          [
+            800,
+            300
+          ]
+        ]
+      },
+      "width": 480,
+      "height": 800
+    },
+    {
+      "visual": {
+        "maxHeight": 2000,
+        "heights": [
+          [
+            320,
+            500.2
+          ],
+          [
+            480,
+            800
+          ],
+          [
+            800,
+            300
+          ]
+        ]
+      },
+      "width": 600,
+      "height": 800
+    },
+    {
+      "visual": {
+        "maxHeight": 2000,
+        "heights": [
+          [
+            320,
+            500.2
+          ],
+          [
+            480,
+            800
+          ],
+          [
+            800,
+            300
+          ]
+        ]
+      },
+      "width": 800,
+      "height": 300
+    },
+    {
+      "visual": {
+        "maxHeight": 2000,
+        "heights": [
+          [
+            320,
+            500.2
+          ],
+          [
+            480,
+            800
+          ],
+          [
+            800,
+            300
+          ]
+        ]
+      },
+      "width": 1000,
+      "height": 300
+    },
+    {
+      "visual": {
+        "maxHeight": 400,
+        "heights": [
+          [
+            320,
+            500.2
+          ],
+          [
+            480,
+            800
+          ],
+          [
+            800,
+            300
+          ]
+        ]
+      },
+      "width": 400,
+      "height": 400
+    },
+    {
+      "visual": {
+        "maxHeight": 2000,
+        "heights": [
+          [
+            360,
+            10
+          ]
+        ]
+      },
+      "width": 360,
+      "height": 80
+    },
+    {
+      "visual": {
+        "maxHeight": 2000,
+        "heights": [
+          [
+            360,
+            3000
+          ]
+        ]
+      },
+      "width": 360,
+      "height": 2000
+    },
+    {
+      "visual": {
+        "maxHeight": 2000
+      },
+      "width": 360,
+      "height": null
+    }
+  ]
+}

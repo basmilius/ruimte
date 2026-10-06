@@ -134,6 +134,11 @@ final class ChatModel {
                 self.presentation.setBookmarks(ChatBookmarks.parse(payload["bookmarks"]?.arrayValue ?? []))
             })
         unsubscribe.append(
+            client.subscribe(WireEvent.chatVisuals.rawValue) { [weak self] payload in
+                guard let self, payload["chatId"]?.stringValue == self.chatID else { return }
+                self.presentation.setVisuals(ChatVisuals.parse(payload.list("visuals")))
+            })
+        unsubscribe.append(
             client.subscribe(WireEvent.snoozeChanged.rawValue) { [weak self] payload in
                 guard let self else { return }
                 self.snoozedUntil = ChatSnooze.until(of: self.chatID, in: payload)
@@ -234,9 +239,11 @@ final class ChatModel {
                 item["id"]?.stringValue.map { ($0, index) }
             }, uniquingKeysWith: { _, newest in newest })
         refreshPending()
+        presentation.earlierPageWaits = history.cursor != nil
         presentation.replace(items, info: info)
-        // A machine without bookmarks sends none, and then this chat has none.
+        // A machine without bookmarks or visuals sends none, and then this chat has none.
         presentation.setBookmarks(ChatBookmarks.parse(snapshot["bookmarks"]?.arrayValue ?? []))
+        presentation.setVisuals(ChatVisuals.parse(snapshot.list("visuals")))
         subagentRevision += 1
         revision += 1
     }
@@ -321,6 +328,7 @@ final class ChatModel {
                     self.items.enumerated().map { ($0.element.text("id"), $0.offset) },
                     uniquingKeysWith: { _, newest in newest })
                 self.refreshPending()
+                self.presentation.earlierPageWaits = self.history.cursor != nil
                 self.presentation.prepend(page["items"]?.arrayValue ?? [])
                 self.subagentRevision += 1
                 self.revision += 1

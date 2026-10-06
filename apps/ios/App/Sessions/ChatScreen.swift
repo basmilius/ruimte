@@ -176,6 +176,7 @@ struct ChatScreen: View {
                 Task { await model.nameBookmark(id, name: name) }
             }
         }
+        .modifier(ChatVisualDialogs(model: model))
         .mobileSheet(
             item: Binding(
                 get: { model.presentation.forkRequest }, set: { model.presentation.forkRequest = $0 })

@@ -14,14 +14,15 @@ final class ChatItemState: Identifiable {
 }
 
 struct ChatTimelineEntry: Identifiable, Equatable {
-    enum Kind: Equatable { case message, tools, activity, turnFold, turnStart, changedFiles, subagent, forks }
+    enum Kind: Equatable { case message, tools, activity, turnFold, turnStart, changedFiles, subagent, forks, visual }
     let id: String
     let kind: Kind
     var items: [ChatItemState] = []
+    var visual: ChatVisual?
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.id == rhs.id && lhs.kind == rhs.kind
-            && lhs.items.map(ObjectIdentifier.init) == rhs.items.map(ObjectIdentifier.init)
+            && lhs.items.map(ObjectIdentifier.init) == rhs.items.map(ObjectIdentifier.init) && lhs.visual == rhs.visual
     }
 }
 
@@ -56,6 +57,14 @@ final class ChatPresentation {
     private(set) var bookmarks: [String: ChatBookmark] = [:]
     /// A row asked to place, name or take away a bookmark; the screen carries it out.
     var bookmarkRequest: ChatBookmarkRequest?
+    /// The pages agents published in the chat, as the machine last said.
+    private(set) var visuals: [ChatVisual] = []
+    /// A card asked to open its visual large or to remove it; the screen carries it out.
+    var visualRequest: ChatVisualRequest?
+    @ObservationIgnored let visualPages = ChatVisualPages()
+    /// Whether the machine holds a page of the thread before the first item here, which a visual from before that
+    /// item waits for.
+    @ObservationIgnored var earlierPageWaits = false
     /// The timeline entries on screen, answered by the timeline while it is there.
     @ObservationIgnored var visibleEntryIDs: () -> [String] = { [] }
     private(set) var scrollRequest = 0
@@ -190,6 +199,12 @@ final class ChatPresentation {
         return true
     }
 
+    func setVisuals(_ visuals: [ChatVisual]) {
+        guard visuals != self.visuals else { return }
+        self.visuals = visuals
+        rebuild()
+    }
+
     func setBookmarks(_ bookmarks: [ChatBookmark]) {
         let next = Dictionary(bookmarks.map { ($0.itemID, $0) }, uniquingKeysWith: { first, _ in first })
         if next != self.bookmarks { self.bookmarks = next }
@@ -285,6 +300,8 @@ final class ChatPresentation {
             }
         }
         if let activeID { rows.append(ChatTimelineEntry(id: "working-\(activeID)", kind: .activity)) }
+        let heldFrom = earlierPageWaits ? order.first.flatMap { records[$0]?.value["createdAt"]?.numberValue } : nil
+        rows = ChatVisuals.placed(rows, visuals: visuals, heldFrom: heldFrom)
         guard rows != entries else { return }
         entries = rows
         revision += 1
