@@ -1111,12 +1111,19 @@ describe('files that move', () => {
     it('sends the edit of an open document to the client that asked, and only the files it holds', async () => {
         const { host, calls, file, events } = await moveRig(importEdits);
         await open(host, 'src/a.ts', 'export "./a";\n', 'client-2');
-        const moving = host.renameFiles('client-2', 'p1', aToC.from, aToC.to, true, file);
-        await until(() => kinds(events['client-2'], 'language.edit').length > 0);
+        const unsubscribe = host.subscribe('client-2', (event) => {
+            events['client-2'].push(event);
+            if (event.event === 'language.edit') {
+                host.answerEdit('client-2', { projectId: 'p1', editId: (event as { payload: { editId: string } }).payload.editId, applied: true });
+            }
+        });
+        try {
+            await host.renameFiles('client-2', 'p1', aToC.from, aToC.to, true, file);
+        } finally {
+            unsubscribe();
+        }
         expect(kinds(events['client-1'], 'language.edit')).toHaveLength(0);
-        const [asked] = kinds(events['client-2'], 'language.edit');
-        host.answerEdit('client-2', { projectId: 'p1', editId: (asked as { payload: { editId: string } }).payload.editId, applied: true });
-        await moving;
+        expect(kinds(events['client-2'], 'language.edit')).toHaveLength(1);
         expect(calls).toEqual(['write', 'move']);
     });
 
