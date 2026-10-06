@@ -36065,6 +36065,255 @@
       "launches"
     ]
   },
+  "request.database.connections.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.database.connections.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "rev": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "connections": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string"
+            },
+            "config": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "engine": {
+                      "type": "string",
+                      "const": "sqlite"
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "engine",
+                    "path"
+                  ],
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "engine": {
+                      "type": "string",
+                      "const": "mysql"
+                    }
+                  },
+                  "required": [
+                    "engine"
+                  ],
+                  "additionalProperties": {}
+                }
+              ]
+            },
+            "shared": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "config",
+            "shared"
+          ],
+          "additionalProperties": {}
+        }
+      }
+    },
+    "required": [
+      "rev",
+      "connections"
+    ]
+  },
+  "request.database.connections.save.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "baseRev": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "connections": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string"
+            },
+            "config": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "engine": {
+                      "type": "string",
+                      "const": "sqlite"
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "engine",
+                    "path"
+                  ],
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "engine": {
+                      "type": "string",
+                      "const": "mysql"
+                    }
+                  },
+                  "required": [
+                    "engine"
+                  ],
+                  "additionalProperties": {}
+                }
+              ]
+            },
+            "shared": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "config",
+            "shared"
+          ],
+          "additionalProperties": {}
+        }
+      }
+    },
+    "required": [
+      "projectId",
+      "baseRev",
+      "connections"
+    ]
+  },
+  "request.database.connections.save.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "rev": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "connections": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string"
+            },
+            "config": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "engine": {
+                      "type": "string",
+                      "const": "sqlite"
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "engine",
+                    "path"
+                  ],
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "engine": {
+                      "type": "string",
+                      "const": "mysql"
+                    }
+                  },
+                  "required": [
+                    "engine"
+                  ],
+                  "additionalProperties": {}
+                }
+              ]
+            },
+            "shared": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "config",
+            "shared"
+          ],
+          "additionalProperties": {}
+        }
+      }
+    },
+    "required": [
+      "rev",
+      "connections"
+    ]
+  },
+  "request.database.request.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema"
+  },
+  "request.database.request.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema"
+  },
   "request.fs.browse.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -54450,6 +54699,86 @@
     "required": [
       "projectId",
       "document"
+    ]
+  },
+  "event.database.connections.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "rev": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "connections": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string"
+            },
+            "config": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "engine": {
+                      "type": "string",
+                      "const": "sqlite"
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "engine",
+                    "path"
+                  ],
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "engine": {
+                      "type": "string",
+                      "const": "mysql"
+                    }
+                  },
+                  "required": [
+                    "engine"
+                  ],
+                  "additionalProperties": {}
+                }
+              ]
+            },
+            "shared": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "config",
+            "shared"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "rev",
+      "connections",
+      "projectId"
     ]
   },
   "event.fs.changed": {

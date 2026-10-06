@@ -136,6 +136,14 @@ import {
 } from './auth.ts';
 import { DirectSignalPayloadSchema } from './direct.ts';
 import {
+    DatabaseConnectionsChangedEventSchema,
+    DatabaseConnectionsPayloadSchema,
+    DatabaseConnectionsSavePayloadSchema,
+    DatabaseConnectionsSchema,
+    DatabaseRequestPayloadSchema,
+    DatabaseRequestResultSchema
+} from './database.ts';
+import {
     DrawingChangedEventSchema,
     DrawingCopyPayloadSchema,
     DrawingOpenResultSchema,
@@ -291,6 +299,7 @@ export * from './direct.ts';
 export * from './direct-liveness.ts';
 export * from './device.ts';
 export * from './context-sources.ts';
+export * from './database.ts';
 export * from './diagram-host.ts';
 export * from './drawing-host.ts';
 export * from './envelope.ts';
@@ -472,6 +481,11 @@ export const REQUEST_SCHEMAS = {
     'launch.restart': { payload: LaunchStartPayloadSchema, result: LaunchStartResultSchema },
     'launch.stop': { payload: LaunchStopPayloadSchema, result: EmptySchema },
     'launch.list': { payload: EmptySchema, result: LaunchListResultSchema },
+    'database.connections': { payload: DatabaseConnectionsPayloadSchema, result: DatabaseConnectionsSchema },
+    // A person's save of the whole list; a password in it never reaches a file.
+    'database.connections.save': { payload: DatabaseConnectionsSavePayloadSchema, result: DatabaseConnectionsSchema },
+    // One message of `@adecore/database`'s protocol, answered with its response. Export and import only for the local secret.
+    'database.request': { payload: DatabaseRequestPayloadSchema, result: DatabaseRequestResultSchema },
     'fs.browse': { payload: FsBrowsePayloadSchema, result: FsBrowseResultSchema },
     'fs.reveal': { payload: FsRevealPayloadSchema, result: EmptySchema },
     'fs.search': { payload: FsSearchPayloadSchema, result: FsSearchResultSchema },
@@ -609,6 +623,8 @@ export const EVENT_SCHEMAS = {
     'ondevice.text': OnDeviceTextEventSchema,
     'launch.status': LaunchStatusSchema,
     'launches.changed': LaunchesChangedEventSchema,
+    // To every client that holds the project, except the one whose save it answers.
+    'database.connections.changed': DatabaseConnectionsChangedEventSchema,
     'fs.changed': FsChangedEventSchema,
     'git.status': GitStatusEventSchema,
     'git.changed': GitChangedEventSchema,
