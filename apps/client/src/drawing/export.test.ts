@@ -43,4 +43,22 @@ describe('the SVG of a drawing', () => {
         const store = { getState: () => ({ exportBackground: false }) } as unknown as Parameters<typeof drawingSvg>[0];
         expect(drawingSvg(store, [note])).toContain('stroke="var(--draw-edge-yellow)"');
     });
+
+    test('rotates a translated element around its own center', () => {
+        const element: DrawingElement = {
+            kind: 'rect',
+            id: 'rotated',
+            x: 120,
+            y: 80,
+            w: 100,
+            h: 40,
+            angle: Math.PI / 2,
+            stroke: 'ink',
+            strokeWidth: 2,
+            roughness: 0,
+            seed: 1
+        };
+        const store = { getState: () => ({ exportBackground: false }) } as unknown as Parameters<typeof drawingSvg>[0];
+        expect(drawingSvg(store, [element])).toContain('transform="translate(120 80) rotate(90 50 20)"');
+    });
 });
