@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { runAsPerson } from '@/actions/client-actions';
 import { FileText, Search } from 'lucide-react';
@@ -82,12 +82,9 @@ export function FileViewer() {
     const active = useFiles((s) => s.active);
     const tabs = useFiles((s) => s.tabs);
     const [shown, setShown] = useState<readonly string[]>([]);
-
-    useEffect(() => {
-        if (active) {
-            setShown((previous) => shownAfter(previous, active));
-        }
-    }, [active]);
+    if (active && shown[0] !== active) {
+        setShown(shownAfter(shown, active));
+    }
 
     const tab = tabs.find((entry) => entry.key === active) ?? null;
     if (!active || !tab) {
