@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { LanguageServerKind, LanguageRequestResult } from '@ruimte/contracts';
@@ -198,7 +198,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await host?.close();
-    await rm(base, { recursive: true, force: true });
+    if (base !== '') {
+        // JS traversal of the installed server trees can outlive Bun's cleanup hook.
+        const cleanup = Bun.spawn(['/bin/rm', '-rf', '--', base], { stdout: 'ignore', stderr: 'inherit' });
+        expect(await cleanup.exited).toBe(0);
+    }
 });
 
 describe('the runtime of a compiled daemon', () => {
