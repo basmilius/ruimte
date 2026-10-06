@@ -43,6 +43,9 @@ export const EndpointInfoSchema = z.object({
     /* Whether the daemon may take up a chat that stopped on a limit on a clock, when the chat's own
        switch lets it. Absent from an older daemon, which never does. */
     resumeAtReset: z.boolean().optional(),
+    /* Whether an agent in an AI chat may show a page above its reply (`ruimte-context visual`). Off
+       only when a person turned it off; absent from an older daemon, which keeps no visuals. */
+    visualReplies: z.boolean().optional(),
     appleFoundationEnabled: z.boolean().optional(),
     /* Whether the machine keeps itself from sleeping. The daemon holds the block, so it holds without a
        window open and for a phone. Absent from an older daemon, whose desktop app still holds it per window. */
@@ -132,6 +135,8 @@ export const EndpointSetIdentityPayloadSchema = z.object({
     streamingAllowed: z.boolean().optional(),
     // Whether a limited chat may be taken up on a clock; left out, the machine stays as it stands.
     resumeAtReset: z.boolean().optional(),
+    // Whether an agent may show a page above its reply; left out, the machine stays as it stands.
+    visualReplies: z.boolean().optional(),
     appleFoundationEnabled: z.boolean().optional(),
     // When the machine keeps itself awake, and how; each left out stays as it stands.
     keepAwake: KeepAwakeModeSchema.optional(),
@@ -156,6 +161,7 @@ export const EndpointChangedEventSchema = z.object({
     refuseStatements: z.boolean().optional(),
     streamingAllowed: z.boolean().optional(),
     resumeAtReset: z.boolean().optional(),
+    visualReplies: z.boolean().optional(),
     appleFoundationEnabled: z.boolean().optional(),
     keepAwake: KeepAwakeModeSchema.optional(),
     keepAwakeOnBattery: z.boolean().optional(),

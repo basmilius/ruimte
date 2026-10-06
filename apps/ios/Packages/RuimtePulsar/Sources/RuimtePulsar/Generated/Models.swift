@@ -3454,6 +3454,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `refuseStatements`: Bool?
     public let `streamingAllowed`: Bool?
     public let `resumeAtReset`: Bool?
+    public let `visualReplies`: Bool?
     public let `appleFoundationEnabled`: Bool?
     public let `keepAwake`: PairResultEndpointKeepAwake?
     public let `keepAwakeOnBattery`: Bool?
@@ -3477,7 +3478,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `lanDoorFixed`: Bool?
     public let `accountId`: Presence<String>
 
-    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `lan`: Presence<PairResultEndpointLan> = .missing, `lanDoor`: Bool? = nil, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing) {
+    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `lan`: Presence<PairResultEndpointLan> = .missing, `lanDoor`: Bool? = nil, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
@@ -3486,6 +3487,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         self.`refuseStatements` = `refuseStatements`
         self.`streamingAllowed` = `streamingAllowed`
         self.`resumeAtReset` = `resumeAtReset`
+        self.`visualReplies` = `visualReplies`
         self.`appleFoundationEnabled` = `appleFoundationEnabled`
         self.`keepAwake` = `keepAwake`
         self.`keepAwakeOnBattery` = `keepAwakeOnBattery`
@@ -3520,6 +3522,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         `refuseStatements` = try container.decodeIfPresent(Bool.self, forKey: .`refuseStatements`)
         `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
         `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
+        `visualReplies` = try container.decodeIfPresent(Bool.self, forKey: .`visualReplies`)
         `appleFoundationEnabled` = try container.decodeIfPresent(Bool.self, forKey: .`appleFoundationEnabled`)
         `keepAwake` = try container.decodeIfPresent(PairResultEndpointKeepAwake.self, forKey: .`keepAwake`)
         `keepAwakeOnBattery` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeOnBattery`)
@@ -3558,6 +3561,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`refuseStatements`, forKey: .`refuseStatements`)
         try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
         try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
+        try container.encodeIfPresent(`visualReplies`, forKey: .`visualReplies`)
         try container.encodeIfPresent(`appleFoundationEnabled`, forKey: .`appleFoundationEnabled`)
         try container.encodeIfPresent(`keepAwake`, forKey: .`keepAwake`)
         try container.encodeIfPresent(`keepAwakeOnBattery`, forKey: .`keepAwakeOnBattery`)
@@ -3603,6 +3607,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case `refuseStatements` = "refuseStatements"
         case `streamingAllowed` = "streamingAllowed"
         case `resumeAtReset` = "resumeAtReset"
+        case `visualReplies` = "visualReplies"
         case `appleFoundationEnabled` = "appleFoundationEnabled"
         case `keepAwake` = "keepAwake"
         case `keepAwakeOnBattery` = "keepAwakeOnBattery"

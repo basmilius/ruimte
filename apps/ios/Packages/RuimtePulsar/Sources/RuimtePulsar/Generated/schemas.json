@@ -5073,6 +5073,9 @@
           "resumeAtReset": {
             "type": "boolean"
           },
+          "visualReplies": {
+            "type": "boolean"
+          },
           "appleFoundationEnabled": {
             "type": "boolean"
           },
@@ -16745,6 +16748,64 @@
             "createdAt"
           ]
         }
+      },
+      "visuals": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "at": {
+              "type": "number"
+            },
+            "maxHeight": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "heights": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "size": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "turnId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "at",
+            "maxHeight",
+            "size"
+          ]
+        }
       }
     },
     "required": [
@@ -20670,6 +20731,91 @@
     },
     "required": [
       "bookmarks"
+    ]
+  },
+  "request.chat.removeVisual.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "visualId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "chatId",
+      "visualId"
+    ]
+  },
+  "request.chat.removeVisual.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "visuals": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "at": {
+              "type": "number"
+            },
+            "maxHeight": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "heights": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "size": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "turnId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "at",
+            "maxHeight",
+            "size"
+          ]
+        }
+      }
+    },
+    "required": [
+      "visuals"
     ]
   },
   "request.skills.list.payload": {
@@ -40575,6 +40721,9 @@
       "resumeAtReset": {
         "type": "boolean"
       },
+      "visualReplies": {
+        "type": "boolean"
+      },
       "appleFoundationEnabled": {
         "type": "boolean"
       },
@@ -41009,6 +41158,9 @@
       "resumeAtReset": {
         "type": "boolean"
       },
+      "visualReplies": {
+        "type": "boolean"
+      },
       "appleFoundationEnabled": {
         "type": "boolean"
       },
@@ -41307,6 +41459,9 @@
         "type": "boolean"
       },
       "resumeAtReset": {
+        "type": "boolean"
+      },
+      "visualReplies": {
         "type": "boolean"
       },
       "appleFoundationEnabled": {
@@ -41760,6 +41915,9 @@
         "type": "boolean"
       },
       "resumeAtReset": {
+        "type": "boolean"
+      },
+      "visualReplies": {
         "type": "boolean"
       },
       "appleFoundationEnabled": {
@@ -48601,6 +48759,78 @@
       "bookmarks"
     ]
   },
+  "event.chat.visuals": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "visuals": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "at": {
+              "type": "number"
+            },
+            "maxHeight": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "heights": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "size": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "turnId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "at",
+            "maxHeight",
+            "size"
+          ]
+        }
+      }
+    },
+    "required": [
+      "chatId",
+      "visuals"
+    ]
+  },
   "event.endpoint.changed": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -48826,6 +49056,9 @@
         "type": "boolean"
       },
       "resumeAtReset": {
+        "type": "boolean"
+      },
+      "visualReplies": {
         "type": "boolean"
       },
       "appleFoundationEnabled": {

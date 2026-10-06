@@ -327,6 +327,7 @@ export * from './stored-path.ts';
 export * from './task.ts';
 export * from './text.ts';
 export * from './usage.ts';
+export * from './visual.ts';
 export * from './voice-languages.ts';
 
 // Every request the wire knows, with the schema of what goes in and what comes back.
@@ -405,6 +406,7 @@ export const REQUEST_SCHEMAS = {
     'chat.addBookmark': AGENT_REQUEST_SCHEMAS['chat.addBookmark'],
     'chat.renameBookmark': AGENT_REQUEST_SCHEMAS['chat.renameBookmark'],
     'chat.removeBookmark': AGENT_REQUEST_SCHEMAS['chat.removeBookmark'],
+    'chat.removeVisual': AGENT_REQUEST_SCHEMAS['chat.removeVisual'],
     'skills.list': AGENT_REQUEST_SCHEMAS['skills.list'],
     'provider.list': AGENT_REQUEST_SCHEMAS['provider.list'],
     'accounts.list': AGENT_REQUEST_SCHEMAS['accounts.list'],
@@ -585,6 +587,7 @@ export const EVENT_SCHEMAS = {
     'chat.status': AGENT_EVENT_SCHEMAS['chat.status'],
     'chat.subagentChanged': AGENT_EVENT_SCHEMAS['chat.subagentChanged'],
     'chat.bookmarks': AGENT_EVENT_SCHEMAS['chat.bookmarks'],
+    'chat.visuals': AGENT_EVENT_SCHEMAS['chat.visuals'],
     'endpoint.changed': EndpointChangedEventSchema,
     'endpoint.updateChanged': EndpointUpdateChangedEventSchema,
     // To the desktop app on this machine only: a person asked another client to install the update.
