@@ -62,7 +62,7 @@ describe('native checkout', () => {
 
     it('finds the standalone sibling from Ruimte sources independently of the working directory', async () => {
         const ruimte = join(folder, 'ruimte');
-        const source = join(folder, 'language-server-php');
+        const source = join(folder, 'language-servers', 'php');
         await mkdir(ruimte);
         await checkoutAt(source);
         expect(phpLanguageServerCheckout(false, null, ruimte)).toEqual({ folder: source, version: '0.3.1', stubsCommit: COMMIT });
@@ -73,7 +73,7 @@ describe('native checkout', () => {
         const ruimte = join(folder, 'ruimte');
         const override = join(folder, 'custom-php');
         await mkdir(ruimte);
-        await checkoutAt(join(folder, 'language-server-php'));
+        await checkoutAt(join(folder, 'language-servers', 'php'));
         await checkoutAt(override, '0.4.0');
         expect(phpLanguageServerCheckout(false, override, ruimte)).toEqual({ folder: override, version: '0.4.0', stubsCommit: COMMIT });
         expect(phpLanguageServerCheckout(false, join(folder, 'missing'), ruimte)).toBeNull();
@@ -98,7 +98,7 @@ describe('native checkout', () => {
     it('resolves a symlink to Ruimte before looking for its sibling', async () => {
         const ruimte = join(folder, 'projects', 'ruimte');
         const alias = join(folder, 'alias');
-        const source = join(folder, 'projects', 'language-server-php');
+        const source = join(folder, 'projects', 'language-servers', 'php');
         await mkdir(ruimte, { recursive: true });
         await checkoutAt(source);
         await symlink(ruimte, alias, 'dir');
@@ -109,7 +109,7 @@ describe('native checkout', () => {
         const ruimte = join(folder, 'projects', 'ruimte');
         const worktree = join(folder, 'worktrees', 'feature');
         const gitdir = join(ruimte, '.git', 'worktrees', 'feature');
-        const source = join(folder, 'projects', 'language-server-php');
+        const source = join(folder, 'projects', 'language-servers', 'php');
         await mkdir(gitdir, { recursive: true });
         await mkdir(worktree, { recursive: true });
         await writeFile(join(worktree, '.git'), 'gitdir: ../../projects/ruimte/.git/worktrees/feature\n');
@@ -118,7 +118,7 @@ describe('native checkout', () => {
         expect(phpLanguageServerCheckout(false, null, worktree)?.folder).toBe(source);
         expect(await readFile(join(worktree, '.git'), 'utf8')).toBe('gitdir: ../../projects/ruimte/.git/worktrees/feature\n');
         expect(await readFile(join(gitdir, 'commondir'), 'utf8')).toBe('../..\n');
-        const nearer = join(folder, 'worktrees', 'language-server-php');
+        const nearer = join(folder, 'worktrees', 'language-servers', 'php');
         await checkoutAt(nearer);
         expect(phpLanguageServerCheckout(false, null, worktree)?.folder).toBe(nearer);
     });
@@ -127,11 +127,11 @@ describe('native checkout', () => {
         const ruimte = join(folder, 'ruimte');
         await mkdir(ruimte);
         expect(phpLanguageServerCheckout(false, null, ruimte)).toBeNull();
-        await expect(stat(join(folder, 'language-server-php'))).rejects.toThrow();
+        await expect(stat(join(folder, 'language-servers', 'php'))).rejects.toThrow();
         await writeFile(join(ruimte, '.git'), 'gitdir: missing\n');
         expect(phpLanguageServerCheckout(false, null, ruimte)).toBeNull();
-        await checkoutAt(join(folder, 'language-server-php'));
-        await writeFile(join(folder, 'language-server-php', 'crates', 'index', 'src', 'stubs.rs'), 'pub const STUBS_COMMIT: &str = "invalid";');
+        await checkoutAt(join(folder, 'language-servers', 'php'));
+        await writeFile(join(folder, 'language-servers', 'php', 'crates', 'index', 'src', 'stubs.rs'), 'pub const STUBS_COMMIT: &str = "invalid";');
         expect(phpLanguageServerCheckout(false, null, ruimte)).toBeNull();
     });
 });

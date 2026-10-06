@@ -60,7 +60,7 @@ The script replaces installed package symlinks directly. Bun 1.4.2's `bun link` 
 
 The PHP language server lives in `basmilius/language-server-php` and is independent of the ADE CORE packages. The link script switches every declared `@adecore/*` consumer; PHP is no longer one of them.
 
-For PHP development, place an existing checkout at `../language-server-php` beside Ruimte, or set `RUIMTE_PHP_LANGUAGE_SERVER_SOURCE=/path/to/language-server-php`. A Ruimte worktree also discovers the sibling of its primary checkout. Install builds that checkout with Cargo. The locator never creates or updates a Git checkout. Without valid local sources, the daemon uses the pinned native release; a compiled daemon always uses that release. See [the daemon README](../apps/server/README.md#language-servers) for the descriptor and install behavior.
+For PHP development, place an existing checkout at `../language-servers/php` beside Ruimte, or set `RUIMTE_PHP_LANGUAGE_SERVER_SOURCE=/path/to/php`. A Ruimte worktree also discovers the sibling of its primary checkout. Install builds that checkout with Cargo. The locator never creates or updates a Git checkout. Without valid local sources, the daemon uses the pinned native release; a compiled daemon always uses that release. See [the daemon README](../apps/server/README.md#language-servers) for the descriptor and install behavior.
 
 ## Work across the repositories
 

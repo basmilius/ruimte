@@ -87,6 +87,8 @@ function mainCheckoutRoot(root: string): string | null {
     }
 }
 
+const PHP_CHECKOUT = ['language-servers', 'php'];
+
 export function phpLanguageServerCheckout(
     compiled: boolean,
     sourcePath: string | null = process.env.RUIMTE_PHP_LANGUAGE_SERVER_SOURCE ?? null,
@@ -101,13 +103,13 @@ export function phpLanguageServerCheckout(
     try {
         // Anchor discovery to the sources, even when the daemon starts elsewhere or through a symlink.
         const root = realpathSync(ruimteRoot);
-        const sibling = readNativeCheckout(join(dirname(root), 'language-server-php'));
+        const sibling = readNativeCheckout(join(dirname(root), ...PHP_CHECKOUT));
         if (sibling !== null) {
             return sibling;
         }
         // A Ruimte worktree can use the standalone checkout beside its primary checkout.
         const main = mainCheckoutRoot(root);
-        return main === null ? null : readNativeCheckout(join(dirname(main), 'language-server-php'));
+        return main === null ? null : readNativeCheckout(join(dirname(main), ...PHP_CHECKOUT));
     } catch {
         return null;
     }
