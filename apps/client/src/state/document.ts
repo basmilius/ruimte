@@ -31,7 +31,7 @@ import {
     type DeviceReference,
     type StandaloneNode
 } from '@ruimte/contracts';
-import { FILES_VIEW_ID } from '@/shell/files-view';
+import { FILES_VIEW_ID } from '@/shell/client-cells';
 import type { CanvasPatch } from '@/project/merge';
 import { NODE_SIZE, defaultCanvases, nextId, type CanvasState } from '@/state/canvas';
 import { defaultDiagrams, type DiagramState } from '@/state/diagram';

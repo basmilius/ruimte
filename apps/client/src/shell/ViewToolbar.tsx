@@ -2,7 +2,7 @@ import { ComputerIndicator } from '@/computer/ComputerIndicator';
 import { useNodeComputerSession } from '@/computer/indicator';
 import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
 import { useDictation } from '@/dictation/controller';
-import { isFilesView, type CellView } from '@/shell/files-view';
+import { isFilesView, type CellView } from '@/shell/client-cells';
 import { FileTabs } from '@/shell/panels/FileTabs';
 import { runtimeModeHint, runtimeModeLabel } from '@adecore/agents-react/chat/runtime-modes';
 import { ForkPill } from '@/chat/ForkPill';

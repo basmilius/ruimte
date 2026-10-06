@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { openFileLink, parseFileRef, resolveFileRef } from '@/shell/panels/file-links';
-import { FILES_VIEW_ID } from '@/shell/files-view';
+import { FILES_VIEW_ID } from '@/shell/client-cells';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';

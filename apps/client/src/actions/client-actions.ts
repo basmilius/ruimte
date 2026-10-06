@@ -63,7 +63,7 @@ import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';
 import { offerViewUndo } from '@/project/view-trash';
 import { openInNewWindow, wantsNewWindow } from '@/project/windows';
 import type { ChatPromptClients } from '@adecore/agents-react/prompts/logic/subjects';
-import { FILES_VIEW_ID } from '@/shell/files-view';
+import { FILES_VIEW_ID } from '@/shell/client-cells';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { canSplit, cellAt, cellCount, focusedViewId, freeViewFor, isSameCell, locateView, type SplitDirection, type SplitZone } from '@/shell/split';
 import { sightOf, visibleNodes } from '@/state/attention';

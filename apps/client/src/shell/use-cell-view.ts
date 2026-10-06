@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FILES_VIEW_ID, filesView, type CellView } from '@/shell/files-view';
+import { FILES_VIEW_ID, filesView, type CellView } from '@/shell/client-cells';
 import { cellViewOf, useDocument } from '@/state/document';
 
 /*

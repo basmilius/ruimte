@@ -3,7 +3,7 @@ import { RUNTIME_MODES } from '@adecore/agents-react/chat/runtime-modes';
 import { useSubagentTrail } from '@adecore/agents-react/chat/subagent-view';
 import { useDictation } from '@/dictation/controller';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
-import { isFilesView, type CellView } from '@/shell/files-view';
+import { isFilesView, type CellView } from '@/shell/client-cells';
 import { useChatRow } from '@adecore/agents-react/state/chats';
 import { useHasPlans } from '@/state/plans';
 

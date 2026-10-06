@@ -5,7 +5,7 @@ import { Expand, Files, MoreHorizontal } from 'lucide-react';
 import { viewIconOf } from '@ruimte/contracts';
 import { closeCellAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { isFilesView, type CellView } from '@/shell/files-view';
+import { isFilesView, type CellView } from '@/shell/client-cells';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { SubagentTitleCrumb } from '@adecore/agents-react/chat/ui/SubagentControls';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';

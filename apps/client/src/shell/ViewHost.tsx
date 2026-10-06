@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
-import { isFilesView, type CellView } from '@/shell/files-view';
+import { isFilesView, type CellView } from '@/shell/client-cells';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { Canvas } from '@/canvas/Canvas';
 import { newChatOn } from '@/project/new-chat';

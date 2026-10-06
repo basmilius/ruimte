@@ -1,6 +1,6 @@
 import { isCanvasView } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
-import { FILES_VIEW_ID } from '@/shell/files-view';
+import { FILES_VIEW_ID } from '@/shell/client-cells';
 import { locateView } from '@/shell/split';
 import { useDocument } from '@/state/document';
 

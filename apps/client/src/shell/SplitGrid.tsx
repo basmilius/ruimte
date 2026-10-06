@@ -5,7 +5,7 @@ import { isCanvasView, type SplitLayout } from '@ruimte/contracts';
 import { PromptStack } from '@/canvas/PromptStack';
 import { carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { carriesDiff, droppedDiff } from '@/shell/diff-drag';
-import { FILES_VIEW_ID, isFilesView } from '@/shell/files-view';
+import { FILES_VIEW_ID, isFilesView } from '@/shell/client-cells';
 import { useCellView } from '@/shell/use-cell-view';
 import { placeFilesAction, placeViewAction } from '@/actions/client-actions';
 import { useDocument } from '@/state/document';

@@ -1,5 +1,5 @@
 import { isOpenableView, type ProjectLocal, type ProjectView, type SplitCell, type SplitColumn, type SplitLayout } from '@ruimte/contracts';
-import { FILES_VIEW_ID } from '@/shell/files-view';
+import { FILES_VIEW_ID } from '@/shell/client-cells';
 
 /*
  * The whole limit of the model. Columns of cells instead of a free tree means "at most three by

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { closeTab, moveTabs, openTab, pinTab, RECENT_FILES_LIMIT, rememberClosed, tabKey, useFiles, type FileTab, type TabState } from './files.ts';
-import { FILES_VIEW_ID } from '@/shell/files-view';
+import { FILES_VIEW_ID } from '@/shell/client-cells';
 import { viewIdsIn } from '@/shell/split';
 import { useDocument } from './document.ts';
 

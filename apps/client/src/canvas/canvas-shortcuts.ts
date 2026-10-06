@@ -37,7 +37,7 @@ import { focusViewRow } from '@/shell/sidebar-focus';
 import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { transportFor } from '@/transport';
 import { activeViewOf, useDocument } from '@/state/document';
-import { FILES_VIEW_ID } from '@/shell/files-view';
+import { FILES_VIEW_ID } from '@/shell/client-cells';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
 import { cellCount, type SplitDirection } from '@/shell/split';

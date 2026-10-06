@@ -7,7 +7,7 @@ import { LaunchChip } from '@/launches/LaunchChip';
 import { PanelControls } from '@/shell/PanelControls';
 import { ProjectMenu } from '@/shell/ProjectMenu';
 import { ViewMenu } from '@/shell/ViewMenu';
-import { FILES_VIEW_ID } from '@/shell/files-view';
+import { FILES_VIEW_ID } from '@/shell/client-cells';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { IS_STATION } from '@/station';
