@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { ProjectLanguage as SharedProjectLanguage, type LanguageDocumentHandle, type ProjectFiles, type RenameSuggestionsRequest } from '@adecore/editor-react';
 import type { Editor } from '@adecore/editor';
 import { fileUriToPath } from '@adecore/lsp';
@@ -40,6 +41,7 @@ export class ProjectLanguage extends SharedProjectLanguage {
             applyEdit: (params) => applyEdit?.(params) ?? Promise.resolve({ applied: false, failureReason: 'The project language is not ready' })
         });
         super(service, {
+            i18n: i18next,
             folder,
             ...(files === null ? {} : { files }),
             apple: isApplePlatform(),
