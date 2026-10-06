@@ -103,6 +103,7 @@ const LANGUAGES: Record<string, string> = {
     toml: 'toml',
     ts: 'typescript',
     tsx: 'tsx',
+    twig: 'twig',
     vue: 'vue',
     xml: 'xml',
     yaml: 'yaml',

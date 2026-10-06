@@ -2,13 +2,16 @@ import { describe, expect, it } from 'bun:test';
 import {
     activates,
     additionKindsForLanguage,
+    alongsideKindsForPath,
+    componentServes,
     documentLanguageId,
     KIND_PROFILES,
     kindForLanguage,
     lspLanguageId,
     resolveNativeTypescript,
     resolveTypescriptLib,
-    usesVue
+    usesVue,
+    type Activation
 } from './profiles.ts';
 import { LANGUAGE_KIND_PACKAGES, LANGUAGE_PACKAGE_VERSIONS, pinnedVersionsOf, versionOf } from './versions.ts';
 
@@ -40,6 +43,9 @@ describe('server profiles', () => {
         expect(kindForLanguage('rust')).toBeNull();
         expect(kindForLanguage('plaintext', {}, 'views/page.phtml')).toBe('php-native');
         expect(kindForLanguage('plaintext', {}, 'notes/readme.txt')).toBeNull();
+        expect(kindForLanguage('twig', { php: 'php' })).toBe('php-native');
+        expect(kindForLanguage('blade', { php: 'php' })).toBe('php-native');
+        expect(kindForLanguage('plaintext', {}, 'templates/base.html.twig')).toBe('php-native');
         expect(lspLanguageId('tsx')).toBe('typescriptreact');
         expect(lspLanguageId('php')).toBe('php');
     });
@@ -51,6 +57,21 @@ describe('server profiles', () => {
         expect(additionKindsForLanguage('vue')).toEqual(['eslint', 'tailwind']);
         expect(additionKindsForLanguage('scss')).toEqual(['tailwind']);
         expect(additionKindsForLanguage('python')).toEqual([]);
+    });
+
+    it('serves the configuration of a Symfony project with the PHP server beside the YAML one', async () => {
+        expect(kindForLanguage('yaml', {}, 'config/services.yaml')).toBe('yaml');
+        for (const path of ['config/services.yaml', 'config/packages/doctrine.yml', 'translations/messages.en.yaml', 'translations/admin/validators.nl.yml']) {
+            expect(alongsideKindsForPath(path).map(([kind]) => kind)).toEqual(['php-native']);
+            expect(componentServes(KIND_PROFILES['php-native'].components[0]!, 'yaml', path)).toBe(true);
+        }
+        for (const path of ['src/config/services.yaml', '.github/workflows/ci.yml', 'config/routes.php', 'docker-compose.yml']) {
+            expect(alongsideKindsForPath(path)).toEqual([]);
+        }
+        const [[, needs]] = alongsideKindsForPath('config/services.yaml') as [[string, { activation: Activation }]];
+        const facts = (files: string[]) => ({ folder: '/work', packageJson: null, exists: async (path: string) => files.includes(path) });
+        expect(await activates(needs, facts(['/work/composer.json']))).toBe(true);
+        expect(await activates(needs, facts([]))).toBe(false);
     });
 
     it('activates an addition by a config file, a dependency or a package.json field', async () => {

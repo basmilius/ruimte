@@ -25,6 +25,8 @@ export interface ComponentProfile {
     languages: readonly string[];
     /* File patterns it serves besides those languages (`matchesFilePattern`), such as the templates of a language the editor does not name. */
     patterns?: readonly string[];
+    /* File patterns of a language another kind serves, which this process serves beside that kind, in a project that calls for it. */
+    alongside?: { patterns: readonly string[]; activation: Activation };
     /* The script it runs, relative to the `node_modules` of the install. Empty for a server with a `command`. */
     entry: string;
     /* Whether the entry is a program of its own, which runs as it is and not under the daemon's runtime. */
@@ -252,8 +254,14 @@ export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
         components: [
             {
                 name: 'php-native',
-                languages: ['php'],
-                patterns: ['*.phtml'],
+                // A Blade template opens as `php`; the server reads it as Blade by its `.blade.php` name.
+                languages: ['php', 'blade', 'twig'],
+                patterns: ['*.phtml', '*.twig'],
+                // The configuration of a Symfony project, which the server answers in and is silent about elsewhere.
+                alongside: {
+                    patterns: ['config/**/*.yaml', 'config/**/*.yml', 'translations/**/*.yaml', 'translations/**/*.yml'],
+                    activation: { files: ['composer.json'] }
+                },
                 entry: 'php-language-server',
                 program: (context) => context.native?.executable ?? '',
                 args: () => ['--stdio'],
@@ -454,7 +462,7 @@ export function documentLanguageId(languageId: string, storedPath: string): stri
 
 /* Whether a process serves a document, by its language or by its path. */
 export function componentServes(component: ComponentProfile, languageId: string, storedPath: string): boolean {
-    return component.languages.includes(lspLanguageId(languageId)) || servesPath(component, storedPath);
+    return component.languages.includes(lspLanguageId(languageId)) || servesPath(component, storedPath) || servesAlongside(component, storedPath);
 }
 
 function catalog(): [LanguageServerKind, KindProfile][] {
@@ -498,6 +506,10 @@ function servesPath(component: ComponentProfile, storedPath: string): boolean {
     return (component.patterns ?? []).some((pattern) => matchesFilePattern(pattern, storedPath));
 }
 
+function servesAlongside(component: ComponentProfile, storedPath: string): boolean {
+    return (component.alongside?.patterns ?? []).some((pattern) => matchesFilePattern(pattern, storedPath));
+}
+
 /* The kinds that serve what this one does, instead of it: the machine uses one of them at a time. Empty for a kind with no alternative. */
 export function alternativesOf(kind: LanguageServerKind): LanguageServerKind[] {
     const { choice } = KIND_PROFILES[kind];
@@ -509,6 +521,15 @@ export function additionKindsForLanguage(languageId: string): LanguageServerKind
     return catalog()
         .filter(([, profile]) => profile.activation !== undefined && serves(profile, languageId))
         .map(([kind]) => kind);
+}
+
+/* The kinds that serve a file by its path beside the kind of its language, with what a project has to hold for each, in the order of the catalog. */
+export function alongsideKindsForPath(storedPath: string): Array<[LanguageServerKind, { activation: Activation }]> {
+    return catalog().flatMap(([kind, profile]) =>
+        profile.components.flatMap((component) =>
+            component.alongside !== undefined && servesAlongside(component, storedPath) ? [[kind, component.alongside] as const] : []
+        )
+    );
 }
 
 /* What a project says about itself, as far as an addition needs to know. */
@@ -542,7 +563,7 @@ function packageJsonHas(packageJson: string | null, activation: Activation): boo
 }
 
 /* Whether a project calls for an addition: one of its files in the project folder, or its `package.json` naming what the addition is for. */
-export async function activates(profile: KindProfile, facts: ProjectFacts): Promise<boolean> {
+export async function activates(profile: { activation?: Activation }, facts: ProjectFacts): Promise<boolean> {
     const { activation } = profile;
     if (activation === undefined) {
         return false;

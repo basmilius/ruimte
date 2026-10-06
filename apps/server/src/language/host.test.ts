@@ -1010,6 +1010,20 @@ describe('the PHP server of Ruimte and Intelephense', () => {
         expect((await open(host, 'views/page.phtml', '<p>', 'client-1', 'plaintext')).servers).toEqual(['php-native']);
     });
 
+    it('serves Twig, Blade and the configuration of a Symfony project with the server of Ruimte', async () => {
+        const { host } = await installed(['php-native', 'yaml'], { files: ['/work/composer.json'] });
+        expect((await open(host, 'templates/base.html.twig', '{{ title }}', 'client-1', 'twig')).servers).toEqual(['php-native']);
+        expect((await open(host, 'resources/views/welcome.blade.php', '@if(true)', 'client-1', 'php')).servers).toEqual(['php-native']);
+        expect((await open(host, 'config/services.yaml', 'services:', 'client-1', 'yaml')).servers).toEqual(['yaml', 'php-native']);
+        expect((await open(host, 'translations/messages.en.yml', 'hello: Hello', 'client-1', 'yaml')).servers).toEqual(['yaml', 'php-native']);
+        expect((await open(host, '.github/workflows/ci.yml', 'on: push', 'client-1', 'yaml')).servers).toEqual(['yaml']);
+    });
+
+    it('leaves the YAML of a project without composer.json to the YAML server', async () => {
+        const { host } = await installed(['php-native', 'yaml']);
+        expect((await open(host, 'config/services.yaml', 'services:', 'client-1', 'yaml')).servers).toEqual(['yaml']);
+    });
+
     it('moves the open documents to the other server, clears what the first reported and ends it', async () => {
         const { host, spawner, events } = await installed(['php-native', 'php']);
         await open(host, 'src/a.php', '<?php', 'client-1', 'php');

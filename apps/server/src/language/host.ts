@@ -54,6 +54,7 @@ import { MERGED_METHODS, mergeAnswers, mergeProviders } from './merge.ts';
 import {
     activates,
     additionKindsForLanguage,
+    alongsideKindsForPath,
     alternativesOf,
     componentServes,
     documentLanguageId,
@@ -535,7 +536,10 @@ export class LanguageHost {
     /* The kinds that serve a document: the one of its language, then the additions the project calls for. */
     private async kindsFor(project: ProjectLanguage, languageId: string, storedPath: string): Promise<LanguageServerId[]> {
         const primary = await this.primaryKindFor(project, kindForLanguage(languageId, this.choices.get(), storedPath));
-        const candidates = additionKindsForLanguage(languageId);
+        const candidates = [
+            ...additionKindsForLanguage(languageId).map((kind) => [kind, KIND_PROFILES[kind]] as const),
+            ...alongsideKindsForPath(storedPath).filter(([kind]) => kind !== primary)
+        ];
         const kinds: LanguageServerId[] = primary === null ? [] : [primary];
         if (candidates.length > 0) {
             const facts: ProjectFacts = {
@@ -543,8 +547,8 @@ export class LanguageHost {
                 packageJson: await (this.options.readText ?? readTextOrNull)(join(project.folder, 'package.json')),
                 exists: this.options.exists ?? fileExists
             };
-            const active = await Promise.all(candidates.map((kind) => activates(KIND_PROFILES[kind], facts)));
-            kinds.push(...candidates.filter((_, index) => active[index]));
+            const active = await Promise.all(candidates.map(([, needs]) => activates(needs, facts)));
+            kinds.push(...candidates.filter((_, index) => active[index]).map(([kind]) => kind));
         }
         return [...kinds, ...this.customKindsFor(project, languageId, storedPath)];
     }
