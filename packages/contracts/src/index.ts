@@ -175,6 +175,7 @@ import {
     LanguageProvidersEventSchema,
     LanguageRequestPayloadSchema,
     LanguageRequestResultSchema,
+    LanguageRollbackPayloadSchema,
     LanguageServerStatusResultSchema,
     LanguageServerTargetPayloadSchema,
     LanguageStatusEventSchema,
@@ -444,6 +445,8 @@ export const REQUEST_SCHEMAS = {
     'language.install': { payload: LanguageInstallPayloadSchema, result: LanguageServerStatusResultSchema },
     // The machine's choice between two servers of one language; any client may switch it, since both were installed by a person.
     'language.prefer': { payload: LanguagePreferPayloadSchema, result: LanguageServerStatusResultSchema },
+    // A person's step back from an update; like an install, never the daemon's own or a verb's.
+    'language.rollback': { payload: LanguageRollbackPayloadSchema, result: LanguageServerStatusResultSchema },
     'language.restart': { payload: LanguageServerTargetPayloadSchema, result: LanguageServerStatusResultSchema },
     'language.log': { payload: LanguageServerTargetPayloadSchema, result: LanguageLogResultSchema },
     'language.custom.list': { payload: EmptySchema, result: LanguageCustomListResultSchema },

@@ -55,7 +55,7 @@ export const LanguageServerStatusSchema = z.object({
     // Open on purpose: a client reading a reply whole must not refuse it for a kind a newer daemon adds.
     server: z.string(),
     state: LanguageServerStateSchema,
-    // The version of the pinned package the kind is named after; empty for a server of a person's own.
+    // The version the kind runs, or for one not installed the version an install brings; empty for a server of a person's own.
     version: z.string(),
     // Open documents in the project that the server serves.
     documents: z.number().int().nonnegative(),
@@ -75,7 +75,11 @@ export const LanguageServerStatusSchema = z.object({
     // Only for a kind that has an alternative serving the same language (PHP): whether the machine uses this one for it.
     chosen: z.boolean().optional(),
     // There is no build of the kind to install in this release of Ruimte yet, so Install has nothing to download.
-    unavailable: z.boolean().optional()
+    unavailable: z.boolean().optional(),
+    // What `language.install` brings over the version the kind runs: the version this Ruimte pins, or a build of a checkout that changed since (`rebuild`).
+    update: z.object({ version: z.string(), rebuild: z.boolean().optional() }).optional(),
+    // The version the kind ran before, which `language.rollback` goes back to.
+    previous: z.object({ version: z.string() }).optional()
 });
 export type LanguageServerStatus = z.infer<typeof LanguageServerStatusSchema>;
 
@@ -85,6 +89,9 @@ export type LanguageStatusResult = z.infer<typeof LanguageStatusResultSchema>;
 
 /* The kinds install into `$RUIMTE_HOME/language-servers` for the whole machine, so no project is named. */
 export const LanguageInstallPayloadSchema = z.object({ server: LanguageServerKindSchema });
+
+/* Goes back to the version a kind ran before the one it runs, for the whole machine. */
+export const LanguageRollbackPayloadSchema = z.object({ server: LanguageServerKindSchema });
 
 /* A server that serves the same language as another one, as the machine's choice between them: the daemon uses it for the language from the next document on, and the other one ends with its documents. */
 export const LanguagePreferPayloadSchema = z.object({ server: LanguageServerKindSchema });

@@ -198,6 +198,7 @@
     "language.status",
     "language.install",
     "language.prefer",
+    "language.rollback",
     "language.restart",
     "language.log",
     "language.custom.list",

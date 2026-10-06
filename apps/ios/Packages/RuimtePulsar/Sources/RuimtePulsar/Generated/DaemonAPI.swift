@@ -106,6 +106,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `languageStatus` = "language.status"
     case `languageInstall` = "language.install"
     case `languagePrefer` = "language.prefer"
+    case `languageRollback` = "language.rollback"
     case `languageRestart` = "language.restart"
     case `languageLog` = "language.log"
     case `languageCustomList` = "language.custom.list"
