@@ -364,6 +364,7 @@ describe('smart keys', () => {
             smartIndentOnEnter: true,
             indentOnPaste: true,
             smartSemicolon: true,
+            smartArrow: true,
             camelHumps: false
         });
     });

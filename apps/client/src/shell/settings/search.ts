@@ -231,6 +231,12 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         label: 'settings:editor.smartKeys.smartSemicolon.label',
         description: 'settings:editor.smartKeys.smartSemicolon.description'
     },
+    {
+        id: 'editor.smartKeys.smartArrow',
+        section: 'editor',
+        label: 'settings:editor.smartKeys.smartArrow.label',
+        description: 'settings:editor.smartKeys.smartArrow.description'
+    },
     { id: 'editor.servers', section: 'editor', label: 'settings:editor.servers.title', description: 'settings:editor.servers.description' },
     { id: 'editor.servers.own', section: 'editor', label: 'settings:editor.servers.own.title', description: 'settings:editor.servers.own.description' },
     { id: 'views.drawing.snap', section: 'views', label: 'settings:views.drawing.snap.label', description: 'settings:views.drawing.snap.description' },

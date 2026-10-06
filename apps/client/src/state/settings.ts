@@ -31,6 +31,7 @@ export const DEFAULT_SMART_KEYS: EditorSmartKeys = {
     smartIndentOnEnter: true,
     indentOnPaste: true,
     smartSemicolon: true,
+    smartArrow: true,
     camelHumps: false
 };
 

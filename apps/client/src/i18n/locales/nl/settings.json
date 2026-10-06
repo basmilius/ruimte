@@ -304,6 +304,10 @@
             "smartSemicolon": {
                 "label": "Slimme puntkomma",
                 "description": "Een puntkomma die je binnen een aanroep typt, gaat naar het einde van de instructie."
+            },
+            "smartArrow": {
+                "label": "Slimme pijl",
+                "description": "In PHP wordt een min die je direct na een variabele typt ->."
             }
         },
         "servers": {

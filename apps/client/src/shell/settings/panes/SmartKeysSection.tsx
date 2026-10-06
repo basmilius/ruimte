@@ -13,7 +13,8 @@ const KEYS = [
     ['tabOutOfClosers', 'tabOut'],
     ['smartIndentOnEnter', 'smartEnter'],
     ['indentOnPaste', 'indentOnPaste'],
-    ['smartSemicolon', 'smartSemicolon']
+    ['smartSemicolon', 'smartSemicolon'],
+    ['smartArrow', 'smartArrow']
 ] as const satisfies readonly (readonly [keyof EditorSmartKeys, string])[];
 
 /* What the editor does by itself as you type. */

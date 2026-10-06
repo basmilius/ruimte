@@ -304,6 +304,10 @@
             "smartSemicolon": {
                 "label": "Smart semicolon",
                 "description": "A semicolon typed inside a call goes to the end of the statement."
+            },
+            "smartArrow": {
+                "label": "Smart arrow",
+                "description": "In PHP, a minus typed right after a variable becomes ->."
             }
         },
         "servers": {
