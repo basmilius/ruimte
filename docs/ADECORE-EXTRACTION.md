@@ -1,6 +1,6 @@
 # Moving shared modules to Adecore
 
-The inventory and extraction plan below record the starting state. Current consumers use the published Adecore packages, and the original sources were removed before manual testing on October 6, 2026. See [the cutover record](ADECORE-CUTOVER.md).
+The inventory and extraction plan below record the starting state. Current consumers use the published Adecore packages, and the original sources were removed before manual testing on October 6, 2026. PHP has since moved to `basmilius/language-server-php`; Ruimte selects its standalone checkout or the pinned `v0.1.0` native release. See [the cutover record](ADECORE-CUTOVER.md).
 
 Inventory and migration proposal, October 5, 2026.
 

@@ -1,10 +1,9 @@
 import release from './php-native-release.json' with { type: 'json' };
-import { phpLanguageServerSourcePath } from '@adecore/php-language-server';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { access, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import type { LanguageServerKind } from '@ruimte/contracts';
 import { extractEntries, readArchive, type ArchiveFormat } from './archive.ts';
 
@@ -27,6 +26,7 @@ export interface NativeAsset {
 
 export interface NativeRelease {
     version: string;
+    sourceRevision: string;
     /* The commit of phpstorm-stubs the server was built against, which Install fetches along with it. */
     stubsCommit: string;
     /* By `<platform>-<arch>`, as Node names them (`darwin-arm64`, `linux-x64`). */
@@ -73,11 +73,44 @@ export function readNativeCheckout(folder: string): NativeCheckout | null {
     }
 }
 
-export function phpLanguageServerCheckout(compiled: boolean, sourcePath = process.env.RUIMTE_PHP_LANGUAGE_SERVER_SOURCE): NativeCheckout | null {
+function mainCheckoutRoot(root: string): string | null {
+    try {
+        const gitdir = /^gitdir:\s*(.+)$/m.exec(readFileSync(join(root, '.git'), 'utf8'))?.[1]?.trim();
+        if (gitdir === undefined) {
+            return null;
+        }
+        const directory = resolve(root, gitdir);
+        const common = resolve(directory, readFileSync(join(directory, 'commondir'), 'utf8').trim());
+        return basename(common) === '.git' ? dirname(common) : null;
+    } catch {
+        return null;
+    }
+}
+
+export function phpLanguageServerCheckout(
+    compiled: boolean,
+    sourcePath: string | null = process.env.RUIMTE_PHP_LANGUAGE_SERVER_SOURCE ?? null,
+    ruimteRoot = resolve(import.meta.dir, '../../../..')
+): NativeCheckout | null {
     if (compiled) {
         return null;
     }
-    return readNativeCheckout(sourcePath ?? phpLanguageServerSourcePath());
+    if (sourcePath !== null) {
+        return readNativeCheckout(resolve(sourcePath));
+    }
+    try {
+        // Anchor discovery to the sources, even when the daemon starts elsewhere or through a symlink.
+        const root = realpathSync(ruimteRoot);
+        const sibling = readNativeCheckout(join(dirname(root), 'language-server-php'));
+        if (sibling !== null) {
+            return sibling;
+        }
+        // A Ruimte worktree can use the standalone checkout beside its primary checkout.
+        const main = mainCheckoutRoot(root);
+        return main === null ? null : readNativeCheckout(join(dirname(main), 'language-server-php'));
+    } catch {
+        return null;
+    }
 }
 
 /* What an install of a native kind does, and what it ends up running. */
@@ -101,11 +134,7 @@ export interface NativePolicyOptions {
     releases?: Partial<Record<NativeKind, NativeRelease>>;
 }
 
-/*
- * Where a native kind comes from. A daemon that runs from a checkout uses the server that checkout
- * builds, and never one a release names; a compiled daemon has no checkout and uses the pinned
- * release, or reports that this build has none.
- */
+/* A selected checkout builds its server; without one, the pinned release supplies it. */
 export class NativePolicy {
     private readonly options: NativePolicyOptions;
 

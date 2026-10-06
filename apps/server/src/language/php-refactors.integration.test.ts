@@ -12,7 +12,7 @@ import { NativePolicy, phpLanguageServerCheckout } from './native.ts';
 import { spawnLanguageProcess } from './runtime.ts';
 
 /*
- * The refactors of Adecore's PHP server through the Ruimte host, on a small project written to a temporary folder. It runs the
+ * The refactors of the standalone PHP server through the Ruimte host, on a small project written to a temporary folder. It runs the
  * server that is built already and the stubs that Install left in the development home, so nothing is built or downloaded here.
  */
 

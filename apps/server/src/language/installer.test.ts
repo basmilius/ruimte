@@ -311,6 +311,7 @@ describe('native install', () => {
     describe('from a release', () => {
         const binary = tarGz([{ path: 'php-language-server', text: '#!/bin/sh\n', mode: 0o755 }]);
         const release = (checksum = sha256(binary)): NativeRelease => ({
+            sourceRevision: COMMIT,
             version: '1.2.3',
             stubsCommit: COMMIT,
             assets: {

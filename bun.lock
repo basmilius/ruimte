@@ -5,6 +5,7 @@
     "": {
       "name": "ruimte",
       "devDependencies": {
+        "@types/bun": "^1.4.2",
         "oxfmt": "^0.70.0",
         "oxlint": "^1.85.0",
         "typescript": "^7.0.2",
@@ -137,7 +138,6 @@
         "@adecore/drawing": "0.17.0-beta.1",
         "@adecore/lsp": "0.17.0-beta.1",
         "@adecore/merge": "0.17.0-beta.1",
-        "@adecore/php-language-server": "0.17.0-beta.1",
         "@adecore/plan": "0.17.0-beta.1",
         "@adecore/service": "0.17.0-beta.1",
         "@modelcontextprotocol/client": "^2.1.0",
@@ -300,8 +300,6 @@
     "@adecore/lsp": ["@adecore/lsp@0.17.0-beta.1", "", {}, "sha512-NbQ/4khoXNFac61PEMT+69XiXBBOJh2bZEskqRoNCTy2Xs0Dal/FHZ5YFeWGhi8EKjvegEWtBVSPbIXKYWyINA=="],
 
     "@adecore/merge": ["@adecore/merge@0.17.0-beta.1", "", {}, "sha512-q0ySYdCm7mV2U+1+30IbYxY2M/+HxndgoEXB/5Sa9D1WNnQAWty/V40ls2PgkQ0zYLxTWcYZjgBn+fivPIPHcw=="],
-
-    "@adecore/php-language-server": ["@adecore/php-language-server@0.17.0-beta.1", "", {}, "sha512-C2nyQvOpvuoP7oJkjMMRsHIN3xphzkv/pZXwep37sKwANH27PDbt9X9iRQdt/+i0Bz16PGeebD1L1MDVp08puA=="],
 
     "@adecore/plan": ["@adecore/plan@0.17.0-beta.1", "", { "dependencies": { "zod": "^4.6.5" } }, "sha512-93bNkAxQGb3AUixpVzollpqXD2N6eoECsIPiV7hP/mew/rDfgID3VHj4ZY7GXJ+gxnxISDNI562aN3qlgF4rpQ=="],
 

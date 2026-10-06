@@ -4,7 +4,7 @@
     "version": "0.0.0",
     "type": "module",
     "scripts": {
-        "dev": "RUIMTE_HOME=${RUIMTE_DEV_HOME:-$HOME/.ruimte-dev} bun --watch src/main.ts --port 4211",
+        "dev": "RUIMTE_HOME=${RUIMTE_DEV_HOME:-$HOME/.ruimte-dev} bun --conditions=source --watch src/main.ts --port 4211",
         "start": "bun src/main.ts",
         "typecheck": "tsc --noEmit",
         "smoke": "bun src/smoke.ts",
@@ -35,7 +35,6 @@
         "serve-sim": "0.1.46",
         "werift": "0.24.4",
         "zod": "^4.6.5",
-        "@adecore/php-language-server": "0.17.0-beta.1",
         "@ruimte/service": "workspace:*"
     },
     "devDependencies": {

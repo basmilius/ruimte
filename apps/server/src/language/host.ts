@@ -105,7 +105,7 @@ export interface LanguageHostOptions {
     custom?: CustomLanguageServers;
     /* Which server the machine uses where two serve one language; by default the file beside the installs. */
     choices?: LanguageChoices;
-    /* Where the native servers come from: the checkout the daemon runs from, else the pinned releases. */
+    /* Native servers use a selected standalone checkout or the pinned release. */
     native?: NativePolicy;
     /* How an install downloads a release or the stubs. */
     download?: Download;

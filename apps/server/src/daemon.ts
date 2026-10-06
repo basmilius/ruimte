@@ -854,7 +854,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         folderOf: (projectId) => projects.index.folderOf(projectId),
         holders: (projectId) => projects.holdersOf(projectId),
         machineHome,
-        // A checkout builds the PHP server it holds; a compiled daemon only ever installs a pinned release.
+        // A compiled daemon ignores local PHP sources and installs the pinned native release.
         native: new NativePolicy({ checkout: phpLanguageServerCheckout(compiled) })
     });
     await language.load();

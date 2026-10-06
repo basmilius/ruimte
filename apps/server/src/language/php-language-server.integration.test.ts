@@ -13,7 +13,7 @@ import { spawnLanguageProcess } from './runtime.ts';
 import { tarGz } from './test-archives.ts';
 
 /*
- * The Adecore PHP server, built from its installed sources with Cargo as Install does in development
+ * The standalone PHP server, built from its checkout with Cargo as Install does in development
  * and run through the host. The stubs come from a small archive of the test's own, so the run needs no network.
  */
 
@@ -22,7 +22,7 @@ const hasCargo = existsSync(cargoCommand());
 
 if (!hasCargo || checkout === null) {
     console.warn(
-        `Skipping the PHP server tests: ${checkout === null ? 'the selected Adecore package or explicit checkout has no native sources' : 'cargo is not installed'}`
+        `Skipping the PHP server tests: ${checkout === null ? 'the standalone sibling or explicit checkout has no native sources' : 'cargo is not installed'}`
     );
 }
 
@@ -111,7 +111,7 @@ const download: Download = async (_url, destination) => {
     await writeFile(destination, STUBS);
 };
 
-describe.skipIf(!hasCargo || checkout === null)('the Adecore PHP server in Ruimte', () => {
+describe.skipIf(!hasCargo || checkout === null)('the standalone PHP server in Ruimte', () => {
     beforeAll(async () => {
         base = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-php-server-')));
         project = join(base, 'project');

@@ -5,6 +5,7 @@ import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { build, defaultClientConditions, defineConfig, searchForWorkspaceRoot, type Plugin } from 'vite';
+import { adecoreSources } from './adecore-sources.ts';
 
 // The dev daemon sits on 4211 so an installed Ruimte can keep 4210.
 const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4211';
@@ -13,10 +14,14 @@ const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4211';
 const port = 4212;
 
 // Where the @adecore packages really live: a linked checkout sits outside this repository.
-const adecore = ['ui', 'terminal', 'agents-react', 'editor-core', 'editor', 'editor-react', 'lsp', 'drawing', 'diagram', 'merge', 'plan']
-    .map((name) => fileURLToPath(new URL(`./node_modules/@adecore/${name}`, import.meta.url)))
+const clientManifest = JSON.parse(readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8')) as {
+    dependencies: Record<string, string>;
+};
+const adecore = Object.keys(clientManifest.dependencies)
+    .filter((name) => name.startsWith('@adecore/'))
+    .map((name) => fileURLToPath(new URL(`./node_modules/${name}`, import.meta.url)))
     .filter(existsSync)
-    .map((path) => realpathSync(path));
+    .map((path) => searchForWorkspaceRoot(realpathSync(path)));
 
 /*
  * The web client at `station.ruimte.app` (`vite build --mode station`). It is the same page, plus what
@@ -126,7 +131,7 @@ function pdfjsAssets(): Plugin {
 }
 
 export default defineConfig(({ mode }) => ({
-    plugins: [react(), tailwindcss(), bytesWorker(), pdfjsAssets(), ...(mode === 'station' ? [stationHead()] : [])],
+    plugins: [adecoreSources(), react(), tailwindcss(), bytesWorker(), pdfjsAssets(), ...(mode === 'station' ? [stationHead()] : [])],
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url))

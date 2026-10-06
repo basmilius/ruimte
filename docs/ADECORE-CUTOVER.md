@@ -6,7 +6,7 @@ The original shared implementations were removed on October 6 before manual test
 
 ## Ownership
 
-| Shared implementation                              | Adecore package                                         | Ruimte integration                                                                        |
+| Shared implementation                              | Package or repository                                   | Ruimte integration                                                                        |
 | -------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Agent wire schemas                                 | `@adecore/agent-contracts`                              | Existing request/event tables in `@ruimte/contracts`.                                     |
 | Agent runtimes and coordination                    | `@adecore/agents`                                       | Daemon providers, chat management, task adapters, persistence and application commands.   |
@@ -15,7 +15,7 @@ The original shared implementations were removed on October 6 before manual test
 | Merge, drawing, diagram and plan                   | `@adecore/merge`, `drawing`, `diagram`, `plan`          | Product views, daemon stores and application wire envelopes.                              |
 | FileTree and tree rows                             | `@adecore/ui`                                           | Files/search, Git changes and commit/change trees.                                        |
 | Service managers                                   | `@adecore/service`                                      | `@ruimte/service/host` retains Ruimte's identity, environment and paths.                  |
-| Native PHP language server                         | `@adecore/php-language-server`                          | Explicit source lookup and pinned release assets in the language host.                    |
+| Native PHP language server                         | `basmilius/language-server-php`                         | Standalone checkout lookup and pinned native release assets in the language host.        |
 
 UI, terminal and shell dependencies also use `0.17.0-beta.1`. The application npm workflow publishes only the launcher and platform binaries. Adecore owns library releases, model catalogs and pricing snapshots. The old library build files and placeholders have been removed.
 
@@ -29,7 +29,7 @@ FileTree owns row rendering and generic interaction. Ruimte keeps listing caches
 
 Drawing, diagram and plan host schemas add project/view/chat envelopes around the shared generic schemas. Schema comparisons preserve the existing constraints, request/event tables use the shared instances, and all 565 generated Swift wire models remain unchanged. The iOS document renderer was regenerated against the installed drawing package and its dependency license records.
 
-The PHP npm version is `0.17.0-beta.1`; the native binary version remains `0.1.0`. `php-native-release.json` pins the published GitHub descriptor and checksums for Apple silicon, Linux arm64/x64 and Windows x64. Development can use the installed native sources or `RUIMTE_PHP_LANGUAGE_SERVER_SOURCE`. Installation remains a person's action.
+PHP has since moved to `basmilius/language-server-php`, and Ruimte no longer consumes a PHP npm package. The native binary version remains `0.1.0`. `php-native-release.json` pins that repository's official `v0.1.0` descriptor and checksums for Apple silicon, Linux arm64/x64 and Windows x64. Development selects the existing standalone sibling checkout or `RUIMTE_PHP_LANGUAGE_SERVER_SOURCE`; a compiled daemon uses the release. Installation remains a person's action. The validation below records the earlier ADE CORE cutover, before this PHP move.
 
 ## Validation
 
@@ -44,7 +44,7 @@ Before source cleanup, the following checks passed against the published npm pac
 - All four PHP descriptor checksums matched GitHub asset digests. The macOS artifact also passed checksum verification, safe archive extraction and a real stdio initialize, UTF-8 negotiation, document-symbol, shutdown and exit sequence.
 - Scoped formatting and whitespace checks.
 
-TypeScript resolves Adecore's supported `source` condition. The shared base config also includes Bun's condition so unrelated dependencies that expose TypeScript sources continue to resolve their supported Bun entrypoint. Production compilation and separate consumer checks exercise the published default JavaScript exports.
+TypeScript resolves Adecore's supported `source` condition. The shared base config also includes Bun's condition so unrelated dependencies that expose TypeScript sources continue to resolve their supported Bun entrypoint. The current client, desktop and daemon builds select `source` exports, as documented in [ADE CORE development](./ADECORE-DEVELOPMENT.md). The separate consumer checks recorded above also exercised the published default JavaScript exports.
 
 Vite prebundles `.tsx` source exports so CommonJS dependencies of the shared React components reach the browser as ES modules. A clean-cache browser integration test boots the application and loads the Note view, which uses the shared Markdown component.
 

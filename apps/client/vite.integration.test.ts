@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 
@@ -27,6 +27,10 @@ test.skipIf(browser === null || node === null)(
             if (address === null || address === undefined || typeof address === 'string') {
                 throw new Error('Vite did not bind a TCP port');
             }
+            const editor = Bun.resolveSync('@adecore/editor', import.meta.dir);
+            const core = Bun.resolveSync('@adecore/editor-core', dirname(editor));
+            const source = await fetch(`http://localhost:${address.port}/@fs${core}`);
+            expect(source.status).toBe(200);
             const process = Bun.spawn(
                 [node!, fileURLToPath(new URL('./testing/dev-import-smoke.mjs', import.meta.url)), `http://localhost:${address.port}`, browser!],
                 { stdout: 'pipe', stderr: 'pipe' }
