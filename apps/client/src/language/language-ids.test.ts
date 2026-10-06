@@ -11,6 +11,7 @@ describe('the language a file opens with', () => {
         expect(lspLanguageIdOf('css')).toBe('css');
         expect(lspLanguageIdOf('docker')).toBe('dockerfile');
         expect(lspLanguageIdOf('shellscript')).toBe('shellscript');
+        expect(lspLanguageIdOf('twig')).toBe('twig');
         expect(lspLanguageIdOf('zig')).toBeNull();
         expect(lspLanguageIdOf(undefined)).toBeNull();
     });

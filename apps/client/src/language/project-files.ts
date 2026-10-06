@@ -45,6 +45,14 @@ export function draftFiles(endpointId: string, transport: Transport, projectId: 
                 return error instanceof Error ? error.message : String(error);
             }
         },
+        create: async (path, text) => {
+            try {
+                await transport.request('fs.create', { path, kind: 'file', text });
+                return null;
+            } catch (error) {
+                return error instanceof Error ? error.message : String(error);
+            }
+        },
         stage: (files: readonly StagedFile[]) => {
             for (const file of files) {
                 textDrafts.stage(endpointId, file.path, file.disk, file.text);
