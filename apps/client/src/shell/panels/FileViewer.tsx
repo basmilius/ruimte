@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { runAsPerson } from '@/actions/client-actions';
 import { FileText, Search } from 'lucide-react';
 import { DiffFile } from '@/shell/panels/DiffFile';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { FileBody } from '@/shell/panels/FileBody';
+import { keptTabs, shownAfter } from '@/shell/panels/kept-tabs';
 import { FileIcon, EmptyState, Icon, ListRow, SectionLabel, Tile, ContextMenu } from '@adecore/ui';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
@@ -71,23 +73,44 @@ function EmptyPreview() {
     );
 }
 
-/* The preview panel's body: whichever tab is up, under the strip that names them. */
+/*
+ * The preview panel's body: whichever tab is up, under the strip that names them. The tabs shown last keep
+ * their editor underneath, hidden and inert, as the platform keeps an editor per tab: going back to one finds
+ * its colors, folds and usages as they were, instead of the editor building them up again in front of you.
+ */
 export function FileViewer() {
     const active = useFiles((s) => s.active);
-    const tab = useFiles((s) => s.tabs.find((entry) => entry.key === s.active) ?? null);
+    const tabs = useFiles((s) => s.tabs);
+    const [shown, setShown] = useState<readonly string[]>([]);
 
+    useEffect(() => {
+        if (active) {
+            setShown((previous) => shownAfter(previous, active));
+        }
+    }, [active]);
+
+    const tab = tabs.find((entry) => entry.key === active) ?? null;
     if (!active || !tab) {
         return <EmptyPreview />;
     }
+    const kept = keptTabs(active, shown, tabs);
 
     return (
-        // Keyed on the tab, so switching tabs starts a read of its own instead of drawing the file before it.
-        <div className="flex min-h-0 min-w-0 grow flex-col justify-center">
-            {tab.view ? (
-                <DiffFile key={tab.key} tabKey={tab.key} path={tab.path} name={basenameOf(tab.path)} view={tab.view} />
-            ) : (
-                <FileBody key={tab.key} path={tab.path} name={basenameOf(tab.path)} on="tab" tabKey={tab.key} />
-            )}
+        // Keyed on the tab, so a tab starts a read of its own instead of drawing the file before it.
+        <div className="relative min-h-0 min-w-0 grow">
+            {kept.map((entry) => (
+                <div
+                    key={entry.key}
+                    className={`absolute inset-0 flex min-h-0 min-w-0 flex-col justify-center ${entry.key === active ? '' : 'invisible'}`}
+                    inert={entry.key !== active}
+                >
+                    {entry.view ? (
+                        <DiffFile key={entry.key} tabKey={entry.key} path={entry.path} name={basenameOf(entry.path)} view={entry.view} />
+                    ) : (
+                        <FileBody key={entry.key} path={entry.path} name={basenameOf(entry.path)} on="tab" tabKey={entry.key} />
+                    )}
+                </div>
+            ))}
         </div>
     );
 }
