@@ -6,7 +6,9 @@ import { VISUAL_LIMITS, type ChatItem, type ChatVisual, type ProjectContent } fr
 import { visualFileName } from '@adecore/agents/chat/visual-store';
 import { ManualClock } from '@adecore/agents/outbox/manual-clock';
 import { readBytes } from '../bytes/read-bytes.ts';
+import type { VisualHost } from '../canvas/verb.ts';
 import { SHOWN_LINE } from '../canvas/visual-verb.ts';
+import { VisualRenderError, type VisualPreview } from '../visuals/renderer.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
@@ -63,13 +65,16 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-async function boot(options: { installed?: ('claude' | 'codex')[]; visualReplies?: boolean } = {}): Promise<TestDaemon> {
+async function boot(
+    options: { installed?: ('claude' | 'codex')[]; visualReplies?: boolean; visualRender?: Pick<VisualHost, 'preview' | 'measure'> } = {}
+): Promise<TestDaemon> {
     const daemon = await bootTestDaemon({
         home,
         store,
         clock,
         installed: options.installed ?? ['claude'],
-        machine: { resumeAtReset: false, visualReplies: options.visualReplies ?? true }
+        machine: { resumeAtReset: false, visualReplies: options.visualReplies ?? true },
+        ...(options.visualRender === undefined ? {} : { visualRender: options.visualRender })
     });
     running.push(daemon);
     return daemon;
@@ -230,7 +235,11 @@ describe('visual verbs', () => {
     test('help visual carries the rules for a page and an example to copy', async () => {
         const daemon = await boot();
         const lines = await runVerb(daemon, 'chat-lead', 'help', ['visual']);
-        expect(lines[0]).toBe('usage\tvisual\t<show|list|remove> ...');
+        expect(lines[0]).toBe('usage\tvisual\t<preview|show|list|remove> ...');
+        expect(lines.some((line) => line.startsWith('preview\tPreview first, then show: ruimte-context visual preview < page.html'))).toBe(true);
+        expect(lines).toContain(
+            'action\tvisual preview\t[--width W] [--appearance dark|light] (< page.html | --html H)\tRenders a self-contained HTML page the way this chat would draw it, without showing it, and answers a png of it, the height it needs and what it wrote to its console.'
+        );
         expect(lines.some((line) => line.startsWith('page\tA visual is one self-contained HTML document'))).toBe(true);
         expect(lines.some((line) => line.startsWith('layout\t'))).toBe(true);
         expect(lines.some((line) => line.startsWith('theme\t') && line.includes('--chart-1'))).toBe(true);
@@ -238,6 +247,125 @@ describe('visual verbs', () => {
             `example\truimte-context visual show --title "Open issues per label" --height 160 <<'EOF'`
         );
         expect(lines.filter((line) => line.startsWith('example\t')).at(-1)).toBe('example\tEOF');
+    });
+});
+
+describe('previews and measured heights', () => {
+    function previewed(overrides: Partial<VisualPreview> = {}): VisualPreview {
+        return { path: '/home/screenshots/visual-1a2b-1.png', width: 768, height: 420, shotHeight: 420, console: [], omitted: 0, ...overrides };
+    }
+
+    test('visual preview prints the shot, the height, the console and that show publishes it, at the reply width in dark by default', async () => {
+        const asked: unknown[] = [];
+        const preview = async (input: { html: string; width: number; appearance: 'dark' | 'light' }): Promise<VisualPreview> => {
+            asked.push(input);
+            return previewed({
+                width: input.width,
+                console: [
+                    { level: 'log', text: 'drawn 3 bars' },
+                    { level: 'exception', text: 'Uncaught TypeError: x is not a function at page.html:12:5' }
+                ],
+                omitted: 4
+            });
+        };
+        const daemon = await bootWithChat({ visualRender: { preview } });
+        expect(await runVerb(daemon, 'chat-lead', 'visual', ['preview', `--html=${PAGE}`])).toEqual([
+            'shot\t/home/screenshots/visual-1a2b-1.png\tthe png on this machine, which you open with your own tools',
+            'height\t420\tthe height the page needs at 768px',
+            'console\tlog\tdrawn 3 bars',
+            'console\texception\tUncaught TypeError: x is not a function at page.html:12:5',
+            'note\t4 more console messages were left out',
+            'next\tThis only checked the page; ruimte-context visual show --title T with the same page on stdin shows it above your reply'
+        ]);
+        await runVerb(daemon, 'chat-lead', 'visual', ['preview', '--width', '400', '--appearance', 'light', `--html=${PAGE}`]);
+        expect(asked).toEqual([
+            { html: PAGE, width: 768, appearance: 'dark' },
+            { html: PAGE, width: 400, appearance: 'light' }
+        ]);
+        expect(await daemon.chats.listVisuals('chat-lead')).toEqual([]);
+    });
+
+    test('a quiet page gets a note, and a page taller than its shot says how much the shot covers', async () => {
+        const daemon = await bootWithChat({ visualRender: { preview: async () => previewed({ height: 5200, shotHeight: 4000 }) } });
+        const lines = await runVerb(daemon, 'chat-lead', 'visual', ['preview', `--html=${PAGE}`]);
+        expect(lines.slice(1, 4)).toEqual([
+            'height\t5200\tthe height the page needs at 768px',
+            'note\tThe shot covers the first 4000 of those pixels',
+            'note\tThe page wrote nothing to its console'
+        ]);
+    });
+
+    test('without a browser the preview is refused under a code of its own, and show still works', async () => {
+        const daemon = await bootWithChat();
+        const lines = await runVerb(daemon, 'chat-lead', 'visual', ['preview', `--html=${PAGE}`]);
+        expect(lines).toEqual(['refused\tpreview-unavailable\tThis machine renders no previews; show the page with visual show without a preview']);
+        await shown(daemon, 'Bars');
+
+        const refusing = await bootWithChat({
+            visualRender: {
+                preview: async () => {
+                    throw new VisualRenderError(
+                        'preview-unavailable',
+                        'This machine has no Chrome to render a preview with; show the page with visual show without a preview'
+                    );
+                }
+            }
+        });
+        expect(await runVerb(refusing, 'chat-lead', 'visual', ['preview', `--html=${PAGE}`])).toEqual([
+            'refused\tpreview-unavailable\tThis machine has no Chrome to render a preview with; show the page with visual show without a preview'
+        ]);
+    });
+
+    test('a preview is refused for a terminal, with visual replies off, for an empty page and for flags out of range', async () => {
+        let previews = 0;
+        const preview = async (): Promise<VisualPreview> => {
+            previews++;
+            return previewed();
+        };
+        const daemon = await bootWithChat({ visualRender: { preview } });
+        expect(refusalCode(await runVerb(daemon, 'term-lead', 'visual', ['preview', `--html=${PAGE}`]))).toBe('visual-needs-chat');
+        expect(await runVerb(daemon, 'chat-lead', 'visual', ['preview', '--html='])).toEqual([
+            'refused\tvisual-invalid\tThe page is empty; pass one self-contained HTML document',
+            'detail\truimte-context help visual'
+        ]);
+        expect((await runVerb(daemon, 'chat-lead', 'visual', ['preview', '--width', '200', `--html=${PAGE}`]))[0]).toBe(
+            'refused\tbad-arguments\t--width is from 240 to 1600 CSS pixels'
+        );
+        expect((await runVerb(daemon, 'chat-lead', 'visual', ['preview', '--appearance', 'sepia', `--html=${PAGE}`]))[0]).toBe(
+            'refused\tbad-arguments\t--appearance is dark or light'
+        );
+        const off = await bootWithChat({ visualReplies: false, visualRender: { preview } });
+        expect(refusalCode(await runVerb(off, 'chat-lead', 'visual', ['preview', `--html=${PAGE}`]))).toBe('visuals-off');
+        expect(previews).toBe(0);
+    });
+
+    test('visual show stores the heights the page was measured at, and without them when measuring gave none', async () => {
+        const measured: string[] = [];
+        let answer: [number, number][] | undefined = [
+            [320, 610],
+            [768, 420]
+        ];
+        const measure = async (html: string): Promise<[number, number][] | undefined> => {
+            measured.push(html);
+            return answer;
+        };
+        const daemon = await bootWithChat({ visualRender: { measure } });
+        const first = await shown(daemon, 'Bars');
+        answer = undefined;
+        const second = await shown(daemon, 'Lines');
+        await show(daemon, 'chat-lead', ['--title', 'Empty', '--html= ']);
+        const [one, two] = await daemon.chats.listVisuals('chat-lead');
+        expect(one).toMatchObject({
+            id: first,
+            heights: [
+                [320, 610],
+                [768, 420]
+            ]
+        });
+        expect(two!.id).toBe(second);
+        expect(two!.heights).toBeUndefined();
+        // An empty page is refused by the store without a browser started for it.
+        expect(measured).toEqual([PAGE, PAGE]);
     });
 });
 

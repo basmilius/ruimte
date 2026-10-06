@@ -50,6 +50,7 @@ describe('verbsNote', () => {
         }
         expect(VISUAL_NOTE).toContain('`ruimte-context visual show --title T < page.html`');
         expect(VISUAL_NOTE).toContain('`ruimte-context help visual`');
+        expect(VISUAL_NOTE).toContain('after checking it with `visual preview`');
         // A terminal agent hears the verbs through its hooks, which never carry the sentence.
         expect(hookContext('SessionStart', [], { depth: 0 })).not.toContain('visual');
     });

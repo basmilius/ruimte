@@ -1,14 +1,23 @@
 import type { ActionHandlers } from '@ruimte/actions';
-import type { ChatVisual } from '@ruimte/contracts';
+import { VISUAL_LIMITS, type ChatVisual } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents/coded-error';
 import { callerKind } from '../canvas/tasks.ts';
 import { VerbRefusal, field, orNote, type VisualHost } from '../canvas/verb.ts';
+import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
 import type { ServerActionContext } from './context.ts';
 
 const HELP_LINE = 'detail\truimte-context help visual';
 
 /* What the store refuses a page with; its message already says what to change. */
 const STORE_REFUSALS: ReadonlySet<string> = new Set(['visual-invalid', 'visual-too-large']);
+
+/* What a render refuses a preview with, each with a message that names what to do instead. */
+const PREVIEW_REFUSALS: ReadonlySet<string> = new Set(['preview-unavailable', 'preview-timeout', 'preview-failed']);
+
+/* A page the store would refuse anyway is not worth starting a browser for. */
+function renderable(html: string): boolean {
+    return html.trim() !== '' && Buffer.byteLength(html, 'utf8') <= VISUAL_LIMITS.bytes;
+}
 
 export function visualRow(visual: ChatVisual): string {
     return `visual\t${visual.id}\t${field(visual.title)}\t${visual.size} bytes`;
@@ -23,6 +32,12 @@ function visualsOf({ host }: ServerActionContext): VisualHost {
         throw new VerbRefusal('unavailable', 'This machine keeps no visuals; answer in text');
     }
     return host.visuals;
+}
+
+function requireEnabled(visuals: VisualHost): void {
+    if (!visuals.enabled()) {
+        throw new VerbRefusal('visuals-off', 'A person turned visual replies off on this machine: answer in text, and do not call visual again');
+    }
 }
 
 /* A visual shows in the thread of an AI chat, and a terminal has no thread to show it in. */
@@ -41,14 +56,48 @@ export const visualActions: ActionHandlers<ServerActionContext> = {
     'visual.show': async ({ title, html, maxHeight }, { actor, context }) => {
         const visuals = visualsOf(context);
         const chatId = await callerChat(context, actor.id);
-        if (!visuals.enabled()) {
-            throw new VerbRefusal('visuals-off', 'A person turned visual replies off on this machine: answer in text, and do not call visual again');
-        }
+        requireEnabled(visuals);
+        const heights = renderable(html) ? await visuals.measure?.(html) : undefined;
         try {
-            return { output: { visual: await visuals.publish(chatId, { title, html, ...(maxHeight === null ? {} : { maxHeight }) }) } };
+            return {
+                output: {
+                    visual: await visuals.publish(chatId, {
+                        title,
+                        html,
+                        ...(maxHeight === null ? {} : { maxHeight }),
+                        ...(heights === undefined ? {} : { heights })
+                    })
+                }
+            };
         } catch (e) {
             if (e instanceof CodedError && STORE_REFUSALS.has(e.code)) {
                 throw new VerbRefusal(e.code, e.message, [HELP_LINE]);
+            }
+            throw e;
+        }
+    },
+    'visual.preview': async ({ html, width, appearance }, { actor, context }) => {
+        const visuals = visualsOf(context);
+        await callerChat(context, actor.id);
+        requireEnabled(visuals);
+        if (html.trim() === '') {
+            throw new VerbRefusal('visual-invalid', 'The page is empty; pass one self-contained HTML document', [HELP_LINE]);
+        }
+        if (!renderable(html)) {
+            throw new VerbRefusal(
+                'visual-too-large',
+                `The page is larger than the ${VISUAL_LIMITS.bytes / 1024 / 1024} MiB a visual may be; load libraries from a public CDN URL and refer to large images by their http(s) URL`,
+                [HELP_LINE]
+            );
+        }
+        if (!visuals.preview) {
+            throw new VerbRefusal('preview-unavailable', 'This machine renders no previews; show the page with visual show without a preview');
+        }
+        try {
+            return { output: await visuals.preview({ html, width: width ?? PREVIEW_WIDTH.default, appearance: appearance ?? 'dark' }) };
+        } catch (e) {
+            if (e instanceof CodedError && PREVIEW_REFUSALS.has(e.code)) {
+                throw new VerbRefusal(e.code, e.message);
             }
             throw e;
         }

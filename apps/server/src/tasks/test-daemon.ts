@@ -4,7 +4,7 @@ import { chatRequests } from '@adecore/agents/tasks/waiting-child';
 import { AgentLineageStore } from '@adecore/agents/lineage';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
-import type { AgentStart, CanvasHost } from '../canvas/verb.ts';
+import type { AgentStart, CanvasHost, VisualHost } from '../canvas/verb.ts';
 import { addWanted } from '../canvas/worktree.ts';
 import { AttachmentStore } from '@adecore/agents/chat/attachment-store';
 import { ChatManager } from '../chat/chat-manager.ts';
@@ -99,6 +99,8 @@ export interface TestDaemonOptions {
     env?: Record<string, string | undefined>;
     /* What a running turn says about the plan of its account. */
     onLimits?: (update: LimitsUpdate) => void;
+    /* How pages are previewed and measured; without it a preview is refused and a page shown without heights. */
+    visualRender?: Pick<VisualHost, 'preview' | 'measure'>;
 }
 
 export async function bootTestDaemon({
@@ -112,7 +114,8 @@ export async function bootTestDaemon({
     machine = { resumeAtReset: false },
     accounts,
     env = { PATH: process.env.PATH, HOME: home },
-    onLimits
+    onLimits,
+    visualRender = {}
 }: TestDaemonOptions): Promise<TestDaemon> {
     await store.hiddenAgents.load();
     const prompts = new PendingPromptStore(home);
@@ -315,7 +318,8 @@ export async function bootTestDaemon({
             enabled: () => machine.visualReplies !== false,
             publish: (chatId, input) => chats.publishVisual(chatId, input),
             list: (chatId) => chats.listVisuals(chatId),
-            remove: (chatId, visualId) => chats.removeVisual(chatId, visualId)
+            remove: (chatId, visualId) => chats.removeVisual(chatId, visualId),
+            ...visualRender
         }
     };
 

@@ -37,7 +37,7 @@ const COMPUTER_NOTE =
 
 /* Said only to an AI chat while visual replies are on for this machine; a terminal has no thread to show a page in. */
 export const VISUAL_NOTE =
-    'When a chart, a table, a diagram, a collage of images or a mockup would say more than prose, show a self-contained HTML page above your reply with `ruimte-context visual show --title T < page.html` (`ruimte-context help visual` has the rules), and let the reply add only what the page does not say.';
+    'When a chart, a table, a diagram, a collage of images or a mockup would say more than prose, show a self-contained HTML page above your reply with `ruimte-context visual show --title T < page.html` after checking it with `visual preview` (`ruimte-context help visual` has the rules), and let the reply add only what the page does not say.';
 
 /* Said only while a device node is linked in: without it a model asked to try an app reaches for a simulator of its own. */
 const DEVICE_NOTE =

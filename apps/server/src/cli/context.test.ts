@@ -312,7 +312,7 @@ describe('runContext', () => {
         expect(seen[2]!.argv).toEqual(['note', 'a', '--text=x\\\\y']);
     });
 
-    test('visual show sends stdin as --html byte for byte, and leaves stdin unread when --html is given', async () => {
+    test('visual show and preview send stdin as --html byte for byte, and leave stdin unread when --html is given', async () => {
         const page = '<!doctype html>\n<p title="a\\nb">Ten\tcases</p>\n';
         await runContext(['visual', 'show', '--title', 'Cases', '--height', '200'], env, async () => page);
         expect(seen[0]!.argv).toEqual(['show', '--title', 'Cases', '--height', '200', `--html=${page}`]);
@@ -323,6 +323,8 @@ describe('runContext', () => {
         expect(seen[1]!.argv).toEqual(['show', '--title', 'Cases', '--html=<p>x</p>']);
         await runContext(['visual', 'list'], env, stdin);
         expect(seen[2]!.argv).toEqual(['list']);
+        await runContext(['visual', 'preview', '--width', '400'], env, async () => page);
+        expect(seen[3]!.argv).toEqual(['preview', '--width', '400', `--html=${page}`]);
     });
 
     test('a refusal exits 3 and goes to stderr', async () => {

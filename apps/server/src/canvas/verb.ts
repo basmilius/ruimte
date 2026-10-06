@@ -14,6 +14,8 @@ import {
     type ProjectContent,
     type RuntimeMode,
     type ModelSelection,
+    type VisualAppearance,
+    type VisualHeight,
     type Worktree,
     type WorktreeMergePayload,
     type WorktreeMergeResult
@@ -28,6 +30,7 @@ import type { NoticeDelivery } from '../context/notices.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { HiddenAgentStore } from '../agents/hidden-agents.ts';
+import type { VisualPreview } from '../visuals/renderer.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
 import { field } from '@adecore/agents/context/refusal';
 import type { ChatRequests } from '@adecore/agents/tasks/waiting-child';
@@ -143,9 +146,13 @@ export interface CanvasHost {
 export interface VisualHost {
     enabled(): boolean;
     /* Refuses with the store's own code, `visual-invalid` or `visual-too-large`, and a message that says what to change. */
-    publish(chatId: string, input: { title: string; html: string; maxHeight?: number }): Promise<ChatVisual>;
+    publish(chatId: string, input: { title: string; html: string; maxHeight?: number; heights?: VisualHeight[] }): Promise<ChatVisual>;
     list(chatId: string): Promise<ChatVisual[]>;
     remove(chatId: string, visualId: string): Promise<ChatVisual[]>;
+    /* Refuses with `preview-unavailable`, `preview-timeout` or `preview-failed`; absent on a host that renders no page. */
+    preview?(input: { html: string; width: number; appearance: VisualAppearance }): Promise<VisualPreview>;
+    /* Undefined when measuring took too long or failed, which never stops a page from being shown. */
+    measure?(html: string): Promise<VisualHeight[] | undefined>;
 }
 
 /* A launch of a project as an agent sees it: what it is, whether a person approved it here, and what runs of it now. */

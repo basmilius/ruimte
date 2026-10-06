@@ -1792,6 +1792,30 @@ export const ACTION_DEFINITIONS = {
         }),
         output: z.object({ visual: ChatVisualSchema })
     },
+    'visual.preview': {
+        title: 'Preview a visual',
+        description:
+            'Renders a self-contained HTML page the way this chat would draw it, without showing it, and answers a png of it, the height it needs and what it wrote to its console.',
+        effect: 'read',
+        domain: 'communicate',
+        actors: AGENT,
+        input: z.object({
+            html: z.string().describe('The page, one self-contained HTML document'),
+            width: z.number().nullable().describe('The width of the frame in CSS pixels; without it the reply column of a chat at a common size'),
+            appearance: z.enum(['dark', 'light']).nullable().describe('The appearance the page is drawn in; dark without it')
+        }),
+        output: z.object({
+            // A png on this machine, outside the project folder.
+            path: z.string(),
+            width: z.number(),
+            height: z.number(),
+            // Less than `height` when the page is taller than a png of a preview gets.
+            shotHeight: z.number(),
+            console: z.array(z.object({ level: z.enum(['log', 'info', 'warning', 'error', 'exception']), text: z.string() })),
+            // The console messages past the ones `console` holds.
+            omitted: z.number()
+        })
+    },
     'visual.list': {
         title: 'List visuals',
         description: 'Lists the visuals of this chat in the order they were shown.',

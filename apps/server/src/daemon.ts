@@ -20,7 +20,9 @@ import {
     type HealthResult,
     type MachineStatus,
     type MachineWork,
-    type RuntimeMode
+    type RuntimeMode,
+    type VisualAppearance,
+    type VisualHeight
 } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
 import { ClaudeTitleReader } from '@adecore/agents/chat/claude-title';
@@ -81,6 +83,7 @@ import { deliverNotice, MESSAGE_WORDS, renderNotice } from './context/notices.ts
 import { ChatStore } from '@adecore/agents/chat/chat-store';
 import { BookmarkStore } from '@adecore/agents/chat/bookmark-store';
 import { VisualStore } from '@adecore/agents/chat/visual-store';
+import { childLauncher, previewVisual, renderCommand, VisualRenderer } from './visuals/renderer.ts';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher, type ClientAccess } from './dispatcher.ts';
 import { readOrCreateEndpointIdentity } from './endpoint-id.ts';
@@ -492,6 +495,8 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     const browserPages = new BrowserPages();
     const browserDriver = new BrowserDriver(config.home, browsers, browserPages);
     const deviceHelperCommand = compiled ? [process.execPath, 'device-helper'] : [process.execPath, resolve(import.meta.dir, 'main.ts'), 'device-helper'];
+    // Visuals are rendered in children with a Chrome of their own, never in the one above, whose profile holds a person's cookies.
+    const visualRenderer = new VisualRenderer(childLauncher(renderCommand(compiled, process.execPath, process.execArgv, import.meta.dir)));
     const deviceBridge = physicalStreamHelperPath(compiled, process.execPath, resolve(import.meta.dir, '../..'));
     const physicalStreamSource = createPhysicalStreamSourceFactory(deviceBridge);
     const treeLauncher = createTreeLauncher(deviceBridge);
@@ -631,9 +636,12 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         launches: agentLaunches(launchStore, launches, (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null)),
         visuals: {
             enabled: () => identity.visualReplies,
-            publish: (chatId: string, input: { title: string; html: string; maxHeight?: number }) => chats.publishVisual(chatId, input),
+            publish: (chatId: string, input: { title: string; html: string; maxHeight?: number; heights?: VisualHeight[] }) =>
+                chats.publishVisual(chatId, input),
             list: (chatId: string) => chats.listVisuals(chatId),
-            remove: (chatId: string, visualId: string) => chats.removeVisual(chatId, visualId)
+            remove: (chatId: string, visualId: string) => chats.removeVisual(chatId, visualId),
+            preview: (input: { html: string; width: number; appearance: VisualAppearance }) => previewVisual(visualRenderer, config.home, input),
+            measure: (html: string) => visualRenderer.measure(html)
         },
         context: {
             list: (targetId: string) => context.list(targetId),
@@ -1318,6 +1326,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         await computer.stop();
         manager.killAll();
         browsers.closeAll();
+        await step('Stopping visual previews', () => visualRenderer.stop());
         deviceDriver.releaseAll();
         deviceControl.stop();
         devices.closeAll();
