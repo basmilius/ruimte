@@ -24,7 +24,7 @@ func nativeSummaryPreservesSavedHistoryAndRestoresConversation() async throws {
     try await runner.restore(required: true)
     var iterator = frames.stream.makeAsyncIterator()
     _ = await iterator.next()
-    await runner.handle(Request(type: "compact", id: "compact", prompt: nil, output: nil, outcome: nil))
+    await runner.handle(Request(type: "compact", id: "compact", prompt: nil, output: nil, outcome: nil, instructions: nil, maxTokens: nil, temperature: nil))
     var compacted = false
     while let frame = await iterator.next() {
         if frame.type == "compacted" { compacted = true; break }
@@ -51,7 +51,7 @@ func nativeSummaryPreservesSavedHistoryAndRestoresConversation() async throws {
     let restarted = Runner(store: store, output: output)
     try await restarted.restore(required: true)
     _ = await iterator.next()
-    await restarted.handle(Request(type: "turn", id: "recall", prompt: "What project color and launch day did we agree? Reply briefly from memory. Do not use tools.", output: nil, outcome: nil))
+    await restarted.handle(Request(type: "turn", id: "recall", prompt: "What project color and launch day did we agree? Reply briefly from memory. Do not use tools.", output: nil, outcome: nil, instructions: nil, maxTokens: nil, temperature: nil))
     var text = ""
     var metrics: Frame?
     while let frame = await iterator.next() {
@@ -59,7 +59,7 @@ func nativeSummaryPreservesSavedHistoryAndRestoresConversation() async throws {
         if frame.type == "metrics" { metrics = frame }
         if frame.type == "tool.call" {
             print("Unexpected recall tool: \(frame.name ?? "unknown")")
-            await restarted.handle(Request(type: "tool.result", id: frame.id, prompt: nil, output: "This memory check needs no tools.", outcome: .denied))
+            await restarted.handle(Request(type: "tool.result", id: frame.id, prompt: nil, output: "This memory check needs no tools.", outcome: .denied, instructions: nil, maxTokens: nil, temperature: nil))
         }
         if frame.type == "done" {
             #expect(frame.state == "done")
@@ -100,7 +100,7 @@ func nativeCompactionHandlesSchemaHeavyHistory() async throws {
     try await runner.restore(required: true)
     var iterator = frames.stream.makeAsyncIterator()
     _ = await iterator.next()
-    await runner.handle(Request(type: "compact", id: "compact", prompt: nil, output: nil, outcome: nil))
+    await runner.handle(Request(type: "compact", id: "compact", prompt: nil, output: nil, outcome: nil, instructions: nil, maxTokens: nil, temperature: nil))
     while let frame = await iterator.next() {
         if frame.type == "compacted" { break }
         if frame.type == "done" { throw SessionStoreError(description: frame.text ?? "Compaction failed") }
