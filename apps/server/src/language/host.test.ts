@@ -886,7 +886,7 @@ describe('files that change on disk', () => {
         await open(host, 'src/a.php', '<?php', 'client-1', 'php');
         await ready(host, 'php-native');
         const [php] = spawner.of('php-native');
-        // What the server registers in its release 0.3.0.
+        // What the server registers in its release 0.4.1.
         const globs = [
             '**/*.php',
             '**/composer.json',
