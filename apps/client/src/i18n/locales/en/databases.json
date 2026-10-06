@@ -40,6 +40,15 @@
             "description": "Saves the connection in .ruimte/databases.json for everyone who works on this project. The password never goes into the file.",
             "outside": "The database file is outside the project folder, so the connection cannot be shared."
         },
+        "agents": {
+            "label": "Agents",
+            "description": "What AI agents in this project may do with this connection. Only a person on this machine can let them write.",
+            "off": "Off",
+            "read": "Read only",
+            "write": "Read and write",
+            "writeRemote": "Only from the app on that machine",
+            "failed": "Could not change what agents may do"
+        },
         "saveFailed": "The machine did not save the connections: {{reason}}"
     },
     "connections": {

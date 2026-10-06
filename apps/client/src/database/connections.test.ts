@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import type { DatabaseConnection, DatabaseConnections, DatabaseConnectionsChangedEvent, DatabaseConnectionsSavePayload } from '@ruimte/contracts';
+import type {
+    DatabaseAgentAccess,
+    DatabaseAgentAccessChangedEvent,
+    DatabaseConnection,
+    DatabaseConnections,
+    DatabaseConnectionsChangedEvent,
+    DatabaseConnectionsSavePayload
+} from '@ruimte/contracts';
 import { TransportError } from '@/transport/transport';
 import { createDatabaseConnections, isOutsideProject, isSavable, keepUnchanged, type ConnectionsTarget } from './connections.ts';
 import { memorySecretStore, secretKeyOf } from './secrets.ts';
@@ -10,13 +17,31 @@ const SHOP: DatabaseConnection = { id: 'shop', name: 'Shop', shared: true, confi
 function machine(initial: DatabaseConnections) {
     let document = initial;
     const saves: DatabaseConnectionsSavePayload[] = [];
+    const handed: Record<string, string>[] = [];
+    let access: Record<string, DatabaseAgentAccess> = {};
     const changed = new Set<(event: DatabaseConnectionsChangedEvent) => void>();
+    const accessChanged = new Set<(event: DatabaseAgentAccessChangedEvent) => void>();
     let held: Promise<void> | null = null;
     let release = (): void => undefined;
     const transport = {
         request: async (type: string, payload: unknown): Promise<unknown> => {
             if (type === 'database.connections') {
                 return document;
+            }
+            if (type === 'database.passwords') {
+                handed.push((payload as { passwords: Record<string, string> }).passwords);
+                return {};
+            }
+            if (type === 'database.agentAccess') {
+                return { access };
+            }
+            if (type === 'database.agentAccess.set') {
+                const set = payload as { connectionId: string; access: DatabaseAgentAccess };
+                if (set.access === 'write') {
+                    throw new TransportError('forbidden', 'Only a person on this machine can let agents write to a database');
+                }
+                access = { ...access, [set.connectionId]: set.access };
+                return { access };
             }
             const save = payload as DatabaseConnectionsSavePayload;
             saves.push(save);
@@ -29,15 +54,24 @@ function machine(initial: DatabaseConnections) {
             document = { rev: document.rev + 1, connections: save.connections };
             return document;
         },
-        on: (_event: string, handler: (event: DatabaseConnectionsChangedEvent) => void) => {
-            changed.add(handler);
-            return () => changed.delete(handler);
+        on: (event: string, handler: (event: never) => void) => {
+            const listeners = (event === 'database.agentAccess.changed' ? accessChanged : changed) as Set<(event: never) => void>;
+            listeners.add(handler);
+            return () => listeners.delete(handler);
         },
         subscribeStatus: () => () => undefined
     } as unknown as ConnectionsTarget['transport'];
     return {
         transport,
         saves,
+        handed,
+        /* Another client set what agents may do. */
+        accessElsewhere(next: Record<string, DatabaseAgentAccess>) {
+            access = next;
+            for (const handler of accessChanged) {
+                handler({ projectId: 'p', access });
+            }
+        },
         document: () => document,
         /* Another client saved. */
         elsewhere(next: DatabaseConnection[]) {
@@ -142,6 +176,43 @@ describe('the connections of a project', () => {
         await model.edit([]);
         expect(await secrets.read(secretKeyOf('local', 'p', 'shop'))).toBeNull();
         expect(model.store.getState().passwords).toEqual({});
+    });
+});
+
+describe('what the agents of the project get', () => {
+    test("the machine gets the passwords on a load and after a person's edit, never after a change from elsewhere", async () => {
+        const secrets = memorySecretStore();
+        await secrets.write(secretKeyOf('local', 'p', 'shop'), 'hunter2');
+        const { model, fake } = await opened({ rev: 1, connections: [SHOP] }, secrets);
+        expect(fake.handed).toEqual([{ shop: 'hunter2' }]);
+
+        fake.elsewhere([{ ...SHOP, config: { ...SHOP.config, host: 'evil.example.com' } }]);
+        await Promise.resolve();
+        expect(fake.handed).toHaveLength(1);
+
+        await model.edit([{ ...SHOP, config: { ...SHOP.config, password: 'correct horse' } }]);
+        expect(fake.handed.at(-1)).toEqual({ shop: 'correct horse' });
+        await model.edit([{ ...SHOP, name: 'Shop two', config: { ...SHOP.config, password: 'correct horse' } }]);
+        expect(fake.handed).toHaveLength(2);
+
+        await model.reload();
+        expect(fake.handed).toHaveLength(3);
+    });
+
+    test('reads what agents may do, sets it, and follows another client', async () => {
+        const { model, fake } = await opened({ rev: 1, connections: [SHOP] });
+        expect(model.store.getState().agentAccess).toEqual({});
+        await model.setAgentAccess('shop', 'off');
+        expect(model.store.getState().agentAccess).toEqual({ shop: 'off' });
+        fake.accessElsewhere({ shop: 'write' });
+        expect(model.store.getState().agentAccess).toEqual({ shop: 'write' });
+    });
+
+    test('a refused change says so and leaves what agents may do as it was', async () => {
+        const { model, notes } = await opened({ rev: 1, connections: [SHOP] });
+        await model.setAgentAccess('shop', 'write');
+        expect(model.store.getState().agentAccess).toEqual({});
+        expect(notes).toEqual(['Could not change what agents may do']);
     });
 });
 

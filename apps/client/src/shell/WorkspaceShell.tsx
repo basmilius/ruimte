@@ -4,6 +4,7 @@ import { WebviewParking } from '@/browser/WebviewParking';
 import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
 import { ChatChooserMenu } from '@/chat/ChatChooserMenu';
 import { connectWorkspaceChatHost } from '@/chat/workspace-host';
+import { ensureDatabaseConnections } from '@/database/connections';
 import { useDatabaseTabs } from '@/database/state';
 import { useCanvasShortcuts } from '@/canvas/canvas-shortcuts';
 import { CellOverlayLayer } from '@/shell/CellOverlay';
@@ -76,6 +77,10 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
         void prefetcher.prefetchEverything();
     }, []);
     useEffect(() => () => stopVoice(), []);
+    /* The project's agents open its databases with the passwords this window holds, so they are read with the project rather than with the panel. */
+    useEffect(() => {
+        ensureDatabaseConnections();
+    }, []);
     return (
         <ConnectionProvider connection={workspace.connection}>
             <div className="flex h-full w-full bg-bg">

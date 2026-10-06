@@ -1,7 +1,14 @@
 import type { Connection } from '@adecore/database';
 import i18next from 'i18next';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
-import { isAbsolutePath, storedPathOf, type DatabaseConnection, type DatabaseConnectionsChangedEvent } from '@ruimte/contracts';
+import {
+    isAbsolutePath,
+    storedPathOf,
+    type DatabaseAgentAccess,
+    type DatabaseAgentAccessChangedEvent,
+    type DatabaseConnection,
+    type DatabaseConnectionsChangedEvent
+} from '@ruimte/contracts';
 import { messageOf } from '@adecore/ui';
 import { databaseSecretStore, secretKeyOf, secretWrites, splitPasswords, withPasswords, type DatabaseSecretStore } from '@/database/secrets';
 import { endpointKey } from '@/state/keys';
@@ -27,6 +34,8 @@ export interface DatabaseConnectionsState {
     saveError: string | null;
     /* The password of each connection by id, as this window knows them. Never in `saved` or `local`. */
     passwords: Record<string, string>;
+    /* What agents may do with each connection, by id, where a person set it; one that is not in it is `read`. */
+    agentAccess: Record<string, DatabaseAgentAccess>;
 }
 
 /* The project the connections are of, on the machine that keeps them. */
@@ -42,7 +51,17 @@ export interface ConnectionsDeps {
     notify(title: string, description: string): void;
 }
 
-const INITIAL: DatabaseConnectionsState = { key: null, status: 'idle', error: null, rev: 0, saved: [], local: null, saveError: null, passwords: {} };
+const INITIAL: DatabaseConnectionsState = {
+    key: null,
+    status: 'idle',
+    error: null,
+    rev: 0,
+    saved: [],
+    local: null,
+    saveError: null,
+    passwords: {},
+    agentAccess: {}
+};
 
 /* What the machine takes: a SQLite connection needs a whole path first, which a new one does not have yet. */
 export function isSavable(connection: DatabaseConnection): boolean {
@@ -68,6 +87,8 @@ export interface DatabaseConnectionsModel {
     ready(): Promise<DatabaseConnection[] | null>;
     /* What the views open, as a selector: the same array for the same state, and the same object for a connection that did not change. */
     list(state: DatabaseConnectionsState): DatabaseConnection[];
+    /* What agents may do with one connection. Resolves once the machine took it; a refusal is said through `notify`. */
+    setAgentAccess(connectionId: string, access: DatabaseAgentAccess): Promise<void>;
 }
 
 /*
@@ -87,6 +108,8 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
     /* What the secret store holds for this project, as far as this window wrote or read it. */
     let stored: Record<string, string> = {};
     const waiting: (() => void)[] = [];
+    /* The passwords as the machine last got them from this window; null makes the next hand-over go whatever it holds. */
+    let handed: string | null = null;
 
     const settle = (): void => {
         for (const resolve of waiting.splice(0)) {
@@ -126,6 +149,36 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         store.setState({ passwords: { ...Object.fromEntries(found), ...store.getState().passwords } });
     };
 
+    /*
+     * The machine keeps them in memory for the project's agents, each bound to where its connection
+     * points now. Only a load and a person's own edit hand them over: a change made outside this
+     * window, such as an agent pointing a connection elsewhere, must not take a password along.
+     */
+    const handPasswords = async (of: ConnectionsTarget): Promise<void> => {
+        const { saved, passwords } = store.getState();
+        const listed = Object.fromEntries(
+            saved.flatMap((connection) => (passwords[connection.id] === undefined ? [] : [[connection.id, passwords[connection.id]!]]))
+        );
+        const text = JSON.stringify(listed);
+        if (text === handed) {
+            return;
+        }
+        handed = text;
+        // A machine from before agents read databases has no such request, and an agent there never asks.
+        await of.transport.request('database.passwords', { projectId: of.projectId, passwords: listed }).catch(() => undefined);
+    };
+
+    const readAgentAccess = async (of: ConnectionsTarget): Promise<void> => {
+        try {
+            const answer = await of.transport.request('database.agentAccess', { projectId: of.projectId });
+            if (target === of) {
+                store.setState({ agentAccess: answer.access });
+            }
+        } catch {
+            // The same older machine: agents there reach no database, which the dialog leaves unsaid.
+        }
+    };
+
     const load = async (): Promise<void> => {
         const of = target;
         if (of === null) {
@@ -143,6 +196,10 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
             store.setState({ status: 'ready', error: null, rev: answer.rev, saved: answer.connections });
             await readSecrets(of, answer.connections);
             settle();
+            if (target === of) {
+                handed = null;
+                await Promise.all([handPasswords(of), readAgentAccess(of)]);
+            }
         } catch (error: unknown) {
             if (target !== of || ticket !== loads) {
                 return;
@@ -188,6 +245,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
             }
             const settled = version === sent && sending.length === local.length;
             store.setState({ rev: answer.rev, saved: answer.connections, saveError: null, ...(settled ? { local: null } : {}) });
+            await handPasswords(of);
         } catch (error: unknown) {
             if (target !== of) {
                 return;
@@ -224,6 +282,12 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         void readSecrets(of, event.connections);
     };
 
+    const onAgentAccess = (event: DatabaseAgentAccessChangedEvent): void => {
+        if (target !== null && event.projectId === target.projectId) {
+            store.setState({ agentAccess: event.access });
+        }
+    };
+
     return {
         store,
         attach(next) {
@@ -237,6 +301,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
             target = next;
             saving = false;
             stored = {};
+            handed = null;
             version += 1;
             settle();
             if (next === null) {
@@ -246,6 +311,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
             store.setState({ ...INITIAL, key: keyOf(next), status: 'loading' });
             unsubscribe = [
                 next.transport.on('database.connections.changed', onChanged),
+                next.transport.on('database.agentAccess.changed', onAgentAccess),
                 // What changed while the socket was gone was told to nobody. An edit still waiting is saved
                 // against the rev it was made on, which finds out on its own whether the list moved on.
                 next.transport.subscribeStatus((status) => {
@@ -277,7 +343,21 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
                 return settled.status === 'ready' ? list(settled) : null;
             });
         },
-        list
+        list,
+        async setAgentAccess(connectionId, access) {
+            const of = target;
+            if (of === null) {
+                return;
+            }
+            try {
+                const answer = await of.transport.request('database.agentAccess.set', { projectId: of.projectId, connectionId, access });
+                if (target === of) {
+                    store.setState({ agentAccess: answer.access });
+                }
+            } catch (error: unknown) {
+                deps.notify(i18next.t('databases:dialog.agents.failed'), messageOf(error));
+            }
+        }
     };
 }
 
