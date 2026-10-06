@@ -16,6 +16,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@adecore/agents-react": "0.17.0",
+        "@adecore/database": "0.17.0",
         "@adecore/diagram": "0.17.0",
         "@adecore/drawing": "0.17.0",
         "@adecore/editor": "0.17.0",

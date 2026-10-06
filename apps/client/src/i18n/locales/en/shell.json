@@ -51,6 +51,7 @@
         "names": {
             "files": "Files",
             "git": "Git",
+            "databases": "Databases",
             "devices": "Devices",
             "processes": "Processes",
             "launches": "Launches",
@@ -325,7 +326,8 @@
         "chooseImage": "Choose image…",
         "useFolderIcon": "Use folder's icon",
         "tooLarge": "That image is larger than 256 KB",
-        "unreadable": "That file could not be read"
+        "unreadable": "That file could not be read",
+        "databases": "Database connections…"
     },
     "linkMachine": {
         "title": "Link a machine with a code",
@@ -536,6 +538,9 @@
             "toggleSidebar": "Toggle sidebar",
             "toggleFiles": "Toggle files panel",
             "toggleGit": "Toggle git panel",
+            "toggleDatabases": "Toggle databases panel",
+            "newDatabaseConsole": "New database console",
+            "databaseConnections": "Manage database connections",
             "toggleProcesses": "Toggle processes panel",
             "toggleProblems": "Toggle problems panel",
             "toggleTheme": "Toggle light and dark",
@@ -700,6 +705,7 @@
         "agentChat": "{{name}} Chat",
         "agentTerminal": "{{name}} Terminal",
         "newFile": "New File…",
+        "newDatabaseConsole": "New Database Console",
         "newFolder": "New Folder…",
         "openFolder": "Open Folder…",
         "reveal": "Reveal in {{app}}",
@@ -718,6 +724,7 @@
         "sidebar": "Sidebar",
         "files": "Files",
         "git": "Git",
+        "databases": "Databases",
         "devices": "Devices",
         "togglePanel": "Toggle Panel",
         "splitRight": "Split Right",
@@ -783,6 +790,7 @@
         "releaseNotes": "Release Notes",
         "keyboardShortcuts": "Keyboard Shortcuts",
         "projectSettings": "Project Settings…",
+        "databaseConnections": "Database Connections…",
         "clear": "Clear",
         "open": "Menu",
         "find": "Find",

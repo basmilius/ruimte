@@ -1,7 +1,8 @@
-import type { GitDiffScope, ProjectPanels } from '@ruimte/contracts';
+import type { GitDiffScope, ProjectPanelKind, ProjectPanels } from '@ruimte/contracts';
+import { parseDatabaseTabs, serializeDatabaseTabs, type DatabaseTabs } from '@/database/tabs';
 import { tabKey, type FileTab } from '@/state/files';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE } from '@/state/git';
-import type { PanelDefaults } from '@/state/ui';
+import type { PanelDefaults, PanelKind } from '@/state/ui';
 
 /* Everything the surfaces around the canvas remember for one project on this machine. */
 export interface PanelsState extends PanelDefaults {
@@ -16,11 +17,20 @@ export interface PanelsState extends PanelDefaults {
     sidebarExpanded: string[] | null;
     /* The last favicon of every browser node, by node id. */
     favicons: Record<string, string>;
+    databaseTabs: DatabaseTabs;
 }
 
 /* A width from the file is a whole positive number of pixels or it is nothing at all. */
 function width(stored: number | undefined, fallback: number | null): number | null {
     return stored !== undefined && Number.isFinite(stored) && stored > 0 ? Math.round(stored) : fallback;
+}
+
+/* The kind of the panel, from the flags a kind an older client does not know is stored in. */
+function storedPanelKind(stored: ProjectPanels, kind: ProjectPanelKind): PanelKind {
+    if (stored.databasesPanel === true) {
+        return 'databases';
+    }
+    return stored.launchesPanel === true ? 'launches' : kind;
 }
 
 /*
@@ -37,7 +47,7 @@ export function parsePanels(stored: ProjectPanels | undefined, defaults: PanelsS
     /* A tab that is not among them would leave the viewer pointing at nothing. */
     const active = tabs.some((tab) => tab.key === stored?.activeTab) ? (stored?.activeTab ?? null) : (tabs[0]?.key ?? null);
     return {
-        panel: stored?.panel === undefined ? defaults.panel : { open: stored.panel.open, kind: stored.launchesPanel === true ? 'launches' : stored.panel.kind },
+        panel: stored?.panel === undefined ? defaults.panel : { open: stored.panel.open, kind: storedPanelKind(stored, stored.panel.kind) },
         panelWidth: width(stored?.panelWidth, defaults.panelWidth),
         planAnchor: stored?.plan ?? defaults.planAnchor,
         planWidth: width(stored?.planWidth, defaults.planWidth),
@@ -49,21 +59,23 @@ export function parsePanels(stored: ProjectPanels | undefined, defaults: PanelsS
         gitLogHeight: width(stored?.git?.logHeight, DEFAULT_LOG_HEIGHT) ?? DEFAULT_LOG_HEIGHT,
         gitHiddenRepos: stored?.git?.hiddenRepos ?? [],
         sidebarExpanded: stored?.sidebarExpanded ?? null,
-        favicons: stored?.favicons ?? {}
+        favicons: stored?.favicons ?? {},
+        databaseTabs: parseDatabaseTabs(stored?.databases)
     };
 }
 
 /* The other way, for the machine-local file. A width nobody dragged stays out of it. */
 export function serializePanels(state: PanelsState): ProjectPanels {
     return {
-        // A client from before launches reads the files panel in its place.
+        // A client from before launches or databases reads the files panel in its place.
         panel:
-            state.panel.kind === 'launches'
+            state.panel.kind === 'launches' || state.panel.kind === 'databases'
                 ? { open: state.panel.open, kind: 'files' }
                 : state.panel.kind === 'problems'
                   ? { open: false, kind: 'files' }
                   : { open: state.panel.open, kind: state.panel.kind },
         ...(state.panel.kind === 'launches' ? { launchesPanel: true } : {}),
+        ...(state.panel.kind === 'databases' ? { databasesPanel: true } : {}),
         ...(state.panelWidth === null ? {} : { panelWidth: Math.round(state.panelWidth) }),
         ...(state.planAnchor === null ? {} : { plan: state.planAnchor }),
         ...(state.planWidth === null ? {} : { planWidth: Math.round(state.planWidth) }),
@@ -79,6 +91,7 @@ export function serializePanels(state: PanelsState): ProjectPanels {
         /* A list nobody has folded stays out of the file, so the next open still seeds itself. */
         ...(state.sidebarExpanded === null ? {} : { sidebarExpanded: state.sidebarExpanded }),
         /* A project with no page open writes no map at all. */
-        ...(Object.keys(state.favicons).length === 0 ? {} : { favicons: state.favicons })
+        ...(Object.keys(state.favicons).length === 0 ? {} : { favicons: state.favicons }),
+        ...(state.databaseTabs.tabs.length === 0 ? {} : { databases: serializeDatabaseTabs(state.databaseTabs) })
     };
 }

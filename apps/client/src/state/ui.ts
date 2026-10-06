@@ -17,8 +17,8 @@ export type SettingsSectionId =
     | 'machines'
     | 'about';
 
-/* Launches is a kind the project's file does not know, so it is stored beside `panel` (`launchesPanel`). Problems is one too, and only for this session: the file stores it as closed. */
-export type PanelKind = ProjectPanelKind | 'launches' | 'problems';
+/* Launches and databases are kinds the project's file does not know, so each is stored beside `panel` (`launchesPanel`, `databasesPanel`). Problems is one too, and only for this session: the file stores it as closed. */
+export type PanelKind = ProjectPanelKind | 'launches' | 'databases' | 'problems';
 
 const PANEL_KINDS: readonly PanelKind[] = ['files', 'git', 'processes', 'devices'];
 
@@ -75,7 +75,7 @@ export type PlanAnchor = NonNullable<ProjectPanels['plan']>;
 const CLOSED_PANEL: PanelState = { open: false, kind: 'files' };
 
 /* What the Chats project has no panel for: its folder is the daemon's, and so are its repository and what runs in it. */
-export const SCRATCH_HIDDEN_PANELS: readonly PanelKind[] = ['files', 'git', 'devices', 'launches', 'problems'];
+export const SCRATCH_HIDDEN_PANELS: readonly PanelKind[] = ['files', 'git', 'devices', 'launches', 'databases', 'problems'];
 
 export function panelHidden(kind: PanelKind, scratch: boolean): boolean {
     return scratch && SCRATCH_HIDDEN_PANELS.includes(kind);

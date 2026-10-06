@@ -343,6 +343,10 @@ describe('cleanLayout', () => {
     test('shares are rebuilt after the cutting', () => {
         sums(cleanLayout(gridOf([['a', 'b'], ['c']]), ['a', 'c'])!);
     });
+
+    test('the cells of this client stay, though no document holds them', () => {
+        expect(shapeOf(cleanLayout(gridOf([['a', 'files'], ['databases']]), ['a'])!)).toEqual([['a', 'files'], ['databases']]);
+    });
 });
 
 describe('openableViewIds', () => {

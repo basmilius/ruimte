@@ -1,5 +1,7 @@
 import type { ProjectPanels } from '@ruimte/contracts';
 import { faviconsOfProject, useBrowser } from '@/browser/registry';
+import { useDatabaseTabs } from '@/database/state';
+import { EMPTY_DATABASE_TABS } from '@/database/tabs';
 import { useFiles } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE, useGit } from '@/state/git';
@@ -17,7 +19,8 @@ function defaults(): PanelsState {
         gitLogHeight: DEFAULT_LOG_HEIGHT,
         gitHiddenRepos: [],
         sidebarExpanded: null,
-        favicons: {}
+        favicons: {},
+        databaseTabs: EMPTY_DATABASE_TABS
     };
 }
 
@@ -37,7 +40,8 @@ function read(): PanelsState {
         gitLogHeight: useGit.getState().logHeight,
         gitHiddenRepos: useGit.getState().hiddenRepos,
         sidebarExpanded: ui.sidebarExpanded,
-        favicons: faviconsOfProject(useBrowser.getState().byKey, currentEndpointId())
+        favicons: faviconsOfProject(useBrowser.getState().byKey, currentEndpointId()),
+        databaseTabs: { tabs: useDatabaseTabs.getState().tabs, active: useDatabaseTabs.getState().active }
     };
 }
 
@@ -56,7 +60,13 @@ export class PanelsPort {
 
     constructor() {
         const publish = (): void => this.publish();
-        this.unsubscribe = [useUi.subscribe(publish), useFiles.subscribe(publish), useGit.subscribe(publish), useBrowser.subscribe(publish)];
+        this.unsubscribe = [
+            useUi.subscribe(publish),
+            useFiles.subscribe(publish),
+            useGit.subscribe(publish),
+            useBrowser.subscribe(publish),
+            useDatabaseTabs.subscribe(publish)
+        ];
         this.snapshot = this.stringify();
     }
 
@@ -72,6 +82,7 @@ export class PanelsPort {
             useGit.getState().setHiddenRepos(state.gitHiddenRepos);
             useUi.getState().setSidebarExpanded(state.sidebarExpanded);
             useBrowser.getState().loadFavicons(currentEndpointId(), state.favicons);
+            useDatabaseTabs.getState().load(projectId, state.databaseTabs);
         } finally {
             this.applying = false;
             this.snapshot = this.stringify();

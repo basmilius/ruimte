@@ -5,7 +5,7 @@ import { isCanvasView, type SplitLayout } from '@ruimte/contracts';
 import { PromptStack } from '@/canvas/PromptStack';
 import { carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { carriesDiff, droppedDiff } from '@/shell/diff-drag';
-import { FILES_VIEW_ID, isFilesView } from '@/shell/client-cells';
+import { FILES_VIEW_ID, isClientCell } from '@/shell/client-cells';
 import { useCellView } from '@/shell/use-cell-view';
 import { placeFilesAction, placeViewAction } from '@/actions/client-actions';
 import { useDocument } from '@/state/document';
@@ -232,7 +232,7 @@ function Cell({
                     focus and nowhere else: nine docks would be nine rows of the same buttons. */}
                 {focused && <Dock onHiddenChange={setDockHidden} />}
                 {/* A stack per canvas, not per dock: a cell without the focus has no dock, and its prompts still need a place. */}
-                {!isFilesView(view) && isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
+                {!isClientCell(view) && isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
                 {filling && <MaximizedIndicator at={at} />}
             </CellOverlay>
         </div>

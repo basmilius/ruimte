@@ -16,6 +16,7 @@ import {
     toggleFlagAction
 } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
+import { openNewConsole, useDatabaseTabs } from '@/database/state';
 import { focusedLanguage } from '@/language/focused-language';
 import { languageCommandRows } from '@/language/language-commands';
 import { editorCommandRows } from '@/shell/editor-commands';
@@ -642,6 +643,21 @@ export function appCommands(): Command[] {
                       : [
                             { id: 'panel-files', label: i18next.t('shell:palette.commands.toggleFiles'), run: () => useUi.getState().togglePanel('files') },
                             { id: 'panel-git', label: i18next.t('shell:palette.commands.toggleGit'), run: () => useUi.getState().togglePanel('git') },
+                            {
+                                id: 'panel-databases',
+                                label: i18next.t('shell:palette.commands.toggleDatabases'),
+                                run: () => useUi.getState().togglePanel('databases')
+                            },
+                            {
+                                id: 'database-console-new',
+                                label: i18next.t('shell:palette.commands.newDatabaseConsole'),
+                                run: () => void openNewConsole()
+                            },
+                            {
+                                id: 'database-connections',
+                                label: i18next.t('shell:palette.commands.databaseConnections'),
+                                run: () => useDatabaseTabs.getState().openConnections()
+                            },
                             {
                                 id: 'panel-problems',
                                 label: i18next.t('shell:palette.commands.toggleProblems'),

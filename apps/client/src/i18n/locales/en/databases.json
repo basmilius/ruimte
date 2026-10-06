@@ -1,0 +1,51 @@
+{
+    "cell": {
+        "name": "Databases",
+        "tabs": "Open tables and consoles",
+        "newConsole": "New console",
+        "empty": {
+            "title": "Nothing open",
+            "body": "Open a table from the databases panel, or start a console."
+        },
+        "gone": "This connection is no longer in the project.",
+        "closeTab": "Close tab",
+        "failed": "This tab failed to render",
+        "discard": {
+            "title": "Discard the changes to {{table}}?",
+            "description": "Nobody submitted the edits in this table. Closing the tab throws them away.",
+            "confirm": "Discard and close"
+        }
+    },
+    "tab": {
+        "filtered": "{{table}} (filtered)",
+        "structure": "{{table}} (structure)",
+        "console": "Console {{number}}",
+        "newTable": "New table",
+        "design": "{{table}} (design)"
+    },
+    "panel": {
+        "newConsole": "New console",
+        "manage": "Manage connections",
+        "reading": "Reading the connections…",
+        "failed": "The connections could not be read: {{reason}}",
+        "empty": "This project has no database connections yet.",
+        "add": "Add connection",
+        "containers": "Running database containers",
+        "addContainer": "Add {{name}}"
+    },
+    "dialog": {
+        "title": "Database connections",
+        "share": {
+            "label": "Share in the repository",
+            "description": "Saves the connection in .ruimte/databases.json for everyone who works on this project. The password never goes into the file.",
+            "outside": "The database file is outside the project folder, so the connection cannot be shared."
+        },
+        "saveFailed": "The machine did not save the connections: {{reason}}"
+    },
+    "connections": {
+        "conflict": {
+            "title": "The database connections changed elsewhere",
+            "description": "They were read again, and your last change was not saved."
+        }
+    }
+}

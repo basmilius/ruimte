@@ -31,7 +31,7 @@ import {
     type DeviceReference,
     type StandaloneNode
 } from '@ruimte/contracts';
-import { FILES_VIEW_ID } from '@/shell/client-cells';
+import { isClientCellId, type ClientCellId } from '@/shell/client-cells';
 import type { CanvasPatch } from '@/project/merge';
 import { NODE_SIZE, defaultCanvases, nextId, type CanvasState } from '@/state/canvas';
 import { defaultDiagrams, type DiagramState } from '@/state/diagram';
@@ -141,10 +141,10 @@ export interface DocumentState {
     /* A view into a cell's zone: the four edges split, the middle takes the place of what is there. */
     dropViewAt(viewId: string, at: CellAt, zone: SplitZone): void;
     dropFileAt(name: string, path: string, at: CellAt, zone: SplitZone): string | null;
-    /* The files in place of the focused cell, the way any view opens; the focus when they already stand somewhere. */
-    showFiles(): void;
-    /* Takes that cell off the grid again, which is what closing the last tab does. */
-    hideFiles(): void;
+    /* A cell of this client in place of the focused cell, the way any view opens; the focus when it already stands somewhere. */
+    showClientCell(id: ClientCellId): void;
+    /* Takes that cell off the grid again, which is what closing its last tab does. */
+    hideClientCell(id: ClientCellId): void;
     /* Splits the focused cell and puts a view in the new one. */
     splitFocused(direction: SplitDirection, viewId: string): void;
     /* Takes a cell off the grid; the neighbors grow into it. The last cell stays, there has to be one. */
@@ -357,15 +357,15 @@ function settledOn(
         activeViewId,
         lastCanvasViewId: canvas ? activeViewId : was.lastCanvasViewId,
         /* A view of its own has no canvas to fall back to, so the keyboard starts inside its body.
-           The files tab strip has no view object, hence its id. */
-        bodyFocused: activeViewId === FILES_VIEW_ID || (active !== null && !canvas)
+           A cell of this client has no view object, hence its id. */
+        bodyFocused: isClientCellId(activeViewId) || (active !== null && !canvas)
     };
 }
 
-/* Temporary file cells and the files tab strip are openable without belonging to the document. */
+/* Temporary file cells and the cells of this client are openable without belonging to the document. */
 function canStandInCell(state: Pick<DocumentState, 'views' | 'temporaryFileViews'>, id: string): boolean {
     const view = cellViewOf(state, id);
-    return id === FILES_VIEW_ID || (view !== null && isOpenableView(view));
+    return isClientCellId(id) || (view !== null && isOpenableView(view));
 }
 
 /* Which view a banner would put on screen if its button were pressed; null for one that offers nothing. */
@@ -628,23 +628,23 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
                 return view.id;
             },
 
-            showFiles() {
+            showClientCell(id) {
                 const state = get();
                 if (state.layout === null) {
-                    commit(singleLayout(FILES_VIEW_ID));
+                    commit(singleLayout(id));
                     return;
                 }
-                const shown = showViewIn(state.layout, FILES_VIEW_ID);
+                const shown = showViewIn(state.layout, id);
                 if (shown !== null) {
                     commit(shown.layout);
                 }
             },
 
-            /* Unlike a cell a person closes, the files go even as the last one: the grid without a
-               cell has a view of its own to show. */
-            hideFiles() {
+            /* Unlike a cell a person closes, a cell of this client goes even as the last one: the grid
+               without a cell has a view of its own to show. */
+            hideClientCell(id) {
                 const state = get();
-                const at = state.layout === null ? null : locateView(state.layout, FILES_VIEW_ID);
+                const at = state.layout === null ? null : locateView(state.layout, id);
                 if (state.layout !== null && at !== null) {
                     commit(closeCell(state.layout, at));
                 }

@@ -263,8 +263,10 @@ export function menuModel(context: MenuContext): MenuSpec {
             ),
             command('open-folder', t('openFolder')),
             ...only(workspace && context.folder, command('file-new', t('newFile')), command('folder-new', t('newFolder'))),
+            ...only(workspace && !context.scratch, command('database-console-new', t('newDatabaseConsole'))),
             ...only(workspace && context.folder, command('reveal', t('reveal', { app: context.fileManager }))),
             ...only(workspace, command('project-settings', t('projectSettings'))),
+            ...only(workspace && !context.scratch, command('database-connections', t('databaseConnections'))),
             separator,
             ...only(workspace && context.windows, command('window-move', t('moveToNewWindow'))),
             ...only(workspace || desktop, close),
@@ -348,6 +350,7 @@ export function menuModel(context: MenuContext): MenuSpec {
                     !context.scratch,
                     command('panel-files', t('files'), { checked: context.panel === 'files' }),
                     command('panel-git', t('git'), { checked: context.panel === 'git' }),
+                    command('panel-databases', t('databases'), { checked: context.panel === 'databases' }),
                     command('panel-devices', t('devices'), { checked: context.panel === 'devices' })
                 ),
                 command('panel-toggle', t('togglePanel'), { shortcut: CANVAS_SHORTCUTS.togglePanel }),

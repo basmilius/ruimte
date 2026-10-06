@@ -51,6 +51,7 @@
         "names": {
             "files": "Bestanden",
             "git": "Git",
+            "databases": "Databases",
             "devices": "Apparaten",
             "processes": "Processen",
             "launches": "Launches",
@@ -325,7 +326,8 @@
         "chooseImage": "Afbeelding kiezen…",
         "useFolderIcon": "Het icoon van de map gebruiken",
         "tooLarge": "Die afbeelding is groter dan 256 KB",
-        "unreadable": "Dat bestand kon niet worden gelezen"
+        "unreadable": "Dat bestand kon niet worden gelezen",
+        "databases": "Databaseverbindingen…"
     },
     "linkMachine": {
         "title": "Een machine koppelen met een code",
@@ -536,6 +538,9 @@
             "toggleSidebar": "Zijbalk aan of uit",
             "toggleFiles": "Bestandenpaneel aan of uit",
             "toggleGit": "Git-paneel aan of uit",
+            "toggleDatabases": "Databasepaneel aan of uit",
+            "newDatabaseConsole": "Nieuwe databaseconsole",
+            "databaseConnections": "Databaseverbindingen beheren",
             "toggleProcesses": "Processen-paneel aan of uit",
             "toggleProblems": "Problemenpaneel aan of uit",
             "toggleTheme": "Licht of donker",
@@ -700,6 +705,7 @@
         "agentChat": "{{name}}-chat",
         "agentTerminal": "{{name}}-terminal",
         "newFile": "Nieuw bestand…",
+        "newDatabaseConsole": "Nieuwe databaseconsole",
         "newFolder": "Nieuwe map…",
         "openFolder": "Map openen…",
         "reveal": "Tonen in {{app}}",
@@ -718,6 +724,7 @@
         "sidebar": "Zijbalk",
         "files": "Bestanden",
         "git": "Git",
+        "databases": "Databases",
         "devices": "Apparaten",
         "togglePanel": "Paneel aan/uit",
         "splitRight": "Naar rechts splitsen",
@@ -783,6 +790,7 @@
         "releaseNotes": "Release notes",
         "keyboardShortcuts": "Sneltoetsen",
         "projectSettings": "Projectinstellingen…",
+        "databaseConnections": "Databaseverbindingen…",
         "clear": "Wissen",
         "open": "Menu",
         "find": "Zoeken",

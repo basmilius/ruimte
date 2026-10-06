@@ -4,6 +4,7 @@ import { WebviewParking } from '@/browser/WebviewParking';
 import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
 import { ChatChooserMenu } from '@/chat/ChatChooserMenu';
 import { connectWorkspaceChatHost } from '@/chat/workspace-host';
+import { useDatabaseTabs } from '@/database/state';
 import { useCanvasShortcuts } from '@/canvas/canvas-shortcuts';
 import { CellOverlayLayer } from '@/shell/CellOverlay';
 import { startLaunchWatch } from '@/launches/watch';
@@ -44,6 +45,13 @@ const LaunchDialogs = lazyDialog(
     'LaunchDialogs',
     useLaunches,
     (s) => s.dialog !== null
+);
+
+const DatabaseConnectionsDialog = lazyDialog(
+    () => import('@/database/ConnectionsDialog'),
+    'DatabaseConnectionsDialog',
+    useDatabaseTabs,
+    (s) => s.dialog.open
 );
 
 const ConflictOverlay = lazyDialog(
@@ -143,6 +151,9 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
             </ErrorBoundary>
             <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                 <LaunchDialogs />
+            </ErrorBoundary>
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <DatabaseConnectionsDialog />
             </ErrorBoundary>
             <ForkDialog />
         </ConnectionProvider>

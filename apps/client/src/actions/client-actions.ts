@@ -64,7 +64,7 @@ import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';
 import { offerViewUndo } from '@/project/view-trash';
 import { openInNewWindow, wantsNewWindow } from '@/project/windows';
 import type { ChatPromptClients } from '@adecore/agents-react/prompts/logic/subjects';
-import { FILES_VIEW_ID } from '@/shell/client-cells';
+import { DATABASES_VIEW_ID, FILES_VIEW_ID, isClientCellId } from '@/shell/client-cells';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { canSplit, cellAt, cellCount, focusedViewId, freeViewFor, isSameCell, locateView, type SplitDirection, type SplitZone } from '@/shell/split';
 import { sightOf, visibleNodes } from '@/state/attention';
@@ -225,9 +225,12 @@ function lastCanvasOf(state: DocumentState): (ProjectView & { kind: 'canvas' }) 
     return state.views.filter(isCanvasView).find((view) => view.id === state.lastCanvasViewId) ?? state.views.find(isCanvasView) ?? null;
 }
 
-/* What stands in a cell: a view of the project, or this client's files, which the document does not have. */
+/* What stands in a cell: a view of the project, or a cell of this client, which the document does not have. */
 function cellName(state: DocumentState, viewId: string): string {
-    return viewId === FILES_VIEW_ID ? 'Files' : (cellViewOf(state, viewId)?.name ?? viewId);
+    if (viewId === FILES_VIEW_ID) {
+        return 'Files';
+    }
+    return viewId === DATABASES_VIEW_ID ? 'Databases' : (cellViewOf(state, viewId)?.name ?? viewId);
 }
 
 /* The cells of the grid column by column, each named by the view standing in it. */
@@ -1279,7 +1282,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
             }
             if (viewId !== null) {
                 const view = cellViewOf(state, viewId);
-                if (viewId !== FILES_VIEW_ID && (!view || !isOpenableView(view))) {
+                if (!isClientCellId(viewId) && (!view || !isOpenableView(view))) {
                     throw unknownView(viewId);
                 }
             }

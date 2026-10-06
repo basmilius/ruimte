@@ -1,0 +1,51 @@
+{
+    "cell": {
+        "name": "Databases",
+        "tabs": "Open tabellen en consoles",
+        "newConsole": "Nieuwe console",
+        "empty": {
+            "title": "Niets geopend",
+            "body": "Open een tabel vanuit het databasepaneel, of start een console."
+        },
+        "gone": "Deze verbinding hoort niet meer bij het project.",
+        "closeTab": "Tab sluiten",
+        "failed": "Deze tab kon niet worden getekend",
+        "discard": {
+            "title": "Wijzigingen in {{table}} weggooien?",
+            "description": "Niemand heeft de wijzigingen in deze tabel ingediend. Sluit je de tab, dan zijn ze weg.",
+            "confirm": "Weggooien en sluiten"
+        }
+    },
+    "tab": {
+        "filtered": "{{table}} (gefilterd)",
+        "structure": "{{table}} (structuur)",
+        "console": "Console {{number}}",
+        "newTable": "Nieuwe tabel",
+        "design": "{{table}} (ontwerp)"
+    },
+    "panel": {
+        "newConsole": "Nieuwe console",
+        "manage": "Verbindingen beheren",
+        "reading": "Verbindingen lezen…",
+        "failed": "De verbindingen konden niet worden gelezen: {{reason}}",
+        "empty": "Dit project heeft nog geen databaseverbindingen.",
+        "add": "Verbinding toevoegen",
+        "containers": "Draaiende databasecontainers",
+        "addContainer": "{{name}} toevoegen"
+    },
+    "dialog": {
+        "title": "Databaseverbindingen",
+        "share": {
+            "label": "Delen in de repository",
+            "description": "Bewaart de verbinding in .ruimte/databases.json voor iedereen die aan dit project werkt. Het wachtwoord komt nooit in het bestand.",
+            "outside": "Het databasebestand staat buiten de projectmap, dus de verbinding kan niet worden gedeeld."
+        },
+        "saveFailed": "De machine heeft de verbindingen niet opgeslagen: {{reason}}"
+    },
+    "connections": {
+        "conflict": {
+            "title": "De databaseverbindingen zijn elders gewijzigd",
+            "description": "Ze zijn opnieuw gelezen, en je laatste wijziging is niet opgeslagen."
+        }
+    }
+}

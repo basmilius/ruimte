@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { FolderSearch, ImageUp } from 'lucide-react';
+import { Database, FolderSearch, ImageUp } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { type ProjectIconChoice, type ProjectSummary } from '@ruimte/contracts';
+import { useDatabaseTabs } from '@/database/state';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { useProject } from '@/state/project';
 import { PROJECT_ICON_KEYWORDS } from '@/project/project-icons';
 import { useProjectIconGroups } from '@/project/use-project-icon-groups';
 import { Button, Icon, useAsyncAction, Dialog, Field, FormError, IconPicker, Input, SectionLabel } from '@adecore/ui';
@@ -57,6 +59,8 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
     const trimmedName = name.trim();
     /* The Chats project's name is the app's word and its folder the daemon's, so only its symbol is a person's to pick. */
     const scratch = project.scratch === true;
+    /* The dialog of the connections edits those of the project on screen, which this one may not be. */
+    const onScreen = useProject((state) => state.current?.projectId === project.projectId && state.currentEndpointId === endpointId);
 
     const pickFile = async (file: File | undefined): Promise<void> => {
         if (!file) {
@@ -149,6 +153,16 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
                         <Button disabled={busy} onClick={() => void run(actions.useFolderIcon)}>
                             <Icon icon={FolderSearch} size={12} /> {t('projectSettings.useFolderIcon')}
                         </Button>
+                        {onScreen && (
+                            <Button
+                                onClick={() => {
+                                    onOpenChange(false);
+                                    useDatabaseTabs.getState().openConnections();
+                                }}
+                            >
+                                <Icon icon={Database} size={12} /> {t('projectSettings.databases')}
+                            </Button>
+                        )}
                     </>
                 )}
                 <span className="grow" />

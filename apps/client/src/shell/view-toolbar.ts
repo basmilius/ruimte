@@ -3,7 +3,7 @@ import { RUNTIME_MODES } from '@adecore/agents-react/chat/runtime-modes';
 import { useSubagentTrail } from '@adecore/agents-react/chat/subagent-view';
 import { useDictation } from '@/dictation/controller';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
-import { isFilesView, type CellView } from '@/shell/client-cells';
+import { isClientCell, isFilesView, type CellView } from '@/shell/client-cells';
 import { useChatRow } from '@adecore/agents-react/state/chats';
 import { useHasPlans } from '@/state/plans';
 
@@ -14,9 +14,9 @@ export function modeOf(host: NodeHost | null): RuntimeMode | undefined {
     return RUNTIME_MODES.find((mode) => mode === host?.runtimeMode);
 }
 
-/* The id a hook that only knows the document may be asked about; a canvas has its own store and the files are in neither. */
+/* The id a hook that only knows the document may be asked about; a canvas has its own store and the cells of this client are in neither. */
 export function hostIdOf(view: CellView | null): string {
-    return view !== null && view.kind !== 'canvas' && !isFilesView(view) ? view.id : '';
+    return view !== null && view.kind !== 'canvas' && !isClientCell(view) ? view.id : '';
 }
 
 /* Whether a chat view shows a sub-agent in its place, where its title turns into the first crumb and needs no separator after it. */
@@ -35,7 +35,8 @@ export function useHasViewToolbar(view: CellView | null): boolean {
     if (isFilesView(view)) {
         return true;
     }
-    if (view === null || !KINDS_WITH_TOOLBAR.has(view.kind)) {
+    // The databases draw their tabs inside the cell, since a strip of `Tabs` carries a line of its own.
+    if (view === null || isClientCell(view) || !KINDS_WITH_TOOLBAR.has(view.kind)) {
         return false;
     }
     if (view.kind === 'chat') {
@@ -63,7 +64,7 @@ export function useViewToolbarLeads(view: CellView | null): boolean {
     if (isFilesView(view)) {
         return true;
     }
-    return has && view !== null && LEADING_TOOLBAR_KINDS.has(view.kind);
+    return has && view !== null && !isClientCell(view) && LEADING_TOOLBAR_KINDS.has(view.kind);
 }
 
 export function useIsFork(view: CellView | null): boolean {

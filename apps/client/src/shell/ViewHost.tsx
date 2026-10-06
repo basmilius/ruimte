@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
-import { isFilesView, type CellView } from '@/shell/client-cells';
+import { isDatabasesView, isFilesView, type CellView } from '@/shell/client-cells';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { Canvas } from '@/canvas/Canvas';
 import { newChatOn } from '@/project/new-chat';
@@ -22,6 +22,7 @@ import { ErrorBoundary, lazyNamed } from '@adecore/ui';
 
 const DrawingView = lazyNamed(() => import('@/drawing/DrawingView'), 'DrawingView');
 const DiagramView = lazyNamed(() => import('@/diagram/DiagramView'), 'DiagramView');
+const DatabasesCell = lazyNamed(() => import('@/database/DatabasesCell'), 'DatabasesCell');
 
 function StandaloneView({ view }: { view: ProjectView }) {
     // `bodyFocused` is one flag for the whole grid, so without the cell every chat and terminal would grab it.
@@ -99,6 +100,23 @@ function FilesSurface() {
     );
 }
 
+/*
+ * The tables, consoles and designers of this client in their cell. Like a view of its own it takes the
+ * keyboard on a press, and the views it draws come in a chunk of their own.
+ */
+function DatabasesSurface() {
+    const { t } = useTranslation('shell');
+    return (
+        <div className="absolute inset-0 flex flex-col bg-surface" onPointerDownCapture={() => useDocument.getState().setBodyFocused(true)}>
+            <ErrorBoundary label={t('viewHost.failed')} className="flex min-h-0 grow flex-col">
+                <Suspense fallback={null}>
+                    <DatabasesCell />
+                </Suspense>
+            </ErrorBoundary>
+        </div>
+    );
+}
+
 /* The page of a browser view is the parked element, placed over this whole column by the layer. A
    view without an address has no page yet, so what is left under it is the splash. */
 function BrowserViewSurface({ id }: { id: string }) {
@@ -121,6 +139,9 @@ export function ViewSurface({ view }: { view: CellView }) {
     const diagram = useDiagram((s) => s.content);
     if (isFilesView(view)) {
         return <FilesSurface />;
+    }
+    if (isDatabasesView(view)) {
+        return <DatabasesSurface />;
     }
     return (
         /* Inside the cell and around the view alone: the cell's toolbar and the dock stay usable,

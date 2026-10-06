@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Expand, Files, MoreHorizontal } from 'lucide-react';
+import { Database, Expand, Files, MoreHorizontal } from 'lucide-react';
 import { viewIconOf } from '@ruimte/contracts';
 import { closeCellAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { isFilesView, type CellView } from '@/shell/client-cells';
+import { isClientCell, isDatabasesView, isFilesView, type CellView } from '@/shell/client-cells';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { SubagentTitleCrumb } from '@adecore/agents-react/chat/ui/SubagentControls';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
@@ -85,6 +85,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     /* The last cell stays (`split.close`), so its bar has nothing to offer there. */
     const closable = useDocument((s) => s.layout !== null && cellCount(s.layout) > 1);
     const files = isFilesView(view);
+    const client = isClientCell(view);
     const hasViewToolbar = useHasViewToolbar(view);
     /* The files never fold: their controls are the tab strip, and a strip inside a popover is a list
        of files you have to open a menu to see. It gives way by scrolling sideways instead. */
@@ -146,6 +147,12 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                             a name here would take the room the strip needs. */}
                             {files ? (
                                 <Icon icon={Files} size={14} className="shrink-0" />
+                            ) : isDatabasesView(view) ? (
+                                /* Its tabs sit in the cell under the bar, so the bar names the cell. */
+                                <>
+                                    <Icon icon={Database} size={14} className="shrink-0" />
+                                    <span className="min-w-0 truncate font-medium">{view.name}</span>
+                                </>
                             ) : view.kind === 'browser' ? (
                                 /* The address field beside it already says where the page is, so the
                                    title would only take its room. */
@@ -211,8 +218,8 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                     </ContextMenu.Trigger>
                     <ContextMenu.Popup>
                         <SplitItems at={at} separated />
-                        {/* The files are no view of the project: nothing to rename, share or delete. */}
-                        {!files && <ViewMenuItems viewId={view.id} kind={view.kind} />}
+                        {/* The cells of this client are no views of the project: nothing to rename, share or delete. */}
+                        {!client && <ViewMenuItems viewId={view.id} kind={view.kind} />}
                     </ContextMenu.Popup>
                 </ContextMenu.Root>
             )}

@@ -1,5 +1,5 @@
 import { isOpenableView, type ProjectLocal, type ProjectView, type SplitCell, type SplitColumn, type SplitLayout } from '@ruimte/contracts';
-import { FILES_VIEW_ID } from '@/shell/client-cells';
+import { CLIENT_CELL_IDS } from '@/shell/client-cells';
 
 /*
  * The whole limit of the model. Columns of cells instead of a free tree means "at most three by
@@ -289,8 +289,8 @@ export function focusDirection(layout: SplitLayout, direction: SplitDirection): 
  * here on the way in, and a layout with nothing left falls back to the first view there is.
  */
 export function cleanLayout(layout: SplitLayout, viewIds: readonly string[]): SplitLayout | null {
-    // The files stand in a cell without being in the document, so their id passes on its own.
-    const known = new Set([...viewIds, FILES_VIEW_ID]);
+    // The cells of this client stand in the grid without being in the document, so their ids pass on their own.
+    const known = new Set<string>([...viewIds, ...CLIENT_CELL_IDS]);
     const seen = new Set<string>();
     const columns: SplitColumn[] = [];
     for (const column of layout.columns) {

@@ -7,7 +7,7 @@ import { LaunchChip } from '@/launches/LaunchChip';
 import { PanelControls } from '@/shell/PanelControls';
 import { ProjectMenu } from '@/shell/ProjectMenu';
 import { ViewMenu } from '@/shell/ViewMenu';
-import { FILES_VIEW_ID } from '@/shell/client-cells';
+import { isClientCellId } from '@/shell/client-cells';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { IS_STATION } from '@/station';
@@ -40,9 +40,9 @@ export function Toolbar() {
     const hasPanelButtons = toolbarPanels(scratch).length > 0;
     const voiceOpen = useVoice((s) => s.open);
     const sidebarOpen = useUi((s) => s.sidebarOpen);
-    /* The files are in no document, so the switcher has nothing to name while they hold the cell;
-       the tabs beside it say which file is up. */
-    const hasView = useDocument((s) => s.activeViewId !== null && s.activeViewId !== FILES_VIEW_ID);
+    /* The cells of this client are in no document, so the switcher has nothing to name while one has
+       the focus; its tabs say what is up. */
+    const hasView = useDocument((s) => s.activeViewId !== null && !isClientCellId(s.activeViewId));
     const inset = useTrafficLightInset();
 
     return (

@@ -1,5 +1,6 @@
 import type { GitDiffScope, ProjectFileTabView } from '@ruimte/contracts';
 import { create } from 'zustand';
+import { FILES_VIEW_ID } from '@/shell/client-cells';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
@@ -230,7 +231,7 @@ export const useFiles = create<FilesStore>((set, get) => ({
        again. Beside it is a drag. */
     open(path, limit, view, line, options) {
         get().openHidden(path, limit, view, line, options);
-        useDocument.getState().showFiles();
+        useDocument.getState().showClientCell(FILES_VIEW_ID);
     },
     openHidden(path, limit, view, line, options) {
         const reveal = line === undefined ? get().revealLine : { key: tabKey(path, view), line, nonce: (get().revealLine?.nonce ?? 0) + 1 };
@@ -255,7 +256,7 @@ export const useFiles = create<FilesStore>((set, get) => ({
                 )
             });
             if (next.tabs.length === 0) {
-                useDocument.getState().hideFiles();
+                useDocument.getState().hideClientCell(FILES_VIEW_ID);
             }
         };
         closeAfterSaving(currentEndpointId(), tab === undefined || tab.view !== undefined ? [] : [tab.path], closeNow);

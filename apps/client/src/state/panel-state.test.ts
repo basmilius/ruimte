@@ -15,7 +15,8 @@ const defaults: PanelsState = {
     gitLogHeight: 200,
     gitHiddenRepos: [],
     sidebarExpanded: null,
-    favicons: {}
+    favicons: {},
+    databaseTabs: { tabs: [], active: null }
 };
 
 const full: PanelsState = {
@@ -40,7 +41,17 @@ const full: PanelsState = {
     gitLogHeight: 260,
     gitHiddenRepos: ['tools'],
     sidebarExpanded: ['main', 'notes'],
-    favicons: { 'browser-1': 'https://bas.dev/favicon.ico' }
+    favicons: { 'browser-1': 'https://bas.dev/favicon.ico' },
+    databaseTabs: {
+        tabs: [
+            { id: 't1', kind: 'table', connectionId: 'shop', schema: 'shop', table: 'orders' },
+            { id: 't2', kind: 'table', connectionId: 'shop', schema: 'shop', table: 'customers', where: '`id` = 3' },
+            { id: 't3', kind: 'structure', connectionId: 'shop', schema: 'shop', table: 'orders' },
+            { id: 't4', kind: 'console', connectionId: 'shop', schema: 'shop', sql: 'SELECT 1', number: 2 },
+            { id: 't5', kind: 'designer', connectionId: 'shop', schema: 'shop' }
+        ],
+        active: 't4'
+    }
 };
 
 describe('panels in the machine-local file', () => {
@@ -59,6 +70,32 @@ describe('panels in the machine-local file', () => {
         expect(serializePanels(launches)).toMatchObject({ panel: { open: true, kind: 'files' }, launchesPanel: true });
         expect(parsePanels(serializePanels(launches), defaults).panel).toEqual({ open: true, kind: 'launches' });
         expect(serializePanels(defaults)).not.toHaveProperty('launchesPanel');
+    });
+
+    test('the databases panel rides beside a kind an older client reads, as launches does', () => {
+        const databases: PanelsState = { ...defaults, panel: { open: true, kind: 'databases' } };
+        expect(serializePanels(databases)).toMatchObject({ panel: { open: true, kind: 'files' }, databasesPanel: true });
+        expect(serializePanels(databases)).not.toHaveProperty('launchesPanel');
+        expect(parsePanels(serializePanels(databases), defaults).panel).toEqual({ open: true, kind: 'databases' });
+        expect(serializePanels(defaults)).not.toHaveProperty('databasesPanel');
+    });
+
+    test('a client without database tabs writes none, and a tab this release cannot read is dropped alone', () => {
+        expect(serializePanels(defaults)).not.toHaveProperty('databases');
+        const parsed = parsePanels(
+            {
+                databases: {
+                    tabs: [
+                        { id: 'a', kind: 'chart', connectionId: 'shop' },
+                        { id: 'b', kind: 'table', connectionId: 'shop', schema: 'main', table: 'orders' },
+                        'nonsense'
+                    ],
+                    activeTab: 'a'
+                }
+            },
+            defaults
+        );
+        expect(parsed.databaseTabs).toEqual({ tabs: [{ id: 'b', kind: 'table', connectionId: 'shop', schema: 'main', table: 'orders' }], active: 'b' });
     });
 
     test('the problems panel is for this session only, so the file stores it as closed', () => {

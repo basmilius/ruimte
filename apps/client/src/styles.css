@@ -11,6 +11,7 @@
 @source "../node_modules/@adecore/ui/src";
 @source "../node_modules/@adecore/agents-react/src";
 @source "../node_modules/@adecore/editor-react/src";
+@source "../node_modules/@adecore/database/src";
 
 /* Markdown reads as prose, which is a rhythm nobody wants to write twice. The plugin brings it;
    `.chat-markdown` below paints it in the theme's tokens and holds it to the app's type scale. */
