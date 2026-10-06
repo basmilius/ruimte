@@ -165,6 +165,11 @@ export interface ProjectLanguage {
     end(projectId: string): Promise<void>;
 }
 
+/* What the store needs of the database connections: they let go of a project when it does. */
+export interface ProjectDatabases {
+    closeProject(projectId: string): void;
+}
+
 /* What the store needs of the provenance records: they go with the project. */
 export interface ProjectProvenance {
     forget(projectId: string): Promise<void>;
@@ -261,6 +266,7 @@ export class ProjectStore {
     private launches: ProjectLaunches | null = null;
     private language: ProjectLanguage | null = null;
     private provenance: ProjectProvenance | null = null;
+    private databases: ProjectDatabases | null = null;
 
     constructor(home: string, seams: WatchSeams = SYSTEM_WATCH, writeIO: ProjectWriteIO = PROJECT_WRITE_IO) {
         this.home = home;
@@ -395,6 +401,10 @@ export class ProjectStore {
     /* The diagram store follows this one the same way. */
     attachDiagrams(diagrams: ProjectViewFiles): void {
         this.diagrams = diagrams;
+    }
+
+    attachDatabases(databases: ProjectDatabases): void {
+        this.databases = databases;
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -949,6 +959,7 @@ export class ProjectStore {
         }
         this.drawings?.closeProject(projectId);
         this.diagrams?.closeProject(projectId);
+        this.databases?.closeProject(projectId);
         state.watcher?.close();
         state.cancelSettle?.();
         this.open.delete(projectId);

@@ -109,6 +109,9 @@ import { registerFsHandlers } from './handlers/fs.ts';
 import { readServedFile } from './fs/read.ts';
 import { registerGitHandlers } from './handlers/git.ts';
 import { registerDiagramHandlers } from './handlers/diagram.ts';
+import { registerDatabaseHandlers } from './handlers/database.ts';
+import { DatabaseConnectionStore } from './database/connection-store.ts';
+import { DatabaseService } from './database/database-service.ts';
 import { registerLaunchHandlers } from './handlers/launches.ts';
 import { registerLanguageHandlers } from './handlers/language.ts';
 import { registerOnDeviceHandlers } from './handlers/ondevice.ts';
@@ -890,6 +893,12 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     chats.observe((event) => provenance.consume(event));
     projects.attachProvenance(provenance);
     registerProvenanceHandlers(dispatcher, provenance, machineHome);
+    const databases = new DatabaseService({ machineHome });
+    const databaseConnections = new DatabaseConnectionStore({
+        projects: { folderOf: (projectId) => projects.index.folderOf(projectId), holdersOf: (projectId) => projects.holdersOf(projectId) }
+    });
+    projects.attachDatabases(databaseConnections);
+    registerDatabaseHandlers(dispatcher, databases, databaseConnections);
     registerFsHandlers(
         dispatcher,
         folders,
@@ -1044,6 +1053,8 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         diagrams,
         launchStore,
         launches,
+        databases,
+        databaseConnections,
         language,
         folders,
         statuses,
@@ -1335,6 +1346,8 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         diagrams.closeAll();
         launches.close();
         launchStore.closeAll();
+        databaseConnections.closeAll();
+        await step('Stopping the database helper', () => databases.dispose());
         await step('Stopping language servers', () => language.close());
         await step('Stopping the on-device helper', () => onDevice.dispose());
         peers.closeAll();

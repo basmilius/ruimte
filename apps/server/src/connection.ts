@@ -57,6 +57,9 @@ export interface ConnectionServices {
     diagrams: Subscribable;
     launchStore?: Subscribable;
     launches?: Subscribable;
+    /* The database sessions a client opened, which close when it goes. */
+    databases?: { release(clientId: string): Promise<void> };
+    databaseConnections?: Subscribable;
     language?: Subscribable;
     folders: Attachable;
     statuses: Attachable;
@@ -132,6 +135,7 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
             services.diagrams.subscribe(clientId, sink),
             services.launchStore?.subscribe(clientId, sink) ?? (() => undefined),
             services.launches?.subscribe(clientId, sink) ?? (() => undefined),
+            services.databaseConnections?.subscribe(clientId, sink) ?? (() => undefined),
             services.language?.subscribe(clientId, sink) ?? (() => undefined),
             services.folders.subscribe(clientId, sink),
             services.statuses.subscribe(clientId, sink),
@@ -165,6 +169,7 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
             services.devices?.detachAll(clientId);
             services.folders.detachAll(clientId);
             services.statuses.detachAll(clientId);
+            void services.databases?.release(clientId);
             for (const unsubscribe of unsubscribes) {
                 unsubscribe();
             }

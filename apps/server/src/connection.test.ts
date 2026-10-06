@@ -157,6 +157,29 @@ describe('connectionOpener', () => {
         expect(channel.frames).toEqual([]);
     });
 
+    test('releases the database sessions of a client once when its channel closes', () => {
+        const released: string[] = [];
+        const order: string[] = [];
+        const sources = Object.fromEntries(NAMES.map((name) => [name, new FakeSource(name, order)])) as Record<(typeof NAMES)[number], FakeSource>;
+        const open = connectionOpener({
+            ...sources,
+            sessions: Object.assign(sources.sessions, { get: () => undefined }),
+            dispatcher: new Dispatcher(),
+            databases: {
+                release: async (clientId) => {
+                    released.push(clientId);
+                }
+            }
+        });
+        const channel = new FakeChannel();
+        open(channel, { reachability: 'loopback', sessionId: null });
+
+        channel.fireClose();
+        channel.fireClose();
+
+        expect(released).toEqual(['client-1']);
+    });
+
     test('gates output on the channel buffer and repairs it with a screen on drain', async () => {
         const { open, sources } = setup({ a: 'screen-a' });
         const channel = new FakeChannel();
