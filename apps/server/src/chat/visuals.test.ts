@@ -7,7 +7,7 @@ import { visualFileName } from '@adecore/agents/chat/visual-store';
 import { ManualClock } from '@adecore/agents/outbox/manual-clock';
 import { readBytes } from '../bytes/read-bytes.ts';
 import type { VisualHost } from '../canvas/verb.ts';
-import { SHOWN_LINE } from '../canvas/visual-verb.ts';
+import { IMAGES_LINE, SHOWN_LINE } from '../canvas/visual-verb.ts';
 import { VisualRenderError, type VisualPreview } from '../visuals/renderer.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
@@ -247,6 +247,26 @@ describe('visual verbs', () => {
             `example\truimte-context visual show --title "Open issues per label" --height 160 <<'EOF'`
         );
         expect(lines.filter((line) => line.startsWith('example\t')).at(-1)).toBe('example\tEOF');
+        expect(lines[lines.findIndex((line) => line.startsWith('page\t')) + 1]).toBe(IMAGES_LINE);
+    });
+
+    test('help visual show and help visual preview say under stdin that local images are embedded', async () => {
+        const daemon = await boot();
+        expect(IMAGES_LINE).toBe(
+            'images\tA local image may be written as its absolute file path, as the whole of a quoted attribute or JS string or the bare argument of a CSS url(), such as <img src="/tmp/before.png">. ' +
+                'The CLI reads it in your own process and embeds it, so the page needs no file on this machine: at most 10 MiB per image and 16 MiB for the page with its images. ' +
+                'A file counts only when its bytes are an image. visual show refuses a page with an image it cannot embed; visual preview embeds what it can and prints a line for the rest'
+        );
+        for (const action of ['show', 'preview']) {
+            const lines = await runVerb(daemon, 'chat-lead', 'help', ['visual', action]);
+            expect(lines[lines.findIndex((line) => line.startsWith('stdin\t')) + 1]).toBe(IMAGES_LINE);
+        }
+        const show = await runVerb(daemon, 'chat-lead', 'help', ['visual', 'show']);
+        expect(show.find((line) => line.startsWith('refusals\t'))).toContain('\tvisual-images-missing\tvisual-image-too-large\t');
+        const preview = await runVerb(daemon, 'chat-lead', 'help', ['visual', 'preview']);
+        expect(preview).toContain(
+            'prints\tmissing|too-large\tpath\treason\tlast, one line per local image the CLI left as written, which visual show would refuse'
+        );
     });
 });
 

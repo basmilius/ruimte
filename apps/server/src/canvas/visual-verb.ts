@@ -1,6 +1,7 @@
 import { VISUAL_LAYOUT_GUIDE, VISUAL_LIMITS, VISUAL_PAGE_RULES, VISUAL_THEME_GUIDE } from '@ruimte/contracts';
 import { z } from 'zod';
 import { visualRow, visualRows } from '../actions/visual-actions.ts';
+import { VISUAL_IMAGE_BYTES } from '../cli/visual-images.ts';
 import { CONSOLE_LIMITS } from '../visuals/page-console.ts';
 import { SHOT_MAX_HEIGHT } from '../visuals/render-protocol.ts';
 import { PREVIEW_LIMIT_MS, PREVIEW_WIDTH } from '../visuals/renderer.ts';
@@ -10,6 +11,12 @@ import { SCOPE_LINE, field } from './verb.ts';
 /* A model that is not told so describes the page in its reply as well, which the person then reads twice. */
 export const SHOWN_LINE =
     'shown\tThe person sees this page above your reply. Do not mention or describe it there: your reply adds only what the page does not say';
+
+/* The CLI embeds them before the page leaves (`cli/visual-images.ts`), so the daemon never reads a path an agent names. */
+export const IMAGES_LINE =
+    'images\tA local image may be written as its absolute file path, as the whole of a quoted attribute or JS string or the bare argument of a CSS url(), such as <img src="/tmp/before.png">. ' +
+    `The CLI reads it in your own process and embeds it, so the page needs no file on this machine: at most ${VISUAL_IMAGE_BYTES / 1024 / 1024} MiB per image and ${VISUAL_LIMITS.bytes / 1024 / 1024} MiB for the page with its images. ` +
+    'A file counts only when its bytes are an image. visual show refuses a page with an image it cannot embed; visual preview embeds what it can and prints a line for the rest';
 
 /* Each row one line of the shell command, so the heredoc reads the way it is typed. */
 const EXAMPLE_LINES: readonly string[] = [
@@ -43,9 +50,10 @@ const show = defineActionVerb('visual', {
     ],
     detail: [
         "stdin\tThe page, piped in or as a heredoc: ruimte-context visual show --title T <<'EOF' ... EOF; ruimte-context help visual has a whole example",
+        IMAGES_LINE,
         'prints\tvisual\tid\ttitle\tsize\tthe visual shown, with the size of the stored page in bytes',
         SHOWN_LINE,
-        'refusals\tvisual-needs-chat\tvisuals-off\tvisual-invalid\tvisual-too-large\tthe codes this action refuses with; the message of each says what to do instead'
+        'refusals\tvisual-needs-chat\tvisuals-off\tvisual-invalid\tvisual-too-large\tvisual-images-missing\tvisual-image-too-large\tthe codes this action refuses with; the message of each says what to do instead'
     ],
     positionals: z.tuple([], { error: 'visual show takes no arguments; the page goes on stdin and its title in --title' }),
     flags: z.object({
@@ -90,9 +98,11 @@ const preview = defineActionVerb('visual', {
     ],
     detail: [
         'stdin\tThe page, the same way visual show takes it',
+        IMAGES_LINE,
         'prints\tshot\tpath\tthe png on this machine, which you open with your own tools',
         'prints\theight\tpixels\tthe height the page needs at that width; the frame in the chat takes it',
         `prints\tconsole\tlevel\ttext\twhat the page wrote to its console, uncaught exceptions with their stack and what failed to load, at most ${CONSOLE_LIMITS.messages}; a note when there is nothing`,
+        'prints\tmissing|too-large\tpath\treason\tlast, one line per local image the CLI left as written, which visual show would refuse',
         `browser\tA headless Chrome on this machine draws the page as the chat would. It loads public http(s) addresses as the chat does and never this machine or its network; a page that does not settle within ${PREVIEW_LIMIT_MS / 1000} s is refused`,
         'refusals\tvisual-needs-chat\tvisuals-off\tvisual-invalid\tvisual-too-large\tpreview-unavailable\tpreview-timeout\tpreview-failed\tthe codes this action refuses with; on preview-unavailable show the page without a preview'
     ],
@@ -168,6 +178,7 @@ export const VISUAL_SUMMARY = 'Previews a self-contained HTML page, shows it abo
 export const VISUAL_DETAIL: readonly string[] = [
     'when\tA chart, a table, a diagram, a collage of images or a mockup that says more than prose; never for what a sentence or a short list says',
     `page\t${VISUAL_PAGE_RULES}`,
+    IMAGES_LINE,
     `layout\t${VISUAL_LAYOUT_GUIDE}`,
     `theme\t${VISUAL_THEME_GUIDE}`,
     ...EXAMPLE_LINES,

@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import { mkdtemp, rm, truncate, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { VISUAL_LIMITS } from '@ruimte/contracts';
 import { unescapeText } from '../canvas/text-escapes.ts';
 import { VERBS } from '../canvas/verbs.ts';
 import { runContext } from './context.ts';
@@ -65,6 +69,8 @@ const daemon = {
                 return new Response('flow-1\t1\t0\t0\t0\n');
             case 'done':
                 return new Response('done\ttask-1\tchat-lead\n');
+            case 'visual':
+                return new Response(argv[0] === 'preview' ? 'shot\t/home/shot.png\tthe png\nnext\tshow it\n' : 'visual\tv1\tShots\t100 bytes\n');
             case 'broken':
                 return new Response('boom', { status: 500 });
             default:
@@ -341,5 +347,102 @@ describe('runContext', () => {
     test('a daemon error exits 1, and so does a daemon that is not there', async () => {
         expect(await runContext(['broken'], env)).toBe(1);
         expect(await runContext(['help'], { ...env, RUIMTE_CONTEXT_URL: 'http://127.0.0.1:1/context' })).toBe(1);
+    });
+});
+
+describe('local images of a visual', () => {
+    const png = Buffer.concat([Buffer.from('\x89PNG\r\n\x1a\n', 'latin1'), Buffer.from([0, 0, 0, 13]), Buffer.from('IHDR'), Buffer.alloc(17)]);
+    const notAnImage = 'its bytes are not a PNG, JPEG, GIF, WebP, AVIF, HEIF, SVG, BMP or ICO image';
+    let folder: string;
+
+    beforeEach(async () => {
+        folder = await mkdtemp(join(tmpdir(), 'ruimte-context-visual-'));
+    });
+
+    afterEach(async () => {
+        await rm(folder, { recursive: true, force: true });
+    });
+
+    async function file(name: string, bytes: Uint8Array | string): Promise<string> {
+        const path = join(folder, name);
+        await writeFile(path, bytes);
+        return path;
+    }
+
+    function embedded(bytes: Uint8Array): string {
+        return `data:image/png;base64,${Buffer.from(bytes).toString('base64')}`;
+    }
+
+    test('show embeds a local image in the page before it goes out, from stdin or from --html', async () => {
+        const shot = await file('shot.png', png);
+        expect(await runContext(['visual', 'show', '--title', 'Shots'], env, async () => `<img src="${shot}">`)).toBe(0);
+        expect(await runContext(['visual', 'show', '--title', 'Shots', `--html=<p style="background:url(${shot})">`], env)).toBe(0);
+        expect(seen.map((call) => call.argv)).toEqual([
+            ['show', '--title', 'Shots', `--html=<img src="${embedded(png)}">`],
+            ['show', '--title', 'Shots', `--html=<p style="background:url(${embedded(png)})">`]
+        ]);
+        expect(stdout).toBe('visual\tv1\tShots\t100 bytes\nvisual\tv1\tShots\t100 bytes\n');
+    });
+
+    test('show refuses without sending when a path names no image file, and names every one', async () => {
+        const gone = join(folder, 'gone.png');
+        const text = await file('notes.png', 'a list of things to do\n');
+        const shot = await file('shot.png', png);
+        const page = `<img src="${gone}"><img src="${shot}"><script>const notes = '${text}';</script>`;
+        expect(await runContext(['visual', 'show', '--title', 'Shots'], env, async () => page)).toBe(3);
+        expect(stderr).toBe(
+            [
+                `refused\tvisual-images-missing\tThe page names 2 paths with no image file on this machine: ${gone}, ${text}; use absolute paths to existing image files, or remove them from the page`,
+                `missing\t${gone}\tnot embedded: no image file there`,
+                `missing\t${text}\tnot embedded: ${notAnImage}`,
+                'detail\truimte-context help visual'
+            ].join('\n') + '\n'
+        );
+        expect(stdout).toBe('');
+        expect(seen).toEqual([]);
+    });
+
+    test('show refuses an image past 10 MiB, and a page that cannot hold its images, naming the size and the limit', async () => {
+        const large = await file('large.png', png);
+        await truncate(large, 10 * 1024 * 1024 + 1);
+        expect(await runContext(['visual', 'show', '--title', 'Shots'], env, async () => `<img src="${large}">`)).toBe(3);
+        expect(stderr).toBe(
+            [
+                `refused\tvisual-image-too-large\tAn image may be at most 10 MiB, and the page names one larger: ${large}; scale it down, or refer to it by an http(s) URL`,
+                `too-large\t${large}\tnot embedded: 10.1 MiB, more than the 10 MiB an image may be`,
+                'detail\truimte-context help visual'
+            ].join('\n') + '\n'
+        );
+        stderr = '';
+        const shot = await file('shot.png', Buffer.concat([png, Buffer.alloc(300)]));
+        const full = `${'x'.repeat(VISUAL_LIMITS.bytes - 100)}<img src="${shot}">`;
+        expect(await runContext(['visual', 'show', '--title', 'Shots'], env, async () => full)).toBe(3);
+        expect(stderr).toBe(
+            [
+                'refused\tvisual-too-large\tWith its images embedded the page would be at least 16.1 MiB, and a visual may be at most 16 MiB; embed fewer or smaller images, or refer to them by their http(s) URL',
+                'detail\truimte-context help visual'
+            ].join('\n') + '\n'
+        );
+        expect(seen).toEqual([]);
+    });
+
+    test('preview embeds what it can, leaves the rest as written and names it after the daemon lines', async () => {
+        const shot = await file('shot.png', png);
+        const gone = join(folder, 'gone.png');
+        const text = await file('notes.jpg', 'a list of things to do\n');
+        const page = `<img src="${shot}"><img src="${gone}"><img src="${text}">`;
+        expect(await runContext(['visual', 'preview', '--width', '400'], env, async () => page)).toBe(0);
+        expect(seen.map((call) => call.argv)).toEqual([
+            ['preview', '--width', '400', `--html=<img src="${embedded(png)}"><img src="${gone}"><img src="${text}">`]
+        ]);
+        expect(stdout).toBe(
+            [
+                'shot\t/home/shot.png\tthe png',
+                'next\tshow it',
+                `missing\t${gone}\tnot embedded: no image file there`,
+                `missing\t${text}\tnot embedded: ${notAnImage}`
+            ].join('\n') + '\n'
+        );
+        expect(stderr).toBe('');
     });
 });

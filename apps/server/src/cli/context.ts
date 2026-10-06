@@ -81,15 +81,40 @@ export async function runContext(args: string[], env: Environment = process.env,
         return 0;
     }
 
+    const canvasUrl = url.replace(/\/context\/?$/, '/canvas');
+    if (command === 'visual' && (args[1] === 'show' || args[1] === 'preview')) {
+        return runVisualPage(canvasUrl, args[1], await withStdinFlag(args.slice(2), 'html', stdin), headers, env);
+    }
     const argv =
         command === 'view' && args[1] === 'diagram'
             ? ['diagram', ...(await withStdinFlag(args.slice(2), 'document', stdin))]
             : command === 'plan' && args[1] === 'new'
               ? ['new', ...(await withStdinPlan(args.slice(2), stdin))]
-              : command === 'visual' && (args[1] === 'show' || args[1] === 'preview')
-                ? [args[1], ...(await withStdinFlag(args.slice(2), 'html', stdin))]
-                : await withStdinText(args.slice(1), stdin);
-    return runVerb(url.replace(/\/context\/?$/, '/canvas'), command, argv, headers, env);
+              : await withStdinText(args.slice(1), stdin);
+    return runVerb(canvasUrl, command, argv, headers, env);
+}
+
+/*
+ * A page's local images go in here, in the agent's own process, so the daemon never reads a path an
+ * agent names. Imported only for these two, so no other verb pays for loading the contracts.
+ */
+async function runVisualPage(
+    canvasUrl: string,
+    action: 'show' | 'preview',
+    argv: string[],
+    headers: Record<string, string>,
+    env: Environment
+): Promise<number> {
+    const { prepareVisualPage } = await import('./visual-images.ts');
+    const prepared = await prepareVisualPage(action, argv);
+    if ('refusal' in prepared) {
+        return refuse(prepared.refusal.code, prepared.refusal.message, prepared.refusal.lines);
+    }
+    const code = await runVerb(canvasUrl, 'visual', [action, ...prepared.argv], headers, env);
+    if (code === 0 && prepared.lines.length > 0) {
+        process.stdout.write(`${prepared.lines.join('\n')}\n`);
+    }
+    return code;
 }
 
 /*
@@ -206,7 +231,7 @@ function readRefusal(body: string, id: string): ParsedRefusal {
     return { code: 'unknown-source', message, lines: [] };
 }
 
-/* `list` and `read` are the CLI's own, so it writes the refusal the daemon would have written for a verb. */
+/* `list`, `read` and a page's local images are the CLI's own, so it writes the refusal the daemon would have written for a verb. */
 function refuse(code: string, message: string, lines: string[]): number {
     process.stderr.write(`${refusalBody(code, message, lines)}\n`);
     return 3;
