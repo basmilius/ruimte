@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, realpath, rename, rm, stat, symlink, writeFil
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { LanguageRequestResult } from '@ruimte/contracts';
-import { applyTextEdits, fileUriToPath, type CodeAction, type Position, type WorkspaceEdit } from '@adecore/lsp';
+import { applyTextEdits, fileUriToPath, planWorkspaceEdit, type CodeAction, type DocumentSnapshot, type Position, type WorkspaceEdit } from '@adecore/lsp';
 import { MachineHome } from '../fs/machine-home.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { LanguageHost } from './host.ts';
@@ -44,6 +44,25 @@ const FILES: Record<string, string> = {
         ''
     ].join('\n'),
     'src/Domain/Order.php': ['<?php', '', 'namespace App\\Domain;', '', 'class Order', '{', '}', ''].join('\n'),
+    'src/Accounts/User.php': [
+        '<?php',
+        '',
+        'namespace App\\Accounts;',
+        '',
+        'class User',
+        '{',
+        '    public function name(): string',
+        '    {',
+        "        return 'Ada';",
+        '    }',
+        '',
+        '    public function email(): string',
+        '    {',
+        "        return 'ada@example.com';",
+        '    }',
+        '}',
+        ''
+    ].join('\n'),
     'src/Services/Report.php': [
         '<?php',
         '',
@@ -250,6 +269,54 @@ describe.skipIf(!runnable)('the refactors of the PHP server of Ruimte', () => {
         });
     });
 
+    test('extract interface writes the interface into a file it creates and has the class implement it', async () => {
+        const path = 'src/Accounts/User.php';
+        await open(path);
+        const text = texts.get(path)!;
+        const at = positionOf(text, 'class User', 'class '.length + 1);
+        const actions = await actionsAt(path, { start: at, end: at }, ['refactor.extract']);
+        const extract = actions.find((action) => action.title === 'Extract interface UserInterface');
+        expect(extract, JSON.stringify(actions.map((action) => action.title))).toBeDefined();
+        // The server works the edit out at once here, so the action comes with it and a client resolves nothing.
+        const resolved = extract!.edit === undefined ? ((await ask(path, 'codeAction/resolve', extract)).result as CodeAction) : extract!;
+        const edit = resolved.edit!;
+        expect(edit.documentChanges![0]).toEqual({
+            kind: 'create',
+            uri: uriOf('src/Accounts/UserInterface.php'),
+            options: { overwrite: false, ignoreIfExists: false }
+        });
+
+        // The client's side: the file is made with the text the edit writes into it, and the open class takes its edits.
+        const snapshots = new Map<string, DocumentSnapshot>([[uriOf(path), { text, version: versions.get(path)! }]]);
+        for (const planned of planWorkspaceEdit(edit, snapshots)) {
+            if (planned.created) {
+                await writeFile(fileUriToPath(planned.uri)!, planned.text, { flag: 'wx' });
+                continue;
+            }
+            const result = await host.change({ projectId: 'p1', path, baseVersion: versions.get(path)!, changes: [{ text: planned.text }] });
+            texts.set(path, planned.text);
+            versions.set(path, result.version);
+        }
+        const created = await readFile(join(project, 'src/Accounts/UserInterface.php'), 'utf8');
+        expect(created).toContain('interface UserInterface');
+        expect(created).toContain('public function email(): string;');
+        expect(texts.get(path)).toContain('class User implements UserInterface');
+
+        // Without snippet edits the server asks for a rename of the name it wrote, which the client starts there.
+        expect(resolved.command?.command).toBe('php.rename');
+        const [target] = resolved.command!.arguments as Array<{ textDocument: { uri: string }; position: Position }>;
+        expect(target!.textDocument.uri).toBe(uriOf(path));
+        // The server hears of the new file only through the files it watches, so the rename can start once that has come in.
+        await eventually(
+            'the rename of the interface',
+            async () => JSON.stringify((await ask(path, 'textDocument/prepareRename', { position: target!.position })).result),
+            (answer) => answer.includes('UserInterface')
+        );
+        const renamed = JSON.stringify((await ask(path, 'textDocument/rename', { position: target!.position, newName: 'Account' })).result);
+        expect(renamed).toContain(uriOf('src/Accounts/UserInterface.php'));
+        await host.closeDocument('c1', { projectId: 'p1', path });
+    });
+
     test('move class moves the file in the same edit that updates the namespace and the references', async () => {
         const path = 'src/Models/User.php';
         await open(path);
@@ -279,6 +346,10 @@ describe.skipIf(!runnable)('the refactors of the PHP server of Ruimte', () => {
             write: async (path, text) => {
                 order.push(`write ${path.slice(project.length + 1)}`);
                 await writeFile(path, text);
+            },
+            create: async (path, text) => {
+                order.push(`create ${path.slice(project.length + 1)}`);
+                await writeFile(path, text, { flag: 'wx' });
             }
         });
         expect(edited.map((path) => path.slice(project.length + 1)).sort()).toEqual([
