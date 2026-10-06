@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { LanguageServerKind, LanguageRequestResult } from '@ruimte/contracts';
@@ -14,6 +14,8 @@ import { runCommand, spawnLanguageProcess, type LanguageExit, type LanguageProce
  * executable acting as the bun CLI with BUN_BE_BUN=1. The stub compiled here is that same runtime, so
  * what works under it works under the daemon. It needs the network once, for `bun install`.
  */
+
+const fixtureRoot = process.env.RUIMTE_INTEGRATION_FIXTURE_ROOT;
 
 const FILES: Record<string, string> = {
     'tsconfig.json': JSON.stringify({
@@ -149,7 +151,7 @@ async function install(kind: LanguageServerKind): Promise<void> {
 }
 
 beforeAll(async () => {
-    base = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-language-')));
+    base = await realpath(await mkdtemp(join(fixtureRoot ?? tmpdir(), 'ruimte-language-')));
     project = join(base, 'project');
     plain = join(base, 'plain');
     lint = join(base, 'lint');
@@ -198,10 +200,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await host?.close();
-    if (base !== '') {
-        // JS traversal of the installed server trees can outlive Bun's cleanup hook.
-        const cleanup = Bun.spawn(['/bin/rm', '-rf', '--', base], { stdout: 'ignore', stderr: 'inherit' });
-        expect(await cleanup.exited).toBe(0);
+    // The runner owns package-tree cleanup because Bun gives test hooks five seconds.
+    if (fixtureRoot === undefined && base !== '') {
+        await rm(base, { recursive: true, force: true });
     }
 });
 
