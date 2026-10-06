@@ -10,17 +10,59 @@ import {
 } from './web-guards';
 
 const APP = createDesktopAppScheme('/client', 'http://127.0.0.1:4210').isAppUrl;
+const PACKAGED = createDesktopAppScheme('/client').isAppUrl;
+
+const page = { url: 'http://127.0.0.1:4210/', parent: null };
+// A frame of the app's page, before it loaded anything.
+const frame = { url: '', parent: page };
+const visual = { url: 'http://127.0.0.1:4210/__visual/', parent: page };
+const inVisual = { url: '', parent: visual };
+const deeper = { url: 'https://cdn.example.com/embed', parent: inVisual };
+const preview = { url: 'about:srcdoc', parent: page };
 
 describe('appSubframeNavigation', () => {
-    test('a frame inside the app stays on the app or on an empty document', () => {
-        expect(appSubframeNavigation('http://127.0.0.1:4210/frame', APP)).toBe('allow');
-        expect(appSubframeNavigation('about:blank', APP)).toBe('allow');
-        expect(appSubframeNavigation('about:srcdoc', APP)).toBe('allow');
+    test("a frame of the app's page shows the host page of a visual or an empty document", () => {
+        expect(appSubframeNavigation('http://127.0.0.1:4210/__visual/', frame, APP)).toBe('allow');
+        expect(appSubframeNavigation('http://127.0.0.1:4210/__visual/#%7B%22theme%22%7D', frame, APP)).toBe('allow');
+        expect(appSubframeNavigation('app://ruimte/__visual/', frame, PACKAGED)).toBe('allow');
+        expect(appSubframeNavigation('about:blank', frame, APP)).toBe('allow');
+        expect(appSubframeNavigation('about:srcdoc', frame, APP)).toBe('allow');
     });
 
-    test('and never leaves for the system browser', () => {
-        expect(appSubframeNavigation('https://example.com/', APP)).toBe('refuse');
-        expect(appSubframeNavigation('file:///etc/hosts', APP)).toBe('refuse');
+    test('so a page in a visual cannot take its frame anywhere, the app included', () => {
+        for (const url of [
+            'http://127.0.0.1:4210/',
+            'http://127.0.0.1:4210/projects/a',
+            'http://127.0.0.1:4210/__visual',
+            'http://127.0.0.1:4210/__visual/other',
+            'https://example.com/',
+            'https://example.com/__visual/',
+            'data:text/html,<p>x</p>',
+            'file:///etc/hosts'
+        ]) {
+            expect(appSubframeNavigation(url, visual, APP)).toBe('refuse');
+        }
+        expect(appSubframeNavigation('app://ruimte/', visual, PACKAGED)).toBe('refuse');
+    });
+
+    test("a frame inside a visual's page loads the web as the host page's policy does, never the app", () => {
+        expect(appSubframeNavigation('https://www.example.com/embed', inVisual, APP)).toBe('allow');
+        expect(appSubframeNavigation('data:text/html,<p>x</p>', inVisual, APP)).toBe('allow');
+        expect(appSubframeNavigation('blob:null/1234', inVisual, APP)).toBe('allow');
+        expect(appSubframeNavigation('https://other.example.com/', deeper, APP)).toBe('allow');
+        expect(appSubframeNavigation('about:blank', inVisual, APP)).toBe('allow');
+        for (const url of ['http://example.com/', 'http://127.0.0.1:4210/', 'http://127.0.0.1:4210/__visual/', 'file:///etc/hosts', 'javascript:alert(1)']) {
+            expect(appSubframeNavigation(url, inVisual, APP)).toBe('refuse');
+        }
+    });
+
+    test("a frame of the app's own preview holds nothing of the web", () => {
+        expect(appSubframeNavigation('https://example.com/', { url: '', parent: preview }, APP)).toBe('refuse');
+    });
+
+    test('a frame Electron no longer knows gets the rule of a frame of the page', () => {
+        expect(appSubframeNavigation('http://127.0.0.1:4210/__visual/', null, APP)).toBe('allow');
+        expect(appSubframeNavigation('https://example.com/', null, APP)).toBe('refuse');
     });
 });
 

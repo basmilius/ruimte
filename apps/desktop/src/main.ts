@@ -458,14 +458,14 @@ function guardAppNavigation(contents: Electron.WebContents): void {
     });
     // Nobody chose where a redirect goes, so one that leaves the app only stops.
     contents.on('will-redirect', (event) => {
-        const verdict = event.isMainFrame ? scheme.navigation(event.url) : appSubframeNavigation(event.url, scheme.isAppUrl);
+        const verdict = event.isMainFrame ? scheme.navigation(event.url) : appSubframeNavigation(event.url, event.frame, scheme.isAppUrl);
         if (verdict !== 'allow') {
             event.preventDefault();
         }
     });
     // The main frame is `will-navigate`'s, which is the one that may hand a link to the system browser.
     contents.on('will-frame-navigate', (event) => {
-        if (!event.isMainFrame && appSubframeNavigation(event.url, scheme.isAppUrl) !== 'allow') {
+        if (!event.isMainFrame && appSubframeNavigation(event.url, event.frame, scheme.isAppUrl) !== 'allow') {
             event.preventDefault();
         }
     });
@@ -622,6 +622,8 @@ function createWindow(
             preload: join(here, 'preload.cjs'),
             contextIsolation: true,
             nodeIntegration: false,
+            // The bridge, the local secret included, stays in the top frame: a visual's page runs in a frame of this page.
+            nodeIntegrationInSubFrames: false,
             webviewTag: true,
             // On macOS the first is `NSLocale.currentLocale`, so it follows the Region setting, and
             // the second is the language order from System Settings; `app.getLocale()` would hand

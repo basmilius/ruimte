@@ -1,4 +1,5 @@
 import type { NavigationVerdict } from '@adecore/shell';
+import { VISUAL_HOST_PATH } from '@ruimte/csp';
 
 /*
  * What the shell lets a page do, as pure decisions, so `main.ts` only wires them to Electron's events.
@@ -23,9 +24,45 @@ export function isSystemSettingsPane(url: string): boolean {
     return SYSTEM_SETTINGS_PANES.has(url);
 }
 
-/* A frame inside the app's page never leaves for the system browser: nobody chose that link. */
-export function appSubframeNavigation(url: string, isAppUrl: (url: string) => boolean): NavigationVerdict {
-    return isAppUrl(url) || url === 'about:blank' || url === 'about:srcdoc' ? 'allow' : 'refuse';
+/* The part of a frame the guards read, up through its parents. */
+export interface FrameInPage {
+    readonly url: string;
+    readonly parent: FrameInPage | null;
+}
+
+function isEmptyDocument(url: string): boolean {
+    return url === 'about:blank' || url === 'about:srcdoc';
+}
+
+function isVisualHost(url: string, isAppUrl: (url: string) => boolean): boolean {
+    return isAppUrl(url) && URL.parse(url)?.pathname === VISUAL_HOST_PATH;
+}
+
+/* Whether the frame sits inside a visual: below a frame of the app's page that shows the sandbox host page. */
+function insideVisual(frame: FrameInPage | null, isAppUrl: (url: string) => boolean): boolean {
+    const chain: FrameInPage[] = [];
+    for (let at = frame; at !== null; at = at.parent) {
+        chain.push(at);
+    }
+    // The frame, the frame of the app's page it is in, and that page.
+    return chain.length > 2 && isVisualHost(chain[chain.length - 2]!.url, isAppUrl);
+}
+
+/*
+ * Where a frame inside the app's page may go, which is never the system browser: nobody chose that
+ * link. A frame of the app's page shows a visual's sandbox host page or an empty document and nothing
+ * else, so an agent's page cannot take its frame anywhere, the app included. A frame inside an agent's
+ * page loads the web as the host page's policy lets it, and never the app. A frame Electron no longer
+ * knows gets the stricter rule.
+ */
+export function appSubframeNavigation(url: string, frame: FrameInPage | null, isAppUrl: (url: string) => boolean): NavigationVerdict {
+    if (isEmptyDocument(url)) {
+        return 'allow';
+    }
+    if (insideVisual(frame, isAppUrl)) {
+        return /^(https|data|blob):/i.test(url) && !isAppUrl(url) ? 'allow' : 'refuse';
+    }
+    return isVisualHost(url, isAppUrl) ? 'allow' : 'refuse';
 }
 
 // TODO(Bas): media, location and notifications through a prompt per origin in the client, once that exists.
