@@ -23,6 +23,8 @@ export interface ServerInfo {
     streamingAllowed: boolean | null;
     /* Whether a chat that stopped on a limit may be taken up again on a clock; false for a daemon without the setting. */
     resumeAtReset: boolean;
+    /* Whether an agent may show a page above its reply; null for a daemon from before visuals, which keeps none. */
+    visualReplies: boolean | null;
     appleFoundationEnabled: boolean | null;
     /* When the machine keeps itself awake; null for a daemon from before, whose desktop app holds it per window. */
     keepAwake: KeepAwakeMode | null;
@@ -66,6 +68,7 @@ const UNKNOWN: ServerInfo = {
     agentsDeleteAnyView: false,
     streamingAllowed: null,
     resumeAtReset: false,
+    visualReplies: null,
     appleFoundationEnabled: null,
     keepAwake: null,
     keepAwakeOnBattery: false,
@@ -97,6 +100,7 @@ interface ServersStore {
             | 'agentsDeleteAnyView'
             | 'streamingAllowed'
             | 'resumeAtReset'
+            | 'visualReplies'
             | 'appleFoundationEnabled'
             | 'keepAwake'
             | 'keepAwakeOnBattery'
@@ -126,6 +130,7 @@ interface ServersStore {
                     ServerInfo,
                     | 'streamingAllowed'
                     | 'resumeAtReset'
+                    | 'visualReplies'
                     | 'appleFoundationEnabled'
                     | 'keepAwake'
                     | 'keepAwakeOnBattery'

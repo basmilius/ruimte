@@ -3,6 +3,7 @@ import { canSwipeBetweenPages, desktop } from '@/desktop/bridge';
 import { closedLidOffered, keepAwakeAvailable } from '@/state/keep-awake';
 import { ALL_SETTINGS_SECTIONS, sectionDescription, sectionLabel } from '@/shell/settings/sections';
 import { FOLDING_GROUPS } from '@/shell/settings/folding-rows';
+import { anyMachineShows } from '@/shell/settings/machine-switches';
 import { shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
@@ -279,6 +280,13 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     { id: 'providers.apple', section: 'providers', label: 'settings:providers.apple.label', description: 'settings:providers.apple.description' },
     { id: 'agents.resumeAtReset', section: 'agents', label: 'settings:agents.resumeAtReset.label', description: 'settings:agents.resumeAtReset.description' },
+    {
+        id: 'agents.visualReplies',
+        section: 'agents',
+        label: 'settings:agents.visualReplies.label',
+        description: 'settings:agents.visualReplies.description',
+        available: () => anyMachineShows('visualReplies')
+    },
     { id: 'agents.deleteAnyView', section: 'agents', label: 'settings:agents.deleteAnyView.label', description: 'settings:agents.deleteAnyView.description' },
     { id: 'agents.working.sound', section: 'agents', label: 'settings:agents.working.sound.label', description: 'settings:agents.working.sound.description' },
     {

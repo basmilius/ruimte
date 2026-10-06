@@ -652,6 +652,12 @@
             "description": "Aan gaat een chat die op een verbruikslimiet stopte vanzelf verder zodra de limiet reset, en wordt een turn die mislukte omdat het model overbelast was na 1, 5 en 15 minuten opnieuw geprobeerd.",
             "notConnected": "Niet verbonden. Pas dit aan terwijl er een project op de machine open staat."
         },
+        "visualReplies": {
+            "label": "Visuele antwoorden",
+            "rowLabel": "Agents op {{machine}} mogen visuele antwoorden tonen",
+            "description": "Aan mag een agent een grafiek, tabel of mockup als pagina boven zijn antwoord tonen. Uit antwoordt hij in tekst. Visualisaties die al in een chat staan, blijven staan.",
+            "notConnected": "Niet verbonden. Pas dit aan terwijl er een project op de machine open staat."
+        },
         "machine": {
             "title": "Op {{machine}}",
             "description": "Per machine opgeslagen. Geldt voor elke client die ermee verbonden is."

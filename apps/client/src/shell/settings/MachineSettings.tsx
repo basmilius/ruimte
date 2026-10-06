@@ -54,6 +54,7 @@ async function saveMachineSetting(
             agentsDeleteAnyView: answer.agentsDeleteAnyView === true,
             streamingAllowed: answer.streamingAllowed ?? null,
             resumeAtReset: answer.resumeAtReset === true,
+            visualReplies: answer.visualReplies ?? null,
             broker: answer.broker ?? null,
             brokerFixed: answer.brokerFixed === true,
             lanDoor: answer.lanDoor ?? null,

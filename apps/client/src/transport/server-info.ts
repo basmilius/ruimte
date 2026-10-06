@@ -29,6 +29,7 @@ function load(endpointId: string): void {
                 agentsDeleteAnyView: info.agentsDeleteAnyView === true,
                 streamingAllowed: info.streamingAllowed ?? null,
                 resumeAtReset: info.resumeAtReset === true,
+                visualReplies: info.visualReplies ?? null,
                 appleFoundationEnabled: info.appleFoundationEnabled ?? null,
                 keepAwake: info.keepAwake ?? null,
                 keepAwakeOnBattery: info.keepAwakeOnBattery === true,

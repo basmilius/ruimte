@@ -15,6 +15,7 @@ export function startEndpointWatch(): () => void {
                     agentsDeleteAnyView: payload.agentsDeleteAnyView === true,
                     ...(payload.streamingAllowed === undefined ? {} : { streamingAllowed: payload.streamingAllowed }),
                     resumeAtReset: payload.resumeAtReset === true,
+                    ...(payload.visualReplies === undefined ? {} : { visualReplies: payload.visualReplies }),
                     ...(payload.keepAwake === undefined
                         ? {}
                         : {

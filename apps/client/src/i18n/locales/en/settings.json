@@ -652,6 +652,12 @@
             "description": "On, a chat that stopped on a usage limit goes on by itself once the limit resets, and a turn that failed because the model was overloaded is tried again after 1, 5 and 15 minutes.",
             "notConnected": "Not connected. Change this while a project on the machine is open."
         },
+        "visualReplies": {
+            "label": "Visual replies",
+            "rowLabel": "Agents on {{machine}} may show visual replies",
+            "description": "On, an agent may show a chart, table or mockup above its reply, as a page. Off, it answers in text. Visuals already in a chat stay.",
+            "notConnected": "Not connected. Change this while a project on the machine is open."
+        },
         "machine": {
             "title": "On {{machine}}",
             "description": "Saved per machine. Applies to every client connected to it."

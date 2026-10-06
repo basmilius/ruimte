@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SettingsRow } from '@adecore/ui/settings';
 import { Switch } from '@adecore/ui';
+import { MACHINE_SWITCHES, showsMachineSwitch, type MachineSwitch } from '@/shell/settings/machine-switches';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
@@ -10,15 +11,8 @@ import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';
 
-/*
- * A switch about agents that lives in the machine's own `endpoint.json`, since the daemon is what acts
- * on it and a client-side switch would hold nothing back: what an agent may take away, and whether a
- * chat on a limit is taken up again on a clock.
- */
-export type MachineSwitch = 'agentsDeleteAnyView' | 'resumeAtReset';
-
 // The i18n group under `agents` each switch reads its words from.
-const WORDS: Record<MachineSwitch, string> = { agentsDeleteAnyView: 'deleteAnyView', resumeAtReset: 'resumeAtReset' };
+const WORDS: Record<MachineSwitch, string> = { agentsDeleteAnyView: 'deleteAnyView', resumeAtReset: 'resumeAtReset', visualReplies: 'visualReplies' };
 
 /* The wire takes name, icon and the switch together, so the row sends back the name and icon the machine already carries. */
 function MachineSwitchRow({ endpoint, setting, searchId }: { endpoint: Endpoint; setting: MachineSwitch; searchId?: string }) {
@@ -47,7 +41,8 @@ function MachineSwitchRow({ endpoint, setting, searchId }: { endpoint: Endpoint;
                 nameSource: next.nameSource ?? null,
                 icon: next.icon ?? null,
                 agentsDeleteAnyView: next.agentsDeleteAnyView === true,
-                resumeAtReset: next.resumeAtReset === true
+                resumeAtReset: next.resumeAtReset === true,
+                visualReplies: next.visualReplies ?? null
             });
         } catch (e) {
             useToasts.getState().show({
@@ -88,24 +83,35 @@ export function MachineSwitchSections() {
     const stored = useEndpoints((s) => s.endpoints);
     const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
     // Nothing here holds a link. Opening settings must not connect to every machine, so a switch reads what a connected machine last said.
+    const servers = useServers((s) => s.byEndpoint);
 
     // This machine first, which is the one a person with a single machine is looking at.
     const ordered = [
         ...endpoints.filter((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID),
         ...endpoints.filter((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID)
     ];
+    // A search leads to the first machine that has the switch, which is not always the first one.
+    const searchTargets = new Map(
+        MACHINE_SWITCHES.map((setting) => [setting, ordered.find((endpoint) => showsMachineSwitch(setting, servers[endpoint.id]))?.id ?? null])
+    );
 
     return (
         <>
-            {ordered.map((endpoint, index) => (
+            {ordered.map((endpoint) => (
                 <SettingsSection
                     key={endpoint.id}
                     title={t('agents.machine.title', { machine: endpoint.label })}
                     description={t('agents.machine.description')}
                     scope="machine"
                 >
-                    <MachineSwitchRow endpoint={endpoint} setting="resumeAtReset" searchId={index === 0 ? 'agents.resumeAtReset' : undefined} />
-                    <MachineSwitchRow endpoint={endpoint} setting="agentsDeleteAnyView" searchId={index === 0 ? 'agents.deleteAnyView' : undefined} />
+                    {MACHINE_SWITCHES.filter((setting) => showsMachineSwitch(setting, servers[endpoint.id])).map((setting) => (
+                        <MachineSwitchRow
+                            key={setting}
+                            endpoint={endpoint}
+                            setting={setting}
+                            searchId={searchTargets.get(setting) === endpoint.id ? `agents.${WORDS[setting]}` : undefined}
+                        />
+                    ))}
                 </SettingsSection>
             ))}
         </>
