@@ -36356,6 +36356,121 @@
   "request.database.request.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema"
   },
+  "request.database.agentAccess.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.database.agentAccess.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "access": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "string",
+          "enum": [
+            "off",
+            "read",
+            "write"
+          ]
+        }
+      }
+    },
+    "required": [
+      "access"
+    ]
+  },
+  "request.database.agentAccess.set.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "connectionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "access": {
+        "type": "string",
+        "enum": [
+          "off",
+          "read",
+          "write"
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "connectionId",
+      "access"
+    ]
+  },
+  "request.database.agentAccess.set.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "access": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "string",
+          "enum": [
+            "off",
+            "read",
+            "write"
+          ]
+        }
+      }
+    },
+    "required": [
+      "access"
+    ]
+  },
+  "request.database.passwords.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "passwords": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "minLength": 1
+        },
+        "additionalProperties": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "projectId",
+      "passwords"
+    ]
+  },
+  "request.database.passwords.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.fs.browse.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -54820,6 +54935,34 @@
     "required": [
       "rev",
       "connections",
+      "projectId"
+    ]
+  },
+  "event.database.agentAccess.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "access": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "string",
+          "enum": [
+            "off",
+            "read",
+            "write"
+          ]
+        }
+      },
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "access",
       "projectId"
     ]
   },

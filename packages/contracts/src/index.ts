@@ -136,10 +136,14 @@ import {
 } from './auth.ts';
 import { DirectSignalPayloadSchema } from './direct.ts';
 import {
+    DatabaseAgentAccessChangedEventSchema,
+    DatabaseAgentAccessMapSchema,
+    DatabaseAgentAccessSetPayloadSchema,
     DatabaseConnectionsChangedEventSchema,
     DatabaseConnectionsPayloadSchema,
     DatabaseConnectionsSavePayloadSchema,
     DatabaseConnectionsSchema,
+    DatabasePasswordsPayloadSchema,
     DatabaseRequestPayloadSchema,
     DatabaseRequestResultSchema
 } from './database.ts';
@@ -486,6 +490,11 @@ export const REQUEST_SCHEMAS = {
     'database.connections.save': { payload: DatabaseConnectionsSavePayloadSchema, result: DatabaseConnectionsSchema },
     // One message of `@adecore/database`'s protocol, answered with its response. Export and import only for the local secret.
     'database.request': { payload: DatabaseRequestPayloadSchema, result: DatabaseRequestResultSchema },
+    'database.agentAccess': { payload: DatabaseConnectionsPayloadSchema, result: DatabaseAgentAccessMapSchema },
+    // A person's choice for one connection; `write` only through the local secret.
+    'database.agentAccess.set': { payload: DatabaseAgentAccessSetPayloadSchema, result: DatabaseAgentAccessMapSchema },
+    // The passwords a client holds for the project's connections, kept in memory for its agents.
+    'database.passwords': { payload: DatabasePasswordsPayloadSchema, result: EmptySchema },
     'fs.browse': { payload: FsBrowsePayloadSchema, result: FsBrowseResultSchema },
     'fs.reveal': { payload: FsRevealPayloadSchema, result: EmptySchema },
     'fs.search': { payload: FsSearchPayloadSchema, result: FsSearchResultSchema },
@@ -625,6 +634,8 @@ export const EVENT_SCHEMAS = {
     'launches.changed': LaunchesChangedEventSchema,
     // To every client that holds the project, except the one whose save it answers.
     'database.connections.changed': DatabaseConnectionsChangedEventSchema,
+    // To every client that holds the project, except the one that set it.
+    'database.agentAccess.changed': DatabaseAgentAccessChangedEventSchema,
     'fs.changed': FsChangedEventSchema,
     'git.status': GitStatusEventSchema,
     'git.changed': GitChangedEventSchema,

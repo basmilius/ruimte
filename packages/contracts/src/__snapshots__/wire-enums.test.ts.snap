@@ -87,6 +87,7 @@ exports[`no vocabulary a daemon sends gains or loses a value 1`] = `
   "needs-you, process, turn",
   "nested, root, submodule",
   "none, pending, sent",
+  "off, read, write",
   "overload, usage",
   "paused, running, takenOver",
   "physical, simulator",
