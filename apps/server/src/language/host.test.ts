@@ -1144,6 +1144,10 @@ describe('files that move', () => {
             write: async (path: string, text: string) => {
                 calls.push('write');
                 written.push({ path, text });
+            },
+            create: async (path: string, text: string) => {
+                calls.push('create');
+                written.push({ path, text });
             }
         };
         const server = spawner.processes[0].server;
@@ -1166,6 +1170,37 @@ describe('files that move', () => {
         expect(written).toEqual([{ path: '/work/src/b.ts', text: 'import "./c";\n' }]);
         expect(server.paramsOf('workspace/willRenameFiles')).toEqual([{ files: [{ oldUri: 'file:///work/src/a.ts', newUri: 'file:///work/src/c.ts' }] }]);
         expect(server.paramsOf('workspace/didRenameFiles')).toEqual([{ files: [{ oldUri: 'file:///work/src/a.ts', newUri: 'file:///work/src/c.ts' }] }]);
+    });
+
+    it('makes a file the server creates first, with the text the edit writes into it', async () => {
+        const index = 'file:///work/src/index.ts';
+        const { host, calls, written, file } = await moveRig(() => ({
+            documentChanges: [
+                { kind: 'create', uri: index, options: { overwrite: false, ignoreIfExists: false } },
+                {
+                    textDocument: { uri: index, version: null },
+                    edits: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, newText: 'export * from "./c";\n' }]
+                },
+                line('/work/src/b.ts', './c')
+            ]
+        }));
+        expect(await host.renameFiles('client-1', 'p1', aToC.from, aToC.to, true, file)).toEqual(['/work/src/index.ts', '/work/src/b.ts']);
+        expect(calls).toEqual(['create', 'write', 'move']);
+        expect(written).toEqual([
+            { path: '/work/src/index.ts', text: 'export * from "./c";\n' },
+            { path: '/work/src/b.ts', text: 'import "./c";\n' }
+        ]);
+    });
+
+    it('does not move when the server creates a file that is there', async () => {
+        const { host, calls, file } = await moveRig(() => ({
+            documentChanges: [{ kind: 'create', uri: 'file:///work/src/b.ts' }, line('/work/src/b.ts', './c')]
+        }));
+        await expect(host.renameFiles('client-1', 'p1', aToC.from, aToC.to, true, file)).rejects.toMatchObject({
+            code: 'language-failed',
+            message: 'file:///work/src/b.ts already exists'
+        });
+        expect(calls).toEqual([]);
     });
 
     it('sends the edit of an open document to the client that asked, and only the files it holds', async () => {

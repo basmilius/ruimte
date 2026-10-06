@@ -151,6 +151,8 @@ async function fileExists(path: string): Promise<boolean> {
 export interface FileMove {
     move(): Promise<void>;
     write(path: string, text: string): Promise<void>;
+    /* Makes a file that is not there with its text, and fails when it is. */
+    create(path: string, text: string): Promise<void>;
 }
 
 /* What a failure of the LSP client is on the wire. */
@@ -812,15 +814,18 @@ export class LanguageHost {
     }
 
     /*
-     * Makes what a server answered to a rename: a document a client holds open takes it in its editor, as one
-     * undo step, and any other file is written. The edit is tried against every text first, so one that does not fit changes nothing.
+     * Makes what a server answered to a rename: a file it creates is made first, a document a client holds open takes
+     * its edits in its editor, as one undo step, and any other file is written. The edit is tried against every text
+     * first, so one that does not fit changes nothing.
      */
     private async applyRenameEdit(project: ProjectLanguage, clientId: string, edit: WorkspaceEdit, file: FileMove): Promise<string[]> {
         const documents = new Map<string, SharedDocument>(
             [...project.documents.values()].filter((document) => document.clients.size > 0).map((document) => [document.uri, document])
         );
         const snapshots = new Map<string, DocumentSnapshot>();
+        const creates = new Set((edit.documentChanges ?? []).flatMap((change) => ('kind' in change && change.kind === 'create' ? [change.uri] : [])));
         const uris = new Set([
+            ...creates,
             ...(edit.documentChanges ?? []).flatMap((change) => ('textDocument' in change ? [change.textDocument.uri] : [])),
             ...Object.keys(edit.changes ?? {})
         ]);
@@ -828,6 +833,10 @@ export class LanguageHost {
             const open = documents.get(uri);
             const text = open?.text ?? (await (this.options.readText ?? readTextOrNull)(fileUriToPath(uri) ?? ''));
             if (text === null || text === undefined) {
+                // A file the edit creates has no text yet; if it is there all the same, making it fails.
+                if (creates.has(uri)) {
+                    continue;
+                }
                 throw new LanguageError(LANGUAGE_ERROR_CODES.failed, `${uri} cannot be read to make the edit of a rename`);
             }
             snapshots.set(uri, { text, version: open?.version ?? null });
@@ -839,14 +848,19 @@ export class LanguageHost {
             throw new LanguageError(LANGUAGE_ERROR_CODES.failed, error instanceof Error ? error.message : 'The edit of a rename does not fit the files');
         }
         const held = new Map<string, WorkspaceEdit>();
+        const created: Array<{ path: string; text: string }> = [];
         const closed: Array<{ path: string; text: string }> = [];
         const edited: string[] = [];
         for (const change of planned) {
-            if (change.text === change.before) {
+            if (change.text === change.before && change.created !== true) {
                 continue;
             }
             const path = fileUriToPath(change.uri) ?? '';
             edited.push(path);
+            if (change.created === true) {
+                created.push({ path, text: change.text });
+                continue;
+            }
             const open = documents.get(change.uri);
             if (open === undefined) {
                 closed.push({ path, text: change.text });
@@ -860,6 +874,9 @@ export class LanguageHost {
                 ...(entries.length > 0 ? entries : [{ textDocument: { uri: change.uri, version: null }, edits: edit.changes?.[change.uri] ?? [] }])
             ];
             held.set(target, own);
+        }
+        for (const { path, text } of created) {
+            await file.create(path, text);
         }
         for (const [target, own] of held) {
             const result = await this.sendEdit(project.projectId, target, own);

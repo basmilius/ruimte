@@ -83,6 +83,9 @@ export function registerFsHandlers(
                     if (read.kind === 'text') {
                         await writeTextFile(path, text, read.mtime, boundary);
                     }
+                },
+                create: async (path, text) => {
+                    await createEntry({ path, kind: 'file', text }, boundary);
                 }
             });
             return edited.length > 0 ? { edited } : {};
