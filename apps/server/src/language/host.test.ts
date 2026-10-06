@@ -881,6 +881,52 @@ describe('files that change on disk', () => {
         expect(php.server.paramsOf('workspace/didChangeWatchedFiles')).toEqual([{ changes: [{ uri: 'file:///work/Generated.php', type: 1 }] }]);
     });
 
+    it('hands the PHP server of Ruimte the files of other languages its patterns name, without looking at their language', async () => {
+        const { host, spawner, watch, disk } = await installed(['php-native']);
+        await open(host, 'src/a.php', '<?php', 'client-1', 'php');
+        await ready(host, 'php-native');
+        const [php] = spawner.of('php-native');
+        // What the server registers in its release 0.2.0.
+        const globs = [
+            '**/*.php',
+            '**/composer.json',
+            '**/vendor/composer/installed.json',
+            '**/.env',
+            '**/.env.*',
+            '**/lang/**',
+            '**/translations/**',
+            '**/templates/**',
+            '**/config/**/*.yaml',
+            '**/config/**/*.yml',
+            '**/config/**/*.xml',
+            '**/database/schema/*.sql',
+            '**/resources/{js,ts}/{Pages,pages}/**'
+        ];
+        await registerWatchers(
+            php!,
+            'php-files',
+            globs.map((globPattern) => ({ globPattern }))
+        );
+
+        const changed = [
+            'resources/js/Pages/Users/Index.vue',
+            'resources/ts/pages/Home.tsx',
+            'resources/js/Pages/Settings.svelte',
+            'templates/base.html.twig',
+            'config/packages/doctrine.yaml',
+            'vendor/composer/installed.json'
+        ];
+        for (const path of changed) {
+            disk.add(`/work/${path}`);
+            watch.on('/work').emit(path, 'change');
+        }
+        watch.on('/work').emit('resources/js/Components/Button.vue', 'change');
+        watch.on('/work').emit('vendor/laravel/framework/src/Foundation/Application.php', 'change');
+        await watch.settle();
+        const [{ changes }] = php!.server.paramsOf('workspace/didChangeWatchedFiles') as [{ changes: { uri: string }[] }];
+        expect(changes.map((change) => change.uri).sort()).toEqual(changed.map((path) => `file:///work/${path}`).sort());
+    });
+
     it('tells a server that a file changed or went, in one batch per burst', async () => {
         const { host, spawner, watch, disk } = await installed(['php'], { intelephense: true });
         await open(host, 'main.php', '<?php', 'client-1', 'php');
