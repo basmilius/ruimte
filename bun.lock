@@ -135,6 +135,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@adecore/agents": "0.17.0",
+        "@adecore/database": "0.17.0",
         "@adecore/diagram": "0.17.0",
         "@adecore/drawing": "0.17.0",
         "@adecore/lsp": "0.17.0",
@@ -287,6 +288,16 @@
     "@adecore/agents": ["@adecore/agents@0.17.0", "", { "dependencies": { "@adecore/agent-contracts": "0.17.0", "zod": "^4.6.5" } }, "sha512-0nmKL+s3ZELmD7RAxt3A03T+6/CBmLfldW35dIM02ehX23daDrTyZoUB/kMNvEKs34laQMw08fV+dn31xk1QQw=="],
 
     "@adecore/agents-react": ["@adecore/agents-react@0.17.0", "", { "dependencies": { "@adecore/agent-contracts": "0.17.0", "@codemirror/commands": "^6.11.1", "@codemirror/language": "^6.12.4", "@codemirror/state": "^6.7.6", "@codemirror/view": "^6.43.13", "@lezer/common": "^1.5.2", "@lezer/highlight": "^1.2.3", "@lezer/markdown": "^1.7.2", "@pierre/diffs": "^1.4.3", "@tanstack/react-virtual": "^3.14.13", "clsx": "^2.1.1", "lucide-react": "^1.47.0", "react-markdown": "^10.1.0", "remark-breaks": "^4.0.0", "remark-gfm": "^4.0.1", "shiki": "^4.4.3", "simple-icons": "^16.32.0", "zod": "^4.6.5", "zustand": "^5.0.15" }, "peerDependencies": { "@adecore/ui": "^0.17.0", "i18next": "^26.4.2", "react": "^19.3.0", "react-dom": "^19.3.0", "react-i18next": "^17.0.15" } }, "sha512-KQm5VCnOTZVhjPSZTKScy9SQEj29qXc6ziKE0zo/zbc0hAd6hwlMX3coTQX3dOlX5M8KPWf0Vb8klpQv/EaH0A=="],
+
+    "@adecore/database": ["@adecore/database@0.17.0", "", { "dependencies": { "@base-ui-components/react": "^1.0.0-rc.0", "clsx": "^2.1.1", "lucide-react": "^1.47.0" }, "optionalDependencies": { "@adecore/database-darwin-arm64": "0.17.0", "@adecore/database-linux-arm64": "0.17.0", "@adecore/database-linux-x64": "0.17.0", "@adecore/database-win32-x64": "0.17.0" }, "peerDependencies": { "@adecore/ui": "^0.17.0", "i18next": "^26.4.2", "react": "^19.3.0", "react-dom": "^19.3.0", "react-i18next": "^17.0.15" } }, "sha512-0Fcax4b0rt/zOwvJd1IRUKS1iII1QB80e+WdZxIMnFZvhnUOzT3cl5YB63hFynNwbEciE7cPl72LhviX5e0d3Q=="],
+
+    "@adecore/database-darwin-arm64": ["@adecore/database-darwin-arm64@0.17.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-TQDCrujX2pMTtkLXOFpwSKUYIQoublGx9Mtkis0gvlf854Wioa0sKGXj41DU3lls5bEietSzYx2OFzmjNVVEvA=="],
+
+    "@adecore/database-linux-arm64": ["@adecore/database-linux-arm64@0.17.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-/Ia3Fg9vYTvszAYos2SP9Xr0gOpdQyMAhrFRjv7DFCf2Wzz3PJPRCeT9s5IW7Zoh9XkbvIP6ffzhd8uhUNTxRw=="],
+
+    "@adecore/database-linux-x64": ["@adecore/database-linux-x64@0.17.0", "", { "os": "linux", "cpu": "x64" }, "sha512-v0l0SIoDVXn3vv8bRLeDseCmJ3cFOO0uescOTJsR/IyrKzMwhaJxeCgmkCHfgwc7NlySm5mei3dDklN+PoC10Q=="],
+
+    "@adecore/database-win32-x64": ["@adecore/database-win32-x64@0.17.0", "", { "os": "win32", "cpu": "x64" }, "sha512-QYUkUk6s3YBfQ+Fq036576SwMR2lBHo7GTqyMrvHK8jjPZcTOLDjkSTnMXwjUUJKrHdenrDUyfAejynFUmLxZg=="],
 
     "@adecore/diagram": ["@adecore/diagram@0.17.0", "", { "dependencies": { "@adecore/drawing": "0.17.0", "zod": "^4.6.5" } }, "sha512-JUqeAZPfdNa7MXJLg13v1DM8IAZWGebbdTvsP5qtKSBYEx/IYn/CsOOxzPi/a0E/O5DW8E87GswN49oN41WwQQ=="],
 

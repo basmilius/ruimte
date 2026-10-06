@@ -21,6 +21,7 @@
         "@ruimte/actions": "workspace:*",
         "@adecore/agents": "0.17.0",
         "@ruimte/contracts": "workspace:*",
+        "@adecore/database": "0.17.0",
         "@adecore/diagram": "0.17.0",
         "@adecore/drawing": "0.17.0",
         "@adecore/merge": "0.17.0",
