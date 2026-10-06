@@ -283,6 +283,7 @@ describe('auth handlers', () => {
                     agentsDeleteAnyView: false,
                     streamingAllowed: true,
                     resumeAtReset: false,
+                    visualReplies: true,
                     appleFoundationEnabled: false,
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
@@ -312,6 +313,15 @@ describe('auth handlers', () => {
         const renamed = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Renamed', icon: null });
         expect(renamed).toMatchObject({ ok: true, result: { agentsDeleteAnyView: true } });
         expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info')).toMatchObject({ ok: true, result: { agentsDeleteAnyView: true } });
+    });
+
+    test('visual replies start on, and any client the machine let in turns them off for every client', async () => {
+        expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info')).toMatchObject({ ok: true, result: { visualReplies: true } });
+
+        const off = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: null, icon: null, visualReplies: false });
+        expect(off).toMatchObject({ ok: true, result: { visualReplies: false } });
+        expect(identity.visualReplies).toBe(false);
+        expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info')).toMatchObject({ ok: true, result: { visualReplies: false } });
     });
 
     test('a name nobody could read is refused before it reaches the file', async () => {

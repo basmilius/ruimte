@@ -9,6 +9,7 @@ import { addWanted } from '../canvas/worktree.ts';
 import { AttachmentStore } from '@adecore/agents/chat/attachment-store';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { ChatStore } from '@adecore/agents/chat/chat-store';
+import { VisualStore } from '@adecore/agents/chat/visual-store';
 import { continueOn } from '../chat/continue-on.ts';
 import { chatForkDeps, forkChat, readForkInfo } from '../chat/fork.ts';
 import { fakeClaude } from '@adecore/agents/chat/fake-claude';
@@ -58,6 +59,7 @@ export interface TestDaemon {
     sessions: SessionManager;
     chats: ChatManager;
     plans: PlanStore;
+    visuals: VisualStore;
     adapter: FakePtyAdapter;
     claude: InProcessCli;
     codex: InProcessCli;
@@ -89,8 +91,8 @@ export interface TestDaemonOptions {
     installed?: AgentKind[];
     /* What runs as Claude Code; the plain fake unless a test needs one that misbehaves. */
     claudeCli?: FakeCli;
-    /* The machine's switches a test flips; resuming after a limit is off, as on a fresh machine. */
-    machine?: { resumeAtReset: boolean };
+    /* The machine's switches a test flips; resuming after a limit is off and visual replies on, as on a fresh machine. */
+    machine?: { resumeAtReset: boolean; visualReplies?: boolean };
     /* The accounts of the CLIs; without them every CLI has only its default account. */
     accounts?: AccountLaunches;
     /* The environment every CLI starts from. */
@@ -149,6 +151,7 @@ export async function bootTestDaemon({
         }
     });
     const plans = new PlanStore(home, { now: () => clock.now() });
+    const visuals = new VisualStore(home, attachments);
     const chatEnvs: Array<Record<string, string>> = [];
     const chats = new ChatManager({
         providers,
@@ -171,6 +174,8 @@ export async function bootTestDaemon({
         endChildren: (chatId) => endChildren.stopNode(chatId, 'a person cleared this chat'),
         endedAt: (chatId) => lineage.endedAt(chatId),
         plans,
+        visuals,
+        visualReplies: () => machine.visualReplies !== false,
         limitResume: {
             allowed: () => machine.resumeAtReset,
             now: () => clock.now(),
@@ -305,7 +310,13 @@ export async function bootTestDaemon({
         tasks: wiring.host,
         plans,
         agents: agentStates({ outbox, lineage, chats, sessions }),
-        requests: chatRequests(chats)
+        requests: chatRequests(chats),
+        visuals: {
+            enabled: () => machine.visualReplies !== false,
+            publish: (chatId, input) => chats.publishVisual(chatId, input),
+            list: (chatId) => chats.listVisuals(chatId),
+            remove: (chatId, visualId) => chats.removeVisual(chatId, visualId)
+        }
     };
 
     const dispatcher = new Dispatcher();
@@ -336,6 +347,7 @@ export async function bootTestDaemon({
         sessions,
         chats,
         plans,
+        visuals,
         adapter,
         claude,
         codex,

@@ -45,6 +45,9 @@ const FileSchema = z.object({
        overload, when its own switch lets it. The daemon keeps that clock, so the switch is the machine's.
        Absent is off. */
     resumeAtReset: z.boolean().optional().catch(undefined),
+    /* Whether an agent in an AI chat may show a page above its reply. Absent is on: a page says more
+       than prose for a chart or a table, so a machine shows them until a person says otherwise. */
+    visualReplies: z.boolean().optional().catch(undefined),
     appleFoundationEnabled: z.boolean().optional().catch(undefined),
     /* When the machine keeps itself from sleeping. The daemon holds the block, so the setting is the
        machine's and a phone can set it. Absent is off, on the adapter only and without the display. */
@@ -73,6 +76,7 @@ interface IdentityOptions {
     agentsDeleteAnyView: boolean;
     streamingAllowed: boolean;
     resumeAtReset: boolean;
+    visualReplies: boolean;
     appleFoundationEnabled: boolean;
     keepAwake: KeepAwakeSetting;
     broker: BrokerSetting;
@@ -110,6 +114,7 @@ export interface IdentityFlags {
     agentsDeleteAnyView?: boolean;
     streamingAllowed?: boolean;
     resumeAtReset?: boolean;
+    visualReplies?: boolean;
     appleFoundationEnabled?: boolean;
     keepAwake?: KeepAwakeMode;
     keepAwakeOnBattery?: boolean;
@@ -138,6 +143,7 @@ export class EndpointIdentity {
     private deleteAnyView: boolean;
     private allowStreaming: boolean;
     private resumeLimited: boolean;
+    private visuals: boolean;
     private appleEnabled: boolean;
     private awake: KeepAwakeSetting;
     private brokerSetting: BrokerSetting;
@@ -157,6 +163,7 @@ export class EndpointIdentity {
         this.deleteAnyView = options.agentsDeleteAnyView;
         this.allowStreaming = options.streamingAllowed;
         this.resumeLimited = options.resumeAtReset;
+        this.visuals = options.visualReplies;
         this.appleEnabled = options.appleFoundationEnabled;
         this.awake = options.keepAwake;
         this.brokerSetting = options.broker;
@@ -190,6 +197,11 @@ export class EndpointIdentity {
     /* Whether the outbox may take up a limited chat on a clock; off on a fresh machine, and each chat can still say no. */
     get resumeAtReset(): boolean {
         return this.resumeLimited;
+    }
+
+    /* Whether `ruimte-context visual show` publishes; pages already in a thread show either way. */
+    get visualReplies(): boolean {
+        return this.visuals;
     }
 
     get appleFoundationEnabled(): boolean {
@@ -255,6 +267,7 @@ export class EndpointIdentity {
         this.deleteAnyView = flags.agentsDeleteAnyView ?? this.deleteAnyView;
         this.allowStreaming = flags.streamingAllowed ?? this.allowStreaming;
         this.resumeLimited = flags.resumeAtReset ?? this.resumeLimited;
+        this.visuals = flags.visualReplies ?? this.visuals;
         this.appleEnabled = flags.appleFoundationEnabled ?? this.appleEnabled;
         this.awake = {
             mode: flags.keepAwake ?? this.awake.mode,
@@ -291,6 +304,7 @@ export class EndpointIdentity {
                 agentsDeleteAnyView: this.deleteAnyView,
                 streamingAllowed: this.allowStreaming,
                 resumeAtReset: this.resumeLimited,
+                visualReplies: this.visuals,
                 appleFoundationEnabled: this.appleEnabled,
                 ...this.keepAwakeFields(),
                 ...this.closedLid?.describe(),
@@ -315,6 +329,7 @@ export class EndpointIdentity {
             ...(this.deleteAnyView ? { agentsDeleteAnyView: true } : {}),
             ...(!this.allowStreaming ? { streamingAllowed: false } : {}),
             ...(this.resumeLimited ? { resumeAtReset: true } : {}),
+            ...(this.visuals ? {} : { visualReplies: false }),
             ...(this.appleEnabled ? { appleFoundationEnabled: true } : {}),
             ...(this.awake.mode === 'off' ? {} : { keepAwake: this.awake.mode }),
             ...(this.awake.onBattery ? { keepAwakeOnBattery: true } : {}),
@@ -377,6 +392,7 @@ export async function readOrCreateEndpointIdentity(home: string, defaultName: st
         agentsDeleteAnyView: file?.agentsDeleteAnyView ?? false,
         streamingAllowed: file?.streamingAllowed ?? true,
         resumeAtReset: file?.resumeAtReset ?? false,
+        visualReplies: file?.visualReplies ?? true,
         appleFoundationEnabled: file?.appleFoundationEnabled ?? false,
         keepAwake: {
             mode: file?.keepAwake ?? KEEP_AWAKE_OFF.mode,

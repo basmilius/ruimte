@@ -80,6 +80,7 @@ import { NoticeStore, type Notice } from '@adecore/agents/messages/notice-store'
 import { deliverNotice, MESSAGE_WORDS, renderNotice } from './context/notices.ts';
 import { ChatStore } from '@adecore/agents/chat/chat-store';
 import { BookmarkStore } from '@adecore/agents/chat/bookmark-store';
+import { VisualStore } from '@adecore/agents/chat/visual-store';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher, type ClientAccess } from './dispatcher.ts';
 import { readOrCreateEndpointIdentity } from './endpoint-id.ts';
@@ -367,6 +368,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     const checkpoints = new Checkpoints(config.home);
     const plans = new PlanStore(config.home);
     const bookmarks = new BookmarkStore(config.home);
+    const visuals = new VisualStore(config.home, attachments);
     const chats: ChatManager = new ChatManager({
         providers,
         store: new ChatStore(config.home, { attachments, isSidecar: isPlanFileName }),
@@ -376,6 +378,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         binDir,
         depthOf: (chatId) => lineage.depthOf(chatId),
         computer: () => computer.usable,
+        visualReplies: () => identity.visualReplies,
         modeCeiling: (chatId) => lineage.ceilingOf(chatId),
         checkCwd: startCwd,
         contextSources: (chatId) => context.list(chatId),
@@ -402,6 +405,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         endedAt: (chatId) => lineage.endedAt(chatId),
         plans,
         bookmarks,
+        visuals,
         limitResume: {
             allowed: () => identity.resumeAtReset,
             now: () => Date.now(),
@@ -625,6 +629,12 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         requests: chatRequests(chats),
         computer,
         launches: agentLaunches(launchStore, launches, (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null)),
+        visuals: {
+            enabled: () => identity.visualReplies,
+            publish: (chatId: string, input: { title: string; html: string; maxHeight?: number }) => chats.publishVisual(chatId, input),
+            list: (chatId: string) => chats.listVisuals(chatId),
+            remove: (chatId: string, visualId: string) => chats.removeVisual(chatId, visualId)
+        },
         context: {
             list: (targetId: string) => context.list(targetId),
             read: (targetId: string, sourceId: string, tail: number | null, subagent: string | null) => context.answer(targetId, sourceId, tail, subagent)
@@ -886,7 +896,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     registerBytesHandlers(
         dispatcher,
         {
-            attachment: (chatId, id) => chats.attachment(chatId, id),
+            attachment: (chatId, id) => chats.findAttachment(chatId, id),
             projectIcon: (projectId, theme) => projects.iconFile(projectId, theme),
             file: readServedFile
         },
@@ -1162,7 +1172,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         }
 
         if (url.pathname.startsWith(`${ATTACHMENTS_PATH}/`)) {
-            return handleAttachmentRequest(request, url, remote, access, (chatId, id) => chats.attachment(chatId, id));
+            return handleAttachmentRequest(request, url, remote, access, (chatId, id) => chats.findAttachment(chatId, id));
         }
 
         if (url.pathname.startsWith(`${PROJECTS_PATH}/`)) {

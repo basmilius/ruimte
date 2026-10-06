@@ -6,6 +6,8 @@ import {
     ChatCheckpointDiffSchema,
     ChatSubagentSourceSchema,
     ChatSubagentStatusSchema,
+    ChatVisualSchema,
+    ChatVisualsSchema,
     ComputerApprovalChoiceSchema,
     ContextSourceSchema,
     DeviceReferenceSchema,
@@ -1775,6 +1777,38 @@ export const ACTION_DEFINITIONS = {
         actors: AGENT,
         input: z.object({ planId: z.string().min(1).describe('The plan by id; never the newest by default, since this cannot be undone') }),
         output: z.object({ planId: z.string(), title: z.string() })
+    },
+    /* The store checks a page and its title and refuses under its own codes, which an input schema would turn into one invalid-input. */
+    'visual.show': {
+        title: 'Show a visual',
+        description: 'Shows a self-contained HTML page above your reply in this chat, such as a chart, a table, a diagram, a collage of images or a mockup.',
+        effect: 'shared',
+        domain: 'communicate',
+        actors: AGENT,
+        input: z.object({
+            title: z.string().describe('What the page shows, in a few words'),
+            html: z.string().describe('The page, one self-contained HTML document'),
+            maxHeight: z.number().nullable().describe('The tallest the frame may grow, in CSS pixels; without it the most a frame may take')
+        }),
+        output: z.object({ visual: ChatVisualSchema })
+    },
+    'visual.list': {
+        title: 'List visuals',
+        description: 'Lists the visuals of this chat in the order they were shown.',
+        effect: 'read',
+        domain: 'communicate',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({ visuals: ChatVisualsSchema })
+    },
+    'visual.remove': {
+        title: 'Remove a visual',
+        description: 'Takes a visual of this chat out of its thread.',
+        effect: 'shared',
+        domain: 'communicate',
+        actors: AGENT,
+        input: z.object({ visualId: z.string().min(1).describe('The visual by id, as visual show or visual list printed it') }),
+        output: z.object({ visualId: z.string(), title: z.string() })
     },
     'diagram.replaceContent': {
         title: 'Replace a diagram',

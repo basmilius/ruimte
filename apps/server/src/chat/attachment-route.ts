@@ -4,7 +4,10 @@ import { bytesResponse, guardBytesRequest } from '../bytes/byte-route.ts';
 
 export const ATTACHMENTS_PATH = '/attachments';
 
-// What a browser may paint itself; anything else is handed over as a download instead.
+/*
+ * What a browser may paint itself; anything else is handed over as a download instead. Never
+ * text/html: a visual's page runs scripts, and on this origin they would reach the daemon's API.
+ */
 const INLINE_MIME = /^(image\/(png|jpeg|gif|webp|svg\+xml)|application\/pdf|text\/plain)$/;
 
 /*
@@ -18,7 +21,7 @@ export async function handleAttachmentRequest(
     url: URL,
     remoteAddress: string,
     options: AccessOptions,
-    lookup: (chatId: string, id: string) => ChatAttachment | null
+    lookup: (chatId: string, id: string) => Promise<ChatAttachment | null>
 ): Promise<Response> {
     const parts = url.pathname.slice(ATTACHMENTS_PATH.length + 1).split('/');
     if (parts.length !== 2 || parts[0] === '' || parts[1] === '') {
@@ -28,7 +31,7 @@ export async function handleAttachmentRequest(
     if (refused) {
         return refused;
     }
-    const attachment = lookup(decodeURIComponent(parts[0]!), decodeURIComponent(parts[1]!));
+    const attachment = await lookup(decodeURIComponent(parts[0]!), decodeURIComponent(parts[1]!));
     if (!attachment) {
         return new Response('No attachment', { status: 404 });
     }

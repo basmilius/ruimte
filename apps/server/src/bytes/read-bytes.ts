@@ -12,14 +12,14 @@ export class BytesError extends CodedError<BytesErrorCode> {}
  * Access itself was decided when the connection was let in, as `decideAccess` decides it per route.
  */
 export interface ByteSources {
-    attachment(chatId: string, attachmentId: string): ChatAttachment | null;
+    attachment(chatId: string, attachmentId: string): Promise<ChatAttachment | null>;
     projectIcon(projectId: string, theme: 'light' | 'dark'): Promise<{ path: string; mime: string } | null>;
     file(path: string): Promise<{ mime: string } | null>;
 }
 
 async function locate(sources: ByteSources, resource: ByteResource): Promise<{ path: string; mime: string } | null> {
     if (resource.kind === 'attachment') {
-        const attachment = sources.attachment(resource.chatId, resource.attachmentId);
+        const attachment = await sources.attachment(resource.chatId, resource.attachmentId);
         return attachment ? { path: attachment.path, mime: attachment.mime } : null;
     }
     if (resource.kind === 'projectIcon') {

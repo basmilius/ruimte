@@ -3,6 +3,7 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type {
     AgentKind,
+    ChatAttachment,
     ChatEvent,
     ChatInfo,
     ChatItem,
@@ -10,6 +11,7 @@ import type {
     ChatSubagentResult,
     ChatSubagentItem,
     ChatTurnLimit,
+    ChatVisual,
     ContextSource,
     ModelSelection,
     RuntimeMode,
@@ -58,6 +60,8 @@ interface ChatManagerOptions extends ChatCoreOptions {
     standalone?: (chatId: string) => boolean;
     // Whether computer use is on for this machine, read when a chat's CLI starts.
     computer?: () => boolean;
+    // Whether an agent may show a page above its reply, read when a chat's CLI starts.
+    visualReplies?: () => boolean;
     // A client may create an agent chat before the outbox starts it; the explicit model still wins.
     openingSelection?: (chatId: string, provider: AgentKind) => ModelSelection | undefined;
     // The sources themselves, so a chat can name them to its agent and tell it what came and went between turns.
@@ -193,6 +197,7 @@ export class ChatManager extends ChatCore {
     private readonly depthOf: (chatId: string) => number;
     private readonly standalone: (chatId: string) => boolean;
     private readonly computer: () => boolean;
+    private readonly visualReplies: () => boolean;
     private readonly opening: NonNullable<ChatManagerOptions['openingSelection']>;
     private readonly contextSources: (chatId: string) => ContextSource[];
     private readonly chatTitle: (chatId: string, id: string) => string | null;
@@ -219,6 +224,7 @@ export class ChatManager extends ChatCore {
         this.depthOf = options.depthOf ?? (() => 0);
         this.standalone = options.standalone ?? (() => false);
         this.computer = options.computer ?? (() => false);
+        this.visualReplies = options.visualReplies ?? (() => false);
         this.opening = options.openingSelection ?? (() => undefined);
         this.contextSources = options.contextSources ?? (() => []);
         this.chatTitle = options.chatTitle ?? (() => null);
@@ -259,7 +265,12 @@ export class ChatManager extends ChatCore {
     /* Takes back a record `writeRecord` wrote, as long as nobody loaded the chat since. */
     async deleteRecord(chatId: string): Promise<void> {
         if (!this.chats.has(chatId) && !this.creating.has(chatId)) {
-            await Promise.all([this.store?.delete(chatId), this.plans?.removeChat(chatId), this.bookmarks?.removeChat(chatId)]);
+            await Promise.all([
+                this.store?.delete(chatId),
+                this.plans?.removeChat(chatId),
+                this.bookmarks?.removeChat(chatId),
+                this.visuals?.removeChat(chatId)
+            ]);
         }
     }
 
@@ -271,6 +282,25 @@ export class ChatManager extends ChatCore {
     /* Gives a fork the bookmarks on the messages it copied. */
     async copyBookmarks(fromChatId: string, toChatId: string, itemIds: ReadonlySet<string>): Promise<void> {
         await this.bookmarks?.copyChat(fromChatId, toChatId, (itemId) => itemIds.has(itemId));
+    }
+
+    /* Gives a fork the visuals `keep` picks, each with a page of its own. */
+    async copyVisuals(fromChatId: string, toChatId: string, keep: (visual: ChatVisual) => boolean): Promise<void> {
+        await this.visuals?.copyChat(fromChatId, toChatId, keep);
+    }
+
+    /*
+     * The file behind an attachment id, also of a chat nobody loaded since the daemon started: a
+     * visual's page is known to the store only once it read that chat's list.
+     */
+    async findAttachment(chatId: string, id: string): Promise<ChatAttachment | null> {
+        const found = this.attachment(chatId, id);
+        if (found !== null || !this.visuals) {
+            return found;
+        }
+        // Reading the list is what lets the store answer for the pages of that chat.
+        await this.visuals.list(chatId).catch(() => []);
+        return this.visuals.attachment(chatId, id);
     }
 
     override detachAll(clientId: string): void {
@@ -353,6 +383,7 @@ export class ChatManager extends ChatCore {
             this.attachments.removeAll(chatId),
             this.plans?.removeChat(chatId),
             this.bookmarks?.removeChat(chatId),
+            this.visuals?.removeChat(chatId),
             this.dropForkCopy(stored)
         ]);
     }
@@ -424,7 +455,9 @@ export class ChatManager extends ChatCore {
             sources: this.contextSources(chatId),
             depth: this.depthOf(chatId),
             standalone: this.standalone(chatId),
-            computer: this.computer()
+            computer: this.computer(),
+            // An inline edit answers with one replacement block, which a page above it would only contradict.
+            visuals: this.visualReplies() && !this.inlineChat(chatId)
         });
     }
 

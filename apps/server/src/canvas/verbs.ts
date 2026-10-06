@@ -24,6 +24,7 @@ import { renameAction } from './rename-verb.ts';
 import { doneVerb, taskListAction, taskNewAction } from './task-verbs.ts';
 import { teamVerb } from './team-verb.ts';
 import { VIEW_ACTIONS, VIEW_DETAIL, VIEW_SUMMARY } from './view-verb.ts';
+import { VISUAL_ACTIONS, VISUAL_DETAIL, VISUAL_SUMMARY } from './visual-verb.ts';
 import { worktreeVerb } from './worktree-verb.ts';
 import { summaryLines } from '@adecore/agents/context/verb';
 import { SCOPE_LINE, defineHelp, defineNoun, dryRunLine, type ContextVerb, type VerbCall, type VerbEntry } from './verb.ts';
@@ -136,6 +137,13 @@ const viewNoun = defineNoun({
     actions: [...VIEW_ACTIONS, openAction, diagramAction]
 });
 
+const visualNoun = defineNoun({
+    name: 'visual',
+    summary: VISUAL_SUMMARY,
+    detail: VISUAL_DETAIL,
+    actions: [...VISUAL_ACTIONS]
+});
+
 const launchesNoun = defineNoun({
     name: 'launches',
     summary: LAUNCHES_SUMMARY,
@@ -173,6 +181,7 @@ export const VERBS: readonly VerbEntry[] = [
     viewNoun,
     taskNoun,
     planVerb,
+    visualNoun,
     worktreeVerb,
     operationVerb,
     launchesNoun,

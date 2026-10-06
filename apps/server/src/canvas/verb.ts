@@ -4,6 +4,7 @@ import {
     type ContextSource,
     type AgentStatus,
     type BrowserDriveAction,
+    type ChatVisual,
     type DiagramContent,
     type GitDiffResult,
     type LaunchConfigKind,
@@ -134,6 +135,17 @@ export interface CanvasHost {
     context?: ContextHost;
     /* The launches of a project, as an agent may see and run them; absent on a host that runs none. */
     launches?: LaunchHost;
+    /* The pages the caller's own chat shows above its replies; absent on a host that keeps none. */
+    visuals?: VisualHost;
+}
+
+/* The visuals of a chat, kept beside its record, and the machine's switch that lets an agent show a new one. */
+export interface VisualHost {
+    enabled(): boolean;
+    /* Refuses with the store's own code, `visual-invalid` or `visual-too-large`, and a message that says what to change. */
+    publish(chatId: string, input: { title: string; html: string; maxHeight?: number }): Promise<ChatVisual>;
+    list(chatId: string): Promise<ChatVisual[]>;
+    remove(chatId: string, visualId: string): Promise<ChatVisual[]>;
 }
 
 /* A launch of a project as an agent sees it: what it is, whether a person approved it here, and what runs of it now. */
@@ -262,7 +274,7 @@ export const { defineVerb, defineAction, defineNoun, defineHelp, dryRunVerbNames
 
 /* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
 export const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify, alert, answer, worktree and launches are the project itself, and plan is the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify, alert, answer, worktree and launches are the project itself, and plan and visual are the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
 
 /* What `help` says of the last row of every list of the project file. */
 export const REVISION_ROW = `revision\tThe last row is revision and the revision of the project file; --${REVISION_FLAG} on a write that follows refuses it once the project moved on`;

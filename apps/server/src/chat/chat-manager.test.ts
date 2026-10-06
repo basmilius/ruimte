@@ -393,6 +393,28 @@ describe('ChatManager', () => {
         expect(recorder.ofKind('assistant')[0]?.text).toBe(verbsNote({ depth: 0, standalone: true }));
     });
 
+    test('the system prompt names visuals while the machine has them on, and never to an inline edit', async () => {
+        await retire(manager);
+        manager = makeManager({ visualReplies: () => true, inlineChat: (chatId) => chatId === 'chat-inline' });
+        manager.subscribe('c1', recorder.sink());
+        await manager.create({ chatId: 'chat-shows', cwd: home });
+        manager.attach('chat-shows', 'c1');
+        await manager.send('chat-shows', 'system?');
+        await recorder.until(idle);
+        expect(recorder.ofKind('assistant')[0]?.text).toBe(verbsNote({ depth: 0, visuals: true }));
+
+        const inline = new ChatRecorder();
+        manager.subscribe('c2', inline.sink());
+        await manager.create({ chatId: 'chat-inline', cwd: home });
+        manager.attach('chat-inline', 'c2');
+        // The first prompt carries the inline edit's preamble, which the fake echoes instead.
+        await manager.send('chat-inline', 'first');
+        await inline.until(() => inline.ofKind('assistant').length === 1 && inline.info?.activeTurnId === null);
+        await manager.send('chat-inline', 'system?');
+        await inline.until(() => inline.ofKind('assistant').length === 2 && inline.info?.activeTurnId === null);
+        expect(inline.ofKind('assistant')[1]?.text).toBe(verbsNote({ depth: 0 }));
+    });
+
     test('the system prompt names the verbs always and the linked sources by name when there are some', async () => {
         await manager.create({ chatId: 'chat-sys', cwd: home });
         manager.attach('chat-sys', 'c1');

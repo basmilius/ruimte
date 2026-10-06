@@ -35,6 +35,10 @@ const ALERT_NOTE =
 const COMPUTER_NOTE =
     'With `ruimte-context computer` you read and operate the apps of this Mac, each only once the person lets you into it; use it only when they ask you to work in an app. You work in the background by default, so the person can go on with their own work; ask them before you use `--front`, which brings the app forward and interrupts them. The person can pause you, take over or stop you at any moment: then wait for them, or ask them, instead of calling again in a loop. A call holds 6 s for their answer or their pause; `--wait 60` holds longer and goes on as soon as they are done, so give that shell command a timeout above the wait.';
 
+/* Said only to an AI chat while visual replies are on for this machine; a terminal has no thread to show a page in. */
+export const VISUAL_NOTE =
+    'When a chart, a table, a diagram, a collage of images or a mockup would say more than prose, show a self-contained HTML page above your reply with `ruimte-context visual show --title T < page.html` (`ruimte-context help visual` has the rules), and let the reply add only what the page does not say.';
+
 /* Said only while a device node is linked in: without it a model asked to try an app reaches for a simulator of its own. */
 const DEVICE_NOTE =
     'A device node linked to you is a simulator or phone you operate with `ruimte-context device`: take a `shot`, act in its pixels with `tap`, `swipe` and `button`, and take the next shot to see what happened.';
@@ -44,12 +48,14 @@ export function verbsNote({
     depth,
     standalone = false,
     computer = false,
-    device = false
+    device = false,
+    visuals = false
 }: {
     depth: number;
     standalone?: boolean;
     computer?: boolean;
     device?: boolean;
+    visuals?: boolean;
 }): string {
     if (standalone) {
         return [
@@ -63,6 +69,7 @@ export function verbsNote({
                 : []),
             'For a note or drawing the person asks for in Ruimte, name its destination with --view.',
             ALERT_NOTE,
+            ...(visuals ? [VISUAL_NOTE] : []),
             ...(computer ? [COMPUTER_NOTE] : []),
             ...(device ? [DEVICE_NOTE] : []),
             'Ids in its output are for your commands; to the person, name things by their title, never by id.'
@@ -80,6 +87,9 @@ export function verbsNote({
     }
     if (depth < MAX_AGENT_DEPTH) {
         parts.push('With `--task` a result comes back as your next message once it settles, so end your turn instead of polling.');
+    }
+    if (visuals) {
+        parts.push(VISUAL_NOTE);
     }
     if (computer) {
         parts.push(COMPUTER_NOTE);
@@ -142,14 +152,16 @@ export function chatPrompt({
     sources,
     depth,
     standalone,
-    computer
+    computer,
+    visuals
 }: {
     sources: ContextSource[];
     depth: number;
     standalone?: boolean;
     computer?: boolean;
+    visuals?: boolean;
 }): string {
-    const note = verbsNote({ depth, standalone, computer, device: linksDevice(sources) });
+    const note = verbsNote({ depth, standalone, computer, device: linksDevice(sources), visuals });
     const prompt = contextPrompt(sources);
     return prompt === null ? note : `${note} ${prompt}`;
 }

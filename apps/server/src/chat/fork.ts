@@ -13,6 +13,7 @@ import {
     type ChatInfo,
     type ChatItem,
     type ChatTurnItem,
+    type ChatVisual,
     type ModelSelection,
     type RuntimeMode,
     type ProjectCanvasView,
@@ -81,6 +82,8 @@ export interface ChatForkDeps {
     copyPlans(fromChatId: string, toChatId: string): Promise<void>;
     /* Copies the bookmarks of the original that sit on these items; `deleteRecord` takes them back too. */
     copyBookmarks(fromChatId: string, toChatId: string, itemIds: ReadonlySet<string>): Promise<void>;
+    /* Copies the visuals of the original `keep` picks, each with a page of its own; `deleteRecord` takes them back too. */
+    copyVisuals(fromChatId: string, toChatId: string, keep: (visual: ChatVisual) => boolean): Promise<void>;
     newSessionId(): string;
     now(): number;
     /* The accounts a fork may go on under; without them only a CLI's default account. */
@@ -107,6 +110,16 @@ export function itemsThrough(items: readonly ChatItem[], turnId: string): ChatIt
         }
     }
     return items.filter((item, index) => (item.turnId === null ? index <= end : kept.has(item.turnId)));
+}
+
+/*
+ * Whether a visual belongs to what a fork copied: one a copied turn published, or one published
+ * between turns no later than the end of the turn the fork was cut at.
+ */
+export function visualKept(copied: readonly ChatItem[], turn: ChatTurnItem): (visual: ChatVisual) => boolean {
+    const turnIds = new Set(copied.flatMap((item) => (item.kind === 'turn' ? [item.id] : [])));
+    const end = turn.endedAt ?? copied.reduce((latest, item) => Math.max(latest, item.createdAt), turn.createdAt);
+    return (visual) => (visual.turnId === undefined ? visual.at <= end : turnIds.has(visual.turnId));
 }
 
 interface Cut {
@@ -389,6 +402,7 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload): Pr
         await deps.writeRecord(forkId, forkInfo, items, [notes.preamble]);
         await deps.copyPlans(payload.chatId, forkId);
         await deps.copyBookmarks(payload.chatId, forkId, new Set(copied.map((item) => item.id)));
+        await deps.copyVisuals(payload.chatId, forkId, visualKept(copied, turn));
     } catch (error) {
         await undo();
         throw error;
@@ -566,6 +580,7 @@ export function chatForkDeps(wiring: {
         deleteRecord: (chatId) => wiring.chats.deleteRecord(chatId),
         copyPlans: (fromChatId, toChatId) => wiring.chats.copyPlans(fromChatId, toChatId),
         copyBookmarks: (fromChatId, toChatId, itemIds) => wiring.chats.copyBookmarks(fromChatId, toChatId, itemIds),
+        copyVisuals: (fromChatId, toChatId, keep) => wiring.chats.copyVisuals(fromChatId, toChatId, keep),
         newSessionId: () => randomUUID(),
         now: () => Date.now(),
         accounts: {

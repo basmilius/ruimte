@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { AgentKindSchema, type ContextSource } from '@ruimte/contracts';
 import { NODE_VERB_KINDS } from '../canvas/node-verb.ts';
-import { chatPrompt, contextChangeNote, contextHint, contextPrompt, hookContext, verbsNote } from './context-note.ts';
+import { chatPrompt, contextChangeNote, contextHint, contextPrompt, hookContext, verbsNote, VISUAL_NOTE } from './context-note.ts';
 
 const VERBS_NOTE = verbsNote({ depth: 0 });
 
@@ -40,6 +40,18 @@ describe('verbsNote', () => {
         }
         expect(hookContext('SessionStart', [], { computer: true })).toContain('`ruimte-context computer`');
         expect(chatPrompt({ sources: [], depth: 0, computer: true })).toContain('`ruimte-context computer`');
+    });
+
+    test('tells an AI chat about visuals only while they are on, on a canvas and in a view alike, and never a terminal', () => {
+        for (const standalone of [false, true]) {
+            expect(chatPrompt({ sources: [], depth: 0, standalone, visuals: true })).toContain(VISUAL_NOTE);
+            expect(chatPrompt({ sources: [], depth: 0, standalone })).not.toContain('visual');
+            expect(chatPrompt({ sources: [], depth: 0, standalone, visuals: false })).not.toContain('visual');
+        }
+        expect(VISUAL_NOTE).toContain('`ruimte-context visual show --title T < page.html`');
+        expect(VISUAL_NOTE).toContain('`ruimte-context help visual`');
+        // A terminal agent hears the verbs through its hooks, which never carry the sentence.
+        expect(hookContext('SessionStart', [], { depth: 0 })).not.toContain('visual');
     });
 
     test('names the device noun only while a device node is linked in', () => {

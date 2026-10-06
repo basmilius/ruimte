@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatInfo, ChatItem, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
+import type { ChatInfo, ChatItem, ChatTurnItem, ChatVisual, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
 import { AgentLineageStore } from '@adecore/agents/lineage';
 import type { CanvasHost } from '../canvas/verb.ts';
 import { ManualClock } from '@adecore/agents/outbox/manual-clock';
@@ -284,7 +284,7 @@ describe('forking a Claude chat', () => {
         // The note about the verbs went in as developer instructions, so only the handoff stands before the text.
         expect(reply).toBe(`echo: ${record.preambles[0]}\n\ngo on (medium)`);
         await say(nodeId, 'note?');
-        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(verbsNote({ depth: 0 }));
+        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(verbsNote({ depth: 0, visuals: true }));
         expect(daemon.chats.get(nodeId)!.info.agentSessionId).not.toBeNull();
     });
 
@@ -355,11 +355,13 @@ describe('forkChat', () => {
             codex: unknown[];
             written: Array<{ info: ChatInfo; items: ChatItem[]; preambles: string[] }>;
             bookmarkedItems: string[][];
+            keptVisuals: Array<(visual: ChatVisual) => boolean>;
         } = {
             claude: [],
             codex: [],
             written: [],
-            bookmarkedItems: []
+            bookmarkedItems: [],
+            keptVisuals: []
         };
         const deps: ChatForkDeps = {
             source: async () => source,
@@ -401,6 +403,9 @@ describe('forkChat', () => {
             copyBookmarks: async (_fromChatId, _toChatId, itemIds) => {
                 asked.bookmarkedItems.push([...itemIds]);
             },
+            copyVisuals: async (_fromChatId, _toChatId, keep) => {
+                asked.keptVisuals.push(keep);
+            },
             newSessionId: () => 'session-2',
             now: () => 5
         };
@@ -426,6 +431,25 @@ describe('forkChat', () => {
         const { deps, asked } = stub({ info: info('claude'), items });
         await forkChat(deps, { chatId: 'chat-lead', turnId: 'turn-1' });
         expect(asked.bookmarkedItems).toEqual([['turn-1', 'user-1']]);
+    });
+
+    test('the visuals go along when a copied turn showed them, or between turns before the cut, and no further', async () => {
+        const items = [turn('turn-1', { lastUuid: 'u-1' }), user('user-1', 'turn-1'), turn('turn-2', { lastUuid: 'u-2' }), user('user-2', 'turn-2')];
+        const { deps, asked } = stub({ info: info('claude'), items });
+        await forkChat(deps, { chatId: 'chat-lead', turnId: 'turn-1' });
+        const visual = (id: string, at: number, turnId?: string): ChatVisual => ({
+            id,
+            title: id,
+            at,
+            maxHeight: 2000,
+            size: 10,
+            ...(turnId ? { turnId } : {})
+        });
+        const keep = asked.keptVisuals[0]!;
+        // The turn the fork was cut at ended at 1.
+        expect(
+            [visual('in-turn', 5, 'turn-1'), visual('before', 1), visual('later-turn', 0, 'turn-2'), visual('after', 2)].filter(keep).map((kept) => kept.id)
+        ).toEqual(['in-turn', 'before']);
     });
 
     test('Codex is asked for the turn it named, all of it for a last turn without a name, and a count otherwise', async () => {

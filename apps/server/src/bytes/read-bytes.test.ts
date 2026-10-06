@@ -23,7 +23,7 @@ beforeAll(async () => {
     await writeFile(join(folder, 'notes.txt'), 'not an image');
     await writeFile(join(folder, 'a.out'), Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x01]));
     sources = {
-        attachment: (chatId, id) =>
+        attachment: async (chatId, id) =>
             chatId === 'chat-1' && id === 'a1'
                 ? { id: 'a1', name: 'picture.gif', mime: 'image/gif', size: picture.length, path: join(folder, 'picture.gif') }
                 : null,

@@ -15,7 +15,7 @@ let store: AttachmentStore;
 let png: ChatAttachment;
 let zip: ChatAttachment;
 
-function lookup(chatId: string, id: string): ChatAttachment | null {
+async function lookup(chatId: string, id: string): Promise<ChatAttachment | null> {
     if (chatId !== 'node-1') {
         return null;
     }
@@ -57,6 +57,22 @@ describe('the attachment route', () => {
     test('a file a browser cannot paint is handed over as a download', async () => {
         const response = await ask('node-1', zip.id);
         expect(response.headers.get('content-disposition')).toBe('attachment; filename="bundle.zip"');
+    });
+
+    test('a page of HTML is never painted on this origin: it goes out as a download the browser may not sniff', async () => {
+        const page = await store.save('node-1', {
+            name: 'chart.html',
+            mime: 'text/html',
+            data: Buffer.from('<script>fetch("/ws")</script>').toString('base64')
+        });
+        const url = new URL(`http://127.0.0.1:4210${ATTACHMENTS_PATH}/node-1/${page.id}`);
+        const response = await handleAttachmentRequest(new Request(url, asLocal()), url, '127.0.0.1', OPTIONS, async (chatId, id) =>
+            chatId === 'node-1' && id === page.id ? page : null
+        );
+        expect(response.status).toBe(200);
+        expect(response.headers.get('content-type')).toBe('text/html');
+        expect(response.headers.get('content-disposition')).toBe('attachment; filename="chart.html"');
+        expect(response.headers.get('x-content-type-options')).toBe('nosniff');
     });
 
     test('an id the chat does not know, and a chat nobody attached to, answer 404', async () => {

@@ -39,7 +39,7 @@ beforeEach(async () => {
         async () => ({ folders: [root], worktreesOf: async () => [], worktreesRoot: join(home, 'worktrees') }),
         machineHome
     );
-    registerBytesHandlers(dispatcher, { attachment: () => null, projectIcon: async () => null, file: readServedFile }, machineHome);
+    registerBytesHandlers(dispatcher, { attachment: async () => null, projectIcon: async () => null, file: readServedFile }, machineHome);
 });
 
 afterEach(async () => {

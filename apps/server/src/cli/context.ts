@@ -83,23 +83,25 @@ export async function runContext(args: string[], env: Environment = process.env,
 
     const argv =
         command === 'view' && args[1] === 'diagram'
-            ? ['diagram', ...(await withStdinDocument(args.slice(2), stdin))]
+            ? ['diagram', ...(await withStdinFlag(args.slice(2), 'document', stdin))]
             : command === 'plan' && args[1] === 'new'
               ? ['new', ...(await withStdinPlan(args.slice(2), stdin))]
-              : await withStdinText(args.slice(1), stdin);
+              : command === 'visual' && args[1] === 'show'
+                ? ['show', ...(await withStdinFlag(args.slice(2), 'html', stdin))]
+                : await withStdinText(args.slice(1), stdin);
     return runVerb(url.replace(/\/context\/?$/, '/canvas'), command, argv, headers, env);
 }
 
 /*
- * `view diagram` takes its document on stdin, which the daemon never sees, so it travels as `--document`.
- * Not escaped the way `--text` is: the daemon parses JSON here and reads no escapes of its own. A
- * `--document` already given means stdin is not the source, so it is left unread.
+ * `view diagram` takes its document and `visual show` its page on stdin, which the daemon never sees,
+ * so it travels as `--document` or `--html`. Not escaped the way `--text` is: the daemon reads no
+ * escapes there. The flag already given means stdin is not the source, so it is left unread.
  */
-async function withStdinDocument(argv: string[], stdin: () => Promise<string>): Promise<string[]> {
-    if (argv.some((word) => word === '--document' || word.startsWith('--document='))) {
+async function withStdinFlag(argv: string[], flag: string, stdin: () => Promise<string>): Promise<string[]> {
+    if (argv.some((word) => word === `--${flag}` || word.startsWith(`--${flag}=`))) {
         return argv;
     }
-    return [...argv, `--document=${await stdin()}`];
+    return [...argv, `--${flag}=${await stdin()}`];
 }
 
 /*

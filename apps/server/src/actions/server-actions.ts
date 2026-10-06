@@ -17,6 +17,7 @@ import { checkProjectRevision } from './revision.ts';
 import { startActions } from './start-actions.ts';
 import { taskActions } from './task-actions.ts';
 import { viewActions } from './view-actions.ts';
+import { visualActions } from './visual-actions.ts';
 import { worktreeActions } from './worktree-actions.ts';
 
 /*
@@ -34,6 +35,7 @@ export const serverActions = new ActionRegistry<ServerActionContext>(
         ...operationActions,
         ...taskActions,
         ...planActions,
+        ...visualActions,
         ...diagramActions,
         ...browserActions,
         ...computerActions,

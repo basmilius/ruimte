@@ -136,6 +136,7 @@ describe('readOrCreateEndpointIdentity', () => {
                     agentsDeleteAnyView: false,
                     streamingAllowed: true,
                     resumeAtReset: false,
+                    visualReplies: true,
                     appleFoundationEnabled: false,
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
@@ -208,6 +209,24 @@ describe('readOrCreateEndpointIdentity', () => {
         await identity.setIdentity(null, null, { resumeAtReset: false });
         const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
         expect(written.resumeAtReset).toBeUndefined();
+    });
+
+    test('visual replies are on by default and only a person turning them off is stored', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(identity.visualReplies).toBe(true);
+
+        await identity.setIdentity(null, null, { visualReplies: false });
+        expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).visualReplies).toBe(false);
+        let written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
+        expect(written.visualReplies).toBe(false);
+
+        // Naming the machine is a different control, so it leaves this one where it stands.
+        await identity.setIdentity('Studio', null);
+        expect(identity.visualReplies).toBe(false);
+
+        await identity.setIdentity('Studio', null, { visualReplies: true });
+        written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
+        expect(written.visualReplies).toBeUndefined();
     });
 
     test('keep awake is off by default, each part set on its own survives a restart, and off writes nothing', async () => {
