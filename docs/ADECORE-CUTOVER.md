@@ -1,6 +1,6 @@
 # Ruimte consuming Adecore
 
-Ruimte now consumes the published Adecore `0.17.0-beta.1` packages. The manifests pin that version and `bun.lock` records the registry artifacts. Temporary links to the Adecore checkout have been replaced by the normal isolated Bun install.
+Ruimte now consumes the published Adecore `0.17.0-beta.2` packages. The manifests pin that version and `bun.lock` records the registry artifacts. Temporary links to the Adecore checkout have been replaced by the normal isolated Bun install.
 
 The original shared implementations were removed on October 6 before manual testing, at Bas's request. This includes the former packages, PHP Rust workspace, old library publisher, superseded editor and tree files, and the unused Monaco engine. Commit `db8f1afee` retains the originals for comparison or rollback. Ruimte keeps its application adapters.
 
@@ -17,7 +17,7 @@ The original shared implementations were removed on October 6 before manual test
 | Service managers                                   | `@adecore/service`                                      | `@ruimte/service/host` retains Ruimte's identity, environment and paths.                  |
 | Native PHP language server                         | `basmilius/language-server-php`                         | Standalone checkout lookup and pinned native release assets in the language host.        |
 
-UI, terminal and shell dependencies also use `0.17.0-beta.1`. The application npm workflow publishes only the launcher and platform binaries. Adecore owns library releases, model catalogs and pricing snapshots. The old library build files and placeholders have been removed.
+UI, terminal and shell dependencies also use `0.17.0-beta.2`. The application npm workflow publishes only the launcher and platform binaries. Adecore owns library releases, model catalogs and pricing snapshots. The old library build files and placeholders have been removed.
 
 ## Compatibility retained by the adapters
 
@@ -31,7 +31,27 @@ Drawing, diagram and plan host schemas add project/view/chat envelopes around th
 
 PHP has since moved to `basmilius/language-server-php`, and Ruimte no longer consumes a PHP npm package. The native binary version remains `0.1.0`. `php-native-release.json` pins that repository's official `v0.1.0` descriptor and checksums for Apple silicon, Linux arm64/x64 and Windows x64. Development selects the existing standalone sibling checkout or `RUIMTE_PHP_LANGUAGE_SERVER_SOURCE`; a compiled daemon uses the release. Installation remains a person's action. The validation below records the earlier ADE CORE cutover, before this PHP move.
 
-## Validation
+## 0.17.0-beta.2 integration
+
+All 28 ADE CORE dependency declarations now resolve to npm `0.17.0-beta.2`, covering 14 packages and their shared dependencies. No consumer points at the local ADE CORE checkout.
+
+Language features receive the same i18next instance as `UIProvider`. The editor bundle already loads into that single instance. Model helpers receive it explicitly. File editors have translated accessible names that update without remounting, and the commit message field has its own name. Ruimte currently has no query-editor mount.
+
+ADE CORE now triggers the first feature requests after a document opens. The wire records the initial providers without firing another notification; later provider events and resynchronization still notify. `useServingKinds` uses the editor's shared subscription. Ruimte keeps its popup composition for hover actions, rendering and inline AI, including its existing context-menu children.
+
+The chat owns its new theme colors. Ruimte keeps the terminal and search mappings used by its own views, and removes unused yellow-terminal and find-match utility mappings. Drawing and diagram exports already use the shared packages; a regression test covers a rotated drawing element away from the origin. Ruimte has no selector depending on `.popup-positioner[data-open]`.
+
+The desktop uses `createAppScheme` with its own host, CSP and dev URL. Ruimte retains only the blank storage-migration response and its subframe policy. The previous file-serving implementation is removed after testing routes, missing chunks, WebAssembly, path containment and packaged/dev guards.
+
+Validation on October 6:
+
+- 6,397 unit tests across 620 files, with no failures. Commit signing is disabled only in the test process through `GIT_CONFIG_COUNT`, without changing Git configuration.
+- 39 relevant integration tests across four files: package switching, Tailwind HMR, browser imports and language-server runtime behavior. The browser also verifies English/Dutch editor names without remounting and the shared translation instance.
+- All workspace typechecks, lint, formatting, generated Swift/renderer checks, client and desktop builds, and frozen-lockfile validation.
+
+The broader run also corrected test assumptions about asynchronous project summaries and uninstalled language-server alternatives. Application behavior for those cases is unchanged. Native PHP checkout builds are independent of this npm upgrade.
+
+## Earlier cutover validation
 
 Before source cleanup, the following checks passed against the published npm packages:
 
