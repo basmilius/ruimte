@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { placeBeside, placePopup } from './popup-placement';
+import { placeBeside, placePopup } from '@adecore/editor-react/models';
 
 const window = { width: 1000, height: 800 };
 const anchor = (left: number, top: number) => ({ left, top, right: left + 8, bottom: top + 20 });

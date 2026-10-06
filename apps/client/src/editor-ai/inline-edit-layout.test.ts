@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { MAX_PROBLEM_CHIPS, PROBLEM_CHIP_CHARS, problemChips, problemDetail, problemLabel } from './inline-edit-layout';
-import type { InlineProblem } from './inline-edit-model';
+import type { InlineProblem } from '@adecore/editor-react/models';
 
 function problem(line: number, severity: InlineProblem['severity'], message = `message ${line}`, code = ''): InlineProblem {
     return { line, severity, message, code };

@@ -23,7 +23,7 @@ Publishing a release also publishes `ruimte` and its three platform binary packa
 
 `.github/workflows/npm.yml` runs on `release: published`, on the dispatch sent by `release.yml`, or by hand (`gh workflow run npm.yml -f version=0.2.0`, for an existing tag). It compiles the daemon for `darwin-arm64` on macOS and `linux-x64`/`linux-arm64` on Ubuntu, then uses `packages/npm/scripts/build.ts` to prepare the packages. `publish.ts` publishes the platform binaries before the launcher, skips versions already on npm and uses `next` for prereleases.
 
-The `libraries-v*` trigger and library publication jobs have been removed. The old library sources, build script and placeholders remain during consumer validation; they are no longer part of Ruimte's publication workflow. Adecore owns library builds and Trusted Publishing for its npm names.
+The `libraries-v*` trigger, library publication jobs, build script and library placeholders have been removed. Adecore owns library builds and Trusted Publishing for its npm names.
 
 There is no npm token. Every package trusts the workflow through Trusted Publishing, set on
 npmjs.com per package under Settings, Trusted publishing: GitHub Actions, owner `basmilius`,

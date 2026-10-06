@@ -7,7 +7,7 @@ import { knownAccounts, providerAccountsOf } from '@adecore/agents-react/state/p
 import { providersOf } from '@adecore/agents-react/state/providers';
 import { availableAgents } from '@/agents/creation';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { codeLabelOf, severityOf } from '@/language/diagnostics-model';
+import { codeLabelOf, severityOf } from '@adecore/editor-react/models';
 import type { HostLanguage as EditorLanguage } from '@/language/host-language';
 import { shikiLanguageOf } from '@/language/language-ids-host';
 import { isShortcut } from '@/language/shortcut-keys';
@@ -18,7 +18,7 @@ import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { highlightLayers } from '@adecore/editor-react';
 import { inlineEditDeps } from './inline-edit-deps';
-import { inlineRangeOf, isEmptyRange, lineSpanOf, locateSelection, problemsOnLines, type InlineProblem, type LineSpan } from './inline-edit-model';
+import { inlineRangeOf, isEmptyRange, lineSpanOf, locateSelection, problemsOnLines, type InlineProblem, type LineSpan } from '@adecore/editor-react/models';
 import { inlineEditFor, onInlineEditsChange } from './inline-edit-record';
 import { sweepInlineEdits } from './inline-edit-prune';
 import { InlineEditSession, inlineSessionOf, type InlineEditDeps } from './inline-edit-session';

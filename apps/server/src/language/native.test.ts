@@ -82,15 +82,15 @@ describe('native policy', () => {
 
     it('runs the checkout the daemon is in, whatever a release says', () => {
         const policy = new NativePolicy({
-            checkout: { folder: '/repo/apps/php-language-server', version: '0.1.0', stubsCommit: COMMIT },
+            checkout: { folder: '/checkout/php-language-server', version: '0.1.0', stubsCommit: COMMIT },
             releases: { 'php-native': release }
         });
         expect(policy.plan('php-native', '/home/php-native')).toEqual({
             source: 'dev',
             version: '0.1.0',
             stubsCommit: COMMIT,
-            executable: '/repo/apps/php-language-server/target/release/php-language-server',
-            checkout: '/repo/apps/php-language-server'
+            executable: '/checkout/php-language-server/target/release/php-language-server',
+            checkout: '/checkout/php-language-server'
         });
     });
 

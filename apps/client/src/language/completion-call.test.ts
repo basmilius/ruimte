@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { CompletionItem } from '@adecore/lsp';
-import { hasParameters, planCall, withParentheses, type CallSite } from './completion-call';
+import { hasParameters, planCall, withParentheses, type CallSite } from '@adecore/editor-react/models';
 
 const at = (line: number, character: number) => ({ line, character });
 const method = (extra: Partial<CompletionItem> = {}): CompletionItem => ({ label: 'open', kind: 2, ...extra });

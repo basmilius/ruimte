@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProvenanceChangedEvent, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
 import { type FakeEditor, FakeEditorEngine } from '@adecore/editor/fake';
-import { ManualTimers } from '@/language/timers';
+import { ManualTimers } from '@adecore/editor-react/testing';
 import type { AgentChangesSettings } from './agent-changes';
 import { AgentChanges } from './agent-changes';
 import { colorOfChat, drawnRuns } from './agent-runs';

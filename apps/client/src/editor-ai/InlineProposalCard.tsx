@@ -12,7 +12,7 @@ import type { EditorLanguage as RuimteEditorLanguage } from '@/language/ruimte-e
 
 type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
 import { isShortcut } from '@/language/shortcut-keys';
-import { diffSegments, emphasisOf } from './inline-edit-model';
+import { diffSegments, emphasisOf } from '@adecore/editor-react/models';
 import type { ApplyOutcome, InlineEditSession } from './inline-edit-session';
 
 const APPLY = shortcut('Mod+Enter');

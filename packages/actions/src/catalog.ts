@@ -1673,7 +1673,7 @@ export const ACTION_DEFINITIONS = {
             stepIds: z.array(z.string().min(1)).min(1).describe('One or more steps without sub-steps, by id'),
             state: PlanStepStateSchema,
             note: z.string().nullable().describe('A note on each of the steps; an empty one clears it'),
-            // Moving the work on is the agent's; packages/plan refuses it from a person.
+            // Moving the work on is the agent's; @adecore/plan refuses it from a person.
             next: agentField(z.string().min(1)).describe('The step that becomes active in the same rev')
         }),
         output: planChanged

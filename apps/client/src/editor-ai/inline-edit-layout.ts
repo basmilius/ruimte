@@ -1,4 +1,4 @@
-import type { InlineProblem } from './inline-edit-model';
+import type { InlineProblem } from '@adecore/editor-react/models';
 
 /* How many problems the question names as chips; the rest are counted. */
 export const MAX_PROBLEM_CHIPS = 3;

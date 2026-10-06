@@ -30,7 +30,7 @@ test('a process killed at each durable save boundary recovers on a fresh daemon'
             const program = `
                 import { ProjectStore } from './apps/server/src/projects/project-store.ts';
                 import { PROJECT_WRITE_IO } from './apps/server/src/projects/project-write.ts';
-                import { FakeWatch } from './packages/agents/src/watch-test-helpers.ts';
+                import { FakeWatch } from ${JSON.stringify(import.meta.resolve('@adecore/agents/watch-test-helpers'))};
                 let operations = 0;
                 let armed = false;
                 const stop = () => { if (armed && ++operations === ${boundary}) { process.kill(process.pid, 'SIGKILL'); } };

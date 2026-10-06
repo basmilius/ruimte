@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
-import { editorHighlightsOf, neighborRange } from './highlights';
+
 import { ProjectLanguage } from './ruimte-project-language';
-import { ManualTimers } from './timers';
+import { ManualTimers } from '@adecore/editor-react/testing';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { eventOf } from './key-events';
 
@@ -79,21 +79,5 @@ describe('highlights', () => {
         expect(editor.getCaret()).toEqual(at(0, 4));
         editor.press(eventOf(CANVAS_SHORTCUTS.previousHighlight));
         expect(editor.getCaret()).toEqual(at(2, 6));
-    });
-});
-
-describe('pure parts', () => {
-    test('reads the kinds and orders the marks', () => {
-        expect(editorHighlightsOf([{ range: range(1, 0, 1), kind: 2 }, { range: range(0, 0, 0), kind: 1 }, { range: range(0, 2, 4) }])).toEqual([
-            { range: range(0, 2, 4), kind: 'text' },
-            { range: range(1, 0, 1), kind: 'read' }
-        ]);
-    });
-
-    test('steps and wraps', () => {
-        const ranges = [range(0, 4, 9), range(1, 0, 5)];
-        expect(neighborRange(ranges, at(1, 0), 1)).toEqual(ranges[0]);
-        expect(neighborRange(ranges, at(0, 4), -1)).toEqual(ranges[1]);
-        expect(neighborRange([], at(0, 0), 1)).toBeNull();
     });
 });

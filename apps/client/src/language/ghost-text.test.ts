@@ -8,7 +8,7 @@ import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { eventOf } from './key-events';
 import { ProjectLanguage } from './ruimte-project-language';
-import { ManualTimers } from './timers';
+import { ManualTimers } from '@adecore/editor-react/testing';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });

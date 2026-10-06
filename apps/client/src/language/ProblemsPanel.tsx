@@ -12,7 +12,7 @@ import { basenameOf } from '@/shell/panels/files-tree';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useTransport } from '@/transport/context';
-import { codeLabelOf, severityOf } from './diagnostics-model';
+import { codeLabelOf, severityOf } from '@adecore/editor-react/models';
 import { draftFiles } from './project-files';
 import { acquireProjectLanguage, type ProjectLanguage } from './ruimte-project-language';
 import { countsOf, type ProblemFile } from './project-problems';

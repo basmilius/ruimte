@@ -3,7 +3,7 @@ import { FakeEditorEngine } from '@adecore/editor/fake';
 import { useToasts } from '@/state/toasts';
 import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
-import { locationRow, uniqueLocations } from './navigation';
+
 import { ProjectLanguage } from './ruimte-project-language';
 
 const uri = 'file:///work/app/src/a.ts';
@@ -35,19 +35,6 @@ async function setup(answer: unknown, providers: Record<string, unknown> = { 'te
 
 beforeEach(() => {
     useToasts.setState({ toasts: [] });
-});
-
-describe('places', () => {
-    test('lists each place once, links included', () => {
-        expect(uniqueLocations([here, { ...here }, there])).toEqual([here, there]);
-        expect(uniqueLocations([{ targetUri: uri, targetRange: range(0, 0, 9), targetSelectionRange: range(3, 4, 9) }])).toEqual([here]);
-        expect(uniqueLocations(null)).toEqual([]);
-    });
-
-    test('reads a row as the file and line, with its folder', () => {
-        expect(locationRow(there, 'src/lib/b.ts')).toEqual({ label: 'b.ts:10', detail: 'src/lib', path: true });
-        expect(locationRow(here, 'a.ts')).toEqual({ label: 'a.ts:4', detail: '', path: true });
-    });
 });
 
 describe('going to a definition', () => {

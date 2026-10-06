@@ -207,7 +207,7 @@ secrets exist. The private statement key is also kept in `~/.private/ruimte.secr
 
 ## Model catalogs
 
-`GET /v1/models/catalog` is public and answers `packages/agents/src/providers/claude-models.json` and
+`GET /v1/models/catalog` is public and answers `@adecore/agents/providers/claude-models.json` and
 `codex-models.json` as they are in this deploy, under `catalogs.claude` and `catalogs.codex`, cacheable
 for five minutes. A daemon takes a catalog only when it passes `ModelCatalogDataSchema` and is not older
 than the one it shipped with, so adding a model is an edit to those files (with a newer `updatedAt`), a row
@@ -227,7 +227,7 @@ is there. Without the key the route answers `503` with `not-configured`, before 
 `503` with `no-benchmarks`.
 
 Which model of Artificial Analysis stands for which model and effort of Ruimte is `src/benchmark-models.ts`,
-looked up by id; a test holds it against the manifests in `packages/agents/src/providers`. A new model is a row
+looked up by id; a test holds it against the manifests in `@adecore/agents/providers`. A new model is a row
 there and a deploy of this Worker, not a release of the app. `X-RateLimit-Remaining` and `X-RateLimit-Reset`
 on an answer say how much of the day is left.
 

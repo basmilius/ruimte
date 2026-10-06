@@ -1,7 +1,7 @@
 import type { Diagnostic } from '@adecore/lsp';
 import type { Transport } from '@/transport/transport';
-import { comparePositions, severityOf } from './diagnostics-model';
-import type { ProblemCounts } from './diagnostics';
+import { comparePositions, severityOf } from '@adecore/editor-react/models';
+import type { ProblemCounts } from '@adecore/editor-react';
 
 /* One problem of a file and the server that reported it. */
 export interface ProblemRow {

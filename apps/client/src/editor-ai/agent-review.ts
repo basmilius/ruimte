@@ -6,10 +6,10 @@ import { lineRangeLabel, selectionBlock } from '@/chat/selection-to-chat';
 import type { AgentChanges, DrawFrame } from './agent-changes';
 import { registerAgentReview } from './agent-review-registry';
 import { highlightLayers } from '@adecore/editor-react';
-import { replaceAllLines, type LineReplacement } from './line-edits';
+import { replaceAllLines, type LineReplacement } from '@adecore/editor-react/models';
 import { ReviewGroup, type ReviewMember } from '@adecore/editor-react';
 import { LineActionHost, RowHost, type HostedAction, type HostedRow } from '@adecore/editor-react';
-import { replacedWords } from './word-diff';
+import { replacedWords } from '@adecore/editor-react/models';
 
 const ROW_OWNER = 'review';
 const ACTION_OWNER = 'review';

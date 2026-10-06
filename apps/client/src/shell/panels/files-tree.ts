@@ -1,4 +1,5 @@
 import type { GitStatus, GitStatusEntry } from '@pierre/trees';
+import { FileTree } from '@adecore/ui';
 import { absoluteOf, isAbsolutePath, relativeTo, resolveStoredPath, storedPathOf, type FsEntry, type GitFile } from '@ruimte/contracts';
 import { chipText } from '@adecore/agents-react/chat/mentions';
 
@@ -52,19 +53,6 @@ export function dirnameOf(path: string): string {
     return cut > 0 ? path.slice(0, cut) : path.slice(0, cut + 1);
 }
 
-/* Every directory on the way to a row, outermost first, the way the tree names one. */
-export function ancestorDirsOf(treePath: string): string[] {
-    const segments = treePath.split('/').filter((segment) => segment !== '');
-    segments.pop();
-    const dirs: string[] = [];
-    let prefix = '';
-    for (const segment of segments) {
-        prefix = `${prefix}${segment}/`;
-        dirs.push(prefix);
-    }
-    return dirs;
-}
-
 export function treePathOf(root: string, entry: FsEntry): string {
     const relative = relativeTo(root, entry.path);
     return entry.kind === 'directory' ? `${relative}/` : relative;
@@ -105,64 +93,8 @@ export function buildTreeInput(root: string, cache: EntryCache, showHidden: bool
     return { paths, ignored };
 }
 
-/*
- * The open set without a branch that hangs under a closed directory. The tree keeps a child of a
- * directory it closed expanded, and `initialExpandedPaths` opens every directory on the way to a
- * path it is handed, so such a child would open its parent again at the next reset: close one
- * folder, open another, and the first stands open. A path whose directories the tree has not heard
- * of yet stays, since nothing closed those.
- */
-export function withoutClosedBranches(open: ReadonlySet<string>, known: ReadonlySet<string>): Set<string> {
-    return new Set([...open].filter((path) => ancestorDirsOf(path).every((dir) => open.has(dir) || !known.has(dir))));
-}
-
-/* The directories that opened since the last snapshot. The tree has no expand event, so the panel
-   diffs what it knows against what the model says and loads the difference. */
-export function newlyExpanded(before: ReadonlySet<string>, after: ReadonlySet<string>): string[] {
-    return [...after].filter((path) => !before.has(path));
-}
-
-/*
- * What is open after the tree reported itself: the directories it says are open, plus the ones it
- * has not heard of yet. A directory remembered from the last visit is not in the tree until its
- * parent has been listed, and dropping it there would collapse it the moment the listing arrives.
- */
-export function mergeExpanded(remembered: ReadonlySet<string>, reported: ReadonlySet<string>, known: ReadonlySet<string>): Set<string> {
-    const merged = new Set(reported);
-    for (const path of remembered) {
-        if (!known.has(path)) {
-            merged.add(path);
-        }
-    }
-    return merged;
-}
-
-export interface SortRow {
-    isDirectory: boolean;
-    /* The path split on separators; `src/index.ts` is two segments, the directory `src/` is one. */
-    segments: readonly string[];
-}
-
-// Compare whole path segments because loaded directories may have no row of their own in the flat list.
-export function compareRows(left: SortRow, right: SortRow): number {
-    const shared = Math.min(left.segments.length, right.segments.length);
-    for (let i = 0; i < shared; i++) {
-        const leftSegment = left.segments[i]!;
-        const rightSegment = right.segments[i]!;
-        if (leftSegment === rightSegment) {
-            continue;
-        }
-        const leftIsDirectory = left.isDirectory || i < left.segments.length - 1;
-        const rightIsDirectory = right.isDirectory || i < right.segments.length - 1;
-        if (leftIsDirectory !== rightIsDirectory) {
-            return leftIsDirectory ? -1 : 1;
-        }
-        // Case is not a reason to split two names apart; the raw compare only breaks a tie.
-        return leftSegment.localeCompare(rightSegment, undefined, { numeric: true, sensitivity: 'base' }) || leftSegment.localeCompare(rightSegment);
-    }
-    // One path is the head of the other, so the shorter one is the directory the longer one sits in.
-    return left.segments.length - right.segments.length;
-}
+export const { ancestorDirsOf, withoutClosedBranches, newlyExpanded, mergeExpanded, compareRows } = FileTree;
+export type SortRow = Parameters<typeof FileTree.compareRows>[0];
 
 /*
  * A porcelain letter as the tree names the same thing. The tree knows five states and git writes

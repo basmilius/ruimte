@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { NavigationHistory, type Place } from './navigation-history';
+import { NavigationHistory, type Place } from '@adecore/editor-react';
 
 const place = (uri: string, line: number, character = 0): Place => ({ uri, position: { line, character } });
 const a = 'file:///work/a.ts';

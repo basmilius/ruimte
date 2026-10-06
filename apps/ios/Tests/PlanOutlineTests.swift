@@ -36,7 +36,7 @@ final class PlanOutlineTests: XCTestCase {
         return try XCTUnwrap(PlanStep(step("p", steps: steps)))
     }
 
-    /// Every pair of `derived state` in `packages/plan/src/plan.test.ts`, in the order that file has them. The
+    /// Every pair of `derived state` in `@adecore/plan/plan.test.ts`, in the order that file has them. The
     /// derivation lives twice, so these vectors are what keeps the phone and the desktop from drifting apart.
     private static let derivedPairs: [(PlanStepState, PlanStepState, PlanStepState)] = [
         (.open, .open, .open),

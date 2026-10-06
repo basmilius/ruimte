@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { entriesOf, filterEntries, groupEntries, groupOfKind, letterOfKind, modeOf, scoreOf, workspaceEntriesOf } from './symbol-picker-model';
+import { entriesOf, filterEntries, groupEntries, groupOfKind, letterOfKind, modeOf, scoreOf, workspaceEntriesOf } from '@adecore/editor-react/models';
 
 const at = (line: number, character = 0) => ({ line, character });
 const range = (line: number) => ({ start: at(line), end: at(line + 2) });

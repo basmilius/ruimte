@@ -2,27 +2,28 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import type { LanguageRequestResult } from '@ruimte/contracts';
 import type { Diagnostic, Position } from '@adecore/lsp';
 import { MachineHome } from '../fs/machine-home.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { LanguageHost } from './host.ts';
-import { cargoCommand, NativePolicy, readNativeCheckout, type Download } from './native.ts';
+import { cargoCommand, NativePolicy, phpLanguageServerCheckout, type Download } from './native.ts';
 import { spawnLanguageProcess } from './runtime.ts';
 import { tarGz } from './test-archives.ts';
 
 /*
- * The PHP server of Ruimte, built from the checkout with cargo the way Install does in development
+ * The Adecore PHP server, built from its installed sources with Cargo as Install does in development
  * and run through the host. The stubs come from a small archive of the test's own, so the run needs no network.
  */
 
-const CHECKOUT = resolve(import.meta.dir, '../../../php-language-server');
-const checkout = readNativeCheckout(CHECKOUT);
+const checkout = phpLanguageServerCheckout(false);
 const hasCargo = existsSync(cargoCommand());
 
 if (!hasCargo || checkout === null) {
-    console.warn(`Skipping the PHP server tests: ${checkout === null ? `${CHECKOUT} is not a checkout of the server` : 'cargo is not installed'}`);
+    console.warn(
+        `Skipping the PHP server tests: ${checkout === null ? 'the selected Adecore package or explicit checkout has no native sources' : 'cargo is not installed'}`
+    );
 }
 
 const STUBS = tarGz([
@@ -110,7 +111,7 @@ const download: Download = async (_url, destination) => {
     await writeFile(destination, STUBS);
 };
 
-describe.skipIf(!hasCargo || checkout === null)('the PHP server of Ruimte', () => {
+describe.skipIf(!hasCargo || checkout === null)('the Adecore PHP server in Ruimte', () => {
     beforeAll(async () => {
         base = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-php-server-')));
         project = join(base, 'project');

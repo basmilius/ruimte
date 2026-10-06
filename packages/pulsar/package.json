@@ -1,22 +1,22 @@
 {
-  "name": "@ruimte/pulsar",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts",
-    "./verify-node": "./src/verify-node.ts",
-    "./verify-web": "./src/verify-web.ts"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@ruimte/agent-contracts": "workspace:*",
-    "zod": "^4.6.5"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.4.2",
-    "typescript": "^7.0.2"
-  }
+    "name": "@ruimte/pulsar",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts",
+        "./verify-node": "./src/verify-node.ts",
+        "./verify-web": "./src/verify-web.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "zod": "^4.6.5",
+        "@adecore/agent-contracts": "0.17.0-beta.1"
+    },
+    "devDependencies": {
+        "@types/bun": "^1.4.2",
+        "typescript": "^7.0.2"
+    }
 }

@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
-import { covers, withMargin } from './inlay-hints';
+
 import { ProjectLanguage } from './ruimte-project-language';
-import { ManualTimers } from './timers';
+import { ManualTimers } from '@adecore/editor-react/testing';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });
@@ -14,23 +14,6 @@ async function settle(): Promise<void> {
         await Promise.resolve();
     }
 }
-
-describe('the lines hints are asked for', () => {
-    test('are the ones in view with a margin, cut at the ends of the document', () => {
-        const end = at(299, 7);
-        const endOfLine = (line: number) => at(line, 10);
-        expect(withMargin({ start: at(100, 0), end: at(120, 4) }, end, endOfLine)).toEqual({ start: at(40, 0), end: at(180, 10) });
-        expect(withMargin({ start: at(2, 0), end: at(30, 4) }, end, endOfLine)).toEqual({ start: at(0, 0), end: at(90, 10) });
-        expect(withMargin({ start: at(280, 0), end: at(299, 7) }, end, endOfLine).end).toEqual(end);
-    });
-
-    test('hold the view only when every line in it was asked for', () => {
-        const asked = { start: at(40, 0), end: at(180, 10) };
-        expect(covers(asked, { start: at(60, 0), end: at(90, 0) })).toBe(true);
-        expect(covers(asked, { start: at(30, 0), end: at(90, 0) })).toBe(false);
-        expect(covers(asked, { start: at(150, 0), end: at(200, 0) })).toBe(false);
-    });
-});
 
 describe('inlay hints of a long file', () => {
     async function setup() {

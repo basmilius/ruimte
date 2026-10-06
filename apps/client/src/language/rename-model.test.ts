@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { occurrencesOf, renamePreviewOf, renameRowsOf, renameTargetOf, wordRangeAt } from './rename-model';
+import { occurrencesOf, renamePreviewOf, renameRowsOf, renameTargetOf, wordRangeAt } from '@adecore/editor-react/models';
 
 const at = (line: number, character: number) => ({ line, character });
 const range = (line: number, start: number, end: number) => ({ start: at(line, start), end: at(line, end) });

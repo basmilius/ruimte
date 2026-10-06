@@ -3,9 +3,9 @@ import type { AgentKind, ProvenanceReadResult, ProvenanceRun } from '@ruimte/con
 import type { Editor, EditorContentChange, EditorTrackedRange } from '@adecore/editor';
 import type { DiskText } from '@/state/text-drafts';
 import { useConflictInfo } from './conflict-info';
-import { planConflict, type ConflictStretch } from './conflict-model';
+import { planConflict, type ConflictStretch } from '@adecore/editor-react/models';
 import { highlightLayers } from '@adecore/editor-react';
-import { replaceAllLines, replaceLines } from './line-edits';
+import { replaceAllLines, replaceLines } from '@adecore/editor-react/models';
 import { RowHost, type HostedRow } from '@adecore/editor-react';
 
 const ROW_OWNER = 'conflict';

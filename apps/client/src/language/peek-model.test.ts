@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { definitionSnippetOf, peekFilesOf, snippetOf, visualColumnOf } from './peek-model';
+import { definitionSnippetOf, peekFilesOf, snippetOf, visualColumnOf } from '@adecore/editor-react/models';
 
 const at = (line: number, character: number) => ({ line, character });
 const place = (uri: string, line: number) => ({ uri, range: { start: at(line, 2), end: at(line, 6) } });

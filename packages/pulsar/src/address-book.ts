@@ -1,4 +1,4 @@
-import { ModelCatalogDataSchema } from '@ruimte/agent-contracts/model';
+import { ModelCatalogDataSchema } from '@adecore/agent-contracts/model';
 import { z } from 'zod';
 import { MachineIdSchema, NonceSchema, PublicKeySchema, SignatureSchema } from './keys.ts';
 

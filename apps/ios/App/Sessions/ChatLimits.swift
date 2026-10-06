@@ -10,7 +10,7 @@ struct ChatLimitView: Equatable {
     let detail: String?
 }
 
-/// The limit wording of the desktop client, `limit.*` in `packages/agents-react/src/locales/en/agent-chat.json`,
+/// The limit wording of the desktop client, `limit.*` in `@adecore/agents-react/locales/en/agent-chat.json`,
 /// kept in step with it by hand.
 enum ChatLimits {
     /// Nil while the last turn stopped on nothing, or a turn runs. `moment` writes a time a limit names.

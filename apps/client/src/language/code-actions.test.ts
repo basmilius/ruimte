@@ -4,9 +4,9 @@ import { useToasts } from '@/state/toasts';
 import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './ruimte-project-language';
-import type { ProjectFiles } from './workspace-edit';
+import type { ProjectFiles } from '@adecore/editor-react';
 import { TransportError } from '@/transport/transport';
-import { ManualTimers } from './timers';
+import { ManualTimers } from '@adecore/editor-react/testing';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { eventOf } from './key-events';
 

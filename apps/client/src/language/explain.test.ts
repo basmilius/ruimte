@@ -7,7 +7,7 @@ import { TransportError } from '@/transport/transport';
 import { EditorLanguage } from './ruimte-editor-language';
 import { innermostFunction } from './explain';
 import { FakeLanguageTransport } from './fake-daemon';
-import type { HoverInfo } from './popups';
+import type { HoverInfo } from '@adecore/editor-react';
 import { ProjectLanguage } from './ruimte-project-language';
 
 const uri = 'file:///work/app/src/a.ts';

@@ -3,7 +3,7 @@ import { FakeEditorEngine } from '@adecore/editor/fake';
 import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './ruimte-project-language';
-import { ManualTimers } from './timers';
+import { ManualTimers } from '@adecore/editor-react/testing';
 import { useToasts } from '@/state/toasts';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { eventOf } from './key-events';

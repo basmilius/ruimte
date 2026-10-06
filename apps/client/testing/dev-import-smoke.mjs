@@ -99,7 +99,7 @@ try {
     const probe = await send(
         'Runtime.evaluate',
         {
-            expression: `import('/src/language/SignatureCard.tsx').then(() => ({ok: true}), (error) => ({ok: false, message: error.message}))`,
+            expression: `import('/src/canvas/nodes/NoteNode.tsx').then(() => ({ok: true}), (error) => ({ok: false, message: error.message}))`,
             awaitPromise: true,
             returnByValue: true
         },

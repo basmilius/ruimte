@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { parameterSpan, signatureViewOf } from './signature-model';
+import { parameterSpan, signatureViewOf } from '@adecore/editor-react/models';
 
 const signature = {
     label: 'scoreCandidate(candidate: Candidate, vacancy: Vacancy, options?: MatchOptions): number',

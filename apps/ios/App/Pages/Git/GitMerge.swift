@@ -27,7 +27,7 @@ struct MergeTextShape: Equatable, Sendable {
     let finalNewline: Bool
 }
 
-/// A port of `packages/merge`. The daemon answers `git.resolveAi` by block index and fingerprint, so the
+/// A port of `@adecore/merge`. The daemon answers `git.resolveAi` by block index and fingerprint, so the
 /// split here has to come out exactly as the TypeScript one does, tie-breaks of the diff included.
 enum ThreeWayMerge {
     private static let maxDistance = 4000
@@ -353,7 +353,7 @@ enum ThreeWayMerge {
         }
     }
 
-    /// FNV-1a over the UTF-16 code units of both sides, as `packages/merge` writes it, so an answer the
+    /// FNV-1a over the UTF-16 code units of both sides, as `@adecore/merge` writes it, so an answer the
     /// daemon wrote for a block can be checked against the block it lands on.
     static func fingerprint(_ block: MergeBlock) -> String {
         var hash: UInt32 = 0x811c_9dc5

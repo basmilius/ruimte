@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { SymbolKind } from '@adecore/lsp';
-import { declaredNameOf, isTypeName, linkTypeNames, placesOfName } from './symbol-links';
+import { declaredNameOf, isTypeName, linkTypeNames, placesOfName } from '@adecore/editor-react/models';
 
 const range = (line: number) => ({ start: { line, character: 0 }, end: { line, character: 3 } });
 const symbol = (name: string, kind: SymbolKind, uri: string, containerName?: string) => ({ name, kind, containerName, location: { uri, range: range(3) } });

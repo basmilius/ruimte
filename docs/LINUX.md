@@ -19,10 +19,10 @@ of them forced by the `@ruimte/desktop` scope. Leave them alone.
 
 ```yaml
 linux:
-  target: [AppImage, deb, rpm]
-  artifactName: ${productName}-${version}-${arch}.${ext}
-  executableName: ruimte
-  syncDesktopName: true
+    target: [AppImage, deb, rpm]
+    artifactName: ${productName}-${version}-${arch}.${ext}
+    executableName: ruimte
+    syncDesktopName: true
 ```
 
 ```json
@@ -63,7 +63,7 @@ The `linux` job in `.github/workflows/release.yml` builds x64 on `ubuntu-22.04` 
 2. **Fonts with a Linux face.** `--font-sans` and `--font-mono` in `@adecore/ui/theme.css`
    name Apple, Microsoft and web faces only (an issue for that library, not a patch here), so both fall through to the generic on a Linux
    desktop. Cantarell, Ubuntu and Noto Sans for the first, DejaVu Sans Mono, Liberation Mono and
-   Noto Sans Mono for the second. `DEFAULT_FONT_STACKS` in `packages/drawing/src/text.ts` has the
+   Noto Sans Mono for the second. `DEFAULT_FONT_STACKS` in `@adecore/drawing/text.ts` has the
    same gap, and its `hand` stack names nothing a stock Linux box ships.
 3. **Wayland.** The app runs under XWayland by default, which is blurry on fractional scaling.
    Whether to pass `--ozone-platform-hint=auto` is a choice, not a bug.

@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
+import { inlineMessage } from './inline-message';
 import {
     diffSegments,
     emphasisOf,
     endOfInsertion,
     fitReplacement,
-    inlineMessage,
     inlineRangeOf,
     lineSpanOf,
     locateSelection,
@@ -12,7 +12,7 @@ import {
     problemsOnLines,
     replaceRange,
     textInRange
-} from './inline-edit-model';
+} from '@adecore/editor-react/models';
 
 const at = (line: number, character: number) => ({ line, character });
 

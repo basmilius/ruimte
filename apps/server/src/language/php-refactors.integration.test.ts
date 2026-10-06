@@ -2,21 +2,23 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, realpath, rename, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { LanguageRequestResult } from '@ruimte/contracts';
 import { applyTextEdits, fileUriToPath, type CodeAction, type Position, type WorkspaceEdit } from '@adecore/lsp';
 import { MachineHome } from '../fs/machine-home.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { LanguageHost } from './host.ts';
-import { NativePolicy } from './native.ts';
+import { NativePolicy, phpLanguageServerCheckout } from './native.ts';
 import { spawnLanguageProcess } from './runtime.ts';
 
 /*
- * The refactors of the PHP server of Ruimte through the host, on a small project written to a temporary folder. It runs the
+ * The refactors of Adecore's PHP server through the Ruimte host, on a small project written to a temporary folder. It runs the
  * server that is built already and the stubs that Install left in the development home, so nothing is built or downloaded here.
  */
 
-const BINARY = resolve(import.meta.dir, '../../../php-language-server/target/release/php-language-server');
+const checkout = phpLanguageServerCheckout(false);
+const BINARY =
+    checkout === null ? '' : join(checkout.folder, 'target', 'release', process.platform === 'win32' ? 'php-language-server.exe' : 'php-language-server');
 const STUBS_ROOT = join(process.env.RUIMTE_DEV_HOME ?? join(homedir(), '.ruimte-dev'), 'language-servers', 'php-native', 'storage', 'stubs');
 const stubs = existsSync(STUBS_ROOT) ? readdirSync(STUBS_ROOT).find((commit) => existsSync(join(STUBS_ROOT, commit, '.complete'))) : undefined;
 const runnable = existsSync(BINARY) && stubs !== undefined;

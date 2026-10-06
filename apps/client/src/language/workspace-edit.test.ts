@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import type { WorkspaceEdit } from '@adecore/lsp';
 import type { DiskText } from '@/state/text-drafts';
-import { applyWorkspaceEdit, entriesOf, renamesOf, type ProjectFiles, type StagedFile } from './workspace-edit';
+import { applyWorkspaceEdit, type ProjectFiles, type StagedFile } from '@adecore/editor-react';
 
 const openUri = 'file:///work/app/src/a.ts';
 const closedUri = 'file:///work/app/src/b.ts';
@@ -152,11 +152,5 @@ describe('workspace edits that move a file', () => {
             applied: false,
             failureReason: 'Moved.ts is taken'
         });
-    });
-
-    test('lists what an edit moves apart from the text it edits', () => {
-        expect(renamesOf(move)).toEqual([{ kind: 'rename', oldUri: openUri, newUri: movedUri }]);
-        expect([...entriesOf(move)!.keys()]).toEqual([openUri, closedUri]);
-        expect(entriesOf({ documentChanges: [{ kind: 'delete', uri: openUri }] })).toBeNull();
     });
 });

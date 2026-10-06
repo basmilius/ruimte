@@ -7,7 +7,7 @@ import { lineRangeLabel, offerSelection, selectionBlock, startLinkedChatOrTell, 
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useProject } from '@/state/project';
 import type { HostLanguage as EditorLanguage } from './host-language';
-import type { Problem } from './diagnostics-model';
+import type { Problem } from '@adecore/editor-react/models';
 import { shikiLanguageOf } from './language-ids-host';
 import { isShortcut } from './shortcut-keys';
 

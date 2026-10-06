@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { parseSnippet, tabOrder } from './snippet';
+import { parseSnippet, tabOrder } from '@adecore/editor-react/models';
 
 describe('parseSnippet', () => {
     test('turns placeholders, choices and bare stops into text and stops', () => {

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
-import { editorHintsOf } from './inlay-hints';
+
 import { ProjectLanguage } from './ruimte-project-language';
 
 const uri = 'file:///work/app/src/a.ts';
@@ -37,20 +37,5 @@ describe('inlay hints and semantic tokens', () => {
         expect(calls.sort()).toEqual(['textDocument/inlayHint', 'textDocument/semanticTokens/full']);
         expect(editor.inlayHints).toEqual([{ position: { line: 0, character: 5 }, label: ': number' }]);
         expect(editor.semanticTokens).toEqual([{ line: 0, character: 10, length: 4, scopes: ['entity.name.function.call'] }]);
-    });
-});
-
-describe('editorHintsOf', () => {
-    test('orders hints by position and drops an empty one', () => {
-        expect(
-            editorHintsOf([
-                { position: { line: 2, character: 0 }, label: 'b:' },
-                { position: { line: 1, character: 4 }, label: '' },
-                { position: { line: 0, character: 9 }, label: ': string' }
-            ])
-        ).toEqual([
-            { position: { line: 0, character: 9 }, label: ': string' },
-            { position: { line: 2, character: 0 }, label: 'b:' }
-        ]);
     });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProvenanceReadResult, ProvenanceReviewState, ProvenanceRun } from '@ruimte/contracts';
 import { type FakeEditor, FakeEditorEngine } from '@adecore/editor/fake';
-import { ManualTimers } from '@/language/timers';
+import { ManualTimers } from '@adecore/editor-react/testing';
 import { AgentChanges } from './agent-changes';
 import { AgentReview, commentRowId, revertNote } from './agent-review';
 import { agentReviewOf } from './agent-review-registry';

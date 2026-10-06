@@ -3,7 +3,6 @@ import { FakeEditorEngine } from '@adecore/editor/fake';
 import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './ruimte-project-language';
-import { selectionChainOf } from './selection-ranges';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });
@@ -28,10 +27,6 @@ describe('selection ranges', () => {
         await language.document.ready;
         return { editor, language, asked };
     }
-
-    test('flattens a chain with its smallest range first', () => {
-        expect(selectionChainOf({ range: range(0, 4, 9), parent: { range: range(0, 0, 14) } })).toEqual([range(0, 4, 9), range(0, 0, 14)]);
-    });
 
     test('hands the editor the chain of each position when a server offers them', async () => {
         const { editor, asked } = await setup({ 'textDocument/selectionRange': {} });

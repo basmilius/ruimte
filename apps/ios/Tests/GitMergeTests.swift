@@ -2,7 +2,7 @@ import XCTest
 
 @testable import Ruimte
 
-/// The expected values come from `packages/merge` run under Bun: the daemon answers `git.resolveAi` by block
+/// The expected values come from `@adecore/merge` run under Bun: the daemon answers `git.resolveAi` by block
 /// index and fingerprint, so the port has to split and print exactly as the TypeScript does.
 final class GitMergeTests: XCTestCase {
     private func summary(_ blocks: [MergeBlock]) -> [String] {

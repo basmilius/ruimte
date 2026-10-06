@@ -6,31 +6,31 @@ is a priority recommendation. Run measurements or a design spike before estimati
 
 ## Implementation order
 
-| Package | Priority | Depends on |
-| --- | --- | --- |
-| 1. Chat lifecycle and native requests | First | Nothing |
-| 2. Ownership and persistent files | First | Nothing |
-| 3. Test floor and measurements | Early | Nothing for a baseline |
-| 4. Keyboard and settings | Next | DOM setup from 3 for interaction tests |
-| 5. File and diff entry points | Next | Nothing |
-| 6. Terminal basics | Next | 4 for new bindings; 5 for file links |
-| 7. Canvas ergonomics | Next | 4 for bindings; baseline from 3 |
-| 8. Chat depth | Next | 1 for lifecycle; 5 for shared file locations |
-| 9. Accounts | Next | 1 for continuation/recovery |
-| 10. Remote access and media | Next | 2; measurements from 3 |
-| 11. iOS, devices and worktrees | Next | 1 for task status; 5 for locations |
-| 12. Multiple windows | Later | 2 and 4; baseline from 3 |
-| 13. Copilot and Gemini chat | Later | 1 and 9; compatibility checks below |
-| 14. Language servers | Later | 5; design spike and permission decisions |
-| 15. Plugins | Decision first | Registry inventory and a compatibility release |
-| 16. Linux and Windows | Linux checks early, Windows deferred | Platform spikes and CI |
+| Package                               | Priority                             | Depends on                                     |
+| ------------------------------------- | ------------------------------------ | ---------------------------------------------- |
+| 1. Chat lifecycle and native requests | First                                | Nothing                                        |
+| 2. Ownership and persistent files     | First                                | Nothing                                        |
+| 3. Test floor and measurements        | Early                                | Nothing for a baseline                         |
+| 4. Keyboard and settings              | Next                                 | DOM setup from 3 for interaction tests         |
+| 5. File and diff entry points         | Next                                 | Nothing                                        |
+| 6. Terminal basics                    | Next                                 | 4 for new bindings; 5 for file links           |
+| 7. Canvas ergonomics                  | Next                                 | 4 for bindings; baseline from 3                |
+| 8. Chat depth                         | Next                                 | 1 for lifecycle; 5 for shared file locations   |
+| 9. Accounts                           | Next                                 | 1 for continuation/recovery                    |
+| 10. Remote access and media           | Next                                 | 2; measurements from 3                         |
+| 11. iOS, devices and worktrees        | Next                                 | 1 for task status; 5 for locations             |
+| 12. Multiple windows                  | Later                                | 2 and 4; baseline from 3                       |
+| 13. Copilot and Gemini chat           | Later                                | 1 and 9; compatibility checks below            |
+| 14. Language servers                  | Later                                | 5; design spike and permission decisions       |
+| 15. Plugins                           | Decision first                       | Registry inventory and a compatibility release |
+| 16. Linux and Windows                 | Linux checks early, Windows deferred | Platform spikes and CI                         |
 
 Measurements must finish before changing the WebGL budget, splitting the composer chunk or
 choosing media buffer sizes.
 
 ## 1. Chat lifecycle and native requests
 
-Sources: `packages/agents/src/chat`, task coordination and the host's resume handlers.
+Sources: `@adecore/agents/chat`, task coordination and the host's resume handlers.
 
 The completed lifecycle fixes and CLI captures are recorded in
 [the orchestration report](reports/private/2026-09-30-orchestration-upstream.html#resultaat).
@@ -209,7 +209,7 @@ decision-dependent step until concurrent edits have a defined treatment.
 
 ## 9. Accounts
 
-Source: `packages/agents/src/providers/accounts`. Nobody has used a second real account yet.
+Source: `@adecore/agents/providers/accounts`. Nobody has used a second real account yet.
 
 1. Verify two real Claude account folders retain separate logins after daemon/app restart, each
    showing its own email after a restart of the Mac, and a real Codex conversation continues on
@@ -298,11 +298,11 @@ Source: [the provider research](reports/2026-09-25-provider-research.html).
 2. Recheck supported versions and run bounded Copilot SDK versus ACP and Gemini ACP spikes.
    Choose Copilot's transport from actual permission/question/resume and packaged-Bun behavior.
    Keep any shared ACP parsing independent of a provider's unstable model-selection extension.
-3. Implement one backend and protocol mapper per provider in `packages/agents`, with capability
+3. Implement one backend and protocol mapper per provider in `@adecore/agents`, with capability
    discovery, accounts/login probing, model selection, streaming, Stop, approvals, questions and resume.
    Add terminal hook normalization only for documented status/context events; leave TUI answers there.
 4. Test desktop and iOS against these existing provider words. Separately design unknown-provider
-   handling in `packages/agent-contracts/src/agent.ts` so an older desktop does not reject a whole
+   handling in `@adecore/agent-contracts/agent.ts` so an older desktop does not reject a whole
    answer. Confirm the iOS open-enum build has shipped before introducing any new enum word;
    regenerating schemas is not proof that the installed app has that change.
 

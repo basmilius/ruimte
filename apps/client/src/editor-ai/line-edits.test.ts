@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
-import { planConflict } from './conflict-model';
-import { replaceAllLines, replaceLines } from './line-edits';
+import { planConflict } from '@adecore/editor-react/models';
+import { replaceAllLines, replaceLines } from '@adecore/editor-react/models';
 
 function apply(text: string, from: number, to: number, lines: string[]): string {
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text, theme: 'light' });

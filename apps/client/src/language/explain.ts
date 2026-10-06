@@ -8,7 +8,7 @@ import { functionSourceAt, isFunctionSignature } from '@/ondevice/explain-model'
 import { onDeviceClientFor, type OnDeviceClient } from '@/ondevice/ondevice-client';
 import { explainPrompt } from '@/ondevice/prompts';
 import type { HostLanguage as EditorLanguage } from './host-language';
-import type { HoverView } from './popups';
+import type { HoverView } from '@adecore/editor-react';
 import { shikiLanguageOf } from './language-ids-host';
 
 const TOAST_ID = 'language-explain';

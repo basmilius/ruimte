@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { docblockMarkdown, hoverSectionsOf, hoverTextOf, markdownParts, isEmptyHover, locationsOf, splitDocTags, splitSignatures } from './hover-content';
+import {
+    docblockMarkdown,
+    hoverSectionsOf,
+    hoverTextOf,
+    markdownParts,
+    isEmptyHover,
+    locationsOf,
+    splitDocTags,
+    splitSignatures
+} from '@adecore/editor-react/models';
 
 describe('splitSignatures', () => {
     test('takes the leading code as the signature and the prose after the rule as the documentation', () => {

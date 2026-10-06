@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { REFACTOR_GROUPS, actionsOf, diagnosticsAt, fixableOnLine, groupOf, isHint, mergeEntries, previewOf } from './code-actions-model';
+import { REFACTOR_GROUPS, actionsOf, diagnosticsAt, fixableOnLine, groupOf, isHint, mergeEntries, previewOf } from '@adecore/editor-react/models';
 
 const range = (line: number, start: number, end: number) => ({ start: { line, character: start }, end: { line, character: end } });
 const uri = 'file:///work/a.ts';

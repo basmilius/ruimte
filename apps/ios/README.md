@@ -129,7 +129,7 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   machine can propose answers (`git.resolveAi`); a proposal is an answer to check, not a write. Mark
   resolved writes the file over the digest it was read at, so a file that moved on the machine refuses
   and is read again, keeping the answers that still fit. The stretch logic is a Swift port of
-  `packages/merge` that splits and fingerprints exactly as the daemon does.
+  `@adecore/merge` that splits and fingerprints exactly as the daemon does.
   Worktrees of a repository list what they hold and open their changes against the branch they came
   from. A new one is made for a branch; a merge commits loose work first if asked, squashes, merges or
   rebases, and runs in the checkout that has the target branch out. A target checked out nowhere is
@@ -337,7 +337,6 @@ Three steps (`App/Onboarding`), centered on an iPad as on an iPhone.
   set up before it existed is never asked, and an account without machines waits for its first one.
 
 ## Settings
-
 
 Settings (`App/Settings`) is an opaque sheet behind the avatar, at the top of the sidebar on an iPad, with the sections of the desktop's settings that mean something on a phone. The account comes first, with
 how it signed in and how many machines the phone reaches; behind it are those machines, Sign out and Delete account.
@@ -758,8 +757,8 @@ not change any production infrastructure.
 Keep a row for each attempt:
 
 | Device / OS | Network | Relay required | Route | Hello ms | Foreground ms | Result / error |
-| --- | --- | --- | --- | --- | --- | --- |
-| | | | | | | |
+| ----------- | ------- | -------------- | ----- | -------- | ------------- | -------------- |
+|             |         |                |       |          |               |                |
 
 Local build and unit tests cannot establish production relay reachability, browser
 login on a device, scene behavior under iPad multitasking, or reconnect latency on 5G.

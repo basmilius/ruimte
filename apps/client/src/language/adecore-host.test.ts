@@ -4,7 +4,7 @@ import { FakeEditorEngine } from '@adecore/editor/fake';
 import { EditorLanguage } from './ruimte-editor-language';
 import { ProjectLanguage } from './ruimte-project-language';
 import { FakeLanguageTransport } from './fake-daemon';
-import { ManualTimers } from './timers';
+import { ManualTimers } from '@adecore/editor-react/testing';
 import { RUIMTE_EDITOR_KEYMAP } from '@/shell/editor-keymap';
 
 async function settle(): Promise<void> {

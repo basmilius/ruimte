@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { FileTree } from '@pierre/trees';
 import type { FsEntry, GitFile } from '@ruimte/contracts';
-import { directoryHandle, resetExpandedPaths } from './panel-tree.ts';
+import { FileTree as SharedFileTree } from '@adecore/ui';
 import {
     LOADING_NAME,
     ancestorDirsOf,
@@ -17,6 +17,8 @@ import {
     treePathOf,
     withoutClosedBranches
 } from './files-tree.ts';
+
+const { directoryHandle, resetExpandedPaths } = SharedFileTree;
 
 const ROOT = '/repo';
 

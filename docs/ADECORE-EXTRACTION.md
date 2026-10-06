@@ -1,5 +1,7 @@
 # Moving shared modules to Adecore
 
+The inventory and extraction plan below record the starting state. Current consumers use the published Adecore packages, and the original sources were removed before manual testing on October 6, 2026. See [the cutover record](ADECORE-CUTOVER.md).
+
 Inventory and migration proposal, October 5, 2026.
 
 Adecore should own the modules shared by development apps. Ruimte and AfterMotion should consume its published packages, supply their own adapters and own their product behavior. A shared module must build and be usable without a checkout of either app.
@@ -126,7 +128,7 @@ Old `@ruimte/*` releases should remain available. Publish and validate the Adeco
 
 The current PHP implementation is now authorized for transfer. At the handoff, Ruimte's editor and PHP source tree is clean, with source revision `9729144f0df3f25628f20cc283dee54f8d9e8162`. Transfer that implementation and record its revision; preserve its known remaining work. The original source stays in Ruimte until the complete application cutover passes validation.
 
-The [Cargo workspace](../apps/php-language-server/Cargo.toml) already has five separate crates: syntax, format, index, analysis and the stdio LSP server. Its package metadata declares MIT, and it has no dependency on Ruimte. Move that workspace intact into Adecore, for example under `packages/php-language-server`, with its lockfile, scripts, tests and docs. No split into more repositories is needed. Ruimte's current documentation saying it will get a repository of its own must change to this destination.
+The [Cargo workspace](https://github.com/basmilius/adecore/blob/main/packages/php-language-server/Cargo.toml) already has five separate crates: syntax, format, index, analysis and the stdio LSP server. Its package metadata declares MIT, and it has no dependency on Ruimte. Move that workspace intact into Adecore, for example under `packages/php-language-server`, with its lockfile, scripts, tests and docs. No split into more repositories is needed. Ruimte's current documentation saying it will get a repository of its own must change to this destination.
 
 The remaining integration work is distribution:
 
@@ -185,7 +187,7 @@ The initial inventory above is based on source and manifest inspection. The extr
 
 ## Local extraction status, October 5, 2026
 
-The shared implementations now exist in Adecore's existing `main` checkout. The agent family, file tree and shared tree rows, merge, drawing, diagram, plan, service managers, editor family and PHP language server have been transferred. Application adapters and original source remain in Ruimte. Neither application has completed its consumer cutover.
+The shared implementations now exist in Adecore's existing `main` checkout. The agent family, file tree and shared tree rows, merge, drawing, diagram, plan, service managers, editor family and PHP language server have been transferred. Application adapters remain in Ruimte. Ruimte has completed its consumer cutover; AfterMotion has not.
 
 Adecore's workspace dependencies, build order, compiled exports, source conditions, package assets, docs dependencies and editor styles are integrated. The release workflow includes dependency-ordered publication and verified PHP native archives with a pinned descriptor. The extraction has reached `origin/main`. Adecore `0.17.0-beta.1` is now published on npm and GitHub with native PHP archives for Apple silicon, Linux arm64/x64 and Windows x64.
 
@@ -204,6 +206,6 @@ FindReplace's replacement-label lookups now match its nested English and Dutch l
 
 Ruimte's active consumers now import Adecore's agent, editor, LSP, merge, drawing, diagram, plan and service packages. Its FileTree views use the shared UI component. Application adapters preserve chat storage keys, mention drags, editor shortcuts, daemon transport, machine-wide diagnostics, AI actions, Git staging and service identity. Ruimte-specific wire envelopes wrap the shared schemas; generated Swift models remain unchanged.
 
-Ruimte pins `0.17.0-beta.1` and its lockfile installs the published npm artifacts. Temporary checkout links have been removed. The published PHP descriptor is pinned in the daemon, with all four checksums checked against GitHub's asset digests. The app's npm workflow now publishes its launcher and platform binaries only. Original implementations and legacy library build files remain.
+Ruimte pins `0.17.0-beta.1` and its lockfile installs the published npm artifacts. Temporary checkout links have been removed. The published PHP descriptor is pinned in the daemon, with all four checksums checked against GitHub's asset digests. The app's npm workflow now publishes its launcher and platform binaries only. The original implementations and legacy library build files were removed on October 6 before the manual test round. Commit `db8f1afee` retains them.
 
-AfterMotion's consumer cutover remains a separate task. Desktop interaction, visual and screen-reader acceptance in Ruimte still need evidence before source cleanup. No original source has been deleted.
+AfterMotion's consumer cutover remains a separate task. Desktop interaction, visual and screen-reader acceptance in Ruimte still need evidence. See [the cutover record](ADECORE-CUTOVER.md) for current ownership and validation.

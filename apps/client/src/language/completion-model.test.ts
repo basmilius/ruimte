@@ -15,7 +15,7 @@ import {
     rankCompletions,
     rowWindow,
     snippetToText
-} from './completion-model';
+} from '@adecore/editor-react/models';
 
 const at = (line: number, character: number) => ({ line, character });
 const item = (label: string, extra: Partial<CompletionItem> = {}): CompletionItem => ({ label, ...extra });

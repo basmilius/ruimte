@@ -31,7 +31,7 @@ import * as agent from '../src/agent.ts';
 import * as task from '../src/task.ts';
 import * as plan from '../src/plan.ts';
 import * as chat from '../src/chat.ts';
-import { PLAN_STATE_MARKERS } from '../../plan/src/text.ts';
+import { PLAN_STATE_MARKERS } from '@adecore/plan';
 import { PROTOCOL_VERSION } from '../src/protocol.ts';
 import { PULSAR_STATEMENT_PUBLIC_KEYS } from '../../pulsar/src/statement-key.ts';
 
@@ -322,7 +322,7 @@ const apiSource = [
  * new one fails the TypeScript build here before it can reach a Swift switch without a marker.
  */
 const planMarkerSource = `public extension PlanStepState {
-    /// The marker of this state, as \`PLAN_STATE_MARKERS\` in \`@ruimte/plan\` writes it.
+    /// The marker of this state, as \`PLAN_STATE_MARKERS\` in \`@adecore/plan\` writes it.
     var marker: String {
         switch self {
 ${plan.PlanStepStateSchema.options.map((state) => `        case .${camel(state)}: ${JSON.stringify(PLAN_STATE_MARKERS[state])}`).join('\n')}

@@ -10,7 +10,7 @@ extension PlanStepState {
     /// The outcomes the mark of a test step offers.
     static let testOutcomes: [PlanStepState] = [.done, .warning, .info, .failed, .skipped, .blocked]
 
-    /// Outcomes that close a step without a failure, as `isFinishedOutcome` in `@ruimte/plan`.
+    /// Outcomes that close a step without a failure, as `isFinishedOutcome` in `@adecore/plan`.
     var isFinished: Bool { self == .done || self == .skipped || self == .warning || self == .info }
 
     /// A note says what went wrong or what to read, so these ask for one before the state is sent.
@@ -67,7 +67,7 @@ struct PlanStep: Identifiable, Equatable, Sendable {
 
     var isParent: Bool { !steps.isEmpty }
 
-    /// The same rules as `deriveState` in `@ruimte/plan`, so the phone and the desktop show one state.
+    /// The same rules as `deriveState` in `@adecore/plan`, so the phone and the desktop show one state.
     var state: PlanStepState {
         guard isParent else { return storedState ?? .open }
         let states = steps.map(\.state)
@@ -153,7 +153,7 @@ struct PlanGroup: Identifiable, Equatable, Sendable {
     var progress: PlanProgress { PlanProgress(leaves: steps.flatMap(\.leaves)) }
 }
 
-/// Counts over leaf steps only, as `planProgress` in `@ruimte/plan` does: a parent is its children.
+/// Counts over leaf steps only, as `planProgress` in `@adecore/plan` does: a parent is its children.
 struct PlanProgress: Equatable, Sendable {
     var total = 0
     var counts: [PlanStepState: Int] = [:]
@@ -342,7 +342,7 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
         return result
     }
 
-    /// The plan as a GFM task list, as `planToMarkdown` in `@ruimte/plan` writes it: ids, who set a state and the
+    /// The plan as a GFM task list, as `planToMarkdown` in `@adecore/plan` writes it: ids, who set a state and the
     /// locks stay out.
     var markdown: String {
         var blocks = ["# \(title)"]

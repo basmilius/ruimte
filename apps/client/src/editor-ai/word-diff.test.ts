@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { replacedWords } from './word-diff';
+import { replacedWords } from '@adecore/editor-react/models';
 
 describe('the words a change replaced', () => {
     test('marks the word that differs and nothing around it', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitBlameCommit } from '@ruimte/contracts';
-import { UNCOMMITTED, authorsText, authorshipOf, mapBlame, shortName } from './code-authors';
+import { UNCOMMITTED, authorsText, authorshipOf, mapBlame, shortName } from '@adecore/editor-react/models';
 
 const commit = (author: string, at: number, summary = 'Change'): GitBlameCommit => ({
     hash: `${author}${at}`.padEnd(40, '0'),

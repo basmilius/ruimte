@@ -4,7 +4,7 @@ import { endpointKey } from '@/state/keys';
 import { textDrafts } from '@/state/text-drafts';
 import { useToasts } from '@/state/toasts';
 import type { Transport } from '@/transport/transport';
-import type { ProjectFiles, StagedFile } from './workspace-edit';
+import type { ProjectFiles, StagedFile } from '@adecore/editor-react';
 
 /* How many files a toast names before it says how many more there are. */
 const NAMED_FILES = 3;

@@ -10,7 +10,7 @@ import { basenameOf } from '@/shell/panels/files-tree';
 import { InlineAgentPicker } from './InlineAgentPicker';
 import type { InlineEditFeature, InlinePrompt } from './inline-edit';
 import { problemChips, problemDetail, problemLabel } from './inline-edit-layout';
-import type { InlineProblem } from './inline-edit-model';
+import type { InlineProblem } from '@adecore/editor-react/models';
 
 const SEVERITY_ICONS = { error: CircleX, warning: TriangleAlert, info: Info, hint: Info } as const;
 const SEVERITY_TONES = { error: 'text-status-error', warning: 'text-status-needs-you', info: 'text-text-muted', hint: 'text-text-muted' } as const;

@@ -50,8 +50,7 @@ function lineOf(text: string, offset: number): number {
 const KEY_LISTENERS: Record<string, string> = {
     'shell/app-shortcuts.ts': "the window's own shortcuts, bound once",
     'canvas/canvas-shortcuts.ts': 'what acts on the project, bound once by the workspace',
-    'drawing/use-drawing-keys.ts': "a drawing view's bare tool keys, the one exception the product rules allow, and only while that drawing has the keyboard",
-    'language/definition-link.ts': 'no shortcut: whether the modifier is down, which underlines the name under a resting pointer and no key acts on'
+    'drawing/use-drawing-keys.ts': "a drawing view's bare tool keys, the one exception the product rules allow, and only while that drawing has the keyboard"
 };
 
 /* Where the app may build on `Intl` itself rather than on `@adecore/ui/format`, and why there. */

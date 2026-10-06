@@ -12,7 +12,7 @@ in the same file. A window downloads every namespace of its language before the 
 English beside it as the fallback, and never the words of a language nobody asked for.
 
 The chat, its prompt cards, the providers pane and the usage page carry their words in
-`@ruimte/agents-react` (`agent-chat`, `agent-prompts`, `agent-providers`, `agent-usage`), and the
+`@adecore/agents-react` (`agent-chat`, `agent-prompts`, `agent-providers`, `agent-usage`), and the
 components of `@adecore/ui` in `ui`, which `UIProvider` adds in every language the library
 ships. Both are loaded beside these files. The same rules hold in the chat's words; the library's
 change in its own repository.

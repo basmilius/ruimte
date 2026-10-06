@@ -3952,7 +3952,7 @@ public struct ProjectCanvasDefaultsLayoutsItemTextsValue: Codable, Sendable, Equ
 }
 
 public extension PlanStepState {
-    /// The marker of this state, as `PLAN_STATE_MARKERS` in `@ruimte/plan` writes it.
+    /// The marker of this state, as `PLAN_STATE_MARKERS` in `@adecore/plan` writes it.
     var marker: String {
         switch self {
         case .open: "[ ]"

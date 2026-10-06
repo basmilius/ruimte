@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { DocumentSymbol } from '@adecore/lsp';
-import { declarationsOf, startAfterComments, usagesText, type DeclarationSource } from './code-vision-model';
+import { declarationsOf, startAfterComments, usagesText, type DeclarationSource } from '@adecore/editor-react/models';
 
 const at = (line: number, character = 0) => ({ line, character });
 

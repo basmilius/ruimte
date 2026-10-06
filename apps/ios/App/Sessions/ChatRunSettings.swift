@@ -43,7 +43,7 @@ enum ChatRuntimeMode {
     }
 }
 
-/// What a chat's context holds, as `context-usage.ts` in `@ruimte/agents-react` reads `info.usage`.
+/// What a chat's context holds, as `context-usage.ts` in `@adecore/agents-react` reads `info.usage`.
 struct ChatContextUsage: Equatable {
     enum Part: String, CaseIterable {
         case toolOutput, filesRead, conversation, system
