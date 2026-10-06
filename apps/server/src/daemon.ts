@@ -110,8 +110,11 @@ import { readServedFile } from './fs/read.ts';
 import { registerGitHandlers } from './handlers/git.ts';
 import { registerDiagramHandlers } from './handlers/diagram.ts';
 import { registerDatabaseHandlers } from './handlers/database.ts';
-import { DatabaseConnectionStore } from './database/connection-store.ts';
+import { DatabaseConnectionStore, hasDatabaseConnections } from './database/connection-store.ts';
 import { DatabaseService } from './database/database-service.ts';
+import { DatabaseAccessStore } from './database/agent-access.ts';
+import { AgentDatabases } from './database/agent-databases.ts';
+import { DatabasePasswords } from './database/agent-passwords.ts';
 import { registerLaunchHandlers } from './handlers/launches.ts';
 import { registerLanguageHandlers } from './handlers/language.ts';
 import { registerOnDeviceHandlers } from './handlers/ondevice.ts';
@@ -385,6 +388,10 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         depthOf: (chatId) => lineage.depthOf(chatId),
         computer: () => computer.usable,
         visualReplies: () => identity.visualReplies,
+        databases: (chatId) => {
+            const folder = projects.index.locate(chatId)?.folder;
+            return folder !== undefined && hasDatabaseConnections(folder);
+        },
         modeCeiling: (chatId) => lineage.ceilingOf(chatId),
         checkCwd: startCwd,
         contextSources: (chatId) => context.list(chatId),
@@ -424,6 +431,21 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     const projects = new ProjectStore(config.home);
     await projects.hiddenAgents.load();
     projects.attachTracked(isTrackedPath);
+    const machineHome = new MachineHome(config.home);
+    const databases = new DatabaseService({ machineHome });
+    const databaseConnections = new DatabaseConnectionStore({
+        projects: { folderOf: (projectId) => projects.index.folderOf(projectId), holdersOf: (projectId) => projects.holdersOf(projectId) }
+    });
+    const databaseAccess = new DatabaseAccessStore(config.home);
+    await databaseAccess.load();
+    const agentDatabases = new AgentDatabases({
+        service: databases,
+        connections: databaseConnections,
+        projects,
+        access: databaseAccess,
+        passwords: new DatabasePasswords(),
+        scratchFolder: projects.scratchFolder
+    });
     const outboxWiring = wireOutbox({
         link: outboxLink,
         outbox,
@@ -637,6 +659,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         requests: chatRequests(chats),
         computer,
         launches: agentLaunches(launchStore, launches, (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null)),
+        databases: agentDatabases,
         visuals: {
             enabled: () => identity.visualReplies,
             publish: (chatId: string, input: { title: string; html: string; maxHeight?: number; heights?: VisualHeight[] }) =>
@@ -869,7 +892,6 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         },
         disconnect: disconnectSession
     });
-    const machineHome = new MachineHome(config.home);
     const language = new LanguageHost({
         root: join(config.home, 'language-servers'),
         folderOf: (projectId) => projects.index.folderOf(projectId),
@@ -893,12 +915,13 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     chats.observe((event) => provenance.consume(event));
     projects.attachProvenance(provenance);
     registerProvenanceHandlers(dispatcher, provenance, machineHome);
-    const databases = new DatabaseService({ machineHome });
-    const databaseConnections = new DatabaseConnectionStore({
-        projects: { folderOf: (projectId) => projects.index.folderOf(projectId), holdersOf: (projectId) => projects.holdersOf(projectId) }
+    projects.attachDatabases({
+        closeProject: (projectId) => {
+            databaseConnections.closeProject(projectId);
+            agentDatabases.letGo(projectId);
+        }
     });
-    projects.attachDatabases(databaseConnections);
-    registerDatabaseHandlers(dispatcher, databases, databaseConnections);
+    registerDatabaseHandlers(dispatcher, databases, databaseConnections, agentDatabases);
     registerFsHandlers(
         dispatcher,
         folders,
@@ -1055,6 +1078,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         launches,
         databases,
         databaseConnections,
+        databaseAgents: agentDatabases,
         language,
         folders,
         statuses,
@@ -1347,6 +1371,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         launches.close();
         launchStore.closeAll();
         databaseConnections.closeAll();
+        agentDatabases.close();
         await step('Stopping the database helper', () => databases.dispose());
         await step('Stopping language servers', () => language.close());
         await step('Stopping the on-device helper', () => onDevice.dispose());

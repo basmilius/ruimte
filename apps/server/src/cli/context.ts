@@ -88,9 +88,11 @@ export async function runContext(args: string[], env: Environment = process.env,
     const argv =
         command === 'view' && args[1] === 'diagram'
             ? ['diagram', ...(await withStdinFlag(args.slice(2), 'document', stdin))]
-            : command === 'plan' && args[1] === 'new'
-              ? ['new', ...(await withStdinPlan(args.slice(2), stdin))]
-              : await withStdinText(args.slice(1), stdin);
+            : command === 'database' && (args[1] === 'query' || args[1] === 'execute')
+              ? [args[1], ...(await withStdinFlag(args.slice(2), 'sql', stdin))]
+              : command === 'plan' && args[1] === 'new'
+                ? ['new', ...(await withStdinPlan(args.slice(2), stdin))]
+                : await withStdinText(args.slice(1), stdin);
     return runVerb(canvasUrl, command, argv, headers, env);
 }
 
@@ -118,9 +120,10 @@ async function runVisualPage(
 }
 
 /*
- * `view diagram` takes its document and `visual show` and `visual preview` a page on stdin, which the
- * daemon never sees, so it travels as `--document` or `--html`. Not escaped the way `--text` is: the
- * daemon reads no escapes there. The flag already given means stdin is not the source, so it is left unread.
+ * `view diagram` takes its document, `visual show` and `visual preview` a page and `database query` and
+ * `database execute` their SQL on stdin, which the daemon never sees, so it travels as `--document`,
+ * `--html` or `--sql`. Not escaped the way `--text` is: the daemon reads no escapes there. The flag
+ * already given means stdin is not the source, so it is left unread.
  */
 async function withStdinFlag(argv: string[], flag: string, stdin: () => Promise<string>): Promise<string[]> {
     if (argv.some((word) => word === `--${flag}` || word.startsWith(`--${flag}=`))) {

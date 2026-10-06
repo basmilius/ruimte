@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
     DATABASES_VERSION,
@@ -180,6 +181,31 @@ export class DatabaseConnectionStore {
         return this.writes.run(async () => documentOf(await this.load(projectId, clientId)));
     }
 
+    /*
+     * The connections of a project for the daemon's own use, such as an agent of it, whoever holds
+     * it. A project nobody holds is read from its files as they are and is not watched.
+     */
+    connectionsOf(projectId: string): Promise<DatabaseConnection[]> {
+        return this.writes.run(async () => {
+            const known = this.loaded.get(projectId);
+            if (known) {
+                return documentOf(known).connections;
+            }
+            const folder = this.projects.folderOf(projectId);
+            if (folder === null) {
+                throw new DatabaseConnectionError('project-not-found', `No project ${projectId} on this machine`);
+            }
+            const state = emptyState(folder);
+            const [shared, own] = await Promise.all([
+                readConnectionsFile(sharedPathIn(folder), parseShared, false),
+                readConnectionsFile(privatePathIn(folder), parsePrivate, false)
+            ]);
+            takeShared(state, shared);
+            takePrivate(state, own);
+            return documentOf(state).connections;
+        });
+    }
+
     /* A person's save of the whole list; which connections are shared is theirs to say. */
     save(projectId: string, baseRev: number, connections: readonly DatabaseConnection[], clientId: string): Promise<DatabaseConnections> {
         return this.writes.run(async () => {
@@ -265,19 +291,7 @@ export class DatabaseConnectionStore {
         if (known) {
             return known;
         }
-        const state: LoadedConnections = {
-            folder,
-            rev: 0,
-            sharedText: '',
-            privateText: '',
-            shared: [],
-            sharedRest: {},
-            own: [],
-            privateRest: {},
-            order: [],
-            watchers: [],
-            settle: null
-        };
+        const state = emptyState(folder);
         const [shared, own] = await Promise.all([
             readConnectionsFile(sharedPathIn(folder), parseShared),
             readConnectionsFile(privatePathIn(folder), parsePrivate)
@@ -346,6 +360,27 @@ export class DatabaseConnectionStore {
             })
             .filter((watcher) => watcher !== null);
     }
+}
+
+function emptyState(folder: string): LoadedConnections {
+    return {
+        folder,
+        rev: 0,
+        sharedText: '',
+        privateText: '',
+        shared: [],
+        sharedRest: {},
+        own: [],
+        privateRest: {},
+        order: [],
+        watchers: [],
+        settle: null
+    };
+}
+
+/* Whether a project folder has a connections file at all, which is when its agents hear about `database`. */
+export function hasDatabaseConnections(folder: string): boolean {
+    return existsSync(sharedPathIn(folder)) || existsSync(privatePathIn(folder));
 }
 
 /* A file from a newer Ruimte is refused and left as it is, never set aside: a later release reads it. */

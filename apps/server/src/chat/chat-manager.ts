@@ -62,6 +62,8 @@ interface ChatManagerOptions extends ChatCoreOptions {
     computer?: () => boolean;
     // Whether an agent may show a page above its reply, read when a chat's CLI starts.
     visualReplies?: () => boolean;
+    // Whether the chat's project has database connections, read when a chat's CLI starts.
+    databases?: (chatId: string) => boolean;
     // A client may create an agent chat before the outbox starts it; the explicit model still wins.
     openingSelection?: (chatId: string, provider: AgentKind) => ModelSelection | undefined;
     // The sources themselves, so a chat can name them to its agent and tell it what came and went between turns.
@@ -198,6 +200,7 @@ export class ChatManager extends ChatCore {
     private readonly standalone: (chatId: string) => boolean;
     private readonly computer: () => boolean;
     private readonly visualReplies: () => boolean;
+    private readonly databases: (chatId: string) => boolean;
     private readonly opening: NonNullable<ChatManagerOptions['openingSelection']>;
     private readonly contextSources: (chatId: string) => ContextSource[];
     private readonly chatTitle: (chatId: string, id: string) => string | null;
@@ -225,6 +228,7 @@ export class ChatManager extends ChatCore {
         this.standalone = options.standalone ?? (() => false);
         this.computer = options.computer ?? (() => false);
         this.visualReplies = options.visualReplies ?? (() => false);
+        this.databases = options.databases ?? (() => false);
         this.opening = options.openingSelection ?? (() => undefined);
         this.contextSources = options.contextSources ?? (() => []);
         this.chatTitle = options.chatTitle ?? (() => null);
@@ -457,7 +461,8 @@ export class ChatManager extends ChatCore {
             standalone: this.standalone(chatId),
             computer: this.computer(),
             // An inline edit answers with one replacement block, which a page above it would only contradict.
-            visuals: this.visualReplies() && !this.inlineChat(chatId)
+            visuals: this.visualReplies() && !this.inlineChat(chatId),
+            databases: !this.inlineChat(chatId) && this.databases(chatId)
         });
     }
 

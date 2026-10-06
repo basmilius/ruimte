@@ -2,8 +2,13 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { DatabaseResponse } from '@adecore/database/protocol';
+import type { DatabaseConnection } from '@ruimte/contracts';
+import type { Cell, DatabaseResponse } from '@adecore/database/protocol';
+import { CodedError } from '@adecore/agents/coded-error';
 import { MachineHome } from '../fs/machine-home.ts';
+import { DatabaseAccessStore } from './agent-access.ts';
+import { AgentDatabases, type DatabasePlace } from './agent-databases.ts';
+import { DatabasePasswords } from './agent-passwords.ts';
 import { DatabaseService, databaseHelperPath } from './database-service.ts';
 
 /*
@@ -26,6 +31,35 @@ async function ok<T>(response: Promise<DatabaseResponse>): Promise<T> {
         throw new Error(`${answered.error.code}: ${answered.error.message}`);
     }
     return answered.result as T;
+}
+
+/* The agents' door over the real helper, for one project whose connections are these. */
+async function agentDatabases(service: DatabaseService, home: string, connections: DatabaseConnection[]) {
+    const access = new DatabaseAccessStore(home);
+    await access.load();
+    const passwords = new DatabasePasswords();
+    const agents = new AgentDatabases({
+        service,
+        connections: { connectionsOf: async () => connections },
+        projects: { holdersOf: () => ['client-1'] },
+        access,
+        passwords,
+        scratchFolder: join(home, 'scratch')
+    });
+    return { agents, access };
+}
+
+/* The code an agent's call is refused with, or null when it went through. */
+async function refusedWith(work: Promise<unknown>): Promise<string | null> {
+    try {
+        await work;
+        return null;
+    } catch (e) {
+        if (e instanceof CodedError) {
+            return e.code;
+        }
+        throw e;
+    }
 }
 
 describe.skipIf(databaseHelperPath() === null)('the database helper on SQLite', () => {
@@ -106,6 +140,45 @@ describe.skipIf(databaseHelperPath() === null)('the database helper on SQLite', 
         expect(response).toMatchObject({ ok: false, error: { code: 'forbidden' } });
     });
 
+    test('an agent reads through a read-only session and writes only where a person allowed it', async () => {
+        const project = join(root, 'project');
+        await mkdir(project, { recursive: true });
+        const file = join(project, 'agent.sqlite');
+        const { session } = await ok<{ session: string }>(
+            call(service, 'client-9', 'open', { connection: { engine: 'sqlite', path: file, create: true } }, true)
+        );
+        await ok(
+            call(service, 'client-9', 'execute', {
+                session,
+                sql: 'CREATE TABLE orders (id INTEGER PRIMARY KEY, total REAL NOT NULL); INSERT INTO orders (total) VALUES (500), (1500), (2500), (750);'
+            })
+        );
+        await service.release('client-9');
+        const place: DatabasePlace = { projectId: 'p1', folder: project };
+        const { agents, access } = await agentDatabases(service, home, [{ id: 'shop', name: 'Shop', shared: false, config: { engine: 'sqlite', path: file } }]);
+
+        const query = await agents.query(place, 'chat-1', 'shop', 'SELECT id, total FROM orders WHERE total > 1000 ORDER BY id DESC', {
+            schema: null,
+            limit: 10
+        });
+        expect(query.result.rows).toEqual([
+            [3, 2500],
+            [2, 1500]
+        ]);
+        expect(await refusedWith(agents.query(place, 'chat-1', 'shop', 'DELETE FROM orders', { schema: null, limit: 10 }))).toBe('unsupported');
+        expect(
+            await refusedWith(agents.query(place, 'chat-1', 'shop', 'WITH gone AS (SELECT 1) DELETE FROM orders', { schema: null, limit: 10 }))
+        ).not.toBeNull();
+        expect(await refusedWith(agents.execute(place, 'chat-1', 'shop', 'DELETE FROM orders', null))).toBe('database-write-off');
+        expect((await agents.query(place, 'chat-1', 'shop', 'SELECT COUNT(*) AS n FROM orders', { schema: null, limit: 1 })).result.rows).toEqual([[4]]);
+
+        await access.set('p1', 'shop', 'write');
+        const executed = await agents.execute(place, 'chat-1', 'shop', 'DELETE FROM orders WHERE total < 1000; SELECT COUNT(*) AS n FROM orders', null);
+        expect(executed.results.map((result) => result.kind)).toEqual(['done', 'rows']);
+        expect(executed.results[0]).toMatchObject({ affected: 2 });
+        expect(executed.results[1]).toMatchObject({ rows: [[2]] });
+    });
+
     test('a released client has no session left', async () => {
         const { session } = await ok<{ session: string }>(call(service, 'client-3', 'open', { connection: { engine: 'sqlite', path } }));
         await service.release('client-3');
@@ -168,6 +241,47 @@ describe.skipIf(!MYSQL_URL || databaseHelperPath() === null)('the database helpe
         expect(rows).toEqual([[2, 'second']]);
         const { count } = await ok<{ count: number }>(call(service, 'client-1', 'count', { session, schema: database, table }));
         expect(count).toBe(1);
+    });
+
+    test('an agent finds the last orders over 1000 with the password a client handed over, and writes only where allowed', async () => {
+        const home = join(root, 'agent-home');
+        const config = { engine: 'mysql' as const, host: url.hostname, port: Number(url.port || 3306), user: account.user, database };
+        const place: DatabasePlace = { projectId: 'p1', folder: root };
+        const { agents, access } = await agentDatabases(service, home, [{ id: 'db', name: 'Test database', shared: true, config }]);
+
+        if (account.password !== '') {
+            expect(await refusedWith(agents.tables(place, 'chat-1', 'db', null))).toBe('database-locked');
+            await agents.handPasswords('p1', 'client-1', { db: account.password });
+        }
+        const listed = await agents.tables(place, 'chat-1', 'db', null);
+        expect(listed.tables.map((table) => table.name)).toContain('orders');
+
+        const sql = 'SELECT id, total, placed_at FROM orders WHERE total > 1000 ORDER BY placed_at DESC';
+        const query = await agents.query(place, 'chat-1', 'db', sql, { schema: null, limit: 10 });
+        const direct = await ok<{ results: { rows: Cell[][] }[] }>(call(service, 'client-1', 'execute', { session, sql: `${sql} LIMIT 10` }));
+        expect(query.result.rows).toEqual(direct.results[0]!.rows);
+        expect(query.result.rows).toHaveLength(10);
+        expect(query.result.hasMore).toBe(true);
+        expect(query.result.rows.every((row) => Number(row[1]) > 1000)).toBe(true);
+
+        expect(await refusedWith(agents.query(place, 'chat-1', 'db', `DROP TABLE \`${table}\``, { schema: null, limit: 10 }))).toBe('unsupported');
+        const own = `${table}_agent`;
+        expect(await refusedWith(agents.execute(place, 'chat-1', 'db', `CREATE TABLE \`${own}\` (id INT PRIMARY KEY)`, null))).toBe('database-write-off');
+
+        await access.set('p1', 'db', 'write');
+        try {
+            const executed = await agents.execute(
+                place,
+                'chat-1',
+                'db',
+                `CREATE TABLE \`${own}\` (id INT PRIMARY KEY); INSERT INTO \`${own}\` VALUES (1), (2); SELECT COUNT(*) AS n FROM \`${own}\``,
+                null
+            );
+            expect(executed.results.map((result) => result.kind)).toEqual(['done', 'done', 'rows']);
+            expect(executed.results[1]).toMatchObject({ affected: 2 });
+        } finally {
+            await agents.execute(place, 'chat-1', 'db', `DROP TABLE IF EXISTS \`${own}\``, null);
+        }
     });
 
     test('finds the container that serves the server and reaches it through a Docker tunnel', async () => {

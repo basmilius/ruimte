@@ -60,6 +60,8 @@ export interface ConnectionServices {
     /* The database sessions a client opened, which close when it goes. */
     databases?: { release(clientId: string): Promise<void> };
     databaseConnections?: Subscribable;
+    /* What a person set for the agents of a project's databases, which every client that holds it hears. */
+    databaseAgents?: Subscribable;
     language?: Subscribable;
     folders: Attachable;
     statuses: Attachable;
@@ -136,6 +138,7 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
             services.launchStore?.subscribe(clientId, sink) ?? (() => undefined),
             services.launches?.subscribe(clientId, sink) ?? (() => undefined),
             services.databaseConnections?.subscribe(clientId, sink) ?? (() => undefined),
+            services.databaseAgents?.subscribe(clientId, sink) ?? (() => undefined),
             services.language?.subscribe(clientId, sink) ?? (() => undefined),
             services.folders.subscribe(clientId, sink),
             services.statuses.subscribe(clientId, sink),

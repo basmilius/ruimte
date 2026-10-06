@@ -52,30 +52,39 @@ async function callerChat({ host, place }: ServerActionContext, caller: string):
     return caller;
 }
 
-export const visualActions: ActionHandlers<ServerActionContext> = {
-    'visual.show': async ({ title, html, maxHeight }, { actor, context }) => {
-        const visuals = visualsOf(context);
-        const chatId = await callerChat(context, actor.id);
-        requireEnabled(visuals);
-        const heights = renderable(html) ? await visuals.measure?.(html) : undefined;
-        try {
-            return {
-                output: {
-                    visual: await visuals.publish(chatId, {
-                        title,
-                        html,
-                        ...(maxHeight === null ? {} : { maxHeight }),
-                        ...(heights === undefined ? {} : { heights })
-                    })
-                }
-            };
-        } catch (e) {
-            if (e instanceof CodedError && STORE_REFUSALS.has(e.code)) {
-                throw new VerbRefusal(e.code, e.message, [HELP_LINE]);
-            }
-            throw e;
+/*
+ * Shows a page above the caller's reply: only in an AI chat, only while the machine lets agents show
+ * visuals, and within what the store takes. `visual show` and any action that draws a page of its
+ * own, such as the table of a database query, go through here.
+ */
+export async function showVisual(
+    context: ServerActionContext,
+    caller: string,
+    input: { title: string; html: string; maxHeight: number | null }
+): Promise<ChatVisual> {
+    const visuals = visualsOf(context);
+    const chatId = await callerChat(context, caller);
+    requireEnabled(visuals);
+    const heights = renderable(input.html) ? await visuals.measure?.(input.html) : undefined;
+    try {
+        return await visuals.publish(chatId, {
+            title: input.title,
+            html: input.html,
+            ...(input.maxHeight === null ? {} : { maxHeight: input.maxHeight }),
+            ...(heights === undefined ? {} : { heights })
+        });
+    } catch (e) {
+        if (e instanceof CodedError && STORE_REFUSALS.has(e.code)) {
+            throw new VerbRefusal(e.code, e.message, [HELP_LINE]);
         }
-    },
+        throw e;
+    }
+}
+
+export const visualActions: ActionHandlers<ServerActionContext> = {
+    'visual.show': async ({ title, html, maxHeight }, { actor, context }) => ({
+        output: { visual: await showVisual(context, actor.id, { title, html, maxHeight }) }
+    }),
     'visual.preview': async ({ html, width, appearance }, { actor, context }) => {
         const visuals = visualsOf(context);
         await callerChat(context, actor.id);

@@ -9,6 +9,7 @@ import { answerVerb } from './answer-verb.ts';
 import { arrangeAction } from './arrange-verb.ts';
 import { BROWSER_ACTIONS, BROWSER_DETAIL, BROWSER_SUMMARY } from './browser-verb.ts';
 import { COMPUTER_ACTIONS, COMPUTER_DETAIL, COMPUTER_SUMMARY } from './computer-verb.ts';
+import { DATABASE_ACTIONS, DATABASE_DETAIL, DATABASE_SUMMARY } from './database-verb.ts';
 import { DEVICE_ACTIONS, DEVICE_DETAIL, DEVICE_SUMMARY } from './device-verb.ts';
 import { diagramAction } from './diagram-verb.ts';
 import { flagVerb } from './flag-verb.ts';
@@ -151,6 +152,13 @@ const launchesNoun = defineNoun({
     actions: [...LAUNCHES_ACTIONS]
 });
 
+const databaseNoun = defineNoun({
+    name: 'database',
+    summary: DATABASE_SUMMARY,
+    detail: DATABASE_DETAIL,
+    actions: [...DATABASE_ACTIONS]
+});
+
 const taskNoun = defineNoun({
     name: 'task',
     summary:
@@ -185,6 +193,7 @@ export const VERBS: readonly VerbEntry[] = [
     worktreeVerb,
     operationVerb,
     launchesNoun,
+    databaseNoun,
     computerNoun
 ];
 

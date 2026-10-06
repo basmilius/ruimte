@@ -39,6 +39,11 @@ const COMPUTER_NOTE =
 export const VISUAL_NOTE =
     'When a chart, a table, a diagram, a collage of images or a mockup would say more than prose, show a self-contained HTML page above your reply with `ruimte-context visual show --title T < page.html` after checking it with `visual preview` (`ruimte-context help visual` has the rules), and let the reply add only what the page does not say.';
 
+/* Said only in a project with database connections: without it a model asked about the data reads the schema from migrations and guesses. */
+function databaseNote(visuals: boolean): string {
+    return `This project has databases: answer a question about its data with \`ruimte-context database\` (list, tables, describe, query), which reads with one SELECT or WITH statement on a read-only session${visuals ? ', and `query --show TITLE` shows the rows as a table above your reply' : ''}; \`ruimte-context help database\` has the rules.`;
+}
+
 /* Said only while a device node is linked in: without it a model asked to try an app reaches for a simulator of its own. */
 const DEVICE_NOTE =
     'A device node linked to you is a simulator or phone you operate with `ruimte-context device`: take a `shot`, act in its pixels with `tap`, `swipe` and `button`, and take the next shot to see what happened.';
@@ -49,13 +54,15 @@ export function verbsNote({
     standalone = false,
     computer = false,
     device = false,
-    visuals = false
+    visuals = false,
+    databases = false
 }: {
     depth: number;
     standalone?: boolean;
     computer?: boolean;
     device?: boolean;
     visuals?: boolean;
+    databases?: boolean;
 }): string {
     if (standalone) {
         return [
@@ -70,6 +77,7 @@ export function verbsNote({
             'For a note or drawing the person asks for in Ruimte, name its destination with --view.',
             ALERT_NOTE,
             ...(visuals ? [VISUAL_NOTE] : []),
+            ...(databases ? [databaseNote(visuals)] : []),
             ...(computer ? [COMPUTER_NOTE] : []),
             ...(device ? [DEVICE_NOTE] : []),
             'Ids in its output are for your commands; to the person, name things by their title, never by id.'
@@ -90,6 +98,9 @@ export function verbsNote({
     }
     if (visuals) {
         parts.push(VISUAL_NOTE);
+    }
+    if (databases) {
+        parts.push(databaseNote(visuals));
     }
     if (computer) {
         parts.push(COMPUTER_NOTE);
@@ -153,15 +164,17 @@ export function chatPrompt({
     depth,
     standalone,
     computer,
-    visuals
+    visuals,
+    databases
 }: {
     sources: ContextSource[];
     depth: number;
     standalone?: boolean;
     computer?: boolean;
     visuals?: boolean;
+    databases?: boolean;
 }): string {
-    const note = verbsNote({ depth, standalone, computer, device: linksDevice(sources), visuals });
+    const note = verbsNote({ depth, standalone, computer, device: linksDevice(sources), visuals, databases });
     const prompt = contextPrompt(sources);
     return prompt === null ? note : `${note} ${prompt}`;
 }
