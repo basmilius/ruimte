@@ -22,6 +22,16 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 - Native chat timeline, streaming, markdown/code highlighting, model options, drafts,
   attachments, context selection, approvals and questions. The composer styles Markdown
   while editing and shows selected files and skills as inline badges.
+- Visual replies: a page an agent shows above its reply (`visuals` on `chat.attach`, `chat.visuals`) stands in the
+  thread by its `at`, under a settled turn's fold above the answer, between the calls of a running turn and always
+  above Working. Each card is a `WKWebView` of its own as wide as the reply, starting at the height this phone saw
+  before, the machine measured or 240 points, then following the page; a taller page scrolls inside. The page loads
+  from memory under `ruimte-visual://` with the policy of the desktop's host page (`ChatVisualContract.swift`, generated
+  from `packages/csp` by `Scripts/generate-visual.ts`), so it runs on an opaque origin without files or storage and
+  its main frame never leaves. A script in a content world of the app's own reports the height and hands over the
+  links a person taps, which open in Safari. The page takes the app's colors and fonts from its address and follows
+  light and dark over a message. Open large shows it over the whole screen; Remove asks first and deletes it for every
+  device (`chat.removeVisual`).
 - Chats outside any project. New chat on the projects page (a menu of the machines when there are
   several) and on a machine's Projects page picks one of the machine's installed chat agents from `provider.list`,
   asks the machine for it with `project.newChat` and opens it; the machine hands back the chat of that
@@ -348,8 +358,9 @@ Then Appearance (theme, terminal font size), Agents, Files and Git (hidden files
   `provider.list` with their accounts from `accounts.list`: version, plan and email, or why an account cannot run. A
   signed-out account offers Sign in again where the machine names a login command, which runs the CLI's own login
   in a terminal there, as on the usage page. Defaults hold this phone's permission mode and a model per chat CLI,
-  the picks it already sends with `chat.setPreferences`, and the machine's own switches for resuming after a limit
-  and for agents deleting any view (`endpoint.setIdentity`, sending a name nobody chose as null so it stays unchosen).
+  the picks it already sends with `chat.setPreferences`, and the machine's own switches for resuming after a limit,
+  for agents deleting any view and for visual replies (`endpoint.setIdentity`, sending a name nobody chose as null so it
+  stays unchosen), each shown only where the machine reports it.
   Computer Use shows only its state (`computer.status`): turning it on and letting an agent into an app happens on
   the machine itself. Installing a CLI or adding an account does too.
 - Notifications and Live Activities: see below.
