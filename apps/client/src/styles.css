@@ -115,7 +115,7 @@
     --editor-selection: color-mix(in srgb, var(--accent) 16%, transparent);
     --editor-occurrence: color-mix(in srgb, var(--text) 7%, transparent);
     --editor-guide: color-mix(in srgb, var(--text) 5%, transparent);
-    --editor-guide-active: color-mix(in srgb, var(--text) 24%, transparent);
+    --editor-guide-active: var(--editor-guide);
     --editor-margin: color-mix(in srgb, var(--text) 14%, transparent);
     --editor-whitespace: color-mix(in srgb, var(--text) 30%, transparent);
     /* The diagonal lines of the bands that frame the block a peek draws between the lines. */
@@ -202,7 +202,7 @@
     --editor-selection: color-mix(in srgb, var(--accent) 28%, transparent);
     --editor-occurrence: color-mix(in srgb, var(--text) 9%, transparent);
     --editor-guide: color-mix(in srgb, var(--text) 6%, transparent);
-    --editor-guide-active: color-mix(in srgb, var(--text) 28%, transparent);
+    --editor-guide-active: var(--editor-guide);
     --editor-margin: color-mix(in srgb, var(--text) 16%, transparent);
     --editor-whitespace: color-mix(in srgb, var(--text) 32%, transparent);
     --editor-hatch: color-mix(in srgb, var(--text) 10%, transparent);
