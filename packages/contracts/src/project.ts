@@ -860,6 +860,8 @@ export const ProjectPanelsSchema = z.object({
     // The panel is the launches panel. A field of its own, since a new kind would break an older client
     // reading this file; `panel` still holds a kind it knows.
     launchesPanel: z.boolean().optional(),
+    // The panel is the databases panel, beside `panel` for the same reason as `launchesPanel`.
+    databasesPanel: z.boolean().optional(),
     // Whole pixels. Absent means the panel opens at the width the app picks for it.
     panelWidth: z.number().int().positive().optional(),
     // The plan the plan panel shows. Whether it is open follows from whether its chat is on screen, never from this file.
@@ -869,6 +871,8 @@ export const ProjectPanelsSchema = z.object({
     activeTab: z.string().nullable().optional(),
     // What the file tree had open, the way the tree names a directory: relative, POSIX, trailing slash.
     expandedDirs: z.array(z.string()).optional(),
+    // The tabs of the databases cell. The client reads each tab on its own, so a kind a newer release adds drops that tab and not the file.
+    databases: z.object({ tabs: z.array(z.unknown()), activeTab: z.string().nullable().optional() }).optional(),
     // The canvases the sidebar has folded open. Absent means the list has never been folded by hand.
     sidebarExpanded: z.array(z.string()).optional(),
     // The last favicon of every browser node, by node id, so a reload draws it before the page loads.

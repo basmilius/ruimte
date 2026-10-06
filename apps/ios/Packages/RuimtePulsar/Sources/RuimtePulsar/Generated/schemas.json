@@ -26052,6 +26052,9 @@
               "launchesPanel": {
                 "type": "boolean"
               },
+              "databasesPanel": {
+                "type": "boolean"
+              },
               "panelWidth": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
@@ -26151,6 +26154,24 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "databases": {
+                "type": "object",
+                "properties": {
+                  "tabs": {
+                    "type": "array",
+                    "items": {}
+                  },
+                  "activeTab": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "tabs"
+                ]
               },
               "sidebarExpanded": {
                 "type": "array",
@@ -29133,6 +29154,9 @@
               "launchesPanel": {
                 "type": "boolean"
               },
+              "databasesPanel": {
+                "type": "boolean"
+              },
               "panelWidth": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
@@ -29232,6 +29256,24 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "databases": {
+                "type": "object",
+                "properties": {
+                  "tabs": {
+                    "type": "array",
+                    "items": {}
+                  },
+                  "activeTab": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "tabs"
+                ]
               },
               "sidebarExpanded": {
                 "type": "array",
