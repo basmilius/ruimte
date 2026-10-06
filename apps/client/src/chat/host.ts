@@ -8,7 +8,8 @@ import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas/accents';
 import { searchFiles } from '@/chat/file-search';
 import { openLogin } from '@/chat/login';
-import { isApplePlatform } from '@/desktop/bridge';
+import { visualHostFor } from '@/chat/visuals';
+import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
 import { isScratchProject, useProject } from '@/state/project';
@@ -87,6 +88,7 @@ export function connectChatHost(): void {
                 return readResource((piece) => readPiece(transport, piece), { kind: 'attachment', chatId, attachmentId });
             }
         },
+        visuals: visualHostFor(window.location.origin, desktop, (url) => void window.open(url, '_blank', 'noopener,noreferrer')),
         code: {
             useMode: () => useTheme((s) => s.resolved),
             useThemes: () => ({ light: useSettings((s) => s.codeThemeLight), dark: useSettings((s) => s.codeThemeDark) }),
