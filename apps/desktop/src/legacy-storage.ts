@@ -1,7 +1,7 @@
 import { existsSync, writeFileSync } from 'node:fs';
 import { DESKTOP_APP_ORIGIN } from '@ruimte/contracts';
 import { BrowserWindow, net, session } from 'electron';
-import { STORAGE_MOVE_PATH } from './app-files';
+import { STORAGE_MOVE_PATH } from './app-scheme';
 
 /*
  * Once per profile: the page kept its `localStorage` under `http://127.0.0.1:<port>` while the daemon

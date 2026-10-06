@@ -5,8 +5,8 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { Socket } from 'node:net';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { buildIdentityOf, DESKTOP_APP_ORIGIN, DESKTOP_APP_SCHEME, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
-import { registerAppScheme, serveAppScheme } from './app-protocol';
+import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
+import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
 import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
 import { moveLegacyStorage } from './legacy-storage';
 import {
@@ -45,11 +45,9 @@ import { SpeechModel } from './speech-model';
 import {
     allowGuestPermission,
     appSubframeNavigation,
-    appWindowNavigation,
     BROWSER_PARTITION,
     createGestureGate,
     hardenGuestPreferences,
-    isAppSender,
     isExternalLink,
     isSystemSettingsPane,
     PREVIEW_PARTITION
@@ -68,6 +66,7 @@ const {
     net,
     powerMonitor,
     powerSaveBlocker,
+    protocol,
     safeStorage,
     screen,
     session,
@@ -102,13 +101,11 @@ const port = Number(process.env.RUIMTE_PORT ?? DEFAULT_PORT);
 const ruimteHome = app.isPackaged ? (process.env.RUIMTE_HOME ?? join(homedir(), '.ruimte')) : (process.env.RUIMTE_DEV_HOME ?? join(homedir(), '.ruimte-dev'));
 
 // The page is the shell's own, from the build in its resources; only `bun dev` serves it from Vite.
-const appUrl = devUrl ?? `${DESKTOP_APP_ORIGIN}/`;
-const appOrigin = devUrl ? new URL(devUrl).origin : DESKTOP_APP_ORIGIN;
-const APP_SCHEMES = [DESKTOP_APP_SCHEME];
+const scheme = createDesktopAppScheme(clientRoot(), devUrl ?? undefined);
 // What the page reaches its own machine at, now that it is not served from there.
 const daemonUrl = `http://127.0.0.1:${port}`;
 
-registerAppScheme();
+protocol.registerSchemesAsPrivileged([scheme.privileged]);
 
 let daemon: ChildProcess | null = null;
 const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
@@ -118,7 +115,7 @@ const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
  * only talks to its host), but a page the window was navigated to would inherit the bridge.
  */
 function fromAppWindow(event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): boolean {
-    return isAppSender(windows.fromPage(event.sender) !== null, event.senderFrame, appOrigin, APP_SCHEMES);
+    return scheme.isAppSender(windows.fromPage(event.sender) !== null, event.senderFrame);
 }
 
 /* The window whose page a message came from, which is where its dialog, its sheet and its answer belong. */
@@ -450,7 +447,7 @@ function routePreviewLinks(contents: Electron.WebContents): void {
 /* Nothing but the app loads in its window: a dropped link or file would otherwise take the bridge with it. */
 function guardAppNavigation(contents: Electron.WebContents): void {
     contents.on('will-navigate', (event) => {
-        const verdict = appWindowNavigation(event.url, appOrigin, APP_SCHEMES);
+        const verdict = scheme.navigation(event.url);
         if (verdict === 'allow') {
             return;
         }
@@ -461,14 +458,14 @@ function guardAppNavigation(contents: Electron.WebContents): void {
     });
     // Nobody chose where a redirect goes, so one that leaves the app only stops.
     contents.on('will-redirect', (event) => {
-        const verdict = event.isMainFrame ? appWindowNavigation(event.url, appOrigin, APP_SCHEMES) : appSubframeNavigation(event.url, appOrigin, APP_SCHEMES);
+        const verdict = event.isMainFrame ? scheme.navigation(event.url) : appSubframeNavigation(event.url, scheme.isAppUrl);
         if (verdict !== 'allow') {
             event.preventDefault();
         }
     });
     // The main frame is `will-navigate`'s, which is the one that may hand a link to the system browser.
     contents.on('will-frame-navigate', (event) => {
-        if (!event.isMainFrame && appSubframeNavigation(event.url, appOrigin, APP_SCHEMES) !== 'allow') {
+        if (!event.isMainFrame && appSubframeNavigation(event.url, scheme.isAppUrl) !== 'allow') {
             event.preventDefault();
         }
     });
@@ -684,7 +681,7 @@ function createWindow(
         }
     });
     // The smoke run opens its one window the way a start without a session does.
-    void window.loadURL(windowUrl(appUrl, key, origin === 'first' || smoke, view)).catch(() => undefined);
+    void window.loadURL(windowUrl(scheme.url, key, origin === 'first' || smoke, view)).catch(() => undefined);
     return window;
 }
 
@@ -1407,7 +1404,7 @@ async function runSmoke(window: Electron.BrowserWindow): Promise<void> {
     }
     await window.webContents.executeJavaScript(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', altKey: true, bubbles: true }))`);
     await wait(500);
-    const target = appUrl;
+    const target = scheme.url;
     await window.webContents.executeJavaScript(
         `(() => { const ids = window.ruimte?.nodeIds() ?? []; const id = ids[ids.length - 1]; if (id) { window.ruimte.browserNavigate(id, ${JSON.stringify(target)}); } })()`
     );
@@ -1451,7 +1448,7 @@ if (!app.requestSingleInstanceLock()) {
 
     void app.whenReady().then(async () => {
         setStaticMenu();
-        serveAppScheme(clientRoot());
+        protocol.handle(scheme.scheme, (request) => answerAppRequest(scheme, request));
         sealAppSession();
         sealPreviewSession();
         sealBrowserSession();

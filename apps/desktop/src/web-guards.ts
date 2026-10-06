@@ -1,4 +1,4 @@
-import { isAppUrl, type NavigationVerdict } from '@adecore/shell';
+import type { NavigationVerdict } from '@adecore/shell';
 
 /*
  * What the shell lets a page do, as pure decisions, so `main.ts` only wires them to Electron's events.
@@ -24,8 +24,8 @@ export function isSystemSettingsPane(url: string): boolean {
 }
 
 /* A frame inside the app's page never leaves for the system browser: nobody chose that link. */
-export function appSubframeNavigation(url: string, appOrigin: string, schemes: readonly string[] = []): NavigationVerdict {
-    return isAppUrl(url, appOrigin, [...schemes]) || url === 'about:blank' || url === 'about:srcdoc' ? 'allow' : 'refuse';
+export function appSubframeNavigation(url: string, isAppUrl: (url: string) => boolean): NavigationVerdict {
+    return isAppUrl(url) || url === 'about:blank' || url === 'about:srcdoc' ? 'allow' : 'refuse';
 }
 
 // TODO(Bas): media, location and notifications through a prompt per origin in the client, once that exists.

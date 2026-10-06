@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { createDesktopAppScheme } from './app-scheme';
 import {
     allowGuestPermission,
     appSubframeNavigation,
@@ -8,7 +9,7 @@ import {
     type GuestWebPreferences
 } from './web-guards';
 
-const APP = 'http://127.0.0.1:4210';
+const APP = createDesktopAppScheme('/client', 'http://127.0.0.1:4210').isAppUrl;
 
 describe('appSubframeNavigation', () => {
     test('a frame inside the app stays on the app or on an empty document', () => {
