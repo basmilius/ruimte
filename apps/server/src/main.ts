@@ -32,6 +32,10 @@ if (arguments_[0] === 'device-helper') {
     const { runDeviceHelper } = await import('./devices/native-helper.ts');
     process.exit(await runDeviceHelper(deviceId));
 }
+if (arguments_[0] === 'visual-render') {
+    const { runRenderChild } = await import('./visuals/render-child.ts');
+    process.exit(await runRenderChild());
+}
 
 const config = parseServerArgs(arguments_);
 
