@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DESKTOP_APP_ORIGIN } from '@ruimte/contracts';
+import { DESKTOP_APP_ORIGIN, VISUAL_HOST_PAGE } from '@ruimte/contracts';
+import { VISUAL_HOST_CSP, VISUAL_HOST_PATH } from '@ruimte/csp';
 import { answerAppRequest, createDesktopAppScheme, STORAGE_MOVE_PATH } from './app-scheme';
 
 let root: string;
@@ -74,6 +75,21 @@ describe('the shared app scheme in Ruimte', () => {
         expect(await blank.text()).toBe('<!doctype html><title>Ruimte</title>');
         expect(blank.headers.get('content-security-policy')).toBeNull();
         expect((await request(`app://elsewhere${STORAGE_MOVE_PATH}`)).status).toBe(404);
+    });
+
+    test('answers the host page of a visual under its own policy, never the client', async () => {
+        const host = await request(`${DESKTOP_APP_ORIGIN}${VISUAL_HOST_PATH}`);
+        expect(host.status).toBe(200);
+        expect(await host.text()).toBe(VISUAL_HOST_PAGE);
+        expect(host.headers.get('content-type')).toBe('text/html; charset=utf-8');
+        expect(host.headers.get('content-security-policy')).toBe(VISUAL_HOST_CSP);
+        expect(host.headers.get('x-content-type-options')).toBe('nosniff');
+        expect(host.headers.get('cache-control')).toBe('no-cache');
+        expect(host.headers.get('x-frame-options')).toBeNull();
+        expect((await request(`app://elsewhere${VISUAL_HOST_PATH}`)).status).toBe(404);
+        const beside = await request(`${DESKTOP_APP_ORIGIN}/__visual/other`);
+        expect(await beside.text()).toContain('<title>Ruimte</title>');
+        expect(beside.headers.get('content-security-policy')).toContain("default-src 'self'");
     });
 
     test('binds packaged navigation and IPC to the registered app origin', () => {

@@ -39,6 +39,7 @@
         "@pierre/trees": "1.0.0-beta.6",
         "@ruimte/actions": "workspace:*",
         "@ruimte/contracts": "workspace:*",
+        "@ruimte/csp": "workspace:*",
         "@ruimte/desktop-bridge": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@tanstack/react-virtual": "^3.14.13",

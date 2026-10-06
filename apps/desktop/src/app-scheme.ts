@@ -1,6 +1,6 @@
 import { createAppScheme, type AppScheme } from '@adecore/shell';
-import { DESKTOP_APP_ORIGIN, DESKTOP_APP_SCHEME } from '@ruimte/contracts';
-import { cspString } from '@ruimte/csp';
+import { DESKTOP_APP_ORIGIN, DESKTOP_APP_SCHEME, VISUAL_HOST_PAGE } from '@ruimte/contracts';
+import { cspString, VISUAL_HOST_HEADERS, VISUAL_HOST_PATH } from '@ruimte/csp';
 
 export const STORAGE_MOVE_PATH = '/__ruimte-storage';
 
@@ -19,6 +19,9 @@ export function answerAppRequest(scheme: AppScheme, request: Request): Promise<R
     if (scheme.originOf(request.url) === DESKTOP_APP_ORIGIN && url.pathname === STORAGE_MOVE_PATH) {
         // The storage move writes through executeJavaScript without booting the client or its policy.
         return new Response('<!doctype html><title>Ruimte</title>', { headers: { 'content-type': 'text/html; charset=utf-8' } });
+    }
+    if (scheme.originOf(request.url) === DESKTOP_APP_ORIGIN && url.pathname === VISUAL_HOST_PATH) {
+        return new Response(VISUAL_HOST_PAGE, { headers: VISUAL_HOST_HEADERS });
     }
     return scheme.handle(request);
 }

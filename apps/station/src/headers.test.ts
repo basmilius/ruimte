@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { VISUAL_HOST_CSP, VISUAL_HOST_PATH } from '@ruimte/csp';
 import { CONTENT_SECURITY_POLICY, notFoundForMissingAsset, withSecurityHeaders } from './headers';
 
 function directive(name: string): string[] {
@@ -54,5 +55,24 @@ describe('the station headers', () => {
         expect(notFoundForMissingAsset(page(), '/pulsar/callback').status).toBe(200);
         const chunk = new Response('x', { headers: { 'content-type': 'text/javascript' } });
         expect(notFoundForMissingAsset(chunk, '/assets/index-abc123.js')).toBe(chunk);
+    });
+
+    test('the host page of a visual is answered under its own policy, and the client may frame it', () => {
+        const host = withSecurityHeaders(new Response('<!doctype html>', { headers: { 'content-type': 'text/html' } }), VISUAL_HOST_PATH);
+        expect(host.headers.get('content-security-policy')).toBe(VISUAL_HOST_CSP);
+        expect(host.headers.get('x-frame-options')).toBeNull();
+        expect(host.headers.get('x-content-type-options')).toBe('nosniff');
+        expect(host.headers.get('content-type')).toBe('text/html; charset=utf-8');
+        expect(host.headers.get('cache-control')).toBe('no-cache');
+        expect(host.headers.get('strict-transport-security')).toContain('max-age=63072000');
+        expect(host.headers.get('referrer-policy')).toBe('no-referrer');
+    });
+
+    test('every other path keeps the denial of every frame', () => {
+        for (const path of ['/', '/__visual', '/__visual/index.html', '/__visual/other', '/assets/index-abc123.js']) {
+            const answer = withSecurityHeaders(new Response('x'), path);
+            expect(answer.headers.get('x-frame-options')).toBe('DENY');
+            expect(answer.headers.get('content-security-policy')).toBe(CONTENT_SECURITY_POLICY);
+        }
     });
 });

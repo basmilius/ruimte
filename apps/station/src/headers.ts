@@ -1,4 +1,4 @@
-import { cspString } from '@ruimte/csp';
+import { cspString, VISUAL_HOST_HEADERS, VISUAL_HOST_PATH } from '@ruimte/csp';
 
 /*
  * The client's policy, tightened for a page on the public web. A daemon serves a paired host that
@@ -28,16 +28,26 @@ export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
 };
 
 /*
+ * The sandbox host page of a visual, which the client's build writes at its path, under a policy of
+ * its own: the page is framed by the client, so the denial of every frame stays with the other answers.
+ */
+const VISUAL_HOST_SECURITY_HEADERS: Readonly<Record<string, string>> = {
+    ...Object.fromEntries(Object.entries(SECURITY_HEADERS).filter(([name]) => name !== 'x-frame-options')),
+    ...VISUAL_HOST_HEADERS
+};
+
+/*
  * Every answer with the headers above. Vite names what is under `/assets/` after its content, so those
  * never change and are cached for a year; everything else (the page, the manifest) is asked for again,
  * so a deploy reaches a person on the next load.
  */
 export function withSecurityHeaders(response: Response, pathname: string): Response {
     const headers = new Headers(response.headers);
-    for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    const visualHost = pathname === VISUAL_HOST_PATH;
+    for (const [name, value] of Object.entries(visualHost ? VISUAL_HOST_SECURITY_HEADERS : SECURITY_HEADERS)) {
         headers.set(name, value);
     }
-    if (response.ok) {
+    if (response.ok && !visualHost) {
         headers.set('cache-control', pathname.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache');
     }
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers });

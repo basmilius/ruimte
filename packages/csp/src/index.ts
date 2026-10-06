@@ -2,8 +2,8 @@
  * The Content Security Policy the client runs under, as data. Three places serve the same page and
  * each wrote the policy out in full: the `<meta http-equiv>` in `apps/client/index.html` (which is
  * what covers the Vite dev server and an Electron window, since a window without one has no policy
- * at all and `eval` is free), the header the daemon sends with the client it serves, and the header
- * the station worker sends. The html cannot import, so a test holds its tag against this table.
+ * at all and `eval` is free), the header the desktop app's scheme sends, and the header the station
+ * worker sends. The html cannot import, so a test holds its tag against this table.
  */
 
 export type CspDirectives = Readonly<Record<string, readonly string[]>>;
@@ -13,12 +13,13 @@ export type CspDirectives = Readonly<Record<string, readonly string[]>>;
  * whatever address that machine reports and its broker whatever host a person picks, and its signals,
  * images, attachments and file bytes come over those. Shiki needs
  * WebAssembly and the UI libraries inject styles, which is what the other two exceptions are for.
+ * A frame only ever shows the sandbox host page of a visual, on the page's own origin.
  */
 export const CLIENT_CSP_DIRECTIVES = {
     'default-src': ["'self'"],
     'base-uri': ["'self'"],
     'object-src': ["'none'"],
-    'frame-src': ["'none'"],
+    'frame-src': ["'self'"],
     'script-src': ["'self'", "'wasm-unsafe-eval'"],
     'style-src': ["'self'", "'unsafe-inline'"],
     'img-src': ["'self'", 'data:', 'blob:', 'http:', 'https:'],
@@ -28,9 +29,55 @@ export const CLIENT_CSP_DIRECTIVES = {
     'worker-src': ["'self'", 'blob:']
 } satisfies CspDirectives;
 
-/* The policy as a header value. An override replaces a directive whole, and a name that is not in the table is added to the end. */
-export function cspString(overrides: CspDirectives = {}): string {
-    return Object.entries({ ...CLIENT_CSP_DIRECTIVES, ...overrides })
+function directivesString(directives: CspDirectives): string {
+    return Object.entries(directives)
         .map(([name, values]) => `${name} ${values.join(' ')}`)
         .join('; ');
 }
+
+/* The policy as a header value. An override replaces a directive whole, and a name that is not in the table is added to the end. */
+export function cspString(overrides: CspDirectives = {}): string {
+    return directivesString({ ...CLIENT_CSP_DIRECTIVES, ...overrides });
+}
+
+/*
+ * Where every server of the client answers the sandbox host page of a visual (`VISUAL_HOST_PAGE`):
+ * the Vite dev server, the desktop app's scheme and the station. It is on the client's own origin,
+ * since the frame's sandbox gives the page an opaque origin of its own.
+ */
+export const VISUAL_HOST_PATH = '/__visual/';
+
+/*
+ * An agent's page is written into the host page, so it runs under this policy and never under the
+ * client's. It runs its inline scripts and styles and loads public sources, which is how a chart
+ * library from a CDN works. Plain `http:` and `ws:` are left out: a secure page loads those only from
+ * the person's own computer (the daemon, a dev server), which is no public source. The sandbox repeats
+ * the frame's, so the page never gets the client's origin, also where something frames it without
+ * one, and only the client may frame it at all.
+ */
+export const VISUAL_HOST_CSP_DIRECTIVES = {
+    'default-src': ["'none'"],
+    'script-src': ["'unsafe-inline'", "'unsafe-eval'", 'https:', 'data:', 'blob:'],
+    'style-src': ["'unsafe-inline'", 'https:', 'data:'],
+    'img-src': ['https:', 'data:', 'blob:'],
+    'font-src': ['https:', 'data:'],
+    'media-src': ['https:', 'data:', 'blob:'],
+    'connect-src': ['https:', 'wss:', 'data:', 'blob:'],
+    'worker-src': ['blob:', 'data:'],
+    'frame-src': ['https:', 'data:', 'blob:'],
+    'form-action': ["'none'"],
+    'base-uri': ["'none'"],
+    'frame-ancestors': ["'self'"],
+    sandbox: ['allow-scripts', 'allow-forms']
+} satisfies CspDirectives;
+
+export const VISUAL_HOST_CSP = directivesString(VISUAL_HOST_CSP_DIRECTIVES);
+
+/* What every answer of the host page carries. No-cache, so a release that changes the page reaches a frame on its next load. */
+export const VISUAL_HOST_HEADERS: Readonly<Record<string, string>> = {
+    'content-type': 'text/html; charset=utf-8',
+    'content-security-policy': VISUAL_HOST_CSP,
+    'x-content-type-options': 'nosniff',
+    'referrer-policy': 'no-referrer',
+    'cache-control': 'no-cache'
+};

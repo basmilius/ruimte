@@ -28,6 +28,7 @@
         "@ruimte/actions": "workspace:*",
         "@adecore/agents-react": "0.17.0-beta.2",
         "@ruimte/contracts": "workspace:*",
+        "@ruimte/csp": "workspace:*",
         "@ruimte/desktop-bridge": "workspace:*",
         "@adecore/diagram": "0.17.0-beta.2",
         "@adecore/drawing": "0.17.0-beta.2",
