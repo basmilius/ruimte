@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { LanguageServerKind, LanguageRequestResult } from '@ruimte/contracts';
@@ -134,6 +134,12 @@ async function waitReady(kind: LanguageServerKind, projectId = 'p1'): Promise<vo
     );
 }
 
+/* The folder of the install a kind runs, as its `current.json` names it. */
+async function installFolder(kind: LanguageServerKind): Promise<string> {
+    const { current } = JSON.parse(await readFile(join(base, 'home', 'language-servers', kind, 'current.json'), 'utf8')) as { current: string };
+    return join(base, 'home', 'language-servers', kind, 'versions', current);
+}
+
 async function install(kind: LanguageServerKind): Promise<void> {
     if ((await host.status('p1')).find((status) => status.server === kind)?.state !== 'not-installed') {
         return;
@@ -262,7 +268,7 @@ describe('TypeScript, on the native server of TypeScript 7', () => {
         await host.open('c1', { projectId: 'p3', path: 'src/a.js', languageId: 'javascript', text });
         await waitReady('typescript', 'p3');
         const spec = specs.find((candidate) => candidate.cwd === lint && candidate.args.includes('--lsp'))!;
-        expect(spec.command).toContain(join(base, 'home', 'language-servers', 'typescript', 'node_modules'));
+        expect(spec.command).toContain(join(await installFolder('typescript'), 'node_modules'));
         await host.closeDocument('c1', { projectId: 'p3', path: 'src/a.js' });
     }, 180_000);
 
@@ -726,7 +732,7 @@ describe('servers that serve beside the server of the language', () => {
 describe('a language server of a person', () => {
     test('runs the command that was saved, for the files its pattern names', async () => {
         await install('docker');
-        const script = join(base, 'home', 'language-servers', 'docker', 'node_modules', 'dockerfile-language-server-nodejs', 'bin', 'docker-langserver');
+        const script = join(await installFolder('docker'), 'node_modules', 'dockerfile-language-server-nodejs', 'bin', 'docker-langserver');
         const saved = await host.customSave({
             name: 'Container files',
             command: runtime.command,

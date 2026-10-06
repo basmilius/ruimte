@@ -51,7 +51,7 @@ function rig(kind: LanguageServerKind, spawner = fakeSpawner()): Rig {
         profile: KIND_PROFILES[kind],
         projectId: 'p1',
         folder: '/work',
-        installDirectory: `/home/language-servers/${kind}`,
+        installDirectory: () => `/home/language-servers/${kind}`,
         isInstalled: async () => install.installed,
         runtime,
         spawn: spawner.spawn,

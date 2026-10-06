@@ -44,11 +44,12 @@ import {
 } from '@adecore/lsp';
 import type { WatchSeams } from '@adecore/agents/watch-seam';
 import { ClientSinks } from '../client-sinks.ts';
+import { errorText } from '../error-text.ts';
 import { ProjectFileWatcher, type StatPath } from './file-watch.ts';
 import { CustomLanguageServers, customProfile } from './custom.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LanguageChoices } from './choices.ts';
-import { LanguageInstaller } from './installer.ts';
+import { LanguageInstaller, type CheckoutRevision } from './installer.ts';
 import type { Download, NativePolicy } from './native.ts';
 import { MERGED_METHODS, mergeAnswers, mergeProviders } from './merge.ts';
 import {
@@ -74,8 +75,6 @@ const KINDS = Object.keys(KIND_PROFILES) as LanguageServerKind[];
 function isCatalogKind(id: LanguageServerId): id is LanguageServerKind {
     return id in KIND_PROFILES;
 }
-
-const OUTDATED_MESSAGE = 'The installed version is not the one this version of Ruimte uses. Install it again to update.';
 
 const HELD_MESSAGE = 'Its command was changed outside Ruimte. Open it and save it again to start it.';
 
@@ -110,6 +109,8 @@ export interface LanguageHostOptions {
     native?: NativePolicy;
     /* How an install downloads a release or the stubs. */
     download?: Download;
+    /* How the revision of a checkout a native kind builds from is read; git by default. */
+    checkoutRevision?: CheckoutRevision;
 }
 
 interface ProjectLanguage {
@@ -228,7 +229,9 @@ export class LanguageHost {
             now: options.now,
             native: options.native,
             download: options.download,
-            onChange: (kind) => this.installChanged(kind)
+            onChange: (kind) => this.installChanged(kind),
+            onSwitched: (kind) => this.installSwitched(kind),
+            ...(options.checkoutRevision === undefined ? {} : { checkoutRevision: options.checkoutRevision })
         });
     }
 
@@ -238,20 +241,34 @@ export class LanguageHost {
 
     /* Reads the servers of a person's own and the machine's choices. Call before a client can ask. */
     async load(): Promise<void> {
-        await Promise.all([this.custom.load(), this.choices.load()]);
+        await Promise.all([this.custom.load(), this.choices.load(), this.installer.load()]);
     }
 
     async status(projectId: string): Promise<LanguageServerStatus[]> {
+        // A person looks at the servers here, which is when a checkout that changed since its build is worth knowing about.
+        await this.installer.refreshCheckouts();
         const project = this.projects.get(projectId) ?? null;
         const folder = project?.folder ?? this.options.folderOf(projectId);
         const own = folder === null ? [] : this.custom.list().filter((server) => runsFor(server, folder));
         return Promise.all([...KINDS, ...own.map((server) => server.id as LanguageServerId)].map((id) => this.statusOf(project, id)));
     }
 
-    /* Starts installing a kind and answers while it runs; the end comes as a `language.status` event. */
+    /* Starts installing a kind, or updating it beside what it runs, and answers while it runs; the end comes as a `language.status` event. */
     async install(kind: LanguageServerKind): Promise<LanguageServerStatus> {
         void this.installer.install(kind);
         return this.statusOf(null, kind);
+    }
+
+    /* Goes back to the version a kind ran before, which a person asks for when an update does not work for them. */
+    async rollback(kind: LanguageServerKind): Promise<LanguageServerStatus> {
+        try {
+            await this.installer.rollback(kind);
+        } catch (error) {
+            throw new LanguageError(LANGUAGE_ERROR_CODES.failed, errorText(error));
+        }
+        const status = await this.statusOf(null, kind);
+        this.sinks.emit({ event: 'language.status', payload: { projectId: null, status } });
+        return status;
     }
 
     /*
@@ -648,7 +665,7 @@ export class LanguageHost {
                 profile,
                 projectId: project.projectId,
                 folder: project.folder,
-                installDirectory: catalog === null ? '' : this.installer.directoryOf(catalog),
+                installDirectory: () => (catalog === null ? '' : this.installer.installDirectoryOf(catalog)),
                 native: () => (catalog === null ? null : this.installer.launchOf(catalog)),
                 isInstalled: () => (catalog === null ? Promise.resolve(true) : this.installer.isInstalled(catalog)),
                 runtime: this.options.runtime ?? bunRuntime(),
@@ -905,12 +922,12 @@ export class LanguageHost {
         }
         const kind = id;
         const install = await this.installer.state(kind);
-        const base = { server: kind, version: this.installer.versionOf(kind), ...this.choiceOf(kind) };
+        const base = this.identityOf(kind);
         if (install === 'installing') {
             return { ...base, state: 'installing', documents: 0 };
         }
         if (install === 'missing') {
-            const message = this.installer.failureOf(kind) ?? ((await this.installer.isOutdated(kind)) ? OUTDATED_MESSAGE : null);
+            const message = this.installer.failureOf(kind);
             return {
                 ...base,
                 state: 'not-installed',
@@ -936,6 +953,18 @@ export class LanguageHost {
         };
     }
 
+    /* What an install would bring over the version a kind runs, the one before it, and why the last update did not come. */
+    private versionsOf(kind: LanguageServerKind): Pick<LanguageServerStatus, 'update' | 'previous' | 'message'> {
+        const update = this.installer.updateOf(kind);
+        const previous = this.installer.previousOf(kind);
+        const failure = update === null ? null : this.installer.failureOf(kind);
+        return {
+            ...(update === null ? {} : { update: { version: update.version, ...(update.rebuild ? { rebuild: true } : {}) } }),
+            ...(previous === null ? {} : { previous: { version: previous } }),
+            ...(failure === null ? {} : { message: failure })
+        };
+    }
+
     /* Whether the machine uses the kind, for a kind that has an alternative; nothing for one that has none. */
     private choiceOf(kind: LanguageServerKind): { chosen?: boolean } {
         const { choice } = KIND_PROFILES[kind];
@@ -943,9 +972,11 @@ export class LanguageHost {
     }
 
     /* The id and version of a server, and for one of a person's own what the client has no catalog entry to say. */
-    private identityOf(id: LanguageServerId): Pick<LanguageServerStatus, 'server' | 'version' | 'name' | 'languages' | 'patterns' | 'chosen'> {
+    private identityOf(
+        id: LanguageServerId
+    ): Pick<LanguageServerStatus, 'server' | 'version' | 'name' | 'languages' | 'patterns' | 'chosen' | 'update' | 'previous' | 'message'> {
         if (isCatalogKind(id)) {
-            return { server: id, version: this.installer.versionOf(id), ...this.choiceOf(id) };
+            return { server: id, version: this.installer.versionOf(id), ...this.choiceOf(id), ...this.versionsOf(id) };
         }
         const own = this.custom.get(id);
         return { server: id, version: '', name: own?.name ?? id, languages: own?.languages ?? [], patterns: own?.patterns ?? [] };
@@ -1017,6 +1048,16 @@ export class LanguageHost {
                 }
             }
         })().catch(() => undefined);
+    }
+
+    /* A kind runs another install now, so every server of it that ran starts again on it. */
+    private installSwitched(kind: LanguageServerKind): void {
+        for (const project of this.projects.values()) {
+            const server = project.servers.get(kind);
+            if (server && server.state !== 'stopped') {
+                void server.restart().catch(() => undefined);
+            }
+        }
     }
 
     private toHolders(projectId: string, event: SessionEvent): void {

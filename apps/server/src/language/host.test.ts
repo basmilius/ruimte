@@ -9,6 +9,7 @@ import type { SessionEvent } from '../sessions/manager.ts';
 import { LanguageChoices } from './choices.ts';
 import { CustomLanguageServers } from './custom.ts';
 import { LanguageHost } from './host.ts';
+import type { LanguageInstaller } from './installer.ts';
 import { NativePolicy, type Download } from './native.ts';
 import { KIND_PROFILES } from './profiles.ts';
 import { FULL_CAPABILITIES, fakeSpawner, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
@@ -57,6 +58,8 @@ function rig(
         native?: NativePolicy;
         /* The text of files that are no document, by path. */
         texts?: Record<string, string>;
+        /* The revision of the checkout the PHP server builds from; none to read by default. */
+        revision?: () => string | null;
     } = {}
 ): Rig {
     const spawner = options.spawner ?? fakeSpawner();
@@ -80,6 +83,7 @@ function rig(
         spawn: spawner.spawn,
         native: options.native ?? new NativePolicy({ checkout: { folder: join(root, 'repo'), version: '0.1.0', stubsCommit: STUBS_COMMIT } }),
         download: stubsDownload,
+        checkoutRevision: async () => options.revision?.() ?? null,
         run: async (spec, onLine) => {
             if (spec.command.endsWith('php-language-server')) {
                 onLine('php-language-server 0.1.0');
@@ -95,7 +99,8 @@ function rig(
                 onLine(`Version ${versionOf('typescript')}`);
                 return 0;
             }
-            const kind = basename(spec.cwd) as LanguageServerKind;
+            // An install runs in its own folder, `<kind>/versions/<id>`.
+            const kind = basename(dirname(dirname(spec.cwd))) as LanguageServerKind;
             installs.push(kind);
             for (const component of KIND_PROFILES[kind].components) {
                 const entry = join(spec.cwd, 'node_modules', component.entry);
@@ -152,7 +157,8 @@ async function installed(
 
 /* Waits on what only real I/O settles, the install check, by looking again each turn of the event loop and never by the clock. */
 async function until(check: () => boolean | Promise<boolean>): Promise<void> {
-    for (let i = 0; i < 2000; i++) {
+    // Generous, since the files of an install take more turns while other test files run beside this one.
+    for (let i = 0; i < 20_000; i++) {
         if (await check()) {
             return;
         }
@@ -807,13 +813,51 @@ describe('install and status', () => {
         ]);
     });
 
-    it('answers an install of older versions as not installed and says an install updates it', async () => {
-        const { host } = await installed(['typescript']);
+    it('keeps running an install of older versions, offers the pinned one, and starts its servers again on each switch', async () => {
+        const { host, spawner } = rig();
+        // What an update of Ruimte leaves: the install of the versions it pinned before, from before installs had a folder each.
+        for (const component of KIND_PROFILES.typescript.components) {
+            const entry = join(root, 'typescript', 'node_modules', component.entry);
+            await mkdir(dirname(entry), { recursive: true });
+            await writeFile(entry, '');
+        }
         await writeFile(
             join(root, 'typescript', 'installed.json'),
-            JSON.stringify({ versions: { 'typescript-language-server': '6.0.1', typescript: '6.0.3' } })
+            JSON.stringify({ versions: { typescript: '6.0.3', 'typescript-language-server': '6.0.1', 'typescript-6': 'npm:typescript@6.0.3' } })
         );
-        expect((await host.status('p1'))[0]).toMatchObject({ state: 'not-installed', message: expect.stringContaining('Install it again to update') });
+        await openReady(host);
+        const status = async () => (await host.status('p1')).find((entry) => entry.server === 'typescript')!;
+        expect(await status()).toMatchObject({ state: 'ready', version: '6.0.3', update: { version: '7.0.2' } });
+        expect(spawner.of('typescript')[0]!.spec.command).toBe(join(root, 'typescript', 'node_modules', KIND_PROFILES.typescript.components[0]!.entry));
+
+        await host.install('typescript');
+        // The install itself writes to disk, which no count of turns of the event loop waits for, so its own promise is awaited.
+        await (host as unknown as { installer: LanguageInstaller }).installer.install('typescript');
+        await until(async () => spawner.of('typescript').length === 2 && (await status()).state === 'ready');
+        expect(spawner.of('typescript')[0]!.kills).toEqual(['SIGTERM']);
+        expect(spawner.of('typescript')[1]!.spec.command).toContain(join(root, 'typescript', 'versions', '7.0.2-'));
+        const updated = await status();
+        expect(updated).toMatchObject({ version: '7.0.2', previous: { version: '6.0.3' } });
+        expect(updated.update).toBeUndefined();
+
+        expect(await host.rollback('typescript')).toMatchObject({ version: '6.0.3', previous: { version: '7.0.2' }, update: { version: '7.0.2' } });
+        await until(async () => spawner.of('typescript').length === 3 && (await status()).state === 'ready');
+        expect(spawner.of('typescript')[2]!.spec.command).toBe(join(root, 'typescript', 'node_modules', KIND_PROFILES.typescript.components[0]!.entry));
+    });
+
+    it('refuses a step back for a kind that has no earlier version', async () => {
+        const { host } = await installed(['typescript']);
+        await expect(host.rollback('typescript')).rejects.toMatchObject({ code: 'language-failed', message: expect.stringContaining('no earlier version') });
+    });
+
+    it('offers a build of a checkout that changed since the last one, read when the servers are asked for', async () => {
+        let revision = 'aaa';
+        const { host } = rig({ revision: () => revision });
+        await host.install('php-native');
+        await until(async () => (await host.status('p1')).find((status) => status.server === 'php-native')?.state === 'stopped');
+        expect((await host.status('p1')).find((status) => status.server === 'php-native')?.update).toBeUndefined();
+        revision = 'bbb';
+        expect((await host.status('p1')).find((status) => status.server === 'php-native')).toMatchObject({ update: { version: '0.1.0', rebuild: true } });
     });
 
     it('answers a failed install as not installed, with the reason', async () => {

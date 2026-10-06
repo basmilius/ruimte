@@ -101,7 +101,8 @@ export interface LanguageServerOptions {
     profile: KindProfile;
     projectId: string;
     folder: string;
-    installDirectory: string;
+    /* The folder the kind runs from, asked at each start, since an update moves it. */
+    installDirectory(): string;
     /* What a kind that is a program of its own runs: the file and the stubs beside it. */
     native?: () => { executable: string; stubsCommit: string } | null;
     isInstalled(): Promise<boolean>;
@@ -549,7 +550,8 @@ export class LanguageServer {
         this.failure = undefined;
         this.notify();
         this.sidecarFailure = undefined;
-        const { installDirectory, folder, exists } = this.options;
+        const { folder, exists } = this.options;
+        const installDirectory = this.options.installDirectory();
         const context: LaunchContext = {
             installDirectory,
             projectFolder: folder,
@@ -632,7 +634,8 @@ export class LanguageServer {
         if (this.phase !== 'ready' || this.sidecarFailure !== undefined) {
             return null;
         }
-        const { installDirectory, folder, exists } = this.options;
+        const { folder, exists } = this.options;
+        const installDirectory = this.options.installDirectory();
         const context: LaunchContext = {
             installDirectory,
             projectFolder: folder,

@@ -100,6 +100,11 @@ describe('language handlers', () => {
         ]);
         expect(await call('language.prefer', { server: 'css' })).toMatchObject({ ok: false, error: { code: 'invalid-server' } });
     });
+
+    test('a step back needs an earlier version to go back to', async () => {
+        expect(await call('language.rollback', { server: 'css' })).toMatchObject({ ok: false, error: { code: 'language-failed' } });
+        expect(await call('language.rollback', { server: 'nope' })).toMatchObject({ ok: false, error: { code: 'bad-request' } });
+    });
 });
 
 describe('language servers of a person', () => {

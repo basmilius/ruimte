@@ -34,8 +34,8 @@ export interface FakeSpawner {
 }
 
 function nameOf(spec: LanguageProcessSpec): string {
-    // The install directory names the kind, which tells apart processes that run the same script, like the sidecar of TypeScript and the TypeScript server of Vue.
-    const kind = spec.args.map((arg) => /\/([^/]+)\/node_modules\//.exec(arg)?.[1]).find((name) => name !== undefined);
+    // The install directory (`<kind>/versions/<id>`) names the kind, which tells apart processes that run the same script, like the sidecar of TypeScript and the TypeScript server of Vue.
+    const kind = spec.args.map((arg) => /\/([^/]+)\/(?:versions\/[^/]+\/)?node_modules\//.exec(arg)?.[1]).find((name) => name !== undefined);
     const profiles = kind !== undefined && kind in KIND_PROFILES ? [KIND_PROFILES[kind as keyof typeof KIND_PROFILES]] : Object.values(KIND_PROFILES);
     // A native server is its own command, and a server of a person's own is named by it.
     return (

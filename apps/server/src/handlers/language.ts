@@ -10,6 +10,8 @@ export function registerLanguageHandlers(dispatcher: Dispatcher, host: LanguageH
 
     dispatcher.register('language.prefer', (payload) => translate(async () => ({ status: await host.prefer(payload.server) })));
 
+    dispatcher.register('language.rollback', (payload) => translate(async () => ({ status: await host.rollback(payload.server) })));
+
     dispatcher.register('language.restart', (payload) => translate(async () => ({ status: await host.restart(payload.projectId, payload.server) })));
 
     dispatcher.register('language.log', (payload) => translate(async () => ({ lines: await host.log(payload.projectId, payload.server) })));
