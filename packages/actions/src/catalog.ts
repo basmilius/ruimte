@@ -10,6 +10,7 @@ import {
     ChatVisualsSchema,
     ComputerApprovalChoiceSchema,
     ContextSourceSchema,
+    DatabaseAgentAccessSchema,
     DeviceReferenceSchema,
     DiagramDirectionSchema,
     DiagramShapeSchema,
@@ -373,6 +374,10 @@ const gitRunsOutput = z.object({
 const pullStrategy = forActors(PERSON, z.enum(['merge', 'rebase'])).describe('How a branch that moved on both sides comes together');
 const PERSON_VOICE_AND_AGENT: readonly ActionActorKind[] = ['person', 'voice', 'agent'];
 
+const databaseConnection = z.string().trim().min(1).describe('The connection by id, or by its name when no other connection of the project carries that name');
+const databaseSchema = z.string().min(1).nullable();
+export const DATABASE_QUERY_ROWS = 100;
+export const DATABASE_QUERY_MAX_ROWS = 1000;
 const launchName = z.string().trim().min(1).describe('The id of a launch, or its name when no other launch of the project carries that name');
 const launchStarted = z.object({ launchId: z.string(), name: z.string(), kind: LaunchConfigKindSchema, members: z.array(z.string()) });
 
@@ -3338,6 +3343,125 @@ export const ACTION_DEFINITIONS = {
         actors: PERSON,
         input: z.object({ request: z.unknown().describe('A request of the database views, as they made it') }),
         output: z.object({ response: z.unknown() })
+    },
+    'database.list': {
+        title: 'List database connections',
+        description: 'Lists the database connections of the project, where each points and what agents may do with it; never a password.',
+        effect: 'read',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({
+            connections: z.array(
+                z.object({
+                    id: z.string(),
+                    name: z.string(),
+                    engine: z.string(),
+                    target: z.string(),
+                    access: DatabaseAgentAccessSchema,
+                    outsideProject: z.boolean()
+                })
+            )
+        })
+    },
+    'database.tables': {
+        title: 'List database tables',
+        description: 'Lists the schemas of a database connection and the tables and views of one of them, with the row count the server estimates.',
+        effect: 'read',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({
+            connection: databaseConnection,
+            schema: databaseSchema.describe("The schema whose tables to list; without it the connection's own database, or every schema when it has none")
+        }),
+        output: z.object({
+            connection: z.string(),
+            schemas: z.array(z.string()),
+            tables: z.array(z.object({ schema: z.string(), name: z.string(), kind: z.string(), rowEstimate: z.number().nullable() }))
+        })
+    },
+    'database.describe': {
+        title: 'Describe a database table',
+        description: 'Describes a table or view of a database connection: its columns, primary key, indexes and foreign keys.',
+        effect: 'read',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({
+            connection: databaseConnection,
+            table: z.string().min(1).describe('The table or view, by name'),
+            schema: databaseSchema.describe("The schema the table is in; without it the connection's own database")
+        }),
+        output: z.object({
+            schema: z.string(),
+            name: z.string(),
+            kind: z.string(),
+            columns: z.array(
+                z.looseObject({
+                    name: z.string(),
+                    type: z.string(),
+                    nullable: z.boolean(),
+                    defaultValue: z.string().nullable(),
+                    autoIncrement: z.boolean(),
+                    generated: z.boolean()
+                })
+            ),
+            primaryKey: z.array(z.string()),
+            indexes: z.array(z.looseObject({ name: z.string(), columns: z.array(z.string()), unique: z.boolean(), primary: z.boolean() })),
+            foreignKeys: z.array(
+                z.looseObject({
+                    name: z.string().nullable(),
+                    columns: z.array(z.string()),
+                    referencedSchema: z.string(),
+                    referencedTable: z.string(),
+                    referencedColumns: z.array(z.string()),
+                    onUpdate: z.string().nullable(),
+                    onDelete: z.string().nullable()
+                })
+            )
+        })
+    },
+    /* A query that shows its rows publishes a visual the way `visual.show` does, under the same rules. */
+    'database.query': {
+        title: 'Query a database',
+        description: 'Runs one statement that reads (SELECT or WITH) on a read-only session of a database connection and answers its first rows.',
+        effect: 'read',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({
+            connection: databaseConnection,
+            sql: z.string().min(1).describe('One statement that starts with SELECT or WITH'),
+            schema: databaseSchema.describe("The schema the statement runs in; without it the connection's own database"),
+            limit: z.number().int().min(1).max(DATABASE_QUERY_MAX_ROWS).nullable().describe(`How many rows at most; ${DATABASE_QUERY_ROWS} without it`),
+            show: z.string().nullable().describe('Also shows the rows as a table above your reply in this chat, under this title')
+        }),
+        output: z.object({
+            connection: z.string(),
+            schema: z.string().nullable(),
+            columns: z.array(z.object({ name: z.string(), type: z.string(), kind: z.string() })),
+            rows: z.array(z.array(z.unknown())),
+            hasMore: z.boolean(),
+            elapsedMs: z.number(),
+            // What became of `show`: the visual, or why the table was not shown; null without `show`.
+            shown: z.union([z.object({ visual: ChatVisualSchema }), z.object({ reason: z.string() })]).nullable()
+        })
+    },
+    'database.execute': {
+        title: 'Write to a database',
+        description:
+            'Runs one or more statements on a database connection a person allowed agents to write to, and answers what each did; never in the supervised mode.',
+        effect: 'external',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({
+            connection: databaseConnection,
+            sql: z.string().min(1).describe('The statements, separated by semicolons'),
+            schema: databaseSchema.describe("The schema the statements run in; without it the connection's own database")
+        }),
+        output: z.object({
+            connection: z.string(),
+            results: z.array(z.looseObject({ kind: z.enum(['rows', 'done', 'error']), sql: z.string(), elapsedMs: z.number() })),
+            inTransaction: z.boolean()
+        })
     },
     'usage.summary': {
         title: 'Read AI usage',
