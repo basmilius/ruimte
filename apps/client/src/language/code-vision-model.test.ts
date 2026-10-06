@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import i18next from 'i18next';
+import dutchWords from '@adecore/editor-react/locales/nl.json' with { type: 'json' };
 import type { DocumentSymbol } from '@adecore/lsp';
 import { declarationsOf, startAfterComments, usagesText, type DeclarationSource } from '@adecore/editor-react/models';
 
@@ -153,9 +155,17 @@ describe('where a declaration starts', () => {
 
 describe('the words', () => {
     test('say no usages, one usage and many', () => {
-        expect(usagesText(0)).toBe('No usages');
-        expect(usagesText(1)).toBe('1 usage');
-        expect(usagesText(1234)).toContain('usages');
-        expect(usagesText(7)).toBe('7 usages');
+        expect(usagesText(0, i18next)).toBe('No usages');
+        expect(usagesText(1, i18next)).toBe('1 usage');
+        expect(usagesText(1234, i18next)).toContain('usages');
+        expect(usagesText(7, i18next)).toBe('7 usages');
+    });
+
+    test('read the supplied instance without changing the application language', async () => {
+        const words = i18next.createInstance();
+        await words.init({ lng: 'nl', resources: { nl: { editor: dutchWords } } });
+        expect(usagesText(0, words)).toBe('Niet gebruikt');
+        expect(usagesText(7, words)).toBe('7 keer gebruikt');
+        expect(usagesText(7, i18next)).toBe('7 usages');
     });
 });
