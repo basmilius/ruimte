@@ -11,8 +11,8 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "@adecore/terminal": "0.17.0-beta.2",
-        "@adecore/ui": "0.17.0-beta.2",
+        "@adecore/terminal": "0.17.0",
+        "@adecore/ui": "0.17.0",
         "@base-ui-components/react": "^1.0.0-rc.0",
         "@codemirror/commands": "^6.11.1",
         "@codemirror/language": "^6.12.4",
@@ -26,17 +26,17 @@
         "@pierre/diffs": "^1.4.3",
         "@pierre/trees": "1.0.0-beta.6",
         "@ruimte/actions": "workspace:*",
-        "@adecore/agents-react": "0.17.0-beta.2",
+        "@adecore/agents-react": "0.17.0",
         "@ruimte/contracts": "workspace:*",
         "@ruimte/csp": "workspace:*",
         "@ruimte/desktop-bridge": "workspace:*",
-        "@adecore/diagram": "0.17.0-beta.2",
-        "@adecore/drawing": "0.17.0-beta.2",
-        "@adecore/merge": "0.17.0-beta.2",
-        "@adecore/plan": "0.17.0-beta.2",
+        "@adecore/diagram": "0.17.0",
+        "@adecore/drawing": "0.17.0",
+        "@adecore/merge": "0.17.0",
+        "@adecore/plan": "0.17.0",
         "@ruimte/pulsar": "workspace:*",
-        "@adecore/editor": "0.17.0-beta.2",
-        "@adecore/lsp": "0.17.0-beta.2",
+        "@adecore/editor": "0.17.0",
+        "@adecore/lsp": "0.17.0",
         "@tanstack/react-virtual": "^3.14.13",
         "@xterm/addon-fit": "^0.11.0",
         "@xterm/addon-web-links": "^0.12.0",
@@ -59,7 +59,7 @@
         "yaml": "^2.9.1",
         "zod": "^4.6.5",
         "zustand": "^5.0.15",
-        "@adecore/editor-react": "0.17.0-beta.2"
+        "@adecore/editor-react": "0.17.0"
     },
     "devDependencies": {
         "@tailwindcss/typography": "^0.5.20",
@@ -73,6 +73,6 @@
         "tailwindcss": "^4.3.3",
         "typescript": "^7.0.2",
         "vite": "^8.3.0",
-        "@adecore/agents": "0.17.0-beta.2"
+        "@adecore/agents": "0.17.0"
     }
 }

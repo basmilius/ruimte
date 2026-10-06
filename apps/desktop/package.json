@@ -24,13 +24,13 @@
         "build:computer-use": "bun ../computer-use/scripts/build.ts"
     },
     "dependencies": {
-        "@adecore/shell": "0.17.0-beta.2",
+        "@adecore/shell": "0.17.0",
         "@ruimte/actions": "workspace:*",
         "@ruimte/contracts": "workspace:*",
         "@ruimte/csp": "workspace:*",
         "@ruimte/desktop-bridge": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
-        "@adecore/service": "0.17.0-beta.2",
+        "@adecore/service": "0.17.0",
         "zod": "^4.6.5",
         "@ruimte/service": "workspace:*"
     },

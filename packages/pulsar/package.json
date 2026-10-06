@@ -13,7 +13,7 @@
     },
     "dependencies": {
         "zod": "^4.6.5",
-        "@adecore/agent-contracts": "0.17.0-beta.2"
+        "@adecore/agent-contracts": "0.17.0"
     },
     "devDependencies": {
         "@types/bun": "^1.4.2",
