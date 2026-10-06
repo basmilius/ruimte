@@ -81,6 +81,17 @@ describe('usages', () => {
         expect(wordsOf(editor)).toEqual([['No usages']]);
     });
 
+    test('count again when the server says its features changed, as it does once it has read the project', async () => {
+        const { editor, language, places, transport } = await setup(['alpha']);
+        language.codeVision.configure({ usages: true, authors: false });
+        await flush();
+        expect(wordsOf(editor)).toEqual([['No usages']]);
+        places.set('alpha', 83);
+        transport.emit('language.providers', { projectId: 'p1', path: 'src/a.ts', providers: transport.providers });
+        await flush();
+        expect(wordsOf(editor)).toEqual([['83 usages']]);
+    });
+
     test('count a place once however many ways the server named it, and never the declaration', async () => {
         const { language, editor, transport } = await setup(['alpha']);
         transport.answers.set('language.request', (payload: { method: string }) =>
