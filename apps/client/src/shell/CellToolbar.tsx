@@ -149,7 +149,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                             className={clsx(
                                 'flex items-center gap-2',
                                 hosted ? 'min-w-24 self-stretch' : 'min-w-5 pl-1',
-                                folded || !hasViewToolbar || (hosted && loose) ? 'grow' : hosted ? 'max-w-[60%] shrink' : 'shrink'
+                                folded || !hasViewToolbar || (hosted && loose) ? 'grow' : 'shrink'
                             )}
                         >
                             {maximized && (
