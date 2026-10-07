@@ -326,8 +326,7 @@
         "chooseImage": "Choose image…",
         "useFolderIcon": "Use folder's icon",
         "tooLarge": "That image is larger than 256 KB",
-        "unreadable": "That file could not be read",
-        "databases": "Database connections…"
+        "unreadable": "That file could not be read"
     },
     "linkMachine": {
         "title": "Link a machine with a code",
