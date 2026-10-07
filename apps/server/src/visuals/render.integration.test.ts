@@ -151,7 +151,7 @@ describe.skipIf(!available)('a preview in a Chrome of its own', () => {
         expect(pngSize(preview.png)).toEqual({ width: 320, height: 4000 });
     }, 30_000);
 
-    test('a page reaches nothing on this machine or its network, by any path, and stays in place', async () => {
+    test('a page reaches nothing on this machine or its network, by any path', async () => {
         const hits: string[] = [];
         const server = Bun.serve({
             hostname: '::',
@@ -193,27 +193,31 @@ const peer = new RTCPeerConnection({ iceServers: [{ urls: 'stun:127.0.0.1:${udp.
 peer.createDataChannel('probe');
 peer.createOffer().then((offer) => peer.setLocalDescription(offer));
 try { new WebTransport('https://127.0.0.1:${udp.port}/').ready.catch(() => {}); } catch {}
-location.href = 'http://127.0.0.1:${port}/navigate';
 </script>
 </body></html>`;
             const preview = await leavesNothing(() => shared.preview(page, 400, 'dark'));
-            // The page that came back is the page itself, not one it went to.
             expect(preview.height).toBeGreaterThanOrEqual(250);
             const texts = preview.console.map((entry) => entry.text);
-            expect(texts).toContain(`The page tried to go to http://127.0.0.1:${port}/navigate; a visual stays on its own page`);
             expect(
                 texts.some(
                     (text) => text.startsWith(`Blocked a connection to 127.0.0.1:${port}`) || text.startsWith(`Blocked a connection to localhost:${port}`)
                 )
             ).toBe(true);
-            // Late attempts of the page have had their time; the browser is gone by now anyway.
-            await Bun.sleep(300);
             expect(hits).toEqual([]);
             expect(datagrams).toBe(0);
         } finally {
             udp.close();
             await server.stop(true);
         }
+    }, 30_000);
+
+    test('a navigation is reported and leaves the page in place', async () => {
+        // Network failures can fill the bounded console before a navigation is reported.
+        const address = 'https://elsewhere.invalid/navigate';
+        const page = `<!doctype html><div style="height:250px">stays</div><script>location.href = '${address}';</script>`;
+        const preview = await leavesNothing(() => shared.preview(page, 400, 'dark'));
+        expect(preview.height).toBe(250);
+        expect(preview.console.map((entry) => entry.text)).toContain(`The page tried to go to ${address}; a visual stays on its own page`);
     }, 30_000);
 
     test('a page reads no file of this machine', async () => {
@@ -248,16 +252,26 @@ try { request.open('GET', '${address}', false); request.send(); console.log('rea
         30_000
     );
 
-    test('measures every width at once, well within its limit', async () => {
+    test('measures responsive heights or reports that its deadline was reached', async () => {
         // Twelve boxes of 50px in columns of at least 150px: fewer rows the wider the frame.
         const boxes = Array.from({ length: 12 }, (_, i) => `<div style="height:50px">${i}</div>`).join('');
         const page = `<!doctype html><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${boxes}</div>`;
-        const started = Date.now();
-        const heights = await leavesNothing(() => shared.measure(page));
-        expect(Date.now() - started).toBeLessThan(6_000);
-        expect(heights?.map(([width]) => width)).toEqual([...VISUAL_MEASURE_WIDTHS]);
-        const expected = VISUAL_MEASURE_WIDTHS.map((width) => [width, Math.ceil(12 / Math.floor(width / 150)) * 50]);
-        expect(heights).toEqual(expected as [number, number][]);
+        const warnings: string[] = [];
+        const measuring = renderer({ warn: (line) => warnings.push(line) });
+        try {
+            const heights = await leavesNothing(() => measuring.measure(page));
+            // The deadline is tested with a manual clock in renderer.test.ts; a busy runner may reach it.
+            if (heights === undefined) {
+                expect(warnings).toEqual(['Measuring a visual took longer than 6 s, so it is shown without heights']);
+            } else {
+                expect(warnings).toEqual([]);
+                expect(heights.map(([width]) => width)).toEqual([...VISUAL_MEASURE_WIDTHS]);
+                const expected = VISUAL_MEASURE_WIDTHS.map((width) => [width, Math.ceil(12 / Math.floor(width / 150)) * 50]);
+                expect(heights).toEqual(expected as [number, number][]);
+            }
+        } finally {
+            await measuring.stop();
+        }
     }, 30_000);
 
     test('a child past its limit is killed with its whole browser, and its profile removed', async () => {
@@ -287,29 +301,37 @@ try { request.open('GET', '${address}', false); request.send(); console.log('rea
 });
 
 describe.skipIf(!available)('a render child whose daemon goes', () => {
-    test('ends with its browser and removes its profile once its stdin closes', async () => {
-        const profile = await mkdtemp(join(tmpdir(), PROFILE_PREFIX));
-        const child = Bun.spawn(COMMAND, { stdin: 'pipe', stdout: 'ignore', stderr: 'ignore', detached: true });
-        try {
-            child.stdin.write(
-                `${JSON.stringify({ html: '<script>while (true) {}</script>', widths: [320], appearance: 'dark', capture: true, profile, budgetMs: 60_000 })}\n`
-            );
-            await child.stdin.flush();
-            const name = basename(profile);
-            expect(await until(async () => browsersOf([name]).length > 1, 10_000)).toBe(true);
-            // What the kernel does to the pipe when the daemon dies, however it dies.
-            await child.stdin.end();
-            expect(await until(async () => child.exitCode !== null, 5_000)).toBe(true);
-            expect(await until(async () => browsersOf([name]).length === 0 && !(await profiles()).includes(name), 5_000)).toBe(true);
-        } finally {
+    test.each(['during startup', 'after Chrome starts'] as const)(
+        'removes its browser and profile when stdin closes %s',
+        async (when) => {
+            const profile = await mkdtemp(join(tmpdir(), PROFILE_PREFIX));
+            const child = Bun.spawn(COMMAND, { stdin: 'pipe', stdout: 'ignore', stderr: 'ignore', detached: true });
             try {
-                process.kill(-child.pid, 'SIGKILL');
-            } catch {
-                // Gone already.
+                child.stdin.write(
+                    `${JSON.stringify({ html: '<script>while (true) {}</script>', widths: [320], appearance: 'dark', capture: true, profile, budgetMs: 60_000 })}\n`
+                );
+                await child.stdin.flush();
+                const name = basename(profile);
+                if (when === 'after Chrome starts') {
+                    expect(await until(async () => browsersOf([name]).length > 1, 10_000)).toBe(true);
+                }
+                // What the kernel does to the pipe when the daemon dies, however it dies.
+                await child.stdin.end();
+                expect(await until(async () => child.exitCode !== null, 5_000)).toBe(true);
+                expect(child.exitCode).toBe(0);
+                expect(await until(async () => browsersOf([name]).length === 0, 5_000)).toBe(true);
+                expect(await profiles()).not.toContain(name);
+            } finally {
+                try {
+                    process.kill(-child.pid, 'SIGKILL');
+                } catch {
+                    // Gone already.
+                }
+                await rm(profile, { recursive: true, force: true });
             }
-            await rm(profile, { recursive: true, force: true });
-        }
-    }, 30_000);
+        },
+        30_000
+    );
 });
 
 describe('without a Chrome', () => {

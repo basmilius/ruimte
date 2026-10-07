@@ -300,7 +300,7 @@ function blockedLine(target: SocksRequest): string {
     return `Blocked a connection to ${where}: a visual reaches public addresses only, never this machine or its network`;
 }
 
-export async function render(request: RenderRequest): Promise<RenderAnswer> {
+export async function render(request: RenderRequest, signal?: AbortSignal): Promise<RenderAnswer> {
     const context: RenderContext = {
         request,
         source: new PageSource(request.html),
@@ -309,6 +309,7 @@ export async function render(request: RenderRequest): Promise<RenderAnswer> {
         deadline: Date.now() + request.budgetMs
     };
     await writeProfile(request.profile);
+    signal?.throwIfAborted();
     const blocked = new Set<string>();
     const proxy = await startSocksProxy(SYSTEM_SOCKS_DEPS, (target) => {
         const line = blockedLine(target);
@@ -340,6 +341,7 @@ export async function render(request: RenderRequest): Promise<RenderAnswer> {
     };
     const views: PageView[] = [];
     try {
+        signal?.throwIfAborted();
         try {
             const first = open();
             views.push(first);
@@ -353,6 +355,7 @@ export async function render(request: RenderRequest): Promise<RenderAnswer> {
         } catch (e) {
             return { ok: false, code: 'browser-unavailable', message: errorText(e) };
         }
+        signal?.throwIfAborted();
         const others = request.widths.slice(1).map(() => open());
         views.push(...others);
         await Promise.all(others.map((view) => view.view.navigate('about:blank')));
@@ -408,6 +411,40 @@ function parseJson(text: string): unknown {
     }
 }
 
+async function stopBrowserChildren(): Promise<void> {
+    // closeAll kills Chrome itself; its helpers can still recreate the profile while exiting.
+    for (let attempt = 0; attempt < 100; attempt++) {
+        const listing = Bun.spawnSync(['ps', '-axo', 'pid=,pgid=,stat=']);
+        if (!listing.success) {
+            throw new Error('Could not inspect the render process group');
+        }
+        const children = listing.stdout
+            .toString()
+            .trim()
+            .split('\n')
+            .map((line) => line.trim().split(/\s+/))
+            // The launcher gives this child its own group; never signal a process outside it.
+            .filter(
+                ([pid, group, state]) => Number(group) === process.pid && Number(pid) !== process.pid && Number(pid) !== listing.pid && !state?.startsWith('Z')
+            )
+            .map(([pid]) => Number(pid));
+        if (children.length === 0) {
+            return;
+        }
+        for (const pid of children) {
+            try {
+                process.kill(pid, 'SIGKILL');
+            } catch (e) {
+                if ((e as NodeJS.ErrnoException).code !== 'ESRCH') {
+                    throw e;
+                }
+            }
+        }
+        await Bun.sleep(20);
+    }
+    throw new Error('The render browser processes did not stop');
+}
+
 /* `ruimte visual-render`: reads one request on stdin and answers on stdout. */
 export async function runRenderChild(): Promise<number> {
     const reader = Bun.stdin.stream().getReader();
@@ -416,25 +453,32 @@ export async function runRenderChild(): Promise<number> {
         return 1;
     }
     const parsed = RenderRequestSchema.safeParse(parseJson(line));
+    if (!parsed.success) {
+        await Bun.write(
+            Bun.stdout,
+            `${JSON.stringify({ ok: false, code: 'render-failed', message: 'The render request did not parse' } satisfies RenderAnswer)}\n`
+        );
+        return 1;
+    }
+    const controller = new AbortController();
+    // A limit of its own, should the daemon hold on without killing it.
+    setTimeout(() => process.exit(2), parsed.data.budgetMs + 5_000);
+    const rendering = render(parsed.data, controller.signal).catch((e: unknown): RenderAnswer => ({ ok: false, code: 'render-failed', message: errorText(e) }));
     // The daemon keeps stdin open until it has the answer; its end means the daemon went, and the browser and the profile go with this process.
     const leaving: { done: Promise<void> | null } = { done: null };
     void untilClosed(reader).then(() => {
+        controller.abort();
         Bun.WebView.closeAll();
         leaving.done = (async () => {
-            if (parsed.success) {
-                await rm(parsed.data.profile, { recursive: true, force: true, maxRetries: 3 }).catch(() => undefined);
-            }
+            // Pending view operations must finish before cleanup, or they can recreate the profile.
+            await rendering;
+            Bun.WebView.closeAll();
+            await stopBrowserChildren();
+            await rm(parsed.data.profile, { recursive: true, force: true, maxRetries: 3 }).catch(() => undefined);
             process.exit(0);
         })();
     });
-    let result: RenderAnswer;
-    if (!parsed.success) {
-        result = { ok: false, code: 'render-failed', message: 'The render request did not parse' };
-    } else {
-        // A limit of its own, should the daemon hold on without killing it.
-        setTimeout(() => process.exit(2), parsed.data.budgetMs + 5_000);
-        result = await render(parsed.data).catch((e: unknown): RenderAnswer => ({ ok: false, code: 'render-failed', message: errorText(e) }));
-    }
+    const result = await rendering;
     // Closing the browser ends the render at once; the profile still has to go before this process does.
     await leaving.done;
     await Bun.write(Bun.stdout, `${JSON.stringify(result)}\n`);
