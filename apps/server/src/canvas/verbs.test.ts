@@ -48,6 +48,9 @@ import { MAX_CANVAS_NODES } from './node-verb.ts';
 import { PLACEMENT_GAP, TEAM_COLUMNS } from './placement.ts';
 import { MAX_ROLES, ROLES_SHAPE } from './team-verb.ts';
 import { MAX_PROJECT_VIEWS, VIEW_KINDS } from './view-verb.ts';
+import { DatabaseAccessStore } from '../database/agent-access.ts';
+import { AgentDatabases } from '../database/agent-databases.ts';
+import { DatabasePasswords } from '../database/agent-passwords.ts';
 import type { Notice } from '@adecore/agents/messages/notice-store';
 import { MAX_NOTICE_LENGTH, type NoticeDelivery } from '../context/notices.ts';
 import { MAX_TITLE_LENGTH, NEW_NODE, OPENING_OFF_CANVAS, type AgentStart, type CanvasHost, type Noun } from './verb.ts';
@@ -94,6 +97,7 @@ let pageOpen: boolean;
 let shotPath: string;
 let madeWorktrees: Worktree[];
 let removedWorktrees: string[];
+let databases: AgentDatabases;
 
 /* A change the store's own check refuses after the verb had its say: `note-1` a second time, on the board. */
 function withRepeatedId(current: ProjectContent): ProjectContent {
@@ -183,6 +187,25 @@ beforeEach(async () => {
     await store.save(projectId, opened.document.rev, content());
     // Released, like a project the person switched away from while its agents keep working.
     store.release(projectId);
+    const access = new DatabaseAccessStore(join(root, 'home'));
+    await access.load();
+    // Only the connections of the project are read: a view names a table and never opens a session.
+    databases = new AgentDatabases({
+        service: { handle: () => Promise.reject(new Error('a view opens no session')), release: async () => undefined },
+        connections: {
+            connectionsOf: async () => [
+                { id: 'shop-1', name: 'Shop', shared: true, config: { engine: 'mysql', host: '127.0.0.1', user: 'root', database: 'shop' } },
+                { id: 'local-1', name: 'Local', shared: false, config: { engine: 'sqlite', path: join(folder, 'local.sqlite') } },
+                { id: 'bare-1', name: 'Bare', shared: false, config: { engine: 'mysql', host: '127.0.0.1', user: 'root' } },
+                { id: 'twin-1', name: 'Twin', shared: false, config: { engine: 'sqlite', path: join(folder, 'one.sqlite') } },
+                { id: 'twin-2', name: 'twin', shared: false, config: { engine: 'sqlite', path: join(folder, 'two.sqlite') } }
+            ]
+        },
+        projects: { holdersOf: () => [] },
+        access,
+        passwords: new DatabasePasswords(),
+        scratchFolder: join(root, 'home', 'scratch')
+    });
 });
 
 afterEach(async () => {
@@ -194,6 +217,7 @@ afterEach(async () => {
 function host(): CanvasHost {
     return {
         hiddenAgents: store.hiddenAgents,
+        databases,
         locate: (id) => store.index.locate(id),
         read: (id) => store.read(id),
         revision: (id) => store.revision(id),
@@ -2051,7 +2075,8 @@ describe('view new', () => {
     test('every kind of the union in contracts is one it makes', async () => {
         const extra: Partial<Record<(typeof VIEW_KINDS)[number], string[]>> = {
             file: ['--path', 'src/main.ts'],
-            browser: ['--url', 'https://bas.dev']
+            browser: ['--url', 'https://bas.dev'],
+            database: ['--connection', 'shop-1', '--table', 'orders']
         };
         for (const kind of VIEW_KINDS) {
             const { status, lines } = await post('view', ['new', `A ${kind}`, '--kind', kind, ...(extra[kind] ?? [])]);
@@ -2069,6 +2094,84 @@ describe('view new', () => {
         expect(await viewOnDisk(outsideFile)).toMatchObject({ path: join(outside, 'notes.md') });
         const page = await made('Docs', ['--kind', 'browser', '--url', 'https://bas.dev/docs']);
         expect(await viewOnDisk(page)).toMatchObject({ kind: 'browser', url: 'https://bas.dev/docs' });
+    });
+
+    test('a database view names a table of a connection of the project, by id or by name', async () => {
+        const byId = await made('orders', ['--kind', 'database', '--connection', 'shop-1', '--table', 'orders']);
+        expect(await viewOnDisk(byId)).toMatchObject({
+            kind: 'database',
+            connectionId: 'shop-1',
+            schema: 'shop',
+            table: 'orders',
+            mode: 'data',
+            createdBy: 'term-1'
+        });
+        expect(await viewOnDisk(byId)).not.toHaveProperty('where');
+        const byName = await made('items', ['--kind', 'database', '--connection', 'local', '--table', 'items', '--mode', 'structure']);
+        expect(await viewOnDisk(byName)).toMatchObject({ connectionId: 'local-1', schema: 'main', table: 'items', mode: 'structure' });
+        const filtered = await made('open orders', [
+            '--kind',
+            'database',
+            '--connection',
+            'Shop',
+            '--table',
+            'orders',
+            '--schema',
+            'archive',
+            '--where',
+            "status = 'open'"
+        ]);
+        expect(await viewOnDisk(filtered)).toMatchObject({ connectionId: 'shop-1', schema: 'archive', where: "status = 'open'" });
+    });
+
+    test('a database view is refused without its connection or table, or on a connection the project does not have', async () => {
+        expect((await post('view', ['new', 'x', '--kind', 'database', '--table', 'orders'])).lines[0]).toBe(
+            'refused\tmissing-flag\tA database view needs --connection'
+        );
+        expect((await post('view', ['new', 'x', '--kind', 'database', '--connection', 'shop-1'])).lines[0]).toBe(
+            'refused\tmissing-flag\tA database view needs --table'
+        );
+        const unknown = await post('view', ['new', 'x', '--kind', 'database', '--connection', 'nowhere', '--table', 'orders']);
+        expect(unknown.status).toBe(422);
+        expect(unknown.lines[0]).toBe('refused\tunknown-connection\tThis project has no database connection nowhere');
+        expect(unknown.lines.slice(1, -1).join('\n')).toContain('shop-1');
+        expect((await post('view', ['new', 'x', '--kind', 'database', '--connection', 'twin', '--table', 'orders'])).lines[0]).toStartWith(
+            'refused\tambiguous-connection\t'
+        );
+        expect((await onDisk()).views).toHaveLength(5);
+    });
+
+    test('a connection that starts in no database needs a schema, and a filter goes with the rows only', async () => {
+        expect((await post('view', ['new', 'x', '--kind', 'database', '--connection', 'bare-1', '--table', 'orders'])).lines[0]).toBe(
+            'refused\tschema-required\tBare starts in no database; name one with --schema'
+        );
+        expect(await viewOnDisk(await made('x', ['--kind', 'database', '--connection', 'bare-1', '--table', 'orders', '--schema', 'shop']))).toMatchObject({
+            schema: 'shop'
+        });
+        expect(
+            (await post('view', ['new', 'x', '--kind', 'database', '--connection', 'shop-1', '--table', 'orders', '--mode', 'structure', '--where', 'id > 1']))
+                .lines[0]
+        ).toStartWith('refused\tbad-arguments\t--where filters rows');
+        expect((await post('view', ['new', 'x', '--kind', 'database', '--connection', 'shop-1', '--table', 'orders', '--mode', 'sideways'])).lines[0]).toBe(
+            'refused\tbad-arguments\t--mode takes data or structure'
+        );
+    });
+
+    test('the table flags belong to a database view alone', async () => {
+        expect((await post('view', ['new', 'x', '--table', 'orders'])).lines[0]).toBe('refused\tflag-not-for-kind\t--table does not go with a canvas view');
+        expect((await post('view', ['new', 'x', '--kind', 'database', '--connection', 'shop-1', '--table', 'orders', '--path', 'src/main.ts'])).lines[0]).toBe(
+            'refused\tflag-not-for-kind\t--path does not go with a database view'
+        );
+    });
+
+    test('a database view is shown with view open like any other', async () => {
+        const id = await made('orders', ['--kind', 'database', '--connection', 'shop-1', '--table', 'orders']);
+        await store.openProject({ projectId });
+        store.hold('client-1', projectId);
+        const shown = await post('view', ['open', id]);
+        expect(shown.status).toBe(200);
+        expect(shown.lines[0]).toBe(`showing\t${id}\tdatabase\torders`);
+        expect(watching).toEqual([{ projectId, viewId: id, by: 'term-1' }]);
     });
 
     test('--after puts the row right under the view it names', async () => {

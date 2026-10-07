@@ -28,10 +28,12 @@ import {
     refuseUndeletable,
     storedFilePath,
     viewKindsFor,
+    type TableParts,
     viewLines,
     viewNamed
 } from '../canvas/views.ts';
 import type { ServerActionContext } from './context.ts';
+import { databasesOf } from './database-actions.ts';
 
 function kindOf(view: ProjectView): ActionOutput<'view.focus'>['kind'] {
     return isUnknownView(view) ? 'unknown' : view.kind;
@@ -61,7 +63,7 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
             }
         };
     },
-    'view.create': async ({ kind, name, url, command, path, provider, after }, { actor, context }) => {
+    'view.create': async ({ kind, name, url, command, path, provider, after, connection, schema, table, mode, where }, { actor, context }) => {
         // Only `agent` starts anything, so a view an agent makes opens empty.
         if (command !== null || provider !== null) {
             throw new VerbRefusal('starts-nothing', 'view new opens a chat or a terminal empty; ruimte-context agent is what starts a CLI');
@@ -87,11 +89,39 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
         if (required && given[required] === null) {
             throw new VerbRefusal('missing-flag', `A ${kind} view needs --${required}`, [`kind\t${kind}\t--${required} (required)`]);
         }
+        const tableFlags = { connection, schema, table, mode, where };
+        if (kind !== 'database') {
+            const stray = Object.entries(tableFlags).find(([, value]) => value != null);
+            if (stray !== undefined) {
+                throw new VerbRefusal('flag-not-for-kind', `--${stray[0]} does not go with a ${kind} view`, [
+                    'kind\tdatabase\t--connection and --table (required), --schema, --mode and --where'
+                ]);
+            }
+        }
+        if (kind === 'database') {
+            for (const flag of ['connection', 'table'] as const) {
+                if (tableFlags[flag] == null) {
+                    throw new VerbRefusal('missing-flag', `A database view needs --${flag}`, ['kind\tdatabase\t--connection and --table (required)']);
+                }
+            }
+            if (where != null && mode === 'structure') {
+                throw new VerbRefusal('bad-arguments', '--where filters rows, so it goes with --mode data and not with --mode structure');
+            }
+        }
 
         // The disk is read before the lock, so a slow folder holds up nobody else's save.
         const folder = context.place.folder;
         const checkedUrl = url === null ? undefined : checkUrl(url);
         const checkedPath = path === null ? undefined : await checkPath(folder, path);
+        const shownTable: TableParts | undefined =
+            kind === 'database'
+                ? {
+                      ...(await databasesOf(context).tableOf(context.place, connection!, schema ?? null)),
+                      table: table!,
+                      mode: mode ?? 'data',
+                      ...(where == null ? {} : { where })
+                  }
+                : undefined;
 
         return context.host.mutate(context.place.projectId, (content) => {
             if (content.views.length + 1 > MAX_PROJECT_VIEWS) {
@@ -103,7 +133,8 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
             const id = newId(ID_PREFIX[kind] ?? 'view', content);
             const view = madeView(kind, id, name, actor.id, {
                 url: checkedUrl,
-                path: checkedPath === undefined ? undefined : storedFilePath(folder, checkedPath)
+                path: checkedPath === undefined ? undefined : storedFilePath(folder, checkedPath),
+                table: shownTable
             });
             return {
                 content: { ...content, views: withView(content.views, view, after ?? undefined) },

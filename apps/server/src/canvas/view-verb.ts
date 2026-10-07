@@ -16,13 +16,33 @@ const nameArgument = titleField('A view name', 'view new needs a name');
 const newSub = defineActionVerb('view', {
     name: 'new',
     action: 'view.create',
-    usage: `<name> [--kind ${VIEW_KINDS.join('|')}] [--path P] [--url U] [--after V]`,
+    usage: `<name> [--kind ${VIEW_KINDS.join('|')}] [--path P] [--url U] [--connection C --table T [--schema S] [--mode data|structure] [--where W]] [--after V]`,
     note: `The default kind is ${VIEW_KINDS[0]}.`,
     params: [
         { syntax: '<name>', need: 'required', field: 'name', text: 'What the row is called; a name with spaces in it is one argument' },
         { syntax: '--kind K', need: 'optional', field: 'kind', text: `${VIEW_KINDS.join(', ')}; without it a ${VIEW_KINDS[0]}` },
         { syntax: '--path P', need: viewKindsFor('path'), field: 'path', more: 'it has to exist' },
         { syntax: '--url U', need: viewKindsFor('url'), field: 'url' },
+        {
+            syntax: '--connection C',
+            need: 'database (required)',
+            field: 'connection',
+            more: 'the id or the name of a connection; ruimte-context database list names them'
+        },
+        {
+            syntax: '--table T',
+            need: 'database (required)',
+            field: 'table',
+            more: 'the table or view; it is not looked up, so a wrong name shows when the view is opened'
+        },
+        { syntax: '--schema S', need: 'database (optional)', field: 'schema', more: 'without it the schema the connection starts in' },
+        { syntax: '--mode M', need: 'database (optional)', field: 'mode', text: 'data shows the rows, structure the columns and keys; without it data' },
+        {
+            syntax: '--where W',
+            need: 'database (optional)',
+            field: 'where',
+            text: 'A filter on the rows, as the text after WHERE; the view then shows only those rows'
+        },
         { syntax: '--after V', need: 'optional', field: 'after' }
     ],
     detail: [
@@ -30,6 +50,7 @@ const newSub = defineActionVerb('view', {
         'kind\tseparator\tA line in the sidebar with a label, which never opens and holds nothing',
         'kind\tsubheader\tA heading over the rows under it, which never opens and holds nothing',
         'kind\tchat, terminal\tOpened empty, with no CLI and no directory; the id is the session id',
+        'kind\tdatabase\tOne table of a connection of this project, as rows or as structure; reading the rows stays with ruimte-context database. The view is written down with the connection id, so it is as private as the connection is',
         'paths\t--path is resolved against the project folder, never against your own directory; it may also be absolute and then points outside',
         `limit\tA project holds at most ${MAX_PROJECT_VIEWS} views`,
         'note\tThe view is written down as yours, which is what lets you remove it again with view delete',
@@ -43,6 +64,11 @@ const newSub = defineActionVerb('view', {
         kind: z.enum(VIEW_KINDS, { error: `--kind takes one of ${VIEW_KINDS.join(', ')}` }).optional(),
         path: z.string().min(1, '--path needs the path of a file').optional(),
         url: z.string().min(1, '--url needs an http or https address').optional(),
+        connection: z.string().min(1, '--connection needs the id or the name of a database connection').optional(),
+        table: z.string().min(1, '--table needs the name of a table').optional(),
+        schema: z.string().min(1, '--schema needs the name of a schema').optional(),
+        mode: z.enum(['data', 'structure'], { error: '--mode takes data or structure' }).optional(),
+        where: z.string().min(1, '--where needs a filter, the text after WHERE').optional(),
         after: z.string().min(1, '--after needs the id of a view').optional()
     }),
     async run({ positionals: [name], flags }, call) {
@@ -53,7 +79,12 @@ const newSub = defineActionVerb('view', {
             command: null,
             path: flags.path ?? null,
             provider: null,
-            after: flags.after ?? null
+            after: flags.after ?? null,
+            connection: flags.connection ?? null,
+            schema: flags.schema ?? null,
+            table: flags.table ?? null,
+            mode: flags.mode ?? null,
+            where: flags.where ?? null
         });
         return [`${made.viewId}\t${made.kind}\t${field(made.view)}`];
     }
@@ -223,6 +254,6 @@ export const VIEW_SUMMARY = 'Lists, makes, renames, marks, moves, removes and sh
 
 export const VIEW_DETAIL: readonly string[] = [
     'see\truimte-context view list\tthe views of the project, which is where every id here comes from',
-    'note\tA view is a row in the sidebar: a canvas, a drawing, a diagram, a file, a page, a session of its own, or a line between them',
+    'note\tA view is a row in the sidebar: a canvas, a drawing, a diagram, a file, a table of a database, a page, a session of its own, or a line between them',
     'note\tThe views of a project are shared, so what you make here is what every person with this project open sees'
 ];

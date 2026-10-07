@@ -59,7 +59,7 @@ export interface AgentExecution {
 }
 
 /* What the agents reach a project's databases through, the verbs' side of `AgentDatabases`. */
-export type DatabaseAgentHost = Pick<AgentDatabases, 'list' | 'tables' | 'describe' | 'query' | 'execute'>;
+export type DatabaseAgentHost = Pick<AgentDatabases, 'list' | 'tables' | 'describe' | 'query' | 'execute' | 'tableOf'>;
 
 export interface AgentDatabasesOptions {
     service: { handle(request: unknown, owner: string): Promise<DatabaseResponse>; release(owner: string): Promise<void> };
@@ -193,6 +193,19 @@ export class AgentDatabases {
 
     async list(place: DatabasePlace): Promise<AgentConnection[]> {
         return Promise.all((await this.connectionsOf(place)).map((connection) => this.agentConnection(place, connection)));
+    }
+
+    /*
+     * The connection and schema a database view names, by the id the project file keeps. The table itself is not
+     * looked up: that would open a session, and a view of a table that is gone says so when a person opens it.
+     */
+    async tableOf(place: DatabasePlace, wanted: string, schema: string | null): Promise<{ connectionId: string; schema: string }> {
+        const connection = await this.named(place, wanted);
+        const resolved = schema ?? this.defaultSchema(connection);
+        if (resolved === null) {
+            refuse('schema-required', `${connection.name} starts in no database; name one with --schema`);
+        }
+        return { connectionId: connection.id, schema: resolved };
     }
 
     async tables(place: DatabasePlace, caller: string, wanted: string, schema: string | null): Promise<AgentTables> {

@@ -7,7 +7,7 @@ import { tableVisual } from '../database/table-visual.ts';
 import type { ServerActionContext } from './context.ts';
 import { showVisual } from './visual-actions.ts';
 
-function databasesOf(context: ServerActionContext): DatabaseAgentHost {
+export function databasesOf(context: ServerActionContext): DatabaseAgentHost {
     if (!context.host.databases) {
         throw new VerbRefusal('no-databases', 'This machine reaches no databases');
     }

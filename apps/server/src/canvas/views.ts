@@ -101,7 +101,22 @@ export function storedFilePath(folder: string, path: string): string {
     return folder !== null && isInside(folder, path) ? storedPathOf(folder, path) : path;
 }
 
-export function madeView(kind: (typeof VIEW_KINDS)[number], id: string, name: string, createdBy: string, parts: { url?: string; path?: string }): ProjectView {
+/* What a database view shows, as the daemon resolved it from the flags. */
+export interface TableParts {
+    connectionId: string;
+    schema: string;
+    table: string;
+    mode: 'data' | 'structure';
+    where?: string;
+}
+
+export function madeView(
+    kind: (typeof VIEW_KINDS)[number],
+    id: string,
+    name: string,
+    createdBy: string,
+    parts: { url?: string; path?: string; table?: TableParts }
+): ProjectView {
     if (kind === 'canvas') {
         return { ...emptyCanvasView(id, name), createdBy };
     }
@@ -116,6 +131,9 @@ export function madeView(kind: (typeof VIEW_KINDS)[number], id: string, name: st
     }
     if (kind === 'file') {
         return { kind, id, name, path: parts.path!, createdBy };
+    }
+    if (kind === 'database') {
+        return { kind, id, name, ...parts.table!, createdBy };
     }
     return { kind, id, name, createdBy };
 }
