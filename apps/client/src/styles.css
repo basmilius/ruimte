@@ -897,3 +897,34 @@
     box-shadow: inset 2px 0 0 var(--status-needs-you);
     background: color-mix(in srgb, var(--status-needs-you) 12%, transparent);
 }
+
+/* Benchmark families keep related hues while individual models remain distinguishable. */
+:root,
+[data-theme='light'] {
+    --model-chart-claude-0: #a55737;
+    --model-chart-claude-1: #ba7050;
+    --model-chart-claude-2: #8f614b;
+    --model-chart-claude-3: #cd8967;
+    --model-chart-claude-4: #a07b65;
+    --model-chart-claude-5: #805742;
+    --model-chart-codex-0: #364553;
+    --model-chart-codex-1: #506779;
+    --model-chart-codex-2: #70899a;
+    --model-chart-codex-3: #496d75;
+    --model-chart-codex-4: #7a8189;
+    --model-chart-codex-5: #616575;
+}
+[data-theme='dark'] {
+    --model-chart-claude-0: #c27c60;
+    --model-chart-claude-1: #e49c7c;
+    --model-chart-claude-2: #b8886b;
+    --model-chart-claude-3: #d0a38a;
+    --model-chart-claude-4: #aa8b79;
+    --model-chart-claude-5: #c59477;
+    --model-chart-codex-0: #eef1f2;
+    --model-chart-codex-1: #bcc5cd;
+    --model-chart-codex-2: #91a0ae;
+    --model-chart-codex-3: #a4c2c7;
+    --model-chart-codex-4: #b3b5bc;
+    --model-chart-codex-5: #a4a1b8;
+}

@@ -1,31 +1,65 @@
 {
     "dialog": {
         "title": "Modellen vergelijken",
-        "subtitle": "Intelligence Index tegen kosten per taak",
-        "description": "De Intelligence Index van Artificial Analysis tegen de kosten per taak, per model en denkniveau.",
+        "subtitle": "Benchmarks van Artificial Analysis",
+        "description": "Vergelijk intelligentie, codeerprestaties, agentprestaties, kosten en uitvoersnelheid van modellen. Filter modellen en denkniveaus en selecteer twee meetpunten om te vergelijken.",
         "close": "Modelvergelijking sluiten",
         "failed": "De modelvergelijking kon niet worden getekend",
-        "scale": "Kostenas",
+        "scale": "Schaal horizontale as",
         "scales": {
             "log": "Log",
             "linear": "Lineair"
         }
     },
+    "views": {
+        "label": "Benchmarkgrafieken",
+        "comparison": "Kosten vs intelligentie",
+        "speed": "Snelheid vs intelligentie",
+        "score": "Intelligentie",
+        "coding": "Code",
+        "agentic": "Agents",
+        "cost": "Kosten per taak",
+        "totalCost": "Totale kosten"
+    },
     "chart": {
-        "label": "Intelligence Index tegen kosten per taak in USD",
-        "cost": "Kosten per taak (USD)",
-        "costLog": "Kosten per taak (USD, logaritmisch)",
+        "point": "{{model}}, {{effort}}: Intelligence Index {{intelligence}}, {{metric}} {{value}",
+        "frontier": "Meetpunten die binnen deze selectie niet op beide assen worden verslagen.",
+        "pareto": "Niet verslagen op beide assen",
+        "logarithmic": "logaritmisch",
+        "keyboard": "Gebruik pijltjestoetsen om meetpunten te verkennen, Enter of Spatie om er een vast te zetten en Escape om de vergelijking te wissen.",
+        "hint": "Selecteer een meetpunt als A en beweeg over een ander punt of selecteer het om te vergelijken."
+    },
+    "bars": {
+        "grouped": "Gegroepeerd",
+        "ranked": "Gerangschikt",
+        "order": "Grafiekvolgorde",
+        "point": "{{model}}, {{effort}}: {{metric}} {{value}"
+    },
+    "metrics": {
         "intelligence": "Intelligence Index",
-        "point": "{{model}}, {{effort}}: Intelligence Index {{intelligence}}, {{cost}} per taak",
-        "range": "{{model}} loopt van {{fromIntelligence}} voor {{fromCost}} tot {{toIntelligence}} voor {{toCost}}.",
-        "single": "{{model}} scoort {{intelligence}} voor {{cost}}.",
-        "frontier": "Niet verslagen op beide assen",
-        "nothingShown": "Zet een model in de lijst aan om het te tekenen."
+        "coding": "Coding Index",
+        "agentic": "Agentic Index",
+        "costPerTask": "Kosten per taak",
+        "totalCost": "Totale kosten",
+        "outputSpeed": "Uitvoersnelheid (tok/s)"
+    },
+    "units": {
+        "intelligence": "Indexpunten, hoger is beter",
+        "coding": "Indexpunten, hoger is beter",
+        "agentic": "Indexpunten, hoger is beter",
+        "costPerTask": "USD, lager is beter",
+        "totalCost": "USD, volledige Intelligence Index-evaluatie",
+        "outputSpeed": "Uitvoertokens per seconde"
+    },
+    "axes": {
+        "costPerTask": "Kosten per taak (USD, lager is beter)",
+        "outputSpeed": "Uitvoertokens per seconde (hoger is beter)"
     },
     "legend": {
         "label": "Modellen",
-        "notMeasured": "Niet gemeten",
-        "legacy": "Legacy-modellen tonen"
+        "notMeasured": "Geen data",
+        "legacy": "Legacy-modellen tonen",
+        "filtered": "Geen meetpunt voor deze grafiek en denkniveaus"
     },
     "efforts": {
         "low": "Laag",
@@ -36,9 +70,63 @@
         "off": "Zonder denken",
         "thinking": "Denken"
     },
+    "shortEfforts": {
+        "low": "L",
+        "medium": "M",
+        "high": "H",
+        "xhigh": "X",
+        "max": "Mx",
+        "off": "Uit",
+        "thinking": "Aan"
+    },
+    "filterEfforts": {
+        "low": "laag",
+        "medium": "medium",
+        "high": "hoog",
+        "xhigh": "xhoog",
+        "max": "max",
+        "off": "uit",
+        "thinking": "denken"
+    },
+    "filters": {
+        "label": "Grafiekfilters",
+        "reasoning": "Denkniveaus",
+        "reset": "Selectie herstellen",
+        "close": "Filters sluiten",
+        "search": "Modellen zoeken",
+        "noResults": "Geen modellen gevonden.",
+        "all": "Alle",
+        "none": "Geen",
+        "resetModels": "Alle modellen tonen",
+        "resetEfforts": "Alle denkniveaus tonen",
+        "count_one": "{{value}} model geselecteerd",
+        "count_other": "{{value}} modellen geselecteerd"
+    },
+    "compare": {
+        "label": "Meetpunten vergelijken",
+        "reference": "A · Referentie",
+        "candidate": "B · Vergelijken met",
+        "choose": "Kies meetpunt B",
+        "clear": "Vergelijking wissen",
+        "pinned": "A · {{measurement}}",
+        "metric": "Maatstaf",
+        "change": "Verschil",
+        "unavailable": "n.b.",
+        "pinHint": "Selecteer dit meetpunt om het als referentie A vast te zetten.",
+        "changeHint": "Indices: verschil in punten. Kosten en snelheid: B / A.",
+        "notices": {
+            "referenceHidden": "De referentie is door een filter verborgen. De vergelijking is gewist.",
+            "candidateHidden": "Meetpunt B is door een filter verborgen. Referentie A blijft vastgezet.",
+            "cleared": "Vergelijking gewist."
+        }
+    },
     "empty": {
         "unavailable": "Er zijn nog geen benchmarks om te tonen.",
-        "unreachable": "De benchmarks konden niet worden geladen. Controleer de verbinding en probeer het opnieuw."
+        "unreachable": "De benchmarks konden niet worden geladen. Controleer de verbinding en probeer het opnieuw.",
+        "models": "Geen modellen geselecteerd. Zet een model aan om de meetpunten te zien.",
+        "efforts": "Alle denkniveaus staan uit.",
+        "matching": "Geen meetpunten voor deze combinatie van modellen en denkniveaus.",
+        "metric": "Er zijn geen meetgegevens voor deze grafiek met de huidige selectie."
     },
     "footer": {
         "source": "Bron: Artificial Analysis (artificialanalysis.ai)",
@@ -48,6 +136,7 @@
         "hours_one": "{{value}} uur geleden bijgewerkt",
         "hours_other": "{{value}} uur geleden bijgewerkt",
         "days_one": "{{value}} dag geleden bijgewerkt",
-        "days_other": "{{value}} dagen geleden bijgewerkt"
+        "days_other": "{{value}} dagen geleden bijgewerkt",
+        "version": "Intelligence Index v{{version}}"
     }
 }

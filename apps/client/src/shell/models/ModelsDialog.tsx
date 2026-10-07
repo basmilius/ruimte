@@ -1,20 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { ChartSpline } from 'lucide-react';
 import { AddressBookRequestError, type ModelBenchmarksResult } from '@ruimte/pulsar';
 import { formatNumber } from '@adecore/ui/format';
-import { Segmented, Skeleton, Button, EmptyState, ErrorBoundary, CloseButton, Dialog } from '@adecore/ui';
+import { Skeleton, Button, EmptyState, ErrorBoundary, CloseButton, Dialog } from '@adecore/ui';
 import { publicAddressBook } from '@/pulsar/account';
-import { chartModels, modelMarks, type CostScale } from '@/shell/models/chart';
-import { ModelsChart } from '@/shell/models/ModelsChart';
-import { ModelsLegend } from '@/shell/models/ModelsLegend';
+import { ModelsComparison } from '@/shell/models/ModelsComparison';
 import { useUi } from '@/state/ui';
 
-const SCALES: readonly CostScale[] = ['log', 'linear'];
-
-// The attribution the terms of Artificial Analysis ask for, with a link to them; a page opens it in the system browser.
-// Those terms allow a chart and not the data itself, so the overlay never gets a table, an export or a way to copy the numbers.
+// Artificial Analysis requires visible attribution alongside its benchmark visualizations.
 const SOURCE_URL = 'https://artificialanalysis.ai';
 
 const MINUTE = 60_000;
@@ -67,76 +62,24 @@ function useBenchmarks(): [load: Load, retry: () => void] {
     return [load, retry];
 }
 
-function Comparison({ result, receivedAt, scale }: { result: ModelBenchmarksResult; receivedAt: number; scale: CostScale }) {
-    const { t } = useTranslation('models');
-    const models = useMemo(() => chartModels(result.models), [result]);
-    const marks = useMemo(() => modelMarks(models), [models]);
-    const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
-    const [showLegacy, setShowLegacy] = useState(false);
-    const [highlighted, setHighlighted] = useState<string | null>(null);
-
-    const listed = useMemo(() => models.filter((model) => showLegacy || !model.legacy), [models, showLegacy]);
-    const drawn = useMemo(() => listed.filter((model) => model.points.length > 0 && !hidden.has(model.id)), [listed, hidden]);
-
-    const toggle = (id: string): void => {
-        const next = new Set(hidden);
-        if (!next.delete(id)) {
-            next.add(id);
-        }
-        setHidden(next);
-    };
-
-    return (
-        <>
-            <div className="grid min-h-0 grow grid-cols-[1fr_16rem] gap-6 overflow-y-auto px-6 pt-4 pb-4 max-[960px]:px-4">
-                <ModelsChart models={drawn} marks={marks} scale={scale} highlighted={drawn.some((model) => model.id === highlighted) ? highlighted : null} />
-                <ModelsLegend
-                    models={listed}
-                    marks={marks}
-                    hidden={hidden}
-                    showLegacy={showLegacy}
-                    onToggle={toggle}
-                    onHighlight={setHighlighted}
-                    onShowLegacy={setShowLegacy}
-                />
-            </div>
-            <footer className="flex shrink-0 flex-wrap items-center justify-center gap-x-2 border-t border-border px-6 py-2 text-xs text-text-muted">
-                <a href={SOURCE_URL} target="_blank" rel="noreferrer" className="underline decoration-border-strong underline-offset-2 hover:text-text">
-                    {t('footer.source')}
-                </a>
-                <span aria-hidden>·</span>
-                <span>{updatedLabel(result.fetchedAt, receivedAt)}</span>
-            </footer>
-        </>
-    );
-}
-
 function Body() {
     const { t } = useTranslation('models');
-    const [scale, setScale] = useState<CostScale>('log');
     const [load, retry] = useBenchmarks();
 
     return (
         <div className="flex h-full min-h-0 flex-col">
             <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border py-3 pr-3 pl-6 max-[960px]:pl-4">
-                <div className="flex min-w-0 flex-col">
+                <div className="flex min-w-0 items-baseline gap-3">
                     <Dialog.Title>{t('dialog.title')}</Dialog.Title>
-                    <p className="text-xs text-text-muted">{t('dialog.subtitle')}</p>
+                    <p className="text-xs text-text-muted max-[760px]:hidden">{t('dialog.subtitle')}</p>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                    <Segmented<CostScale>
-                        value={scale}
-                        options={SCALES.map((id) => ({ id, label: t(`dialog.scales.${id}`) }))}
-                        onValueChange={setScale}
-                        label={t('dialog.scale')}
-                        disabled={load.status !== 'ready'}
-                    />
                     <CloseButton label={t('dialog.close')} dialog />
                 </div>
             </header>
             {load.status === 'loading' && (
-                <div className="grid grow grid-cols-[1fr_16rem] gap-6 px-6 pt-4 pb-4">
-                    <Skeleton className="h-[400px] w-full rounded-lg" />
+                <div className="grid min-h-0 grow grid-cols-[minmax(0,1fr)_15rem] gap-6 px-6 pt-4 pb-4 max-[760px]:grid-cols-1">
+                    <Skeleton className="h-full w-full rounded-lg" />
                     <div className="flex flex-col gap-2">
                         {[0, 1, 2, 3, 4, 5].map((row) => (
                             <Skeleton key={row} className="w-40" />
@@ -157,7 +100,24 @@ function Body() {
                     {t(`empty.${load.reason}`)}
                 </EmptyState>
             )}
-            {load.status === 'ready' && <Comparison result={load.result} receivedAt={load.receivedAt} scale={scale} />}
+            {load.status === 'ready' && (
+                <>
+                    <ModelsComparison result={load.result} />
+                    <footer className="flex shrink-0 flex-wrap items-center justify-center gap-x-2 border-t border-border px-6 py-2 text-xs text-text-muted">
+                        <a href={SOURCE_URL} target="_blank" rel="noreferrer" className="underline decoration-border-strong underline-offset-2 hover:text-text">
+                            {t('footer.source')}
+                        </a>
+                        <span aria-hidden>·</span>
+                        <span>{updatedLabel(load.result.fetchedAt, load.receivedAt)}</span>
+                        {load.result.intelligenceIndexVersion !== undefined && (
+                            <>
+                                <span aria-hidden>·</span>
+                                <span>{t('footer.version', { version: load.result.intelligenceIndexVersion })}</span>
+                            </>
+                        )}
+                    </footer>
+                </>
+            )}
         </div>
     );
 }
@@ -167,7 +127,7 @@ export function ModelsDialog() {
     const open = useUi((s) => s.modelsOpen);
     return (
         <Dialog.Root open={open} onOpenChange={(next) => useUi.getState().setModelsOpen(next)}>
-            <Dialog.Popup className="flex h-[600px] w-[1080px] flex-col">
+            <Dialog.Popup className="flex h-[calc(100dvh-120px)] w-[calc(100vw-120px)] flex-col">
                 <ErrorBoundary label={i18next.t('models:dialog.failed')} className="grow">
                     <Body />
                 </ErrorBoundary>

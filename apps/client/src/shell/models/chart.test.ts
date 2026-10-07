@@ -1,24 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import {
-    chartModels,
-    costAxis,
-    frontier,
-    intelligenceAxis,
-    MARK_SHAPES,
-    markPath,
-    modelMarks,
-    movePoint,
-    nearestPoint,
-    overlaps,
-    placeLabels,
-    type ChartModel
-} from '@/shell/models/chart';
+import { chartModels, costAxis, frontier, intelligenceAxis, modelMarks, movePoint, nearestPoint } from '@/shell/models/chart';
 
 function point(costPerTask: number, intelligence: number) {
     return { costPerTask, intelligence };
 }
 
-function model(id: string, provider: 'claude' | 'codex', legacy = false): ChartModel {
+function model(id: string, provider: 'claude' | 'codex', legacy = false) {
     return { id, name: id, provider, legacy, points: [] };
 }
 
@@ -71,64 +58,31 @@ describe('the axes', () => {
 });
 
 describe('the marks', () => {
-    test("give every model its provider's color and a shape of its own within that provider, legacy ones after them", () => {
-        const marks = modelMarks([model('old', 'claude', true), model('opus', 'claude'), model('sonnet', 'claude'), model('sol', 'codex')]);
-        expect(marks.get('opus')).toEqual({ color: 'var(--chart-claude)', shape: 'circle' });
-        expect(marks.get('sonnet')).toEqual({ color: 'var(--chart-claude)', shape: 'square' });
-        expect(marks.get('old')).toEqual({ color: 'var(--chart-claude)', shape: 'triangle' });
-        expect(marks.get('sol')).toEqual({ color: 'var(--chart-codex)', shape: 'circle' });
+    test('uses partial measurements in canonical effort order and supports an older cached response', () => {
+        const original = { ...model('haiku', 'claude'), points: [{ effort: 'max', intelligence: 42, costPerTask: 0.2 }] };
+        expect(chartModels([original])[0]?.points).toEqual(original.points);
+        const measurements = [
+            { modelId: 'haiku', effort: 'max', intelligence: 42, costPerTask: 0.2 },
+            { modelId: 'other', effort: 'low', intelligence: 12 },
+            { modelId: 'haiku', effort: 'low', coding: 0, outputSpeed: 120 }
+        ];
+        expect(chartModels([original], measurements)[0]?.points).toEqual([
+            { effort: 'low', coding: 0, outputSpeed: 120 },
+            { effort: 'max', intelligence: 42, costPerTask: 0.2 }
+        ]);
+        expect(measurements[0]?.effort).toBe('max');
     });
 
-    test('draw every shape as one closed path', () => {
-        for (const shape of MARK_SHAPES) {
-            expect(markPath(shape, 10, 10, 4)).toMatch(/^M.* Z$/);
-        }
+    test('keep current model colors stable when legacy models are listed', () => {
+        const marks = modelMarks([model('old', 'claude', true), model('opus', 'claude'), model('sonnet', 'claude'), model('sol', 'codex')]);
+        expect(marks.get('opus')).toEqual({ color: 'var(--model-chart-claude-0)' });
+        expect(marks.get('sonnet')).toEqual({ color: 'var(--model-chart-claude-1)' });
+        expect(marks.get('old')).toEqual({ color: 'var(--model-chart-claude-2)' });
+        expect(marks.get('sol')).toEqual({ color: 'var(--model-chart-codex-0)' });
     });
 
     test('leave out a provider this client has no color for', () => {
         expect(chartModels([model('opus', 'claude'), { ...model('other', 'claude'), provider: 'someone' }]).map((entry) => entry.id)).toEqual(['opus']);
-    });
-});
-
-describe('the labels of the lines', () => {
-    const bounds = { left: 0, top: 0, right: 400, bottom: 300 };
-
-    test('sit beside and above the last point when nothing is in the way', () => {
-        const [place] = placeLabels(
-            [
-                [
-                    { x: 100, y: 200 },
-                    { x: 200, y: 100 }
-                ]
-            ],
-            [60],
-            bounds
-        );
-        expect(place).toMatchObject({ x: 210, y: 90, anchor: 'start' });
-    });
-
-    test('stay inside the chart', () => {
-        const [place] = placeLabels(
-            [
-                [
-                    { x: 100, y: 200 },
-                    { x: 390, y: 100 }
-                ]
-            ],
-            [60],
-            bounds
-        );
-        expect(place!.box.right).toBeLessThanOrEqual(bounds.right);
-    });
-
-    test('never land on a label placed before them', () => {
-        const places = placeLabels([[{ x: 300, y: 100 }], [{ x: 290, y: 104 }]], [60, 60], bounds);
-        const [first, second] = places.map((place) => place!.box);
-        expect(overlaps(first!, second!)).toBe(false);
-    });
-
-    test('leave a line without points out', () => {
-        expect(placeLabels([[]], [60], bounds)).toEqual([null]);
     });
 });
 

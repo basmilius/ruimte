@@ -1,31 +1,65 @@
 {
     "dialog": {
         "title": "Compare models",
-        "subtitle": "Intelligence Index against cost per task",
-        "description": "The Intelligence Index of Artificial Analysis against the cost per task, per model and effort.",
+        "subtitle": "Artificial Analysis benchmarks",
+        "description": "Compare model intelligence, coding, agentic performance, costs and output speed. Filter models and reasoning levels and select two measurements to compare.",
         "close": "Close model comparison",
         "failed": "The model comparison failed to render",
-        "scale": "Cost axis",
+        "scale": "Horizontal axis scale",
         "scales": {
             "log": "Log",
             "linear": "Linear"
         }
     },
+    "views": {
+        "label": "Benchmark charts",
+        "comparison": "Cost vs intelligence",
+        "speed": "Speed vs intelligence",
+        "score": "Intelligence",
+        "coding": "Coding",
+        "agentic": "Agentic",
+        "cost": "Cost per task",
+        "totalCost": "Total cost"
+    },
     "chart": {
-        "label": "Intelligence Index against cost per task in USD",
-        "cost": "Cost per task (USD)",
-        "costLog": "Cost per task (USD, logarithmic)",
+        "point": "{{model}}, {{effort}}: Intelligence Index {{intelligence}}, {{metric}} {{value}",
+        "frontier": "Measurements not beaten within this selection on both axes.",
+        "pareto": "Not beaten on both axes",
+        "logarithmic": "log scale",
+        "keyboard": "Use arrow keys to explore measurements, Enter or Space to pin one, and Escape to clear the comparison.",
+        "hint": "Select a measurement to pin A, then hover or select another to compare."
+    },
+    "bars": {
+        "grouped": "Grouped",
+        "ranked": "Ranked",
+        "order": "Chart ordering",
+        "point": "{{model}}, {{effort}}: {{metric}} {{value}"
+    },
+    "metrics": {
         "intelligence": "Intelligence Index",
-        "point": "{{model}}, {{effort}}: Intelligence Index {{intelligence}}, {{cost}} per task",
-        "range": "{{model}} runs from {{fromIntelligence}} for {{fromCost}} to {{toIntelligence}} for {{toCost}}.",
-        "single": "{{model}} scores {{intelligence}} for {{cost}}.",
-        "frontier": "Not beaten on both axes",
-        "nothingShown": "Turn on a model in the list to draw it."
+        "coding": "Coding Index",
+        "agentic": "Agentic Index",
+        "costPerTask": "Cost per task",
+        "totalCost": "Total cost",
+        "outputSpeed": "Output speed (tok/s)"
+    },
+    "units": {
+        "intelligence": "Index points, higher is better",
+        "coding": "Index points, higher is better",
+        "agentic": "Index points, higher is better",
+        "costPerTask": "USD, lower is better",
+        "totalCost": "USD, full Intelligence Index run",
+        "outputSpeed": "Output tokens per second"
+    },
+    "axes": {
+        "costPerTask": "Cost per task (USD, lower is better)",
+        "outputSpeed": "Output tokens per second (higher is better)"
     },
     "legend": {
         "label": "Models",
-        "notMeasured": "Not measured",
-        "legacy": "Show legacy models"
+        "notMeasured": "No data",
+        "legacy": "Show legacy models",
+        "filtered": "No measurement for this chart and these reasoning levels"
     },
     "efforts": {
         "low": "Low",
@@ -36,9 +70,63 @@
         "off": "No thinking",
         "thinking": "Thinking"
     },
+    "shortEfforts": {
+        "low": "L",
+        "medium": "M",
+        "high": "H",
+        "xhigh": "X",
+        "max": "Mx",
+        "off": "Off",
+        "thinking": "On"
+    },
+    "filterEfforts": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high",
+        "xhigh": "xhigh",
+        "max": "max",
+        "off": "none",
+        "thinking": "thinking"
+    },
+    "filters": {
+        "label": "Chart filters",
+        "reasoning": "Reasoning",
+        "reset": "Reset selection",
+        "close": "Close filters",
+        "search": "Find models",
+        "noResults": "No models found.",
+        "all": "All",
+        "none": "None",
+        "resetModels": "Show all models",
+        "resetEfforts": "Show all reasoning levels",
+        "count_one": "{{value}} model selected",
+        "count_other": "{{value}} models selected"
+    },
+    "compare": {
+        "label": "Measurement comparison",
+        "reference": "A · Reference",
+        "candidate": "B · Compare with",
+        "choose": "Choose measurement B",
+        "clear": "Clear comparison",
+        "pinned": "A · {{measurement}}",
+        "metric": "Metric",
+        "change": "Change",
+        "unavailable": "n/a",
+        "pinHint": "Select this measurement to pin it as reference A.",
+        "changeHint": "Indices: difference in points. Costs and speed: B / A.",
+        "notices": {
+            "referenceHidden": "The reference was hidden by a filter. The comparison has been cleared.",
+            "candidateHidden": "Measurement B was hidden by a filter. Reference A is still pinned.",
+            "cleared": "Comparison cleared."
+        }
+    },
     "empty": {
         "unavailable": "There are no benchmarks to show yet.",
-        "unreachable": "The benchmarks could not be loaded. Check the connection and try again."
+        "unreachable": "The benchmarks could not be loaded. Check the connection and try again.",
+        "models": "No models selected. Turn on a model to see its measurements.",
+        "efforts": "All reasoning levels are turned off.",
+        "matching": "No measurements match these models and reasoning levels.",
+        "metric": "No measurements are available for this chart with the current selection."
     },
     "footer": {
         "source": "Source: Artificial Analysis (artificialanalysis.ai)",
@@ -48,6 +136,7 @@
         "hours_one": "Updated {{value}} hour ago",
         "hours_other": "Updated {{value}} hours ago",
         "days_one": "Updated {{value}} day ago",
-        "days_other": "Updated {{value}} days ago"
+        "days_other": "Updated {{value}} days ago",
+        "version": "Intelligence Index v{{version}}"
     }
 }
