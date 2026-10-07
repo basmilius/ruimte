@@ -242,7 +242,9 @@ on an answer say how much of the day is left.
 random bearer token, deploys only its SHA-256 digest and a 15-minute expiry as Worker bindings, then
 calls `POST /internal/benchmarks/refresh`. The bearer stays in the deploy process and is never passed
 to Wrangler or printed. No additional GitHub secret is needed; the Artificial Analysis key stays in
-the Worker.
+the Worker. While the deployment reaches Cloudflare's edges, the script waits up to 55 seconds for
+an old version's `404` or `401` to clear. Those requests never reach Artificial Analysis. Other errors
+are not retried because the refresh may already have consumed quota.
 
 The route validates the token and atomically consumes it before fetching, including when the upstream
 request fails. Repeated or concurrent calls cannot spend the Free quota again. The response confirms

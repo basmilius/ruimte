@@ -58,7 +58,6 @@ describe('Worker deployment', () => {
     test('fails the workflow when refresh fails or returns an unconfirmed or empty result, without retries', async () => {
         for (const [status, body] of [
             [502, { refreshed: false }],
-            [401, {}],
             [429, {}],
             [200, null],
             [200, {}],
@@ -75,6 +74,46 @@ describe('Worker deployment', () => {
                 )
             ).rejects.toThrow('Worker deployed, but');
             expect(requests).toBe(1);
+        }
+    });
+
+    test('waits for deployment propagation only while the old Worker rejects the request', async () => {
+        const tokens: string[] = [];
+        const waits: number[] = [];
+        const statuses = [404, 401, 200];
+        await deployPulsarWorker(
+            async () => {},
+            async (_url, init) => {
+                tokens.push(new Headers(init.headers).get('authorization')!);
+                return Response.json({ refreshed: true, fetchedAt: 123, measurements: 70 }, { status: statuses.shift()! });
+            },
+            async (milliseconds) => {
+                waits.push(milliseconds);
+            }
+        );
+        expect(tokens).toHaveLength(3);
+        expect(new Set(tokens).size).toBe(1);
+        expect(waits).toEqual([5_000, 5_000]);
+    });
+
+    test('gives up after a bounded wait when the new Worker never becomes available', async () => {
+        for (const status of [401, 404]) {
+            let requests = 0;
+            let elapsed = 0;
+            await expect(
+                deployPulsarWorker(
+                    async () => {},
+                    async () => {
+                        requests++;
+                        return new Response(null, { status });
+                    },
+                    async (milliseconds) => {
+                        elapsed += milliseconds;
+                    }
+                )
+            ).rejects.toThrow(`HTTP ${status}`);
+            expect(requests).toBe(12);
+            expect(elapsed).toBe(55_000);
         }
     });
 

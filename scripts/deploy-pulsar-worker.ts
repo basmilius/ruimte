@@ -7,7 +7,8 @@ const TOKEN_LIFETIME_MS = 15 * 60_000;
 
 export async function deployPulsarWorker(
     run: (args: string[]) => Promise<void>,
-    request: (url: string, init: RequestInit) => Promise<Response> = fetch
+    request: (url: string, init: RequestInit) => Promise<Response> = fetch,
+    wait: (milliseconds: number) => Promise<void> = Bun.sleep
 ): Promise<void> {
     await run(['d1', 'migrations', 'apply', 'ruimte-pulsar', '--remote']);
 
@@ -17,14 +18,7 @@ export async function deployPulsarWorker(
     // Wrangler prints plain-text bindings, so only the digest and expiry may enter its arguments.
     await run(['deploy', '--var', `BENCHMARK_REFRESH_TOKEN_HASH:${digest}`, '--var', `BENCHMARK_REFRESH_TOKEN_EXPIRES_AT:${expiresAt}`]);
 
-    const response = await request(REFRESH_URL, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${token}` },
-        redirect: 'error',
-        signal: AbortSignal.timeout(180_000)
-    }).catch(() => {
-        throw new Error('Worker deployed, but the benchmark refresh request failed. Check the live snapshot before deploying again.');
-    });
+    const response = await refreshAfterPropagation(token, request, wait);
     if (!response.ok) {
         throw new Error(`Worker deployed, but benchmark refresh failed (HTTP ${response.status}). The previous snapshot was kept.`);
     }
@@ -33,6 +27,29 @@ export async function deployPulsarWorker(
         throw new Error('Worker deployed, but the benchmark refresh did not confirm a new snapshot.');
     }
     console.log(`Benchmarks refreshed: ${result.measurements} measurements at ${new Date(result.fetchedAt!).toISOString()}`);
+}
+
+async function refreshAfterPropagation(
+    token: string,
+    request: (url: string, init: RequestInit) => Promise<Response>,
+    wait: (milliseconds: number) => Promise<void>
+): Promise<Response> {
+    for (let attempt = 0; ; attempt++) {
+        const response = await request(REFRESH_URL, {
+            method: 'POST',
+            headers: { authorization: `Bearer ${token}` },
+            redirect: 'error',
+            signal: AbortSignal.timeout(180_000)
+        }).catch(() => {
+            throw new Error('Worker deployed, but the benchmark refresh request failed. Check the live snapshot before deploying again.');
+        });
+        // An old edge version rejects the new token before reaching AA. Never retry an accepted or ambiguous request.
+        if ((response.status !== 404 && response.status !== 401) || attempt >= 11) {
+            return response;
+        }
+        await response.body?.cancel();
+        await wait(5_000);
+    }
 }
 
 async function wrangler(args: string[]): Promise<void> {
