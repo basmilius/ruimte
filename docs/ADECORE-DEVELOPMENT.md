@@ -60,6 +60,8 @@ The PHP language server lives in `basmilius/language-server-php` and is independ
 
 For PHP development, place an existing checkout at `../language-servers/php` beside Ruimte, or set `RUIMTE_PHP_LANGUAGE_SERVER_SOURCE=/path/to/php`. A Ruimte worktree also discovers the sibling of its primary checkout. Install builds that checkout with Cargo. The locator never creates or updates a Git checkout. Without valid local sources, the daemon uses the pinned native release; a compiled daemon always uses that release. See [the daemon README](../apps/server/README.md#language-servers) for the descriptor and install behavior.
 
+For SQL development, the same holds for `basmilius/language-server-sql`: place its checkout at `../language-servers/sql` beside Ruimte, or set `RUIMTE_SQL_LANGUAGE_SERVER_SOURCE=/path/to/sql`, and Install builds it with Cargo.
+
 ## Work across the repositories
 
 Fix shared behavior in the ADE CORE folder and application behavior in Ruimte. Edit a shared repository only through its real filesystem path, never through `node_modules`, and only when the task authorizes changes there. A link changes package resolution; it grants neither task authorization nor filesystem permissions.
