@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionManager } from '@adecore/database';
 import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
-import { Button, Dialog, FormError, Select, Switch } from '@adecore/ui';
+import { Button, Dialog, Field, FormError, Select, Switch } from '@adecore/ui';
 import {
     asViewConnections,
     databaseConnections,
@@ -22,8 +22,8 @@ import { useConnection } from '@/transport/context';
 
 /*
  * The connections of the project: every add, edit and delete is saved as it happens, the passwords
- * to this computer's secret store and the rest to the project. Under the manager the connection it
- * shows can be shared with everyone who works on the project.
+ * to this computer's secret store and the rest to the project. After its form fields a connection can
+ * be shared with everyone who works on the project, and says what agents may do with it.
  */
 export function DatabaseConnectionsDialog() {
     const { t } = useTranslation(['databases', 'common']);
@@ -54,10 +54,17 @@ export function DatabaseConnectionsDialog() {
                         selected={shown?.id ?? null}
                         onSelectedChange={(id) => useDatabaseTabs.getState().selectConnection(id)}
                         onBrowse={browse}
+                        renderFields={(connection) => {
+                            const found = connections.find((entry) => entry.id === connection.id);
+                            return found === undefined ? null : (
+                                <>
+                                    <ShareField connection={found} connections={connections} />
+                                    <AgentsField connection={found} local={endpointId === LOCAL_ENDPOINT_ID} />
+                                </>
+                            );
+                        }}
                         className="min-h-0 flex-1"
                     />
-                    {shown !== null && <ShareRow connection={shown} connections={connections} />}
-                    {shown !== null && <AgentsRow connection={shown} local={endpointId === LOCAL_ENDPOINT_ID} />}
                     <Dialog.Footer className="mt-0 shrink-0 border-t border-border px-4 py-3">
                         {saveError !== null && <FormError className="mr-auto min-w-0 truncate">{t('dialog.saveFailed', { reason: saveError })}</FormError>}
                         <Dialog.Close render={<Button variant="secondary" />}>{t('common:action.done')}</Dialog.Close>
@@ -69,7 +76,7 @@ export function DatabaseConnectionsDialog() {
 }
 
 /* Whether the connection goes into the repository's file or stays this person's. A SQLite file outside the project folder can only stay. */
-function ShareRow({ connection, connections }: { connection: DatabaseConnection; connections: readonly DatabaseConnection[] }) {
+function ShareField({ connection, connections }: { connection: DatabaseConnection; connections: readonly DatabaseConnection[] }) {
     const { t } = useTranslation('databases');
     const folder = useProject((state) => state.current?.folder ?? null);
     const outside = isOutsideProject(folder, connection);
@@ -79,13 +86,9 @@ function ShareRow({ connection, connections }: { connection: DatabaseConnection;
     };
 
     return (
-        <div className="flex shrink-0 items-center gap-3 border-t border-border px-4 py-3">
-            <div className="flex min-w-0 grow flex-col">
-                <span className="text-sm text-text">{t('dialog.share.label')}</span>
-                <span className="text-sm text-text-muted">{outside ? t('dialog.share.outside') : t('dialog.share.description')}</span>
-            </div>
+        <Field label={t('dialog.share.label')} hint={outside ? t('dialog.share.outside') : t('dialog.share.description')} orientation="horizontal" group>
             <Switch label={t('dialog.share.label')} checked={connection.shared && !outside} disabled={outside} onCheckedChange={share} />
-        </div>
+        </Field>
     );
 }
 
@@ -94,7 +97,7 @@ function ShareRow({ connection, connections }: { connection: DatabaseConnection;
  * the project, and lets agents write only when a person on that machine says so, which is why a
  * window on another computer cannot pick it.
  */
-function AgentsRow({ connection, local }: { connection: DatabaseConnection; local: boolean }) {
+function AgentsField({ connection, local }: { connection: DatabaseConnection; local: boolean }) {
     const { t } = useTranslation('databases');
     const access = useDatabaseConnections((state) => state.agentAccess[connection.id] ?? 'read');
     const items = [
@@ -108,12 +111,8 @@ function AgentsRow({ connection, local }: { connection: DatabaseConnection; loca
     };
 
     return (
-        <div className="flex shrink-0 items-center gap-3 border-t border-border px-4 py-3">
-            <div className="flex min-w-0 grow flex-col">
-                <span className="text-sm text-text">{t('dialog.agents.label')}</span>
-                <span className="text-sm text-text-muted">{t('dialog.agents.description')}</span>
-            </div>
-            <Select<DatabaseAgentAccess> value={access} onValueChange={choose} items={items} label={t('dialog.agents.label')} align="end" />
-        </div>
+        <Field label={t('dialog.agents.label')} hint={t('dialog.agents.description')} orientation="horizontal" group>
+            <Select<DatabaseAgentAccess> value={access} onValueChange={choose} items={items} label={t('dialog.agents.label')} />
+        </Field>
     );
 }
