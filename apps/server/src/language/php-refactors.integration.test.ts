@@ -207,7 +207,7 @@ describe.skipIf(!runnable)('the refactors of the PHP server of Ruimte', () => {
             folderOf: (projectId) => (projectId === 'p1' ? project : null),
             holders: () => ['c1'],
             machineHome: new MachineHome(join(base, 'home')),
-            native: new NativePolicy({ checkout: { folder: checkout, version: '0.0.0-test', stubsCommit: stubs! } }),
+            native: new NativePolicy({ checkouts: { 'php-native': { folder: checkout, version: '0.0.0-test', stubsCommit: stubs! } } }),
             spawn: (spec) => {
                 const child = spawnLanguageProcess(spec);
                 exits.push(child.exited);

@@ -11,7 +11,7 @@ import { CustomLanguageServers } from './custom.ts';
 import { LanguageHost } from './host.ts';
 import type { LanguageInstaller } from './installer.ts';
 import { NativePolicy, type Download } from './native.ts';
-import { KIND_PROFILES } from './profiles.ts';
+import { KIND_PROFILES, type ProjectSqlSettings } from './profiles.ts';
 import { FULL_CAPABILITIES, fakeSpawner, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
 import { tarGz } from './test-archives.ts';
 import { versionOf } from './versions.ts';
@@ -60,6 +60,7 @@ function rig(
         texts?: Record<string, string>;
         /* The revision of the checkout the PHP server builds from; none to read by default. */
         revision?: () => string | null;
+        sqlSettings?: (projectId: string) => Promise<ProjectSqlSettings | null>;
     } = {}
 ): Rig {
     const spawner = options.spawner ?? fakeSpawner();
@@ -81,7 +82,8 @@ function rig(
         },
         runtime: { command: '/ruimte', args: [], env: { BUN_BE_BUN: '1' } },
         spawn: spawner.spawn,
-        native: options.native ?? new NativePolicy({ checkout: { folder: join(root, 'repo'), version: '0.1.0', stubsCommit: STUBS_COMMIT } }),
+        native:
+            options.native ?? new NativePolicy({ checkouts: { 'php-native': { folder: join(root, 'repo'), version: '0.1.0', stubsCommit: STUBS_COMMIT } } }),
         download: stubsDownload,
         checkoutRevision: async () => options.revision?.() ?? null,
         run: async (spec, onLine) => {
@@ -117,7 +119,8 @@ function rig(
             resolve: (command) => (['zls', 'taplo'].includes(command) ? `/bin/${command}` : null)
         }),
         exists: async (path) => (options.files ?? []).includes(path),
-        readText: async (path) => (path === '/work/package.json' ? (options.packageJson ?? null) : (options.texts?.[path] ?? null))
+        readText: async (path) => (path === '/work/package.json' ? (options.packageJson ?? null) : (options.texts?.[path] ?? null)),
+        ...(options.sqlSettings === undefined ? {} : { sqlSettings: options.sqlSettings })
     });
     const events: Record<string, SessionEvent[]> = { 'client-1': [], 'client-2': [] };
     for (const clientId of Object.keys(events)) {
@@ -136,6 +139,7 @@ async function installed(
         intelephense?: boolean;
         native?: NativePolicy;
         texts?: Record<string, string>;
+        sqlSettings?: (projectId: string) => Promise<ProjectSqlSettings | null>;
     } = {}
 ): Promise<Rig> {
     // PHP goes to the server of Ruimte unless the machine picked Intelephense, which these tests stand in with.
@@ -1157,7 +1161,7 @@ describe('the PHP server of Ruimte and Intelephense', () => {
     });
 
     it('says a build with nothing to install is unavailable, and starts no install for it', async () => {
-        const { host, installs } = await installed(['typescript'], { native: new NativePolicy({ checkout: null, releases: {} }) });
+        const { host, installs } = await installed(['typescript'], { native: new NativePolicy({ checkouts: {}, releases: {} }) });
         expect((await host.status('p1')).find((status) => status.server === 'php-native')).toMatchObject({
             state: 'not-installed',
             version: '',
@@ -1165,7 +1169,9 @@ describe('the PHP server of Ruimte and Intelephense', () => {
         });
         await host.install('php-native');
         await until(async () => (await host.status('p1')).find((status) => status.server === 'php-native')?.message !== undefined);
-        expect((await host.status('p1')).find((status) => status.server === 'php-native')).toMatchObject({ message: 'Not available in this build yet' });
+        expect((await host.status('p1')).find((status) => status.server === 'php-native')).toMatchObject({
+            message: 'No release of this server is available yet'
+        });
         expect(installs).toEqual(['typescript']);
     });
 });
@@ -1329,5 +1335,113 @@ describe('files that move', () => {
         const { host, calls, file } = await moveRig(importEdits);
         expect(await host.renameFiles('client-1', 'other', aToC.from, aToC.to, true, file)).toEqual([]);
         expect(calls).toEqual(['move']);
+    });
+});
+
+describe('an agent asking about a file', () => {
+    const hover = { contents: { kind: 'markdown', value: '`let a: number`' } };
+
+    it('opens a file nobody holds with the text on disk, answers from it, and lets it go', async () => {
+        const spawner = fakeSpawner({}, [], { typescript: { 'textDocument/hover': () => hover } });
+        const { host } = await installed(['typescript'], { spawner });
+        const answer = await host.forAgent(
+            'p1',
+            { path: '/work/src/a.ts', languageId: 'typescript', disk: 'let a = 1;\n', owner: 'agent:chat-1' },
+            async (document) => {
+                expect(document).toMatchObject({
+                    storedPath: 'src/a.ts',
+                    text: 'let a = 1;\n',
+                    unsaved: false,
+                    servers: [{ kind: 'typescript', state: 'ready' }]
+                });
+                return document.request('textDocument/hover', { position: { line: 0, character: 4 } });
+            }
+        );
+        expect(answer.result).toEqual(hover);
+        await settle();
+        const [process] = spawner.of('typescript');
+        expect(process!.server.paramsOf('textDocument/didClose')).toHaveLength(1);
+        await expect(host.request({ projectId: 'p1', path: 'src/a.ts', method: 'textDocument/hover', params: {} })).rejects.toMatchObject({
+            code: LANGUAGE_ERROR_CODES.documentNotOpen
+        });
+    });
+
+    it('joins a document a person has open and keeps the text in their editor', async () => {
+        const { host, spawner } = await installed(['typescript']);
+        await openReady(host, 'src/a.ts', 'let edited = 2;\n');
+        await host.forAgent('p1', { path: '/work/src/a.ts', languageId: 'typescript', disk: 'let a = 1;\n', owner: 'agent:chat-1' }, async (document) => {
+            expect(document.text).toBe('let edited = 2;\n');
+            expect(document.unsaved).toBe(true);
+        });
+        await settle();
+        const [process] = spawner.of('typescript');
+        expect(process!.server.paramsOf('textDocument/didClose')).toEqual([]);
+        expect([...process!.server.documents.values()].map((document) => document.text)).toEqual(['let edited = 2;\n']);
+    });
+
+    it('waits for the first report of a server that pushes what it finds', async () => {
+        const { host, spawner } = await installed(['yaml']);
+        const asked = host.forAgent('p1', { path: '/work/a.yaml', languageId: 'yaml', disk: 'a: [', owner: 'agent:chat-1' }, (document) =>
+            document.diagnostics()
+        );
+        await ready(host, 'yaml');
+        const [process] = spawner.of('yaml');
+        await process!.server.publishDiagnostics('file:///work/a.yaml', [
+            { range: { start: { line: 0, character: 3 }, end: { line: 0, character: 4 } }, message: 'Unclosed' }
+        ]);
+        expect(await asked).toEqual([{ server: 'yaml', diagnostics: [expect.objectContaining({ message: 'Unclosed' })] }]);
+    });
+
+    it('never installs a server: one that is not installed says so', async () => {
+        const { host, installs } = rig();
+        const servers = await host.forAgent(
+            'p1',
+            { path: '/work/src/a.ts', languageId: 'typescript', disk: '', owner: 'agent:chat-1' },
+            async (document) => document.servers
+        );
+        expect(servers).toEqual([{ kind: 'typescript', state: 'not-installed' }]);
+        expect(installs).toEqual([]);
+    });
+
+    it("reads no file under the machine's own state", async () => {
+        const { host } = await installed(['typescript']);
+        await expect(
+            host.forAgent('p1', { path: '/home/.ruimte/secret.ts', languageId: 'typescript', disk: '', owner: 'agent:chat-1' }, async () => undefined)
+        ).rejects.toMatchObject({ code: LANGUAGE_ERROR_CODES.badPath });
+    });
+});
+
+describe('the SQL of a project', () => {
+    it('tells a running PHP server new settings when the SQL of the project changes, and starts the next one with them', async () => {
+        let settings: ProjectSqlSettings = { sql: {}, php: { dialect: 'mysql' }, unbound: [] };
+        const { host, spawner } = await installed(['php-native'], { sqlSettings: async () => settings });
+        await open(host, 'src/a.php', '<?php', 'client-1', 'php');
+        await ready(host, 'php-native');
+        const [process] = spawner.of('php-native');
+        expect(process!.server.paramsOf('initialize')[0]).toMatchObject({ initializationOptions: { sql: { dialect: 'mysql' } } });
+        settings = { sql: {}, php: { dialect: 'mariadb', schema: '/snap.json' }, unbound: [] };
+        await host.sqlChanged('p1');
+        await settle();
+        expect(process!.server.paramsOf('workspace/didChangeConfiguration').at(-1)).toEqual({
+            settings: { phpLanguageServer: { sql: { dialect: 'mariadb', schema: '/snap.json' } } }
+        });
+    });
+
+    it('hands a snapshot written outside the project to the servers that watch it', async () => {
+        const { host, spawner } = await installed(['php-native'], { sqlSettings: async () => ({ sql: {}, php: {}, unbound: [] }) });
+        await open(host, 'src/a.php', '<?php', 'client-1', 'php');
+        await ready(host, 'php-native');
+        const [process] = spawner.of('php-native');
+        await process!.server.request('client/registerCapability', {
+            registrations: [
+                { id: 'php-sql-snapshots', method: 'workspace/didChangeWatchedFiles', registerOptions: { watchers: [{ globPattern: '/snapshots/shop.json' }] } }
+            ]
+        });
+        await host.outsideFilesChanged([
+            { path: '/snapshots/shop.json', type: 2 },
+            { path: '/snapshots/other.json', type: 2 }
+        ]);
+        await settle();
+        expect(process!.server.paramsOf('workspace/didChangeWatchedFiles')).toEqual([{ changes: [{ uri: 'file:///snapshots/shop.json', type: 2 }] }]);
     });
 });

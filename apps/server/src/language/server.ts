@@ -4,6 +4,7 @@ import type { LanguageServerId, LanguageServerState } from '@ruimte/contracts';
 import {
     bridgeVueTypeScript,
     ErrorCodes,
+    fileUriToPath,
     LspError,
     LspSession,
     pathToFileUri,
@@ -12,7 +13,9 @@ import {
     watchesFile,
     type ApplyWorkspaceEditParams,
     type ApplyWorkspaceEditResult,
+    type ConfigurationItem,
     type ContentChange,
+    type Diagnostic,
     type Disposable,
     type DocumentDiagnosticReport,
     type FileSystemWatcher,
@@ -33,7 +36,8 @@ import {
     resolveTypescriptLib,
     type ComponentProfile,
     type KindProfile,
-    type LaunchContext
+    type LaunchContext,
+    type ProjectSqlSettings
 } from './profiles.ts';
 import type { LanguageChild, LanguageExit, LanguageRuntime, SpawnLanguageProcess } from './runtime.ts';
 
@@ -81,6 +85,8 @@ export interface SharedDocument {
     text: string;
     version: number;
     readonly clients: Set<string>;
+    /* What each process last reported for it, by the name of the process, which an agent reads back. */
+    reported?: Map<string, Diagnostic[]>;
 }
 
 export interface LanguageServerHooks {
@@ -104,7 +110,9 @@ export interface LanguageServerOptions {
     /* The folder the kind runs from, asked at each start, since an update moves it. */
     installDirectory(): string;
     /* What a kind that is a program of its own runs: the file and the stubs beside it. */
-    native?: () => { executable: string; stubsCommit: string } | null;
+    native?: () => { executable: string; stubsCommit?: string } | null;
+    /* The settings of the project's SQL as they stand, asked at each start; null when the project has none to give. */
+    sqlSettings?: () => Promise<ProjectSqlSettings | null>;
     isInstalled(): Promise<boolean>;
     runtime: LanguageRuntime;
     spawn: SpawnLanguageProcess;
@@ -148,6 +156,31 @@ const SIDECAR_ACTION_OPTIONS = {
 
 type Phase = 'stopped' | 'starting' | 'ready' | 'crashed';
 
+/* What a process is told through `workspace/configuration`: its fixed settings with those of the project over them, for one document when a path says which. */
+function configurationOf(profile: ComponentProfile, context: LaunchContext, path?: string): Record<string, unknown> | undefined {
+    const own = profile.settings?.(context, path) ?? {};
+    // A project with nothing to say leaves a server exactly as it was without these settings.
+    if (Object.keys(own).length === 0) {
+        return profile.configuration;
+    }
+    return { ...profile.configuration, ...own };
+}
+
+/* A section of the settings, `a.b` reaching into `a`, the way a client answers `workspace/configuration`. */
+function sectionOf(configuration: Record<string, unknown>, section: string | undefined): unknown {
+    if (section === undefined || section === '') {
+        return configuration;
+    }
+    let value: unknown = configuration;
+    for (const key of section.split('.')) {
+        if (typeof value !== 'object' || value === null || !Object.hasOwn(value, key)) {
+            return null;
+        }
+        value = (value as Record<string, unknown>)[key];
+    }
+    return value ?? null;
+}
+
 /*
  * The servers of one kind in one project: one process, or two for Vue. It starts when a document
  * needs it and an install exists, and goes when asked to stop. A process that ends by itself after
@@ -170,6 +203,8 @@ export class LanguageServer {
     private sidecarPromise: Promise<Component | null> | undefined;
     /* Why a sidecar did not start or ended, which keeps it from starting again until the kind does. */
     private sidecarFailure: string | undefined;
+    /* What the processes of the last start were started with, which a change of the project's settings is laid over. */
+    private context: LaunchContext | null = null;
 
     constructor(options: LanguageServerOptions) {
         this.options = options;
@@ -249,6 +284,26 @@ export class LanguageServer {
                 }
             })
         );
+    }
+
+    /* Asks every process that is asked for its diagnostics for those of the document now, and settles once each answered. */
+    async pullNow(document: SharedDocument): Promise<void> {
+        await Promise.all(this.components.map((component) => this.pull(component, document)));
+    }
+
+    /* The processes that have the document open and push what they find rather than being asked, by name. */
+    pushers(document: SharedDocument): string[] {
+        return this.components
+            .filter(
+                (component) =>
+                    component.profile.sidecar !== true && component.profile.pullDiagnostics !== true && component.documents.has(document.absolutePath)
+            )
+            .map((component) => component.profile.name);
+    }
+
+    /* Whether a process of this server reads the project's settings (`ComponentProfile.settings`). */
+    readsSettings(): boolean {
+        return this.options.profile.components.some((component) => component.settings !== undefined);
     }
 
     /* Whether this server serves a document of the language at all. */
@@ -517,6 +572,33 @@ export class LanguageServer {
         throw new LspError(`No ${this.label} server runs commands for this document`, ErrorCodes.MethodNotFound);
     }
 
+    /*
+     * The project's SQL settings changed: each running process that reads them is told the new ones,
+     * and the next start takes them as well. A process that is not up yet gets them with its handshake.
+     */
+    async reconfigure(sql: ProjectSqlSettings | null): Promise<void> {
+        if (this.context !== null) {
+            this.context = { ...this.context, sql };
+        }
+        const context = this.context;
+        if (context === null) {
+            return;
+        }
+        await Promise.all(
+            this.components.map(async (component) => {
+                const configuration = configurationOf(component.profile, context);
+                if (component.profile.settings === undefined || configuration === undefined || component.session.state !== 'ready') {
+                    return;
+                }
+                try {
+                    await component.session.setConfiguration(configuration);
+                } catch (error) {
+                    this.log.push('host', `Could not tell the server its new settings: ${errorText(error)}`);
+                }
+            })
+        );
+    }
+
     /* A person's restart, the only way out of crashed. */
     async restart(): Promise<void> {
         await this.stop();
@@ -557,6 +639,12 @@ export class LanguageServer {
             projectFolder: folder,
             typescriptLib: await resolveTypescriptLib(folder, installDirectory, exists),
             native: this.options.native?.() ?? null,
+            sql: this.options.profile.components.some((component) => component.settings !== undefined)
+                ? await (this.options.sqlSettings?.() ?? Promise.resolve(null)).catch((error: unknown) => {
+                      this.log.push('host', `Could not work out the SQL settings of the project: ${errorText(error)}`);
+                      return null;
+                  })
+                : null,
             typescriptExecutable: this.options.profile.components.some((component) => component.native)
                 ? await resolveNativeTypescript(folder, installDirectory, {
                       exists,
@@ -565,6 +653,7 @@ export class LanguageServer {
                   })
                 : ''
         };
+        this.context = context;
         try {
             for (const profile of this.options.profile.components.filter((candidate) => candidate.sidecar !== true)) {
                 if (generation !== this.generation) {
@@ -586,6 +675,10 @@ export class LanguageServer {
             this.phase = 'ready';
             this.readyAt = this.now();
             this.notify();
+            // Settings that changed while the handshake ran reached no process yet.
+            if (this.context !== context) {
+                void this.reconfigure(this.context?.sql ?? null);
+            }
             for (const document of this.documents.values()) {
                 this.openInComponents(document);
             }
@@ -701,7 +794,15 @@ export class LanguageServer {
             initializationOptions: profile.initializationOptions(context),
             clientInfo: { name: 'ruimte' },
             snippetSupport: true,
-            ...(profile.configuration === undefined ? {} : { configuration: profile.configuration }),
+            ...(configurationOf(profile, context) === undefined ? {} : { configuration: configurationOf(profile, context) }),
+            ...(profile.settings === undefined
+                ? {}
+                : {
+                      onConfiguration: (item: ConfigurationItem) => {
+                          const path = item.scopeUri === undefined ? undefined : (fileUriToPath(item.scopeUri) ?? undefined);
+                          return sectionOf(configurationOf(profile, this.context ?? context, path) ?? {}, item.section);
+                      }
+                  }),
             onApplyEdit: (params) => this.options.hooks.applyEdit(this, params),
             timeoutMs: 0
         });

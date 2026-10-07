@@ -12,8 +12,12 @@ import {
     fetchStubs,
     installRelease,
     isNativeKind,
+    nativeHasStubs,
+    nativeProgramFile,
+    nativeProgramOf,
     nativeStorageOf,
     nativeStubsOf,
+    nativeTitleOf,
     NativePolicy,
     stubsComplete,
     type Download,
@@ -33,6 +37,9 @@ const LEGACY = 'legacy';
 const LEGACY_ENTRIES = [MARKER, 'package.json', 'bun.lock', 'bun.lockb', 'node_modules', 'bin'];
 /* A checkout builds into itself, so it has one install that a build replaces. */
 const DEV = 'dev';
+
+/* What an install of a native kind says when this build has neither a checkout nor a pinned release of it. */
+export const NO_RELEASE = 'No release of this server is available yet';
 
 export type InstallState = 'installed' | 'installing' | 'missing';
 
@@ -62,12 +69,9 @@ async function exists(path: string): Promise<boolean> {
     );
 }
 
-/* The name a native server is pinned under in the marker, which the npm kinds keep their package names in. */
-const NATIVE_PIN = 'php-language-server';
-
 interface Marker {
     versions?: Record<string, string>;
-    /* Native kinds: whether a checkout built the server or a release supplied it, and the stubs installed beside it. */
+    /* Native kinds: whether a checkout built the server or a release supplied it, and the stubs installed beside it, for a kind that reads them. */
     source?: string;
     stubs?: string;
     /* What a person reads as the version of the install; a legacy marker has none. */
@@ -149,7 +153,7 @@ export class LanguageInstaller {
     constructor(options: LanguageInstallerOptions) {
         this.options = options;
         this.run = options.run ?? runCommand;
-        this.native = options.native ?? new NativePolicy({ checkout: null });
+        this.native = options.native ?? new NativePolicy({ checkouts: {} });
     }
 
     /* Reads what every kind has installed. */
@@ -174,13 +178,20 @@ export class LanguageInstaller {
     }
 
     /* What a native kind runs: the program of the install in use and the stubs beside it. Null for any other kind and for one not installed. */
-    launchOf(kind: LanguageServerKind): { executable: string; stubsCommit: string } | null {
+    launchOf(kind: LanguageServerKind): { executable: string; stubsCommit?: string } | null {
         if (!isNativeKind(kind)) {
             return null;
         }
         const current = this.known.get(kind)?.current;
         const executable = current ? this.executableOf(kind, current) : null;
-        return current && executable !== null && current.marker.stubs !== undefined ? { executable, stubsCommit: current.marker.stubs } : null;
+        if (!current || executable === null) {
+            return null;
+        }
+        const stubs = current.marker.stubs;
+        if (!nativeHasStubs(kind)) {
+            return { executable };
+        }
+        return stubs === undefined ? null : { executable, stubsCommit: stubs };
     }
 
     /* `$RUIMTE_HOME/language-servers/<kind>`, which holds the installs, the selection and what every install shares. */
@@ -349,7 +360,7 @@ export class LanguageInstaller {
     /* A legacy marker names its packages and not a version to read; the main package is that version. */
     private legacyVersionOf(kind: LanguageServerKind, marker: Marker): string {
         if (isNativeKind(kind)) {
-            return marker.versions?.[NATIVE_PIN] ?? '';
+            return marker.versions?.[nativeProgramOf(kind)] ?? '';
         }
         const main = Object.keys(pinnedVersionsOf(kind))[0];
         return (main === undefined ? undefined : marker.versions?.[main]) ?? '';
@@ -364,13 +375,15 @@ export class LanguageInstaller {
         if (install.marker.source === 'dev') {
             return plan?.source === 'dev' ? plan.executable : null;
         }
-        return join(install.directory, 'bin', process.platform === 'win32' ? `${NATIVE_PIN}.exe` : NATIVE_PIN);
+        return join(install.directory, 'bin', nativeProgramFile(kind, process.platform));
     }
 
     private matchesPins(kind: LanguageServerKind, marker: Marker): boolean {
         if (isNativeKind(kind)) {
             const plan = this.planOf(kind, this.directoryOf(kind));
-            return plan !== null && marker.versions?.[NATIVE_PIN] === plan.version && marker.source === plan.source && marker.stubs === plan.stubsCommit;
+            return (
+                plan !== null && marker.versions?.[nativeProgramOf(kind)] === plan.version && marker.source === plan.source && marker.stubs === plan.stubsCommit
+            );
         }
         return Object.entries(pinnedVersionsOf(kind)).every(([name, version]) => marker.versions?.[name] === version);
     }
@@ -378,10 +391,14 @@ export class LanguageInstaller {
     private async isWhole(kind: LanguageServerKind, install: Install): Promise<boolean> {
         if (isNativeKind(kind)) {
             const executable = this.executableOf(kind, install);
+            if (executable === null || !(await exists(executable))) {
+                return false;
+            }
+            if (!nativeHasStubs(kind)) {
+                return true;
+            }
             const stubs = install.marker.stubs;
-            return (
-                executable !== null && stubs !== undefined && (await exists(executable)) && (await stubsComplete(nativeStubsOf(this.directoryOf(kind), stubs)))
-            );
+            return stubs !== undefined && (await stubsComplete(nativeStubsOf(this.directoryOf(kind), stubs)));
         }
         const entries = KIND_PROFILES[kind].components.map((component) => join(install.directory, 'node_modules', component.entry));
         return (await Promise.all(entries.map(exists))).every(Boolean);
@@ -410,7 +427,7 @@ export class LanguageInstaller {
             }
             const id = this.pinnedIdOf(kind);
             if (id === null) {
-                throw new Error('Not available in this build yet');
+                throw new Error(NO_RELEASE);
             }
             const target = this.folderOf(kind, id);
             const there = id === DEV ? null : await this.readInstall(kind, id);
@@ -471,12 +488,12 @@ export class LanguageInstaller {
     private async performNative(kind: NativeKind, target: string, log: LanguageLog): Promise<void> {
         const plan = this.planOf(kind, target);
         if (plan === null) {
-            throw new Error('Not available in this build yet');
+            throw new Error(NO_RELEASE);
         }
         const push = (line: string): void => log.push('install', line);
         if (plan.source === 'dev') {
             push(`Building ${plan.version} from ${plan.checkout}`);
-            await this.build(plan, push);
+            await this.build(kind, plan, push);
         } else {
             if (plan.asset === undefined) {
                 throw new Error(`This release has no build for ${process.platform}-${process.arch}`);
@@ -487,16 +504,18 @@ export class LanguageInstaller {
             throw new Error(`The install did not leave ${plan.executable}`);
         }
         await this.verifyNative(plan, push);
-        await fetchStubs(this.directoryOf(kind), plan.stubsCommit, this.options.download ?? download, push);
+        if (plan.stubsCommit !== undefined) {
+            await fetchStubs(this.directoryOf(kind), plan.stubsCommit, this.options.download ?? download, push);
+        }
         const revision = plan.source === 'dev' && plan.checkout !== undefined ? await (this.options.checkoutRevision ?? gitRevision)(plan.checkout) : null;
         if (revision !== null) {
             this.revisions.set(kind, revision);
         }
         await this.writeMarker(target, {
-            versions: { [NATIVE_PIN]: plan.version },
+            versions: { [nativeProgramOf(kind)]: plan.version },
             version: plan.version,
             source: plan.source,
-            stubs: plan.stubsCommit,
+            ...(plan.stubsCommit === undefined ? {} : { stubs: plan.stubsCommit }),
             executable: plan.executable,
             ...(revision === null ? {} : { revision })
         });
@@ -540,7 +559,7 @@ export class LanguageInstaller {
                 await rm(join(this.directoryOf(kind), entry), { recursive: true, force: true });
             }
         }
-        if (isNativeKind(kind)) {
+        if (isNativeKind(kind) && nativeHasStubs(kind)) {
             const read = new Set([current?.marker.stubs, previous?.marker.stubs]);
             const stubs = join(nativeStorageOf(this.directoryOf(kind)), 'stubs');
             for (const commit of await readdir(stubs).catch(() => [] as string[])) {
@@ -551,13 +570,13 @@ export class LanguageInstaller {
         }
     }
 
-    private async build(plan: NativePlan, push: (line: string) => void): Promise<void> {
+    private async build(kind: NativeKind, plan: NativePlan, push: (line: string) => void): Promise<void> {
         const env = { PATH: `${process.env.PATH ?? ''}${delimiter}${join(homedir(), '.cargo', 'bin')}` };
         let code: number;
         try {
             code = await this.run({ command: cargoCommand(), args: ['build', '--release', '--locked'], cwd: plan.checkout!, env }, push);
         } catch {
-            throw new Error('cargo is not installed, and the PHP server is built with it when Ruimte runs from a checkout');
+            throw new Error(`cargo is not installed, and the ${nativeTitleOf(kind)} server is built with it when Ruimte runs from a checkout`);
         }
         if (code !== 0) {
             throw new Error(`cargo build exited with code ${code}`);

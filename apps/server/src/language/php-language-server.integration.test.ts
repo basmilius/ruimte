@@ -124,7 +124,7 @@ describe.skipIf(!hasCargo || checkout === null)('the standalone PHP server in Ru
             folderOf: (projectId) => (projectId === 'p1' ? project : null),
             holders: () => ['c1'],
             machineHome: new MachineHome(join(base, 'home')),
-            native: new NativePolicy({ checkout }),
+            native: new NativePolicy({ checkouts: { 'php-native': checkout } }),
             download,
             spawn: (spec) => {
                 const child = spawnLanguageProcess(spec);

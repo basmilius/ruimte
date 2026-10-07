@@ -12,9 +12,11 @@ import {
     type LanguageCustomCheckResult,
     type LanguageErrorCode,
     type LanguageLogLine,
+    type LanguageMethod,
     type LanguageRequestResult,
     type LanguageServerId,
     type LanguageServerKind,
+    type LanguageServerState,
     type LanguageServerStatus
 } from '@ruimte/contracts';
 import type {
@@ -38,6 +40,7 @@ import {
     watchesFile,
     type ApplyWorkspaceEditParams,
     type ApplyWorkspaceEditResult,
+    type Diagnostic,
     type DocumentSnapshot,
     type RenamedFile,
     type WorkspaceEdit
@@ -45,7 +48,7 @@ import {
 import type { WatchSeams } from '@adecore/agents/watch-seam';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
-import { ProjectFileWatcher, type StatPath } from './file-watch.ts';
+import { ProjectFileWatcher, type FileChange, type StatPath } from './file-watch.ts';
 import { CustomLanguageServers, customProfile } from './custom.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LanguageChoices } from './choices.ts';
@@ -63,12 +66,33 @@ import {
     kindForLanguage,
     usesVue,
     type KindProfile,
-    type ProjectFacts
+    type ProjectFacts,
+    type ProjectSqlSettings
 } from './profiles.ts';
 import { bunRuntime, runCommand, spawnLanguageProcess, type LanguageRuntime, type RunCommand, type SpawnLanguageProcess } from './runtime.ts';
 import { LanguageServer, MERGE_DEADLINE_MS, realLanguageClock, type LanguageClock, type LanguageServerHooks, type SharedDocument } from './server.ts';
 
 export class LanguageError extends CodedError<LanguageErrorCode> {}
+
+/* How long an agent's call waits for a server of its file to come up, which a project that loads for a while can take. */
+export const AGENT_READY_MS = 30_000;
+
+/* How long an agent's call waits for the first report of a server that pushes its diagnostics rather than being asked. */
+export const AGENT_PUSH_MS = 3_000;
+
+/* One file as an agent's call holds it (`LanguageHost.forAgent`). */
+export interface AgentDocument {
+    storedPath: string;
+    absolutePath: string;
+    /* The text the servers see. */
+    text: string;
+    /* Whether a client holds the file open with text that differs from what is on disk. */
+    unsaved: boolean;
+    servers: Array<{ kind: LanguageServerId; state: LanguageServerState | 'not-installed'; message?: string }>;
+    request(method: LanguageMethod, params: object): Promise<LanguageRequestResult>;
+    /* What each process last found in the document, after asking those that are asked. */
+    diagnostics(): Promise<Array<{ server: string; diagnostics: Diagnostic[] }>>;
+}
 
 const KINDS = Object.keys(KIND_PROFILES) as LanguageServerKind[];
 
@@ -111,6 +135,8 @@ export interface LanguageHostOptions {
     download?: Download;
     /* How the revision of a checkout a native kind builds from is read; git by default. */
     checkoutRevision?: CheckoutRevision;
+    /* What the project's SQL comes down to for the servers that read it; without it they start with none. */
+    sqlSettings?: (projectId: string) => Promise<ProjectSqlSettings | null>;
 }
 
 interface ProjectLanguage {
@@ -191,10 +217,17 @@ export class LanguageHost {
     private readonly projects = new Map<string, ProjectLanguage>();
     private readonly edits = new Map<string, PendingEdit>();
     private editCounter = 0;
+    /* What an agent's call waits on: a server that comes up or a report that comes in. */
+    private readonly waiters = new Set<() => void>();
     private readonly hooks: LanguageServerHooks = {
-        status: (server) =>
-            this.toHolders(server.projectId, { event: 'language.status', payload: { projectId: server.projectId, status: this.serverStatus(server) } }),
+        status: (server) => {
+            this.toHolders(server.projectId, { event: 'language.status', payload: { projectId: server.projectId, status: this.serverStatus(server) } });
+            this.wake();
+        },
         diagnostics: (document, component, params) => {
+            document.reported ??= new Map();
+            document.reported.set(component, params.diagnostics);
+            this.wake();
             const projectId = this.projectOf(document);
             if (projectId !== null) {
                 const payload: LanguageDiagnosticsEvent = { projectId, path: document.storedPath, server: component, diagnostics: params.diagnostics };
@@ -257,6 +290,11 @@ export class LanguageHost {
     async install(kind: LanguageServerKind): Promise<LanguageServerStatus> {
         void this.installer.install(kind);
         return this.statusOf(null, kind);
+    }
+
+    /* The program a native kind runs on this machine, or null while it is not installed. */
+    programOf(kind: LanguageServerKind): string | null {
+        return this.installer.launchOf(kind)?.executable ?? null;
     }
 
     /* Goes back to the version a kind ran before, which a person asks for when an update does not work for them. */
@@ -498,6 +536,117 @@ export class LanguageHost {
         }
     }
 
+    /*
+     * What the project's SQL comes down to changed: a binding, a connection or where a snapshot is. Every
+     * server of the project that reads it is told at once; one that is not running takes it at its start.
+     */
+    async sqlChanged(projectId: string): Promise<void> {
+        const project = this.projects.get(projectId);
+        const read = this.options.sqlSettings;
+        if (!project || read === undefined) {
+            return;
+        }
+        const readers = [...project.servers.values()].filter((server) => server.readsSettings());
+        if (readers.length === 0) {
+            return;
+        }
+        const settings = await read(projectId);
+        await Promise.all(readers.map((server) => server.reconfigure(settings)));
+    }
+
+    /* Files outside the project folder that the servers of every project may watch changed, such as a schema snapshot the daemon wrote. */
+    async outsideFilesChanged(changes: readonly FileChange[]): Promise<void> {
+        await Promise.all([...this.projects.values()].flatMap((project) => [...project.servers.values()].map((server) => server.filesChanged(changes))));
+    }
+
+    /*
+     * One file as an agent asks about it. The daemon joins the document as a client of its own for as long
+     * as `work` runs, the way a person opening the file would: a document a client holds keeps the text in
+     * its editor, and one nobody holds opens with the text on disk. A server that is installed starts if it
+     * has to and is waited on up to `AGENT_READY_MS`; one that is not installed stays so.
+     */
+    async forAgent<T>(
+        projectId: string,
+        request: { path: string; languageId: string; disk: string; owner: string },
+        work: (document: AgentDocument) => Promise<T>
+    ): Promise<T> {
+        const project = this.projectFor(projectId);
+        const absolutePath = await this.pathOf(project, request.path);
+        const storedPath = storedPathOf(project.folder, absolutePath);
+        let document = project.documents.get(absolutePath);
+        if (document) {
+            document.clients.add(request.owner);
+        } else {
+            await this.open(request.owner, { projectId, path: storedPath, languageId: request.languageId, text: request.disk });
+            document = project.documents.get(absolutePath)!;
+        }
+        const held = document;
+        try {
+            const kinds = held.kinds;
+            const installed = await Promise.all(kinds.map((kind) => (isCatalogKind(kind) ? this.installer.isInstalled(kind) : Promise.resolve(true))));
+            await this.waitFor(
+                () =>
+                    kinds.every((kind, index) => {
+                        const state = project.servers.get(kind)?.state;
+                        return !installed[index] || state === 'ready' || state === 'indexing' || state === 'crashed';
+                    }),
+                AGENT_READY_MS
+            );
+            const servers = kinds.map((kind, index) => {
+                const server = project.servers.get(kind);
+                const state: LanguageServerState | 'not-installed' = installed[index] ? (server?.state ?? 'stopped') : 'not-installed';
+                return { kind, state, ...(server?.message ? { message: server.message } : {}) };
+            });
+            return await work({
+                storedPath,
+                absolutePath,
+                text: held.text,
+                unsaved: held.text !== request.disk,
+                servers,
+                request: (method, params) => this.request({ projectId, path: storedPath, method, params }),
+                diagnostics: () => this.diagnosticsFor(project, held)
+            });
+        } finally {
+            await this.release(project, held, request.owner).catch(() => undefined);
+        }
+    }
+
+    /* What every running server finds in the document: asked of the ones that are asked, waited on a while for the ones that push. */
+    private async diagnosticsFor(project: ProjectLanguage, document: SharedDocument): Promise<Array<{ server: string; diagnostics: Diagnostic[] }>> {
+        const servers = this.serversOf(project, document).filter((server) => server.state === 'ready' || server.state === 'indexing');
+        await Promise.all(servers.map((server) => server.pullNow(document)));
+        const pushers = servers.flatMap((server) => server.pushers(document));
+        await this.waitFor(() => pushers.every((name) => document.reported?.has(name) === true), AGENT_PUSH_MS);
+        return [...(document.reported?.entries() ?? [])].map(([server, diagnostics]) => ({ server, diagnostics }));
+    }
+
+    /* Settles once `done` holds, checked again at every status and report, or once `ms` passed. */
+    private waitFor(done: () => boolean, ms: number): Promise<void> {
+        if (done()) {
+            return Promise.resolve();
+        }
+        return new Promise<void>((resolve) => {
+            const check = (): void => {
+                if (done()) {
+                    finish();
+                }
+            };
+            const cancel = (this.options.clock ?? realLanguageClock).set(() => finish(), ms);
+            const finish = (): void => {
+                cancel();
+                this.waiters.delete(check);
+                resolve();
+            };
+            this.waiters.add(check);
+        });
+    }
+
+    private wake(): void {
+        for (const waiter of [...this.waiters]) {
+            waiter();
+        }
+    }
+
     /* The project closed on the machine, which is its last client going: its servers end with it. */
     async end(projectId: string): Promise<void> {
         const project = this.projects.get(projectId);
@@ -674,6 +823,7 @@ export class LanguageHost {
                 now: this.options.now,
                 exists: this.options.exists ?? fileExists,
                 readText: this.options.readText,
+                ...(this.options.sqlSettings === undefined ? {} : { sqlSettings: () => this.options.sqlSettings!(project.projectId) }),
                 hooks: this.hooks
             });
             project.servers.set(kind, server);

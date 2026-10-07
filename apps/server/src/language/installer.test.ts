@@ -107,7 +107,7 @@ describe('language installer', () => {
             root,
             runtime,
             run: async () => 0,
-            native: new NativePolicy({ checkout: null, releases: {} }),
+            native: new NativePolicy({ checkouts: {}, releases: {} }),
             onChange: () => undefined
         });
         await installer.install('php');
@@ -209,7 +209,7 @@ const STUBS = tarGz([{ path: `stubs-${COMMIT}/standard/a.php`, text: '<?php' }])
 
 describe('native install', () => {
     const checkout = () => ({ folder: join(root, 'repo'), version: '0.1.0', stubsCommit: COMMIT });
-    const devPolicy = () => new NativePolicy({ checkout: checkout() });
+    const devPolicy = () => new NativePolicy({ checkouts: { 'php-native': checkout() } });
 
     /* Plays cargo, which leaves the executable where a build does, and the executable's own `--version`. */
     function building(calls: LanguageProcessSpec[] = [], version = 'php-language-server 0.1.0'): RunCommand {
@@ -283,7 +283,7 @@ describe('native install', () => {
         const newer = new LanguageInstaller({
             root,
             runtime,
-            native: new NativePolicy({ checkout: { ...checkout(), version: '0.2.0' } }),
+            native: new NativePolicy({ checkouts: { 'php-native': { ...checkout(), version: '0.2.0' } } }),
             onChange: () => undefined
         });
         expect(await newer.state('php-native')).toBe('installed');
@@ -406,7 +406,7 @@ describe('native install', () => {
                 root,
                 runtime,
                 run: versions,
-                native: new NativePolicy({ checkout: null, releases: { 'php-native': release() } }),
+                native: new NativePolicy({ checkouts: {}, releases: { 'php-native': release() } }),
                 download,
                 onChange: () => undefined
             });
@@ -427,7 +427,7 @@ describe('native install', () => {
                     calls.push(spec);
                     return versions(spec, onLine);
                 },
-                native: new NativePolicy({ checkout: null, releases: { 'php-native': release('0'.repeat(64)) } }),
+                native: new NativePolicy({ checkouts: {}, releases: { 'php-native': release('0'.repeat(64)) } }),
                 download,
                 onChange: () => undefined
             });
@@ -469,7 +469,7 @@ describe('native install', () => {
                     onLine(`php-language-server ${release.version}`);
                     return 0;
                 },
-                native: new NativePolicy({ checkout: null, releases: { 'php-native': release } }),
+                native: new NativePolicy({ checkouts: {}, releases: { 'php-native': release } }),
                 download: downloading(fetched),
                 onChange: () => undefined,
                 onSwitched: (kind) => switched.push(kind)
@@ -564,14 +564,88 @@ describe('native install', () => {
             root,
             runtime,
             run: async () => 0,
-            native: new NativePolicy({ checkout: null, releases: {} }),
+            native: new NativePolicy({ checkouts: {}, releases: {} }),
             onChange: () => undefined
         });
         expect(installer.isUnavailable('php-native')).toBe(true);
         expect(installer.isUnavailable('php')).toBe(false);
         expect(installer.versionOf('php-native')).toBe('');
         await installer.install('php-native');
-        expect(installer.failureOf('php-native')).toBe('Not available in this build yet');
+        expect(installer.failureOf('php-native')).toBe('No release of this server is available yet');
         expect(await installer.state('php-native')).toBe('missing');
+    });
+});
+
+describe('the SQL server install', () => {
+    const checkout = () => ({ folder: join(root, 'sql'), version: '0.1.3' });
+
+    /* Plays cargo in the SQL checkout and the program's own `--version`. */
+    function building(calls: LanguageProcessSpec[] = []): RunCommand {
+        return async (spec, onLine) => {
+            calls.push(spec);
+            if (spec.args.includes('--version')) {
+                onLine('sql-language-server 0.1.3');
+                return 0;
+            }
+            await mkdir(join(spec.cwd, 'target', 'release'), { recursive: true });
+            await writeFile(join(spec.cwd, 'target', 'release', 'sql-language-server'), '');
+            return 0;
+        };
+    }
+
+    it('builds the checkout and counts as installed without any stubs, which it never downloads', async () => {
+        const calls: LanguageProcessSpec[] = [];
+        const requested: string[] = [];
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run: building(calls),
+            native: new NativePolicy({ checkouts: { 'sql-native': checkout() } }),
+            download: async (url) => {
+                requested.push(url);
+            },
+            onChange: () => undefined
+        });
+        await installer.install('sql-native');
+        expect(installer.failureOf('sql-native')).toBeNull();
+        expect(await installer.state('sql-native')).toBe('installed');
+        expect(calls.map((call) => call.args)).toEqual([['build', '--release', '--locked'], ['--version']]);
+        expect(requested).toEqual([]);
+        expect(installer.launchOf('sql-native')).toEqual({ executable: join(root, 'sql', 'target', 'release', 'sql-language-server') });
+        const marker = JSON.parse(await readFile(join(await currentFolder('sql-native'), 'installed.json'), 'utf8')) as Record<string, unknown>;
+        expect(marker).toMatchObject({ versions: { 'sql-language-server': '0.1.3' }, source: 'dev' });
+        expect(marker).not.toHaveProperty('stubs');
+        expect(installer.updateOf('sql-native')).toBeNull();
+    });
+
+    it('says plainly that no release is available in a build without a checkout or a pin, and leaves PHP alone', async () => {
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run: async () => 0,
+            native: new NativePolicy({ checkouts: { 'php-native': { folder: join(root, 'php'), version: '0.4.1', stubsCommit: COMMIT } } }),
+            onChange: () => undefined
+        });
+        expect(installer.isUnavailable('sql-native')).toBe(true);
+        expect(installer.isUnavailable('php-native')).toBe(false);
+        await installer.install('sql-native');
+        expect(installer.failureOf('sql-native')).toBe('No release of this server is available yet');
+    });
+
+    it('names the server it could not build when cargo is missing', async () => {
+        const installer = new LanguageInstaller({
+            root,
+            runtime,
+            run: async (spec) => {
+                if (spec.args[0] === 'build') {
+                    throw new Error('ENOENT');
+                }
+                return 0;
+            },
+            native: new NativePolicy({ checkouts: { 'sql-native': checkout() } }),
+            onChange: () => undefined
+        });
+        await installer.install('sql-native');
+        expect(installer.failureOf('sql-native')).toBe('cargo is not installed, and the SQL server is built with it when Ruimte runs from a checkout');
     });
 });

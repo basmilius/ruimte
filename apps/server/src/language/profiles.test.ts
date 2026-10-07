@@ -102,7 +102,7 @@ describe('server profiles', () => {
         const pulling = Object.values(KIND_PROFILES).flatMap((profile) =>
             profile.components.filter((component) => component.pullDiagnostics).map((component) => component.name)
         );
-        expect(pulling).toEqual(['typescript', 'php-native', 'css', 'html', 'json', 'python', 'eslint']);
+        expect(pulling).toEqual(['typescript', 'php-native', 'sql-native', 'css', 'html', 'json', 'python', 'eslint']);
     });
 
     it('keeps the schema store of the YAML server off', () => {
@@ -196,6 +196,21 @@ describe('server profiles', () => {
             stubsPath: '/home/.ruimte/language-servers/vue/storage/stubs/abc'
         });
         expect(php.pullDiagnostics).toBe(true);
+    });
+
+    it("serves SQL files with the SQL server, which reads the project's SQL and answers a file set to none on its own", () => {
+        expect(kindForLanguage('sql')).toBe('sql-native');
+        expect(kindForLanguage('mariadb')).toBe('sql-native');
+        const [sql] = KIND_PROFILES['sql-native'].components;
+        const native = { executable: '/repo/target/release/sql-language-server' };
+        const project = { sql: { dialect: 'mysql', schema: '/snap.json' }, php: { dialect: 'mysql' }, unbound: ['/work/loose.sql'] };
+        expect(sql.program?.({ ...context, native })).toBe(native.executable);
+        expect(sql.initializationOptions({ ...context, sql: project })).toEqual({ sqlLanguageServer: project.sql });
+        expect(sql.settings?.({ ...context, sql: project }, '/work/a.sql')).toEqual({ sqlLanguageServer: project.sql });
+        expect(sql.settings?.({ ...context, sql: project }, '/work/loose.sql')).toEqual({ sqlLanguageServer: { dialect: 'generic' } });
+        const [php] = KIND_PROFILES['php-native'].components;
+        expect(php.settings?.({ ...context, sql: project })).toEqual({ phpLanguageServer: { sql: project.php } });
+        expect(php.settings?.(context)).toEqual({});
     });
 
     it('prefers the TypeScript of the project and falls back to the pinned one', async () => {

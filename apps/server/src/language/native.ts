@@ -1,4 +1,5 @@
-import release from './php-native-release.json' with { type: 'json' };
+import phpRelease from './php-native-release.json' with { type: 'json' };
+import sqlRelease from './sql-native-release.json' with { type: 'json' };
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { access, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
@@ -8,10 +9,12 @@ import type { LanguageServerKind } from '@ruimte/contracts';
 import { extractEntries, readArchive, type ArchiveFormat } from './archive.ts';
 
 /* A kind whose server is a program of its own, downloaded or built once, and not an npm package. */
-export type NativeKind = 'php-native';
+export type NativeKind = 'php-native' | 'sql-native';
+
+export const NATIVE_KINDS: readonly NativeKind[] = ['php-native', 'sql-native'];
 
 export function isNativeKind(kind: LanguageServerKind): kind is NativeKind {
-    return kind === 'php-native';
+    return (NATIVE_KINDS as readonly string[]).includes(kind);
 }
 
 /* One download of a release: the archive for a platform and architecture. */
@@ -27,8 +30,8 @@ export interface NativeAsset {
 export interface NativeRelease {
     version: string;
     sourceRevision: string;
-    /* The commit of phpstorm-stubs the server was built against, which Install fetches along with it. */
-    stubsCommit: string;
+    /* The commit of the standard library stubs the server was built against, which Install fetches along with it; only a kind that reads stubs has one. */
+    stubsCommit?: string;
     /* By `<platform>-<arch>`, as Node names them (`darwin-arm64`, `linux-x64`). */
     assets: Partial<Record<string, NativeAsset>>;
 }
@@ -40,37 +43,124 @@ function releaseAsset(asset: { url: string; sha256: string; format: string; exec
     return { ...asset, format: asset.format };
 }
 
-export const NATIVE_RELEASES: Partial<Record<NativeKind, NativeRelease>> = {
-    'php-native': { ...release, assets: Object.fromEntries(Object.entries(release.assets).map(([platform, asset]) => [platform, releaseAsset(asset)])) }
-};
+/* A descriptor as the repository of a server publishes it; one with no version pins no release yet. */
+interface ReleaseDescriptor {
+    version: string;
+    sourceRevision: string;
+    stubsCommit?: string;
+    assets: Record<string, { url: string; sha256: string; format: string; executable: string }>;
+}
+
+export function pinnedRelease(descriptor: ReleaseDescriptor): NativeRelease | undefined {
+    if (descriptor.version === '') {
+        return undefined;
+    }
+    return { ...descriptor, assets: Object.fromEntries(Object.entries(descriptor.assets).map(([platform, asset]) => [platform, releaseAsset(asset)])) };
+}
+
+export const NATIVE_RELEASES: Partial<Record<NativeKind, NativeRelease>> = Object.fromEntries(
+    (
+        [
+            ['php-native', pinnedRelease(phpRelease)],
+            ['sql-native', pinnedRelease(sqlRelease as ReleaseDescriptor)]
+        ] as const
+    ).filter(([, release]) => release !== undefined)
+);
 
 /* The native sources selected by the daemon host. */
 export interface NativeCheckout {
     folder: string;
     version: string;
-    stubsCommit: string;
+    /* Only a kind that reads standard library stubs pins a commit of them. */
+    stubsCommit?: string;
 }
 
-const PROGRAM_NAME = 'php-language-server';
+/* What tells the native kinds apart: the program they run, where a development daemon finds their sources, and whether stubs come with an install. */
+interface NativeSpec {
+    program: string;
+    /* The checkout beside Ruimte's own, as path segments. */
+    sibling: readonly string[];
+    /* The variable that names a checkout elsewhere. */
+    sourceVariable: string;
+    /* What a person reads a failed build is for. */
+    title: string;
+    read(folder: string): NativeCheckout | null;
+}
 
 const STUBS_ARCHIVE = 'https://codeload.github.com/JetBrains/phpstorm-stubs/tar.gz/';
 
-function programFile(platform: NodeJS.Platform): string {
-    return platform === 'win32' ? `${PROGRAM_NAME}.exe` : PROGRAM_NAME;
+/* The `[workspace.package]` version of a Cargo workspace, which is what its programs print with `--version`. */
+function workspaceVersion(folder: string): string | undefined {
+    if (!existsSync(join(folder, 'Cargo.toml'))) {
+        return undefined;
+    }
+    return /\[workspace\.package\][^[]*?\nversion\s*=\s*"([^"]+)"/.exec(readFileSync(join(folder, 'Cargo.toml'), 'utf8'))?.[1];
 }
 
-/* The server's version and the stubs it pins, read from its own sources, or null when the folder is not that checkout. */
+/* The PHP server's version and the stubs it pins, read from its own sources, or null when the folder is not that checkout. */
 export function readNativeCheckout(folder: string): NativeCheckout | null {
     try {
-        if (!existsSync(join(folder, 'Cargo.toml'))) {
+        const version = workspaceVersion(folder);
+        if (version === undefined) {
             return null;
         }
-        const version = /\[workspace\.package\][^[]*?\nversion\s*=\s*"([^"]+)"/.exec(readFileSync(join(folder, 'Cargo.toml'), 'utf8'))?.[1];
         const stubsCommit = /STUBS_COMMIT:\s*&str\s*=\s*"([0-9a-f]{40})"/.exec(readFileSync(join(folder, 'crates', 'index', 'src', 'stubs.rs'), 'utf8'))?.[1];
-        return version === undefined || stubsCommit === undefined ? null : { folder, version, stubsCommit };
+        return stubsCommit === undefined ? null : { folder, version, stubsCommit };
     } catch {
         return null;
     }
+}
+
+/* The SQL server's version, read from its own sources, or null when the folder is not that checkout: its `native-source.json` names the program. */
+export function readSqlCheckout(folder: string): NativeCheckout | null {
+    try {
+        const version = workspaceVersion(folder);
+        if (version === undefined) {
+            return null;
+        }
+        const source = JSON.parse(readFileSync(join(folder, 'native-source.json'), 'utf8')) as { platforms?: Record<string, { executable?: unknown }> };
+        const names = Object.values(source.platforms ?? {}).map((platform) => platform.executable);
+        return names.some((name) => typeof name === 'string' && name.startsWith(NATIVE_SPECS['sql-native'].program)) ? { folder, version } : null;
+    } catch {
+        return null;
+    }
+}
+
+const NATIVE_SPECS: Record<NativeKind, NativeSpec> = {
+    'php-native': {
+        program: 'php-language-server',
+        sibling: ['language-servers', 'php'],
+        sourceVariable: 'RUIMTE_PHP_LANGUAGE_SERVER_SOURCE',
+        title: 'PHP',
+        read: readNativeCheckout
+    },
+    'sql-native': {
+        program: 'sql-language-server',
+        sibling: ['language-servers', 'sql'],
+        sourceVariable: 'RUIMTE_SQL_LANGUAGE_SERVER_SOURCE',
+        title: 'SQL',
+        read: readSqlCheckout
+    }
+};
+
+/* The name of the program a native kind runs, which is also the name its version is pinned under. */
+export function nativeProgramOf(kind: NativeKind): string {
+    return NATIVE_SPECS[kind].program;
+}
+
+/* What a person reads a native kind is, in a message about its build. */
+export function nativeTitleOf(kind: NativeKind): string {
+    return NATIVE_SPECS[kind].title;
+}
+
+/* Whether an install of the kind brings the standard library stubs beside the program. */
+export function nativeHasStubs(kind: NativeKind): boolean {
+    return kind === 'php-native';
+}
+
+export function nativeProgramFile(kind: NativeKind, platform: NodeJS.Platform): string {
+    const program = nativeProgramOf(kind);
+    return platform === 'win32' ? `${program}.exe` : program;
 }
 
 function mainCheckoutRoot(root: string): string | null {
@@ -87,32 +177,52 @@ function mainCheckoutRoot(root: string): string | null {
     }
 }
 
-const PHP_CHECKOUT = ['language-servers', 'php'];
+/*
+ * The checkout a development daemon builds a native kind from: the one its variable names, else the
+ * sibling of Ruimte's sources, else the sibling of the primary checkout of a Ruimte worktree. A compiled daemon has none.
+ */
+export function nativeCheckout(
+    kind: NativeKind,
+    compiled: boolean,
+    sourcePath: string | null = process.env[NATIVE_SPECS[kind].sourceVariable] ?? null,
+    ruimteRoot = resolve(import.meta.dir, '../../../..')
+): NativeCheckout | null {
+    if (compiled) {
+        return null;
+    }
+    const spec = NATIVE_SPECS[kind];
+    if (sourcePath !== null) {
+        return spec.read(resolve(sourcePath));
+    }
+    try {
+        // Anchor discovery to the sources, even when the daemon starts elsewhere or through a symlink.
+        const root = realpathSync(ruimteRoot);
+        const sibling = spec.read(join(dirname(root), ...spec.sibling));
+        if (sibling !== null) {
+            return sibling;
+        }
+        // A Ruimte worktree can use the standalone checkout beside its primary checkout.
+        const main = mainCheckoutRoot(root);
+        return main === null ? null : spec.read(join(dirname(main), ...spec.sibling));
+    } catch {
+        return null;
+    }
+}
 
 export function phpLanguageServerCheckout(
     compiled: boolean,
     sourcePath: string | null = process.env.RUIMTE_PHP_LANGUAGE_SERVER_SOURCE ?? null,
     ruimteRoot = resolve(import.meta.dir, '../../../..')
 ): NativeCheckout | null {
-    if (compiled) {
-        return null;
-    }
-    if (sourcePath !== null) {
-        return readNativeCheckout(resolve(sourcePath));
-    }
-    try {
-        // Anchor discovery to the sources, even when the daemon starts elsewhere or through a symlink.
-        const root = realpathSync(ruimteRoot);
-        const sibling = readNativeCheckout(join(dirname(root), ...PHP_CHECKOUT));
-        if (sibling !== null) {
-            return sibling;
-        }
-        // A Ruimte worktree can use the standalone checkout beside its primary checkout.
-        const main = mainCheckoutRoot(root);
-        return main === null ? null : readNativeCheckout(join(dirname(main), ...PHP_CHECKOUT));
-    } catch {
-        return null;
-    }
+    return nativeCheckout('php-native', compiled, sourcePath, ruimteRoot);
+}
+
+export function sqlLanguageServerCheckout(
+    compiled: boolean,
+    sourcePath: string | null = process.env.RUIMTE_SQL_LANGUAGE_SERVER_SOURCE ?? null,
+    ruimteRoot = resolve(import.meta.dir, '../../../..')
+): NativeCheckout | null {
+    return nativeCheckout('sql-native', compiled, sourcePath, ruimteRoot);
 }
 
 /* What an install of a native kind does, and what it ends up running. */
@@ -120,7 +230,8 @@ export interface NativePlan {
     /* A checkout builds the server it holds; a release downloads the pinned one. */
     source: 'dev' | 'release';
     version: string;
-    stubsCommit: string;
+    /* The stubs an install fetches beside the program; absent for a kind that reads none. */
+    stubsCommit?: string;
     /* The file the kind runs once installed. */
     executable: string;
     /* The build of the release for this machine; absent when the release has none, and for a checkout. */
@@ -130,7 +241,8 @@ export interface NativePlan {
 }
 
 export interface NativePolicyOptions {
-    checkout: NativeCheckout | null;
+    /* The checkout each kind builds from; a kind without one installs its pinned release. */
+    checkouts: Partial<Record<NativeKind, NativeCheckout | null>>;
     platform?: NodeJS.Platform;
     arch?: string;
     releases?: Partial<Record<NativeKind, NativeRelease>>;
@@ -146,14 +258,14 @@ export class NativePolicy {
 
     /* Null when there is nothing to install: a release build without a release of the kind. */
     plan(kind: NativeKind, installDirectory: string): NativePlan | null {
-        const { checkout } = this.options;
+        const checkout = this.options.checkouts[kind] ?? null;
         const platform = this.options.platform ?? process.platform;
         if (checkout !== null) {
             return {
                 source: 'dev',
                 version: checkout.version,
-                stubsCommit: checkout.stubsCommit,
-                executable: join(checkout.folder, 'target', 'release', programFile(platform)),
+                ...(checkout.stubsCommit === undefined ? {} : { stubsCommit: checkout.stubsCommit }),
+                executable: join(checkout.folder, 'target', 'release', nativeProgramFile(kind, platform)),
                 checkout: checkout.folder
             };
         }
@@ -165,8 +277,8 @@ export class NativePolicy {
         return {
             source: 'release',
             version: release.version,
-            stubsCommit: release.stubsCommit,
-            executable: join(installDirectory, 'bin', asset?.executable ?? programFile(platform)),
+            ...(release.stubsCommit === undefined ? {} : { stubsCommit: release.stubsCommit }),
+            executable: join(installDirectory, 'bin', asset?.executable ?? nativeProgramFile(kind, platform)),
             ...(asset ? { asset } : {})
         };
     }

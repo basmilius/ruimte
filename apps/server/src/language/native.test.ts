@@ -7,13 +7,18 @@ import {
     installRelease,
     NativePolicy,
     nativeStubsOf,
+    NATIVE_RELEASES,
     phpLanguageServerCheckout,
+    pinnedRelease,
     readNativeCheckout,
+    readSqlCheckout,
+    sqlLanguageServerCheckout,
     type Download,
     type NativeAsset,
     type NativeRelease
 } from './native.ts';
 import descriptor from './php-native-release.json' with { type: 'json' };
+import sqlDescriptor from './sql-native-release.json' with { type: 'json' };
 import { sha256, tarGz, zip } from './test-archives.ts';
 
 let folder = '';
@@ -32,6 +37,19 @@ async function checkoutAt(path: string, version = '0.3.1'): Promise<void> {
     await mkdir(join(path, 'crates', 'index', 'src'), { recursive: true });
     await writeFile(join(path, 'Cargo.toml'), `[workspace]\nmembers = ["crates/index"]\n\n[workspace.package]\nversion = "${version}"\nedition = "2024"\n`);
     await writeFile(join(path, 'crates', 'index', 'src', 'stubs.rs'), `pub const STUBS_COMMIT: &str = "${COMMIT}";\n`);
+}
+
+async function sqlCheckoutAt(path: string, version = '0.1.3'): Promise<void> {
+    await mkdir(path, { recursive: true });
+    await writeFile(join(path, 'Cargo.toml'), `[workspace]\nmembers = ["crates/server"]\n\n[workspace.package]\nversion = "${version}"\nedition = "2024"\n`);
+    await writeFile(
+        join(path, 'native-source.json'),
+        JSON.stringify({
+            schemaVersion: 1,
+            version,
+            platforms: { 'darwin-arm64': { target: 'aarch64-apple-darwin', executable: 'sql-language-server', format: 'tar.gz' } }
+        })
+    );
 }
 
 /* A download that answers from memory, by address. */
@@ -136,6 +154,69 @@ describe('native checkout', () => {
     });
 });
 
+describe('the SQL checkout', () => {
+    it('reads its version from the workspace, and knows it by the program its native source names', async () => {
+        await sqlCheckoutAt(folder);
+        expect(readSqlCheckout(folder)).toEqual({ folder, version: '0.1.3' });
+        await checkoutAt(join(folder, 'php'));
+        expect(readSqlCheckout(join(folder, 'php'))).toBeNull();
+        expect(readNativeCheckout(folder)).toBeNull();
+    });
+
+    it('is found beside Ruimte, beside the primary checkout of a worktree, or where its variable says', async () => {
+        const ruimte = join(folder, 'projects', 'ruimte');
+        const source = join(folder, 'projects', 'language-servers', 'sql');
+        await mkdir(ruimte, { recursive: true });
+        await sqlCheckoutAt(source);
+        expect(sqlLanguageServerCheckout(false, null, ruimte)?.folder).toBe(source);
+        expect(sqlLanguageServerCheckout(true, null, ruimte)).toBeNull();
+        expect(phpLanguageServerCheckout(false, null, ruimte)).toBeNull();
+        const override = join(folder, 'elsewhere');
+        await sqlCheckoutAt(override, '0.2.0');
+        expect(sqlLanguageServerCheckout(false, override, ruimte)).toEqual({ folder: override, version: '0.2.0' });
+        const worktree = join(folder, 'worktrees', 'feature');
+        const gitdir = join(ruimte, '.git', 'worktrees', 'feature');
+        await mkdir(gitdir, { recursive: true });
+        await mkdir(worktree, { recursive: true });
+        await writeFile(join(worktree, '.git'), 'gitdir: ../../projects/ruimte/.git/worktrees/feature\n');
+        await writeFile(join(gitdir, 'commondir'), '../..\n');
+        expect(sqlLanguageServerCheckout(false, null, worktree)?.folder).toBe(source);
+    });
+
+    it('builds from a checkout and fetches no stubs, since the server reads none', () => {
+        const policy = new NativePolicy({ checkouts: { 'sql-native': { folder: '/checkout/sql', version: '0.1.3' } } });
+        expect(policy.plan('sql-native', '/home/sql-native')).toEqual({
+            source: 'dev',
+            version: '0.1.3',
+            executable: '/checkout/sql/target/release/sql-language-server',
+            checkout: '/checkout/sql'
+        });
+        expect(policy.plan('php-native', '/home/php-native')).not.toBeNull();
+    });
+
+    it('has no release pinned yet, so a compiled daemon has nothing to install', () => {
+        expect(sqlDescriptor.version).toBe('');
+        expect(pinnedRelease(sqlDescriptor)).toBeUndefined();
+        expect(NATIVE_RELEASES['sql-native']).toBeUndefined();
+        expect(new NativePolicy({ checkouts: {} }).plan('sql-native', '/home/sql-native')).toBeNull();
+    });
+
+    it('takes a release once one is pinned, with the program of its own', () => {
+        const release = pinnedRelease({
+            version: '0.1.3',
+            sourceRevision: COMMIT,
+            assets: { 'linux-x64': { url: 'https://example.test/sql.tar.gz', sha256: 'e'.repeat(64), format: 'tar.gz', executable: 'sql-language-server' } }
+        })!;
+        const policy = new NativePolicy({ checkouts: {}, platform: 'linux', arch: 'x64', releases: { 'sql-native': release } });
+        expect(policy.plan('sql-native', '/home/sql-native')).toEqual({
+            source: 'release',
+            version: '0.1.3',
+            executable: '/home/sql-native/bin/sql-language-server',
+            asset: release.assets['linux-x64']
+        });
+    });
+});
+
 describe('native policy', () => {
     const release: NativeRelease = {
         version: '1.2.3',
@@ -152,7 +233,7 @@ describe('native policy', () => {
         expect(Object.keys(descriptor.assets).sort()).toEqual(['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-x64']);
         for (const [target, asset] of Object.entries(descriptor.assets)) {
             const [platform, arch] = target.split('-');
-            const plan = new NativePolicy({ checkout: null, platform: platform as NodeJS.Platform, arch }).plan('php-native', folder);
+            const plan = new NativePolicy({ checkouts: {}, platform: platform as NodeJS.Platform, arch }).plan('php-native', folder);
             expect(plan).toMatchObject({ source: 'release', version: descriptor.version, asset });
             expect(asset.sha256).toMatch(/^[a-f0-9]{64}$/);
             expect(asset.url).toBe(
@@ -163,7 +244,7 @@ describe('native policy', () => {
 
     it('runs the checkout the daemon is in, whatever a release says', () => {
         const policy = new NativePolicy({
-            checkout: { folder: '/checkout/php-language-server', version: '0.1.0', stubsCommit: COMMIT },
+            checkouts: { 'php-native': { folder: '/checkout/php-language-server', version: '0.1.0', stubsCommit: COMMIT } },
             releases: { 'php-native': release }
         });
         expect(policy.plan('php-native', '/home/php-native')).toEqual({
@@ -176,7 +257,7 @@ describe('native policy', () => {
     });
 
     it('takes the pinned release for the platform of a compiled daemon', () => {
-        const policy = new NativePolicy({ checkout: null, platform: 'darwin', arch: 'arm64', releases: { 'php-native': release } });
+        const policy = new NativePolicy({ checkouts: {}, platform: 'darwin', arch: 'arm64', releases: { 'php-native': release } });
         expect(policy.plan('php-native', '/home/php-native')).toMatchObject({
             source: 'release',
             version: '1.2.3',
@@ -186,13 +267,13 @@ describe('native policy', () => {
     });
 
     it('keeps the version of a release that has no build for this machine, without an asset', () => {
-        const policy = new NativePolicy({ checkout: null, platform: 'linux', arch: 'x64', releases: { 'php-native': release } });
+        const policy = new NativePolicy({ checkouts: {}, platform: 'linux', arch: 'x64', releases: { 'php-native': release } });
         expect(policy.plan('php-native', '/home/php-native')).toMatchObject({ source: 'release', version: '1.2.3' });
         expect(policy.plan('php-native', '/home/php-native')?.asset).toBeUndefined();
     });
 
     it('has nothing to install in a release build with no release pinned', () => {
-        expect(new NativePolicy({ checkout: null, releases: {} }).plan('php-native', '/home/php-native')).toBeNull();
+        expect(new NativePolicy({ checkouts: {}, releases: {} }).plan('php-native', '/home/php-native')).toBeNull();
     });
 });
 

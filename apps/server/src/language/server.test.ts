@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { INITIALIZE_TIMEOUT_MS, LanguageServer, STABLE_AFTER_MS, type LanguageServerHooks, type SharedDocument } from './server.ts';
-import { KIND_PROFILES } from './profiles.ts';
+import { KIND_PROFILES, type ProjectSqlSettings } from './profiles.ts';
 import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
 import type { LanguageServerKind } from '@ruimte/contracts';
 import type { Diagnostic, PublishDiagnosticsParams, RequestHandler, ServerCapabilities } from '@adecore/lsp';
@@ -795,5 +795,105 @@ describe('the sidecar of code actions beside the native TypeScript server', () =
         const [sidecar] = spawner.of('typescript-actions');
         expect(sidecar!.kills).toEqual(['SIGTERM']);
         expect(sidecar!.server.shutdownRequested).toBe(true);
+    });
+});
+
+describe('the settings of a project the SQL servers read', () => {
+    const settings = {
+        sql: { dialect: 'mysql', schema: '/home/snapshots/shop.json', overrides: [{ path: '/work/db/report.sql', dialect: 'sqlite' }] },
+        php: { dialect: 'mysql', schema: '/home/snapshots/shop.json' },
+        unbound: ['/work/db/loose.sql']
+    };
+
+    function sqlServer(kind: 'sql-native' | 'php-native', current: { value: ProjectSqlSettings | null }) {
+        const spawner = fakeSpawner();
+        const server = new LanguageServer({
+            kind,
+            profile: KIND_PROFILES[kind],
+            projectId: 'p1',
+            folder: '/work',
+            installDirectory: () => `/home/language-servers/${kind}`,
+            native: () => ({ executable: `/home/bin/${kind === 'sql-native' ? 'sql' : 'php'}-language-server`, stubsCommit: 'c'.repeat(40) }),
+            sqlSettings: async () => current.value,
+            isInstalled: async () => true,
+            runtime,
+            spawn: spawner.spawn,
+            clock: new ManualClock(),
+            exists: async () => false,
+            readText: async () => null,
+            realPath: async (path) => path,
+            hooks: {
+                status: () => undefined,
+                diagnostics: () => undefined,
+                providers: () => undefined,
+                applyEdit: async () => ({ applied: false }),
+                watching: () => undefined
+            }
+        });
+        return { server, spawner };
+    }
+
+    it('starts the SQL server with them, and answers each document with its own', async () => {
+        const { server, spawner } = sqlServer('sql-native', { value: settings });
+        server.attach(document('/work/db/a.sql', 'sql', 'SELECT 1;'));
+        await settle();
+        const [process] = spawner.processes;
+        expect(process!.spec.command).toBe('/home/bin/sql-language-server');
+        expect((process!.server.paramsOf('initialize')[0] as { initializationOptions: unknown }).initializationOptions).toEqual({
+            sqlLanguageServer: settings.sql
+        });
+        expect(process!.server.paramsOf('workspace/didChangeConfiguration')).toEqual([{ settings: { sqlLanguageServer: settings.sql } }]);
+        const answers = await process!.server.request<unknown[]>('workspace/configuration', {
+            items: [
+                { scopeUri: 'file:///work/db/a.sql', section: 'sqlLanguageServer' },
+                { scopeUri: 'file:///work/db/loose.sql', section: 'sqlLanguageServer' }
+            ]
+        });
+        expect(answers).toEqual([settings.sql, { dialect: 'generic' }]);
+    });
+
+    it('tells a running server the new settings at once, and the next start takes them too', async () => {
+        const current: { value: ProjectSqlSettings | null } = { value: settings };
+        const { server, spawner } = sqlServer('sql-native', current);
+        server.attach(document('/work/db/a.sql', 'sql', 'SELECT 1;'));
+        await settle();
+        const next: ProjectSqlSettings = { ...settings, sql: { dialect: 'mariadb', version: '11.4.2-MariaDB' } };
+        current.value = next;
+        await server.reconfigure(next);
+        await settle();
+        expect(spawner.processes[0]!.server.paramsOf('workspace/didChangeConfiguration').at(-1)).toEqual({ settings: { sqlLanguageServer: next.sql } });
+        await server.restart();
+        await settle();
+        expect((spawner.processes[1]!.server.paramsOf('initialize')[0] as { initializationOptions: unknown }).initializationOptions).toEqual({
+            sqlLanguageServer: next.sql
+        });
+    });
+
+    it('gives the PHP server its storage and stubs as before, with the SQL of its strings beside them', async () => {
+        const { server, spawner } = sqlServer('php-native', { value: settings });
+        server.attach(document('/work/a.php', 'php', '<?php'));
+        await settle();
+        const process = spawner.processes[0]!;
+        expect((process.server.paramsOf('initialize')[0] as { initializationOptions: unknown }).initializationOptions).toEqual({
+            storagePath: '/home/language-servers/php-native/storage',
+            stubsPath: `/home/language-servers/php-native/storage/stubs/${'c'.repeat(40)}`,
+            sql: settings.php
+        });
+        const [answer] = await process.server.request<unknown[]>('workspace/configuration', {
+            items: [{ scopeUri: 'file:///work/a.php', section: 'phpLanguageServer' }]
+        });
+        expect(answer).toEqual({ sql: settings.php });
+    });
+
+    it('starts the PHP server exactly as before when the project has no SQL to give', async () => {
+        const { server, spawner } = sqlServer('php-native', { value: null });
+        server.attach(document('/work/a.php', 'php', '<?php'));
+        await settle();
+        const process = spawner.processes[0]!;
+        expect((process.server.paramsOf('initialize')[0] as { initializationOptions: unknown }).initializationOptions).toEqual({
+            storagePath: '/home/language-servers/php-native/storage',
+            stubsPath: `/home/language-servers/php-native/storage/stubs/${'c'.repeat(40)}`
+        });
+        expect(process.server.paramsOf('workspace/didChangeConfiguration')).toEqual([]);
     });
 });

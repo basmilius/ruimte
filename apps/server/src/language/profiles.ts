@@ -11,9 +11,24 @@ export interface LaunchContext {
     typescriptLib: string;
     /* The native TypeScript server to run: the project's own when it is TypeScript 7 or newer, else the pinned one. */
     typescriptExecutable: string;
-    /* A kind whose server is a program of its own: the file it runs and the commit of the stubs installed beside it. Null for any other kind. */
-    native?: { executable: string; stubsCommit: string } | null;
+    /* A kind whose server is a program of its own: the file it runs and the commit of the stubs installed beside it, for a kind that reads them. Null for any other kind. */
+    native?: { executable: string; stubsCommit?: string } | null;
+    /* What the project's SQL comes down to for the servers that read it (`sql-settings.ts`); null before anything was worked out. */
+    sql?: ProjectSqlSettings | null;
 }
+
+/* The settings of the project's SQL as each server that reads it takes them. */
+export interface ProjectSqlSettings {
+    /* `sqlLanguageServer` of the SQL server. */
+    sql: Record<string, unknown>;
+    /* `sql` of the PHP server, under `phpLanguageServer`. */
+    php: Record<string, unknown>;
+    /* The files a person set to no connection. An override cannot take a schema away, so each is answered on its own through `workspace/configuration`. */
+    unbound: readonly string[];
+}
+
+/* What a file a person set to no connection is read as: no dialect and no schema, whatever the project's default says. */
+export const UNBOUND_SQL = { dialect: 'generic' };
 
 /* One process of a kind. Vue runs two: the Vue server and the TypeScript server it leans on. */
 export interface ComponentProfile {
@@ -39,6 +54,11 @@ export interface ComponentProfile {
     initializationOptions(context: LaunchContext): unknown;
     /* Settings the server reads through `workspace/didChangeConfiguration` and `workspace/configuration`, which are not initialization options. */
     configuration?: Record<string, unknown>;
+    /*
+     * Settings of the project the server reads beside `configuration`, sent at the start and again every
+     * time they change. With a path they are the answer to `workspace/configuration` for that document.
+     */
+    settings?(context: LaunchContext, path?: string): Record<string, unknown>;
     env?: Record<string, string>;
     /* A server told that the client pulls diagnostics stops pushing them, so the daemon asks for them (`textDocument/diagnostic`). */
     pullDiagnostics?: boolean;
@@ -69,6 +89,9 @@ export interface KindProfile {
 const SIDECAR_SDK_PACKAGE = 'typescript-6';
 
 const SCRIPT_LANGUAGES = ['typescript', 'typescriptreact', 'javascript', 'javascriptreact'] as const;
+
+/* `sql` names no dialect; the others name the one the SQL server reads a document in when its settings do not. */
+const SQL_LANGUAGES = ['sql', 'mysql', 'mariadb', 'postgres', 'sqlite'] as const;
 
 /* The server's `logVerbosity` that keeps warnings and errors only. */
 const LOG_VERBOSITY_WARNING = 4;
@@ -268,7 +291,27 @@ export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
                 // The server reads `composer.json` for the language level. The stubs are fetched by Install, so `stubsPath` keeps it from downloading anything itself.
                 initializationOptions: (context) => ({
                     storagePath: nativeStorageOf(context.installDirectory),
-                    stubsPath: nativeStubsOf(context.installDirectory, context.native?.stubsCommit ?? '')
+                    stubsPath: nativeStubsOf(context.installDirectory, context.native?.stubsCommit ?? ''),
+                    ...(context.sql ? { sql: context.sql.php } : {})
+                }),
+                // The SQL in its strings is read against the project's connection, which a person may change while it runs.
+                settings: (context) => (context.sql ? { phpLanguageServer: { sql: context.sql.php } } : {}),
+                pullDiagnostics: true
+            }
+        ]
+    },
+    'sql-native': {
+        kind: 'sql-native',
+        components: [
+            {
+                name: 'sql-native',
+                languages: SQL_LANGUAGES,
+                entry: 'sql-language-server',
+                program: (context) => context.native?.executable ?? '',
+                args: () => ['--stdio'],
+                initializationOptions: (context) => ({ sqlLanguageServer: context.sql?.sql ?? {} }),
+                settings: (context, path) => ({
+                    sqlLanguageServer: path !== undefined && context.sql?.unbound.includes(path) ? UNBOUND_SQL : (context.sql?.sql ?? {})
                 }),
                 pullDiagnostics: true
             }
