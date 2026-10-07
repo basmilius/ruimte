@@ -8,7 +8,8 @@ import type {
     DatabaseConnectionsSavePayload
 } from '@ruimte/contracts';
 import { TransportError } from '@/transport/transport';
-import { createDatabaseConnections, isOutsideProject, isSavable, keepUnchanged, type ConnectionsTarget } from './connections.ts';
+import { createDatabaseConnections, isOutsideProject, keepUnchanged, type ConnectionsTarget } from './connections.ts';
+import { isSavable } from './savable.ts';
 import { memorySecretStore, secretKeyOf } from './secrets.ts';
 
 const SHOP: DatabaseConnection = { id: 'shop', name: 'Shop', shared: true, config: { engine: 'mysql', host: '127.0.0.1', user: 'root' } };

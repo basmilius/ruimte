@@ -1,4 +1,4 @@
-import { isValidConfig, type Connection } from '@adecore/database';
+import type { Connection } from '@adecore/database';
 import i18next from 'i18next';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import {
@@ -62,12 +62,6 @@ const INITIAL: DatabaseConnectionsState = {
     passwords: {},
     agentAccess: {}
 };
-
-/* What can be saved, rather than a draft a person is still filling in: a new SQLite connection without a whole path, or a host cleared to type another. */
-export function isSavable(connection: DatabaseConnection): boolean {
-    const [view] = asViewConnections([connection]);
-    return connection.id !== '' && view !== undefined && isValidConfig(view.config);
-}
 
 /* Whether a connection cannot go into the shared file: a SQLite file outside the project folder, which the machine refuses to share. */
 export function isOutsideProject(folder: string | null, connection: DatabaseConnection): boolean {
@@ -234,9 +228,11 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         saving = true;
         const sent = version;
         const local = state.local;
-        // A draft goes as it was last saved, so a field cleared to type another keeps the connection on the machine meanwhile.
-        const sending = local.flatMap((connection) => (isSavable(connection) ? [connection] : state.saved.filter((saved) => saved.id === connection.id)));
         try {
+            // The check comes with the database package, which a workspace loads only once a database surface asks for it.
+            const { isSavable } = await import('@/database/savable');
+            // A draft goes as it was last saved, so a field cleared to type another keeps the connection on the machine meanwhile.
+            const sending = local.flatMap((connection) => (isSavable(connection) ? [connection] : state.saved.filter((saved) => saved.id === connection.id)));
             await writeSecrets(
                 of,
                 local.map((connection) => connection.id)
