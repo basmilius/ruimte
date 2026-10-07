@@ -7,20 +7,6 @@ final class ChatHistoryTests: XCTestCase {
     private func item(_ id: String, _ text: String = "") -> JSONValue {
         .object(["id": .string(id), "kind": .string("assistant"), "text": .string(text)])
     }
-    func testSyntheticHistoryDecodeMeasurement() throws {
-        let values = (0..<2871).map { item("m\($0)", String(repeating: "output ", count: 900)) }
-        let full = try JSONValue.array(values).encoded()
-        let page = try JSONValue.array(Array(values.suffix(60))).encoded()
-        let fullStart = Date()
-        XCTAssertEqual(try JSONValue.decode(full).arrayValue?.count, 2871)
-        let fullTime = Date().timeIntervalSince(fullStart) * 1000
-        let pageStart = Date()
-        XCTAssertEqual(try JSONValue.decode(page).arrayValue?.count, 60)
-        let pageTime = Date().timeIntervalSince(pageStart) * 1000
-        print(
-            "Synthetic JSON decode on Mac: full \(full.count) bytes / \(fullTime) ms; page \(page.count) bytes / \(pageTime) ms"
-        )
-    }
 
     func testOlderDaemonKeepsFullHistoryAndNeedsNoPagingRequest() {
         var history = ChatHistory()

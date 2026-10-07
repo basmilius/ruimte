@@ -46,11 +46,9 @@ The client, desktop and daemon release builders deliberately keep the source con
 
 Vite updates the client while it runs. The daemon runs with Bun's watch mode. The desktop main process is bundled at startup; restart it after changing `@adecore/shell` or desktop service code. A new file, new export or dependency change may also require a restart. Tools outside this source-configured flow can use compiled `dist` exports and require `bun run build` in ADE CORE.
 
-### Tailwind linked-source validation
+### Tailwind linked sources
 
-The development plugin in `apps/client/adecore-sources.ts` resolves the three ADE CORE `@source` directives to real filesystem paths before Tailwind scans them. This makes the stylesheet dependencies match Vite's linked modules. It also watches those source directories and includes their stylesheet in HMR for new or unloaded files. The committed CSS paths and production build are unchanged.
-
-`apps/client/tailwind.integration.test.ts` uses temporary ADE CORE package folders linked through the same `@source` paths as `styles.css`. It verifies the initial utilities from `ui`, `agents-react` and `editor-react`, CSS HMR after source edits, and discovery of a new source file. The assertions inspect HMR messages and the served CSS without editing the shared checkout.
+The development plugin in `apps/client/adecore-sources.ts` resolves ADE CORE's `@source` directives to real filesystem paths before Tailwind scans them. This makes the stylesheet dependencies match Vite's linked modules. It also watches those source directories and includes their stylesheet in HMR for new or unloaded files. The committed CSS paths and production build are unchanged.
 
 The link command discovers consumers from Ruimte's workspaces and dependencies from ADE CORE's workspaces. It checks that shared dependencies such as editor-core resolve inside the same local folder before changing consumer links. A failed link operation restores the consumer aliases it started with.
 

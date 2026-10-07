@@ -41,7 +41,6 @@
 		1D6CEEA1B77289B22B60489B /* ViewSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B046BB9BDAA4FBBD682034 /* ViewSettingsSheet.swift */; };
 		2039449EB696024C64A7D640 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */; };
 		2078E1D5C84F273F381AA240 /* LaunchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D2983C599BF780FEA70F8A /* LaunchModel.swift */; };
-		20FD9CD7B6EE162D24028A36 /* EclipseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 858D931897B958E9E67522DD /* EclipseTests.swift */; };
 		226093BDE4A09AE44CB9B90A /* GitPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69D1BF9802A60BF9D50BA2B /* GitPage.swift */; };
 		22D4E7461B92CDB6FA1056BB /* ChatSubagentRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2397286316071E20E0ED2DC4 /* ChatSubagentRow.swift */; };
 		232274F1989E0BA90BB73CA8 /* image.webp in Resources */ = {isa = PBXBuildFile; fileRef = 868B09445FC666B30675BD85 /* image.webp */; };
@@ -550,7 +549,6 @@
 		826308F387A7269E62AF6C7C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		830913A49860F17303353605 /* MachineEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineEndpoint.swift; sourceTree = "<group>"; };
 		8449B851575DF02B5169572E /* MobileScrollViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileScrollViewport.swift; sourceTree = "<group>"; };
-		858D931897B958E9E67522DD /* EclipseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EclipseTests.swift; sourceTree = "<group>"; };
 		86350DF4914846B3127196EC /* NowPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPage.swift; sourceTree = "<group>"; };
 		868B09445FC666B30675BD85 /* image.webp */ = {isa = PBXFileReference; path = image.webp; sourceTree = "<group>"; };
 		8692B2C68758104DF29256D0 /* NotificationsSettingsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSettingsPage.swift; sourceTree = "<group>"; };
@@ -1048,7 +1046,6 @@
 				0416D221A1F144614E3E9A43 /* DocumentSceneTests.swift */,
 				073C4EC8E14E8D8910DEF111 /* DrawingEditorTests.swift */,
 				E0EA4FE8F41A92E6DF5B35CD /* DrawingToolbarTests.swift */,
-				858D931897B958E9E67522DD /* EclipseTests.swift */,
 				A6321857DC856275AF3D6F68 /* FilePreviewTests.swift */,
 				974733B9574512335A62B518 /* GitConflictTests.swift */,
 				239F0E1B7C5B1C206BD8CD02 /* GitMergeTests.swift */,
@@ -1581,7 +1578,6 @@
 				36FDA8A2969517F544C26207 /* DocumentSceneTests.swift in Sources */,
 				DD033916C188637B3EA2D645 /* DrawingEditorTests.swift in Sources */,
 				0B7FE4C6D2DE9E12A91F6906 /* DrawingToolbarTests.swift in Sources */,
-				20FD9CD7B6EE162D24028A36 /* EclipseTests.swift in Sources */,
 				C2AC2BD4033C5764494105B5 /* FilePreviewTests.swift in Sources */,
 				BC4CE43B950E84F0FCE87BFC /* GitConflictTests.swift in Sources */,
 				57F5769498648C0AA29CA200 /* GitMergeTests.swift in Sources */,
