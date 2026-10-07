@@ -23,6 +23,7 @@ export function carriesView(transfer: Pick<DataTransfer, 'types'>): boolean {
 
 let held: string | null = null;
 let heldWhole = false;
+let heldTabWidth: number | null = null;
 
 /*
  * Which view is being dragged right now. The payload itself is kept from the page until the drop,
@@ -34,10 +35,19 @@ export function dragging(): string | null {
     return held;
 }
 
-/* `whole` is the bar of a tab host dragging, which carries every tab; a tab or a row in the sidebar carries its view alone. */
-export function setDragging(viewId: string | null, whole = false): void {
+/*
+ * `whole` is the bar of a tab host dragging, which carries every tab; a tab or a row in the sidebar carries its view alone.
+ * `tabWidth` is the width of the tab being dragged, so a drop indicator can be as wide as the tab it stands for.
+ */
+export function setDragging(viewId: string | null, whole = false, tabWidth: number | null = null): void {
     held = viewId;
     heldWhole = viewId !== null && whole;
+    heldTabWidth = viewId === null ? null : tabWidth;
+}
+
+/* The width of the tab being dragged, or null when the drag is not a tab. */
+export function draggingTabWidth(): number | null {
+    return heldTabWidth;
 }
 
 /* Whether the drag in progress takes the whole cell of the view it names, tabs and all. */

@@ -90,7 +90,8 @@ function TabShell({
         event.dataTransfer.setData(VIEW_DRAG_TYPE, id);
         onDragData?.(event.dataTransfer);
         event.dataTransfer.effectAllowed = onDragData === undefined ? 'move' : 'copyMove';
-        setDragging(id);
+        // The drop indicator in another cell is as wide as this tab is.
+        setDragging(id, false, Math.round(event.currentTarget.closest('[data-tab-id]')?.getBoundingClientRect().width ?? 0) || null);
     };
     return (
         <ContextMenu.Root>
@@ -296,12 +297,11 @@ function StripTab({ at, id, active }: { at: CellAt; id: string; active: boolean 
  * a right click offers the menu of what the tab holds, and a pinned tab shows the pin next to its close
  * button. The active tab is marked and kept in sight.
  */
-export function TabStrip({ at, ids, active, insertAt = null }: { at: CellAt; ids: readonly string[]; active: string; insertAt?: number | null }) {
+export function TabStrip({ at, ids, active }: { at: CellAt; ids: readonly string[]; active: string }) {
     const counts = useGit((s) => s.counts);
     const focused = useDocument((s) => s.layout !== null && isSameCell(s.layout.focus, at));
     const stripRef = useRef<HTMLDivElement>(null);
     const [edges, setEdges] = useState({ start: false, end: false });
-    const [lineLeft, setLineLeft] = useState<number | null>(null);
 
     const measureEdges = useCallback((): void => {
         const strip = stripRef.current;
@@ -330,16 +330,6 @@ export function TabStrip({ at, ids, active, insertAt = null }: { at: CellAt; ids
         stripRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }, [active]);
 
-    const measureLine = useCallback((): void => {
-        const tabs = stripRef.current?.querySelectorAll<HTMLElement>('[data-tab-id]') ?? [];
-        const before = insertAt === null ? undefined : tabs[insertAt];
-        const last = tabs[tabs.length - 1];
-        setLineLeft(insertAt === null ? null : before !== undefined ? before.offsetLeft : last !== undefined ? last.offsetLeft + last.offsetWidth : 0);
-    }, [insertAt]);
-
-    // Where a dragged tab would land, in the strip's own coordinates so the line scrolls along with the tabs.
-    useLayoutEffect(measureLine, [measureLine, ids]);
-
     // A trackpad swipes sideways on its own; a wheel with one axis still has to reach the strip.
     const onWheel = (event: ReactWheelEvent<HTMLDivElement>): void => {
         if (event.deltaX === 0 && event.deltaY !== 0) {
@@ -350,7 +340,8 @@ export function TabStrip({ at, ids, active, insertAt = null }: { at: CellAt; ids
     return (
         <div
             ref={stripRef}
-            className="group/strip scroll-fade-x relative flex h-full min-w-0 flex-1 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            data-tab-strip=""
+            className="group/strip scroll-fade-x flex h-full min-w-0 flex-1 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             data-focused={focused}
             data-fade-start={edges.start || undefined}
             data-fade-end={edges.end || undefined}
@@ -360,9 +351,6 @@ export function TabStrip({ at, ids, active, insertAt = null }: { at: CellAt; ids
             {ids.map((id) => (
                 <StripTab key={id} at={at} id={id} active={id === active} />
             ))}
-            {lineLeft !== null && (
-                <span aria-hidden className="pointer-events-none absolute inset-y-1 z-10 w-[2px] -translate-x-px bg-accent" style={{ left: lineLeft }} />
-            )}
         </div>
     );
 }

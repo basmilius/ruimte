@@ -26,11 +26,23 @@ import {
     type CellAt,
     type SplitZone
 } from '@/shell/split';
-import { gapAt, positionAfterLifting } from '@/shell/tab-drop';
+import { clampTabLeft, DEFAULT_TAB_WIDTH, gapAt, gapLeft, positionAfterLifting, sameTabDrop, type TabDrop } from '@/shell/tab-drop';
+import { TabDropIndicator } from '@/shell/TabDropIndicator';
 import type { SplitCell } from '@ruimte/contracts';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { Button, Kbd, Surface, Tooltip } from '@adecore/ui';
-import { carriesView, draggedViewId, dragging, draggingWholeCell, edgeZoneAt, isNowhereDrop, setGridTakesPath, shapeOf, zoneAt } from '@/shell/view-drag';
+import {
+    carriesView,
+    draggedViewId,
+    dragging,
+    draggingTabWidth,
+    draggingWholeCell,
+    edgeZoneAt,
+    isNowhereDrop,
+    setGridTakesPath,
+    shapeOf,
+    zoneAt
+} from '@/shell/view-drag';
 import { ViewSurface } from '@/shell/ViewHost';
 import { CellToolbar } from '@/shell/CellToolbar';
 import { cellsMoved, registerCell } from '@/shell/cell-rects';
@@ -136,6 +148,9 @@ function DropIndicator({ box, zone }: { box: { top: number; height: number }; zo
     );
 }
 
+/* The gap between a cell's title and the tab that would stand after it, the same as the bar's own spacing. */
+const TITLE_GAP = 8;
+
 /* What a cell is called in the tree: its first view, which a switch between its tabs never changes, so the bar and its menus stay mounted. */
 function cellKey(cell: SplitCell): string {
     return cellViewIds(cell)[0]!;
@@ -179,9 +194,9 @@ function Cell({
 }) {
     const view = useCellView(viewId);
     const [dockHidden, setDockHidden] = useState(false);
-    /* A view over the bar of this cell, which makes it a tab of it: the gap in the strip it would land in. */
+    /* A view over the bar of this cell, which makes it a tab of it: where in the strip it would land. */
     const tabs = useDocument((s) => (s.layout === null ? undefined : cellAt(s.layout, at)?.tabs));
-    const [barDrop, setBarDrop] = useState<{ gap: number } | null>(null);
+    const [barDrop, setBarDrop] = useState<TabDrop | null>(null);
 
     /* A drag that is about a view of this window, which a file tab is as well as a path: over a surface that has
        a use for the path itself (the canvas, a composer) the path is what counts, anywhere else the view. */
@@ -193,24 +208,38 @@ function Cell({
     const overBar = (event: ReactDragEvent<HTMLElement>): boolean =>
         carriesView(event.dataTransfer) && ((event.target as HTMLElement | null)?.closest?.('[data-cell-bar]') ?? null) !== null;
 
-    /* Where in the strip the pointer would put a tab, or null when the bar cannot take this drag. A whole cell
+    /* Where the pointer would put a tab, or null when the bar cannot take this drag. A whole cell
        is not a tab, and a view that fills this cell alone has nowhere to go in it. */
-    const tabGapFor = (event: ReactDragEvent<HTMLElement>): { gap: number } | null => {
+    const tabDropFor = (event: ReactDragEvent<HTMLElement>): TabDrop | null => {
         const layout = useDocument.getState().layout;
         if (layout === null) {
             return null;
         }
         const moving = dragging();
+        if (!carriesDiff(event.dataTransfer)) {
+            if (moving === null || draggingWholeCell() || !canStandInCell(useDocument.getState(), moving) || !canDropAsTab(layout, at, moving)) {
+                return null;
+            }
+        }
         const bar = (event.target as HTMLElement).closest('[data-cell-bar]')!;
         const rects = [...bar.querySelectorAll('[data-tab-id]')].map((tab) => tab.getBoundingClientRect());
         const gap = gapAt(rects, event.clientX);
-        if (carriesDiff(event.dataTransfer)) {
-            return { gap };
-        }
-        if (moving === null || draggingWholeCell() || !canStandInCell(useDocument.getState(), moving) || !canDropAsTab(layout, at, moving)) {
-            return null;
-        }
-        return { gap };
+        const barBox = bar.getBoundingClientRect();
+        const strip = bar.querySelector('[data-tab-strip]');
+        const bounds = strip === null ? barBox : strip.getBoundingClientRect();
+        const tabWidth = Math.min(draggingTabWidth() ?? DEFAULT_TAB_WIDTH, Math.round(bounds.right - bounds.left));
+        // A plain cell becomes a host of its view and this one, so the tab goes after the title.
+        const titleEnd = bar.querySelector('[data-cell-title]')?.lastElementChild?.getBoundingClientRect().right ?? barBox.left;
+        const wanted = strip === null ? titleEnd + TITLE_GAP : gapLeft(rects, gap, bounds.left);
+        const cellBox = event.currentTarget.getBoundingClientRect();
+        return {
+            gap,
+            left: Math.round(clampTabLeft(wanted, tabWidth, bounds) - cellBox.left),
+            tabWidth,
+            width: Math.round(cellBox.width),
+            height: Math.round(cellBox.height),
+            barHeight: Math.round(barBox.height)
+        };
     };
 
     /* The position among the tabs the drop leaves, which only a host has an order for. */
@@ -302,6 +331,8 @@ function Cell({
                 {!isLooseView(view) && isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
                 {filling && <MaximizedIndicator at={at} />}
             </CellOverlay>
+            {/* Its own slot, since the tab reaches up over the bar, which the cell's slot clips away. */}
+            <CellOverlay slot="drop">{barDrop !== null && <TabDropIndicator drop={barDrop} />}</CellOverlay>
         </div>
     );
     return (
@@ -317,13 +348,13 @@ function Cell({
                 onDropCapture={claimPath}
                 onDragOver={(event) => {
                     if (overBar(event)) {
-                        const tab = tabGapFor(event);
+                        const tab = tabDropFor(event);
                         if (tab !== null) {
                             // Only a prevented dragover accepts the drop.
                             event.preventDefault();
                         }
                         event.dataTransfer.dropEffect = tab === null ? 'none' : 'move';
-                        setBarDrop((current) => (tab === null ? null : current?.gap === tab.gap ? current : tab));
+                        setBarDrop((current) => (sameTabDrop(current, tab) ? current : tab));
                         onZone(null, boxIn(event.currentTarget));
                         return;
                     }
@@ -350,7 +381,7 @@ function Cell({
                 }}
                 onDrop={(event) => {
                     if (overBar(event)) {
-                        const tab = tabGapFor(event);
+                        const tab = tabDropFor(event);
                         setBarDrop(null);
                         onZone(null, boxIn(event.currentTarget));
                         setGridTakesPath(false);
@@ -403,7 +434,7 @@ function Cell({
                     placeFilesAction(paths, viewId, here);
                 }}
             >
-                <CellToolbar at={at} view={view} focused={focused} tabDrop={barDrop}>
+                <CellToolbar at={at} view={view} focused={focused}>
                     {body}
                 </CellToolbar>
             </div>

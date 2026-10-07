@@ -13,11 +13,11 @@ import { CellViewContext } from '@/state/workspace-stores';
  * follows the cell it belongs to (`browser/WebviewParking.tsx`).
  */
 
-/* Two slots per cell in a fixed order, since the order of two portals into one box is the order they
+/* Slots per cell in a fixed order, since the order of portals into one box is the order they
    mounted in. The cell's own chrome stands over the view's, the way it did inside the cell. */
-type Slot = 'view' | 'cell';
+type Slot = 'view' | 'cell' | 'drop';
 
-const hosts = new Map<string, Record<Slot, HTMLElement>>();
+const hosts = new Map<string, Record<Slot | 'box', HTMLElement>>();
 const listeners = new Set<() => void>();
 
 function announce(): void {
@@ -33,7 +33,8 @@ function subscribeHosts(listener: () => void): () => void {
     };
 }
 
-/* Draws its children over the pages, in the cell around it. Outside a cell they stay where they are. */
+/* Draws its children over the pages, in the cell around it. Outside a cell they stay where they are. The `drop` slot is the one
+   that is not clipped to the cell's body, so a drop indicator can reach up over the bar. */
 export function CellOverlay({ slot, children }: { readonly slot: Slot; readonly children: ReactNode }) {
     const viewId = useContext(CellViewContext);
     const host = useSyncExternalStore(subscribeHosts, () => (viewId === null ? null : (hosts.get(viewId)?.[slot] ?? null)));
@@ -41,11 +42,13 @@ export function CellOverlay({ slot, children }: { readonly slot: Slot; readonly 
 }
 
 function OverlayBox({ viewId }: { readonly viewId: string }) {
+    const box = useRef<HTMLDivElement>(null);
     const view = useRef<HTMLDivElement>(null);
     const cell = useRef<HTMLDivElement>(null);
+    const drop = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
-        hosts.set(viewId, { view: view.current!, cell: cell.current! });
+        hosts.set(viewId, { box: box.current!, view: view.current!, cell: cell.current!, drop: drop.current! });
         announce();
         return () => {
             hosts.delete(viewId);
@@ -55,16 +58,20 @@ function OverlayBox({ viewId }: { readonly viewId: string }) {
 
     return (
         <div
-            className="pointer-events-none absolute top-0 left-0 origin-top-left overflow-hidden"
+            ref={box}
+            className="pointer-events-none absolute top-0 left-0 origin-top-left"
             style={{ visibility: 'hidden' }}
             /* The cell under this box never sees the press, so chrome outside the focused cell says
                for itself which cell the keyboard goes to. */
             onPointerDownCapture={() => focusCellOfView(viewId)}
             onFocusCapture={() => focusCellOfView(viewId)}
         >
-            {/* Isolated, so a z-index inside one slot never reaches past it. */}
-            <div ref={view} className="pointer-events-none absolute inset-0 isolate" />
-            <div ref={cell} className="pointer-events-none absolute inset-0 isolate" />
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                {/* Isolated, so a z-index inside one slot never reaches past it. */}
+                <div ref={view} className="pointer-events-none absolute inset-0 isolate" />
+                <div ref={cell} className="pointer-events-none absolute inset-0 isolate" />
+            </div>
+            <div ref={drop} className="pointer-events-none absolute inset-0 isolate" />
         </div>
     );
 }
@@ -79,7 +86,7 @@ export function CellOverlayLayer() {
         const place = (): void => {
             const box = root.current?.getBoundingClientRect();
             for (const [viewId, slots] of hosts) {
-                const element = slots.view.parentElement;
+                const element = slots.box;
                 const cell = box === undefined ? null : cellElement(viewId);
                 if (element === null) {
                     continue;

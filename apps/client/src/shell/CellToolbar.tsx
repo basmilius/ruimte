@@ -70,20 +70,7 @@ function useFolded(bar: React.RefObject<HTMLElement | null>, actions: React.RefO
  * do. The bar is the handle as well: drag it anywhere to move the view to another cell, which is
  * where a tab bar would be in an app that had tabs, and this app does not.
  */
-export function CellToolbar({
-    at,
-    view,
-    focused,
-    tabDrop,
-    children
-}: {
-    at: CellAt;
-    view: CellView;
-    focused: boolean;
-    /* A view is being dragged over the bar to become one of its tabs; `gap` is where in the strip, counted in tabs from the left. */
-    tabDrop: { gap: number } | null;
-    children: ReactElement;
-}) {
+export function CellToolbar({ at, view, focused, children }: { at: CellAt; view: CellView; focused: boolean; children: ReactElement }) {
     const { t } = useTranslation('shell');
     /* The file's controls are portaled up into this bar, so every cell holds a host of its own:
        one shared host would put the controls of one file over the bar of another. */
@@ -144,11 +131,7 @@ export function CellToolbar({
                         className={clsx(
                             'flex h-10 shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border pr-1.5 text-xs active:cursor-grabbing',
                             !hosted && 'pl-2',
-                            tabDrop !== null && !hosted
-                                ? 'bg-accent/15 text-text outline-2 -outline-offset-2 outline-accent'
-                                : focused
-                                  ? 'bg-surface text-text'
-                                  : 'bg-surface-idle text-text-muted'
+                            focused ? 'bg-surface text-text' : 'bg-surface-idle text-text-muted'
                         )}
                         onPointerDown={(event) => setGrabbable(!(event.target as HTMLElement | null)?.closest(CONTROLS))}
                         onPointerUp={() => setGrabbable(true)}
@@ -162,6 +145,7 @@ export function CellToolbar({
                         {/* The title is what gives way: it truncates down to its glyph before anything else
                     in the bar has to move. A host has its tabs in its place. */}
                         <span
+                            data-cell-title=""
                             className={clsx(
                                 'flex items-center gap-2',
                                 hosted ? 'min-w-24 self-stretch' : 'min-w-5 pl-1',
@@ -180,7 +164,7 @@ export function CellToolbar({
                                 </Tooltip>
                             )}
                             {tabs !== undefined ? (
-                                <TabStrip at={at} ids={tabs} active={view.id} insertAt={tabDrop?.gap ?? null} />
+                                <TabStrip at={at} ids={tabs} active={view.id} />
                             ) : isLooseView(view) ? (
                                 <>
                                     <LooseGlyph tab={view.tab} />

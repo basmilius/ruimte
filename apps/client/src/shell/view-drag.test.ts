@@ -1,5 +1,16 @@
 import { describe, expect, test } from 'bun:test';
-import { carriesView, draggedViewId, dragging, draggingWholeCell, edgeZoneAt, setDragging, shapeOf, VIEW_DRAG_TYPE, zoneAt } from './view-drag';
+import {
+    carriesView,
+    draggedViewId,
+    dragging,
+    draggingTabWidth,
+    draggingWholeCell,
+    edgeZoneAt,
+    setDragging,
+    shapeOf,
+    VIEW_DRAG_TYPE,
+    zoneAt
+} from './view-drag';
 
 function transfer(types: string[], data: Record<string, string> = {}): Pick<DataTransfer, 'types' | 'getData'> {
     return {
@@ -34,6 +45,16 @@ describe('which drag is in progress', () => {
         setDragging(null, true);
         expect(dragging()).toBeNull();
         expect(draggingWholeCell()).toBe(false);
+    });
+
+    test('a dragged tab keeps its width until the drag ends', () => {
+        setDragging('view-1', false, 96);
+        expect(draggingTabWidth()).toBe(96);
+        setDragging('view-2');
+        expect(draggingTabWidth()).toBeNull();
+        setDragging('view-3', false, 96);
+        setDragging(null);
+        expect(draggingTabWidth()).toBeNull();
     });
 });
 
