@@ -26135,6 +26135,22 @@
                         "scope",
                         "staged"
                       ]
+                    },
+                    "console": {
+                      "type": "object",
+                      "properties": {
+                        "connectionId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "schema": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "connectionId"
+                      ]
                     }
                   },
                   "required": [
@@ -26148,6 +26164,10 @@
                   "string",
                   "null"
                 ]
+              },
+              "strip": {
+                "type": "array",
+                "items": {}
               },
               "expandedDirs": {
                 "type": "array",
@@ -29237,6 +29257,22 @@
                         "scope",
                         "staged"
                       ]
+                    },
+                    "console": {
+                      "type": "object",
+                      "properties": {
+                        "connectionId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "schema": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "connectionId"
+                      ]
                     }
                   },
                   "required": [
@@ -29250,6 +29286,10 @@
                   "string",
                   "null"
                 ]
+              },
+              "strip": {
+                "type": "array",
+                "items": {}
               },
               "expandedDirs": {
                 "type": "array",

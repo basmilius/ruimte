@@ -841,14 +841,51 @@ export const ProjectFileTabViewSchema = z.object({
 });
 export type ProjectFileTabView = z.infer<typeof ProjectFileTabViewSchema>;
 
+// The connection a tab of a `.sql` file runs its statements on, which makes the tab a console.
+export const ProjectConsoleBindingSchema = z.object({
+    connectionId: z.string().min(1),
+    // Absent runs in the schema the connection starts in.
+    schema: z.string().min(1).optional()
+});
+export type ProjectConsoleBinding = z.infer<typeof ProjectConsoleBindingSchema>;
+
 // One file the files cell has open. Whether it is edited is view state and stays out of the file.
 export const ProjectFileTabSchema = z.object({
     path: z.string().min(1),
     pinned: z.boolean(),
     // Absent means the tab shows the file; the diff tab of the same file carries this.
-    view: ProjectFileTabViewSchema.optional()
+    view: ProjectFileTabViewSchema.optional(),
+    console: ProjectConsoleBindingSchema.optional()
 });
 export type ProjectFileTab = z.infer<typeof ProjectFileTabSchema>;
+
+/*
+ * One tab of the files cell in `strip`, of any kind. A database tab carries an id of its own, since
+ * two tabs may show one table: a filtered one, or a new table's designer before it has a name.
+ */
+const ProjectDatabaseTabFields = {
+    id: z.string().min(1),
+    pinned: z.boolean(),
+    connectionId: z.string().min(1),
+    schema: z.string().min(1)
+};
+// Whether the table of a tab is a view, as the database last said.
+const ProjectTableKindSchema = z.enum(['table', 'view']);
+export const ProjectStripTabSchema = z.discriminatedUnion('kind', [
+    ProjectFileTabSchema.extend({ kind: z.literal('file') }),
+    z.object({
+        kind: z.literal('table'),
+        ...ProjectDatabaseTabFields,
+        table: z.string().min(1),
+        // A filtered table, as a jump along a foreign key opens one.
+        where: z.string().min(1).optional(),
+        tableKind: ProjectTableKindSchema.optional()
+    }),
+    z.object({ kind: z.literal('structure'), ...ProjectDatabaseTabFields, table: z.string().min(1), tableKind: ProjectTableKindSchema.optional() }),
+    // Without a table the designer makes a new one.
+    z.object({ kind: z.literal('designer'), ...ProjectDatabaseTabFields, table: z.string().min(1).optional() })
+]);
+export type ProjectStripTab = z.infer<typeof ProjectStripTabSchema>;
 
 /*
  * How the panels around the canvas stood when this project was last on screen. Every field is
@@ -867,11 +904,15 @@ export const ProjectPanelsSchema = z.object({
     // The plan the plan panel shows. Whether it is open follows from whether its chat is on screen, never from this file.
     plan: z.object({ chatId: z.string().min(1), planId: z.string().min(1), dismissed: z.boolean() }).optional(),
     planWidth: z.number().int().positive().optional(),
+    // The file tabs alone, for a client from before `strip`.
     tabs: z.array(ProjectFileTabSchema).optional(),
     activeTab: z.string().nullable().optional(),
+    // Every tab of the files cell in its order, files and database views alike (`ProjectStripTabSchema`). The client
+    // reads each tab on its own, so a kind a newer release adds drops that tab and not the list.
+    strip: z.array(z.unknown()).optional(),
     // What the file tree had open, the way the tree names a directory: relative, POSIX, trailing slash.
     expandedDirs: z.array(z.string()).optional(),
-    // The tabs of the databases cell. The client reads each tab on its own, so a kind a newer release adds drops that tab and not the file.
+    // The tabs of the databases cell of a release before `strip`, which the client reads into it once.
     databases: z.object({ tabs: z.array(z.unknown()), activeTab: z.string().nullable().optional() }).optional(),
     // The canvases the sidebar has folded open. Absent means the list has never been folded by hand.
     sidebarExpanded: z.array(z.string()).optional(),
