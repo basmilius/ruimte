@@ -21,7 +21,15 @@ import { canShareView, isCanvasView, type ProjectView } from '@ruimte/contracts'
 import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui/BookmarkSubmenu';
 import { ForkMenuItem } from '@/chat/ForkMenuItem';
 import { useOffersFork } from '@/chat/use-offers-fork';
-import { closeCellAction, duplicateViewAction, placeViewOnCanvasAction, showViewOnCanvasAction, splitAction } from '@/actions/client-actions';
+import {
+    closeCellAction,
+    closeCellsRightOfAction,
+    closeOtherCellsAction,
+    duplicateViewAction,
+    placeViewOnCanvasAction,
+    showViewOnCanvasAction,
+    splitAction
+} from '@/actions/client-actions';
 import { FlagSubmenu } from '@/project/FlagSubmenu';
 import { askDeleteView, askViewSettings, openSessionInKind, setViewShared } from '@/project/views';
 import { sessionHandoffs, viewOffers } from '@/shell/view-offers';
@@ -229,12 +237,12 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
                 </Menu.Item>
             )}
             {closable && cell !== null && standing !== null && (
-                <Menu.Item onClick={() => useDocument.getState().closeOtherCells(cell)}>
+                <Menu.Item onClick={() => closeOtherCellsAction(cell)}>
                     <Icon icon={ListX} size={14} /> {t('viewMenu.closeOthers')}
                 </Menu.Item>
             )}
             {closesRight && cell !== null && (
-                <Menu.Item onClick={() => useDocument.getState().closeCellsRightOf(cell)}>
+                <Menu.Item onClick={() => closeCellsRightOfAction(cell)}>
                     <Icon icon={ArrowRightToLine} size={14} /> {t('viewMenu.closeToRight')}
                 </Menu.Item>
             )}

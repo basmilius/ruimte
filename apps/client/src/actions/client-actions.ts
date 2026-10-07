@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { contentActions, type ContentMachine } from '@/actions/content-actions';
 import { databaseActions, type DatabaseMachine } from '@/actions/database-actions';
 import { asksFirst, asRefusal, developerActions, GIT_OPERATION, type DeveloperMachine } from '@/actions/developer-actions';
@@ -66,13 +67,25 @@ import { openInNewWindow, wantsNewWindow } from '@/project/windows';
 import type { ChatPromptClients } from '@adecore/agents-react/prompts/logic/subjects';
 import { looseTabLabel } from '@/shell/panels/tab-label';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
-import { canSplit, cellAt, cellCount, focusedViewId, freeViewFor, isSameCell, locateView, type SplitDirection, type SplitZone } from '@/shell/split';
+import {
+    canSplit,
+    cellAt,
+    cellCount,
+    focusedViewId,
+    freeViewFor,
+    isSameCell,
+    locateView,
+    type CellAt,
+    type SplitDirection,
+    type SplitZone
+} from '@/shell/split';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { defaultCanvases, focusedCanvas, liveCanvas, NODE_SIZE, type AddNodeOptions, type CanvasState, type Locks, type NodeKind } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state/chats';
 import { liveDiagram } from '@/state/diagram';
 import { activeViewOf, cellViewOf, useDocument, viewOfNode, type DocumentState } from '@/state/document';
 import { liveDrawing } from '@/state/drawing';
+import { closeCellGuarded, closeCellsRightOfGuarded, closeOtherCellsGuarded } from '@/state/cell-close';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
 import { currentEndpointId, endpointKey } from '@/state/keys';
@@ -1238,7 +1251,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
             state.splitFocused(direction, target);
             return { output: { viewId: target, view: view.name ?? target, direction } };
         },
-        'split.close': ({ viewId }) => {
+        'split.close': async ({ viewId }) => {
             const state = document.getState();
             const layout = state.layout;
             if (layout === null || cellCount(layout) < 2) {
@@ -1251,7 +1264,9 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
             }
             // Named first: a loose view is gone from the pool once its cell is.
             const view = cellName(state, closing.viewId);
-            state.closeCellAt(at);
+            if (!(await closeCellGuarded(at))) {
+                throw new ActionRefusal('close-kept', `“${view}” was kept open: a person chose to keep its unsaved changes.`);
+            }
             return { output: { viewId: closing.viewId, view } };
         },
         'split.focus': ({ direction }) => {
@@ -1472,6 +1487,22 @@ function activeViewId(): string | null {
 
 export function focusViewAction(viewId: string): void {
     void runAsPerson('view.focus', { viewId });
+}
+
+/*
+ * A view of the project opened beside the one in the focused cell, as a tab. Not an action of the catalog: only a
+ * person at a grid asks for this. The banner over the views says so and offers the way back, as for any show.
+ */
+export function openInNewTabAction(viewId: string): void {
+    const state = useDocument.getState();
+    const view = state.views.find((candidate) => candidate.id === viewId);
+    const shown = view === undefined || !isOpenableView(view) ? null : state.showView(viewId, { newTab: true });
+    if (view !== undefined && shown?.tab !== undefined) {
+        useDocument.getState().showNotice({
+            message: i18next.t('project:showView.newTab', { view: view.name ?? viewId }),
+            action: { kind: 'back', shown }
+        });
+    }
 }
 
 export function renameViewAction(viewId: string, name: string): void {
@@ -1714,6 +1745,15 @@ export function splitAction(direction: 'right' | 'down'): void {
 /* Null closes the focused cell. */
 export function closeCellAction(viewId: string | null = null): void {
     void runAsPerson('split.close', { viewId });
+}
+
+/* Every cell but the one at `at`, through the questions of their loose tabs. */
+export function closeOtherCellsAction(at: CellAt): void {
+    void closeOtherCellsGuarded(at);
+}
+
+export function closeCellsRightOfAction(at: CellAt): void {
+    void closeCellsRightOfGuarded(at);
 }
 
 /*

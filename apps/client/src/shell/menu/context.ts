@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { canShareView, isCanvasView, isOpenableView, type ProjectView } from '@ruimte/contracts';
+import { canShareView, isCanvasView, isOpenableView, type ProjectView, type SplitLayout } from '@ruimte/contracts';
 import { forkRefusal, lastSettledTurn } from '@adecore/agents-react/chat/logic/fork';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { keepAwakeAvailable, keepAwakeChoice } from '@/state/keep-awake';
@@ -10,7 +10,7 @@ import { chosenLaunchId } from '@/launches/actions';
 import { launchViews } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
 import type { MenuContext, MenuHost, MenuLaunch } from '@/shell/menu/model';
-import { canSplit, cellCount, cellsRightOf, freeViewFor, maximizedCell } from '@/shell/split';
+import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, isTabHost, maximizedCell } from '@/shell/split';
 import { sessionHandoffs, viewOffers, type ViewOffers } from '@/shell/view-offers';
 import { focusedCanvas, maximizedNodeOf, maximizeTargetOf } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state/chats';
@@ -90,6 +90,21 @@ function menuLaunches(endpointId: string): MenuLaunch[] {
     return document.launches.map((launch) => ({ id: launch.id, name: launch.name, live: views.get(launch.id)?.live === true }));
 }
 
+/* The focused cell as a host of tabs, which the Tab commands of the menu read. */
+function tabsOf(layout: SplitLayout | null): MenuContext['tabs'] {
+    const cell = layout === null ? null : cellAt(layout, layout.focus);
+    if (layout === null || cell === null || !isTabHost(cell)) {
+        return { hosted: false, count: 0, index: 0, splitOff: false };
+    }
+    const tabs = cell.tabs ?? [];
+    return {
+        hosted: true,
+        count: tabs.length,
+        index: tabs.indexOf(cell.viewId),
+        splitOff: tabs.length > 1 && canSplit(layout, layout.focus, 'right', cell.viewId)
+    };
+}
+
 /* The moment the menu is built for, out of the stores. */
 export function menuContext(host: MenuHost): MenuContext {
     const documentState = useDocument.getState();
@@ -116,6 +131,7 @@ export function menuContext(host: MenuHost): MenuContext {
         promote: onCanvas && selected !== undefined && canOpenAsView(selected.kind),
         anyLocked: Object.values(canvas.locks).some(Boolean),
         cells: layout === null ? 1 : cellCount(layout),
+        tabs: tabsOf(layout),
         split: { right: room('right'), down: room('down') },
         maximized: maximizedCell(layout, documentState.maximized) !== null,
         nodeMaximizable: onCanvas && maximizeTargetOf(canvas) !== null,

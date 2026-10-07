@@ -250,7 +250,12 @@
         "openInTerminal": "In een terminal openen",
         "viewSettings": "Instellingen…",
         "deleteView": "Weergave verwijderen",
-        "reveal": "Tonen in {{app}}"
+        "reveal": "Tonen in {{app}}",
+        "openInNewTab": "Openen in nieuw tabblad",
+        "moveTabLeft": "Tabblad naar links",
+        "moveTabRight": "Tabblad naar rechts",
+        "moveTabToNewCell": "Tabblad naar nieuwe cel",
+        "ungroup": "Tabbladen ontgroeperen"
     },
     "share": {
         "start": "Delen met je team",
@@ -867,6 +872,13 @@
         "recentLocations": "Recente plekken…",
         "folding": "Invouwen",
         "explain": "Code uitleggen",
-        "suggestInline": "Code voorstellen"
+        "suggestInline": "Code voorstellen",
+        "closeTab": "Tabblad sluiten",
+        "nextTab": "Volgend tabblad",
+        "previousTab": "Vorig tabblad",
+        "moveTabLeft": "Tabblad naar links",
+        "moveTabRight": "Tabblad naar rechts",
+        "moveTabToNewCell": "Tabblad naar nieuwe cel",
+        "ungroup": "Tabbladen ontgroeperen"
     }
 }

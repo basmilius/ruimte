@@ -18,6 +18,7 @@ import {
     Globe,
     LayoutGrid,
     MessageSquare,
+    PanelTop,
     Pencil,
     PenTool,
     Plus,
@@ -85,7 +86,9 @@ import { SidebarToggle } from '@/shell/SidebarToggle';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { IS_STATION } from '@/station';
 import { NewViewItems } from '@/shell/ViewMenu';
-import { draggedViewId, dragging as draggedView, setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
+import { draggedViewId, dragging as draggedView, draggingWholeCell, setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
+import { wantsNewTab } from '@/shell/tab-drop';
+import { isApplePlatform } from '@/desktop/bridge';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { UsageLimitsCard } from '@adecore/agents-react/usage/UsageLimitsCard';
 import { ConnectionDot } from '@/shell/ConnectionDot';
@@ -559,7 +562,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                 tabIndex={tabbable ? 0 : -1}
                 className={clsx(ROW, 'group font-medium', row.active ? ROW_SELECTED : row.beside ? ROW_BESIDE : ROW_PLAIN)}
                 onFocus={onFocus}
-                onClick={() => (row.target ? void openSidebarTarget(row.target) : showView(view.id))}
+                onClick={(event) => (row.target ? void openSidebarTarget(row.target) : showView(view.id, { newTab: wantsNewTab(event, isApplePlatform()) }))}
                 onDoubleClick={() => setRenaming(true)}
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
                 onDragEnd={() => onDrag(null)}
@@ -638,6 +641,14 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                 )}
             </ContextMenu.Trigger>
             <ContextMenu.Popup>
+                {!row.target && (
+                    <>
+                        <ContextMenu.Item onClick={() => showView(view.id, { newTab: true })}>
+                            <Icon icon={PanelTop} size={14} /> {t('viewMenu.openInNewTab')}
+                        </ContextMenu.Item>
+                        <ContextMenu.Separator />
+                    </>
+                )}
                 {view.self && <SnoozeMenuItems endpointId={endpointId} nodeId={view.self.id} needsYou={view.self.status === 'needs-you'} />}
                 <ViewMenuItems viewId={view.id} kind={view.kind} onSidebar />
             </ContextMenu.Popup>
@@ -1046,7 +1057,9 @@ export function Sidebar() {
                                     onDragOver={
                                         takesDrop
                                             ? (e) => {
-                                                  const temporary = fileTabOf(useFiles.getState(), draggedView()) !== undefined;
+                                                  // Only a file promotes: a diff, a commit or a database view has no row to become, and a whole host is no file.
+                                                  const loose = fileTabOf(useFiles.getState(), draggedView());
+                                                  const temporary = loose !== undefined && loose.view === undefined && !draggingWholeCell();
                                                   if (
                                                       !reorderable &&
                                                       !temporary &&

@@ -1,8 +1,7 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { isLooseView, type CellView } from '@/shell/cell-view';
-import { cellAt, locateView } from '@/shell/split';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { Canvas } from '@/canvas/Canvas';
 import { newChatOn } from '@/project/new-chat';
@@ -64,25 +63,20 @@ function StandaloneView({ view }: { view: ProjectView }) {
 }
 
 /*
- * A loose view in its cell: the body under the tabs, which stand in the bar above. It takes the
- * keyboard the way a standalone view does, so the file that just opened answers to the shortcuts
- * the workspace binds for a tab (`canvas/canvas-shortcuts.ts`).
+ * The bodies of a host's loose views. With a loose view in front it is the body under the tabs, taking the
+ * keyboard the way a standalone view does, so the file that just opened answers to the shortcuts the
+ * workspace binds for a tab (`canvas/canvas-shortcuts.ts`). With a view of the project in front the bodies
+ * stay mounted but hidden and inert, or a table with edits nobody submitted would lose them to a switch of tab.
  */
-function FilesSurface({ tabKey }: { tabKey: string }) {
+function FilesSurface({ tabKey, ids }: { tabKey: string | null; ids: readonly string[] }) {
     const { t } = useTranslation('shell');
-    /* The views of the cell, whose loose ones keep their editors while another is in front. */
-    const tabs = useDocument((s) => {
-        const at = s.layout === null ? null : locateView(s.layout, tabKey);
-        return s.layout === null || at === null ? undefined : cellAt(s.layout, at)?.tabs;
-    });
-    const ids = useMemo(() => tabs ?? [tabKey], [tabs, tabKey]);
     /* Set by what was opened by hand, in the files panel, the git panel or the palette. */
     const focusRequest = useFiles((s) => s.focusRequest);
     const handled = useRef<number | null>(null);
     const bodyRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (focusRequest === null || focusRequest.key !== tabKey || handled.current === focusRequest.nonce) {
+        if (tabKey === null || focusRequest === null || focusRequest.key !== tabKey || handled.current === focusRequest.nonce) {
             return;
         }
         handled.current = focusRequest.nonce;
@@ -96,7 +90,8 @@ function FilesSurface({ tabKey }: { tabKey: string }) {
         <div
             ref={bodyRef}
             tabIndex={-1}
-            className="absolute inset-0 flex flex-col bg-surface outline-none"
+            className={`absolute inset-0 flex flex-col bg-surface outline-none ${tabKey === null ? 'invisible' : ''}`}
+            inert={tabKey === null}
             onPointerDownCapture={() => useDocument.getState().setBodyFocused(true)}
         >
             {/* The tabs stay in the bar above, so another file is one click away from a broken one. */}
@@ -120,22 +115,26 @@ function BrowserViewSurface({ id }: { id: string }) {
  * mounted under every other kind because it carried the app's shortcuts, and with up to nine cells that
  * would mean nine hidden canvases. The shortcuts moved to the workspace (`canvas/canvas-shortcuts.ts`).
  */
-export function ViewSurface({ view }: { view: CellView }) {
+export function ViewSurface({ view, hostIds }: { view: CellView; hostIds?: readonly string[] }) {
     const { t } = useTranslation('shell');
     /* A view draws from the project document, and a drawing or a diagram from a file of its own as
        well. Reading an editor this cell has none of is the blank one, which never changes. */
     const rev = useProject((s) => s.rev);
     const drawing = useDrawing((s) => s.elements);
     const diagram = useDiagram((s) => s.content);
-    if (isLooseView(view)) {
-        return <FilesSurface tabKey={view.id} />;
-    }
+    const loose = isLooseView(view);
+    const holdsLoose = useFiles((s) => hostIds !== undefined && hostIds.some((id) => s.tabs.some((tab) => tab.key === id)));
     return (
-        /* Inside the cell and around the view alone: the cell's toolbar and the dock stay usable,
-           and the cells beside it never notice. */
-        <ErrorBoundary label={t('viewHost.failed')} resetKeys={[view.id, rev, drawing, diagram]}>
-            {isCanvasView(view) ? <Canvas /> : <StandaloneView view={view} />}
-        </ErrorBoundary>
+        <>
+            {!loose && (
+                /* Inside the cell and around the view alone: the cell's toolbar and the dock stay usable,
+                   and the cells beside it never notice. */
+                <ErrorBoundary key={view.id} label={t('viewHost.failed')} resetKeys={[view.id, rev, drawing, diagram]}>
+                    {isCanvasView(view) ? <Canvas /> : <StandaloneView view={view} />}
+                </ErrorBoundary>
+            )}
+            {(loose || holdsLoose) && <FilesSurface tabKey={loose ? view.id : null} ids={hostIds ?? [view.id]} />}
+        </>
     );
 }
 

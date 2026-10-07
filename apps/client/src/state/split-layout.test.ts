@@ -473,3 +473,70 @@ describe('closing more than one cell', () => {
         expect(useDocument.getState().activeViewId).toBe('a');
     });
 });
+
+describe('tabs dragged and commanded', () => {
+    test('a view from the sidebar dropped on a plain bar makes the cell a host of both, the new one in front', () => {
+        expect(useDocument.getState().dropViewAsTab('b', { column: 0, cell: 0 }, null)).toBe(true);
+        expect(tabsOf()).toEqual([['a', 'b']]);
+        expect(useDocument.getState().activeViewId).toBe('b');
+        expect(openEditors().sort()).toEqual(['a', 'b']);
+    });
+
+    test('a tab dropped at a position of another strip leaves its own and lands there', () => {
+        useDocument.getState().dropViewAsTab('b', { column: 0, cell: 0 }, null);
+        useDocument.getState().splitFocused('right', 'c');
+        useDocument.getState().dropViewAsTab('a', { column: 1, cell: 0 }, 0);
+        expect(tabsOf()).toEqual([['b'], ['a', 'c']]);
+        expect(useDocument.getState().layout!.focus).toEqual({ column: 1, cell: 0 });
+    });
+
+    test('a tab dropped within its own strip reorders it', () => {
+        useDocument.getState().dropViewAsTab('b', { column: 0, cell: 0 }, null);
+        useDocument.getState().dropViewAsTab('c', { column: 0, cell: 0 }, null);
+        expect(tabsOf()).toEqual([['a', 'b', 'c']]);
+        useDocument.getState().dropViewAsTab('a', { column: 0, cell: 0 }, 2);
+        expect(tabsOf()).toEqual([['b', 'c', 'a']]);
+    });
+
+    test('a view that fills a cell alone cannot become a tab of that cell', () => {
+        expect(useDocument.getState().dropViewAsTab('a', { column: 0, cell: 0 }, null)).toBe(false);
+        expect(tabsOf()).toEqual([['a']]);
+    });
+
+    test('a divider, which never opens, is no tab', () => {
+        const id = useDocument.getState().addSeparatorView();
+        expect(useDocument.getState().dropViewAsTab(id, { column: 0, cell: 0 }, null)).toBe(false);
+        expect(tabsOf()).toEqual([['a']]);
+    });
+
+    test('moving a tab steps along the strip and stops at the ends', () => {
+        useDocument.getState().dropViewAsTab('b', { column: 0, cell: 0 }, null);
+        useDocument.getState().dropViewAsTab('c', { column: 0, cell: 0 }, null);
+        useDocument.getState().moveTab('c', -1);
+        expect(tabsOf()).toEqual([['a', 'c', 'b']]);
+        useDocument.getState().moveTab('a', -1);
+        expect(tabsOf()).toEqual([['a', 'c', 'b']]);
+    });
+
+    test('a tab splits off to a cell of its own on the right, and a lone tab does not', () => {
+        useDocument.getState().dropViewAsTab('b', { column: 0, cell: 0 }, null);
+        expect(useDocument.getState().splitTabOff('b')).toBe(true);
+        expect(tabsOf()).toEqual([['a'], ['b']]);
+        expect(useDocument.getState().splitTabOff('b')).toBe(false);
+    });
+
+    test('a host with one tab left ungroups into a plain cell', () => {
+        useDocument.getState().dropViewAsTab('b', { column: 0, cell: 0 }, null);
+        useDocument.getState().closeViewTab('b');
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]!.tabs).toEqual(['a']);
+        useDocument.getState().ungroupCell({ column: 0, cell: 0 });
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]!.tabs).toBeUndefined();
+    });
+
+    test('showing a view as a new tab makes a host of the focused cell and can be undone', () => {
+        const shown = useDocument.getState().showView('b', { newTab: true })!;
+        expect(tabsOf()).toEqual([['a', 'b']]);
+        useDocument.getState().undoShowView(shown);
+        expect(tabsOf()).toEqual([['a']]);
+    });
+});

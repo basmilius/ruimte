@@ -242,6 +242,15 @@ export function useCanvasShortcuts(): void {
                 useDocument.getState().stepTab(is(CANVAS_SHORTCUTS.nextTab) ? 1 : -1);
                 return;
             }
+            // Moving the tab in front along its strip is as much about the host as stepping is.
+            if (is(CANVAS_SHORTCUTS.moveTabLeft) || is(CANVAS_SHORTCUTS.moveTabRight)) {
+                const tab = focusedHostTab();
+                if (tab !== null) {
+                    e.preventDefault();
+                    useDocument.getState().moveTab(tab, is(CANVAS_SHORTCUTS.moveTabRight) ? 1 : -1);
+                    return;
+                }
+            }
             /* A host closes its tab in front, and the cell goes with the last one (`state/document.ts`), so
                one shortcut walks out of a stack of tabs and then out of the cell that held them. A file
                with unsaved changes is saved first, and a table with edits nobody submitted asks first.

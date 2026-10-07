@@ -939,8 +939,15 @@ describe('dropView with tabs', () => {
         expect(tabShapeOf(dropView(gridOf([['[a *b]'], ['[c *d]']]), 'b', second, 'center'))).toEqual([['[a *d]'], ['[c *b]']]);
     });
 
-    test('the middle with a view nobody shows replaces the active tab of a host in place', () => {
-        expect(tabShapeOf(dropView(gridOf([['[a *b c]']]), 'x', first, 'center'))).toEqual([['[a *x c]']]);
+    test('the middle with a view nobody shows becomes a tab right of the active one in a host', () => {
+        const layout = dropView(gridOf([['[a *b c]']]), 'x', first, 'center');
+        expect(tabShapeOf(layout)).toEqual([['[a b *x c]']]);
+        expect(layout.focus).toEqual(first);
+        sums(layout);
+    });
+
+    test('the middle with a view nobody shows still replaces the view of a plain cell', () => {
+        expect(tabShapeOf(dropView(gridOf([['a'], ['b']]), 'x', second, 'center'))).toEqual([['a'], ['x']]);
     });
 
     test('a view that fills its cell alone swaps the whole cells, tabs included', () => {

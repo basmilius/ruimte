@@ -7,6 +7,7 @@ import {
     deleteViewAction,
     focusNodeAction,
     focusViewAction,
+    openInNewTabAction,
     linkNodesAction,
     moveViewAction,
     promoteNodeAction,
@@ -29,7 +30,11 @@ import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 
 /* Puts a view on screen. A node that lives on another canvas is reached by switching there first. */
-export function showView(id: string): void {
+export function showView(id: string, options: { newTab?: boolean } = {}): void {
+    if (options.newTab) {
+        openInNewTabAction(id);
+        return;
+    }
     focusViewAction(id);
 }
 

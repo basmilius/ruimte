@@ -19,7 +19,8 @@
         "someone": "Een agent",
         "alreadyThere": "{{agent}} wees naar {{view}}, waar je al naar keek",
         "follow": "{{agent}} liet {{view}} zien in de cel waarin je werkte",
-        "go": "{{agent}} vroeg je om naar {{view}} te kijken"
+        "go": "{{agent}} vroeg je om naar {{view}} te kijken",
+        "newTab": "{{view}} geopend als tabblad"
     },
     "diagram": {
         "draft": "Vul het lege diagram \"{{name}}\" met `ruimte-context view diagram {{viewId}}`. Het moet dit laten zien: "

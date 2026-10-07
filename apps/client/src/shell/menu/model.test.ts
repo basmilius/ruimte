@@ -35,6 +35,7 @@ function context(patch: Partial<MenuContext> = {}): MenuContext {
         promote: false,
         anyLocked: false,
         cells: 1,
+        tabs: { hosted: false, count: 0, index: 0, splitOff: false },
         split: { right: true, down: true },
         maximized: false,
         nodeMaximizable: false,

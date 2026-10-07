@@ -1,8 +1,11 @@
 import i18next from 'i18next';
-import { isCanvasView, isDiagramView, isDrawingView, isSessionView, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
+import { isCanvasView, isDiagramView, isDrawingView, isSessionView, type AgentKind, type ProviderInfo, type SplitLayout } from '@ruimte/contracts';
 import type { AgentTarget } from '@/agents/nodes';
 import {
     applyLayoutAction,
+    closeCellsRightOfAction,
+    closeOtherCellsAction,
+    closeTabAction,
     createNodeAction,
     createTextAction,
     createViewAction,
@@ -51,7 +54,7 @@ import { transportFor } from '@/transport';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { runAppShortcut } from '@/shell/app-shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
-import { cellCount, cellsRightOf, maximizedCell } from '@/shell/split';
+import { canSplit, cellAt, cellCount, cellsRightOf, isTabHost, maximizedCell } from '@/shell/split';
 import type { Shortcut } from '@adecore/ui';
 
 export interface Command {
@@ -169,6 +172,50 @@ function launchCommands(): Command[] {
             label: i18next.t('launches:menu.edit'),
             run: () => useLaunches.getState().setDialog({ kind: 'edit', launchId: chosenLaunchId() })
         }
+    ];
+}
+
+/* What the focused host can do with its tabs: only the rows that would do something right now. */
+function tabCommands(layout: SplitLayout | null): Command[] {
+    const cell = layout === null ? null : cellAt(layout, layout.focus);
+    if (layout === null || cell === null || !isTabHost(cell)) {
+        return [];
+    }
+    const tabs = cell.tabs ?? [];
+    const index = tabs.indexOf(cell.viewId);
+    const document = useDocument.getState();
+    return [
+        { id: 'tab-close', label: i18next.t('shell:menu.closeTab'), shortcut: CANVAS_SHORTCUTS.closeCell, run: () => closeTabAction(cell.viewId) },
+        ...(tabs.length > 1
+            ? [
+                  { id: 'tab-next', label: i18next.t('shell:menu.nextTab'), shortcut: CANVAS_SHORTCUTS.nextTab, run: () => document.stepTab(1) },
+                  { id: 'tab-previous', label: i18next.t('shell:menu.previousTab'), shortcut: CANVAS_SHORTCUTS.previousTab, run: () => document.stepTab(-1) }
+              ]
+            : []),
+        ...(index > 0
+            ? [
+                  {
+                      id: 'tab-move-left',
+                      label: i18next.t('shell:viewMenu.moveTabLeft'),
+                      shortcut: CANVAS_SHORTCUTS.moveTabLeft,
+                      run: () => document.moveTab(cell.viewId, -1)
+                  }
+              ]
+            : []),
+        ...(index < tabs.length - 1
+            ? [
+                  {
+                      id: 'tab-move-right',
+                      label: i18next.t('shell:viewMenu.moveTabRight'),
+                      shortcut: CANVAS_SHORTCUTS.moveTabRight,
+                      run: () => document.moveTab(cell.viewId, 1)
+                  }
+              ]
+            : []),
+        ...(tabs.length > 1 && canSplit(layout, layout.focus, 'right', cell.viewId)
+            ? [{ id: 'tab-split-off', label: i18next.t('shell:viewMenu.moveTabToNewCell'), run: () => void document.splitTabOff(cell.viewId) }]
+            : []),
+        ...(tabs.length === 1 ? [{ id: 'tab-ungroup', label: i18next.t('shell:viewMenu.ungroup'), run: () => document.ungroupCell(layout.focus) }] : [])
     ];
 }
 
@@ -386,6 +433,7 @@ export function appCommands(): Command[] {
                   { id: 'view-new-terminal', label: i18next.t('shell:palette.commands.newTerminalView'), run: () => void createViewAction('terminal') },
                   { id: 'view-new-separator', label: i18next.t('shell:palette.commands.newSeparator'), run: () => void createViewAction('separator') },
                   { id: 'view-new-subheader', label: i18next.t('shell:palette.commands.newSubheader'), run: () => void newSubheaderView() },
+                  ...tabCommands(layout),
                   ...(layout !== null && cellCount(layout) > 1
                       ? [
                             {
@@ -398,14 +446,14 @@ export function appCommands(): Command[] {
                             {
                                 id: 'cell-close-others',
                                 label: i18next.t('shell:palette.commands.closeOtherCells'),
-                                run: () => useDocument.getState().closeOtherCells(layout.focus)
+                                run: () => closeOtherCellsAction(layout.focus)
                             },
                             ...(cellsRightOf(layout, layout.focus) > 0
                                 ? [
                                       {
                                           id: 'cell-close-right',
                                           label: i18next.t('shell:palette.commands.closeCellsRight'),
-                                          run: () => useDocument.getState().closeCellsRightOf(layout.focus)
+                                          run: () => closeCellsRightOfAction(layout.focus)
                                       }
                                   ]
                                 : [])

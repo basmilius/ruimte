@@ -121,7 +121,7 @@ export function useSessionRow<T>(nodeId: string, select: (row: SessionState | un
     return useSessions((s) => select(s.byKey[endpointKey(endpointId, nodeId)]));
 }
 
-function sessionStatus(state: SessionState | undefined): AgentStatus | undefined {
+export function sessionStatus(state: SessionState | undefined): AgentStatus | undefined {
     if (!state) {
         return undefined;
     }

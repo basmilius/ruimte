@@ -22,6 +22,8 @@ export const CANVAS_SHORTCUTS = {
     focusPrompts: shortcut('Mod+Shift+P'),
     previousTab: shortcut('Ctrl+Shift+Tab'),
     nextTab: shortcut('Ctrl+Tab'),
+    moveTabLeft: shortcut('Mod+Alt+Shift+ArrowLeft'),
+    moveTabRight: shortcut('Mod+Alt+Shift+ArrowRight'),
     previousView: shortcut('Mod+Shift+['),
     nextView: shortcut('Mod+Shift+]'),
     browserBack: shortcut('Mod+['),

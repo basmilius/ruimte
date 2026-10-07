@@ -19,7 +19,8 @@
         "someone": "An agent",
         "alreadyThere": "{{agent}} pointed at {{view}}, which you were already looking at",
         "follow": "{{agent}} showed {{view}} in the cell you were working in",
-        "go": "{{agent}} asked you to look at {{view}}"
+        "go": "{{agent}} asked you to look at {{view}}",
+        "newTab": "Opened {{view}} as a tab"
     },
     "diagram": {
         "draft": "Fill the empty diagram \"{{name}}\" with `ruimte-context view diagram {{viewId}}`. It should show "

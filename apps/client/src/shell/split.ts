@@ -221,15 +221,25 @@ export function dropView(layout: SplitLayout, viewId: string, at: CellAt, zone: 
     if (source !== null && fillsCellAlone(layout, source)) {
         return moveCell(layout, source, at, zone);
     }
-    const sourceCell = source === null ? null : cellAt(layout, source)!;
     if (zone === 'center') {
-        const replaced = cellAt(layout, at)!;
-        // A tab trades places with the target's active view; a view that stood nowhere takes that view's place.
-        const swapped = sourceCell === null ? layout.columns : replaceCell(layout.columns, source!, renamedIn(sourceCell, viewId, replaced.viewId));
-        return settled(replaceCell(swapped, at, renamedIn(replaced, replaced.viewId, viewId)), at);
+        // A view that stands nowhere yet joins a host rather than replacing its active tab, so no loose tab vanishes by accident.
+        if (source === null && isTabHost(cellAt(layout, at)!)) {
+            return dropAsTab(layout, viewId, at, null);
+        }
+        return tradeInto(layout, viewId, at);
     }
+    const sourceCell = source === null ? null : cellAt(layout, source)!;
     const columns = sourceCell === null ? layout.columns : replaceCell(layout.columns, source!, withoutTab(sourceCell, viewId));
     return splitAt(columns, at, zone, { viewId });
+}
+
+/* The middle of a cell: a tab trades places with the target's active view, a view that stood nowhere takes that view's place. */
+function tradeInto(layout: SplitLayout, viewId: string, at: CellAt): SplitLayout {
+    const source = locateView(layout, viewId);
+    const sourceCell = source === null ? null : cellAt(layout, source)!;
+    const replaced = cellAt(layout, at)!;
+    const swapped = sourceCell === null ? layout.columns : replaceCell(layout.columns, source!, renamedIn(sourceCell, viewId, replaced.viewId));
+    return settled(replaceCell(swapped, at, renamedIn(replaced, replaced.viewId, viewId)), at);
 }
 
 /*
@@ -470,7 +480,7 @@ function withReplacedBack(layout: SplitLayout, shown: Omit<ShownView, 'layout'>)
     if (shown.replaced === null || cell === null || cellViewIds(cell).length > 1) {
         return layout;
     }
-    return ungroup(dropView(layout, shown.replaced, shown.at, 'center'), shown.at);
+    return ungroup(tradeInto(layout, shown.replaced, shown.at), shown.at);
 }
 
 /*

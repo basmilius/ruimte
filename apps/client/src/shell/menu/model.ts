@@ -48,6 +48,8 @@ export interface MenuContext {
     promote: boolean;
     anyLocked: boolean;
     cells: number;
+    /* The focused cell as a host of tabs: how many, which one is in front, and whether the tab in front has room to leave for a cell of its own. */
+    tabs: { hosted: boolean; count: number; index: number; splitOff: boolean };
     split: { right: boolean; down: boolean };
     /* A cell fills the grid for now. */
     maximized: boolean;
@@ -234,10 +236,14 @@ export function menuModel(context: MenuContext): MenuSpec {
         ...only(agent.terminal, command(`agent-view-terminal-${agent.kind}`, t('agentTerminal', { name: agent.name })))
     ]);
     // With one cell Cmd+W closes the window, as the stock Window menu's Close did before this menu.
+    // In a host the key closes the tab in front, so Close Cell keeps no key of its own there.
+    const hosted = context.tabs.hosted;
     const close =
         context.cells > 1 || !desktop
-            ? command('close-cell', t('closeCell'), { shortcut: CANVAS_SHORTCUTS.closeCell, enabled: context.cells > 1 })
-            : role('close', t('closeWindow'));
+            ? command('close-cell', t('closeCell'), { shortcut: hosted ? undefined : CANVAS_SHORTCUTS.closeCell, enabled: context.cells > 1 })
+            : hosted
+              ? command('close-cell', t('closeCell'), { enabled: false })
+              : role('close', t('closeWindow'));
     const fileMenu = {
         id: 'file',
         label: t('file'),
@@ -269,6 +275,7 @@ export function menuModel(context: MenuContext): MenuSpec {
             ...only(workspace && !context.scratch, command('database-connections', t('databaseConnections'))),
             separator,
             ...only(workspace && context.windows, command('window-move', t('moveToNewWindow'))),
+            ...only(workspace && hosted, command('tab-close', t('closeTab'), { shortcut: CANVAS_SHORTCUTS.closeCell })),
             ...only(workspace || desktop, close),
             ...only(
                 workspace,
@@ -357,6 +364,17 @@ export function menuModel(context: MenuContext): MenuSpec {
                 separator,
                 command('split-right', t('splitRight'), { shortcut: CANVAS_SHORTCUTS.splitRight, enabled: context.split.right }),
                 command('split-down', t('splitDown'), { shortcut: CANVAS_SHORTCUTS.splitDown, enabled: context.split.down }),
+                ...only(
+                    hosted,
+                    command('tab-move-left', t('moveTabLeft'), { shortcut: CANVAS_SHORTCUTS.moveTabLeft, enabled: context.tabs.index > 0 }),
+                    command('tab-move-right', t('moveTabRight'), {
+                        shortcut: CANVAS_SHORTCUTS.moveTabRight,
+                        enabled: context.tabs.index < context.tabs.count - 1
+                    }),
+                    command('tab-split-off', t('moveTabToNewCell'), { enabled: context.tabs.splitOff }),
+                    command('tab-ungroup', t('ungroup'), { enabled: context.tabs.count === 1 }),
+                    separator
+                ),
                 command('cell-maximize', t('maximizeCell'), {
                     shortcut: context.nodeMaximizable ? undefined : CANVAS_SHORTCUTS.maximizeCell,
                     enabled: context.cells > 1,
@@ -390,6 +408,11 @@ export function menuModel(context: MenuContext): MenuSpec {
                 separator,
                 command('view-previous', t('previousView'), { shortcut: CANVAS_SHORTCUTS.previousView }),
                 command('view-next', t('nextView'), { shortcut: CANVAS_SHORTCUTS.nextView }),
+                ...only(
+                    hosted,
+                    command('tab-previous', t('previousTab'), { shortcut: CANVAS_SHORTCUTS.previousTab, enabled: context.tabs.count > 1 }),
+                    command('tab-next', t('nextTab'), { shortcut: CANVAS_SHORTCUTS.nextTab, enabled: context.tabs.count > 1 })
+                ),
                 separator,
                 ...context.views.slice(0, 9).map((name, index) => command(`${GO_VIEW_PREFIX}${index + 1}`, name, { shortcut: viewShortcut(index) })),
                 separator,

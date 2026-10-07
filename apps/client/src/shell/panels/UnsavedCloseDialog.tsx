@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { closeWithoutSaving, retryClose, useUnsavedClose } from './unsaved-close';
+import { closeWithoutSaving, dismissClose, retryClose, useUnsavedClose } from './unsaved-close';
 import { DraftBar } from './DraftBar';
 import { currentEndpointId } from '@/state/keys';
 import { useFiles } from '@/state/files';
@@ -11,7 +11,7 @@ export function UnsavedCloseDialog() {
     const { t } = useTranslation('panels');
     const pending = useUnsavedClose((s) => s.pending);
     const [busy, setBusy] = useState(false);
-    const close = (): void => useUnsavedClose.setState({ pending: null });
+    const close = dismissClose;
 
     return (
         <Dialog.Root

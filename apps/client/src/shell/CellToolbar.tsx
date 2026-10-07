@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Expand, MoreHorizontal } from 'lucide-react';
+import { Expand, MoreHorizontal, Ungroup } from 'lucide-react';
 import { viewIconOf } from '@ruimte/contracts';
 import { closeCellAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
@@ -17,7 +17,7 @@ import { useHasViewToolbar, useShowsSubagents, useViewToolbarLeads } from '@/she
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
 import { cellAt, cellCount, type CellAt } from '@/shell/split';
-import { CloseButton, Icon, IconButton, Separator, ContextMenu, Popover, Tooltip } from '@adecore/ui';
+import { CloseButton, Icon, IconButton, Menu, Separator, ContextMenu, Popover, Tooltip } from '@adecore/ui';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
 /* What the bar holds that is not the bar: a press on one of these is not the start of a drag. */
@@ -70,7 +70,20 @@ function useFolded(bar: React.RefObject<HTMLElement | null>, actions: React.RefO
  * do. The bar is the handle as well: drag it anywhere to move the view to another cell, which is
  * where a tab bar would be in an app that had tabs, and this app does not.
  */
-export function CellToolbar({ at, view, focused, children }: { at: CellAt; view: CellView; focused: boolean; children: ReactElement }) {
+export function CellToolbar({
+    at,
+    view,
+    focused,
+    tabDrop,
+    children
+}: {
+    at: CellAt;
+    view: CellView;
+    focused: boolean;
+    /* A view is being dragged over the bar to become one of its tabs; `gap` is where in the strip, counted in tabs from the left. */
+    tabDrop: { gap: number } | null;
+    children: ReactElement;
+}) {
     const { t } = useTranslation('shell');
     /* The file's controls are portaled up into this bar, so every cell holds a host of its own:
        one shared host would put the controls of one file over the bar of another. */
@@ -123,13 +136,18 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                     <ContextMenu.Trigger
                         render={<header />}
                         ref={bar}
+                        data-cell-bar=""
                         draggable={grabbable}
                         aria-label={t('cellToolbar.drag', {
                             name: visibleTitle ?? t('cellToolbar.view')
                         })}
                         className={clsx(
                             'flex h-10 shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border pr-1.5 pl-2 text-xs active:cursor-grabbing',
-                            focused ? 'bg-surface text-text' : 'bg-surface-idle text-text-muted'
+                            tabDrop !== null && !hosted
+                                ? 'bg-accent/15 text-text outline-2 -outline-offset-2 outline-accent'
+                                : focused
+                                  ? 'bg-surface text-text'
+                                  : 'bg-surface-idle text-text-muted'
                         )}
                         onPointerDown={(event) => setGrabbable(!(event.target as HTMLElement | null)?.closest(CONTROLS))}
                         onPointerUp={() => setGrabbable(true)}
@@ -157,7 +175,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                                 </Tooltip>
                             )}
                             {tabs !== undefined ? (
-                                <TabStrip at={at} ids={tabs} active={view.id} />
+                                <TabStrip at={at} ids={tabs} active={view.id} insertAt={tabDrop?.gap ?? null} />
                             ) : isLooseView(view) ? (
                                 <>
                                     <LooseGlyph tab={view.tab} />
@@ -226,6 +244,14 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                         )}
                     </ContextMenu.Trigger>
                     <ContextMenu.Popup>
+                        {tabs?.length === 1 && (
+                            <>
+                                <Menu.Item onClick={() => useDocument.getState().ungroupCell(at)}>
+                                    <Icon icon={Ungroup} size={14} /> {t('viewMenu.ungroup')}
+                                </Menu.Item>
+                                <Menu.Separator />
+                            </>
+                        )}
                         <SplitItems at={at} separated />
                         {/* A loose view is no view of the project: nothing to rename, share or delete. */}
                         {isLooseView(view) ? <FileMenuItems tabKey={view.id} /> : <ViewMenuItems viewId={view.id} kind={view.kind} />}

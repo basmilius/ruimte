@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type WheelEvent as ReactWheelEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pin, X } from 'lucide-react';
+import type { AgentStatus } from '@ruimte/contracts';
 import { viewIconOf, type ProjectView } from '@ruimte/contracts';
+import { StatusDot } from '@/canvas/NodeFrame';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
 import { writeMentionDrag } from '@adecore/agents-react/chat/mentions';
 import { useBrowserDisplayTitle } from '@/browser/title';
@@ -14,11 +16,15 @@ import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { LooseGlyph } from '@/shell/panels/LooseGlyph';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
+import { TabMenuItems } from '@/shell/TabMenuItems';
 import { useCellView } from '@/shell/use-cell-view';
+import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import type { CellAt } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { isCheckoutDiff, isDatabaseTab, useFiles, type DatabaseTab, type FileTab } from '@/state/files';
 import { useGit } from '@/state/git';
+import { useChats } from '@adecore/agents-react/state/chats';
+import { sessionStatus, useSessionRow } from '@/state/sessions';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { isUnsavedDraft, useTextDrafts } from '@/state/text-drafts';
 import { ContextMenu, Icon, IconButton, Menu, Tooltip } from '@adecore/ui';
@@ -50,7 +56,10 @@ interface TabShellProps {
     unsavedLabel?: string;
     pinned?: boolean;
     diff?: boolean;
-    onDragStart?: (event: React.DragEvent<HTMLButtonElement>) => void;
+    /* Written beside the view payload for a drop that wants more of the tab, such as a file for a composer. */
+    onDragData?: (transfer: DataTransfer) => void;
+    /* A mark that says the view needs the person, which must be seen from a tab in the background. */
+    attention?: ReactNode;
     onDoubleClick?: () => void;
     onClose: () => void;
     menu: ReactNode;
@@ -67,18 +76,28 @@ function TabShell({
     unsavedLabel,
     pinned = false,
     diff = false,
-    onDragStart,
+    onDragData,
+    attention,
     onDoubleClick,
     onClose,
     menu
 }: TabShellProps) {
     const { t } = useTranslation('panels');
+    const onDragStart = (event: React.DragEvent<HTMLButtonElement>): void => {
+        // The bar is a drag handle of its own, whose payload would take the place of this one.
+        event.stopPropagation();
+        event.dataTransfer.setData(VIEW_DRAG_TYPE, id);
+        onDragData?.(event.dataTransfer);
+        event.dataTransfer.effectAllowed = onDragData === undefined ? 'move' : 'copyMove';
+        setDragging(id);
+    };
     return (
         <ContextMenu.Root>
             {/* The bar around the strip has a menu of its own, which a right click on a tab does not open as well. */}
             <ContextMenu.Trigger
                 render={<span />}
                 className={TAB}
+                data-tab-id={id}
                 data-active={active}
                 data-view={diff ? 'diff' : undefined}
                 onContextMenu={(event) => event.stopPropagation()}
@@ -87,8 +106,9 @@ function TabShell({
                     <button
                         className={TAB_OPEN}
                         aria-current={active}
-                        draggable={onDragStart !== undefined}
+                        draggable
                         onDragStart={onDragStart}
+                        onDragEnd={() => setDragging(null)}
                         onClick={() => useDocument.getState().activateTab(id)}
                         onDoubleClick={onDoubleClick}
                     >
@@ -96,6 +116,7 @@ function TabShell({
                         <span className="truncate">{label}</span>
                         {detail}
                         {/* Out of the row until there is something to mark, so a clean tab keeps the close button 8px from its name. */}
+                        {attention}
                         {unsavedLabel !== undefined && (
                             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted">
                                 <span className="sr-only">{unsavedLabel}</span>
@@ -113,7 +134,10 @@ function TabShell({
                     onClick={onClose}
                 />
             </ContextMenu.Trigger>
-            <ContextMenu.Popup>{menu}</ContextMenu.Popup>
+            <ContextMenu.Popup>
+                <TabMenuItems viewId={id} />
+                {menu}
+            </ContextMenu.Popup>
         </ContextMenu.Root>
     );
 }
@@ -161,14 +185,11 @@ function FileTabItem({ tab, tabKey, active, label }: { tab: FileTab; tabKey: str
             pinned={tab.pinned}
             diff={tab.view !== undefined}
             /* A diff is a tab about a comparison, so there is nothing for a canvas or a composer to take from it. */
-            onDragStart={
+            onDragData={
                 tab.view === undefined
-                    ? (event) => {
-                          // The bar is a drag handle of its own, whose payload would take the place of this one.
-                          event.stopPropagation();
-                          event.dataTransfer.setData(PATHS_DRAG_TYPE, tab.path);
-                          writeMentionDrag(event.dataTransfer, [tab.path]);
-                          event.dataTransfer.effectAllowed = 'copy';
+                    ? (transfer) => {
+                          transfer.setData(PATHS_DRAG_TYPE, tab.path);
+                          writeMentionDrag(transfer, [tab.path]);
                       }
                     : undefined
             }
@@ -209,6 +230,19 @@ function LooseTabItem({ view, active }: { view: LooseCellView; active: boolean }
     );
 }
 
+function NeedsYouMark({ status }: { status: AgentStatus | undefined }) {
+    return status === 'needs-you' ? <StatusDot status="needs-you" plain /> : null;
+}
+
+function ChatAttention({ id }: { id: string }) {
+    const endpointId = useEndpointId();
+    return <NeedsYouMark status={useChats((s) => s.statusByKey[endpointKey(endpointId, id)]?.info.status)} />;
+}
+
+function TerminalAttention({ id }: { id: string }) {
+    return <NeedsYouMark status={useSessionRow(id, sessionStatus)} />;
+}
+
 /* A view of the project as a tab: its mark and its name, the cell's own menu, and a close that only takes it off the screen. */
 function ProjectTabItem({ at, view, active }: { at: CellAt; view: ProjectView; active: boolean }) {
     const { t } = useTranslation('panels');
@@ -229,6 +263,7 @@ function ProjectTabItem({ at, view, active }: { at: CellAt; view: ProjectView; a
                     path={view.kind === 'file' ? view.path : null}
                 />
             }
+            attention={view.kind === 'chat' ? <ChatAttention id={view.id} /> : view.kind === 'terminal' ? <TerminalAttention id={view.id} /> : undefined}
             onClose={() => closeTabAction(view.id)}
             menu={
                 <>
@@ -257,10 +292,11 @@ function StripTab({ at, id, active }: { at: CellAt; id: string; active: boolean 
  * a right click offers the menu of what the tab holds, and a pinned tab shows the pin next to its close
  * button. The active tab is marked and kept in sight.
  */
-export function TabStrip({ at, ids, active }: { at: CellAt; ids: readonly string[]; active: string }) {
+export function TabStrip({ at, ids, active, insertAt = null }: { at: CellAt; ids: readonly string[]; active: string; insertAt?: number | null }) {
     const counts = useGit((s) => s.counts);
     const stripRef = useRef<HTMLDivElement>(null);
     const [edges, setEdges] = useState({ start: false, end: false });
+    const [lineLeft, setLineLeft] = useState<number | null>(null);
 
     const measureEdges = useCallback((): void => {
         const strip = stripRef.current;
@@ -289,6 +325,16 @@ export function TabStrip({ at, ids, active }: { at: CellAt; ids: readonly string
         stripRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }, [active]);
 
+    const measureLine = useCallback((): void => {
+        const tabs = stripRef.current?.querySelectorAll<HTMLElement>('[data-tab-id]') ?? [];
+        const before = insertAt === null ? undefined : tabs[insertAt];
+        const last = tabs[tabs.length - 1];
+        setLineLeft(insertAt === null ? null : before !== undefined ? before.offsetLeft : last !== undefined ? last.offsetLeft + last.offsetWidth : 0);
+    }, [insertAt]);
+
+    // Where a dragged tab would land, in the strip's own coordinates so the line scrolls along with the tabs.
+    useLayoutEffect(measureLine, [measureLine, ids]);
+
     // A trackpad swipes sideways on its own; a wheel with one axis still has to reach the strip.
     const onWheel = (event: ReactWheelEvent<HTMLDivElement>): void => {
         if (event.deltaX === 0 && event.deltaY !== 0) {
@@ -299,7 +345,7 @@ export function TabStrip({ at, ids, active }: { at: CellAt; ids: readonly string
     return (
         <div
             ref={stripRef}
-            className="scroll-fade-x flex h-full min-w-0 flex-1 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="scroll-fade-x relative flex h-full min-w-0 flex-1 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             data-fade-start={edges.start || undefined}
             data-fade-end={edges.end || undefined}
             onWheel={onWheel}
@@ -308,6 +354,9 @@ export function TabStrip({ at, ids, active }: { at: CellAt; ids: readonly string
             {ids.map((id) => (
                 <StripTab key={id} at={at} id={id} active={id === active} />
             ))}
+            {lineLeft !== null && (
+                <span aria-hidden className="pointer-events-none absolute inset-y-1 z-10 w-[2px] -translate-x-px bg-accent" style={{ left: lineLeft }} />
+            )}
         </div>
     );
 }

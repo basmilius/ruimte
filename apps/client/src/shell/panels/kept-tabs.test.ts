@@ -31,4 +31,13 @@ describe('the tabs that keep their editor', () => {
         expect(keptTabs('d', ['c', 'b'], all, 2, holds).map((tab) => tab.key)).toEqual(['a', 'c', 'd']);
         expect(keptTabs('a', ['d'], all, 2, holds).map((tab) => tab.key)).toEqual(['a', 'd']);
     });
+
+    test('keep the tabs shown last and the held ones drawn while a view that is no tab is in front', () => {
+        const all = tabs('a', 'b', 'c', 'd');
+        const holds = (tab: { key: string }): boolean => tab.key === 'a';
+        expect(keptTabs(null, ['c', 'b'], all).map((tab) => tab.key)).toEqual(['b', 'c']);
+        expect(keptTabs(null, ['c', 'b'], all, 1, holds).map((tab) => tab.key)).toEqual(['a', 'c']);
+        expect(keptTabs(null, [], all, undefined, holds).map((tab) => tab.key)).toEqual(['a']);
+        expect(keptTabs(null, [], all).map((tab) => tab.key)).toEqual([]);
+    });
 });

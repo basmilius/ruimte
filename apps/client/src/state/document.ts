@@ -61,11 +61,13 @@ import {
     layoutOf,
     locateView,
     moveCell,
+    moveTabBy,
     openableViewIds,
     replaceViewId,
     showViewIn,
     singleLayout,
     undoShowView,
+    ungroup,
     viewIdsIn,
     type CellAt,
     type ShownView,
@@ -139,7 +141,7 @@ export interface DocumentState {
     setActiveView(id: string): void;
     /* The same, for a view someone else asked for: it answers what moved, so a toast can put it back.
        Null when nothing moved, which is a view this document does not have or the one already in front. */
-    showView(id: string): ShownView | null;
+    showView(id: string, options?: { newTab?: boolean }): ShownView | null;
     /* The way back out of that toast, run against the grid as it stands when the button is pressed. */
     undoShowView(shown: Omit<ShownView, 'layout'>): void;
     /* What an agent's `view open` has to say, put in the banner over whatever was standing in it. */
@@ -160,7 +162,15 @@ export interface DocumentState {
     /* A loose view lands in a cell's zone, standing nowhere yet or moving from where it stands. False when the grid has no room. */
     dropLooseAt(key: string, at: CellAt, zone: SplitZone): boolean;
     /* A loose view joins the tabs of a cell, which becomes a host. False when it already fills that cell alone. */
-    dropLooseAsTab(key: string, at: CellAt): boolean;
+    dropLooseAsTab(key: string, at: CellAt, index?: number | null): boolean;
+    /* Any view that can stand in a cell joins the tabs of one: from the sidebar, from another cell or within its own strip. `index` null goes right of the active tab. */
+    dropViewAsTab(viewId: string, at: CellAt, index: number | null): boolean;
+    /* The tab moves along the strip of its host, stopping at the ends. */
+    moveTab(viewId: string, delta: number): void;
+    /* The tab leaves its host for a cell of its own to the right. False when it is the only tab or the grid has no room. */
+    splitTabOff(viewId: string): boolean;
+    /* A host with a single tab becomes a plain cell again. */
+    ungroupCell(at: CellAt): void;
     /* A loose view leaves the grid; its cell goes with its last tab, and the last cell falls back to the first view there is. */
     closeLoose(key: string): void;
     /* A view of the project leaves the screen, its cell with its last tab; the last cell stays. */
@@ -397,7 +407,7 @@ function looseIdsOf(state: Pick<DocumentState, 'views' | 'layout'>): string[] {
 }
 
 /* A project view that can stand in a cell, or a loose view that stands in one already. */
-function canStandInCell(state: Pick<DocumentState, 'views' | 'layout'>, id: string): boolean {
+export function canStandInCell(state: Pick<DocumentState, 'views' | 'layout'>, id: string): boolean {
     const view = cellViewOf(state, id);
     return view === null ? state.layout !== null && locateView(state.layout, id) !== null : isOpenableView(view);
 }
@@ -597,7 +607,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
                 }
             },
 
-            showView(id) {
+            showView(id, options) {
                 const state = get();
                 if (!canStandInCell(state, id)) {
                     return null;
@@ -606,7 +616,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
                     commit(singleLayout(id));
                     return null;
                 }
-                const shown = showViewIn(state.layout, id);
+                const shown = showViewIn(state.layout, id, options);
                 if (shown !== null) {
                     commit(shown.layout);
                 }
@@ -681,13 +691,47 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
                 return true;
             },
 
-            dropLooseAsTab(key, at) {
+            dropLooseAsTab(key, at, index = null) {
                 const state = get();
                 if (state.layout === null || !canDropAsTab(state.layout, at, key)) {
                     return false;
                 }
-                commit(dropAsTab(state.layout, key, at, null));
+                commit(dropAsTab(state.layout, key, at, index));
                 return true;
+            },
+
+            dropViewAsTab(viewId, at, index) {
+                const state = get();
+                if (!canStandInCell(state, viewId)) {
+                    return false;
+                }
+                return get().dropLooseAsTab(viewId, at, index);
+            },
+
+            moveTab(viewId, delta) {
+                const state = get();
+                const next = state.layout === null ? null : moveTabBy(state.layout, viewId, delta);
+                if (next !== null && next !== state.layout) {
+                    commit(next);
+                }
+            },
+
+            splitTabOff(viewId) {
+                const state = get();
+                const at = state.layout === null ? null : locateView(state.layout, viewId);
+                if (state.layout === null || at === null || !canSplit(state.layout, at, 'right', viewId)) {
+                    return false;
+                }
+                commit(dropView(state.layout, viewId, at, 'right'));
+                return true;
+            },
+
+            ungroupCell(at) {
+                const state = get();
+                const next = state.layout === null ? null : ungroup(state.layout, at);
+                if (next !== null && next !== state.layout) {
+                    commit(next);
+                }
             },
 
             closeLoose(key) {

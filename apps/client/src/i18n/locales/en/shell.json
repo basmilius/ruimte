@@ -250,7 +250,12 @@
         "openInTerminal": "Open in terminal",
         "viewSettings": "View settings…",
         "deleteView": "Delete view",
-        "reveal": "Reveal in {{app}}"
+        "reveal": "Reveal in {{app}}",
+        "openInNewTab": "Open in new tab",
+        "moveTabLeft": "Move tab left",
+        "moveTabRight": "Move tab right",
+        "moveTabToNewCell": "Move tab to new cell",
+        "ungroup": "Ungroup"
     },
     "share": {
         "start": "Share with your team",
@@ -867,6 +872,13 @@
         "recentLocations": "Recent Locations…",
         "folding": "Folding",
         "explain": "Explain Code",
-        "suggestInline": "Suggest Code"
+        "suggestInline": "Suggest Code",
+        "closeTab": "Close Tab",
+        "nextTab": "Next Tab",
+        "previousTab": "Previous Tab",
+        "moveTabLeft": "Move Tab Left",
+        "moveTabRight": "Move Tab Right",
+        "moveTabToNewCell": "Move Tab to New Cell",
+        "ungroup": "Ungroup"
     }
 }

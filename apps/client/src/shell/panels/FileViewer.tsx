@@ -33,26 +33,27 @@ function KeptTab({ up, children }: { up: boolean; children: ReactNode }) {
  * nobody submitted stays drawn however long ago it was up, or the edits would go with it. `ids` are the
  * views of the cell in order, of which the loose ones are tabs.
  */
-export function FileViewer({ active, ids }: { active: string; ids: readonly string[] }) {
+export function FileViewer({ active, ids }: { active: string | null; ids: readonly string[] }) {
     const { t } = useTranslation('databases');
     const pool = useFiles((s) => s.tabs);
     const unsubmitted = useFiles((s) => s.unsubmitted);
     const [shown, setShown] = useState<readonly string[]>([]);
-    if (shown[0] !== active) {
-        setShown(shownAfter(shown, active));
-    }
-
     const tabs = useMemo(() => ids.flatMap((id): Tab[] => pool.filter((entry) => entry.key === id)), [ids, pool]);
-    if (!tabs.some((entry) => entry.key === active)) {
+    // A view of the project in front leaves no loose tab up: what was shown last stays drawn, hidden.
+    const up = active !== null && tabs.some((entry) => entry.key === active) ? active : null;
+    if (up !== null && shown[0] !== up) {
+        setShown(shownAfter(shown, up));
+    }
+    const kept = keptTabs(up, shown, tabs, undefined, (entry) => unsubmitted[entry.key] === true);
+    if (kept.length === 0) {
         return null;
     }
-    const kept = keptTabs(active, shown, tabs, undefined, (entry) => unsubmitted[entry.key] === true);
 
     return (
         // Keyed on the tab, so a tab starts a read of its own instead of drawing the file before it.
         <div className="relative min-h-0 min-w-0 grow">
             {kept.map((entry) => (
-                <KeptTab key={entry.key} up={entry.key === active}>
+                <KeptTab key={entry.key} up={entry.key === up}>
                     {isDatabaseTab(entry) ? (
                         <ErrorBoundary label={t('tab.failed')} resetKeys={[entry.key]} className="h-full">
                             <Suspense fallback={null}>

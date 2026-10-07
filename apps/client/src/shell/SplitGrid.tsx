@@ -8,11 +8,25 @@ import { carriesDiff, droppedDiff } from '@/shell/diff-drag';
 import { isLooseView } from '@/shell/cell-view';
 import { useCellView } from '@/shell/use-cell-view';
 import { placeFilesAction, placeViewAction } from '@/actions/client-actions';
-import { useDocument } from '@/state/document';
-import { useFiles } from '@/state/files';
+import { canStandInCell, useDocument } from '@/state/document';
+import { tabKey, useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
 import { CellViewContext } from '@/state/workspace-stores';
-import { canMoveCell, canSplit, cellCount, cellViewIds, isSameCell, locateView, draggedSizes, maximizedCell, type CellAt, type SplitZone } from '@/shell/split';
+import {
+    canDropAsTab,
+    canMoveCell,
+    canSplit,
+    cellAt,
+    cellCount,
+    cellViewIds,
+    isSameCell,
+    locateView,
+    draggedSizes,
+    maximizedCell,
+    type CellAt,
+    type SplitZone
+} from '@/shell/split';
+import { gapAt, positionAfterLifting } from '@/shell/tab-drop';
 import type { SplitCell } from '@ruimte/contracts';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { Button, Kbd, Surface, Tooltip } from '@adecore/ui';
@@ -165,6 +179,46 @@ function Cell({
 }) {
     const view = useCellView(viewId);
     const [dockHidden, setDockHidden] = useState(false);
+    /* A view over the bar of this cell, which makes it a tab of it: the gap in the strip it would land in. */
+    const tabs = useDocument((s) => (s.layout === null ? undefined : cellAt(s.layout, at)?.tabs));
+    const [barDrop, setBarDrop] = useState<{ gap: number } | null>(null);
+
+    /* A drag that is about a view of this window, which a file tab is as well as a path: over a surface that has
+       a use for the path itself (the canvas, a composer) the path is what counts, anywhere else the view. */
+    const usesPaths = (event: ReactDragEvent<HTMLElement>): boolean => {
+        const transfer = event.dataTransfer;
+        return carriesPaths(transfer.types) && !(carriesView(transfer) && dragging() !== null && takesDrop(event.target) === null);
+    };
+
+    const overBar = (event: ReactDragEvent<HTMLElement>): boolean =>
+        carriesView(event.dataTransfer) && ((event.target as HTMLElement | null)?.closest?.('[data-cell-bar]') ?? null) !== null;
+
+    /* Where in the strip the pointer would put a tab, or null when the bar cannot take this drag. A whole cell
+       is not a tab, and a view that fills this cell alone has nowhere to go in it. */
+    const tabGapFor = (event: ReactDragEvent<HTMLElement>): { gap: number } | null => {
+        const layout = useDocument.getState().layout;
+        if (layout === null) {
+            return null;
+        }
+        const moving = dragging();
+        const bar = (event.target as HTMLElement).closest('[data-cell-bar]')!;
+        const rects = [...bar.querySelectorAll('[data-tab-id]')].map((tab) => tab.getBoundingClientRect());
+        const gap = gapAt(rects, event.clientX);
+        if (carriesDiff(event.dataTransfer)) {
+            return { gap };
+        }
+        if (moving === null || draggingWholeCell() || !canStandInCell(useDocument.getState(), moving) || !canDropAsTab(layout, at, moving)) {
+            return null;
+        }
+        return { gap };
+    };
+
+    /* The position among the tabs the drop leaves, which only a host has an order for. */
+    const tabIndexFor = (gap: number, moving: string): number | null => {
+        const layout = useDocument.getState().layout;
+        const cell = layout === null ? null : cellAt(layout, at);
+        return cell?.tabs === undefined ? null : positionAfterLifting(cell.tabs, gap, moving);
+    };
 
     /* Where the drag would land, or null for a drop the grid cannot take: the pointer then reads
        `no-drop` and nothing lights up. A target that is not there needs no explanation. */
@@ -214,7 +268,7 @@ function Cell({
 
     /* The claim, staked before anything inside the cell sees the drag; the canvas reads it and holds off. */
     const claimPath = (event: ReactDragEvent<HTMLElement>): void => {
-        if (!carriesPaths(event.dataTransfer.types)) {
+        if (!usesPaths(event)) {
             return;
         }
         const zone = pathZoneFor(event);
@@ -238,8 +292,8 @@ function Cell({
            with a splitter drag, which moves no state at all, hence the observer. A cell hidden behind
            a maximized one leaves the registry, which hides its pages without moving a <webview>. */
         <div ref={(element) => watchCell(viewId, hidden ? null : element)} className="relative min-h-0 grow overflow-hidden">
-            {/* A loose view keeps one surface for the tabs of its host, which keeps the editors of the tabs shown last. */}
-            <ViewSurface key={isLooseView(view) ? 'loose' : view.id} view={view} />
+            {/* A host keeps one surface for its loose tabs, which keeps the editors of the tabs shown last. */}
+            <ViewSurface view={view} hostIds={tabs} />
             <CellOverlay slot="cell">
                 {/* The dock belongs to the canvas under it, so it is drawn in the cell that has the
                     focus and nowhere else: nine docks would be nine rows of the same buttons. */}
@@ -262,7 +316,19 @@ function Cell({
                 onDragOverCapture={claimPath}
                 onDropCapture={claimPath}
                 onDragOver={(event) => {
-                    const paths = carriesPaths(event.dataTransfer.types);
+                    if (overBar(event)) {
+                        const tab = tabGapFor(event);
+                        if (tab !== null) {
+                            // Only a prevented dragover accepts the drop.
+                            event.preventDefault();
+                        }
+                        event.dataTransfer.dropEffect = tab === null ? 'none' : 'move';
+                        setBarDrop((current) => (tab === null ? null : current?.gap === tab.gap ? current : tab));
+                        onZone(null, boxIn(event.currentTarget));
+                        return;
+                    }
+                    setBarDrop(null);
+                    const paths = usesPaths(event);
                     const next = paths ? pathZoneFor(event) : zoneFor(event);
                     if (next !== null) {
                         // Only a prevented dragover accepts the drop; without it the browser refuses it.
@@ -278,11 +344,34 @@ function Cell({
                     // A drag crossing into a child fires leave on the parent; only leaving the cell counts.
                     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
                         setGridTakesPath(false);
+                        setBarDrop(null);
                         onZone(null, boxIn(event.currentTarget));
                     }
                 }}
                 onDrop={(event) => {
-                    const paths = carriesPaths(event.dataTransfer.types) ? droppedPaths(event.dataTransfer) : [];
+                    if (overBar(event)) {
+                        const tab = tabGapFor(event);
+                        setBarDrop(null);
+                        onZone(null, boxIn(event.currentTarget));
+                        setGridTakesPath(false);
+                        if (tab === null) {
+                            return;
+                        }
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const diff = droppedDiff(event.dataTransfer);
+                        if (diff !== null) {
+                            const key = tabKey(diff.path, diff.view);
+                            useFiles.getState().dropDiff(diff.path, diff.view, useSettings.getState().filesTabLimit, at, 'center', tabIndexFor(tab.gap, key));
+                            return;
+                        }
+                        const dragged = draggedViewId(event.dataTransfer);
+                        if (dragged !== null) {
+                            useDocument.getState().dropViewAsTab(dragged, at, tabIndexFor(tab.gap, dragged));
+                        }
+                        return;
+                    }
+                    const paths = usesPaths(event) ? droppedPaths(event.dataTransfer) : [];
                     const here = paths.length > 0 ? pathZoneFor(event) : zoneFor(event);
                     onZone(null, boxIn(event.currentTarget));
                     setGridTakesPath(false);
@@ -313,7 +402,7 @@ function Cell({
                     placeFilesAction(paths, viewId, here);
                 }}
             >
-                <CellToolbar at={at} view={view} focused={focused}>
+                <CellToolbar at={at} view={view} focused={focused} tabDrop={barDrop}>
                     {body}
                 </CellToolbar>
             </div>

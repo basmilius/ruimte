@@ -288,13 +288,17 @@ interface FilesStore extends TabPool {
     /* A file dragged to a cell's edge becomes a tab there, in a cell of its own. The key, or null when the grid has no room. */
     dropFile(path: string, limit: number, at: CellAt, zone: SplitZone): string | null;
     /* A change dragged to a cell: the middle joins its tabs, an edge makes a cell of its own. False when nothing landed. */
-    dropDiff(path: string, view: FileTabView, limit: number, at: CellAt, zone: SplitZone): boolean;
+    dropDiff(path: string, view: FileTabView, limit: number, at: CellAt, zone: SplitZone, index?: number | null): boolean;
     /* What the limit leaves alone besides a pin: a file with unsaved changes and a table with edits nobody submitted. */
     keepsOpen(tab: Tab): boolean;
     /* A file or folder moved on the machine; its tabs go with it, and the cells that hold them. Answers what was renamed. */
     moved(from: string, to: string): Map<string, string>;
     /* A file with unsaved changes is saved first, and a table with edits nobody submitted asks first. */
     close(key: string): void;
+    /* `close`, answering whether the tab is gone: false when a person kept it at one of those questions. */
+    closeGuarded(key: string): Promise<boolean>;
+    /* The tabs one after another, each through its own questions; stops at the first a person keeps. */
+    closeInOrder(keys: readonly string[]): Promise<boolean>;
     /* The other loose tabs of the host the tab stands in; a pinned tab goes too, and a project view stays. */
     closeOthers(key: string): void;
     /* Every loose tab of the host the tab stands in. */
@@ -331,6 +335,13 @@ export const useFiles = create<FilesStore>((set, get) => {
         const cell = layout === null || at === null ? null : cellAt(layout, at);
         return cell === null ? [] : cellViewIds(cell).flatMap((id) => get().tabs.find((entry) => entry.key === id) ?? []);
     };
+    /* Who waits on the answer of a close that may ask a question first. */
+    const waiting = new Map<string, ((closed: boolean) => void)[]>();
+    const settle = (key: string, closed: boolean): void => {
+        const resolvers = waiting.get(key);
+        waiting.delete(key);
+        resolvers?.forEach((resolve) => resolve(closed));
+    };
     /* Leaves the pool and the cell that holds the tab, and goes where a closed tab goes. */
     const closeNow = (key: string): void => {
         const { [key]: _dropped, ...unsubmitted } = get().unsubmitted;
@@ -342,6 +353,7 @@ export const useFiles = create<FilesStore>((set, get) => {
             recent: rememberClosed(get().recent, tab)
         });
         useDocument.getState().closeLoose(key);
+        settle(key, true);
     };
     /* The host the tab stands in is over its limit once a tab arrives, and its leftmost tab nobody holds on to makes room. */
     const makeRoom = (key: string, limit: number): void => {
@@ -427,14 +439,14 @@ export const useFiles = create<FilesStore>((set, get) => {
             makeRoom(key, limit);
             return key;
         },
-        dropDiff(path, view, limit, at, zone) {
+        dropDiff(path, view, limit, at, zone, index = null) {
             const key = tabKey(path, view);
             const { layout } = useDocument.getState();
             if (layout === null || (zone !== 'center' && !canSplit(layout, at, zone, key))) {
                 return false;
             }
             take(openTab(get(), path, view), undefined, undefined);
-            const landed = zone === 'center' ? useDocument.getState().dropLooseAsTab(key, at) : useDocument.getState().dropLooseAt(key, at, zone);
+            const landed = zone === 'center' ? useDocument.getState().dropLooseAsTab(key, at, index) : useDocument.getState().dropLooseAt(key, at, zone);
             if (!landed) {
                 pruneLoose();
                 return false;
@@ -463,20 +475,36 @@ export const useFiles = create<FilesStore>((set, get) => {
                 }
                 return;
             }
-            closeAfterSaving(currentEndpointId(), tab === undefined || tab.view !== undefined ? [] : [tab.path], () => closeNow(key));
+            closeAfterSaving(
+                currentEndpointId(),
+                tab === undefined || tab.view !== undefined ? [] : [tab.path],
+                () => closeNow(key),
+                () => settle(key, false)
+            );
+        },
+        closeGuarded(key) {
+            if (get().tabs.every((entry) => entry.key !== key)) {
+                return Promise.resolve(true);
+            }
+            return new Promise((resolve) => {
+                waiting.set(key, [...(waiting.get(key) ?? []), resolve]);
+                get().close(key);
+            });
+        },
+        async closeInOrder(keys) {
+            for (const key of keys) {
+                if (!(await get().closeGuarded(key))) {
+                    return false;
+                }
+            }
+            return true;
         },
         /* A pinned tab goes with the rest, since the person asked for this one tab and nothing else. */
         closeOthers(key) {
-            for (const tab of hostTabs(key)) {
-                if (tab.key !== key) {
-                    get().close(tab.key);
-                }
-            }
+            void get().closeInOrder(hostTabs(key).flatMap((tab) => (tab.key === key ? [] : [tab.key])));
         },
         closeAll(key) {
-            for (const tab of hostTabs(key)) {
-                get().close(tab.key);
-            }
+            void get().closeInOrder(hostTabs(key).map((tab) => tab.key));
         },
         release(key) {
             const { [key]: _dropped, ...unsubmitted } = get().unsubmitted;
@@ -489,7 +517,11 @@ export const useFiles = create<FilesStore>((set, get) => {
             }
         },
         cancelDiscard() {
+            const key = get().discarding;
             set({ discarding: null });
+            if (key !== null) {
+                settle(key, false);
+            }
         },
         setUnsubmitted(key, unsubmitted) {
             if ((get().unsubmitted[key] === true) === unsubmitted) {
