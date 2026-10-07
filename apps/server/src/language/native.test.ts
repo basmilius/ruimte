@@ -39,7 +39,7 @@ async function checkoutAt(path: string, version = '0.3.1'): Promise<void> {
     await writeFile(join(path, 'crates', 'index', 'src', 'stubs.rs'), `pub const STUBS_COMMIT: &str = "${COMMIT}";\n`);
 }
 
-async function sqlCheckoutAt(path: string, version = '0.1.3'): Promise<void> {
+async function sqlCheckoutAt(path: string, version = '0.1.4'): Promise<void> {
     await mkdir(path, { recursive: true });
     await writeFile(join(path, 'Cargo.toml'), `[workspace]\nmembers = ["crates/server"]\n\n[workspace.package]\nversion = "${version}"\nedition = "2024"\n`);
     await writeFile(
@@ -157,7 +157,7 @@ describe('native checkout', () => {
 describe('the SQL checkout', () => {
     it('reads its version from the workspace, and knows it by the program its native source names', async () => {
         await sqlCheckoutAt(folder);
-        expect(readSqlCheckout(folder)).toEqual({ folder, version: '0.1.3' });
+        expect(readSqlCheckout(folder)).toEqual({ folder, version: '0.1.4' });
         await checkoutAt(join(folder, 'php'));
         expect(readSqlCheckout(join(folder, 'php'))).toBeNull();
         expect(readNativeCheckout(folder)).toBeNull();
@@ -184,33 +184,46 @@ describe('the SQL checkout', () => {
     });
 
     it('builds from a checkout and fetches no stubs, since the server reads none', () => {
-        const policy = new NativePolicy({ checkouts: { 'sql-native': { folder: '/checkout/sql', version: '0.1.3' } } });
+        const policy = new NativePolicy({ checkouts: { 'sql-native': { folder: '/checkout/sql', version: '0.1.4' } } });
         expect(policy.plan('sql-native', '/home/sql-native')).toEqual({
             source: 'dev',
-            version: '0.1.3',
+            version: '0.1.4',
             executable: '/checkout/sql/target/release/sql-language-server',
             checkout: '/checkout/sql'
         });
         expect(policy.plan('php-native', '/home/php-native')).not.toBeNull();
     });
 
-    it('has no release pinned yet, so a compiled daemon has nothing to install', () => {
-        expect(sqlDescriptor.version).toBe('');
-        expect(pinnedRelease(sqlDescriptor)).toBeUndefined();
-        expect(NATIVE_RELEASES['sql-native']).toBeUndefined();
-        expect(new NativePolicy({ checkouts: {} }).plan('sql-native', '/home/sql-native')).toBeNull();
+    it('pins the standalone v0.1.4 artifacts and their native version', () => {
+        expect(sqlDescriptor.version).toBe('0.1.4');
+        expect(sqlDescriptor.sourceRevision).toBe('8b7087ba29cc81c3e94fa473fc5b324474bfe44e');
+        expect(NATIVE_RELEASES['sql-native']).toBeDefined();
+        expect(Object.keys(sqlDescriptor.assets).sort()).toEqual(['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-x64']);
+        for (const [target, asset] of Object.entries(sqlDescriptor.assets)) {
+            const [platform, arch] = target.split('-');
+            const plan = new NativePolicy({ checkouts: {}, platform: platform as NodeJS.Platform, arch }).plan('sql-native', folder);
+            expect(plan).toMatchObject({ source: 'release', version: sqlDescriptor.version, asset });
+            expect(asset.sha256).toMatch(/^[a-f0-9]{64}$/);
+            expect(asset.url).toBe(
+                `https://github.com/basmilius/language-server-sql/releases/download/v${sqlDescriptor.version}/sql-language-server-v${sqlDescriptor.version}-${target}.${asset.format}`
+            );
+        }
+    });
+
+    it('has nothing to install from a descriptor that pins no release', () => {
+        expect(pinnedRelease({ version: '', sourceRevision: '', assets: {} })).toBeUndefined();
     });
 
     it('takes a release once one is pinned, with the program of its own', () => {
         const release = pinnedRelease({
-            version: '0.1.3',
+            version: '0.1.4',
             sourceRevision: COMMIT,
             assets: { 'linux-x64': { url: 'https://example.test/sql.tar.gz', sha256: 'e'.repeat(64), format: 'tar.gz', executable: 'sql-language-server' } }
         })!;
         const policy = new NativePolicy({ checkouts: {}, platform: 'linux', arch: 'x64', releases: { 'sql-native': release } });
         expect(policy.plan('sql-native', '/home/sql-native')).toEqual({
             source: 'release',
-            version: '0.1.3',
+            version: '0.1.4',
             executable: '/home/sql-native/bin/sql-language-server',
             asset: release.assets['linux-x64']
         });
@@ -225,10 +238,10 @@ describe('native policy', () => {
         assets: { 'darwin-arm64': { url: 'https://example.test/a.tar.gz', sha256: 'f'.repeat(64), format: 'tar.gz', executable: 'php-language-server' } }
     };
 
-    it('pins the standalone v0.4.1 artifacts and their native version', () => {
-        expect(descriptor.version).toBe('0.4.1');
+    it('pins the standalone v0.5.0 artifacts and their native version', () => {
+        expect(descriptor.version).toBe('0.5.0');
         expect(descriptor.stubsCommit).toBe('e4f5f6c3de39f3bab3e9f3fca4b8cdb8b061e681');
-        expect(descriptor.sourceRevision).toBe('a75bafe6a276803b56c9794fb994c90359cb0983');
+        expect(descriptor.sourceRevision).toBe('18a0747e0ada0b3cd2203cc94db976c4a1f90bf6');
         expect(descriptor).not.toHaveProperty('adecoreVersion');
         expect(Object.keys(descriptor.assets).sort()).toEqual(['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-x64']);
         for (const [target, asset] of Object.entries(descriptor.assets)) {

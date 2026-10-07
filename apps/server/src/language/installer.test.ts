@@ -623,7 +623,7 @@ describe('the SQL server install', () => {
             root,
             runtime,
             run: async () => 0,
-            native: new NativePolicy({ checkouts: { 'php-native': { folder: join(root, 'php'), version: '0.4.1', stubsCommit: COMMIT } } }),
+            native: new NativePolicy({ checkouts: { 'php-native': { folder: join(root, 'php'), version: '0.4.1', stubsCommit: COMMIT } }, releases: {} }),
             onChange: () => undefined
         });
         expect(installer.isUnavailable('sql-native')).toBe(true);
