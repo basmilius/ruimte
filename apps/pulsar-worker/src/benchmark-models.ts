@@ -92,11 +92,11 @@ export const BENCHMARK_MODELS: readonly BenchmarkSource[] = [
         provider: 'claude',
         legacy: false,
         efforts: [
-            { effort: 'low', id: null, name: null },
-            { effort: 'medium', id: null, name: null },
-            { effort: 'high', id: null, name: null },
-            { effort: 'xhigh', id: null, name: null },
-            { effort: 'max', id: null, name: null }
+            { effort: 'low', id: '42908ae3-d3bd-4934-be19-fbff93d3fde8', name: 'Claude Haiku 5.5 (Low, Default Fallback)' },
+            { effort: 'medium', id: 'af26fff4-8120-41be-a5f0-86aaea023f20', name: 'Claude Haiku 5.5 (Medium, Default Fallback)' },
+            { effort: 'high', id: '20829974-af06-497e-9f42-77fb958d43b9', name: 'Claude Haiku 5.5 (High, Default Fallback)' },
+            { effort: 'xhigh', id: '41b5bf5e-daf6-42d9-b8d1-60e340a3028d', name: 'Claude Haiku 5.5 (Xhigh, Default Fallback)' },
+            { effort: 'max', id: '7d064a11-6e78-4030-b535-cdf940615041', name: 'Claude Haiku 5.5 (Max, Default Fallback)' }
         ]
     },
     {
