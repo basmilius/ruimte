@@ -28,8 +28,8 @@ describe('language wire', () => {
     });
 
     test('the requests and events are in the tables', () => {
-        expect(Object.keys(REQUEST_SCHEMAS).filter((type) => type.startsWith('language.'))).toHaveLength(16);
-        expect(Object.keys(EVENT_SCHEMAS).filter((type) => type.startsWith('language.'))).toHaveLength(5);
+        expect(Object.keys(REQUEST_SCHEMAS).filter((type) => type.startsWith('language.'))).toHaveLength(18);
+        expect(Object.keys(EVENT_SCHEMAS).filter((type) => type.startsWith('language.'))).toHaveLength(6);
     });
 
     test('a server of a person needs something to serve, and a language server id is a kind or a custom one', () => {

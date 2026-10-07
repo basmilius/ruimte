@@ -26146,6 +26146,64 @@
               "minLength": 1
             }
           },
+          "sql": {
+            "type": "object",
+            "properties": {
+              "default": {
+                "type": "object",
+                "properties": {
+                  "connectionId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "database": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "connectionId"
+                ]
+              },
+              "files": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "connectionId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "database": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "connectionId"
+                  ]
+                }
+              }
+            }
+          },
           "version": {
             "type": "number",
             "const": 3
@@ -29513,6 +29571,64 @@
             "additionalProperties": {
               "type": "string",
               "minLength": 1
+            }
+          },
+          "sql": {
+            "type": "object",
+            "properties": {
+              "default": {
+                "type": "object",
+                "properties": {
+                  "connectionId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "database": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "connectionId"
+                ]
+              },
+              "files": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "connectionId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "database": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "connectionId"
+                  ]
+                }
+              }
             }
           }
         },
@@ -34673,7 +34789,8 @@
           "bash",
           "docker",
           "eslint",
-          "tailwind"
+          "tailwind",
+          "sql-native"
         ]
       }
     },
@@ -34830,7 +34947,8 @@
           "bash",
           "docker",
           "eslint",
-          "tailwind"
+          "tailwind",
+          "sql-native"
         ]
       }
     },
@@ -34987,7 +35105,8 @@
           "bash",
           "docker",
           "eslint",
-          "tailwind"
+          "tailwind",
+          "sql-native"
         ]
       }
     },
@@ -35927,6 +36046,295 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "request.language.sql.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.language.sql.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sql": {
+        "type": "object",
+        "properties": {
+          "default": {
+            "type": "object",
+            "properties": {
+              "connectionId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "database": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "connectionId"
+            ]
+          },
+          "files": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "connectionId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "database": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "connectionId"
+              ]
+            }
+          }
+        }
+      },
+      "snapshots": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "connectionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "database": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "dialect": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string"
+            },
+            "takenAt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tables": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "connectionId",
+            "database",
+            "dialect",
+            "takenAt",
+            "tables"
+          ]
+        }
+      }
+    },
+    "required": [
+      "sql",
+      "snapshots"
+    ]
+  },
+  "request.language.sql.bind.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "binding": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "connectionId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "database": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "connectionId"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "binding"
+    ]
+  },
+  "request.language.sql.bind.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sql": {
+        "type": "object",
+        "properties": {
+          "default": {
+            "type": "object",
+            "properties": {
+              "connectionId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "database": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "connectionId"
+            ]
+          },
+          "files": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "connectionId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "database": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "connectionId"
+              ]
+            }
+          }
+        }
+      },
+      "snapshots": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "connectionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "database": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "dialect": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string"
+            },
+            "takenAt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tables": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "connectionId",
+            "database",
+            "dialect",
+            "takenAt",
+            "tables"
+          ]
+        }
+      }
+    },
+    "required": [
+      "sql",
+      "snapshots"
+    ]
   },
   "request.ondevice.status.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -37038,6 +37446,32 @@
     ]
   },
   "request.database.passwords.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.database.snapshot.refresh.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "connectionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "schema": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.database.snapshot.refresh.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
@@ -53596,6 +54030,64 @@
               "minLength": 1
             }
           },
+          "sql": {
+            "type": "object",
+            "properties": {
+              "default": {
+                "type": "object",
+                "properties": {
+                  "connectionId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "database": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "connectionId"
+                ]
+              },
+              "files": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "connectionId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "database": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "connectionId"
+                  ]
+                }
+              }
+            }
+          },
           "version": {
             "type": "number",
             "const": 3
@@ -55465,6 +55957,125 @@
       "projectId",
       "editId",
       "edit"
+    ]
+  },
+  "event.language.sql.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sql": {
+        "type": "object",
+        "properties": {
+          "default": {
+            "type": "object",
+            "properties": {
+              "connectionId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "database": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "connectionId"
+            ]
+          },
+          "files": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "connectionId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "database": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "connectionId"
+              ]
+            }
+          }
+        }
+      },
+      "snapshots": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "connectionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "database": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "dialect": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string"
+            },
+            "takenAt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tables": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "connectionId",
+            "database",
+            "dialect",
+            "takenAt",
+            "tables"
+          ]
+        }
+      },
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "sql",
+      "snapshots",
+      "projectId"
     ]
   },
   "event.ondevice.text": {

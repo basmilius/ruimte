@@ -111,8 +111,8 @@ export type DatabaseAgentAccessChangedEvent = z.infer<typeof DatabaseAgentAccess
 
 /*
  * Every password this client holds for the project's connections, by connection id, replacing what it
- * handed over before. The daemon keeps them in memory only, for the agents of the project, until the
- * last client lets the project go.
+ * handed over before. The daemon keeps them in memory only, for the agents and the schema snapshots of
+ * the project, until the last client lets the project go.
  */
 export const DatabasePasswordsPayloadSchema = z.object({
     projectId: ProjectIdSchema,

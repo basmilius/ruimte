@@ -725,6 +725,28 @@ export function storedViewOf(view: ProjectView): unknown {
 export const ProjectFlagsSchema = z.record(z.string().min(1), z.string().min(1));
 export type ProjectFlags = z.infer<typeof ProjectFlagsSchema>;
 
+/*
+ * The connection and database the SQL of a file is read against. A null connection is a person's
+ * choice to read it against no schema at all, whatever the project's default says.
+ */
+export const SqlBindingSchema = z.object({
+    connectionId: z.string().min(1).nullable(),
+    // Absent reads the database the connection starts in.
+    database: z.string().min(1).optional()
+});
+export type SqlBinding = z.infer<typeof SqlBindingSchema>;
+
+/*
+ * One person's choices for the SQL of the project: the default every `.sql` file without a choice of
+ * its own and the SQL in other files is read against, and the choice of each file by its stored path.
+ * Only ever in the private file, since a choice names a connection, and a connection has a secret.
+ */
+export const ProjectSqlSchema = z.object({
+    default: SqlBindingSchema.optional(),
+    files: z.record(z.string().min(1), SqlBindingSchema).optional()
+});
+export type ProjectSql = z.infer<typeof ProjectSqlSchema>;
+
 // What the person edits; the daemon wraps it with the version and the rev.
 export const ProjectContentSchema = z.object({
     name: z.string().min(1),
@@ -735,7 +757,9 @@ export const ProjectContentSchema = z.object({
     views: z.array(ProjectViewSchema),
     /* Only ever in the private file, whatever file the flagged view is in. A save without it keeps
        the flags on disk, which is what a client from before flags amounts to. */
-    flags: ProjectFlagsSchema.optional()
+    flags: ProjectFlagsSchema.optional(),
+    /* Only ever in the private file. A save without it keeps what is on disk: only `language.sql.bind` changes it. */
+    sql: ProjectSqlSchema.optional()
 });
 export type ProjectContent = z.infer<typeof ProjectContentSchema>;
 
@@ -819,7 +843,9 @@ export const ProjectPrivateFileSchema = z.object({
     order: z.array(z.string()),
     overlay: z.record(z.string(), ProjectNodeOverlaySchema).default({}),
     // Absent when nothing is flagged, so a file from before flags reads the same as one without any.
-    flags: ProjectFlagsSchema.optional()
+    flags: ProjectFlagsSchema.optional(),
+    // Absent when nothing was chosen.
+    sql: ProjectSqlSchema.optional()
 });
 export type ProjectPrivateFile = z.infer<typeof ProjectPrivateFileSchema>;
 

@@ -49,6 +49,13 @@ import {
 } from './machine-update.ts';
 import { BytesReadPayloadSchema, BytesReadResultSchema } from './bytes.ts';
 import {
+    DatabaseSnapshotRefreshPayloadSchema,
+    LanguageSqlBindPayloadSchema,
+    LanguageSqlChangedEventSchema,
+    LanguageSqlPayloadSchema,
+    LanguageSqlStateSchema
+} from './sql-binding.ts';
+import {
     AgentResumePayloadSchema,
     ApprovalAnswerPayloadSchema,
     ApprovalAnswerResultSchema,
@@ -338,6 +345,7 @@ export * from './push.ts';
 export * from './snooze.ts';
 export * from './language-patterns.ts';
 export * from './stored-path.ts';
+export * from './sql-binding.ts';
 export * from './task.ts';
 export * from './text.ts';
 export * from './usage.ts';
@@ -473,6 +481,9 @@ export const REQUEST_SCHEMAS = {
     'language.request': { payload: LanguageRequestPayloadSchema, result: LanguageRequestResultSchema },
     'language.command': { payload: LanguageCommandPayloadSchema, result: LanguageCommandResultSchema },
     'language.edit.answer': { payload: LanguageEditAnswerPayloadSchema, result: EmptySchema },
+    'language.sql': { payload: LanguageSqlPayloadSchema, result: LanguageSqlStateSchema },
+    // A person's choice of the connection a file, or the project, reads its SQL against; kept in their private project file.
+    'language.sql.bind': { payload: LanguageSqlBindPayloadSchema, result: LanguageSqlStateSchema },
     'ondevice.status': { payload: EmptySchema, result: OnDeviceStatusResultSchema },
     // The text streams to the asking client as `ondevice.text` while it runs; the result is the whole of it.
     'ondevice.generate': { payload: OnDeviceGeneratePayloadSchema, result: OnDeviceGenerateResultSchema },
@@ -495,6 +506,8 @@ export const REQUEST_SCHEMAS = {
     'database.agentAccess.set': { payload: DatabaseAgentAccessSetPayloadSchema, result: DatabaseAgentAccessMapSchema },
     // The passwords a client holds for the project's connections, kept in memory for its agents.
     'database.passwords': { payload: DatabasePasswordsPayloadSchema, result: EmptySchema },
+    // Takes schema snapshots again with the passwords the clients handed over; answers once they are taken.
+    'database.snapshot.refresh': { payload: DatabaseSnapshotRefreshPayloadSchema, result: EmptySchema },
     'fs.browse': { payload: FsBrowsePayloadSchema, result: FsBrowseResultSchema },
     'fs.reveal': { payload: FsRevealPayloadSchema, result: EmptySchema },
     'fs.search': { payload: FsSearchPayloadSchema, result: FsSearchResultSchema },
@@ -629,6 +642,7 @@ export const EVENT_SCHEMAS = {
     'language.custom.changed': LanguageCustomChangedEventSchema,
     'language.providers': LanguageProvidersEventSchema,
     'language.edit': LanguageEditEventSchema,
+    'language.sql.changed': LanguageSqlChangedEventSchema,
     'ondevice.text': OnDeviceTextEventSchema,
     'launch.status': LaunchStatusSchema,
     'launches.changed': LaunchesChangedEventSchema,

@@ -12,6 +12,7 @@ import {
     type ProjectNode,
     type ProjectNodeOverlay,
     type ProjectPrivateFile,
+    type ProjectSql,
     type ProjectSharedFile,
     type ProjectView
 } from './project.ts';
@@ -226,6 +227,10 @@ function withCarriers(view: ProjectView, map: (id: string, carrier: Carrier) => 
     return view.kind === 'chat' || view.kind === 'terminal' ? { ...view, node: map(view.id, view.node) as typeof view.node } : view;
 }
 
+function isEmptySql(sql: ProjectSql): boolean {
+    return sql.default === undefined && Object.keys(sql.files ?? {}).length === 0;
+}
+
 /* What the two files hold, worked out from one document. */
 export interface ProjectSplit {
     shared: ProjectSharedFile;
@@ -268,7 +273,8 @@ export function splitContent(content: ProjectContent, shared: readonly string[],
             views: rest,
             order: content.views.map((view) => view.id),
             overlay,
-            ...(Object.keys(flags).length > 0 ? { flags } : {})
+            ...(Object.keys(flags).length > 0 ? { flags } : {}),
+            ...(content.sql && !isEmptySql(content.sql) ? { sql: content.sql } : {})
         }
     };
 }
@@ -339,7 +345,8 @@ export function mergeFiles(
             color: shared?.color ?? fallback.color,
             ...(shared?.icon ? { icon: shared.icon } : {}),
             views: orderedViews(sharedViews, file.views, file.order),
-            ...(file.flags ? { flags: file.flags } : {})
+            ...(file.flags ? { flags: file.flags } : {}),
+            ...(file.sql ? { sql: file.sql } : {})
         },
         shared: sharedViews.map((view) => view.id)
     };

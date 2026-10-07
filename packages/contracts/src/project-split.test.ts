@@ -181,6 +181,14 @@ describe('splitContent', () => {
         expect(split.private.flags).toEqual({ main: 'ultraviolet' });
     });
 
+    test('the SQL choices stay in the private file, since they name connections, and none leave no key behind', () => {
+        const sql = { default: { connectionId: 'shop' }, files: { 'db/report.sql': { connectionId: 'stats', database: 'warehouse' } } };
+        const split = splitContent({ ...content([canvas('main')]), sql }, ['main'], 1);
+        expect(split.private.sql).toEqual(sql);
+        expect(JSON.stringify(split.shared)).not.toContain('shop');
+        expect('sql' in splitContent({ ...content([canvas('main')]), sql: {} }, [], 1).private).toBe(false);
+    });
+
     test('an id in the list that names no view of this project is ignored', () => {
         const split = splitContent(content([canvas('main')]), ['main', 'ghost'], 1);
         expect(split.shared.views.map((view) => view.id)).toEqual(['main']);
@@ -220,6 +228,12 @@ describe('mergeFiles', () => {
     test('the flags come back over both files', () => {
         const before = { ...content([canvas('main', [node('n1')]), chatView('c1')]), flags: { main: 'red', n1: 'blue', c1: 'green' } };
         const split = splitContent(before, ['main'], 2);
+        expect(mergeFiles(split.shared, split.private, fallback).content).toEqual(before);
+    });
+
+    test('the SQL choices come back from the private file', () => {
+        const before = { ...content([canvas('main')]), sql: { files: { 'a.sql': { connectionId: null } } } };
+        const split = splitContent(before, [], 2);
         expect(mergeFiles(split.shared, split.private, fallback).content).toEqual(before);
     });
 

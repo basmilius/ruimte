@@ -23,7 +23,8 @@ export const LanguageServerKindSchema = z.enum([
     'bash',
     'docker',
     'eslint',
-    'tailwind'
+    'tailwind',
+    'sql-native'
 ]);
 export type LanguageServerKind = z.infer<typeof LanguageServerKindSchema>;
 
