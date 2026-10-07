@@ -145,6 +145,18 @@ describe('the connections of a project', () => {
         expect(model.store.getState().local).toBeNull();
     });
 
+    test('a saved connection that became a draft stays on the machine as it was until it is whole again', async () => {
+        const { model, fake } = await opened({ rev: 1, connections: [SHOP] });
+        const cleared: DatabaseConnection = { ...SHOP, config: { ...SHOP.config, host: '' } };
+        await model.edit([cleared]);
+        expect(fake.document().connections).toEqual([SHOP]);
+        expect(model.store.getState().local).toEqual([cleared]);
+        const moved: DatabaseConnection = { ...SHOP, config: { ...SHOP.config, host: 'db.internal' } };
+        await model.edit([moved]);
+        expect(fake.document().connections).toEqual([moved]);
+        expect(model.store.getState().local).toBeNull();
+    });
+
     test('a save that finds the list moved on reads it again and says so, writing nothing over it', async () => {
         const { model, fake, notes } = await opened({ rev: 1, connections: [SHOP] });
         fake.hold();
@@ -222,6 +234,13 @@ describe('what may be saved and shared', () => {
         expect(isSavable({ ...SHOP, config: { engine: 'sqlite', path: '' } })).toBe(false);
         expect(isSavable({ ...SHOP, config: { engine: 'sqlite', path: 'cache.db' } })).toBe(false);
         expect(isSavable({ ...SHOP, config: { engine: 'sqlite', path: '/repo/cache.db' } })).toBe(true);
+    });
+
+    test('a server needs what the form asks for before the machine takes it', () => {
+        expect(isSavable({ ...SHOP, config: { ...SHOP.config, host: '' } })).toBe(false);
+        expect(isSavable({ ...SHOP, config: { ...SHOP.config, port: 70_000 } })).toBe(false);
+        expect(isSavable({ ...SHOP, config: { ...SHOP.config, tunnel: { kind: 'docker', container: '' } } })).toBe(false);
+        expect(isSavable({ ...SHOP, id: '' })).toBe(false);
     });
 
     test('a SQLite file outside the project folder cannot be shared', () => {

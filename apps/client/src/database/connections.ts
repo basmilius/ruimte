@@ -1,4 +1,4 @@
-import type { Connection } from '@adecore/database';
+import { isValidConfig, type Connection } from '@adecore/database';
 import i18next from 'i18next';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import {
@@ -63,9 +63,10 @@ const INITIAL: DatabaseConnectionsState = {
     agentAccess: {}
 };
 
-/* What the machine takes: a SQLite connection needs a whole path first, which a new one does not have yet. */
+/* What can be saved, rather than a draft a person is still filling in: a new SQLite connection without a whole path, or a host cleared to type another. */
 export function isSavable(connection: DatabaseConnection): boolean {
-    return connection.id !== '' && (connection.config.engine !== 'sqlite' || (connection.config.path !== '' && isAbsolutePath(connection.config.path)));
+    const [view] = asViewConnections([connection]);
+    return connection.id !== '' && view !== undefined && isValidConfig(view.config);
 }
 
 /* Whether a connection cannot go into the shared file: a SQLite file outside the project folder, which the machine refuses to share. */
@@ -233,7 +234,8 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         saving = true;
         const sent = version;
         const local = state.local;
-        const sending = local.filter(isSavable);
+        // A draft goes as it was last saved, so a field cleared to type another keeps the connection on the machine meanwhile.
+        const sending = local.flatMap((connection) => (isSavable(connection) ? [connection] : state.saved.filter((saved) => saved.id === connection.id)));
         try {
             await writeSecrets(
                 of,
@@ -243,7 +245,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
             if (target !== of) {
                 return;
             }
-            const settled = version === sent && sending.length === local.length;
+            const settled = version === sent && local.every(isSavable);
             store.setState({ rev: answer.rev, saved: answer.connections, saveError: null, ...(settled ? { local: null } : {}) });
             await handPasswords(of);
         } catch (error: unknown) {
