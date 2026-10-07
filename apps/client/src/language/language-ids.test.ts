@@ -10,6 +10,7 @@ describe('the language a file opens with', () => {
     test('knows the languages of the catalog by the highlighter id of the file', () => {
         expect(lspLanguageIdOf('css')).toBe('css');
         expect(lspLanguageIdOf('docker')).toBe('dockerfile');
+        expect(lspLanguageIdOf('sql')).toBe('sql');
         expect(lspLanguageIdOf('shellscript')).toBe('shellscript');
         expect(lspLanguageIdOf('twig')).toBe('twig');
         expect(lspLanguageIdOf('zig')).toBeNull();

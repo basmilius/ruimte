@@ -1,5 +1,6 @@
 import { matchesFilePattern, type LanguageServerKind, type LanguageServerStatus } from '@ruimte/contracts';
-export { lspLanguageIdOf, shikiLanguageOf, shikiLanguageOfPath } from '@adecore/editor-react';
+import { lspLanguageIdOf as sharedLspLanguageIdOf } from '@adecore/editor-react';
+export { shikiLanguageOf, shikiLanguageOfPath } from '@adecore/editor-react';
 
 const SERVER_KINDS: Record<string, LanguageServerKind> = {
     typescript: 'typescript',
@@ -20,6 +21,11 @@ const SERVER_KINDS: Record<string, LanguageServerKind> = {
     dockerfile: 'docker',
     sql: 'sql-native'
 };
+
+// TODO(Bas): drop once @adecore/editor-react maps `sql` itself (basmilius/adecore#43).
+export function lspLanguageIdOf(language: string | undefined): string | null {
+    return language === 'sql' ? 'sql' : sharedLspLanguageIdOf(language);
+}
 
 export function customLanguageIdOf(statuses: readonly LanguageServerStatus[], language: string | undefined, storedPath: string): string | null {
     for (const status of statuses) {
