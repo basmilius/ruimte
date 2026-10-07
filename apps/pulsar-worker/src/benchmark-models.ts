@@ -87,10 +87,23 @@ export const BENCHMARK_MODELS: readonly BenchmarkSource[] = [
         ]
     },
     {
+        slug: 'claude-haiku-5-5',
+        name: 'Claude Haiku 5.5',
+        provider: 'claude',
+        legacy: false,
+        efforts: [
+            { effort: 'low', id: null, name: null },
+            { effort: 'medium', id: null, name: null },
+            { effort: 'high', id: null, name: null },
+            { effort: 'xhigh', id: null, name: null },
+            { effort: 'max', id: null, name: null }
+        ]
+    },
+    {
         slug: 'claude-haiku-4-5',
         name: 'Claude Haiku 4.5',
         provider: 'claude',
-        legacy: false,
+        legacy: true,
         efforts: [
             { effort: 'off', id: 'c2b1e769-7aee-4669-8076-73918bdebf6c', name: 'Claude 4.5 Haiku (Non-reasoning)' },
             { effort: 'thinking', id: 'a6340098-d7ae-462d-b372-0a0a67fc44b4', name: 'Claude 4.5 Haiku (Reasoning)' }
