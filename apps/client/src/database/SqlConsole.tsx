@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Unplug } from 'lucide-react';
+import { ChevronDown, Database } from 'lucide-react';
 import type { Editor } from '@adecore/editor';
-import { QueryConsole, useDatabaseClient, type Connection, type QueryConsoleEditorProps, type QueryConsoleRunScope } from '@adecore/database';
-import type { SchemaInfo } from '@adecore/database/protocol';
-import { Button, EmptyState, matchesShortcut, Select, shortcut } from '@adecore/ui';
-import { asViewConnections, ensureDatabaseConnections, useDatabaseConnectionList, useDatabaseConnections } from '@/database/connections';
+import { QueryConsole, type QueryConsoleEditorProps, type QueryConsoleRunScope } from '@adecore/database';
+import { Button, Icon, matchesShortcut, Menu, Select, shortcut } from '@adecore/ui';
+import { asViewConnections, ensureDatabaseConnections, useDatabaseConnectionList } from '@/database/connections';
+import { setConsoleSchema, switchConsoleConnection } from '@/database/console-file';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
+import { useDatabasePanel } from '@/database/state';
 import { isApplePlatform } from '@/desktop/bridge';
 import { useFiles, type ConsoleBinding } from '@/state/files';
 
@@ -25,7 +26,8 @@ function useEditorText(editor: Editor | null, fallback: string): string {
 
 interface SqlConsoleProps {
     tabKey: string;
-    binding: ConsoleBinding;
+    /* Where the file runs, or undefined while it is the file alone. */
+    binding: ConsoleBinding | undefined;
     /* The file's editor once it is there, which a run reads the selection from. */
     editor: Editor | null;
     /* What the file read as, for a run before the editor is there. */
@@ -36,15 +38,16 @@ interface SqlConsoleProps {
 }
 
 /*
- * A `.sql` file in its tab, run on a connection: the console's toolbar, history and results around the file's
- * own editor, which keeps its keymap, find, saving and language features. The text is the file's, so a run
- * runs what the file holds and a run from the history is an edit of the file.
+ * A `.sql` file in its tab, as a console: the console's bar, history and results around the file's own editor,
+ * which keeps its keymap, find, saving and language features. The text is the file's, so a run runs what the
+ * file holds and a run from the history is an edit of the file. The connection and the schema are picked in the
+ * console's own bar and kept on the tab. A file that runs nowhere yet, or whose connection left the project, has
+ * the bar with only Run on a connection; the editor stays where it is when it gets one.
  */
 export function SqlConsole({ tabKey, binding, editor, text, readOnly, children }: SqlConsoleProps) {
-    const { t } = useTranslation('databases');
     const connections = useDatabaseConnectionList();
-    const status = useDatabaseConnections((state) => state.status);
-    const found = connections.find((connection) => connection.id === binding.connectionId);
+    const found = connections.find((connection) => connection.id === binding?.connectionId);
+    const [connection] = found === undefined ? [] : asViewConnections([found]);
     const value = useEditorText(editor, text);
 
     useEffect(() => ensureDatabaseConnections(), []);
@@ -58,32 +61,17 @@ export function SqlConsole({ tabKey, binding, editor, text, readOnly, children }
         editor.focus();
     };
 
-    if (found === undefined) {
-        // While the list is read a console cannot know yet whether its connection is still there.
-        return status === 'ready' ? (
-            <EmptyState
-                icon={Unplug}
-                className="grow"
-                action={
-                    <Button size="sm" variant="secondary" onClick={() => useFiles.getState().setConsole(tabKey, null)}>
-                        {t('console.asFile')}
-                    </Button>
-                }
-            >
-                {t('console.gone')}
-            </EmptyState>
-        ) : null;
-    }
-    const [connection] = asViewConnections([found]);
-    if (connection === undefined) {
-        return null;
-    }
-
     return (
         <RuimteDatabaseProvider>
             <QueryConsole
                 connection={connection}
-                schema={binding.schema}
+                schema={binding?.schema}
+                onSchemaChange={(schema) => {
+                    if (binding !== undefined) {
+                        setConsoleSchema(tabKey, binding, schema);
+                    }
+                }}
+                toolbarEnd={connection === undefined ? <RunOnConnection path={tabKey} /> : <SqlConsolePicker path={tabKey} binding={binding} />}
                 value={value}
                 onValueChange={replaceText}
                 renderEditor={(props) => (
@@ -94,6 +82,37 @@ export function SqlConsole({ tabKey, binding, editor, text, readOnly, children }
                 className="min-h-0 grow"
             />
         </RuimteDatabaseProvider>
+    );
+}
+
+/* What a file that runs nowhere has in its bar: the connections of the project to run it on, or a way to add one. */
+function RunOnConnection({ path }: { path: string }) {
+    const { t } = useTranslation('databases');
+    const connections = useDatabaseConnectionList();
+
+    if (connections.length === 0) {
+        return (
+            <Button size="sm" variant="secondary" onClick={() => useDatabasePanel.getState().openConnections()}>
+                <Icon icon={Database} size={12} />
+                {t('console.runOn')}
+            </Button>
+        );
+    }
+    return (
+        <Menu.Root>
+            <Menu.Trigger render={<Button size="sm" variant="secondary" />}>
+                <Icon icon={Database} size={12} />
+                {t('console.runOn')}
+                <Icon icon={ChevronDown} size={12} />
+            </Menu.Trigger>
+            <Menu.Popup align="end">
+                {connections.map((entry) => (
+                    <Menu.Item key={entry.id} onClick={() => void switchConsoleConnection(path, entry.id)}>
+                        {entry.name === '' ? t('console.untitled') : entry.name}
+                    </Menu.Item>
+                ))}
+            </Menu.Popup>
+        </Menu.Root>
     );
 }
 
@@ -143,15 +162,10 @@ function ConsoleEditor({ ref, run, value, editor, children }: QueryConsoleEditor
     return children;
 }
 
-/*
- * The connection and the schema a `.sql` file runs on, in its toolbar. Picking a connection puts the tab in
- * console mode, and picking none takes it back to the file alone.
- */
-export function SqlConsolePicker({ tabKey, binding }: { tabKey: string; binding: ConsoleBinding | undefined }) {
+/* The connection a console runs on, in its bar: another one runs it there, and Just the file takes the bar back to Run on a connection. */
+function SqlConsolePicker({ path, binding }: { path: string; binding: ConsoleBinding | undefined }) {
     const { t } = useTranslation('databases');
     const connections = useDatabaseConnectionList();
-    const found = connections.find((connection) => connection.id === binding?.connectionId);
-    const [connection] = found === undefined ? [] : asViewConnections([found]);
 
     useEffect(() => ensureDatabaseConnections(), []);
 
@@ -159,56 +173,22 @@ export function SqlConsolePicker({ tabKey, binding }: { tabKey: string; binding:
         return null;
     }
     return (
-        <>
-            <Select
-                size="sm"
-                variant="ghost"
-                label={t('console.runOn')}
-                placeholder={t('console.runOn')}
-                value={binding?.connectionId ?? null}
-                items={[
-                    ...(binding === undefined ? [] : [{ value: AS_FILE, label: t('console.asFile') }]),
-                    ...connections.map((entry) => ({ value: entry.id, label: entry.name === '' ? t('console.untitled') : entry.name }))
-                ]}
-                onValueChange={(id) => useFiles.getState().setConsole(tabKey, id === AS_FILE ? null : { connectionId: id })}
-            />
-            {binding !== undefined && connection !== undefined && (
-                <RuimteDatabaseProvider>
-                    <SchemaSelect tabKey={tabKey} binding={binding} connection={connection} />
-                </RuimteDatabaseProvider>
-            )}
-        </>
-    );
-}
-
-/* The schemas a person can pick, once the connection has listed them; a connection with one, such as a SQLite file, offers no choice. */
-function SchemaSelect({ tabKey, binding, connection }: { tabKey: string; binding: ConsoleBinding; connection: Connection }) {
-    const { t } = useTranslation('databases');
-    const client = useDatabaseClient();
-    const [schemas, setSchemas] = useState<readonly SchemaInfo[]>([]);
-
-    useEffect(() => {
-        const controller = new AbortController();
-        client
-            .session(connection)
-            .schemas({ signal: controller.signal })
-            .then((listed) => setSchemas(listed.filter((schema) => !schema.system)))
-            .catch(() => setSchemas([]));
-        return () => controller.abort();
-    }, [client, connection]);
-
-    if (schemas.length < 2) {
-        return null;
-    }
-    return (
         <Select
             size="sm"
-            variant="ghost"
-            label={t('console.schema')}
-            placeholder={t('console.defaultSchema')}
-            value={binding.schema ?? null}
-            items={schemas.map((schema) => ({ value: schema.name, label: schema.name }))}
-            onValueChange={(schema) => useFiles.getState().setConsole(tabKey, { connectionId: binding.connectionId, schema })}
+            label={t('console.runOn')}
+            placeholder={t('console.runOn')}
+            value={binding?.connectionId ?? null}
+            items={[
+                ...(binding === undefined ? [] : [{ value: AS_FILE, label: t('console.asFile') }]),
+                ...connections.map((entry) => ({ value: entry.id, label: entry.name === '' ? t('console.untitled') : entry.name }))
+            ]}
+            onValueChange={(id) => {
+                if (id === AS_FILE) {
+                    useFiles.getState().setConsole(path, null);
+                } else {
+                    void switchConsoleConnection(path, id);
+                }
+            }}
         />
     );
 }

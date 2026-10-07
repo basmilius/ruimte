@@ -40,7 +40,6 @@ import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 
 const SqlConsole = lazyNamed(() => import('@/database/SqlConsole'), 'SqlConsole');
-const SqlConsolePicker = lazyNamed(() => import('@/database/SqlConsole'), 'SqlConsolePicker');
 
 // One screen of code, near enough. Small enough to highlight without a stutter, large enough that a
 // long file is a handful of blocks instead of thousands.
@@ -333,11 +332,6 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                     </Tooltip>
                 )}
                 {toolbarExtra}
-                {sqlTab !== null && (
-                    <Suspense fallback={null}>
-                        <SqlConsolePicker tabKey={sqlTab} binding={binding} />
-                    </Suspense>
-                )}
             </FileToolbar>
             <DraftBar endpointId={editing.endpointId} path={path} />
             {agentChanges.review !== null && <ReviewBar review={agentChanges.review} />}
@@ -348,10 +342,10 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                     </Button>
                 </EditorNotice>
             )}
-            {sqlTab === null || binding === undefined ? (
+            {sqlTab === null ? (
                 editorArea
             ) : (
-                <ErrorBoundary label={t('databases:console.failedToDraw')} resetKeys={[binding.connectionId]} className="min-h-0 grow">
+                <ErrorBoundary label={t('databases:console.failedToDraw')} resetKeys={[binding?.connectionId]} className="min-h-0 grow">
                     <Suspense fallback={null}>
                         <SqlConsole tabKey={sqlTab} binding={binding} editor={editor} text={read.text} readOnly={readOnlyReason !== null}>
                             {editorArea}

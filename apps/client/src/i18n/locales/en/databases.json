@@ -20,12 +20,14 @@
         "runOn": "Run on a connection",
         "asFile": "Just the file",
         "untitled": "Untitled connection",
-        "schema": "Schema",
-        "defaultSchema": "Default schema",
-        "gone": "The connection this console ran on is no longer in the project.",
         "failed": "The console could not be made",
         "failedToDraw": "This console failed to render",
-        "taken": "Every console name for {{name}} is taken."
+        "taken": "Every console name for {{name}} is taken.",
+        "moveFailed": "The console could not move to that connection",
+        "rename": {
+            "description": "Type a new name for the console. It stays with its connection.",
+            "noFolders": "A console name has no folders in it."
+        }
     },
     "panel": {
         "newConsole": "New console",
@@ -35,7 +37,8 @@
         "empty": "This project has no database connections yet.",
         "add": "Add connection",
         "containers": "Running database containers",
-        "addContainer": "Add {{name}}"
+        "addContainer": "Add {{name}}",
+        "consoles": "Consoles"
     },
     "dialog": {
         "title": "Database connections",

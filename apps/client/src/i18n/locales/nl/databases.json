@@ -20,12 +20,14 @@
         "runOn": "Uitvoeren op een verbinding",
         "asFile": "Alleen het bestand",
         "untitled": "Naamloze verbinding",
-        "schema": "Schema",
-        "defaultSchema": "Standaardschema",
-        "gone": "De verbinding van deze console hoort niet meer bij het project.",
         "failed": "De console kon niet worden gemaakt",
         "failedToDraw": "Deze console kon niet worden getekend",
-        "taken": "Elke consolenaam voor {{name}} is al in gebruik."
+        "taken": "Elke consolenaam voor {{name}} is al in gebruik.",
+        "moveFailed": "De console kon niet naar die verbinding",
+        "rename": {
+            "description": "Typ een nieuwe naam voor de console. Hij blijft bij zijn verbinding.",
+            "noFolders": "Een consolenaam bevat geen mappen."
+        }
     },
     "panel": {
         "newConsole": "Nieuwe console",
@@ -35,7 +37,8 @@
         "empty": "Dit project heeft nog geen databaseverbindingen.",
         "add": "Verbinding toevoegen",
         "containers": "Draaiende databasecontainers",
-        "addContainer": "{{name}} toevoegen"
+        "addContainer": "{{name}} toevoegen",
+        "consoles": "Consoles"
     },
     "dialog": {
         "title": "Databaseverbindingen",

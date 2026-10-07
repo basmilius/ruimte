@@ -15,15 +15,16 @@ import {
 import { containersFor } from '@/database/docker';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
 import { openNewConsole } from '@/database/console-file';
+import { useConsoleFolders } from '@/database/console-folders';
 import { useDatabasePanel } from '@/database/state';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useProject } from '@/state/project';
 
 /*
- * The connections of the project, with their schemas, tables and columns. A table opens in the files
- * cell on a click, the way a file does in the files panel, and a double click keeps its tab. The keyboard
- * stays in the tree, since the next arrow key is the tree's.
+ * The connections of the project, with their schemas, tables and columns, and the consoles of each. A table
+ * or a console opens in the files cell on a click, the way a file does in the files panel, and a double click
+ * keeps its tab. The keyboard stays in the tree, since the next arrow key is the tree's.
  */
 export function DatabasesPanel() {
     useEffect(() => ensureDatabaseConnections(), []);
@@ -42,6 +43,7 @@ function DatabasesPanelBody() {
     const error = useDatabaseConnections((state) => state.error);
     const connections = useDatabaseConnectionList();
     const selection = useDatabasePanel((state) => state.selection);
+    const consoles = useConsoleFolders();
 
     const header = (
         <PanelHeaderSlot>
@@ -94,8 +96,10 @@ function DatabasesPanelBody() {
                 value={selection}
                 onValueChange={(next) => useDatabasePanel.getState().setSelection(next)}
                 openOnClick
+                folders={consoles.folders}
                 className="min-h-0 grow"
             />
+            {consoles.dialogs}
         </>
     );
 }
