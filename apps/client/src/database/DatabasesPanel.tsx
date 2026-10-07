@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CircleAlert, Container, Database, Plus, Settings2, SquareTerminal } from 'lucide-react';
-import { DatabaseExplorer, useDatabaseClient } from '@adecore/database';
+import { connectionFromContainer, containerTitle, DatabaseExplorer, useDatabaseClient } from '@adecore/database';
 import type { DockerContainer } from '@adecore/database/protocol';
 import { Button, ButtonGroup, Icon, IconButton, ListRow, PanelEmpty, SectionLabel } from '@adecore/ui';
-import { asViewConnections, databaseConnections, ensureDatabaseConnections, useDatabaseConnectionList, useDatabaseConnections } from '@/database/connections';
-import { containerConnection, containersFor, containerTitle } from '@/database/docker';
+import {
+    asViewConnections,
+    databaseConnections,
+    ensureDatabaseConnections,
+    fromViewConnections,
+    useDatabaseConnectionList,
+    useDatabaseConnections
+} from '@/database/connections';
+import { containersFor } from '@/database/docker';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
 import { openNewConsole, useDatabaseTabs } from '@/database/state';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
@@ -116,7 +123,7 @@ function NoConnections() {
     const offered = containersFor(containers, folder === null ? null : basenameOf(folder));
 
     const add = (container: DockerContainer): void => {
-        void databaseConnections.edit([containerConnection(crypto.randomUUID(), container)]);
+        void databaseConnections.edit(fromViewConnections([connectionFromContainer(crypto.randomUUID(), container)]));
     };
 
     return (
