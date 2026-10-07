@@ -970,9 +970,15 @@ export const ProjectViewLocalSchema = z.object({
 });
 export type ProjectViewLocal = z.infer<typeof ProjectViewLocalSchema>;
 
-/* One cell shows exactly one view, and a view stands in at most one cell. */
+/*
+ * A cell shows one view, or several as tabs. A view stands in at most one cell and, in a tab host,
+ * at most one tab of it.
+ */
 export const SplitCellSchema = z.object({
+    // The view that is drawn: the active tab of a host, and all an older client reads.
     viewId: z.string().min(1),
+    // Present means the cell is a tab host: its views in order, `viewId` among them. Absent is a plain cell.
+    tabs: z.array(z.string().min(1)).min(1).optional(),
     // Share of its column's height; the cells of a column sum to 1.
     size: z.number().positive()
 });

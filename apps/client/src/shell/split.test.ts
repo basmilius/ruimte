@@ -1,40 +1,72 @@
 import { describe, expect, test } from 'bun:test';
-import type { ProjectView, SplitLayout } from '@ruimte/contracts';
+import type { ProjectView, SplitCell, SplitLayout } from '@ruimte/contracts';
 import { draggedSizes, EVEN_SNAP_PX, evenCells, evenColumns, maximizedCell, snapToEven } from './split';
 import {
+    activateTab,
+    canDropAsTab,
     canSplit,
     cellAt,
     cellCount,
     cellsRightOf,
+    cellViewIds,
     cleanLayout,
     closeCell,
     closeCellsRightOf,
     closeOtherCells,
+    closeTab,
+    dropAsTab,
     dropView,
     focusCell,
     focusDirection,
     focusedViewId,
+    freeViewFor,
     isSameCell,
+    isTabHost,
     layoutOf,
     locateView,
+    moveCell,
+    moveTabBy,
     openableViewIds,
+    replaceViewId,
     showViewIn,
+    shownViewIdsIn,
     singleLayout,
+    ungroup,
     undoShowView,
     viewIdsIn,
     type CellAt,
     type SplitDirection
 } from './split';
 
-/* A layout the way a test reads it: columns of view ids, every share even. */
+/* A cell the way a test writes it: `a` is a plain cell, `[a *b c]` a host with three tabs and `b` active (the first when none is starred). */
+function cellOf(spec: string, size: number): SplitCell {
+    if (!spec.startsWith('[')) {
+        return { viewId: spec, size };
+    }
+    const entries = spec.slice(1, -1).split(' ');
+    const tabs = entries.map((entry) => entry.replace('*', ''));
+    const active = entries.find((entry) => entry.startsWith('*'));
+    return { viewId: active === undefined ? tabs[0] : active.slice(1), tabs, size };
+}
+
+function textOf(cell: SplitCell): string {
+    return cell.tabs === undefined ? cell.viewId : `[${cell.tabs.map((id) => (id === cell.viewId ? `*${id}` : id)).join(' ')}]`;
+}
+
+/* A layout the way a test reads it: columns of cell specs, every share even. */
 function gridOf(columns: string[][], focus: CellAt = { column: 0, cell: 0 }): SplitLayout {
     return {
         columns: columns.map((cells) => ({
             size: 1 / columns.length,
-            cells: cells.map((viewId) => ({ viewId, size: 1 / cells.length }))
+            cells: cells.map((spec) => cellOf(spec, 1 / cells.length))
         })),
         focus
     };
+}
+
+/* The same notation back, tabs and active tab included. */
+function tabShapeOf(layout: SplitLayout): string[][] {
+    return layout.columns.map((column) => column.cells.map(textOf));
 }
 
 function shapeOf(layout: SplitLayout): string[][] {
@@ -563,5 +595,428 @@ describe('draggedSizes', () => {
     test('a mirrored drag stops where an item would get too small', () => {
         expect(rounded(draggedSizes([0.3, 0.4, 0.3], 1, 0.5, 1000, true))).toEqual([0.425, 0.15, 0.425]);
         expect(rounded(draggedSizes([0.3, 0.4, 0.3], 1, -0.5, 1000, true))).toEqual([0.15, 0.7, 0.15]);
+    });
+});
+
+const first: CellAt = { column: 0, cell: 0 };
+const second: CellAt = { column: 1, cell: 0 };
+
+describe('tab hosts as a model', () => {
+    test('a cell is a host when it has tabs, and lists its tabs or only its view', () => {
+        const layout = gridOf([['a'], ['[b *c]']]);
+        expect(isTabHost(cellAt(layout, first)!)).toBe(false);
+        expect(isTabHost(cellAt(layout, second)!)).toBe(true);
+        expect(cellViewIds(cellAt(layout, first)!)).toEqual(['a']);
+        expect(cellViewIds(cellAt(layout, second)!)).toEqual(['b', 'c']);
+    });
+
+    test('a view is placed in a background tab, but only the active views are shown', () => {
+        const layout = gridOf([['a'], ['[b *c]']]);
+        expect(viewIdsIn(layout)).toEqual(['a', 'b', 'c']);
+        expect(shownViewIdsIn(layout)).toEqual(['a', 'c']);
+        expect(locateView(layout, 'b')).toEqual(second);
+        expect(focusedViewId(gridOf([['[a *b]']]))).toBe('b');
+    });
+
+    test('a view in a background tab is taken for a split and for a maximized view', () => {
+        const layout = gridOf([['[*a b]'], ['c']]);
+        const views = [viewOf('a'), viewOf('b'), viewOf('c'), viewOf('d')];
+        expect(freeViewFor({ views, layout, activeViewId: 'a' })).toBe('d');
+        expect(maximizedCell(layout, 'b')).toEqual(first);
+    });
+
+    test('closing the others keeps the host with its tabs', () => {
+        const layout = closeOtherCells(gridOf([['a'], ['[b *c]']]), second);
+        expect(tabShapeOf(layout)).toEqual([['[b *c]']]);
+        sums(layout);
+    });
+});
+
+describe('activateTab', () => {
+    test('the cell takes the focus and the view becomes its active tab', () => {
+        const layout = activateTab(gridOf([['a'], ['[b *c]']]), 'b');
+        expect(tabShapeOf(layout)).toEqual([['a'], ['[*b c]']]);
+        expect(layout.focus).toEqual(second);
+    });
+
+    test('a view that is not there changes nothing', () => {
+        const layout = gridOf([['a']]);
+        expect(activateTab(layout, 'x')).toBe(layout);
+    });
+});
+
+describe('showViewIn rules', () => {
+    test('1: a placed view takes its cell into focus and becomes the active tab', () => {
+        const layout = gridOf([['a'], ['[b *c]']]);
+        const shown = showViewIn(layout, 'b', { newTab: true, loose: true })!;
+        expect(tabShapeOf(shown.layout)).toEqual([['a'], ['[*b c]']]);
+        expect(shown.at).toEqual(second);
+        expect(shown.from).toEqual(first);
+        expect(shown.replaced).toBeNull();
+        expect(shown.tab).toBeUndefined();
+        expect(tabShapeOf(undoShowView(shown.layout, shown))).toEqual([['a'], ['[*b c]']]);
+        expect(undoShowView(shown.layout, shown).focus).toEqual(first);
+    });
+
+    test('1: the active view of the focused cell is nothing to show, a background tab of it is not', () => {
+        const layout = gridOf([['a'], ['[b *c]']], second);
+        expect(showViewIn(layout, 'c')).toBeNull();
+        expect(tabShapeOf(showViewIn(layout, 'b')!.layout)).toEqual([['a'], ['[*b c]']]);
+    });
+
+    test('2: a focused host takes the view as a new tab right of the active one', () => {
+        const layout = gridOf([['a'], ['[b *c d]']], second);
+        const shown = showViewIn(layout, 'x')!;
+        expect(tabShapeOf(shown.layout)).toEqual([['a'], ['[b c *x d]']]);
+        expect(shown.layout.focus).toEqual(second);
+        expect(shown.replaced).toBeNull();
+        const back = undoShowView(shown.layout, shown);
+        expect(tabShapeOf(back)).toEqual([['a'], ['[b *c d]']]);
+        expect(back.focus).toEqual(second);
+    });
+
+    test('2: it comes before every other rule', () => {
+        const layout = gridOf([['[a *b]'], ['[c *d]']], first);
+        const shown = showViewIn(layout, 'x', { loose: true, newTab: true, host: 'c' })!;
+        expect(tabShapeOf(shown.layout)).toEqual([['[a b *x]'], ['[c *d]']]);
+    });
+
+    test('3: a new tab turns the focused plain cell into a host and undo makes it plain again', () => {
+        const layout = gridOf([['a'], ['b']], second);
+        const shown = showViewIn(layout, 'x', { newTab: true })!;
+        expect(tabShapeOf(shown.layout)).toEqual([['a'], ['[b *x]']]);
+        expect(shown.at).toEqual(second);
+        const back = undoShowView(shown.layout, shown);
+        expect(tabShapeOf(back)).toEqual([['a'], ['b']]);
+        expect(cellAt(back, second)!.tabs).toBeUndefined();
+    });
+
+    test('4: a loose view goes to the first host in reading order and that host takes the focus', () => {
+        const layout = gridOf([['a', '[b *c]'], ['[d *e]']], first);
+        const shown = showViewIn(layout, 'x', { loose: true })!;
+        expect(tabShapeOf(shown.layout)).toEqual([['a', '[b c *x]'], ['[d *e]']]);
+        expect(shown.at).toEqual({ column: 0, cell: 1 });
+        expect(shown.layout.focus).toEqual({ column: 0, cell: 1 });
+        expect(shown.from).toEqual(first);
+        const back = undoShowView(shown.layout, shown);
+        expect(tabShapeOf(back)).toEqual([['a', '[b *c]'], ['[d *e]']]);
+        expect(back.focus).toEqual(first);
+    });
+
+    test('4: the host of the named view wins, but only when that view stands in a host', () => {
+        const layout = gridOf([['a'], ['[b *c]'], ['[d *e]']], first);
+        expect(tabShapeOf(showViewIn(layout, 'x', { loose: true, host: 'd' })!.layout)).toEqual([['a'], ['[b *c]'], ['[d e *x]']]);
+        expect(tabShapeOf(showViewIn(layout, 'x', { loose: true, host: 'a' })!.layout)).toEqual([['a'], ['[b c *x]'], ['[d *e]']]);
+    });
+
+    test('5: a loose view without a host replaces the focused cell by a host of its own', () => {
+        const layout = gridOf([['a'], ['b']], second);
+        const shown = showViewIn(layout, 'x', { loose: true })!;
+        expect(tabShapeOf(shown.layout)).toEqual([['a'], ['[*x]']]);
+        expect(shown.replaced).toBe('b');
+        expect(shown.at).toEqual(second);
+        const back = undoShowView(shown.layout, shown);
+        expect(tabShapeOf(back)).toEqual([['a'], ['b']]);
+        expect(cellAt(back, second)!.tabs).toBeUndefined();
+        sums(shown.layout);
+    });
+
+    test('6: otherwise it replaces the view in the focused cell, even with a host elsewhere', () => {
+        const layout = gridOf([['a'], ['[b *c]']], first);
+        const shown = showViewIn(layout, 'x')!;
+        expect(tabShapeOf(shown.layout)).toEqual([['x'], ['[b *c]']]);
+        expect(shown.replaced).toBe('a');
+        expect(tabShapeOf(undoShowView(shown.layout, shown))).toEqual([['a'], ['[b *c]']]);
+    });
+
+    test('undo of a tab takes the person back to the tab that was active, and leaves a gone cell alone', () => {
+        const layout = gridOf([['a'], ['[b *c d]']], second);
+        const shown = showViewIn(layout, 'x')!;
+        const closed = closeCell(shown.layout, second)!;
+        expect(tabShapeOf(undoShowView(closed, shown))).toEqual([['a']]);
+        // The person moved to another tab meanwhile, so that choice stays.
+        const moved = activateTab(shown.layout, 'd');
+        expect(tabShapeOf(undoShowView(moved, shown))).toEqual([['a'], ['[b c *d]']]);
+    });
+
+    test('undo of a replaced host cell leaves a cell that grew more tabs alone', () => {
+        const shown = showViewIn(gridOf([['a']]), 'x', { loose: true })!;
+        const grown = showViewIn(shown.layout, 'y')!.layout;
+        expect(tabShapeOf(undoShowView(grown, shown))).toEqual([['[x *y]']]);
+    });
+});
+
+describe('dropAsTab', () => {
+    test('reorders inside the host, counting among the resulting tabs', () => {
+        const layout = gridOf([['[a *b c]']]);
+        expect(tabShapeOf(dropAsTab(layout, 'b', first, 2))).toEqual([['[a c *b]']]);
+        expect(tabShapeOf(dropAsTab(layout, 'b', first, 0))).toEqual([['[*b a c]']]);
+        expect(tabShapeOf(dropAsTab(layout, 'a', first, 1))).toEqual([['[b *a c]']]);
+        expect(tabShapeOf(dropAsTab(layout, 'c', first, null))).toEqual([['[a b *c]']]);
+    });
+
+    test('from a plain cell the cell goes and its column collapses', () => {
+        const layout = dropAsTab(gridOf([['a'], ['b'], ['c']]), 'c', first, null);
+        expect(tabShapeOf(layout)).toEqual([['[a *c]'], ['b']]);
+        expect(layout.focus).toEqual(first);
+        sums(layout);
+    });
+
+    test('a target behind the emptied column moves up with it', () => {
+        const layout = dropAsTab(gridOf([['a'], ['b'], ['c']]), 'a', { column: 2, cell: 0 }, null);
+        expect(tabShapeOf(layout)).toEqual([['b'], ['[c *a]']]);
+        expect(layout.focus).toEqual(second);
+        sums(layout);
+    });
+
+    test('a target below the emptied cell of its own column moves up with it', () => {
+        const layout = dropAsTab(gridOf([['a', 'b', 'c']]), 'a', { column: 0, cell: 2 }, null);
+        expect(tabShapeOf(layout)).toEqual([['b', '[c *a]']]);
+        expect(layout.focus).toEqual({ column: 0, cell: 1 });
+    });
+
+    test('onto a plain cell it becomes a host, the index counting in the resulting tabs', () => {
+        expect(tabShapeOf(dropAsTab(gridOf([['a'], ['b']]), 'b', first, 0))).toEqual([['[*b a]']]);
+        expect(tabShapeOf(dropAsTab(gridOf([['a'], ['b']]), 'b', first, 1))).toEqual([['[a *b]']]);
+        expect(tabShapeOf(dropAsTab(gridOf([['a'], ['b']]), 'b', first, null))).toEqual([['[a *b]']]);
+    });
+
+    test('index null puts the view right of the active tab', () => {
+        expect(tabShapeOf(dropAsTab(gridOf([['[*a b]'], ['c']]), 'c', first, null))).toEqual([['[a *c b]']]);
+    });
+
+    test('from a host with several tabs only the tab leaves, and the right neighbor takes over', () => {
+        const layout = dropAsTab(gridOf([['[a *b c]'], ['[d *e]']]), 'b', second, 1);
+        expect(tabShapeOf(layout)).toEqual([['[a *c]'], ['[d *b e]']]);
+        expect(layout.focus).toEqual(second);
+        expect(tabShapeOf(dropAsTab(gridOf([['[a b *c]'], ['d']]), 'c', second, null))).toEqual([['[a *b]'], ['[d *c]']]);
+    });
+
+    test('a background tab leaving keeps the active tab of its host', () => {
+        expect(tabShapeOf(dropAsTab(gridOf([['[*a b c]'], ['d']]), 'c', second, null))).toEqual([['[*a b]'], ['[d *c]']]);
+    });
+
+    test('from a one-tab host the cell goes', () => {
+        expect(tabShapeOf(dropAsTab(gridOf([['[*a]'], ['b']]), 'a', second, null))).toEqual([['[b *a]']]);
+    });
+
+    test('a view that is not in the layout is just added', () => {
+        const layout = dropAsTab(gridOf([['a']]), 'x', first, null);
+        expect(tabShapeOf(layout)).toEqual([['[a *x]']]);
+        sums(layout);
+    });
+
+    test('canDropAsTab refuses a missing cell and the cell the view fills alone', () => {
+        const layout = gridOf([['a'], ['[*b]'], ['[c d]']]);
+        expect(canDropAsTab(layout, { column: 9, cell: 0 }, 'a')).toBe(false);
+        expect(canDropAsTab(layout, first, 'a')).toBe(false);
+        expect(canDropAsTab(layout, second, 'b')).toBe(false);
+        expect(canDropAsTab(layout, { column: 2, cell: 0 }, 'c')).toBe(true);
+        expect(canDropAsTab(layout, first, 'x')).toBe(true);
+        expect(dropAsTab(layout, 'a', first, 0)).toBe(layout);
+    });
+});
+
+describe('closeTab', () => {
+    test('the right neighbor becomes active, else the left one', () => {
+        expect(tabShapeOf(closeTab(gridOf([['[a *b c]']]), 'b')!)).toEqual([['[a *c]']]);
+        expect(tabShapeOf(closeTab(gridOf([['[a b *c]']]), 'c')!)).toEqual([['[a *b]']]);
+    });
+
+    test('a background tab leaves the active one where it is', () => {
+        expect(tabShapeOf(closeTab(gridOf([['[*a b c]']]), 'c')!)).toEqual([['[*a b]']]);
+    });
+
+    test('a host stays a host while one tab is left', () => {
+        const layout = closeTab(gridOf([['[a *b]']]), 'a')!;
+        expect(tabShapeOf(layout)).toEqual([['[*b]']]);
+        expect(isTabHost(cellAt(layout, first)!)).toBe(true);
+    });
+
+    test('the last view of a cell closes the cell', () => {
+        const layout = closeTab(gridOf([['a'], ['[*b]']], second), 'b')!;
+        expect(tabShapeOf(layout)).toEqual([['a']]);
+        expect(tabShapeOf(closeTab(gridOf([['a'], ['b']]), 'a')!)).toEqual([['b']]);
+        sums(layout);
+    });
+
+    test('the last cell answers null and a view that is not there changes nothing', () => {
+        expect(closeTab(gridOf([['[*a]']]), 'a')).toBeNull();
+        const layout = gridOf([['a']]);
+        expect(closeTab(layout, 'x')).toBe(layout);
+    });
+});
+
+describe('moveTabBy', () => {
+    test('moves a tab along the strip and stops at the ends', () => {
+        const layout = gridOf([['[a *b c]']]);
+        expect(tabShapeOf(moveTabBy(layout, 'b', -1))).toEqual([['[*b a c]']]);
+        expect(tabShapeOf(moveTabBy(layout, 'b', 1))).toEqual([['[a c *b]']]);
+        expect(tabShapeOf(moveTabBy(layout, 'a', 5))).toEqual([['[*b c a]']]);
+        expect(tabShapeOf(moveTabBy(layout, 'c', -9))).toEqual([['[c a *b]']]);
+    });
+
+    test('a tab at the end and a plain cell stay as they are', () => {
+        const layout = gridOf([['[a *b c]'], ['d']]);
+        expect(moveTabBy(layout, 'c', 1)).toBe(layout);
+        expect(moveTabBy(layout, 'd', 1)).toBe(layout);
+        expect(moveTabBy(layout, 'x', 1)).toBe(layout);
+    });
+});
+
+describe('ungroup', () => {
+    test('a host of one tab becomes a plain cell', () => {
+        const layout = ungroup(gridOf([['[*a]'], ['b']]), first);
+        expect(tabShapeOf(layout)).toEqual([['a'], ['b']]);
+        expect(cellAt(layout, first)!.tabs).toBeUndefined();
+        sums(layout);
+    });
+
+    test('anything else is unchanged', () => {
+        const layout = gridOf([['[a *b]'], ['c']]);
+        expect(ungroup(layout, first)).toBe(layout);
+        expect(ungroup(layout, second)).toBe(layout);
+        expect(ungroup(layout, { column: 5, cell: 0 })).toBe(layout);
+    });
+});
+
+describe('replaceViewId', () => {
+    test('renames a view wherever it stands', () => {
+        expect(tabShapeOf(replaceViewId(gridOf([['a'], ['[b *c]']]), 'c', 'z'))).toEqual([['a'], ['[b *z]']]);
+        expect(tabShapeOf(replaceViewId(gridOf([['a'], ['[b *c]']]), 'b', 'z'))).toEqual([['a'], ['[z *c]']]);
+        expect(tabShapeOf(replaceViewId(gridOf([['a'], ['b']]), 'a', 'z'))).toEqual([['z'], ['b']]);
+    });
+
+    test('a view that is not there changes nothing', () => {
+        const layout = gridOf([['a']]);
+        expect(replaceViewId(layout, 'x', 'z')).toBe(layout);
+    });
+});
+
+describe('canSplit with tabs', () => {
+    const full = gridOf([
+        ['[a *b]', 'c', 'd'],
+        ['e', 'f', 'g'],
+        ['h', 'i', 'j']
+    ]);
+
+    test('a tab leaving a full grid frees no cell and no column', () => {
+        for (const direction of ['left', 'right', 'up', 'down'] as SplitDirection[]) {
+            expect(canSplit(full, { column: 1, cell: 1 }, direction, 'b')).toBe(false);
+        }
+        expect(canSplit(full, { column: 1, cell: 1 }, 'center', 'b')).toBe(true);
+        expect(canSplit(gridOf([['[*a]'], ['b'], ['c']]), second, 'right', 'a')).toBe(true);
+    });
+
+    test('a tab may split off next to its own host, but not swap with itself', () => {
+        const layout = gridOf([['[a *b]']]);
+        expect(canSplit(layout, first, 'right', 'b')).toBe(true);
+        expect(canSplit(layout, first, 'down', 'b')).toBe(true);
+        expect(canSplit(layout, first, 'center', 'b')).toBe(false);
+    });
+});
+
+describe('dropView with tabs', () => {
+    test('an edge puts a tab in a new plain cell and leaves the host with the neighbor active', () => {
+        const layout = dropView(gridOf([['[a *b]'], ['c']]), 'b', second, 'down');
+        expect(tabShapeOf(layout)).toEqual([['[*a]'], ['c', 'b']]);
+        expect(layout.focus).toEqual({ column: 1, cell: 1 });
+        sums(layout);
+    });
+
+    test('an edge of its own host splits the tab off beside it', () => {
+        expect(tabShapeOf(dropView(gridOf([['[a *b]']]), 'b', first, 'right'))).toEqual([['[*a]'], ['b']]);
+    });
+
+    test('the middle trades a tab with the active view of a plain target', () => {
+        const layout = dropView(gridOf([['[a *b]'], ['c']]), 'b', second, 'center');
+        expect(tabShapeOf(layout)).toEqual([['[a *c]'], ['b']]);
+        expect(layout.focus).toEqual(second);
+    });
+
+    test('the middle trades a tab with the active view of a host', () => {
+        expect(tabShapeOf(dropView(gridOf([['[a *b]'], ['[c *d]']]), 'b', second, 'center'))).toEqual([['[a *d]'], ['[c *b]']]);
+    });
+
+    test('the middle with a view nobody shows replaces the active tab of a host in place', () => {
+        expect(tabShapeOf(dropView(gridOf([['[a *b c]']]), 'x', first, 'center'))).toEqual([['[a *x c]']]);
+    });
+
+    test('a view that fills its cell alone swaps the whole cells, tabs included', () => {
+        const layout = dropView(gridOf([['[*a]'], ['[c *d]']]), 'a', second, 'center');
+        expect(tabShapeOf(layout)).toEqual([['[c *d]'], ['[*a]']]);
+        expect(layout.focus).toEqual(second);
+        sums(layout);
+    });
+
+    test('a one-tab host that is split off keeps being a host', () => {
+        expect(tabShapeOf(dropView(gridOf([['[*a]'], ['b']]), 'a', second, 'down'))).toEqual([['b', '[*a]']]);
+    });
+});
+
+describe('moveCell', () => {
+    test('the middle swaps the whole cells and keeps the shares where they stand', () => {
+        const layout = moveCell(gridOf([['[a *b]', 'c']]), first, { column: 0, cell: 1 }, 'center');
+        expect(tabShapeOf(layout)).toEqual([['c', '[a *b]']]);
+        expect(layout.focus).toEqual({ column: 0, cell: 1 });
+        sums(layout);
+    });
+
+    test('an edge splits and the tabs travel along', () => {
+        const layout = moveCell(gridOf([['[a *b]'], ['c']]), first, second, 'down');
+        expect(tabShapeOf(layout)).toEqual([['c', '[a *b]']]);
+        expect(layout.focus).toEqual({ column: 0, cell: 1 });
+        sums(layout);
+    });
+
+    test('a column the move empties is free for the drop, and the limits still hold', () => {
+        expect(tabShapeOf(moveCell(gridOf([['a'], ['b'], ['[c *d]']]), { column: 2, cell: 0 }, first, 'right'))).toEqual([['a'], ['[c *d]'], ['b']]);
+        const tall = gridOf([['a', 'b', 'c'], ['d']]);
+        expect(moveCell(tall, second, { column: 0, cell: 1 }, 'down')).toBe(tall);
+    });
+
+    test('a cell dropped on itself or from nowhere changes nothing', () => {
+        const layout = gridOf([['a'], ['b']]);
+        expect(moveCell(layout, first, first, 'center')).toBe(layout);
+        expect(moveCell(layout, first, first, 'right')).toBe(layout);
+        expect(moveCell(layout, { column: 5, cell: 0 }, first, 'center')).toBe(layout);
+    });
+});
+
+describe('cleanLayout with tabs', () => {
+    test('drops unknown tabs per tab and repairs the active one', () => {
+        const layout = cleanLayout(gridOf([['[a *b c]']]), ['a', 'c'])!;
+        expect(tabShapeOf(layout)).toEqual([['[*a c]']]);
+    });
+
+    test('drops a view that stands twice and a host left with nothing', () => {
+        expect(tabShapeOf(cleanLayout(gridOf([['[a b]'], ['[b *c]']]), ['a', 'b', 'c'])!)).toEqual([['[*a b]'], ['[*c]']]);
+        expect(tabShapeOf(cleanLayout(gridOf([['a'], ['[x y]']]), ['a'])!)).toEqual([['a']]);
+        expect(tabShapeOf(cleanLayout(gridOf([['[a a]']]), ['a'])!)).toEqual([['[*a]']]);
+    });
+
+    test('a viewId outside the tabs goes to the first tab', () => {
+        const layout: SplitLayout = { columns: [{ size: 1, cells: [{ viewId: 'z', tabs: ['a', 'b'], size: 1 }] }], focus: first };
+        expect(tabShapeOf(cleanLayout(layout, ['a', 'b', 'z'])!)).toEqual([['[*a b]']]);
+    });
+
+    test('an empty tabs array is no host', () => {
+        const layout: SplitLayout = { columns: [{ size: 1, cells: [{ viewId: 'a', tabs: [], size: 1 }] }], focus: first };
+        const clean = cleanLayout(layout, ['a'])!;
+        expect(cellAt(clean, first)!.tabs).toBeUndefined();
+        expect(tabShapeOf(clean)).toEqual([['a']]);
+    });
+
+    test('extra ids pass for views that are not in the project', () => {
+        const layout = gridOf([['a'], ['[b *l]']]);
+        expect(tabShapeOf(cleanLayout(layout, ['a', 'b'], ['l'])!)).toEqual([['a'], ['[b *l]']]);
+        expect(tabShapeOf(cleanLayout(layout, ['a', 'b'])!)).toEqual([['a'], ['[*b]']]);
+    });
+
+    test('a cell past the limit takes its tabs with it and the shares add up', () => {
+        const tall = gridOf([['a', 'b', 'c', '[d e]']]);
+        const clean = cleanLayout(tall, ['a', 'b', 'c', 'd', 'e'])!;
+        expect(tabShapeOf(clean)).toEqual([['a', 'b', 'c']]);
+        sums(cleanLayout(gridOf([['[a *b]', 'c']]), ['a', 'c'])!);
     });
 });

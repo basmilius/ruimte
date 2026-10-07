@@ -57,7 +57,23 @@ export function cellCount(layout: SplitLayout): number {
     return layout.columns.reduce((total, column) => total + column.cells.length, 0);
 }
 
+/* A tab host is a cell with a `tabs` list, which stays a host until its last tab is gone. */
+export function isTabHost(cell: SplitCell): boolean {
+    return cell.tabs !== undefined;
+}
+
+/* The views of a cell in order; `viewId` is the one that is drawn. */
+export function cellViewIds(cell: SplitCell): string[] {
+    return cell.tabs === undefined ? [cell.viewId] : cell.tabs;
+}
+
+/* Every view in the layout, background tabs included: this answers whether a view is placed. */
 export function viewIdsIn(layout: SplitLayout): string[] {
+    return layout.columns.flatMap((column) => column.cells.flatMap(cellViewIds));
+}
+
+/* Only the active view of each cell: what is actually drawn. */
+export function shownViewIdsIn(layout: SplitLayout): string[] {
     return layout.columns.flatMap((column) => column.cells.map((cell) => cell.viewId));
 }
 
@@ -69,10 +85,10 @@ export function isSameCell(one: CellAt, other: CellAt): boolean {
     return one.column === other.column && one.cell === other.cell;
 }
 
-/* One view stands in at most one cell, so this answers with the cell or with nothing. */
+/* One view stands in at most one cell, as its view or as one of its tabs, so this answers with the cell or with nothing. */
 export function locateView(layout: SplitLayout, viewId: string): CellAt | null {
     for (let column = 0; column < layout.columns.length; column += 1) {
-        const cell = layout.columns[column].cells.findIndex((candidate) => candidate.viewId === viewId);
+        const cell = layout.columns[column].cells.findIndex((candidate) => cellViewIds(candidate).includes(viewId));
         if (cell !== -1) {
             return { column, cell };
         }
@@ -84,28 +100,74 @@ export function focusedViewId(layout: SplitLayout): string | null {
     return cellAt(layout, layout.focus)?.viewId ?? null;
 }
 
+/* What a cell holds without its share of the column, which is what travels when a cell moves. */
+type CellContent = Pick<SplitCell, 'viewId' | 'tabs'>;
+
+function contentOf(cell: SplitCell): CellContent {
+    return cell.tabs === undefined ? { viewId: cell.viewId } : { viewId: cell.viewId, tabs: cell.tabs };
+}
+
+function replaceCell(columns: readonly SplitColumn[], at: CellAt, next: SplitCell): SplitColumn[] {
+    return columns.map((column, columnIndex) =>
+        columnIndex === at.column ? { ...column, cells: column.cells.map((cell, cellIndex) => (cellIndex === at.cell ? next : cell)) } : column
+    );
+}
+
+/* Where a cell leaves a tab, the active tab only moves when it was the one that left: right neighbor first, else left. */
+function withoutTab(cell: SplitCell, viewId: string): SplitCell {
+    const tabs = cellViewIds(cell);
+    const index = tabs.indexOf(viewId);
+    if (index === -1 || tabs.length === 1) {
+        return cell;
+    }
+    const active = cell.viewId === viewId ? (tabs[index + 1] ?? tabs[index - 1]) : cell.viewId;
+    return { ...cell, viewId: active, tabs: tabs.filter((id) => id !== viewId) };
+}
+
+function renamedIn(cell: SplitCell, from: string, to: string): SplitCell {
+    const next = { ...cell, viewId: cell.viewId === from ? to : cell.viewId };
+    if (cell.tabs !== undefined) {
+        next.tabs = cell.tabs.map((id) => (id === from ? to : id));
+    }
+    return next;
+}
+
 /*
- * Whether a drop on this zone would land. `moving` is the view being dragged when it already stands
- * in a cell: it leaves that cell, so a column or a cell comes free and a layout that looks full is
- * not. Dropping a view on the cell it already sits in is nothing, which is why it answers false.
+ * The shared test behind a drop on a zone. `source` is the cell the dragged view stands in and
+ * `leavesCell` says whether the drop empties it: a tab among several leaves only its tab, so it
+ * frees no cell and no column, and a drop on the edge of its own host is a split, not nothing.
  */
-export function canSplit(layout: SplitLayout, at: CellAt, zone: SplitZone, moving: string | null = null): boolean {
+function canPlace(layout: SplitLayout, at: CellAt, zone: SplitZone, source: CellAt | null, leavesCell: boolean): boolean {
     if (cellAt(layout, at) === null) {
         return false;
     }
-    const source = moving === null ? null : locateView(layout, moving);
-    if (source !== null && isSameCell(source, at)) {
+    if (source !== null && isSameCell(source, at) && (zone === 'center' || leavesCell)) {
         return false;
     }
     if (zone === 'center') {
         return true;
     }
     if (isColumnZone(zone)) {
-        const freed = source !== null && layout.columns[source.column].cells.length === 1 ? 1 : 0;
+        const freed = source !== null && leavesCell && layout.columns[source.column].cells.length === 1 ? 1 : 0;
         return layout.columns.length - freed < MAX_COLUMNS;
     }
-    const leaving = source !== null && source.column === at.column ? 1 : 0;
+    const leaving = source !== null && leavesCell && source.column === at.column ? 1 : 0;
     return layout.columns[at.column].cells.length - leaving < MAX_CELLS;
+}
+
+function fillsCellAlone(layout: SplitLayout, source: CellAt): boolean {
+    return cellViewIds(cellAt(layout, source)!).length === 1;
+}
+
+/*
+ * Whether a drop on this zone would land. `moving` is the view being dragged when it already stands
+ * in a cell: when it fills that cell alone the cell leaves, so a column or a cell comes free and a
+ * layout that looks full is not. Dropping a view on the cell it already sits in is nothing, which
+ * is why it answers false.
+ */
+export function canSplit(layout: SplitLayout, at: CellAt, zone: SplitZone, moving: string | null = null): boolean {
+    const source = moving === null ? null : locateView(layout, moving);
+    return canPlace(layout, at, zone, source, source !== null && fillsCellAlone(layout, source));
 }
 
 /* A column that loses its last cell is gone, so the target moves up when it sat behind that column. */
@@ -123,45 +185,170 @@ function withoutCell(columns: readonly SplitColumn[], source: CellAt, target: Ce
     };
 }
 
-/*
- * The one mutation behind both a drag and a split shortcut: a view lands in a cell's zone. A view that
- * was already on screen moves rather than appearing twice, and a drop on the middle swaps with the
- * view that stood there instead of closing it, so nothing falls off the grid by accident.
- */
-export function dropView(layout: SplitLayout, viewId: string, at: CellAt, zone: SplitZone): SplitLayout {
-    if (!canSplit(layout, at, zone, viewId)) {
-        return layout;
-    }
-    const source = locateView(layout, viewId);
-    if (zone === 'center') {
-        const replaced = cellAt(layout, at)!.viewId;
-        const columns = layout.columns.map((column, columnIndex) => ({
-            ...column,
-            cells: column.cells.map((cell, cellIndex) => {
-                if (columnIndex === at.column && cellIndex === at.cell) {
-                    return { ...cell, viewId };
-                }
-                return source !== null && columnIndex === source.column && cellIndex === source.cell ? { ...cell, viewId: replaced } : cell;
-            })
-        }));
-        return settled(columns, at);
-    }
-
-    const { columns, target } = source === null ? { columns: [...layout.columns], target: at } : withoutCell(layout.columns, source, at);
+/* A new cell beside `target` on one of its four edges, half of the share the target had. */
+function splitAt(columns: readonly SplitColumn[], target: CellAt, zone: Exclude<SplitZone, 'center'>, content: CellContent): SplitLayout {
     if (isColumnZone(zone)) {
         const half = columns[target.column].size / 2;
         const index = zone === 'left' ? target.column : target.column + 1;
         const next = columns.map((column, columnIndex) => (columnIndex === target.column ? { ...column, size: half } : column));
-        next.splice(index, 0, { size: half, cells: [{ viewId, size: 1 }] });
+        next.splice(index, 0, { size: half, cells: [{ ...content, size: 1 }] });
         return settled(next, { column: index, cell: 0 });
     }
     const column = columns[target.column];
     const half = column.cells[target.cell].size / 2;
     const index = zone === 'up' ? target.cell : target.cell + 1;
     const cells = column.cells.map((cell, cellIndex) => (cellIndex === target.cell ? { ...cell, size: half } : cell));
-    cells.splice(index, 0, { viewId, size: half });
+    cells.splice(index, 0, { ...content, size: half });
     const next = columns.map((candidate, columnIndex) => (columnIndex === target.column ? { ...candidate, cells } : candidate));
     return settled(next, { column: target.column, cell: index });
+}
+
+/*
+ * The one mutation behind both a drag and a split shortcut: a view lands in a cell's zone. A view that
+ * was already on screen moves rather than appearing twice, and a drop on the middle swaps with the
+ * view that stood there instead of closing it, so nothing falls off the grid by accident. A view that
+ * fills its cell alone takes the whole cell along (`moveCell`); one of several tabs leaves only its tab.
+ */
+export function dropView(layout: SplitLayout, viewId: string, at: CellAt, zone: SplitZone): SplitLayout {
+    if (!canSplit(layout, at, zone, viewId)) {
+        return layout;
+    }
+    const source = locateView(layout, viewId);
+    if (source !== null && fillsCellAlone(layout, source)) {
+        return moveCell(layout, source, at, zone);
+    }
+    const sourceCell = source === null ? null : cellAt(layout, source)!;
+    if (zone === 'center') {
+        const replaced = cellAt(layout, at)!;
+        // A tab trades places with the target's active view; a view that stood nowhere takes that view's place.
+        const swapped = sourceCell === null ? layout.columns : replaceCell(layout.columns, source!, renamedIn(sourceCell, viewId, replaced.viewId));
+        return settled(replaceCell(swapped, at, renamedIn(replaced, replaced.viewId, viewId)), at);
+    }
+    const columns = sourceCell === null ? layout.columns : replaceCell(layout.columns, source!, withoutTab(sourceCell, viewId));
+    return splitAt(columns, at, zone, { viewId });
+}
+
+/*
+ * A whole cell lands in the zone of another, tabs and all: the middle swaps the two cells, an edge
+ * splits. This is the drag of a host by the empty part of its strip, and of a plain cell by its bar.
+ */
+export function moveCell(layout: SplitLayout, from: CellAt, at: CellAt, zone: SplitZone): SplitLayout {
+    const moving = cellAt(layout, from);
+    if (moving === null || !canPlace(layout, at, zone, from, true)) {
+        return layout;
+    }
+    if (zone === 'center') {
+        const replaced = cellAt(layout, at)!;
+        const columns = replaceCell(replaceCell(layout.columns, at, { ...contentOf(moving), size: replaced.size }), from, {
+            ...contentOf(replaced),
+            size: moving.size
+        });
+        return settled(columns, at);
+    }
+    const { columns, target } = withoutCell(layout.columns, from, at);
+    return splitAt(columns, target, zone, contentOf(moving));
+}
+
+/* Whether `viewId` may join the cell at `at` as a tab; not on the cell it already fills alone, where it would be nothing. */
+export function canDropAsTab(layout: SplitLayout, at: CellAt, viewId: string): boolean {
+    if (cellAt(layout, at) === null) {
+        return false;
+    }
+    const source = locateView(layout, viewId);
+    return !(source !== null && isSameCell(source, at) && fillsCellAlone(layout, source));
+}
+
+/*
+ * A view joins the cell at `at` as a tab, becomes its active one and the cell takes the focus. `index`
+ * is the position among the resulting tabs; null puts it right of the active tab (a reorder in the
+ * same host with null leaves the view where it is). A plain target becomes a host. A view that came
+ * from another cell leaves it: the cell goes when this was its only view, otherwise only the tab.
+ */
+export function dropAsTab(layout: SplitLayout, viewId: string, at: CellAt, index: number | null): SplitLayout {
+    if (!canDropAsTab(layout, at, viewId)) {
+        return layout;
+    }
+    const target = cellAt(layout, at)!;
+    const source = locateView(layout, viewId);
+    const sameCell = source !== null && isSameCell(source, at);
+    const others = cellViewIds(target).filter((id) => id !== viewId);
+    let position = others.length;
+    if (index !== null) {
+        position = Math.min(Math.max(index, 0), others.length);
+    } else if (sameCell) {
+        position = cellViewIds(target).indexOf(viewId);
+    } else if (others.includes(target.viewId)) {
+        position = others.indexOf(target.viewId) + 1;
+    }
+    const joined = { ...target, viewId, tabs: [...others.slice(0, position), viewId, ...others.slice(position)] };
+    const columns = replaceCell(layout.columns, at, joined);
+    if (source === null || sameCell) {
+        return settled(columns, at);
+    }
+    if (fillsCellAlone(layout, source)) {
+        const removed = withoutCell(columns, source, at);
+        return settled(removed.columns, removed.target);
+    }
+    return settled(replaceCell(columns, source, withoutTab(cellAt(layout, source)!, viewId)), at);
+}
+
+/* The view's cell gets the focus and the view becomes its active tab. */
+export function activateTab(layout: SplitLayout, viewId: string): SplitLayout {
+    const at = locateView(layout, viewId);
+    if (at === null) {
+        return layout;
+    }
+    const cell = cellAt(layout, at)!;
+    return { columns: cell.viewId === viewId ? layout.columns : replaceCell(layout.columns, at, { ...cell, viewId }), focus: at };
+}
+
+/*
+ * Takes a view out of its cell. A cell that held only this view closes (null when it was the last
+ * cell, which the caller decides on); a host with more tabs hands the active tab to the right
+ * neighbor, else the left one, and stays a host even when one tab is left.
+ */
+export function closeTab(layout: SplitLayout, viewId: string): SplitLayout | null {
+    const at = locateView(layout, viewId);
+    if (at === null) {
+        return layout;
+    }
+    const cell = cellAt(layout, at)!;
+    if (fillsCellAlone(layout, at)) {
+        return closeCell(layout, at);
+    }
+    return { ...layout, columns: replaceCell(layout.columns, at, withoutTab(cell, viewId)) };
+}
+
+/* One step along the strip of the host, stopping at the ends. */
+export function moveTabBy(layout: SplitLayout, viewId: string, delta: number): SplitLayout {
+    const at = locateView(layout, viewId);
+    const cell = at === null ? null : cellAt(layout, at);
+    if (at === null || cell === null || cell.tabs === undefined) {
+        return layout;
+    }
+    const index = cell.tabs.indexOf(viewId);
+    const next = Math.min(Math.max(index + delta, 0), cell.tabs.length - 1);
+    if (next === index) {
+        return layout;
+    }
+    const tabs = cell.tabs.filter((id) => id !== viewId);
+    tabs.splice(next, 0, viewId);
+    return { ...layout, columns: replaceCell(layout.columns, at, { ...cell, tabs }) };
+}
+
+/* A host with exactly one tab becomes a plain cell again; anything else is left alone. */
+export function ungroup(layout: SplitLayout, at: CellAt): SplitLayout {
+    const cell = cellAt(layout, at);
+    if (cell === null || cell.tabs === undefined || cell.tabs.length !== 1) {
+        return layout;
+    }
+    return { ...layout, columns: replaceCell(layout.columns, at, { viewId: cell.tabs[0], size: cell.size }) };
+}
+
+/* A view that got another id (a file that moved) keeps its place wherever it stands. */
+export function replaceViewId(layout: SplitLayout, from: string, to: string): SplitLayout {
+    const at = locateView(layout, from);
+    return at === null ? layout : { ...layout, columns: replaceCell(layout.columns, at, renamedIn(cellAt(layout, at)!, from, to)) };
 }
 
 /* What showing a view did, which is everything the way back needs. */
@@ -169,25 +356,117 @@ export interface ShownView {
     layout: SplitLayout;
     /* The cell the view is standing in now. */
     at: CellAt;
-    /* The view that made room for it, null when the view was already on screen and only took the focus. */
+    /* The view that made room for it, null when the view was already on screen or came in as a tab. */
     replaced: string | null;
     /* The cell the person was working in, which is where the focus goes back to. */
     from: CellAt;
+    /* Set when the view came in as a tab: what taking it out again needs to know. */
+    tab?: {
+        viewId: string;
+        /* The tab that was active before, which the cell goes back to. */
+        activeBefore: string;
+        /* The cell was a plain one that became a host for this tab. */
+        wasPlain: boolean;
+    };
+}
+
+export interface ShowOptions {
+    /* A view without a row in the sidebar: it goes to a tab host rather than over a view. */
+    loose?: boolean;
+    /* The view whose host a loose view prefers, when that view stands in one. */
+    host?: string | null;
+    /* Open beside the view in the focused cell instead of over it. */
+    newTab?: boolean;
+}
+
+/* The host holding `preferred`, else the first host in reading order: columns left to right, cells top to bottom. */
+function hostFor(layout: SplitLayout, preferred: string | null): CellAt | null {
+    if (preferred !== null) {
+        const at = locateView(layout, preferred);
+        if (at !== null && isTabHost(cellAt(layout, at)!)) {
+            return at;
+        }
+    }
+    for (let column = 0; column < layout.columns.length; column += 1) {
+        const cell = layout.columns[column].cells.findIndex(isTabHost);
+        if (cell !== -1) {
+            return { column, cell };
+        }
+    }
+    return null;
+}
+
+function shownAsTab(layout: SplitLayout, viewId: string, at: CellAt): ShownView {
+    const cell = cellAt(layout, at)!;
+    return {
+        layout: dropAsTab(layout, viewId, at, null),
+        at,
+        replaced: null,
+        from: layout.focus,
+        tab: { viewId, activeBefore: cell.viewId, wasPlain: !isTabHost(cell) }
+    };
 }
 
 /*
- * A view someone else asked for, put on screen. It takes the place of the one in the cell that has
- * the focus, unless it is already standing somewhere: one view is in at most one cell, so that cell
- * takes the focus instead of the view appearing twice. Null when the view is the one being looked
- * at already, since then there is nothing to do and nothing to undo.
+ * A view someone else asked for, put on screen. The first rule that fits wins:
+ * 1. It is placed already: its cell takes the focus and it becomes the active tab. Null when it is
+ *    the view being looked at, since then there is nothing to do and nothing to undo.
+ * 2. The focused cell is a tab host: a new tab right of the active one.
+ * 3. `newTab`: the focused cell becomes a host of its view and the new one.
+ * 4. `loose` with a host on screen: a tab in the host of `host`, else the first host.
+ * 5. `loose` without one: the focused cell becomes a host of this view alone.
+ * 6. It replaces the view in the focused cell.
  */
-export function showViewIn(layout: SplitLayout, viewId: string): ShownView | null {
+export function showViewIn(layout: SplitLayout, viewId: string, options: ShowOptions = {}): ShownView | null {
     const standing = locateView(layout, viewId);
     if (standing !== null) {
-        return isSameCell(standing, layout.focus) ? null : { layout: focusCell(layout, standing), at: standing, replaced: null, from: layout.focus };
+        if (isSameCell(standing, layout.focus) && cellAt(layout, standing)!.viewId === viewId) {
+            return null;
+        }
+        return { layout: activateTab(layout, viewId), at: standing, replaced: null, from: layout.focus };
     }
     const at = layout.focus;
-    return { layout: dropView(layout, viewId, at, 'center'), at, replaced: cellAt(layout, at)?.viewId ?? null, from: at };
+    const focused = cellAt(layout, at);
+    if (focused !== null && isTabHost(focused)) {
+        return shownAsTab(layout, viewId, at);
+    }
+    if (focused !== null && options.newTab) {
+        return shownAsTab(layout, viewId, at);
+    }
+    if (options.loose) {
+        const host = hostFor(layout, options.host ?? null);
+        if (host !== null) {
+            return shownAsTab(layout, viewId, host);
+        }
+        if (focused !== null) {
+            const replacement = { viewId, tabs: [viewId], size: focused.size };
+            return { layout: settled(replaceCell(layout.columns, at, replacement), at), at, replaced: focused.viewId, from: at };
+        }
+    }
+    return { layout: dropView(layout, viewId, at, 'center'), at, replaced: focused?.viewId ?? null, from: at };
+}
+
+/* Takes the shown tab out again, and turns a cell that became a host for it back into a plain one. */
+function withoutShownTab(layout: SplitLayout, shown: Omit<ShownView, 'layout'>, tab: NonNullable<ShownView['tab']>): SplitLayout {
+    const cell = cellAt(layout, shown.at);
+    if (cell === null || cell.tabs === undefined || cell.tabs.length === 1 || !cell.tabs.includes(tab.viewId)) {
+        return layout;
+    }
+    let next = withoutTab(cell, tab.viewId);
+    if (cell.viewId === tab.viewId && next.tabs?.includes(tab.activeBefore)) {
+        next = { ...next, viewId: tab.activeBefore };
+    }
+    const back = { ...layout, columns: replaceCell(layout.columns, shown.at, next) };
+    return tab.wasPlain ? ungroup(back, shown.at) : back;
+}
+
+/* Puts the replaced view back as a plain cell, unless the person has grown the cell into several tabs since. */
+function withReplacedBack(layout: SplitLayout, shown: Omit<ShownView, 'layout'>): SplitLayout {
+    const cell = cellAt(layout, shown.at);
+    if (shown.replaced === null || cell === null || cellViewIds(cell).length > 1) {
+        return layout;
+    }
+    return ungroup(dropView(layout, shown.replaced, shown.at, 'center'), shown.at);
 }
 
 /*
@@ -197,7 +476,7 @@ export function showViewIn(layout: SplitLayout, viewId: string): ShownView | nul
  * work they did themselves. A cell that is gone leaves everything where it is.
  */
 export function undoShowView(layout: SplitLayout, shown: Omit<ShownView, 'layout'>): SplitLayout {
-    const back = shown.replaced === null || cellAt(layout, shown.at) === null ? layout : dropView(layout, shown.replaced, shown.at, 'center');
+    const back = shown.tab === undefined ? withReplacedBack(layout, shown) : withoutShownTab(layout, shown, shown.tab);
     return focusCell(back, shown.from);
 }
 
@@ -216,7 +495,10 @@ export function closeCell(layout: SplitLayout, at: CellAt): SplitLayout | null {
 /* Every cell but the one at `at`, which then fills the grid and has the focus. */
 export function closeOtherCells(layout: SplitLayout, at: CellAt): SplitLayout {
     const kept = cellAt(layout, at);
-    return kept === null || cellCount(layout) === 1 ? layout : singleLayout(kept.viewId);
+    if (kept === null || cellCount(layout) === 1) {
+        return layout;
+    }
+    return { columns: [{ size: 1, cells: [{ ...kept, size: 1 }] }], focus: { column: 0, cell: 0 } };
 }
 
 /* The cells in the columns right of the one `at` stands in, which is what "close to the right" closes. */
@@ -287,20 +569,27 @@ export function focusDirection(layout: SplitLayout, direction: SplitDirection): 
  * A layout can name a view that another client deleted, hold the same view twice after a bad merge,
  * or come from a file written when the limits were wider. Everything the model cannot mean is cut
  * here on the way in, and a layout with nothing left falls back to the first view there is.
+ * `extraIds` stand in cells without being project views (loose views), which the caller knows.
  */
-export function cleanLayout(layout: SplitLayout, viewIds: readonly string[]): SplitLayout | null {
+export function cleanLayout(layout: SplitLayout, viewIds: readonly string[], extraIds: readonly string[] = []): SplitLayout | null {
     // The files stand in a cell without being in the document, so their id passes on its own.
-    const known = new Set([...viewIds, FILES_VIEW_ID]);
+    const known = new Set([...viewIds, ...extraIds, FILES_VIEW_ID]);
     const seen = new Set<string>();
     const columns: SplitColumn[] = [];
     for (const column of layout.columns) {
         const cells: SplitCell[] = [];
         for (const cell of column.cells) {
-            if (!known.has(cell.viewId) || seen.has(cell.viewId) || cells.length === MAX_CELLS) {
+            const listed = cell.tabs !== undefined && cell.tabs.length > 0 ? cell.tabs : null;
+            const kept = [...new Set(listed ?? [cell.viewId])].filter((id) => known.has(id) && !seen.has(id));
+            if (kept.length === 0 || cells.length === MAX_CELLS) {
                 continue;
             }
-            seen.add(cell.viewId);
-            cells.push(cell);
+            kept.forEach((id) => seen.add(id));
+            if (listed === null) {
+                cells.push(cell.tabs === undefined ? cell : { viewId: cell.viewId, size: cell.size });
+            } else {
+                cells.push({ ...cell, viewId: kept.includes(cell.viewId) ? cell.viewId : kept[0], tabs: kept });
+            }
         }
         if (cells.length > 0 && columns.length < MAX_COLUMNS) {
             columns.push({ ...column, cells });

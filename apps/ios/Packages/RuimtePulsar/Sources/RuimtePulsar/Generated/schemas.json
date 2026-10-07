@@ -26262,6 +26262,14 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "tabs": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
                           "size": {
                             "type": "number",
                             "exclusiveMinimum": 0
@@ -29383,6 +29391,14 @@
                           "viewId": {
                             "type": "string",
                             "minLength": 1
+                          },
+                          "tabs": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
                           },
                           "size": {
                             "type": "number",
