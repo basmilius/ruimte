@@ -107,7 +107,7 @@ function DatabasesPanelBody() {
     );
 }
 
-/* A connection pointed elsewhere outside Ruimte opens without its saved password until a person enters it again. */
+/* A connection pointed elsewhere outside this window opens without its saved password until a person enters it again. */
 function WithheldPasswords({ connections }: { connections: readonly DatabaseConnection[] }) {
     const { t } = useTranslation('databases');
     const withheld = useWithheldPasswords();

@@ -40,7 +40,7 @@
         "addContainer": "Add {{name}}",
         "consoles": "Consoles",
         "withheld": {
-            "moved": "The address of {{name}} changed outside Ruimte. Enter its password again to use it there.",
+            "moved": "The address of {{name}} was changed outside this window, so its saved password is not sent there. Enter it again to use it.",
             "unbound": "Enter the password of {{name}} again. Ruimte now keeps a password with the address it is for.",
             "enter": "Enter password"
         }
@@ -64,7 +64,7 @@
         },
         "saveFailed": "The machine did not save the connections: {{reason}}",
         "withheld": {
-            "moved": "The address of this connection changed outside Ruimte, so its saved password is not sent there. Enter the password again to use it at this address.",
+            "moved": "The address of this connection was changed outside this window, so its saved password is not sent there. Enter the password again to use it at this address.",
             "unbound": "Enter the password of this connection again. Ruimte now keeps a password with the address it is for."
         },
         "persistence": {

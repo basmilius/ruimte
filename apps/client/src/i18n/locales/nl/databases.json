@@ -40,7 +40,7 @@
         "addContainer": "{{name}} toevoegen",
         "consoles": "Consoles",
         "withheld": {
-            "moved": "Het adres van {{name}} is buiten Ruimte gewijzigd. Voer het wachtwoord opnieuw in om het daar te gebruiken.",
+            "moved": "Het adres van {{name}} is buiten dit venster gewijzigd, dus het bewaarde wachtwoord gaat daar niet heen. Voer het opnieuw in om de verbinding te gebruiken.",
             "unbound": "Voer het wachtwoord van {{name}} opnieuw in. Ruimte bewaart een wachtwoord nu bij het adres waarvoor het is.",
             "enter": "Wachtwoord invoeren"
         }
@@ -64,7 +64,7 @@
         },
         "saveFailed": "De machine heeft de verbindingen niet opgeslagen: {{reason}}",
         "withheld": {
-            "moved": "Het adres van deze verbinding is buiten Ruimte gewijzigd, dus het bewaarde wachtwoord gaat daar niet heen. Voer het wachtwoord opnieuw in om het op dit adres te gebruiken.",
+            "moved": "Het adres van deze verbinding is buiten dit venster gewijzigd, dus het bewaarde wachtwoord gaat daar niet heen. Voer het wachtwoord opnieuw in om het op dit adres te gebruiken.",
             "unbound": "Voer het wachtwoord van deze verbinding opnieuw in. Ruimte bewaart een wachtwoord nu bij het adres waarvoor het is."
         },
         "persistence": {
