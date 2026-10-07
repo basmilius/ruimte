@@ -113,6 +113,7 @@ export const PALETTE_IDS = [
     'panel-databases',
     'database-console-new',
     'database-connections',
+    'database-schemas-refresh',
     'panel-processes',
     'panel-problems',
     'theme',

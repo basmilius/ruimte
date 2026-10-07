@@ -90,5 +90,28 @@
         "writeFailed_other": "The passwords of {{count}} connections were not saved on this computer",
         "removeFailed_one": "The password of {{name}} was not removed from this computer",
         "removeFailed_other": "The passwords of {{count}} connections were not removed from this computer"
+    },
+    "sql": {
+        "label": "SQL of this file: {{choice}}",
+        "none": "No schema",
+        "connectionDatabase": "{{name}}: {{database}}",
+        "thisFile": "This file",
+        "projectDefault": "Project default ({{name}})",
+        "projectDefaultNone": "Project default (none)",
+        "noneItem": "None",
+        "allDatabases": "Every database",
+        "startDatabase": "{{database}}, where it starts",
+        "addConnection": "Add a connection…",
+        "defaultSection": "Project default",
+        "makeDefault": "Use {{name}} for the project",
+        "clearDefault": "Clear the project default",
+        "noDefault": "The project has no default; pick a connection for this file first",
+        "noSnapshot": "No schema read yet. Open {{name}} in the Databases panel",
+        "snapshot_one": "{{count}} table, read {{time}}",
+        "snapshot_other": "{{count}} tables, read {{time}}",
+        "refresh": "Read the schema again",
+        "bindFailed": "The SQL connection could not be saved",
+        "refreshFailed": "The schema could not be read",
+        "failedToDraw": "The SQL connection picker failed to render"
     }
 }

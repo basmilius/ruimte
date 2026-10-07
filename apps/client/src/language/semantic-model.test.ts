@@ -17,6 +17,20 @@ describe('decodeSemanticTokens', () => {
         ]);
     });
 
+    test("reads the PHP server's legend by name, with the five types of its SQL appended after its own", () => {
+        const php = {
+            tokenTypes: ['namespace', 'class', 'function', 'variable', 'property', 'keyword', 'comment', 'string', 'number', 'operator', 'type'],
+            tokenModifiers: ['declaration', 'static']
+        };
+        // In a string of SQL: a keyword, a table, a column and a type, the ones the grammar leaves to its string color.
+        const data = [0, 10, 6, 5, 0, 0, 7, 5, 1, 0, 0, 6, 5, 4, 0, 0, 6, 4, 10, 0];
+        expect(decodeSemanticTokens({ data }, php)).toEqual([
+            { line: 0, character: 17, length: 5, scopes: ['entity.name.type.class'] },
+            { line: 0, character: 23, length: 5, scopes: ['variable.other.property'] },
+            { line: 0, character: 29, length: 4, scopes: ['entity.name.type'] }
+        ]);
+    });
+
     test('ignores a type the legend does not have', () => {
         expect(decodeSemanticTokens({ data: [0, 0, 3, 9, 0] }, legend)).toEqual([]);
     });

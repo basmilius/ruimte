@@ -15,7 +15,8 @@ export const SERVER_NAMES: Record<LanguageServerKind, { name: string; package: s
     bash: { name: 'Bash', package: 'bash-language-server' },
     docker: { name: 'Dockerfile', package: 'dockerfile-language-server-nodejs' },
     eslint: { name: 'ESLint', package: 'vscode-langservers-extracted' },
-    tailwind: { name: 'Tailwind CSS', package: '@tailwindcss/language-server' }
+    tailwind: { name: 'Tailwind CSS', package: '@tailwindcss/language-server' },
+    'sql-native': { name: 'SQL', package: 'sql-language-server' }
 };
 
 export type ServerTone = 'ok' | 'busy' | 'error' | 'idle';
@@ -53,7 +54,7 @@ export function packageOf(server: string, statuses: readonly LanguageServerStatu
 export const SERVER_GROUPS = [
     { id: 'scripts', kinds: ['typescript', 'vue', 'eslint'] },
     { id: 'web', kinds: ['html', 'css', 'tailwind'] },
-    { id: 'data', kinds: ['json', 'yaml'] },
+    { id: 'data', kinds: ['json', 'yaml', 'sql-native'] },
     { id: 'other', kinds: ['php-native', 'php', 'python', 'bash', 'docker'] }
 ] as const satisfies readonly { id: string; kinds: readonly LanguageServerKind[] }[];
 

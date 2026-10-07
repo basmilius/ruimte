@@ -1,6 +1,9 @@
 import { createDatabaseClient, type DatabaseClient } from '@adecore/database';
 import type { DatabaseResponse } from '@adecore/database/protocol';
 import { performAsPerson } from '@/actions/client-actions';
+import { databaseConnections, useDatabaseConnections } from '@/database/connections';
+import { snapshotTrigger } from '@/database/snapshot-triggers';
+import { ensureSqlBindings, sqlBindings } from '@/database/sql-bindings';
 import { endpointKey } from '@/state/keys';
 import { defaultProjectStore } from '@/state/project';
 import { useWindow, windowWorkspace } from '@/state/window';
@@ -26,7 +29,8 @@ function follow(): void {
 /*
  * One client per workspace, which every surface that draws a database shares, so a table opened in
  * the cell and the explorer in the panel use one session on the machine. Every request goes as a
- * person's action, through the machine of the window's project.
+ * person's action, through the machine of the window's project. Reading a connection's tree and a
+ * statement that changes a schema both have the machine take its schema snapshots again.
  */
 export function databaseClientFor(key: string): DatabaseClient {
     if (current?.key === key) {
@@ -35,7 +39,20 @@ export function databaseClientFor(key: string): DatabaseClient {
     if (current !== null) {
         void current.client.dispose();
     }
-    const client = createDatabaseClient(async (request) => (await performAsPerson('database.request', { request })).response as DatabaseResponse);
+    ensureSqlBindings();
+    const observe = snapshotTrigger(
+        () => databaseConnections.list(useDatabaseConnections.getState()),
+        (connectionId) => sqlBindings.refresh(connectionId)
+    );
+    const client = createDatabaseClient(async (request) => {
+        const response = (await performAsPerson('database.request', { request })).response as DatabaseResponse;
+        observe({ request, response });
+        return response;
+    });
+    // A statement that changed a schema leaves the snapshot the language servers read behind; a machine that cannot take one again says nothing.
+    client.onSchemaChange((change) => {
+        void sqlBindings.refresh(change.connectionId, change.schema).catch(() => undefined);
+    });
     current = { key, client };
     if (!following) {
         following = true;

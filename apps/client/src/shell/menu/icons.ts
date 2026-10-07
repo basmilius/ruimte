@@ -1,6 +1,7 @@
 import type { AgentKind } from '@ruimte/contracts';
 import {
     Activity,
+    DatabaseZap,
     Cpu,
     WandSparkles,
     Sparkles,
@@ -247,6 +248,7 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     'panel-databases': Database,
     'database-console-new': SquareTerminal,
     'database-connections': Cable,
+    'database-schemas-refresh': DatabaseZap,
     'panel-devices': TabletSmartphone,
     'panel-toggle': PanelRightOpen,
     'split-right': PanelRight,

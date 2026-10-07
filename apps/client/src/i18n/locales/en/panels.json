@@ -614,7 +614,7 @@
         "documents_other": "{{formatted}} open files",
         "install": "Install",
         "installDetail": "Installs {{name}} {{version}} on this machine, once.",
-        "unavailable": "Not available in this build yet",
+        "unavailable": "No release of this server is available yet",
         "update": "Update to {{version}}",
         "rebuild": "Rebuild",
         "rollback": "Use {{version}}",

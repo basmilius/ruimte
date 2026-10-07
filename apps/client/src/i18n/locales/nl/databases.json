@@ -90,5 +90,28 @@
         "writeFailed_other": "De wachtwoorden van {{count}} verbindingen zijn niet op deze computer bewaard",
         "removeFailed_one": "Het wachtwoord van {{name}} is niet van deze computer verwijderd",
         "removeFailed_other": "De wachtwoorden van {{count}} verbindingen zijn niet van deze computer verwijderd"
+    },
+    "sql": {
+        "label": "SQL van dit bestand: {{choice}}",
+        "none": "Geen schema",
+        "connectionDatabase": "{{name}}: {{database}}",
+        "thisFile": "Dit bestand",
+        "projectDefault": "Projectstandaard ({{name}})",
+        "projectDefaultNone": "Projectstandaard (geen)",
+        "noneItem": "Geen",
+        "allDatabases": "Elke database",
+        "startDatabase": "{{database}}, waar hij start",
+        "addConnection": "Verbinding toevoegen…",
+        "defaultSection": "Projectstandaard",
+        "makeDefault": "{{name}} gebruiken voor het project",
+        "clearDefault": "Projectstandaard wissen",
+        "noDefault": "Het project heeft geen standaard; kies eerst een verbinding voor dit bestand",
+        "noSnapshot": "Nog geen schema gelezen. Open {{name}} in het paneel Databases",
+        "snapshot_one": "{{count}} tabel, gelezen {{time}}",
+        "snapshot_other": "{{count}} tabellen, gelezen {{time}}",
+        "refresh": "Schema opnieuw lezen",
+        "bindFailed": "De SQL-verbinding kon niet worden bewaard",
+        "refreshFailed": "Het schema kon niet worden gelezen",
+        "failedToDraw": "De keuze van de SQL-verbinding kon niet worden getekend"
     }
 }

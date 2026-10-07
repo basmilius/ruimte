@@ -273,6 +273,7 @@ export function menuModel(context: MenuContext): MenuSpec {
             ...only(workspace && context.folder, command('reveal', t('reveal', { app: context.fileManager }))),
             ...only(workspace, command('project-settings', t('projectSettings'))),
             ...only(workspace && !context.scratch, command('database-connections', t('databaseConnections'))),
+            ...only(workspace && !context.scratch, command('database-schemas-refresh', t('refreshSqlSchemas'))),
             separator,
             ...only(workspace && context.windows, command('window-move', t('moveToNewWindow'))),
             ...only(workspace && hosted, command('tab-close', t('closeTab'), { shortcut: CANVAS_SHORTCUTS.closeCell })),

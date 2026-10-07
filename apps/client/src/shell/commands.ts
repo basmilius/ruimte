@@ -21,6 +21,7 @@ import {
 import { toWorld } from '@/canvas/math';
 import { openNewConsole } from '@/database/console-file';
 import { useDatabasePanel } from '@/database/state';
+import { refreshSqlSchemas } from '@/database/sql-bindings';
 import { focusedLanguage } from '@/language/focused-language';
 import { languageCommandRows } from '@/language/language-commands';
 import { editorCommandRows } from '@/shell/editor-commands';
@@ -706,6 +707,11 @@ export function appCommands(): Command[] {
                                 id: 'database-connections',
                                 label: i18next.t('shell:palette.commands.databaseConnections'),
                                 run: () => useDatabasePanel.getState().openConnections()
+                            },
+                            {
+                                id: 'database-schemas-refresh',
+                                label: i18next.t('shell:palette.commands.refreshSqlSchemas'),
+                                run: () => void refreshSqlSchemas()
                             },
                             {
                                 id: 'panel-problems',

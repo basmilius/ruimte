@@ -17,7 +17,8 @@ const SERVER_KINDS: Record<string, LanguageServerKind> = {
     yaml: 'yaml',
     python: 'python',
     shellscript: 'bash',
-    dockerfile: 'docker'
+    dockerfile: 'docker',
+    sql: 'sql-native'
 };
 
 export function customLanguageIdOf(statuses: readonly LanguageServerStatus[], language: string | undefined, storedPath: string): string | null {

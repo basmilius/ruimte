@@ -36,10 +36,12 @@ import { useFileEditing } from '@/shell/panels/use-file-editing';
 import { useGitBase } from '@/shell/panels/use-git-base';
 import { useCodeTheme } from '@/state/code-theme';
 import { fileTabOf, useFiles } from '@/state/files';
-import { useProject } from '@/state/project';
+import { shownFolderOf, useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 
 const SqlConsole = lazyNamed(() => import('@/database/SqlConsole'), 'SqlConsole');
+
+const SqlBindingPicker = lazyNamed(() => import('@/database/SqlBindingPicker'), 'SqlBindingPicker');
 
 // One screen of code, near enough. Small enough to highlight without a stutter, large enough that a
 // long file is a handful of blocks instead of thousands.
@@ -254,6 +256,8 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const agentChanges = useAgentChanges(editor, path, plain ? undefined : read.language);
     const conflict = useConflictResolution(editor, path);
     const folder = useProject((s) => s.current?.folder ?? null);
+    // The Chats project has no databases, so its files read SQL against none.
+    const databaseFolder = useProject((s) => shownFolderOf(s.current));
 
     /* The editor with its find bar, which a `.sql` tab in console mode draws inside the console. */
     const editorArea = (
@@ -330,6 +334,13 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                     <Tooltip label={readOnlyReason}>
                         <Pill>{t('file.edit.readOnly')}</Pill>
                     </Tooltip>
+                )}
+                {isSqlPath(path) && databaseFolder !== null && (
+                    <ErrorBoundary label={t('databases:sql.failedToDraw')} resetKeys={[path]}>
+                        <Suspense fallback={null}>
+                            <SqlBindingPicker path={path} />
+                        </Suspense>
+                    </ErrorBoundary>
                 )}
                 {toolbarExtra}
             </FileToolbar>

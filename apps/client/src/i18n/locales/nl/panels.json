@@ -614,7 +614,7 @@
         "documents_other": "{{formatted}} open bestanden",
         "install": "Installeren",
         "installDetail": "Installeert {{name}} {{version}} eenmalig op deze machine.",
-        "unavailable": "Nog niet beschikbaar in deze versie",
+        "unavailable": "Er is nog geen release van deze server beschikbaar",
         "update": "Bijwerken naar {{version}}",
         "rebuild": "Rebuild",
         "rollback": "{{version}} gebruiken",
