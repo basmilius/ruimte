@@ -172,6 +172,14 @@ describe('fs.write', () => {
         expect(await readFile(personal.path, 'utf8')).toBe('{}\n');
     });
 
+    test('writes a console a person keeps in the private state like any other file', async () => {
+        await mkdir(join(project, '.ruimte', 'private', 'consoles'), { recursive: true });
+        const console = await put(join(project, '.ruimte', 'private', 'consoles', 'shop 1.sql'), 'SELECT 1;\n');
+
+        await writeTextFile(console.path, 'SELECT 2;\n', console.mtime, boundary());
+        expect(await readFile(console.path, 'utf8')).toBe('SELECT 2;\n');
+    });
+
     test('lets nobody write when the client holds no project', async () => {
         const { path, mtime } = await put(join(project, 'a.txt'), 'one\n');
 

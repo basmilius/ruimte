@@ -4,6 +4,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { FS_READ_MAX_TEXT_BYTES, type FsCreatePayload, type FsCreateResult } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents/coded-error';
 import { isInside } from '../canvas/project-paths.ts';
+import { isRuimteState } from '../projects/project-files.ts';
 import { realRoots, type WriteBoundary } from './write.ts';
 
 type CreateErrorCode = 'bad-path' | 'exists' | 'not-a-directory' | 'outside-project' | 'git-state' | 'ruimte-state' | 'too-large' | 'not-writable';
@@ -81,7 +82,7 @@ export async function createEntry(payload: FsCreatePayload, boundary: WriteBound
     if (segments.includes('.git')) {
         throw new CreateError('git-state', `${target} is part of a repository's own state and is not created from here`);
     }
-    if (segments[0] === '.ruimte') {
+    if (isRuimteState(segments)) {
         throw new CreateError('ruimte-state', `${target} is Ruimte's own state and is not created from here`);
     }
     const bytes = kind === 'file' ? new TextEncoder().encode(payload.text ?? '') : null;

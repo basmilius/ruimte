@@ -115,6 +115,15 @@ describe('fs.create', () => {
         expect(await codeOf(createEntry({ path: join(project, 'new', '.git', 'x'), kind: 'file' }, boundary()))).toBe('git-state');
         expect(await codeOf(createEntry({ path: join(project, '.ruimte', 'project.json'), kind: 'file' }, boundary()))).toBe('ruimte-state');
         expect(await codeOf(createEntry({ path: join(project, '.ruimte', 'sub', 'x'), kind: 'directory' }, boundary()))).toBe('ruimte-state');
+        expect(await codeOf(createEntry({ path: join(project, '.ruimte', 'private', 'consoles'), kind: 'directory' }, boundary()))).toBe('ruimte-state');
+    });
+
+    test('creates a console in the private state, with the folders it needs', async () => {
+        const path = join(project, '.ruimte', 'private', 'consoles', 'shop 1.sql');
+        await createEntry({ path, kind: 'file', text: 'SELECT 1;\n' }, boundary());
+
+        expect(await readFile(path, 'utf8')).toBe('SELECT 1;\n');
+        expect(await codeOf(createEntry({ path, kind: 'file' }, boundary()))).toBe('exists');
     });
 
     test('refuses a relative path and a NUL', async () => {

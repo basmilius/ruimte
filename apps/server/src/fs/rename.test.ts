@@ -73,6 +73,15 @@ describe('fs.rename', () => {
         expect(await codeOf(renamePath(project, join(project, '..', 'moved'), boundary()))).toBe('outside-project');
     });
 
+    test('moves a console out of the private state and back, since a person owns it', async () => {
+        const consoles = join(project, '.ruimte', 'private', 'consoles');
+        await renamePath(join(project, 'src', 'a.ts'), join(consoles, 'a.sql'), boundary());
+        await renamePath(join(consoles, 'a.sql'), join(project, 'queries', 'a.sql'), boundary());
+
+        expect((await stat(join(project, 'queries', 'a.sql'))).isFile()).toBe(true);
+        expect(await codeOf(renamePath(consoles, join(project, 'consoles'), boundary()))).toBe('ruimte-state');
+    });
+
     test('a link out of the project is moved as the link and a target through one is judged on where it lands', async () => {
         await symlink(outside, join(project, 'link'));
         await renamePath(join(project, 'link'), join(project, 'other'), boundary());

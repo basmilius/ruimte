@@ -1,8 +1,9 @@
 import { constants } from 'node:fs';
 import { open, realpath } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, relative, sep } from 'node:path';
 import { FS_READ_MAX_TEXT_BYTES, type FsWriteResult } from '@ruimte/contracts';
 import { isInside } from '../canvas/project-paths.ts';
+import { isRuimteState } from '../projects/project-files.ts';
 import { CodedError } from '@adecore/agents/coded-error';
 import { ReadError, UTF8_BOM, inspect } from './read.ts';
 
@@ -65,7 +66,7 @@ export async function writeTextFile(path: string, text: string, expectedMtime: n
         throw new WriteError('outside-project', `${file.path} is outside the projects open here and their worktrees`);
     }
     // The project files move only through `project.save` and its rev; a write here would slip past both.
-    if (roots.some((root) => isInside(join(root, '.ruimte'), real))) {
+    if (roots.some((root) => isInside(root, real) && isRuimteState(relative(root, real).split(sep)))) {
         throw new WriteError('ruimte-state', `${file.path} is Ruimte's own state and is not written from here`);
     }
     if (mime) {

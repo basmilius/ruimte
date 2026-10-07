@@ -2,6 +2,7 @@ import { lstat, realpath } from 'node:fs/promises';
 import { basename, dirname, join, relative, sep } from 'node:path';
 import { CodedError } from '@adecore/agents/coded-error';
 import { isInside } from '../canvas/project-paths.ts';
+import { isRuimteState } from '../projects/project-files.ts';
 import { trashPath } from './trash.ts';
 import { realRoots, type WriteBoundary } from './write.ts';
 
@@ -37,7 +38,7 @@ export async function deletePath(path: string, boundary: WriteBoundary, trash: (
     if (segments.includes('.git')) {
         throw new DeleteError('git-state', `${path} is part of a repository's own state and is not deleted from here`);
     }
-    if (segments[0] === '.ruimte') {
+    if (isRuimteState(segments)) {
         throw new DeleteError('ruimte-state', `${path} is Ruimte's own state and is not deleted from here`);
     }
     await trash(real);

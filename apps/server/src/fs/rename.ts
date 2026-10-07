@@ -2,6 +2,7 @@ import { lstat, mkdir, realpath, rename, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents/coded-error';
 import { isInside } from '../canvas/project-paths.ts';
+import { isRuimteState } from '../projects/project-files.ts';
 import { realRoots, type WriteBoundary } from './write.ts';
 
 type RenameErrorCode =
@@ -72,7 +73,7 @@ function assertOpenGround(segments: readonly string[], path: string): void {
     if (segments.includes('.git')) {
         throw new RenameError('git-state', `${path} is part of a repository's own state and is not moved from here`);
     }
-    if (segments[0] === '.ruimte') {
+    if (isRuimteState(segments)) {
         throw new RenameError('ruimte-state', `${path} is Ruimte's own state and is not moved from here`);
     }
 }

@@ -37,6 +37,20 @@ export const GITIGNORE_FILE = '.gitignore';
 export const DRAWINGS_DIR = 'drawings';
 // The same rule for diagrams, in a directory beside it, so a file name never says which kind it is.
 export const DIAGRAMS_DIR = 'diagrams';
+// A person's database consoles, plain `.sql` files under `private`, so git never sees them.
+export const CONSOLES_DIR = 'consoles';
+
+/*
+ * Whether a path inside a project folder, as the names below that folder, is Ruimte's own state, which a
+ * file request never writes, creates, moves or deletes: the files there change only through their own
+ * requests and revs. A person's consoles are the exception, since they are files like any other.
+ */
+export function isRuimteState(segments: readonly string[]): boolean {
+    if (segments[0] !== PROJECT_DIR) {
+        return false;
+    }
+    return !(segments[1] === PRIVATE_DIR && segments[2] === CONSOLES_DIR && segments.length > 3);
+}
 
 /*
  * `unreadable` is broken JSON or a shape no version of ours ever wrote; `invalid` is a file that

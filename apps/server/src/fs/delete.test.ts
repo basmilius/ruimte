@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { deletePath } from './delete.ts';
 import type { WriteBoundary } from './write.ts';
 
@@ -82,6 +82,15 @@ describe('fs.delete', () => {
         expect(await codeOf(deletePath(join(project, 'vendor', 'lib', '.git'), boundary(), trash))).toBe('git-state');
         expect(await codeOf(deletePath(join(project, '.ruimte'), boundary(), trash))).toBe('ruimte-state');
         expect(trashed).toEqual([]);
+    });
+
+    test('trashes a console a person keeps in the private state', async () => {
+        const path = join(project, '.ruimte', 'private', 'consoles', 'shop 1.sql');
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, 'SELECT 1;\n');
+
+        await deletePath(path, boundary(), trash);
+        expect(trashed).toEqual([path]);
     });
 
     // Only a volume that ignores case can spell `.git` another way and still mean it.
