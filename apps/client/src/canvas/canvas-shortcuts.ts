@@ -37,8 +37,7 @@ import { focusViewRow } from '@/shell/sidebar-focus';
 import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { transportFor } from '@/transport';
 import { activeViewOf, useDocument } from '@/state/document';
-import { useDatabaseTabs } from '@/database/state';
-import { DATABASES_VIEW_ID, FILES_VIEW_ID, isClientCellId } from '@/shell/client-cells';
+import { FILES_VIEW_ID } from '@/shell/files-view';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
 import { cellCount, type SplitDirection } from '@/shell/split';
@@ -55,10 +54,10 @@ function entryFor<T extends string>(table: Record<T, Shortcut>, e: KeyboardEvent
     return (Object.keys(table) as T[]).find((name) => matchesShortcut(table[name], e, apple)) ?? null;
 }
 
-/* The canvas keeps its own keys to itself while a view of its own has the focus; a cell of this client is one. */
+/* The canvas keeps its own keys to itself while a view of its own has the focus; the files are one. */
 function onStandaloneView(): boolean {
     const state = useDocument.getState();
-    if (isClientCellId(state.activeViewId)) {
+    if (state.activeViewId === FILES_VIEW_ID) {
         return true;
     }
     const view = activeViewOf(state);
@@ -89,26 +88,9 @@ function leaveStandaloneView(e: KeyboardEvent): void {
     focusViewRow(view.id);
 }
 
-/* The tabs of the cell of this client that has the focus: the files or the databases. */
-interface CellTabs {
-    keys: readonly string[];
-    active: string | null;
-    activate(key: string): void;
-    /* A file with unsaved changes is saved first, and a table with edits nobody submitted asks first. */
-    close(key: string): void;
-}
-
-function focusedCellTabs(): CellTabs | null {
-    const viewId = useDocument.getState().activeViewId;
-    if (viewId === FILES_VIEW_ID) {
-        const files = useFiles.getState();
-        return { keys: files.tabs.map((tab) => tab.key), active: files.active, activate: files.activate, close: files.close };
-    }
-    if (viewId === DATABASES_VIEW_ID) {
-        const databases = useDatabaseTabs.getState();
-        return { keys: databases.tabs.map((tab) => tab.id), active: databases.active, activate: databases.activate, close: databases.requestClose };
-    }
-    return null;
+/* The tab the files cell has up, or null when another cell has the focus or the cell holds none. */
+function focusedFileTab(): string | null {
+    return useDocument.getState().activeViewId === FILES_VIEW_ID ? useFiles.getState().active : null;
 }
 
 /* The page the keyboard means: a browser view in the focused cell, or the active browser node on its canvas. */
@@ -241,30 +223,30 @@ export function useCanvasShortcuts(): void {
                 focusCellAction(direction);
                 return;
             }
-            /* Stepping between the open tabs, which is the one thing a cell of this client has that no
-               other cell does. It never leaves the cell, so the grid's own keys stay where they are. */
-            const cellTabs = focusedCellTabs();
-            if (e.key === 'Tab' && e.ctrlKey && !e.metaKey && !e.altKey && cellTabs !== null && cellTabs.active !== null) {
-                const { keys, active } = cellTabs;
-                if (keys.length > 1) {
+            /* Stepping between the open tabs, which is the one thing a files cell has that no other
+               cell does. It never leaves the cell, so the grid's own keys stay where they are. */
+            if (e.key === 'Tab' && e.ctrlKey && !e.metaKey && !e.altKey && focusedFileTab() !== null) {
+                const { tabs, active } = useFiles.getState();
+                if (tabs.length > 1) {
                     e.preventDefault();
-                    const index = keys.indexOf(active);
-                    const next = keys[(index + (e.shiftKey ? -1 : 1) + keys.length) % keys.length];
-                    if (next !== undefined) {
-                        cellTabs.activate(next);
+                    const index = tabs.findIndex((tab) => tab.key === active);
+                    const next = tabs[(index + (e.shiftKey ? -1 : 1) + tabs.length) % tabs.length];
+                    if (next) {
+                        useFiles.getState().activate(next.key);
                     }
                     return;
                 }
             }
-            /* A cell of this client closes its tab, and the cell goes with the last one (`state/files.ts`,
-               `database/state.ts`), so one shortcut walks out of a stack of tabs and then out of the cell
-               that held them. Off macOS the window menu's Close answers Ctrl+W, so the shortcut is always
-               taken there, even with nothing to close. */
+            /* The files cell closes its tab, and the cell goes with the last one (`state/files.ts`), so
+               one shortcut walks out of a stack of tabs and then out of the cell that held them. A file
+               with unsaved changes is saved first, and a table with edits nobody submitted asks first.
+               Off macOS the window menu's Close answers Ctrl+W, so the shortcut is always taken there,
+               even with nothing to close. */
             if (is(CANVAS_SHORTCUTS.closeCell)) {
-                const tab = cellTabs?.active ?? null;
-                if (cellTabs !== null && tab !== null) {
+                const tab = focusedFileTab();
+                if (tab !== null) {
                     e.preventDefault();
-                    cellTabs.close(tab);
+                    useFiles.getState().close(tab);
                     return;
                 }
                 const layout = useDocument.getState().layout;

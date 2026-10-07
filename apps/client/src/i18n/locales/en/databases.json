@@ -1,14 +1,14 @@
 {
-    "cell": {
-        "name": "Databases",
-        "tabs": "Open tables and consoles",
-        "newConsole": "New console",
-        "empty": {
-            "title": "Nothing open",
-            "body": "Open a table from the databases panel, or start a console."
-        },
+    "tab": {
+        "filtered": "{{table}} (filtered)",
+        "structure": "{{table}} (structure)",
+        "newTable": "New table",
+        "design": "{{table}} (design)",
+        "hint": "{{schema}} on {{connection}}",
+        "where": "Where this table is",
+        "unsubmitted": "Edits nobody submitted",
         "gone": "This connection is no longer in the project.",
-        "closeTab": "Close tab",
+        "close": "Close tab",
         "failed": "This tab failed to render",
         "discard": {
             "title": "Discard the changes to {{table}}?",
@@ -16,12 +16,16 @@
             "confirm": "Discard and close"
         }
     },
-    "tab": {
-        "filtered": "{{table}} (filtered)",
-        "structure": "{{table}} (structure)",
-        "console": "Console {{number}}",
-        "newTable": "New table",
-        "design": "{{table}} (design)"
+    "console": {
+        "runOn": "Run on a connection",
+        "asFile": "Just the file",
+        "untitled": "Untitled connection",
+        "schema": "Schema",
+        "defaultSchema": "Default schema",
+        "gone": "The connection this console ran on is no longer in the project.",
+        "failed": "The console could not be made",
+        "failedToDraw": "This console failed to render",
+        "taken": "Every console name for {{name}} is taken."
     },
     "panel": {
         "newConsole": "New console",

@@ -1,5 +1,5 @@
 import { ProjectFileTabViewSchema, type ProjectFileTabView } from '@ruimte/contracts';
-import { FILES_VIEW_ID } from '@/shell/client-cells';
+import { FILES_VIEW_ID } from '@/shell/files-view';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 
 /*

@@ -4,7 +4,7 @@ import { Copy, FileText, ListX, Minus, Pin, PinOff, Plus, RefreshCw, SquareX, X 
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
-import { isCheckoutDiff, useFiles } from '@/state/files';
+import { isCheckoutDiff, isDatabaseTab, useFiles } from '@/state/files';
 import { copyText, Icon, Kbd, Menu } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
@@ -22,6 +22,27 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
 
     if (tab === null) {
         return null;
+    }
+
+    const tabItems = (
+        <>
+            <Menu.Item onClick={() => useFiles.getState().setPinned(tabKey, !pinned)}>
+                <Icon icon={pinned ? PinOff : Pin} size={14} /> {pinned ? t('file.tab.unpin') : t('file.tab.pin')}
+            </Menu.Item>
+            <Menu.Item onClick={() => useFiles.getState().close(tabKey)}>
+                <Icon icon={X} size={14} /> {t('file.tab.close')} <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
+            </Menu.Item>
+            <Menu.Item disabled={!hasOthers} onClick={() => useFiles.getState().closeOthers(tabKey)}>
+                <Icon icon={ListX} size={14} /> {t('file.tab.closeOthers')}
+            </Menu.Item>
+            <Menu.Item onClick={() => useFiles.getState().closeAll()}>
+                <Icon icon={SquareX} size={14} /> {t('file.tab.closeAll')}
+            </Menu.Item>
+        </>
+    );
+    // A database view is about no file, so only what is about the tab is left.
+    if (isDatabaseTab(tab)) {
+        return tabItems;
     }
 
     const { path, view } = tab;
@@ -81,18 +102,7 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
                     <Menu.Separator />
                 </>
             )}
-            <Menu.Item onClick={() => useFiles.getState().setPinned(tabKey, !pinned)}>
-                <Icon icon={pinned ? PinOff : Pin} size={14} /> {pinned ? t('file.tab.unpin') : t('file.tab.pin')}
-            </Menu.Item>
-            <Menu.Item onClick={() => useFiles.getState().close(tabKey)}>
-                <Icon icon={X} size={14} /> {t('file.tab.close')} <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
-            </Menu.Item>
-            <Menu.Item disabled={!hasOthers} onClick={() => useFiles.getState().closeOthers(tabKey)}>
-                <Icon icon={ListX} size={14} /> {t('file.tab.closeOthers')}
-            </Menu.Item>
-            <Menu.Item onClick={() => useFiles.getState().closeAll()}>
-                <Icon icon={SquareX} size={14} /> {t('file.tab.closeAll')}
-            </Menu.Item>
+            {tabItems}
         </>
     );
 }

@@ -31,7 +31,8 @@ export function editBlockOf({ path, roots, large, plain, coarse }: EditGateInput
     if (inside.length === 0) {
         return 'outside-project';
     }
-    if (inside.some((root) => isInside(`${root}/.ruimte`, path))) {
+    // A person's database consoles are files like any other, the one place in `.ruimte` the machine writes from here.
+    if (inside.some((root) => isInside(`${root}/.ruimte`, path) && !isUnderFolder(path, `${root}/.ruimte/private/consoles`))) {
         return 'ruimte-state';
     }
     if (large) {

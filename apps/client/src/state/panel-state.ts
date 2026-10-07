@@ -1,12 +1,19 @@
-import type { GitDiffScope, ProjectPanelKind, ProjectPanels } from '@ruimte/contracts';
-import { parseDatabaseTabs, serializeDatabaseTabs, type DatabaseTabs } from '@/database/tabs';
-import { tabKey, type FileTab } from '@/state/files';
+import {
+    ProjectStripTabSchema,
+    type GitDiffScope,
+    type ProjectFileTab,
+    type ProjectPanelKind,
+    type ProjectPanels,
+    type ProjectStripTab
+} from '@ruimte/contracts';
+import { databaseTabId, databaseTabKey } from '@/database/tabs';
+import { isDatabaseTab, tabKey, type DatabaseTab, type FileTab, type Tab } from '@/state/files';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE } from '@/state/git';
 import type { PanelDefaults, PanelKind } from '@/state/ui';
 
 /* Everything the surfaces around the canvas remember for one project on this machine. */
 export interface PanelsState extends PanelDefaults {
-    tabs: FileTab[];
+    tabs: Tab[];
     active: string | null;
     expandedDirs: string[];
     gitScope: GitDiffScope;
@@ -17,7 +24,6 @@ export interface PanelsState extends PanelDefaults {
     sidebarExpanded: string[] | null;
     /* The last favicon of every browser node, by node id. */
     favicons: Record<string, string>;
-    databaseTabs: DatabaseTabs;
 }
 
 /* A width from the file is a whole positive number of pixels or it is nothing at all. */
@@ -33,17 +39,85 @@ function storedPanelKind(stored: ProjectPanels, kind: ProjectPanelKind): PanelKi
     return stored.launchesPanel === true ? 'launches' : kind;
 }
 
+function fileTabOf(tab: ProjectFileTab): FileTab {
+    return {
+        key: tabKey(tab.path, tab.view),
+        path: tab.path,
+        ...(tab.view ? { view: tab.view } : {}),
+        ...(tab.console ? { console: tab.console } : {}),
+        pinned: tab.pinned
+    };
+}
+
+function tabOf(stored: ProjectStripTab): Tab {
+    if (stored.kind === 'file') {
+        return fileTabOf(stored);
+    }
+    const { id, ...tab } = stored;
+    return { ...tab, key: databaseTabKey(id) };
+}
+
+/* A tab of the databases cell of a release before the strip, in the shape it wrote; a console was a text of its own, which no file holds. */
+function oldDatabaseTabOf(stored: unknown): Tab | null {
+    const entry = typeof stored === 'object' && stored !== null ? (stored as Record<string, unknown>) : {};
+    const parsed = ProjectStripTabSchema.safeParse({ ...entry, pinned: false });
+    return parsed.success && parsed.data.kind !== 'file' ? tabOf(parsed.data) : null;
+}
+
+/*
+ * The tabs in their order, each read on its own, so a kind this release does not know drops that tab and
+ * not the list, and a second tab under one key drops too. A file from before the strip has its file tabs
+ * and the tabs of the databases cell, which follow them.
+ */
+function tabsOf(stored: ProjectPanels | undefined): Tab[] {
+    const read =
+        stored?.strip !== undefined
+            ? stored.strip.map((entry) => {
+                  const parsed = ProjectStripTabSchema.safeParse(entry);
+                  return parsed.success ? tabOf(parsed.data) : null;
+              })
+            : [...(stored?.tabs ?? []).map(fileTabOf), ...(stored?.databases?.tabs ?? []).map(oldDatabaseTabOf)];
+    const tabs: Tab[] = [];
+    for (const tab of read) {
+        if (tab !== null && !tabs.some((other) => other.key === tab.key)) {
+            tabs.push(tab);
+        }
+    }
+    return tabs;
+}
+
+function storedFileTab(tab: FileTab): ProjectFileTab {
+    return { path: tab.path, pinned: tab.pinned, ...(tab.view ? { view: tab.view } : {}), ...(tab.console ? { console: tab.console } : {}) };
+}
+
+function storedDatabaseTab(tab: DatabaseTab): ProjectStripTab {
+    const base = { id: databaseTabId(tab.key), pinned: tab.pinned, connectionId: tab.connectionId, schema: tab.schema };
+    switch (tab.kind) {
+        case 'table':
+            return {
+                kind: 'table',
+                ...base,
+                table: tab.table,
+                ...(tab.where === undefined ? {} : { where: tab.where }),
+                ...(tab.tableKind === undefined ? {} : { tableKind: tab.tableKind })
+            };
+        case 'structure':
+            return { kind: 'structure', ...base, table: tab.table, ...(tab.tableKind === undefined ? {} : { tableKind: tab.tableKind }) };
+        case 'designer':
+            return { kind: 'designer', ...base, ...(tab.table === undefined ? {} : { table: tab.table }) };
+    }
+}
+
+function storedTab(tab: Tab): ProjectStripTab {
+    return isDatabaseTab(tab) ? storedDatabaseTab(tab) : { kind: 'file', ...storedFileTab(tab) };
+}
+
 /*
  * What the project's local file says, with the app's defaults filling in for whatever it leaves
  * out. A file written before the panels lived here says nothing, so it opens on the defaults.
  */
 export function parsePanels(stored: ProjectPanels | undefined, defaults: PanelsState): PanelsState {
-    const tabs: FileTab[] = (stored?.tabs ?? []).map((tab) => ({
-        key: tabKey(tab.path, tab.view),
-        path: tab.path,
-        ...(tab.view ? { view: tab.view } : {}),
-        pinned: tab.pinned
-    }));
+    const tabs = tabsOf(stored);
     /* A tab that is not among them would leave the viewer pointing at nothing. */
     const active = tabs.some((tab) => tab.key === stored?.activeTab) ? (stored?.activeTab ?? null) : (tabs[0]?.key ?? null);
     return {
@@ -59,8 +133,7 @@ export function parsePanels(stored: ProjectPanels | undefined, defaults: PanelsS
         gitLogHeight: width(stored?.git?.logHeight, DEFAULT_LOG_HEIGHT) ?? DEFAULT_LOG_HEIGHT,
         gitHiddenRepos: stored?.git?.hiddenRepos ?? [],
         sidebarExpanded: stored?.sidebarExpanded ?? null,
-        favicons: stored?.favicons ?? {},
-        databaseTabs: parseDatabaseTabs(stored?.databases)
+        favicons: stored?.favicons ?? {}
     };
 }
 
@@ -79,8 +152,10 @@ export function serializePanels(state: PanelsState): ProjectPanels {
         ...(state.panelWidth === null ? {} : { panelWidth: Math.round(state.panelWidth) }),
         ...(state.planAnchor === null ? {} : { plan: state.planAnchor }),
         ...(state.planWidth === null ? {} : { planWidth: Math.round(state.planWidth) }),
-        tabs: state.tabs.map((tab) => ({ path: tab.path, pinned: tab.pinned, ...(tab.view ? { view: tab.view } : {}) })),
+        // A client from before the strip reads the file tabs alone.
+        tabs: state.tabs.filter((tab): tab is FileTab => !isDatabaseTab(tab)).map(storedFileTab),
         activeTab: state.active,
+        strip: state.tabs.map(storedTab),
         expandedDirs: state.expandedDirs,
         git: {
             scope: state.gitScope,
@@ -91,7 +166,6 @@ export function serializePanels(state: PanelsState): ProjectPanels {
         /* A list nobody has folded stays out of the file, so the next open still seeds itself. */
         ...(state.sidebarExpanded === null ? {} : { sidebarExpanded: state.sidebarExpanded }),
         /* A project with no page open writes no map at all. */
-        ...(Object.keys(state.favicons).length === 0 ? {} : { favicons: state.favicons }),
-        ...(state.databaseTabs.tabs.length === 0 ? {} : { databases: serializeDatabaseTabs(state.databaseTabs) })
+        ...(Object.keys(state.favicons).length === 0 ? {} : { favicons: state.favicons })
     };
 }

@@ -1,162 +1,108 @@
 import type { DatabaseAction } from '@adecore/database';
+import { isDatabaseTab, placeTab, type DatabaseTab, type Tab, type TabState } from '@/state/files';
 
-/*
- * One tab of the databases cell. A table opens as its data or its structure, each a tab of its own;
- * a designer without `table` makes a new table.
- */
-export type DatabaseTab =
-    /* `where` opens the data filtered, as a jump along a foreign key does. */
-    | { id: string; kind: 'table'; connectionId: string; schema: string; table: string; where?: string }
-    | { id: string; kind: 'structure'; connectionId: string; schema: string; table: string }
-    | { id: string; kind: 'console'; connectionId: string; schema?: string; sql: string; number: number }
-    | { id: string; kind: 'designer'; connectionId: string; schema: string; table?: string };
+/* What opens a tab. A console is a file (`database/console-file.ts`), and managing a connection opens a dialog. */
+export type DatabaseTabAction = Exclude<DatabaseAction, { kind: 'manage-connection' } | { kind: 'open-console' }>;
 
-export interface DatabaseTabs {
-    tabs: DatabaseTab[];
-    active: string | null;
+const KEY_PREFIX = 'database:';
+
+/* A database tab is named by an id of its own, so a filtered table and a new table's designer can each have one. */
+export function databaseTabKey(id: string): string {
+    return `${KEY_PREFIX}${id}`;
 }
 
-/* What the tabs answer. Managing a connection opens a dialog, not a tab. */
-export type DatabaseTabAction = Exclude<DatabaseAction, { kind: 'manage-connection' }>;
-
-export const EMPTY_DATABASE_TABS: DatabaseTabs = { tabs: [], active: null };
-
-const add = (state: DatabaseTabs, tab: DatabaseTab): DatabaseTabs => ({ tabs: [...state.tabs, tab], active: tab.id });
-
-const focus = (state: DatabaseTabs, id: string): DatabaseTabs => (state.active === id ? state : { tabs: state.tabs, active: id });
-
-/* The number a new console is called by: one past the highest of the consoles that are open. */
-export function nextConsoleNumber(tabs: readonly DatabaseTab[]): number {
-    return tabs.reduce((highest, tab) => (tab.kind === 'console' ? Math.max(highest, tab.number) : highest), 0) + 1;
+export function databaseTabId(key: string): string {
+    return key.startsWith(KEY_PREFIX) ? key.slice(KEY_PREFIX.length) : key;
 }
 
+const focus = (state: TabState, key: string): TabState => (state.active === key ? state : { tabs: state.tabs, active: key });
+
 /*
- * A view asked for a tab. A table opens once per table and view, and opening it again brings that tab
- * up, except a filtered one: the filter is what the person asked to see, so it gets a tab of its own.
- * A table is designed in one tab, and the designer that just created or renamed a table (`source`)
- * becomes the designer of that table rather than leaving it to a second one.
+ * What a database view asked for, as tabs of the files cell, under the limit and the pins the files keep.
+ * A table opens once per table and view, and opening it again brings that tab up, except a filtered one:
+ * the filter is what the person asked to see, so it gets a tab of its own. A table is designed in one tab,
+ * and the designer that just created or renamed a table (`source`) becomes the designer of that table
+ * rather than leaving it to a second one. `preview: false` is a double click in the explorer, which pins
+ * the tab the way a double click on the tab does.
  */
-export function applyTabAction(state: DatabaseTabs, action: DatabaseTabAction, createId: () => string, source: string | null = null): DatabaseTabs {
+export function applyDatabaseAction(
+    state: TabState,
+    action: DatabaseTabAction,
+    limit: number,
+    createId: () => string,
+    keeps: (tab: Tab) => boolean = () => false,
+    source: string | null = null
+): TabState {
+    const place = (tab: DatabaseTab): TabState => placeTab(state, tab, limit, keeps);
     switch (action.kind) {
         case 'open-table': {
             const { connectionId, schema, table } = action.ref;
-            const kind = action.view === 'data' ? 'table' : 'structure';
+            const pinned = action.preview === false;
+            const tableKind = action.tableKind === undefined ? {} : { tableKind: action.tableKind };
             const where = action.view === 'data' ? action.where?.trim() : undefined;
             if (where !== undefined && where !== '') {
-                return add(state, { id: createId(), kind: 'table', connectionId, schema, table, where });
+                return place({ key: databaseTabKey(createId()), kind: 'table', pinned, connectionId, schema, table, where, ...tableKind });
             }
+            const kind = action.view === 'data' ? 'table' : 'structure';
             const open = state.tabs.find(
-                (tab) =>
+                (tab): tab is DatabaseTab & { kind: 'table' | 'structure' } =>
+                    isDatabaseTab(tab) &&
                     tab.kind === kind &&
                     tab.connectionId === connectionId &&
                     tab.schema === schema &&
                     tab.table === table &&
                     (tab.kind !== 'table' || tab.where === undefined)
             );
-            return open === undefined ? add(state, { id: createId(), kind, connectionId, schema, table }) : focus(state, open.id);
+            if (open === undefined) {
+                return place({ key: databaseTabKey(createId()), kind, pinned, connectionId, schema, table, ...tableKind });
+            }
+            if (open.pinned || !pinned) {
+                return focus(state, open.key);
+            }
+            return { tabs: state.tabs.map((tab) => (tab === open ? { ...open, pinned: true } : tab)), active: open.key };
         }
-        case 'open-console':
-            return add(state, {
-                id: createId(),
-                kind: 'console',
-                connectionId: action.connectionId,
-                ...(action.schema === undefined ? {} : { schema: action.schema }),
-                sql: action.sql ?? '',
-                number: nextConsoleNumber(state.tabs)
-            });
         case 'new-table':
-            return add(state, { id: createId(), kind: 'designer', connectionId: action.connectionId, schema: action.schema });
+            return place({ key: databaseTabKey(createId()), kind: 'designer', pinned: false, connectionId: action.connectionId, schema: action.schema });
         case 'edit-table': {
             const { connectionId, schema, table } = action.ref;
-            const designer = state.tabs.find((tab) => tab.id === source);
-            if (designer?.kind === 'designer' && designer.connectionId === connectionId && designer.schema === schema) {
-                return {
-                    tabs: state.tabs.map((tab) => (tab.id === designer.id ? { ...designer, table } : tab)),
-                    active: designer.id
-                };
+            const designer = state.tabs.find((tab) => tab.key === source);
+            if (
+                designer !== undefined &&
+                isDatabaseTab(designer) &&
+                designer.kind === 'designer' &&
+                designer.connectionId === connectionId &&
+                designer.schema === schema
+            ) {
+                return { tabs: state.tabs.map((tab) => (tab === designer ? { ...designer, table } : tab)), active: designer.key };
             }
-            const open = state.tabs.find((tab) => tab.kind === 'designer' && tab.connectionId === connectionId && tab.schema === schema && tab.table === table);
-            return open === undefined ? add(state, { id: createId(), kind: 'designer', connectionId, schema, table }) : focus(state, open.id);
+            const open = state.tabs.find(
+                (tab) => isDatabaseTab(tab) && tab.kind === 'designer' && tab.connectionId === connectionId && tab.schema === schema && tab.table === table
+            );
+            return open === undefined
+                ? place({ key: databaseTabKey(createId()), kind: 'designer', pinned: false, connectionId, schema, table })
+                : focus(state, open.key);
         }
     }
 }
 
-export function activateDatabaseTab(state: DatabaseTabs, id: string): DatabaseTabs {
-    return state.tabs.some((tab) => tab.id === id) ? focus(state, id) : state;
-}
-
-/* The neighbor takes over when the active tab closes: the one to its right, or the one before it. */
-export function closeDatabaseTab(state: DatabaseTabs, id: string): DatabaseTabs {
-    const index = state.tabs.findIndex((tab) => tab.id === id);
-    if (index < 0) {
-        return state;
-    }
-    const tabs = state.tabs.filter((tab) => tab.id !== id);
-    if (state.active !== id) {
-        return { tabs, active: state.active };
-    }
-    return { tabs, active: tabs[Math.min(index, tabs.length - 1)]?.id ?? null };
-}
-
-export function setConsoleSql(state: DatabaseTabs, id: string, sql: string): DatabaseTabs {
-    const tab = state.tabs.find((candidate) => candidate.id === id);
-    if (tab?.kind !== 'console' || tab.sql === sql) {
-        return state;
-    }
-    return { tabs: state.tabs.map((candidate) => (candidate.id === id ? { ...tab, sql } : candidate)), active: state.active };
-}
-
-function text(value: unknown): value is string {
-    return typeof value === 'string' && value !== '';
-}
-
-function optionalText(value: unknown): value is string | undefined {
-    return value === undefined || typeof value === 'string';
-}
-
-/* One stored tab as the cell can draw it, or null for one this release cannot read. */
-function tabOf(stored: unknown): DatabaseTab | null {
-    if (typeof stored !== 'object' || stored === null) {
+/* The action that opens a closed tab again as it stood. */
+export function reopenAction(tab: DatabaseTab): DatabaseTabAction | null {
+    if (tab.table === undefined) {
         return null;
     }
-    const tab = stored as Record<string, unknown>;
-    if (!text(tab.id) || !text(tab.connectionId)) {
-        return null;
-    }
-    const { id, connectionId } = tab;
+    const ref = { connectionId: tab.connectionId, schema: tab.schema, table: tab.table };
     switch (tab.kind) {
         case 'table':
-            return text(tab.schema) && text(tab.table) && optionalText(tab.where)
-                ? { id, kind: 'table', connectionId, schema: tab.schema, table: tab.table, ...(text(tab.where) ? { where: tab.where } : {}) }
-                : null;
+            return {
+                kind: 'open-table',
+                ref,
+                view: 'data',
+                ...(tab.where === undefined ? {} : { where: tab.where }),
+                ...(tab.tableKind === undefined ? {} : { tableKind: tab.tableKind })
+            };
         case 'structure':
-            return text(tab.schema) && text(tab.table) ? { id, kind: 'structure', connectionId, schema: tab.schema, table: tab.table } : null;
-        case 'console':
-            return optionalText(tab.schema) && typeof tab.sql === 'string' && Number.isInteger(tab.number) && (tab.number as number) > 0
-                ? { id, kind: 'console', connectionId, ...(text(tab.schema) ? { schema: tab.schema } : {}), sql: tab.sql, number: tab.number as number }
-                : null;
+            return { kind: 'open-table', ref, view: 'structure', ...(tab.tableKind === undefined ? {} : { tableKind: tab.tableKind }) };
         case 'designer':
-            return text(tab.schema) && optionalText(tab.table)
-                ? { id, kind: 'designer', connectionId, schema: tab.schema, ...(text(tab.table) ? { table: tab.table } : {}) }
-                : null;
-        default:
-            return null;
+            return { kind: 'edit-table', ref };
     }
-}
-
-/* What the project's local file holds, tab by tab: one this release cannot read is left out, and so is a second tab under one id. */
-export function parseDatabaseTabs(stored: { tabs: unknown[]; activeTab?: string | null } | undefined): DatabaseTabs {
-    const tabs: DatabaseTab[] = [];
-    for (const entry of stored?.tabs ?? []) {
-        const tab = tabOf(entry);
-        if (tab !== null && !tabs.some((other) => other.id === tab.id)) {
-            tabs.push(tab);
-        }
-    }
-    const active = tabs.some((tab) => tab.id === stored?.activeTab) ? (stored?.activeTab ?? null) : (tabs[0]?.id ?? null);
-    return { tabs, active };
-}
-
-export function serializeDatabaseTabs(state: DatabaseTabs): { tabs: unknown[]; activeTab: string | null } {
-    return { tabs: state.tabs.map((tab) => ({ ...tab })), activeTab: state.active };
 }

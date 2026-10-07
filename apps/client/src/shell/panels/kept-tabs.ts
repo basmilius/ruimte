@@ -7,12 +7,21 @@ export function shownAfter(previous: readonly string[], active: string, limit = 
 }
 
 /*
- * The tabs to keep drawn: the one up and those shown before it that are still open, at most `limit`. They come in
- * an order of their keys, which no switch changes: an element moved in the page loses where it was scrolled to.
+ * The tabs to keep drawn: the one up and those shown before it that are still open, at most `limit`, and
+ * every tab `holds` says would lose something unmounted, such as a table with edits nobody submitted. They
+ * come in an order of their keys, which no switch changes: an element moved in the page loses where it was
+ * scrolled to.
  */
-export function keptTabs<T extends { key: string }>(active: string, shown: readonly string[], tabs: readonly T[], limit = KEPT_TABS): T[] {
-    return shownAfter(shown, active, Number.POSITIVE_INFINITY)
+export function keptTabs<T extends { key: string }>(
+    active: string,
+    shown: readonly string[],
+    tabs: readonly T[],
+    limit = KEPT_TABS,
+    holds: (tab: T) => boolean = () => false
+): T[] {
+    const recent = shownAfter(shown, active, Number.POSITIVE_INFINITY)
         .flatMap((key) => tabs.filter((tab) => tab.key === key))
-        .slice(0, limit)
-        .sort((left, right) => (left.key < right.key ? -1 : left.key > right.key ? 1 : 0));
+        .slice(0, limit);
+    const held = tabs.filter((tab) => holds(tab) && !recent.includes(tab));
+    return [...recent, ...held].sort((left, right) => (left.key < right.key ? -1 : left.key > right.key ? 1 : 0));
 }

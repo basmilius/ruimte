@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type WheelEvent as ReactWheelEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type WheelEvent as ReactWheelEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitCommitHorizontal, GitCompare, Pin, X } from 'lucide-react';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
 import { writeMentionDrag } from '@adecore/agents-react/chat/mentions';
+import { useDatabaseConnectionList } from '@/database/connections';
+import { databaseTabIcon, databaseTabTitle } from '@/database/tab-look';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { isCheckoutDiff, useFiles } from '@/state/files';
+import { isCheckoutDiff, isDatabaseTab, useFiles, type DatabaseTab, type FileTab } from '@/state/files';
 import { useGit } from '@/state/git';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { isUnsavedDraft, useTextDrafts } from '@/state/text-drafts';
@@ -26,23 +28,33 @@ const TAB_OPEN =
    open one, and while it has focus. */
 const TAB_CLOSE = 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 group-data-[active=true]:opacity-100';
 
+interface TabLook {
+    label: string;
+    hint: string;
+    icon: ReactNode;
+    /* A file with changes nobody saved, or a table with edits nobody submitted. */
+    unsaved: boolean;
+}
+
 /*
- * The open files as a strip of tabs, inside the preview panel's own header. A double-click pins a
- * tab, a right click offers the same menu the toolbar carries, and a pinned tab shows the pin next
- * to its close button.
+ * The open files and database views as a strip of tabs, inside the preview panel's own header. A
+ * double-click pins a tab, a right click offers the same menu the toolbar carries, and a pinned tab
+ * shows the pin next to its close button.
  * Changes share one tab: the strip keeps the file's name so it stays readable, with the mark that
  * says this is a diff and not the file.
  */
 export function FileTabs() {
-    const { t } = useTranslation('panels');
+    const { t } = useTranslation(['panels', 'databases']);
     const tabs = useFiles((s) => s.tabs);
     const active = useFiles((s) => s.active);
+    const unsubmitted = useFiles((s) => s.unsubmitted);
     const counts = useGit((s) => s.counts);
+    const connections = useDatabaseConnectionList();
     const endpointId = useEndpointId();
     // The paths, not the rows: a draft changes with every keystroke, and the strip only has to know which tabs are unsaved.
     const unsavedKey = useTextDrafts((s) =>
         tabs
-            .filter((tab) => tab.view === undefined && isUnsavedDraft(s.rows[endpointKey(endpointId, tab.path)]))
+            .filter((tab): tab is FileTab => !isDatabaseTab(tab) && tab.view === undefined && isUnsavedDraft(s.rows[endpointKey(endpointId, tab.path)]))
             .map((tab) => tab.path)
             .join('\0')
     );
@@ -77,6 +89,40 @@ export function FileTabs() {
         stripRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }, [active]);
 
+    /* A checkout diff is "Changes"; a whole commit uses its hash because no file represents it. */
+    const fileLook = (tab: FileTab): TabLook => {
+        const commit = tab.view?.commit;
+        const checkout = isCheckoutDiff(tab.path, tab.view);
+        return {
+            label: commit !== undefined ? commit.slice(0, 7) : checkout ? basenameOf(tab.path) : tab.view ? t('git.tab.changes') : basenameOf(tab.path),
+            hint:
+                commit !== undefined
+                    ? t('git.tab.commitHint', { hash: commit.slice(0, 7) })
+                    : checkout
+                      ? t('git.tab.checkoutHint', { name: basenameOf(tab.path), base: tab.view?.base ?? t('worktree.baseBranch') })
+                      : tab.view
+                        ? basenameOf(tab.path)
+                        : tab.path,
+            icon: tab.view ? (
+                <Icon icon={commit === undefined ? GitCompare : GitCommitHorizontal} size={14} className="shrink-0 text-text-faint" />
+            ) : (
+                <FileIcon path={tab.path} size={14} />
+            ),
+            unsaved: tab.view === undefined && unsavedPaths.has(tab.path)
+        };
+    };
+
+    /* The tab names the table; its tooltip says where that table is, as a file's says its path. */
+    const databaseLook = (tab: DatabaseTab): TabLook => {
+        const connection = connections.find((entry) => entry.id === tab.connectionId)?.name ?? '';
+        return {
+            label: databaseTabTitle(tab),
+            hint: connection === '' ? tab.schema : t('databases:tab.hint', { schema: tab.schema, connection }),
+            icon: <Icon icon={databaseTabIcon(tab)} size={14} className="shrink-0 text-text-faint" />,
+            unsaved: unsubmitted[tab.key] === true
+        };
+    };
+
     // A trackpad swipes sideways on its own; a wheel with one axis still has to reach the strip.
     const onWheel = (event: ReactWheelEvent<HTMLDivElement>): void => {
         if (event.deltaX === 0 && event.deltaY !== 0) {
@@ -94,32 +140,23 @@ export function FileTabs() {
             onScroll={measureEdges}
         >
             {tabs.map((tab) => {
-                // A checkout diff is "Changes"; a whole commit uses its hash because no file represents it.
-                const commit = tab.view?.commit;
-                const checkout = isCheckoutDiff(tab.path, tab.view);
-                const count = counts[tab.key];
-                const unsaved = tab.view === undefined && unsavedPaths.has(tab.path);
-                const label =
-                    commit !== undefined ? commit.slice(0, 7) : checkout ? basenameOf(tab.path) : tab.view ? t('git.tab.changes') : basenameOf(tab.path);
-                const hint =
-                    commit !== undefined
-                        ? t('git.tab.commitHint', { hash: commit.slice(0, 7) })
-                        : checkout
-                          ? t('git.tab.checkoutHint', { name: basenameOf(tab.path), base: tab.view?.base ?? t('worktree.baseBranch') })
-                          : tab.view
-                            ? basenameOf(tab.path)
-                            : tab.path;
+                const look = isDatabaseTab(tab) ? databaseLook(tab) : fileLook(tab);
+                const view = isDatabaseTab(tab) ? undefined : tab.view;
+                const count = view ? counts[tab.key] : undefined;
                 return (
                     <ContextMenu.Root key={tab.key}>
-                        <ContextMenu.Trigger render={<span />} className={TAB} data-active={tab.key === active} data-view={tab.view ? 'diff' : undefined}>
-                            <Tooltip label={hint}>
+                        <ContextMenu.Trigger render={<span />} className={TAB} data-active={tab.key === active} data-view={view ? 'diff' : undefined}>
+                            <Tooltip label={look.hint}>
                                 <button
                                     className={TAB_OPEN}
                                     aria-current={tab.key === active}
-                                    /* A diff is a tab about a comparison, not about a file, so there is
-                                       nothing for a canvas or a composer to take from it. */
-                                    draggable={tab.view === undefined}
+                                    /* A diff is a tab about a comparison and a database tab about no file, so
+                                       there is nothing for a canvas or a composer to take from either. */
+                                    draggable={!isDatabaseTab(tab) && tab.view === undefined}
                                     onDragStart={(event) => {
+                                        if (isDatabaseTab(tab)) {
+                                            return;
+                                        }
                                         event.dataTransfer.setData(PATHS_DRAG_TYPE, tab.path);
                                         writeMentionDrag(event.dataTransfer, [tab.path]);
                                         event.dataTransfer.effectAllowed = 'copy';
@@ -127,24 +164,20 @@ export function FileTabs() {
                                     onClick={() => useFiles.getState().activate(tab.key)}
                                     onDoubleClick={() => useFiles.getState().setPinned(tab.key, !tab.pinned)}
                                 >
-                                    {tab.view ? (
-                                        <Icon icon={commit === undefined ? GitCompare : GitCommitHorizontal} size={14} className="shrink-0 text-text-faint" />
-                                    ) : (
-                                        <FileIcon path={tab.path} size={14} />
-                                    )}
-                                    <span className="truncate">{label}</span>
+                                    {look.icon}
+                                    <span className="truncate">{look.label}</span>
                                     {/* A side that changed nothing has no number: `+0` is noise, and both
                                     at zero is a diff with nothing in it to count. */}
-                                    {tab.view && count !== undefined && (count.added > 0 || count.deleted > 0) && (
+                                    {count !== undefined && (count.added > 0 || count.deleted > 0) && (
                                         <span className="flex shrink-0 items-center gap-1 tabular-nums">
                                             {count.added > 0 && <span className="text-term-green">+{count.added}</span>}
                                             {count.deleted > 0 && <span className="text-term-red">-{count.deleted}</span>}
                                         </span>
                                     )}
                                     {/* Out of the row until there is something to mark, so a clean tab keeps the close button 8px from its name. */}
-                                    {unsaved && (
+                                    {look.unsaved && (
                                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted">
-                                            <span className="sr-only">{t('file.unsaved.mark')}</span>
+                                            <span className="sr-only">{isDatabaseTab(tab) ? t('databases:tab.unsubmitted') : t('file.unsaved.mark')}</span>
                                         </span>
                                     )}
                                 </button>
@@ -153,7 +186,7 @@ export function FileTabs() {
                             <IconButton
                                 icon={X}
                                 size="2xs"
-                                label={t('file.tab.closeNamed', { name: label })}
+                                label={t('file.tab.closeNamed', { name: look.label })}
                                 kbd={CANVAS_SHORTCUTS.closeCell}
                                 className={TAB_CLOSE}
                                 onClick={() => useFiles.getState().close(tab.key)}

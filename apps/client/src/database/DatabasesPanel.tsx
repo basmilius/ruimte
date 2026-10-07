@@ -14,14 +14,16 @@ import {
 } from '@/database/connections';
 import { containersFor } from '@/database/docker';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
-import { openNewConsole, useDatabaseTabs } from '@/database/state';
+import { openNewConsole } from '@/database/console-file';
+import { useDatabasePanel } from '@/database/state';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useProject } from '@/state/project';
 
 /*
- * The connections of the project, with their schemas, tables and columns. What a row opens lands in
- * the databases cell; a table leaves the keyboard in the tree, since the next arrow key is the tree's.
+ * The connections of the project, with their schemas, tables and columns. A table opens in the files
+ * cell on a click, the way a file does in the files panel, and a double click keeps its tab. The keyboard
+ * stays in the tree, since the next arrow key is the tree's.
  */
 export function DatabasesPanel() {
     useEffect(() => ensureDatabaseConnections(), []);
@@ -39,14 +41,14 @@ function DatabasesPanelBody() {
     const status = useDatabaseConnections((state) => state.status);
     const error = useDatabaseConnections((state) => state.error);
     const connections = useDatabaseConnectionList();
-    const selection = useDatabaseTabs((state) => state.selection);
+    const selection = useDatabasePanel((state) => state.selection);
 
     const header = (
         <PanelHeaderSlot>
             <span className="grow" />
             <ButtonGroup>
                 <IconButton icon={SquareTerminal} label={t('panel.newConsole')} disabled={connections.length === 0} onClick={() => void openNewConsole()} />
-                <IconButton icon={Settings2} label={t('panel.manage')} onClick={() => useDatabaseTabs.getState().openConnections()} />
+                <IconButton icon={Settings2} label={t('panel.manage')} onClick={() => useDatabasePanel.getState().openConnections()} />
             </ButtonGroup>
         </PanelHeaderSlot>
     );
@@ -90,7 +92,8 @@ function DatabasesPanelBody() {
             <DatabaseExplorer
                 connections={asViewConnections(connections)}
                 value={selection}
-                onValueChange={(next) => useDatabaseTabs.getState().setSelection(next)}
+                onValueChange={(next) => useDatabasePanel.getState().setSelection(next)}
+                openOnClick
                 className="min-h-0 grow"
             />
         </>
@@ -131,7 +134,7 @@ function NoConnections() {
             <PanelEmpty
                 icon={Database}
                 action={
-                    <Button size="sm" variant="secondary" onClick={() => useDatabaseTabs.getState().openConnections()}>
+                    <Button size="sm" variant="secondary" onClick={() => useDatabasePanel.getState().openConnections()}>
                         <Icon icon={Plus} size={14} /> {t('panel.add')}
                     </Button>
                 }

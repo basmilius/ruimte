@@ -1,14 +1,14 @@
 {
-    "cell": {
-        "name": "Databases",
-        "tabs": "Open tabellen en consoles",
-        "newConsole": "Nieuwe console",
-        "empty": {
-            "title": "Niets geopend",
-            "body": "Open een tabel vanuit het databasepaneel, of start een console."
-        },
+    "tab": {
+        "filtered": "{{table}} (gefilterd)",
+        "structure": "{{table}} (structuur)",
+        "newTable": "Nieuwe tabel",
+        "design": "{{table}} (ontwerp)",
+        "hint": "{{schema}} op {{connection}}",
+        "where": "Waar deze tabel staat",
+        "unsubmitted": "Wijzigingen die niemand indiende",
         "gone": "Deze verbinding hoort niet meer bij het project.",
-        "closeTab": "Tab sluiten",
+        "close": "Tab sluiten",
         "failed": "Deze tab kon niet worden getekend",
         "discard": {
             "title": "Wijzigingen in {{table}} weggooien?",
@@ -16,12 +16,16 @@
             "confirm": "Weggooien en sluiten"
         }
     },
-    "tab": {
-        "filtered": "{{table}} (gefilterd)",
-        "structure": "{{table}} (structuur)",
-        "console": "Console {{number}}",
-        "newTable": "Nieuwe tabel",
-        "design": "{{table}} (ontwerp)"
+    "console": {
+        "runOn": "Uitvoeren op een verbinding",
+        "asFile": "Alleen het bestand",
+        "untitled": "Naamloze verbinding",
+        "schema": "Schema",
+        "defaultSchema": "Standaardschema",
+        "gone": "De verbinding van deze console hoort niet meer bij het project.",
+        "failed": "De console kon niet worden gemaakt",
+        "failedToDraw": "Deze console kon niet worden getekend",
+        "taken": "Elke consolenaam voor {{name}} is al in gebruik."
     },
     "panel": {
         "newConsole": "Nieuwe console",

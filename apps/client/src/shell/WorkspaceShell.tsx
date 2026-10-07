@@ -5,7 +5,7 @@ import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
 import { ChatChooserMenu } from '@/chat/ChatChooserMenu';
 import { connectWorkspaceChatHost } from '@/chat/workspace-host';
 import { ensureDatabaseConnections } from '@/database/connections';
-import { useDatabaseTabs } from '@/database/state';
+import { useDatabasePanel } from '@/database/state';
 import { useCanvasShortcuts } from '@/canvas/canvas-shortcuts';
 import { CellOverlayLayer } from '@/shell/CellOverlay';
 import { startLaunchWatch } from '@/launches/watch';
@@ -16,6 +16,7 @@ import { LeaveConflictDialog } from '@/shell/LeaveConflictDialog';
 import { MachineLostScreen } from '@/shell/MachineLostScreen';
 import { MergeWorktreeDialog } from '@/shell/MergeWorktreeDialog';
 import { Panel } from '@/shell/Panel';
+import { DiscardEditsDialog } from '@/shell/panels/DiscardEditsDialog';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { UnsavedCloseDialog } from '@/shell/panels/UnsavedCloseDialog';
 import { PlanPanel } from '@/shell/PlanPanel';
@@ -51,7 +52,7 @@ const LaunchDialogs = lazyDialog(
 const DatabaseConnectionsDialog = lazyDialog(
     () => import('@/database/ConnectionsDialog'),
     'DatabaseConnectionsDialog',
-    useDatabaseTabs,
+    useDatabasePanel,
     (s) => s.dialog.open
 );
 
@@ -138,6 +139,9 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
             </ErrorBoundary>
             <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                 <UnsavedCloseDialog />
+            </ErrorBoundary>
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <DiscardEditsDialog />
             </ErrorBoundary>
             <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                 <LeaveConflictDialog />

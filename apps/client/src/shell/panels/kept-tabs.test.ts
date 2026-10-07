@@ -24,4 +24,11 @@ describe('the tabs that keep their editor', () => {
         expect(keptTabs('c', ['a', 'b'], all).map((tab) => tab.key)).toEqual(first);
         expect(keptTabs('b', ['c', 'a'], all).map((tab) => tab.key)).toEqual(first);
     });
+
+    test('keep a tab that would lose something unmounted, however long ago it was shown', () => {
+        const all = tabs('a', 'b', 'c', 'd');
+        const holds = (tab: { key: string }): boolean => tab.key === 'a';
+        expect(keptTabs('d', ['c', 'b'], all, 2, holds).map((tab) => tab.key)).toEqual(['a', 'c', 'd']);
+        expect(keptTabs('a', ['d'], all, 2, holds).map((tab) => tab.key)).toEqual(['a', 'd']);
+    });
 });

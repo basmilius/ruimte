@@ -15,7 +15,7 @@ import {
 } from '@/database/connections';
 import { databaseBrowse } from '@/database/environment';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
-import { useDatabaseTabs } from '@/database/state';
+import { useDatabasePanel } from '@/database/state';
 import { desktop } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useProject } from '@/state/project';
@@ -28,8 +28,8 @@ import { useConnection } from '@/transport/context';
  */
 export function DatabaseConnectionsDialog() {
     const { t } = useTranslation(['databases', 'common']);
-    const open = useDatabaseTabs((state) => state.dialog.open);
-    const selected = useDatabaseTabs((state) => state.dialog.selected);
+    const open = useDatabasePanel((state) => state.dialog.open);
+    const selected = useDatabasePanel((state) => state.dialog.selected);
     const saveError = useDatabaseConnections((state) => state.saveError);
     const connections = useDatabaseConnectionList();
     const { endpointId } = useConnection();
@@ -43,7 +43,7 @@ export function DatabaseConnectionsDialog() {
     }, [open]);
 
     return (
-        <Dialog.Root open={open} onOpenChange={(next) => useDatabaseTabs.getState().setConnectionsOpen(next)}>
+        <Dialog.Root open={open} onOpenChange={(next) => useDatabasePanel.getState().setConnectionsOpen(next)}>
             <Dialog.Popup className="flex h-[640px] w-[800px] flex-col overflow-hidden">
                 <RuimteDatabaseProvider>
                     <div className="flex shrink-0 items-center gap-4 border-b border-border px-5 py-4">
@@ -57,7 +57,7 @@ export function DatabaseConnectionsDialog() {
                         value={asViewConnections(connections)}
                         onValueChange={(next) => void databaseConnections.edit(fromViewConnections(next))}
                         selected={shown?.id ?? null}
-                        onSelectedChange={(id) => useDatabaseTabs.getState().selectConnection(id)}
+                        onSelectedChange={(id) => useDatabasePanel.getState().selectConnection(id)}
                         onBrowse={browse}
                         renderFields={(connection) => {
                             const found = connections.find((entry) => entry.id === connection.id);

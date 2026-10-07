@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { FILES_VIEW_ID } from '@/shell/client-cells';
+import { FILES_VIEW_ID } from '@/shell/files-view';
 import { dragging, setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { carriesDiff, DIFF_DRAG_TYPE, droppedDiff, startDiffDrag } from './diff-drag.ts';
 

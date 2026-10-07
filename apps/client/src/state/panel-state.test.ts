@@ -15,8 +15,7 @@ const defaults: PanelsState = {
     gitLogHeight: 200,
     gitHiddenRepos: [],
     sidebarExpanded: null,
-    favicons: {},
-    databaseTabs: { tabs: [], active: null }
+    favicons: {}
 };
 
 const full: PanelsState = {
@@ -27,31 +26,31 @@ const full: PanelsState = {
     tabs: [
         { key: '/repo/readme.md', path: '/repo/readme.md', pinned: true },
         { key: '/repo/src/main.ts', path: '/repo/src/main.ts', pinned: false },
+        { key: 'database:t1', kind: 'table', pinned: true, connectionId: 'shop', schema: 'shop', table: 'orders', tableKind: 'table' },
         {
             key: 'diff:/repo/src/main.ts',
             path: '/repo/src/main.ts',
             view: { kind: 'diff', cwd: '/repo', scope: 'base', staged: false },
             pinned: false
-        }
+        },
+        { key: 'database:t2', kind: 'table', pinned: false, connectionId: 'shop', schema: 'shop', table: 'customers', where: '`id` = 3' },
+        {
+            key: '/repo/.ruimte/private/consoles/shop 1.sql',
+            path: '/repo/.ruimte/private/consoles/shop 1.sql',
+            console: { connectionId: 'shop', schema: 'shop' },
+            pinned: false
+        },
+        { key: 'database:t3', kind: 'structure', pinned: false, connectionId: 'shop', schema: 'shop', table: 'totals', tableKind: 'view' },
+        { key: 'database:t4', kind: 'designer', pinned: false, connectionId: 'shop', schema: 'shop' }
     ],
-    active: 'diff:/repo/src/main.ts',
+    active: 'database:t2',
     expandedDirs: ['src/', 'src/state/'],
     gitScope: 'base',
     gitCollapsedDirs: ['src', 'src/state'],
     gitLogHeight: 260,
     gitHiddenRepos: ['tools'],
     sidebarExpanded: ['main', 'notes'],
-    favicons: { 'browser-1': 'https://bas.dev/favicon.ico' },
-    databaseTabs: {
-        tabs: [
-            { id: 't1', kind: 'table', connectionId: 'shop', schema: 'shop', table: 'orders' },
-            { id: 't2', kind: 'table', connectionId: 'shop', schema: 'shop', table: 'customers', where: '`id` = 3' },
-            { id: 't3', kind: 'structure', connectionId: 'shop', schema: 'shop', table: 'orders' },
-            { id: 't4', kind: 'console', connectionId: 'shop', schema: 'shop', sql: 'SELECT 1', number: 2 },
-            { id: 't5', kind: 'designer', connectionId: 'shop', schema: 'shop' }
-        ],
-        active: 't4'
-    }
+    favicons: { 'browser-1': 'https://bas.dev/favicon.ico' }
 };
 
 describe('panels in the machine-local file', () => {
@@ -80,22 +79,70 @@ describe('panels in the machine-local file', () => {
         expect(serializePanels(defaults)).not.toHaveProperty('databasesPanel');
     });
 
-    test('a client without database tabs writes none, and a tab this release cannot read is dropped alone', () => {
-        expect(serializePanels(defaults)).not.toHaveProperty('databases');
+    test('the strip keeps the order of every kind, and a client from before it reads the file tabs alone', () => {
+        const stored = serializePanels(full);
+        expect(stored.strip?.map((tab) => (tab as { kind: string }).kind)).toEqual(['file', 'file', 'table', 'file', 'table', 'file', 'structure', 'designer']);
+        expect(stored.tabs?.map((tab) => tab.path)).toEqual([
+            '/repo/readme.md',
+            '/repo/src/main.ts',
+            '/repo/src/main.ts',
+            '/repo/.ruimte/private/consoles/shop 1.sql'
+        ]);
+        expect(stored.strip?.[2]).toEqual({ kind: 'table', id: 't1', pinned: true, connectionId: 'shop', schema: 'shop', table: 'orders', tableKind: 'table' });
+        expect(stored).not.toHaveProperty('databases');
+    });
+
+    test('a tab of a kind this release does not know is dropped alone, and so is a second tab under one key', () => {
         const parsed = parsePanels(
             {
+                strip: [
+                    { kind: 'chart', id: 'a', pinned: false, connectionId: 'shop', schema: 'main' },
+                    { kind: 'table', id: 'b', pinned: false, connectionId: 'shop', schema: 'main', table: 'orders' },
+                    { kind: 'file', path: '/repo/a.ts', pinned: false },
+                    { kind: 'file', path: '/repo/a.ts', pinned: true },
+                    'nonsense',
+                    { kind: 'table', id: 'c', pinned: false, connectionId: 'shop', schema: 'main' }
+                ],
+                activeTab: 'database:a'
+            },
+            defaults
+        );
+        expect(parsed.tabs).toEqual([
+            { key: 'database:b', kind: 'table', pinned: false, connectionId: 'shop', schema: 'main', table: 'orders' },
+            { key: '/repo/a.ts', path: '/repo/a.ts', pinned: false }
+        ]);
+        expect(parsed.active).toBe('database:b');
+    });
+
+    test('the tabs of the databases cell of an earlier release join the file tabs once, without their consoles', () => {
+        const parsed = parsePanels(
+            {
+                tabs: [{ path: '/repo/a.ts', pinned: false }],
+                activeTab: '/repo/a.ts',
                 databases: {
                     tabs: [
-                        { id: 'a', kind: 'chart', connectionId: 'shop' },
-                        { id: 'b', kind: 'table', connectionId: 'shop', schema: 'main', table: 'orders' },
-                        'nonsense'
+                        { id: 't1', kind: 'table', connectionId: 'shop', schema: 'shop', table: 'customers', where: '`id` = 3' },
+                        { id: 't2', kind: 'console', connectionId: 'shop', schema: 'shop', sql: 'SELECT 1', number: 2 },
+                        { id: 't3', kind: 'structure', connectionId: 'shop', schema: 'shop', table: 'orders' },
+                        { id: 't4', kind: 'designer', connectionId: 'shop', schema: 'shop' }
                     ],
-                    activeTab: 'a'
+                    activeTab: 't2'
                 }
             },
             defaults
         );
-        expect(parsed.databaseTabs).toEqual({ tabs: [{ id: 'b', kind: 'table', connectionId: 'shop', schema: 'main', table: 'orders' }], active: 'b' });
+        expect(parsed.tabs).toEqual([
+            { key: '/repo/a.ts', path: '/repo/a.ts', pinned: false },
+            { key: 'database:t1', kind: 'table', pinned: false, connectionId: 'shop', schema: 'shop', table: 'customers', where: '`id` = 3' },
+            { key: 'database:t3', kind: 'structure', pinned: false, connectionId: 'shop', schema: 'shop', table: 'orders' },
+            { key: 'database:t4', kind: 'designer', pinned: false, connectionId: 'shop', schema: 'shop' }
+        ]);
+        expect(parsed.active).toBe('/repo/a.ts');
+        // Once the strip is written, the old list is not read again.
+        const written = serializePanels(parsed);
+        expect(parsePanels({ ...written, databases: { tabs: [{ id: 't9', kind: 'designer', connectionId: 'shop', schema: 'shop' }] } }, defaults).tabs).toEqual(
+            parsed.tabs
+        );
     });
 
     test('the problems panel is for this session only, so the file stores it as closed', () => {

@@ -1,6 +1,6 @@
 import { isCanvasView } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
-import { isClientCellId } from '@/shell/client-cells';
+import { FILES_VIEW_ID } from '@/shell/files-view';
 import { locateView } from '@/shell/split';
 import { useDocument } from '@/state/document';
 
@@ -63,9 +63,9 @@ export function focusCellOfView(viewId: string): void {
         return;
     }
     document.focusCellAt(at);
-    // The cells of this client stand in the grid without being views of the document, and they are no canvas either.
+    // The files stand in a cell without being a view of the document, and they are no canvas either.
     const view = document.views.find((candidate) => candidate.id === viewId);
-    if (isClientCellId(viewId) || (view !== undefined && !isCanvasView(view))) {
+    if (viewId === FILES_VIEW_ID || (view !== undefined && !isCanvasView(view))) {
         useDocument.getState().setBodyFocused(true);
     }
 }

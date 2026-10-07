@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { openFileLink, parseFileRef, resolveFileRef } from '@/shell/panels/file-links';
-import { FILES_VIEW_ID } from '@/shell/client-cells';
+import { FILES_VIEW_ID } from '@/shell/files-view';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
@@ -91,7 +91,7 @@ describe('openFileLink', () => {
 
     test('a file opens as a tab, and the files take a cell of the grid', async () => {
         await openFileLink('/repo', { path: 'src/main.ts', directory: false });
-        expect(useFiles.getState().tabs.map((tab) => tab.path)).toEqual(['/repo/src/main.ts']);
+        expect(useFiles.getState().tabs.map((tab) => tab.key)).toEqual(['/repo/src/main.ts']);
         expect(useDocument.getState().activeViewId).toBe(FILES_VIEW_ID);
     });
 

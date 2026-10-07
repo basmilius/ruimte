@@ -66,7 +66,7 @@ describe('moving a file', () => {
         useTextDrafts.setState({ rows: {} });
         await moveFile(transport, 'm', 'p1', '/p/a.ts', '/p/b.ts', { edits: true });
         expect(asked).toEqual([{ type: 'fs.rename', payload: { path: '/p/a.ts', to: '/p/b.ts', projectId: 'p1', edits: true } }]);
-        expect(useFiles.getState().tabs.map((tab) => tab.path)).toEqual(['/p/b.ts']);
+        expect(useFiles.getState().tabs.map((tab) => tab.key)).toEqual(['/p/b.ts']);
         expect(useFiles.getState().active).toBe('/p/b.ts');
         expect([...viewStates.keys()]).toEqual(['m:/p/b.ts']);
         expect(viewStateKey('m:/p/a.ts')).toBe('m:/p/b.ts');
@@ -92,7 +92,7 @@ describe('moving a file', () => {
             'a.ts has changes that could not be saved, so nothing moved.'
         );
         expect(asked).toEqual([]);
-        expect(useFiles.getState().tabs.map((tab) => tab.path)).toEqual(['/p/a.ts']);
+        expect(useFiles.getState().tabs.map((tab) => tab.key)).toEqual(['/p/a.ts']);
     });
 
     test('keeps the keyboard where it is unless asked', () => {

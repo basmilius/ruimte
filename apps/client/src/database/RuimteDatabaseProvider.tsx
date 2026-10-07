@@ -2,7 +2,7 @@ import { useCallback, useMemo, type ReactNode } from 'react';
 import { DatabaseProvider, type DatabaseAction } from '@adecore/database';
 import { databaseClientFor } from '@/database/client';
 import { databaseFiles, databaseStorage } from '@/database/environment';
-import { useDatabaseTabs } from '@/database/state';
+import { actOnDatabase } from '@/database/open';
 import { desktop } from '@/desktop/bridge';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -29,7 +29,7 @@ export function RuimteDatabaseProvider({ keepTableFocus = false, children }: { k
     const storage = useMemo(() => databaseStorage(localStorageArea(), endpointId, projectId), [endpointId, projectId]);
     const files = useMemo(() => databaseFiles(endpointId, desktop()), [endpointId]);
     const onAction = useCallback(
-        (action: DatabaseAction) => useDatabaseTabs.getState().act(action, { source: null, focus: !(keepTableFocus && action.kind === 'open-table') }),
+        (action: DatabaseAction) => actOnDatabase(action, { source: null, focus: !(keepTableFocus && action.kind === 'open-table') }),
         [keepTableFocus]
     );
 
@@ -41,7 +41,7 @@ export function RuimteDatabaseProvider({ keepTableFocus = false, children }: { k
 }
 
 /* Inside a provider above, the actions of one tab's views, so a designer that saved its table turns that tab into the table's designer. */
-export function DatabaseTabProvider({ tabId, children }: { tabId: string; children: ReactNode }) {
-    const onAction = useCallback((action: DatabaseAction) => useDatabaseTabs.getState().act(action, { source: tabId, focus: true }), [tabId]);
+export function DatabaseTabProvider({ tabKey, children }: { tabKey: string; children: ReactNode }) {
+    const onAction = useCallback((action: DatabaseAction) => actOnDatabase(action, { source: tabKey, focus: true }), [tabKey]);
     return <DatabaseProvider onAction={onAction}>{children}</DatabaseProvider>;
 }

@@ -16,7 +16,8 @@ import {
     toggleFlagAction
 } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
-import { openNewConsole, useDatabaseTabs } from '@/database/state';
+import { openNewConsole } from '@/database/console-file';
+import { useDatabasePanel } from '@/database/state';
 import { focusedLanguage } from '@/language/focused-language';
 import { languageCommandRows } from '@/language/language-commands';
 import { editorCommandRows } from '@/shell/editor-commands';
@@ -656,7 +657,7 @@ export function appCommands(): Command[] {
                             {
                                 id: 'database-connections',
                                 label: i18next.t('shell:palette.commands.databaseConnections'),
-                                run: () => useDatabaseTabs.getState().openConnections()
+                                run: () => useDatabasePanel.getState().openConnections()
                             },
                             {
                                 id: 'panel-problems',

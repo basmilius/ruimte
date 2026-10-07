@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FS_READ_MAX_TEXT_BYTES, type FsReadText } from '@ruimte/contracts';
 import type { Editor } from '@adecore/editor';
@@ -8,7 +8,8 @@ import { registerFocusedEditor } from '@/shell/panels/focused-editor';
 import { LanguagePopups } from '@/language/RuimteLanguagePopups';
 import { useFind } from '@/find/use-find';
 import { formatBytes, formatNumber } from '@adecore/ui/format';
-import { Button, ErrorBoundary, Pill, Tooltip } from '@adecore/ui';
+import { Button, ErrorBoundary, lazyNamed, Pill, Tooltip } from '@adecore/ui';
+import { isSqlPath } from '@/database/console-file';
 import { DraftBar, EditorNotice } from '@/shell/panels/DraftBar';
 import type { EditBlock } from '@/shell/panels/edit-gate';
 import { useFileActions } from '@/shell/panels/file-actions';
@@ -34,9 +35,12 @@ import { useEditorScope } from '@/shell/panels/use-editor-scope';
 import { useFileEditing } from '@/shell/panels/use-file-editing';
 import { useGitBase } from '@/shell/panels/use-git-base';
 import { useCodeTheme } from '@/state/code-theme';
-import { useFiles } from '@/state/files';
+import { fileTabOf, useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
+
+const SqlConsole = lazyNamed(() => import('@/database/SqlConsole'), 'SqlConsole');
+const SqlConsolePicker = lazyNamed(() => import('@/database/SqlConsole'), 'SqlConsolePicker');
 
 // One screen of code, near enough. Small enough to highlight without a stutter, large enough that a
 // long file is a handful of blocks instead of thousands.
@@ -197,6 +201,9 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const nodeId = fileActions?.nodeId ?? null;
     const reveal = useFiles((s) => (s.revealLine !== null && s.revealLine.key === tabKey ? s.revealLine : null));
     const caret = useFiles((s) => (s.caret !== null && s.caret.key === tabKey ? s.caret : null));
+    // Only a tab runs a `.sql` file on a connection; a node or a view of its own shows the file alone.
+    const sqlTab = tabKey !== null && isSqlPath(path) ? tabKey : null;
+    const binding = useFiles((s) => (sqlTab === null ? undefined : fileTabOf(s, sqlTab)?.console));
 
     const { chunks, lineCount } = useMemo(() => {
         // A file that ends in a newline has no last line, only a last line break.
@@ -249,6 +256,61 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const conflict = useConflictResolution(editor, path);
     const folder = useProject((s) => s.current?.folder ?? null);
 
+    /* The editor with its find bar, which a `.sql` tab in console mode draws inside the console. */
+    const editorArea = (
+        <div ref={surface} className="relative flex min-h-0 min-w-0 grow flex-col">
+            {find.open && (
+                <FindBar
+                    find={find}
+                    total={editorFind.total}
+                    current={editorFind.current}
+                    invalid={editorFind.invalid}
+                    onStep={editorFind.step}
+                    onSelectAll={editorFind.selectAll}
+                    selectionScope={{ noSelection: editorFind.noSelection }}
+                    replacement={{ onReplace: editorFind.replace, onReplaceAll: editorFind.replaceAll, disabledReason: readOnlyReason }}
+                />
+            )}
+            {!editing.viewer && editing.engine !== null ? (
+                <ErrorBoundary label={t('file.edit.failed')} resetKeys={[path, editing.engine]} className="min-h-0 grow">
+                    <FileEditor
+                        engine={editing.engine}
+                        endpointId={editing.endpointId}
+                        path={path}
+                        disk={disk}
+                        language={plain ? undefined : read.language}
+                        wrap={wrap}
+                        indentation={editing.indentation}
+                        rightMargin={editing.rightMargin}
+                        readOnlyReason={readOnlyReason}
+                        placeholderScroll={viewerScroll}
+                        focused={editing.focused}
+                        reveal={reveal}
+                        onEditor={setEditor}
+                    />
+                </ErrorBoundary>
+            ) : (
+                <FileScroll className="file-code" data-wrap={wrap} onScroll={(event) => (viewerScroll.current = event.currentTarget.scrollTop)}>
+                    {chunks.map((chunk) => {
+                        const inChunk = reveal !== null && reveal.line >= chunk.start && reveal.line < chunk.start + chunk.lines;
+                        return (
+                            <CodeChunk
+                                key={chunk.start}
+                                code={chunk.code}
+                                lines={chunk.lines}
+                                start={chunk.start}
+                                language={language}
+                                theme={theme}
+                                reveal={inChunk ? reveal.line : undefined}
+                                revealNonce={inChunk ? reveal.nonce : undefined}
+                            />
+                        );
+                    })}
+                </FileScroll>
+            )}
+        </div>
+    );
+
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar
@@ -271,6 +333,11 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                     </Tooltip>
                 )}
                 {toolbarExtra}
+                {sqlTab !== null && (
+                    <Suspense fallback={null}>
+                        <SqlConsolePicker tabKey={sqlTab} binding={binding} />
+                    </Suspense>
+                )}
             </FileToolbar>
             <DraftBar endpointId={editing.endpointId} path={path} />
             {agentChanges.review !== null && <ReviewBar review={agentChanges.review} />}
@@ -281,57 +348,17 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                     </Button>
                 </EditorNotice>
             )}
-            <div ref={surface} className="relative flex min-h-0 min-w-0 grow flex-col">
-                {find.open && (
-                    <FindBar
-                        find={find}
-                        total={editorFind.total}
-                        current={editorFind.current}
-                        invalid={editorFind.invalid}
-                        onStep={editorFind.step}
-                        onSelectAll={editorFind.selectAll}
-                        selectionScope={{ noSelection: editorFind.noSelection }}
-                        replacement={{ onReplace: editorFind.replace, onReplaceAll: editorFind.replaceAll, disabledReason: readOnlyReason }}
-                    />
-                )}
-                {!editing.viewer && editing.engine !== null ? (
-                    <ErrorBoundary label={t('file.edit.failed')} resetKeys={[path, editing.engine]} className="min-h-0 grow">
-                        <FileEditor
-                            engine={editing.engine}
-                            endpointId={editing.endpointId}
-                            path={path}
-                            disk={disk}
-                            language={plain ? undefined : read.language}
-                            wrap={wrap}
-                            indentation={editing.indentation}
-                            rightMargin={editing.rightMargin}
-                            readOnlyReason={readOnlyReason}
-                            placeholderScroll={viewerScroll}
-                            focused={editing.focused}
-                            reveal={reveal}
-                            onEditor={setEditor}
-                        />
-                    </ErrorBoundary>
-                ) : (
-                    <FileScroll className="file-code" data-wrap={wrap} onScroll={(event) => (viewerScroll.current = event.currentTarget.scrollTop)}>
-                        {chunks.map((chunk) => {
-                            const inChunk = reveal !== null && reveal.line >= chunk.start && reveal.line < chunk.start + chunk.lines;
-                            return (
-                                <CodeChunk
-                                    key={chunk.start}
-                                    code={chunk.code}
-                                    lines={chunk.lines}
-                                    start={chunk.start}
-                                    language={language}
-                                    theme={theme}
-                                    reveal={inChunk ? reveal.line : undefined}
-                                    revealNonce={inChunk ? reveal.nonce : undefined}
-                                />
-                            );
-                        })}
-                    </FileScroll>
-                )}
-            </div>
+            {sqlTab === null || binding === undefined ? (
+                editorArea
+            ) : (
+                <ErrorBoundary label={t('databases:console.failedToDraw')} resetKeys={[binding.connectionId]} className="min-h-0 grow">
+                    <Suspense fallback={null}>
+                        <SqlConsole tabKey={sqlTab} binding={binding} editor={editor} text={read.text} readOnly={readOnlyReason !== null}>
+                            {editorArea}
+                        </SqlConsole>
+                    </Suspense>
+                </ErrorBoundary>
+            )}
             {agentChanges.hover !== null && (
                 <ErrorBoundary label={t('file.edit.failed')} resetKeys={[agentChanges.hover.run.id]}>
                     <ProvenanceCard hover={agentChanges.hover} onHold={agentChanges.holdCard} />

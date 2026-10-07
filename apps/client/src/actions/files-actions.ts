@@ -4,7 +4,7 @@ import { asRefusal } from '@/actions/developer-actions';
 import { desktop } from '@/desktop/bridge';
 import { canCopyFilesOn } from '@/shell/panels/file-copy';
 import { absoluteOf, basenameOf, isAbsolutePath, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
-import { useFiles } from '@/state/files';
+import { isDatabaseTab, useFiles } from '@/state/files';
 import { moveFile } from '@/state/file-moves';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -58,7 +58,7 @@ const LIVE_MACHINE: FilesMachine = {
     forget: (path) => {
         const endpointId = currentEndpointId();
         for (const tab of useFiles.getState().tabs) {
-            if (tab.path === path || tab.path.startsWith(`${path}/`)) {
+            if (!isDatabaseTab(tab) && (tab.path === path || tab.path.startsWith(`${path}/`))) {
                 textDrafts.discard(endpointId, tab.path);
                 useFiles.getState().close(tab.key);
             }

@@ -1,6 +1,25 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { closeTab, moveTabs, openTab, pinTab, RECENT_FILES_LIMIT, rememberClosed, tabKey, useFiles, type FileTab, type TabState } from './files.ts';
-import { FILES_VIEW_ID } from '@/shell/client-cells';
+import {
+    bindConsole,
+    closeTab,
+    correctTableKind,
+    fileTabOf,
+    isDatabaseTab,
+    moveTabs,
+    openTab,
+    pinTab,
+    placeTab,
+    RECENT_FILES_LIMIT,
+    rememberClosed,
+    tabKey,
+    useFiles,
+    type ClosedTab,
+    type DatabaseTab,
+    type FileTab,
+    type Tab,
+    type TabState
+} from './files.ts';
+import { FILES_VIEW_ID } from '@/shell/files-view';
 import { viewIdsIn } from '@/shell/split';
 import { useDocument } from './document.ts';
 
@@ -12,6 +31,17 @@ function state(paths: string[], active: string | null): TabState {
     return { tabs: paths.map((path) => tab(path)), active };
 }
 
+/* What names a tab: a file by its path, a database view by its key. */
+function nameOf(entry: Tab): string {
+    return isDatabaseTab(entry) ? entry.key : entry.path;
+}
+
+function paths(next: TabState): string[] {
+    return next.tabs.map(nameOf);
+}
+
+const ORDERS: DatabaseTab = { key: 'database:orders', kind: 'table', pinned: false, connectionId: 'shop', schema: 'shop', table: 'orders' };
+
 describe('openTab', () => {
     test('activates a file that is already open instead of opening it twice', () => {
         const next = openTab(state(['a', 'b'], 'a'), 'b', 5);
@@ -21,23 +51,23 @@ describe('openTab', () => {
 
     test('past the limit the oldest unpinned tab makes room', () => {
         const next = openTab(state(['a', 'b', 'c'], 'a'), 'd', 3);
-        expect(next.tabs.map((entry) => entry.path)).toEqual(['b', 'c', 'd']);
+        expect(paths(next)).toEqual(['b', 'c', 'd']);
         expect(next.active).toBe('d');
     });
 
     test('a pinned tab stays and the next unpinned one goes', () => {
         const pinned: TabState = { tabs: [tab('a', true), tab('b'), tab('c')], active: 'a' };
-        expect(openTab(pinned, 'd', 3).tabs.map((entry) => entry.path)).toEqual(['a', 'c', 'd']);
+        expect(paths(openTab(pinned, 'd', 3))).toEqual(['a', 'c', 'd']);
     });
 
     test('a tab with unsaved changes stays the way a pinned one does', () => {
-        const next = openTab(state(['a', 'b', 'c'], 'a'), 'd', 3, undefined, (entry) => entry.path === 'a');
-        expect(next.tabs.map((entry) => entry.path)).toEqual(['a', 'c', 'd']);
+        const next = openTab(state(['a', 'b', 'c'], 'a'), 'd', 3, undefined, (entry) => entry.key === 'a');
+        expect(paths(next)).toEqual(['a', 'c', 'd']);
     });
 
     test('nothing but pinned tabs means the limit gives way, never a pin', () => {
         const pinned: TabState = { tabs: [tab('a', true), tab('b', true)], active: 'a' };
-        expect(openTab(pinned, 'c', 2).tabs.map((entry) => entry.path)).toEqual(['a', 'b', 'c']);
+        expect(paths(openTab(pinned, 'c', 2))).toEqual(['a', 'b', 'c']);
     });
 });
 
@@ -72,7 +102,7 @@ describe('a diff tab', () => {
         const first = openTab(state([], null), 'a', 5, { kind: 'diff', cwd: '/repo', scope: 'worktree', staged: false });
         const second = openTab(first, 'a', 5, { kind: 'diff', cwd: '/repo', scope: 'base', staged: false });
         expect(second.tabs).toHaveLength(1);
-        expect(second.tabs[0]!.view?.scope).toBe('base');
+        expect(fileTabOf(second, 'diff:a')?.view?.scope).toBe('base');
     });
 });
 
@@ -182,28 +212,76 @@ describe('pinTab', () => {
     });
 });
 
-describe('the files closed a moment ago', () => {
+describe('one strip for files and database views', () => {
+    test('a database view takes a place under the same limit, and the oldest unpinned tab of any kind makes room', () => {
+        const next = placeTab(state(['a', 'b'], 'a'), ORDERS, 2);
+        expect(paths(next)).toEqual(['b', ORDERS.key]);
+        expect(next.active).toBe(ORDERS.key);
+        expect(paths(openTab(next, 'c', 2))).toEqual([ORDERS.key, 'c']);
+    });
+
+    test('a table with edits nobody submitted stays the way a file with unsaved changes does', () => {
+        const next = openTab({ tabs: [ORDERS, tab('a')], active: 'a' }, 'b', 2, undefined, (entry) => entry.key === ORDERS.key);
+        expect(paths(next)).toEqual([ORDERS.key, 'b']);
+    });
+
+    test('a change never opens in the tab of a database view', () => {
+        const next = openTab({ tabs: [ORDERS], active: ORDERS.key }, 'a', 5, { kind: 'diff', cwd: '/repo', scope: 'worktree', staged: false });
+        expect(paths(next)).toEqual([ORDERS.key, 'a']);
+    });
+
+    test('a tab of a `.sql` file runs on a connection, and goes back to the file alone', () => {
+        const bound = bindConsole(state(['/p/q.sql'], '/p/q.sql'), '/p/q.sql', { connectionId: 'shop', schema: 'shop' });
+        expect(fileTabOf(bound, '/p/q.sql')?.console).toEqual({ connectionId: 'shop', schema: 'shop' });
+        expect(fileTabOf(bindConsole(bound, '/p/q.sql', null), '/p/q.sql')).toEqual(tab('/p/q.sql'));
+        expect(bindConsole(bound, ORDERS.key, null)).toBe(bound);
+    });
+
+    test('what the database says a table is corrects the tab, and a tab that already says so stays as it was', () => {
+        const before: TabState = { tabs: [ORDERS], active: ORDERS.key };
+        const view = correctTableKind(before, ORDERS.key, 'view');
+        expect(view.tabs[0]).toEqual({ ...ORDERS, tableKind: 'view' });
+        expect(correctTableKind(view, ORDERS.key, 'view')).toBe(view);
+        expect(correctTableKind(before, 'nothing', 'view')).toBe(before);
+    });
+});
+
+describe('the tabs closed a moment ago', () => {
     const closed = (path: string, view?: FileTab['view']): FileTab => ({ key: path, path, ...(view ? { view } : {}), pinned: false });
+    const file = (path: string): ClosedTab => ({ kind: 'file', path });
 
     test('newest first, each file once, and only as many as the empty preview offers', () => {
-        let recent: string[] = [];
+        let recent: ClosedTab[] = [];
         for (const path of ['/a', '/b', '/c', '/a', '/d', '/e', '/f']) {
             recent = rememberClosed(recent, closed(path));
         }
-        expect(recent).toEqual(['/f', '/e', '/d', '/a', '/c']);
+        expect(recent).toEqual(['/f', '/e', '/d', '/a', '/c'].map(file));
         expect(recent).toHaveLength(RECENT_FILES_LIMIT);
     });
 
     test('a diff is not a file to go back to', () => {
-        expect(rememberClosed(['/a'], closed('/b', { kind: 'diff', cwd: '/', scope: 'worktree', staged: false }))).toEqual(['/a']);
-        expect(rememberClosed(['/a'], undefined)).toEqual(['/a']);
+        expect(rememberClosed([file('/a')], closed('/b', { kind: 'diff', cwd: '/', scope: 'worktree', staged: false }))).toEqual([file('/a')]);
+        expect(rememberClosed([file('/a')], undefined)).toEqual([file('/a')]);
+    });
+
+    test('a database view comes back as it stood, once per table and filter, and unpinned', () => {
+        const filtered: DatabaseTab = { ...ORDERS, key: 'database:filtered', where: '`id` = 1' };
+        let recent = rememberClosed([], { ...ORDERS, pinned: true });
+        recent = rememberClosed(recent, filtered);
+        recent = rememberClosed(recent, { ...ORDERS, key: 'database:again' });
+        expect(recent).toEqual([{ ...ORDERS, key: 'database:again' }, filtered]);
+    });
+
+    test('the designer of a table nobody made yet has nothing to go back to', () => {
+        const designer: DatabaseTab = { key: 'database:new', kind: 'designer', pinned: false, connectionId: 'shop', schema: 'shop' };
+        expect(rememberClosed([file('/a')], designer)).toEqual([file('/a')]);
     });
 });
 
 describe('moveTabs', () => {
     test('a tab follows its file, and so does the active one', () => {
         const next = moveTabs(state(['/p/a.ts', '/p/b.ts'], '/p/a.ts'), '/p/a.ts', '/p/c.ts');
-        expect(next.tabs.map((entry) => [entry.key, entry.path])).toEqual([
+        expect(next.tabs.map((entry) => [entry.key, nameOf(entry)])).toEqual([
             ['/p/c.ts', '/p/c.ts'],
             ['/p/b.ts', '/p/b.ts']
         ]);
@@ -212,7 +290,7 @@ describe('moveTabs', () => {
 
     test('the files of a folder that moved follow it, and a name that only starts alike stays', () => {
         const next = moveTabs(state(['/p/src/a.ts', '/p/src2/b.ts', '/p/src'], '/p/src2/b.ts'), '/p/src', '/p/lib');
-        expect(next.tabs.map((entry) => entry.path)).toEqual(['/p/lib/a.ts', '/p/src2/b.ts', '/p/lib']);
+        expect(paths(next)).toEqual(['/p/lib/a.ts', '/p/src2/b.ts', '/p/lib']);
         expect(next.active).toBe('/p/src2/b.ts');
     });
 
@@ -221,10 +299,17 @@ describe('moveTabs', () => {
         const diff: FileTab = { key: tabKey('/p/a.ts', view), path: '/p/a.ts', view, pinned: false };
         const commit: FileTab = { key: 'commit:abc', path: '/p/a.ts', view: { ...view, commit: 'abc' }, pinned: false };
         const next = moveTabs({ tabs: [diff, commit], active: diff.key }, '/p/a.ts', '/p/b.ts');
-        expect(next.tabs.map((entry) => [entry.key, entry.path])).toEqual([
+        expect(next.tabs.map((entry) => [entry.key, nameOf(entry)])).toEqual([
             ['diff:/p/b.ts', '/p/b.ts'],
             ['commit:abc', '/p/a.ts']
         ]);
         expect(next.active).toBe('diff:/p/b.ts');
+    });
+
+    test('a database view is about no file, so it stays where it is', () => {
+        const before: TabState = { tabs: [ORDERS, tab('/p/a.ts')], active: ORDERS.key };
+        const next = moveTabs(before, '/p', '/q');
+        expect(next.tabs[0]).toBe(ORDERS);
+        expect(paths(next)).toEqual([ORDERS.key, '/q/a.ts']);
     });
 });

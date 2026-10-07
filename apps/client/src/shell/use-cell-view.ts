@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { clientCellView, DATABASES_VIEW_ID, FILES_VIEW_ID, type CellView } from '@/shell/client-cells';
+import { FILES_VIEW_ID, filesView, type CellView } from '@/shell/files-view';
 import { cellViewOf, useDocument } from '@/state/document';
 
 /*
@@ -8,14 +8,8 @@ import { cellViewOf, useDocument } from '@/state/document';
  * instead of the saved view list, since file cells can be temporary.
  */
 export function useCellView(viewId: string | null): CellView | null {
-    const { t } = useTranslation(['shell', 'databases']);
+    const { t } = useTranslation('shell');
     const view = useDocument((state) => cellViewOf(state, viewId));
-    const files = t('shell:filesView.name');
-    const databases = t('databases:cell.name');
-    return useMemo(() => {
-        if (viewId === FILES_VIEW_ID) {
-            return clientCellView(FILES_VIEW_ID, files);
-        }
-        return viewId === DATABASES_VIEW_ID ? clientCellView(DATABASES_VIEW_ID, databases) : view;
-    }, [viewId, view, files, databases]);
+    const name = t('filesView.name');
+    return useMemo(() => (viewId === FILES_VIEW_ID ? filesView(name) : view), [viewId, view, name]);
 }
