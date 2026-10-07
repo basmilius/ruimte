@@ -4,6 +4,8 @@ on:
     push:
         branches: [main]
         paths:
+            - '.github/workflows/pulsar-worker.yml'
+            - 'scripts/deploy-pulsar-worker*'
             - 'apps/pulsar-worker/**'
             - 'packages/pulsar/**'
             - 'bun.lock'
@@ -33,11 +35,10 @@ jobs:
             - run: bun test
             - run: bun test
               working-directory: packages/pulsar
-            # Migrations first: a new Worker may read a column the old one never wrote, never the other way round.
-            - run: bunx wrangler d1 migrations apply ruimte-pulsar --remote
-              env:
-                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-            - run: bunx wrangler deploy
+            - run: bun test scripts/deploy-pulsar-worker.test.ts
+              working-directory: .
+            # The script applies migrations, deploys, then spends its one-time benchmark refresh token.
+            - run: bun run deploy
               env:
                   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
             - run: curl --fail --silent --show-error --max-time 20 https://pulsar.ruimte.app/health

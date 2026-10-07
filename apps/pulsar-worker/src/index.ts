@@ -1,5 +1,6 @@
 import { ProviderIdSchema } from '@ruimte/pulsar';
 import { readBenchmarks, refreshBenchmarks } from './benchmarks.ts';
+import { refreshDeployedBenchmarks } from './deploy-benchmarks.ts';
 import { readCatalogs } from './catalog.ts';
 import { changePushDevice, registerPushDevice, sendPush } from './push.ts';
 import { statementKeyOf } from './crypto.ts';
@@ -124,6 +125,9 @@ async function api(request: Request, env: Env, path: string): Promise<Response> 
 
 async function route(request: Request, env: Env): Promise<Response> {
     const path = new URL(request.url).pathname;
+    if (path === '/internal/benchmarks/refresh' && request.method === 'POST') {
+        return refreshDeployedBenchmarks(request, env);
+    }
     if (path === '/health' && request.method === 'GET') {
         return health(env);
     }

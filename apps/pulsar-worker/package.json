@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "WRANGLER_BUILD_CONDITIONS=source,workerd,worker,browser wrangler dev --local",
-        "deploy": "wrangler d1 migrations apply ruimte-pulsar --remote && wrangler deploy",
+        "deploy": "bun ../../scripts/deploy-pulsar-worker.ts",
         "migrate:local": "wrangler d1 migrations apply ruimte-pulsar --local",
         "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
     },

@@ -143,9 +143,9 @@ PULSAR_STATEMENT_PRIVATE_KEY=... bun test   # also checks a statement against th
 
 ## Deploying
 
-A push to `main` that touches `apps/pulsar-worker/**` or `packages/pulsar/**` runs
-`.github/workflows/pulsar-worker.yml`: typecheck, tests, remote migrations, deploy, and a request to
-`/health`. It needs the repository secret `CLOUDFLARE_API_TOKEN`, a Cloudflare API token with:
+A push to `main` that touches the Worker, its shared API package, deploy script or workflow runs
+`.github/workflows/pulsar-worker.yml`: typecheck, tests, remote migrations, deploy, benchmark refresh,
+and a request to `/health`. It needs the repository secret `CLOUDFLARE_API_TOKEN`, a Cloudflare API token with:
 
 - Account, `Workers Scripts`, Edit
 - Account, `D1`, Edit
@@ -158,7 +158,7 @@ By hand, logged in with `wrangler login`:
 
 ```sh
 cd apps/pulsar-worker
-bun run deploy                   # migrations on the remote database, then wrangler deploy
+bun run deploy                   # remote migrations, deploy, then refresh the benchmarks
 ```
 
 A migration is a new numbered file in `migrations/`, committed with the code that reads it. Migrations
@@ -227,7 +227,7 @@ benchmark task are not available on Free and are not inferred from output speed.
 The optional `measurements` and `intelligenceIndexVersion` fields extend the response. `models.points`
 still contains complete Intelligence/cost pairs for older clients, and a cache created before migration
 `0015_benchmark_measurements.sql` remains readable. Apply the migration before deploying this Worker;
-the next successful refresh fills the new fields. A failed, malformed, truncated or mixed-version fetch
+the deploy refresh fills the new fields. A failed, malformed, truncated or mixed-version fetch
 keeps the previous snapshot. Unrelated source fields are neither stored nor returned. Without the key
 the route answers `503` with `not-configured`; before the first successful refresh it answers `503` with
 `no-benchmarks`.
@@ -235,6 +235,21 @@ the route answers `503` with `not-configured`; before the first successful refre
 Which model of Artificial Analysis stands for which model and effort of Ruimte is `src/benchmark-models.ts`,
 looked up by id. A new model is a row there and a deploy of this Worker, not a release of the app. `X-RateLimit-Remaining` and `X-RateLimit-Reset`
 on an answer say how much of the day is left.
+
+### Refresh after deployment
+
+`bun run deploy` uses `scripts/deploy-pulsar-worker.ts`. After applying migrations, it generates a
+random bearer token, deploys only its SHA-256 digest and a 15-minute expiry as Worker bindings, then
+calls `POST /internal/benchmarks/refresh`. The bearer stays in the deploy process and is never passed
+to Wrangler or printed. No additional GitHub secret is needed; the Artificial Analysis key stays in
+the Worker.
+
+The route validates the token and atomically consumes it before fetching, including when the upstream
+request fails. Repeated or concurrent calls cannot spend the Free quota again. The response confirms
+the new snapshot only after D1 has stored it. A failed refresh fails the deployment job while retaining
+the previous snapshot; it does not undo the deployed Worker. The three-hour schedule continues, and
+each deploy uses one additional paginated fetch from the daily Free allowance. The existing daily
+rate-limit cleanup removes expired deployment claims.
 
 ## The GitHub OAuth app
 

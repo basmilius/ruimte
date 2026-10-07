@@ -83,7 +83,10 @@ async function fetchMeasurements(apiKey: string): Promise<Measurements | null> {
     const measurements = new Map<string, Measurement>();
     let intelligenceIndexVersion: number | undefined;
     for (let page = 1; page <= MAX_PAGES; page++) {
-        const response = await fetch(`${MODELS_URL}?page=${page}`, { headers: { 'x-api-key': apiKey, accept: 'application/json' } }).catch(() => null);
+        const response = await fetch(`${MODELS_URL}?page=${page}`, {
+            headers: { 'x-api-key': apiKey, accept: 'application/json' },
+            signal: AbortSignal.timeout(15_000)
+        }).catch(() => null);
         if (!response?.ok) {
             console.error('benchmarks: page failed', page, response?.status ?? 'network');
             return null;
@@ -132,14 +135,14 @@ export function benchmarksFrom(
         : null;
 }
 
-export async function refreshBenchmarks(env: Env): Promise<void> {
+export async function refreshBenchmarks(env: Env): Promise<ModelBenchmarksResult | null> {
     if (!env.ARTIFICIAL_ANALYSIS_API_KEY) {
-        return;
+        return null;
     }
     const snapshot = await fetchMeasurements(env.ARTIFICIAL_ANALYSIS_API_KEY);
     const result = snapshot === null ? null : benchmarksFrom(snapshot.measurements, Date.now(), snapshot.intelligenceIndexVersion);
     if (result === null) {
-        return;
+        return null;
     }
     await env.DB.prepare(
         'INSERT INTO model_benchmarks (id, fetched_at, models, details) VALUES (1, ?1, ?2, ?3) ON CONFLICT (id) DO UPDATE SET fetched_at = excluded.fetched_at, models = excluded.models, details = excluded.details'
@@ -150,6 +153,7 @@ export async function refreshBenchmarks(env: Env): Promise<void> {
             JSON.stringify({ measurements: result.measurements, intelligenceIndexVersion: result.intelligenceIndexVersion })
         )
         .run();
+    return result;
 }
 
 export async function readBenchmarks(env: Env): Promise<Response> {

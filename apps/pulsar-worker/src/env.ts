@@ -25,4 +25,7 @@ export interface Env {
     DEVICE_LINK_PAGE_URL?: string;
     // The key of the free Data API of Artificial Analysis. Never logged, never sent anywhere else.
     ARTIFICIAL_ANALYSIS_API_KEY?: string;
+    // Only a digest is deployed; the short-lived bearer stays in the deployment process.
+    BENCHMARK_REFRESH_TOKEN_HASH?: string;
+    BENCHMARK_REFRESH_TOKEN_EXPIRES_AT?: string;
 }

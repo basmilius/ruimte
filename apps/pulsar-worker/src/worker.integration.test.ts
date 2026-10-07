@@ -2029,6 +2029,7 @@ describe('an address book nobody configured', () => {
 describe('model benchmarks', () => {
     const BENCHMARKS_CRON = '17 */3 * * *';
     const API_KEY = 'aa-test-key';
+    const DEPLOY_TOKEN = 'ab'.repeat(32);
     const measuredId = (slug: string, effort: string): string => {
         const id = BENCHMARK_MODELS.find((model) => model.slug === slug)?.efforts.find((entry) => entry.effort === effort)?.id;
         if (!id) {
@@ -2078,7 +2079,15 @@ describe('model benchmarks', () => {
     const read = async (): Promise<Response> => dispatch('/v1/models/benchmarks', { on });
 
     beforeAll(async () => {
-        on = miniflare('pulsar-benchmarks', { bindings: { PUBLIC_ORIGIN, ARTIFICIAL_ANALYSIS_API_KEY: API_KEY }, outboundService: artificialAnalysis });
+        on = miniflare('pulsar-benchmarks', {
+            bindings: {
+                PUBLIC_ORIGIN,
+                ARTIFICIAL_ANALYSIS_API_KEY: API_KEY,
+                BENCHMARK_REFRESH_TOKEN_HASH: sha256(DEPLOY_TOKEN),
+                BENCHMARK_REFRESH_TOKEN_EXPIRES_AT: String(Date.now() + 15 * 60_000)
+            },
+            outboundService: artificialAnalysis
+        });
         await migrate(on);
     }, 30_000);
 
@@ -2195,5 +2204,86 @@ describe('model benchmarks', () => {
         asked = [];
         await (await on.getWorker('pulsar')).scheduled({ cron: '17 4 * * *' });
         expect(asked).toEqual([]);
+    });
+
+    test('deployment refresh rejects missing, wrong and expired tokens without fetching', async () => {
+        asked = [];
+        for (const authorization of ['', 'Bearer wrong', `Bearer ${'cd'.repeat(32)}`, `Bearer ${sha256(DEPLOY_TOKEN)}`]) {
+            const response = await dispatch('/internal/benchmarks/refresh', { on, method: 'POST', headers: { authorization } });
+            expect(response.status).toBe(401);
+        }
+        expect((await dispatch('/internal/benchmarks/refresh', { on })).status).toBe(404);
+        expect((await dispatch('/internal/benchmarks/refresh', { on, method: 'OPTIONS' })).status).toBe(404);
+        const expired = miniflare('pulsar-benchmarks-expired', {
+            bindings: {
+                PUBLIC_ORIGIN,
+                ARTIFICIAL_ANALYSIS_API_KEY: API_KEY,
+                BENCHMARK_REFRESH_TOKEN_HASH: sha256(DEPLOY_TOKEN),
+                BENCHMARK_REFRESH_TOKEN_EXPIRES_AT: '0'
+            },
+            outboundService: artificialAnalysis
+        });
+        try {
+            const response = await dispatch('/internal/benchmarks/refresh', {
+                on: expired,
+                method: 'POST',
+                headers: { authorization: `Bearer ${DEPLOY_TOKEN}` }
+            });
+            expect(response.status).toBe(401);
+        } finally {
+            await expired.dispose();
+        }
+        expect(asked).toEqual([]);
+    });
+
+    test('a deployment token refreshes synchronously and can spend the Free quota only once', async () => {
+        asked = [];
+        pages = [page(1, false, [measured(measuredId('claude-haiku-5-5', 'low'), 30, 0.1)])];
+        const responses = await Promise.all(
+            Array.from({ length: 3 }, () =>
+                dispatch('/internal/benchmarks/refresh', {
+                    on,
+                    method: 'POST',
+                    headers: { authorization: `Bearer ${DEPLOY_TOKEN}` }
+                })
+            )
+        );
+        expect(responses.map((response) => response.status).sort()).toEqual([200, 429, 429]);
+        const response = responses.find((response) => response.status === 200)!;
+        const result = (await response.json()) as { refreshed: boolean; fetchedAt: number; measurements: number };
+        expect(result).toEqual({ refreshed: true, fetchedAt: expect.any(Number), measurements: 1 });
+        const cached = (await (await read()).json()) as ModelBenchmarksResult;
+        expect(cached.fetchedAt).toBe(result.fetchedAt);
+        expect(cached.measurements?.[0]?.modelId).toBe('claude-haiku-5-5');
+        expect(response.headers.get('access-control-allow-origin')).toBeNull();
+        expect(asked).toEqual([{ page: '1', key: API_KEY }]);
+        expect(JSON.stringify(result)).not.toContain(DEPLOY_TOKEN);
+    });
+
+    test('failed deployment refresh preserves the cache and consumes its token without retrying', async () => {
+        const failed = miniflare('pulsar-benchmarks-deploy-failed', {
+            bindings: {
+                PUBLIC_ORIGIN,
+                ARTIFICIAL_ANALYSIS_API_KEY: API_KEY,
+                BENCHMARK_REFRESH_TOKEN_HASH: sha256(DEPLOY_TOKEN),
+                BENCHMARK_REFRESH_TOKEN_EXPIRES_AT: String(Date.now() + 15 * 60_000)
+            },
+            outboundService: artificialAnalysis
+        });
+        try {
+            await migrate(failed);
+            await database(failed).run('INSERT INTO model_benchmarks (id, fetched_at, models) VALUES (1, ?, ?)', 123, '[]');
+            asked = [];
+            pages = [429];
+            const options = { on: failed, method: 'POST', headers: { authorization: `Bearer ${DEPLOY_TOKEN}` } };
+            const response = await dispatch('/internal/benchmarks/refresh', options);
+            expect(response.status).toBe(502);
+            expect(await response.json()).toMatchObject({ refreshed: false });
+            expect(await (await dispatch('/v1/models/benchmarks', { on: failed })).json()).toEqual({ fetchedAt: 123, models: [] });
+            expect((await dispatch('/internal/benchmarks/refresh', options)).status).toBe(429);
+            expect(asked).toHaveLength(1);
+        } finally {
+            await failed.dispose();
+        }
     });
 });
