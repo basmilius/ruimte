@@ -101,7 +101,7 @@ final class WorkspaceViewSectionsTests: XCTestCase {
     @MainActor func testDesktopViewGlyphsAndChosenIconsHaveNativeLucideShapes() {
         let expected = [
             "canvas": "frame", "chat": "message-square", "terminal": "terminal", "browser": "globe",
-            "drawing": "pen-tool", "diagram": "workflow", "file": "file-text", "unknown": "circle-question-mark",
+            "drawing": "pen-tool", "diagram": "workflow", "file": "file-text", "database": "table", "unknown": "circle-question-mark",
             "separator": "minus", "subheader": "heading",
         ]
         for (kind, icon) in expected {

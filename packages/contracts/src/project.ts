@@ -564,6 +564,28 @@ export type ProjectDiagramView = z.infer<typeof ProjectDiagramViewSchema>;
 export const ProjectFileViewSchema = ViewBaseSchema.extend({ kind: z.literal('file'), path: z.string().min(1) });
 export type ProjectFileView = z.infer<typeof ProjectFileViewSchema>;
 
+/* Whether a table is a view, as the database last said. */
+const ProjectTableKindSchema = z.enum(['table', 'view']);
+
+/*
+ * One table of a database connection, as its rows or as its structure. The connection is a name in
+ * the project's connection store, which is per machine, so the view is only as good as that name
+ * is where it is opened. An older release keeps this kind as unknown and writes it back unchanged.
+ */
+export const ProjectDatabaseViewSchema = ViewBaseSchema.extend({
+    kind: z.literal('database'),
+    connectionId: z.string().min(1),
+    schema: z.string(),
+    table: z.string().min(1),
+    mode: z.enum(['data', 'structure']),
+    // A filtered table is a view of its own, the way it is a tab of its own.
+    where: z.string().min(1).optional(),
+    tableKind: ProjectTableKindSchema.optional()
+});
+export type ProjectDatabaseView = z.infer<typeof ProjectDatabaseViewSchema>;
+/* What a database view shows, without the row it makes in the sidebar. */
+export type ProjectDatabaseTarget = Pick<ProjectDatabaseView, 'connectionId' | 'schema' | 'table' | 'mode' | 'where' | 'tableKind'>;
+
 const KNOWN_VIEW_SCHEMAS = [
     ProjectCanvasViewSchema,
     ProjectChatViewSchema,
@@ -573,6 +595,7 @@ const KNOWN_VIEW_SCHEMAS = [
     ProjectDrawingViewSchema,
     ProjectDiagramViewSchema,
     ProjectFileViewSchema,
+    ProjectDatabaseViewSchema,
     ProjectSeparatorViewSchema,
     ProjectSubheaderViewSchema
 ] as const;
@@ -643,6 +666,10 @@ export function isDiagramView(view: ProjectView): view is ProjectDiagramView {
 
 export function isFileView(view: ProjectView): view is ProjectFileView {
     return view.kind === 'file';
+}
+
+export function isDatabaseView(view: ProjectView): view is ProjectDatabaseView {
+    return view.kind === 'database';
 }
 
 export function isUnknownView(view: ProjectView): view is ProjectUnknownView {
@@ -869,8 +896,6 @@ const ProjectDatabaseTabFields = {
     connectionId: z.string().min(1),
     schema: z.string().min(1)
 };
-// Whether the table of a tab is a view, as the database last said.
-const ProjectTableKindSchema = z.enum(['table', 'view']);
 export const ProjectStripTabSchema = z.discriminatedUnion('kind', [
     ProjectFileTabSchema.extend({ kind: z.literal('file') }),
     z.object({

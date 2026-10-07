@@ -26,7 +26,7 @@ export const ProjectSidebarViewSchema = z.object({
     id: z.string(),
     name: z.string(),
     titleSource: NodeTitleSourceSchema.optional(),
-    kind: z.enum(['canvas', 'terminal', 'chat', 'browser', 'device', 'drawing', 'diagram', 'file', 'separator', 'subheader', 'unknown']),
+    kind: z.enum(['canvas', 'terminal', 'chat', 'browser', 'device', 'drawing', 'diagram', 'file', 'database', 'separator', 'subheader', 'unknown']),
     icon: ProjectIconChoiceSchema.nullable(),
     provider: AgentKindSchema.nullable(),
     path: z.string().nullable(),

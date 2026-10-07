@@ -89,7 +89,7 @@ export const ActionViewKindSchema = z.enum([...PROJECT_VIEW_KINDS, UNKNOWN_KIND]
 export const VIEW_KINDS = ActionViewKindSchema.options;
 
 /* What an action may ask to be made. Shorter than what it can name, and this catalog's own decision. */
-export const CREATABLE_VIEW_KINDS = ['canvas', 'drawing', 'diagram', 'terminal', 'browser', 'chat', 'file', 'separator', 'subheader'] as const;
+export const CREATABLE_VIEW_KINDS = ['canvas', 'drawing', 'diagram', 'terminal', 'browser', 'chat', 'file', 'database', 'separator', 'subheader'] as const;
 export const ActionCreatableViewKindSchema = z.enum(CREATABLE_VIEW_KINDS);
 
 export const ActionCanvasNodeKindSchema = z.enum([...NodeKindSchema.options, UNKNOWN_KIND]);
@@ -642,7 +642,7 @@ export const ACTION_DEFINITIONS = {
     'view.create': {
         title: 'Create view',
         description:
-            'Creates and focuses a new canvas, drawing, diagram, terminal, browser, AI Chat or file view, or adds a separator or subheader to the view list. A chat or terminal can run a specific agent CLI; a file view shows the file at a path, relative to the project folder or absolute.',
+            'Creates and focuses a new canvas, drawing, diagram, terminal, browser, AI Chat, file or database view, or adds a separator or subheader to the view list. A chat or terminal can run a specific agent CLI; a file view shows the file at a path, relative to the project folder or absolute; a database view shows one table of a database connection, as its rows or its structure.',
         agentDescription: 'Adds a view to the sidebar, written down as yours.',
         effect: 'shared',
         domain: 'views',
@@ -658,7 +658,12 @@ export const ACTION_DEFINITIONS = {
             after: agentField(viewId).describe('Puts the row right under this view; without it the row goes last'),
             device: forActors(PERSON, DeviceReferenceSchema).describe('The simulator or device a device view shows'),
             resume: resumedSession,
-            cwd: forActors(PERSON, z.string().min(1)).describe('The directory the chat or terminal works in')
+            cwd: forActors(PERSON, z.string().min(1)).describe('The directory the chat or terminal works in'),
+            connection: z.string().min(1).nullish().describe('The database connection a database view shows, by id or name'),
+            schema: z.string().min(1).nullish().describe('The schema of the table; without it the schema the connection starts in'),
+            table: z.string().min(1).nullish().describe('The table or view a database view shows'),
+            mode: z.enum(['data', 'structure']).nullish().describe('Whether a database view shows the rows or the structure of the table; without it the rows'),
+            where: z.string().trim().min(1).nullish().describe('A filter on the rows, as the text after WHERE')
         }),
         output: z.object({
             viewId,

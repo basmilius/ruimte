@@ -94,6 +94,7 @@ struct WorkspaceViewIcon: View {
         case "drawing": return "pen-tool"
         case "diagram": return "workflow"
         case "file": return "file-text"
+        case "database": return "table"
         case "note": return "sticky-note"
         case "group": return "layout-grid"
         default: return "circle-question-mark"

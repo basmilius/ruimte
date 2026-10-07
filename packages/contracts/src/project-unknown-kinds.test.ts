@@ -197,3 +197,40 @@ describe('kinds this version does not know', () => {
         expect(migratedFile(noKind)).toBeNull();
     });
 });
+
+describe('a database view', () => {
+    const table = {
+        kind: 'database',
+        id: 'orders',
+        name: 'orders (status = open)',
+        connectionId: 'main-db',
+        schema: 'shop',
+        table: 'orders',
+        mode: 'data',
+        where: "status = 'open'"
+    };
+
+    function fileWith(...views: unknown[]) {
+        return { ...structuredClone(NEWER_FILE), views: [NEWER_FILE.views[0], ...views] };
+    }
+
+    test('is read and written back as it is, and can be opened', () => {
+        const { views } = parsedFrom(fileWith(table, { ...table, id: 'orders-structure', mode: 'structure', where: undefined, tableKind: 'view' }));
+        expect(views[1]).toMatchObject(table);
+        expect(views[2]).toMatchObject({ kind: 'database', mode: 'structure', tableKind: 'view' });
+        expect(isUnknownView(views[1]!)).toBe(false);
+        expect(isOpenableView(views[1]!)).toBe(true);
+        expect(JSON.parse(JSON.stringify(storedViewsOf(views)[1]))).toEqual(table);
+    });
+
+    test('that an older release kept as unknown and sent back is read as the real view again', () => {
+        const kept = { kind: 'unknown', id: 'orders', name: 'orders', raw: table };
+        const { views } = parsedFrom(fileWith(kept));
+        expect(views[1]).toMatchObject({ kind: 'database', connectionId: 'main-db', table: 'orders', where: "status = 'open'" });
+    });
+
+    test('without a table is refused like any malformed known view, not kept as a kind nobody knows', () => {
+        const { connectionId: _connection, ...broken } = table;
+        expect(migratedFile(fileWith(broken))).toBeNull();
+    });
+});
