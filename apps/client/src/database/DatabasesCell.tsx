@@ -12,7 +12,7 @@ import {
     useDatabaseConnections,
     type ConnectionsStatus
 } from '@/database/connections';
-import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
+import { DatabaseTabProvider, RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
 import { openNewConsole, useDatabaseTabs } from '@/database/state';
 import type { DatabaseTab } from '@/database/tabs';
 
@@ -77,50 +77,52 @@ export function DatabasesCell() {
 
     return (
         <div ref={root} tabIndex={-1} className="flex min-h-0 grow flex-col outline-none" onKeyDown={keepAnsweredKeys}>
-            <Tabs.Root value={active} onValueChange={(id) => useDatabaseTabs.getState().activate(String(id))} className="flex min-h-0 grow flex-col">
-                <Tabs.List
-                    aria-label={t('cell.tabs')}
-                    className="shrink-0 px-2"
-                    end={
-                        <IconButton
-                            icon={SquareTerminal}
-                            size="sm"
-                            label={t('cell.newConsole')}
-                            disabled={connections.length === 0}
-                            onClick={() => void openNewConsole()}
-                        />
-                    }
-                >
-                    {tabs.map((tab) => (
-                        <Tabs.Tab key={tab.id} value={tab.id} onClose={() => useDatabaseTabs.getState().requestClose(tab.id)}>
-                            <Icon icon={ICONS[tab.kind]} size={14} />
-                            {titleOf(tab)}
-                        </Tabs.Tab>
-                    ))}
-                </Tabs.List>
-                {tabs.length === 0 ? (
-                    <EmptyState
-                        icon={SquareTerminal}
-                        title={t('cell.empty.title')}
-                        className="grow"
-                        action={
-                            <Button variant="secondary" disabled={connections.length === 0} onClick={() => void openNewConsole()}>
-                                {t('cell.newConsole')}
-                            </Button>
+            <RuimteDatabaseProvider>
+                <Tabs.Root value={active} onValueChange={(id) => useDatabaseTabs.getState().activate(String(id))} className="flex min-h-0 grow flex-col">
+                    <Tabs.List
+                        aria-label={t('cell.tabs')}
+                        className="shrink-0 px-2"
+                        end={
+                            <IconButton
+                                icon={SquareTerminal}
+                                size="sm"
+                                label={t('cell.newConsole')}
+                                disabled={connections.length === 0}
+                                onClick={() => void openNewConsole()}
+                            />
                         }
                     >
-                        {t('cell.empty.body')}
-                    </EmptyState>
-                ) : (
-                    tabs.map((tab) => (
-                        <Tabs.Panel key={tab.id} value={tab.id} keepMounted className="min-h-0 grow">
-                            <ErrorBoundary label={t('cell.failed')} resetKeys={[tab.id]} className="h-full">
-                                <TabBody tab={tab} connections={connections} status={status} />
-                            </ErrorBoundary>
-                        </Tabs.Panel>
-                    ))
-                )}
-            </Tabs.Root>
+                        {tabs.map((tab) => (
+                            <Tabs.Tab key={tab.id} value={tab.id} onClose={() => useDatabaseTabs.getState().requestClose(tab.id)}>
+                                <Icon icon={ICONS[tab.kind]} size={14} />
+                                {titleOf(tab)}
+                            </Tabs.Tab>
+                        ))}
+                    </Tabs.List>
+                    {tabs.length === 0 ? (
+                        <EmptyState
+                            icon={SquareTerminal}
+                            title={t('cell.empty.title')}
+                            className="grow"
+                            action={
+                                <Button variant="secondary" disabled={connections.length === 0} onClick={() => void openNewConsole()}>
+                                    {t('cell.newConsole')}
+                                </Button>
+                            }
+                        >
+                            {t('cell.empty.body')}
+                        </EmptyState>
+                    ) : (
+                        tabs.map((tab) => (
+                            <Tabs.Panel key={tab.id} value={tab.id} keepMounted className="min-h-0 grow">
+                                <ErrorBoundary label={t('cell.failed')} resetKeys={[tab.id]} className="h-full">
+                                    <TabBody tab={tab} connections={connections} status={status} />
+                                </ErrorBoundary>
+                            </Tabs.Panel>
+                        ))
+                    )}
+                </Tabs.Root>
+            </RuimteDatabaseProvider>
             <PromptDialog
                 open={closingTab !== undefined}
                 danger
@@ -139,8 +141,8 @@ export function DatabasesCell() {
 }
 
 /*
- * One tab's view on its connection, inside a provider of its own so a designer that saved a table can
- * turn its own tab into that table's designer. Memoized, since every keystroke in a console is a new
+ * One tab's view on its connection, inside a provider that answers for this tab, so a designer that saved
+ * a table can turn its own tab into that table's designer. Memoized, since every keystroke in a console is a new
  * list of tabs and a grid in the back has no reason to draw again for it.
  */
 const TabBody = memo(function TabBody({
@@ -178,7 +180,7 @@ const TabBody = memo(function TabBody({
     }
 
     return (
-        <RuimteDatabaseProvider source={tab.id}>
+        <DatabaseTabProvider tabId={tab.id}>
             {tab.kind === 'table' && (
                 <TableView
                     connection={connection}
@@ -201,6 +203,6 @@ const TabBody = memo(function TabBody({
                 />
             )}
             {tab.kind === 'designer' && <TableDesigner connection={connection} schema={tab.schema} table={tab.table} className="h-full" />}
-        </RuimteDatabaseProvider>
+        </DatabaseTabProvider>
     );
 });
