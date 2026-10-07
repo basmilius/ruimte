@@ -99,9 +99,12 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
     let saving = false;
     /* Goes up with every edit, so a save knows whether what it sent is still the latest. */
     let version = 0;
-    let loads = 0;
+    /* Goes up with every load and every change from elsewhere, so one that waited on its secrets never lands over a later one. */
+    let reads = 0;
     /* What the secret store holds for this project, as far as this window wrote or read it. */
     let stored: Record<string, string> = {};
+    /* The connections whose secret this window read or wrote, found or not. */
+    const checked = new Set<string>();
     const waiting: (() => void)[] = [];
     /* The passwords as the machine last got them from this window; null makes the next hand-over go whatever it holds. */
     let handed: string | null = null;
@@ -123,16 +126,23 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         return listed.list;
     };
 
+    const unread = (connections: readonly DatabaseConnection[]): DatabaseConnection[] => {
+        const { passwords } = store.getState();
+        return connections.filter((connection) => passwords[connection.id] === undefined && !checked.has(connection.id));
+    };
+
     const readSecrets = async (of: ConnectionsTarget, connections: readonly DatabaseConnection[]): Promise<void> => {
-        const unknown = connections.filter((connection) => store.getState().passwords[connection.id] === undefined && stored[connection.id] === undefined);
         const read = await Promise.all(
-            unknown.map(
+            unread(connections).map(
                 async (connection) =>
                     [connection.id, await deps.secrets.read(secretKeyOf(of.endpointId, of.projectId, connection.id)).catch(() => null)] as const
             )
         );
         if (target !== of) {
             return;
+        }
+        for (const [id] of read) {
+            checked.add(id);
         }
         const found = read.filter((entry): entry is readonly [string, string] => entry[1] !== null);
         if (found.length === 0) {
@@ -179,24 +189,26 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         if (of === null) {
             return;
         }
-        const ticket = ++loads;
+        const ticket = ++reads;
         if (store.getState().status !== 'ready') {
             store.setState({ status: 'loading' });
         }
         try {
             const answer = await of.transport.request('database.connections', { projectId: of.projectId });
-            if (target !== of || ticket !== loads) {
+            if (target !== of || ticket !== reads) {
+                return;
+            }
+            // A view or a test opened before its password is read would go without it.
+            await readSecrets(of, answer.connections);
+            if (target !== of || ticket !== reads) {
                 return;
             }
             store.setState({ status: 'ready', error: null, rev: answer.rev, saved: answer.connections });
-            await readSecrets(of, answer.connections);
             settle();
-            if (target === of) {
-                handed = null;
-                await Promise.all([handPasswords(of), readAgentAccess(of)]);
-            }
+            handed = null;
+            await Promise.all([handPasswords(of), readAgentAccess(of)]);
         } catch (error: unknown) {
-            if (target !== of || ticket !== loads) {
+            if (target !== of || ticket !== reads) {
                 return;
             }
             // A socket that comes back reads the list again (`subscribeStatus`), so a lost link is no failure.
@@ -211,6 +223,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         const { passwords } = store.getState();
         for (const { id, secret } of secretWrites(stored, passwords, ids)) {
             await deps.secrets.write(secretKeyOf(of.endpointId, of.projectId, id), secret).catch(() => undefined);
+            checked.add(id);
             if (secret === null) {
                 delete stored[id];
             } else {
@@ -273,11 +286,23 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         if (of === null || event.projectId !== of.projectId || saving) {
             return;
         }
-        if (store.getState().local !== null) {
-            deps.notify(i18next.t('databases:connections.conflict.title'), i18next.t('databases:connections.conflict.description'));
+        const ticket = ++reads;
+        const apply = (): void => {
+            if (target !== of || ticket !== reads || saving) {
+                return;
+            }
+            if (store.getState().local !== null) {
+                deps.notify(i18next.t('databases:connections.conflict.title'), i18next.t('databases:connections.conflict.description'));
+            }
+            store.setState({ status: 'ready', error: null, rev: event.rev, saved: event.connections, local: null, saveError: null });
+            settle();
+        };
+        // A connection new to this window waits for its secret, as on a load; the rest is taken as it comes.
+        if (unread(event.connections).length === 0) {
+            apply();
+            return;
         }
-        store.setState({ status: 'ready', error: null, rev: event.rev, saved: event.connections, local: null, saveError: null });
-        void readSecrets(of, event.connections);
+        void readSecrets(of, event.connections).then(apply);
     };
 
     const onAgentAccess = (event: DatabaseAgentAccessChangedEvent): void => {
@@ -299,6 +324,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
             target = next;
             saving = false;
             stored = {};
+            checked.clear();
             handed = null;
             version += 1;
             settle();

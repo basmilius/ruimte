@@ -14,6 +14,11 @@ import { memorySecretStore, secretKeyOf } from './secrets.ts';
 
 const SHOP: DatabaseConnection = { id: 'shop', name: 'Shop', shared: true, config: { engine: 'mysql', host: '127.0.0.1', user: 'root' } };
 
+/* Lets every pending promise run, without a timer. */
+function drained(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+}
+
 /* A machine that keeps one project's connections, checks the rev of every save, and holds a save back while `hold` is set. */
 function machine(initial: DatabaseConnections) {
     let document = initial;
@@ -180,6 +185,54 @@ describe('the connections of a project', () => {
         fake.elsewhere([SHOP]);
         expect(model.store.getState().local).toBeNull();
         expect(notes).toHaveLength(1);
+    });
+
+    test('shows the connections only once their passwords are read, so nothing opens one without its password', async () => {
+        const secrets = memorySecretStore();
+        await secrets.write(secretKeyOf('local', 'p', 'shop'), 'hunter2');
+        let asked = (): void => undefined;
+        const reading = new Promise<void>((resolve) => {
+            asked = resolve;
+        });
+        let release = (): void => undefined;
+        const held = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        const slow = {
+            ...secrets,
+            read: async (key: string) => {
+                asked();
+                await held;
+                return secrets.read(key);
+            }
+        };
+        const fake = machine({ rev: 1, connections: [SHOP] });
+        const model = createDatabaseConnections({ secrets: slow, notify: () => undefined });
+        model.attach({ endpointId: 'local', projectId: 'p', transport: fake.transport });
+        const ready = model.ready();
+        await reading;
+        expect(model.store.getState()).toMatchObject({ status: 'loading', saved: [] });
+        release();
+        expect(await ready).toEqual([{ ...SHOP, config: { ...SHOP.config, password: 'hunter2' } }]);
+        expect(model.store.getState().status).toBe('ready');
+    });
+
+    test('a connection new to this window comes in with its password, and a later change is not overtaken by it', async () => {
+        const secrets = memorySecretStore();
+        await secrets.write(secretKeyOf('local', 'p', 'logs'), 'swordfish');
+        const { model, fake } = await opened({ rev: 1, connections: [SHOP] }, secrets);
+        const logs: DatabaseConnection = { ...SHOP, id: 'logs', name: 'Logs' };
+        fake.elsewhere([SHOP, logs]);
+        expect(model.store.getState().saved).toEqual([SHOP]);
+        await drained();
+        expect(model.list(model.store.getState()).find((connection) => connection.id === 'logs')?.config.password).toBe('swordfish');
+
+        const cache: DatabaseConnection = { id: 'cache', name: 'Cache', shared: false, config: { engine: 'sqlite', path: '/repo/cache.db' } };
+        fake.elsewhere([SHOP, logs, cache]);
+        fake.elsewhere([SHOP]);
+        expect(model.store.getState().saved).toEqual([SHOP]);
+        await drained();
+        expect(model.store.getState().saved).toEqual([SHOP]);
     });
 
     test('a connection that is removed takes its password with it', async () => {
