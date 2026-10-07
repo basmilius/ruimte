@@ -1,4 +1,5 @@
 import { MAX_COLUMNS, type CellAt, type SplitDirection, type SplitZone } from '@/shell/split';
+import type { PreviewRect } from '@/shell/tab-drop';
 
 /*
  * What a dragged view carries. A row in the sidebar and a cell of the grid are the same gesture with
@@ -205,6 +206,19 @@ export function shapeOf(zone: SplitZone): DropShape {
         default:
             return { x: 0, y: 0, width: 1, height: 1, column: false };
     }
+}
+
+/*
+ * The rectangle of `shape` in the grid's coordinates, given the box of the column the cell stands in
+ * and of the cell itself. The edges are rounded and not the sizes, so two rectangles that share an
+ * edge keep sharing it and the outline stays on whole pixels.
+ */
+export function shapeRect(shape: DropShape, column: PreviewRect, cell: PreviewRect): PreviewRect {
+    const left = Math.round(column.x + shape.x * column.width);
+    const right = Math.round(column.x + (shape.x + shape.width) * column.width);
+    const top = Math.round(shape.column ? column.y : cell.y + shape.y * cell.height);
+    const bottom = Math.round(shape.column ? column.y + column.height : cell.y + (shape.y + shape.height) * cell.height);
+    return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
 /* A drop that lands on the cell the view already stands in, alone in the grid, changes nothing. */

@@ -26,8 +26,18 @@ import {
     type CellAt,
     type SplitZone
 } from '@/shell/split';
-import { clampTabLeft, DEFAULT_TAB_WIDTH, gapAt, gapLeft, positionAfterLifting, sameTabDrop, type TabDrop } from '@/shell/tab-drop';
-import { TabDropIndicator } from '@/shell/TabDropIndicator';
+import {
+    clampTabLeft,
+    DEFAULT_TAB_WIDTH,
+    gapAt,
+    gapLeft,
+    positionAfterLifting,
+    rectPreview,
+    tabPreview,
+    type PreviewRect,
+    type TabDrop
+} from '@/shell/tab-drop';
+import { hideDropPreview, showDropPreview } from '@/shell/drop-preview';
 import type { SplitCell } from '@ruimte/contracts';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { Button, Kbd, Surface, Tooltip } from '@adecore/ui';
@@ -41,6 +51,7 @@ import {
     isNowhereDrop,
     setGridTakesPath,
     shapeOf,
+    shapeRect,
     zoneAt
 } from '@/shell/view-drag';
 import { ViewSurface } from '@/shell/ViewHost';
@@ -125,27 +136,30 @@ function Splitter({
     );
 }
 
+/* The box of an element in the grid's coordinates, which the drop preview is drawn in. */
+function boxInGrid(element: Element, grid: DOMRect): PreviewRect {
+    const box = element.getBoundingClientRect();
+    return { x: Math.round(box.left - grid.left), y: Math.round(box.top - grid.top), width: Math.round(box.width), height: Math.round(box.height) };
+}
+
 /*
- * The rectangle the dragged view would take, drawn over the column rather than over the cell the
+ * The preview of a split or a trade, which reaches over the column rather than over the cell the
  * pointer is on: a side drop on a cell in a column of three gives a whole new column. You aim at a
- * cell and get a column, so that has to be visible before the pointer is let go. The cell's own box
- * is measured rather than derived from its share, because a cell carries a bar the share knows
- * nothing about.
+ * cell and get a column, so that has to be visible before the pointer is let go. The boxes are
+ * measured rather than derived from a share, because a cell carries a bar the share knows nothing
+ * about. A maximized cell stands over the whole grid, so the grid is its column.
  */
-function DropIndicator({ box, zone }: { box: { top: number; height: number }; zone: SplitZone }) {
-    const shape = shapeOf(zone);
-    return (
-        <div
-            aria-hidden
-            className="pointer-events-none absolute z-20 rounded-sm border-2 border-accent bg-accent/15 transition-[left,width,top,height] duration-100"
-            style={{
-                left: `${shape.x * 100}%`,
-                width: `${shape.width * 100}%`,
-                top: shape.column ? 0 : box.top + shape.y * box.height,
-                height: shape.column ? '100%' : shape.height * box.height
-            }}
-        />
-    );
+function previewZone(cell: HTMLElement, zone: SplitZone, filling: boolean): void {
+    const grid = cell.closest('[data-split-grid]')!.getBoundingClientRect();
+    const column = filling
+        ? { x: 0, y: 0, width: Math.round(grid.width), height: Math.round(grid.height) }
+        : boxInGrid(cell.closest('[data-split-column]')!, grid);
+    showDropPreview(rectPreview(shapeRect(shapeOf(zone), column, boxInGrid(cell, grid))));
+}
+
+function previewTab(cell: HTMLElement, drop: TabDrop): void {
+    const grid = cell.closest('[data-split-grid]')!.getBoundingClientRect();
+    showDropPreview(tabPreview(drop, boxInGrid(cell, grid)));
 }
 
 /* The gap between a cell's title and the tab that would stand after it, the same as the bar's own spacing. */
@@ -180,8 +194,7 @@ function Cell({
     viewId,
     focused,
     filling,
-    hidden,
-    onZone
+    hidden
 }: {
     at: CellAt;
     viewId: string;
@@ -190,13 +203,10 @@ function Cell({
     filling: boolean;
     /* Behind a maximized cell. Still mounted, so its session and its page keep running. */
     hidden: boolean;
-    onZone: (zone: SplitZone | null, box: { top: number; height: number }) => void;
 }) {
     const view = useCellView(viewId);
     const [dockHidden, setDockHidden] = useState(false);
-    /* A view over the bar of this cell, which makes it a tab of it: where in the strip it would land. */
     const tabs = useDocument((s) => (s.layout === null ? undefined : cellAt(s.layout, at)?.tabs));
-    const [barDrop, setBarDrop] = useState<TabDrop | null>(null);
 
     /* A drag that is about a view of this window, which a file tab is as well as a path: over a surface that has
        a use for the path itself (the canvas, a composer) the path is what counts, anywhere else the view. */
@@ -305,13 +315,9 @@ function Cell({
         if (zone === null) {
             /* A surface that takes the drop itself stops the event, so the handler below never runs
                and the hint the grid left standing has to be taken back here. */
-            onZone(null, boxIn(event.currentTarget));
+            hideDropPreview();
         }
     };
-
-    /* The cell's box inside the column it stands in, for the indicator to be drawn against. The
-       column is the offset parent, so this is what the browser already measured. */
-    const boxIn = (element: HTMLElement): { top: number; height: number } => ({ top: element.offsetTop, height: element.offsetHeight });
 
     if (view === null) {
         return null;
@@ -331,8 +337,6 @@ function Cell({
                 {!isLooseView(view) && isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
                 {filling && <MaximizedIndicator at={at} />}
             </CellOverlay>
-            {/* Its own slot, since the tab reaches up over the bar, which the cell's slot clips away. */}
-            <CellOverlay slot="drop">{barDrop !== null && <TabDropIndicator drop={barDrop} />}</CellOverlay>
         </div>
     );
     return (
@@ -354,11 +358,13 @@ function Cell({
                             event.preventDefault();
                         }
                         event.dataTransfer.dropEffect = tab === null ? 'none' : 'move';
-                        setBarDrop((current) => (sameTabDrop(current, tab) ? current : tab));
-                        onZone(null, boxIn(event.currentTarget));
+                        if (tab === null) {
+                            hideDropPreview();
+                        } else {
+                            previewTab(event.currentTarget, tab);
+                        }
                         return;
                     }
-                    setBarDrop(null);
                     const paths = usesPaths(event);
                     const next = paths ? pathZoneFor(event) : zoneFor(event);
                     if (next !== null) {
@@ -369,21 +375,24 @@ function Cell({
                            none, which the browser answers by dropping nothing and saying nothing. */
                         event.dataTransfer.dropEffect = paths ? dropEffectFor(event.dataTransfer.effectAllowed) : 'move';
                     }
-                    onZone(next, boxIn(event.currentTarget));
+                    if (next === null) {
+                        hideDropPreview();
+                    } else {
+                        previewZone(event.currentTarget, next, filling);
+                    }
                 }}
                 onDragLeave={(event) => {
                     // A drag crossing into a child fires leave on the parent; only leaving the cell counts.
                     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
                         setGridTakesPath(false);
-                        setBarDrop(null);
-                        onZone(null, boxIn(event.currentTarget));
+                        // Not at once: the pointer may be on its way to the next cell, and the preview then glides there.
+                        hideDropPreview(true);
                     }
                 }}
                 onDrop={(event) => {
                     if (overBar(event)) {
                         const tab = tabDropFor(event);
-                        setBarDrop(null);
-                        onZone(null, boxIn(event.currentTarget));
+                        hideDropPreview();
                         setGridTakesPath(false);
                         if (tab === null) {
                             return;
@@ -404,7 +413,7 @@ function Cell({
                     }
                     const paths = usesPaths(event) ? droppedPaths(event.dataTransfer) : [];
                     const here = paths.length > 0 ? pathZoneFor(event) : zoneFor(event);
-                    onZone(null, boxIn(event.currentTarget));
+                    hideDropPreview();
                     setGridTakesPath(false);
                     if (here === null) {
                         return;
@@ -480,9 +489,6 @@ function MaximizedIndicator({ at }: { at: CellAt }) {
 
 function Column({ layout, at, maximized }: { layout: SplitLayout; at: number; maximized: CellAt | null }) {
     const column = layout.columns[at]!;
-    /* Which cell the drag is over and where in it. It is held here and not in the cell, because a
-       side drop reaches across the whole column and the indicator is drawn against that box. */
-    const [drop, setDrop] = useState<{ zone: SplitZone; box: { top: number; height: number } } | null>(null);
     const resize = (cell: number): ((event: ReactPointerEvent<HTMLElement>) => void) =>
         splitDrag(
             'y',
@@ -493,10 +499,10 @@ function Column({ layout, at, maximized }: { layout: SplitLayout; at: number; ma
     return (
         /* Not positioned while a cell is maximized, so that cell is drawn against the whole grid. */
         <div
+            data-split-column
             className={clsx('flex min-h-0 min-w-0 flex-col', maximized === null ? 'relative' : maximized.column !== at && 'invisible')}
             style={{ flex: `${column.size} 1 0` }}
         >
-            {drop !== null && <DropIndicator box={drop.box} zone={drop.zone} />}
             {column.cells.map((cell, index) => (
                 <Fragment key={cellKey(cell)}>
                     {index > 0 && (
@@ -517,7 +523,6 @@ function Column({ layout, at, maximized }: { layout: SplitLayout; at: number; ma
                             focused={isSameCell(layout.focus, { column: at, cell: index })}
                             filling={maximized !== null && isSameCell(maximized, { column: at, cell: index })}
                             hidden={maximized !== null && !isSameCell(maximized, { column: at, cell: index })}
-                            onZone={(zone, box) => setDrop(zone === null ? null : { zone, box })}
                         />
                     </div>
                 </Fragment>
@@ -537,9 +542,17 @@ export function SplitGrid(): ReactElement | null {
     useEffect(() => {
         /* A drag called off with Escape ends with neither a leave nor a drop, so a claim left
            standing would hold the canvas off on the next drag that has nothing to do with it. */
-        const clear = (): void => setGridTakesPath(false);
+        const clear = (): void => {
+            setGridTakesPath(false);
+            hideDropPreview();
+        };
         window.addEventListener('dragend', clear);
-        return () => window.removeEventListener('dragend', clear);
+        window.addEventListener('drop', clear);
+        return () => {
+            window.removeEventListener('dragend', clear);
+            window.removeEventListener('drop', clear);
+            hideDropPreview();
+        };
     }, []);
     if (layout === null) {
         return null;
@@ -554,7 +567,7 @@ export function SplitGrid(): ReactElement | null {
         );
     return (
         /* Isolated, so a maximized cell stands over its neighbors and never over the parked pages. */
-        <div className="absolute inset-0 isolate flex bg-border">
+        <div data-split-grid className="absolute inset-0 isolate flex bg-border">
             {layout.columns.map((column, index) => (
                 <Fragment key={cellKey(column.cells[0]!)}>
                     {index > 0 && (

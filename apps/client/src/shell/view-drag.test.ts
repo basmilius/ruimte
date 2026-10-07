@@ -8,6 +8,7 @@ import {
     edgeZoneAt,
     setDragging,
     shapeOf,
+    shapeRect,
     VIEW_DRAG_TYPE,
     zoneAt
 } from './view-drag';
@@ -130,5 +131,27 @@ describe('the shape the indicator draws', () => {
 
     test('the middle is the whole cell', () => {
         expect(shapeOf('center')).toEqual({ x: 0, y: 0, width: 1, height: 1, column: false });
+    });
+});
+
+describe('shapeRect', () => {
+    const column = { x: 100, y: 0, width: 400, height: 600 };
+    const cell = { x: 100, y: 200, width: 400, height: 301 };
+
+    test('a side is the half of the column, over its whole height', () => {
+        expect(shapeRect(shapeOf('left'), column, cell)).toEqual({ x: 100, y: 0, width: 200, height: 600 });
+        expect(shapeRect(shapeOf('right'), column, cell)).toEqual({ x: 300, y: 0, width: 200, height: 600 });
+    });
+
+    test('up and down are the half of the cell, rounded on the edges so the halves meet', () => {
+        const up = shapeRect(shapeOf('up'), column, cell);
+        const down = shapeRect(shapeOf('down'), column, cell);
+        expect(up).toEqual({ x: 100, y: 200, width: 400, height: 151 });
+        expect(down).toEqual({ x: 100, y: 351, width: 400, height: 150 });
+        expect(up.y + up.height).toBe(down.y);
+    });
+
+    test('the middle is the cell', () => {
+        expect(shapeRect(shapeOf('center'), column, cell)).toEqual(cell);
     });
 });
