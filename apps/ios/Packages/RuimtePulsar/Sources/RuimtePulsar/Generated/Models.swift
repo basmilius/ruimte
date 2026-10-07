@@ -337,6 +337,64 @@ public struct AddressBookErrorError: Codable, Sendable, Equatable {
     }
 }
 
+public struct BenchmarkMeasurement: Codable, Sendable, Equatable {
+    public let `modelId`: String
+    public let `effort`: String
+    public let `intelligence`: Double?
+    public let `coding`: Double?
+    public let `agentic`: Double?
+    public let `costPerTask`: Double?
+    public let `totalCost`: Double?
+    public let `outputSpeed`: Double?
+
+    public init(`modelId`: String, `effort`: String, `intelligence`: Double? = nil, `coding`: Double? = nil, `agentic`: Double? = nil, `costPerTask`: Double? = nil, `totalCost`: Double? = nil, `outputSpeed`: Double? = nil) {
+        self.`modelId` = `modelId`
+        self.`effort` = `effort`
+        self.`intelligence` = `intelligence`
+        self.`coding` = `coding`
+        self.`agentic` = `agentic`
+        self.`costPerTask` = `costPerTask`
+        self.`totalCost` = `totalCost`
+        self.`outputSpeed` = `outputSpeed`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("BenchmarkMeasurementSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `modelId` = try container.decode(String.self, forKey: .`modelId`)
+        `effort` = try container.decode(String.self, forKey: .`effort`)
+        `intelligence` = try container.decodeIfPresent(Double.self, forKey: .`intelligence`)
+        `coding` = try container.decodeIfPresent(Double.self, forKey: .`coding`)
+        `agentic` = try container.decodeIfPresent(Double.self, forKey: .`agentic`)
+        `costPerTask` = try container.decodeIfPresent(Double.self, forKey: .`costPerTask`)
+        `totalCost` = try container.decodeIfPresent(Double.self, forKey: .`totalCost`)
+        `outputSpeed` = try container.decodeIfPresent(Double.self, forKey: .`outputSpeed`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`modelId`, forKey: .`modelId`)
+        try container.encode(`effort`, forKey: .`effort`)
+        try container.encodeIfPresent(`intelligence`, forKey: .`intelligence`)
+        try container.encodeIfPresent(`coding`, forKey: .`coding`)
+        try container.encodeIfPresent(`agentic`, forKey: .`agentic`)
+        try container.encodeIfPresent(`costPerTask`, forKey: .`costPerTask`)
+        try container.encodeIfPresent(`totalCost`, forKey: .`totalCost`)
+        try container.encodeIfPresent(`outputSpeed`, forKey: .`outputSpeed`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `modelId` = "modelId"
+        case `effort` = "effort"
+        case `intelligence` = "intelligence"
+        case `coding` = "coding"
+        case `agentic` = "agentic"
+        case `costPerTask` = "costPerTask"
+        case `totalCost` = "totalCost"
+        case `outputSpeed` = "outputSpeed"
+    }
+}
+
 public struct BenchmarkModel: Codable, Sendable, Equatable {
     public let `id`: String
     public let `name`: String
@@ -606,10 +664,14 @@ public struct Machine: Codable, Sendable, Equatable {
 public struct ModelBenchmarksResult: Codable, Sendable, Equatable {
     public let `fetchedAt`: Int64
     public let `models`: [BenchmarkModel]
+    public let `measurements`: [BenchmarkMeasurement]?
+    public let `intelligenceIndexVersion`: Double?
 
-    public init(`fetchedAt`: Int64, `models`: [BenchmarkModel]) {
+    public init(`fetchedAt`: Int64, `models`: [BenchmarkModel], `measurements`: [BenchmarkMeasurement]? = nil, `intelligenceIndexVersion`: Double? = nil) {
         self.`fetchedAt` = `fetchedAt`
         self.`models` = `models`
+        self.`measurements` = `measurements`
+        self.`intelligenceIndexVersion` = `intelligenceIndexVersion`
     }
 
     public init(from decoder: Decoder) throws {
@@ -617,17 +679,23 @@ public struct ModelBenchmarksResult: Codable, Sendable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `fetchedAt` = try container.decode(Int64.self, forKey: .`fetchedAt`)
         `models` = try container.decode([BenchmarkModel].self, forKey: .`models`)
+        `measurements` = try container.decodeIfPresent([BenchmarkMeasurement].self, forKey: .`measurements`)
+        `intelligenceIndexVersion` = try container.decodeIfPresent(Double.self, forKey: .`intelligenceIndexVersion`)
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(`fetchedAt`, forKey: .`fetchedAt`)
         try container.encode(`models`, forKey: .`models`)
+        try container.encodeIfPresent(`measurements`, forKey: .`measurements`)
+        try container.encodeIfPresent(`intelligenceIndexVersion`, forKey: .`intelligenceIndexVersion`)
     }
 
     private enum CodingKeys: String, CodingKey {
         case `fetchedAt` = "fetchedAt"
         case `models` = "models"
+        case `measurements` = "measurements"
+        case `intelligenceIndexVersion` = "intelligenceIndexVersion"
     }
 }
 

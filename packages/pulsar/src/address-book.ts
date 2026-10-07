@@ -243,9 +243,24 @@ export const BenchmarkModelSchema = z.object({
 });
 export type BenchmarkModel = z.infer<typeof BenchmarkModelSchema>;
 
+export const BenchmarkMeasurementSchema = z.object({
+    modelId: z.string().max(64),
+    effort: z.string().max(32),
+    intelligence: z.number().optional(),
+    coding: z.number().optional(),
+    agentic: z.number().optional(),
+    costPerTask: z.number().nonnegative().optional(),
+    totalCost: z.number().nonnegative().optional(),
+    outputSpeed: z.number().positive().optional()
+});
+export type BenchmarkMeasurement = z.infer<typeof BenchmarkMeasurementSchema>;
+
 export const ModelBenchmarksResultSchema = z.object({
     fetchedAt: z.number().int(),
-    models: z.array(BenchmarkModelSchema).max(64)
+    models: z.array(BenchmarkModelSchema).max(64),
+    // Separate from the original complete pairs so older clients can keep reading `models`.
+    measurements: z.array(BenchmarkMeasurementSchema).max(1024).optional(),
+    intelligenceIndexVersion: z.number().optional()
 });
 export type ModelBenchmarksResult = z.infer<typeof ModelBenchmarksResultSchema>;
 

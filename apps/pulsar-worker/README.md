@@ -23,7 +23,7 @@ in `packages/pulsar/src/statement-key.ts`. The wire shapes live in `packages/pul
 | `POST /v1/session/refresh`                 | A new access and refresh token, signed with the session key                                |
 | `DELETE /v1/session`                       | Sign out                                                                                   |
 | `GET /v1/providers`                        | The providers that are configured, so a client only offers those                           |
-| `GET /v1/models/benchmarks`                | Intelligence Index and cost per task per model and effort, for the model comparison        |
+| `GET /v1/models/benchmarks`                | Model indices, costs and output speed per effort, for the model comparison        |
 | `GET /v1/models/catalog`                   | The shipped model catalogs per agent kind, for a machine to pick up a new model            |
 | `GET /v1/account`                          | The account and its identities                                                             |
 | `DELETE /v1/account`                       | Delete the account and everything bound to it, with the typed name and an Apple code       |
@@ -219,16 +219,21 @@ could not read goes on a new route, never on this one.
 `GET /v1/models/benchmarks` is public and feeds the model comparison in the app. The Worker reads the free
 Data API of Artificial Analysis (`GET /api/v2/language/models/free`, the key in `x-api-key`, 200 models
 a page, `page` from 1 while `has_more`, at most ten pages) every three hours, so four pages cost 32 of the
-100 requests a day. It keeps one row in D1 with only what the chart draws: per model of Ruimte its id, name,
-provider and whether it is legacy, and per effort the Intelligence Index and the cost per task in USD. The
-terms of that data allow a chart with attribution, not a copy, so no other field of the answer is kept or
-handed out. A page that fails, does not parse or leaves not one known model measured keeps the row that
-is there. Without the key the route answers `503` with `not-configured`, before the first good refresh
-`503` with `no-benchmarks`.
+100 requests a day. It keeps one snapshot in D1 with model metadata, Intelligence, Coding and Agentic
+indices, cost per task, total benchmark cost and median output tokens per second. Missing values stay
+absent; a model with a score but no cost still appears in the index charts. Token counts and time per
+benchmark task are not available on Free and are not inferred from output speed.
+
+The optional `measurements` and `intelligenceIndexVersion` fields extend the response. `models.points`
+still contains complete Intelligence/cost pairs for older clients, and a cache created before migration
+`0015_benchmark_measurements.sql` remains readable. Apply the migration before deploying this Worker;
+the next successful refresh fills the new fields. A failed, malformed, truncated or mixed-version fetch
+keeps the previous snapshot. Unrelated source fields are neither stored nor returned. Without the key
+the route answers `503` with `not-configured`; before the first successful refresh it answers `503` with
+`no-benchmarks`.
 
 Which model of Artificial Analysis stands for which model and effort of Ruimte is `src/benchmark-models.ts`,
-looked up by id; a test holds it against the manifests in `@adecore/agents/providers`. A new model is a row
-there and a deploy of this Worker, not a release of the app. `X-RateLimit-Remaining` and `X-RateLimit-Reset`
+looked up by id. A new model is a row there and a deploy of this Worker, not a release of the app. `X-RateLimit-Remaining` and `X-RateLimit-Reset`
 on an answer say how much of the day is left.
 
 ## The GitHub OAuth app

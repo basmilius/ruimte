@@ -2051,7 +2051,7 @@ describe('model benchmarks', () => {
     });
     const page = (number: number, hasMore: boolean, data: unknown[]) => ({
         tier: 'free',
-        intelligence_index_version: '9',
+        intelligence_index_version: 9,
         pagination: { page: number, page_size: 200, total_pages: 2, has_more: hasMore },
         data
     });
@@ -2092,6 +2092,29 @@ describe('model benchmarks', () => {
         expect(await errorCode(response)).toBe('no-benchmarks');
     });
 
+    test('the migration preserves a cached response from before the additional metrics', async () => {
+        const upgrade = miniflare('pulsar-benchmarks-upgrade', { bindings: { PUBLIC_ORIGIN, ARTIFICIAL_ANALYSIS_API_KEY: API_KEY } });
+        try {
+            await migrate(upgrade, (file) => file < '0015_benchmark_measurements.sql');
+            const models = [
+                {
+                    id: 'claude-opus-5-5',
+                    name: 'Claude Opus 5.5',
+                    provider: 'claude',
+                    legacy: false,
+                    points: [{ effort: 'low', intelligence: 42.3, costPerTask: 0.55 }]
+                }
+            ];
+            await database(upgrade).run('INSERT INTO model_benchmarks (id, fetched_at, models) VALUES (1, ?, ?)', 123, JSON.stringify(models));
+            await migrate(upgrade, (file) => file === '0015_benchmark_measurements.sql');
+            const response = await dispatch('/v1/models/benchmarks', { on: upgrade });
+            expect(response.status).toBe(200);
+            expect(await response.json()).toEqual({ fetchedAt: 123, models });
+        } finally {
+            await upgrade.dispose();
+        }
+    });
+
     test('follows every page and hands out only what the chart draws', async () => {
         pages = [
             page(1, true, [
@@ -2111,7 +2134,15 @@ describe('model benchmarks', () => {
         const response = await read();
         expect(response.status).toBe(200);
         const result = (await response.json()) as ModelBenchmarksResult;
-        expect(Object.keys(result).sort()).toEqual(['fetchedAt', 'models']);
+        expect(Object.keys(result).sort()).toEqual(['fetchedAt', 'intelligenceIndexVersion', 'measurements', 'models']);
+        expect(result.intelligenceIndexVersion).toBe(9);
+        expect(result.measurements?.find((point) => point.modelId === 'gpt-6-luna' && point.effort === 'max')).toEqual({
+            modelId: 'gpt-6-luna',
+            effort: 'max',
+            intelligence: 37.3,
+            coding: 1,
+            outputSpeed: 3
+        });
         expect(result.models.map((model) => model.id)).toEqual(BENCHMARK_MODELS.map((model) => model.slug));
         for (const model of result.models) {
             expect(Object.keys(model).sort()).toEqual(['id', 'legacy', 'name', 'points', 'provider']);
@@ -2129,7 +2160,7 @@ describe('model benchmarks', () => {
                 { effort: 'max', intelligence: 57.6, costPerTask: 5.98 }
             ]
         });
-        // The max of Luna has an index without a cost, so it is no point.
+        // Older clients require both axes; Luna max remains available through the richer measurements.
         expect(result.models.find((model) => model.id === 'gpt-6-luna')?.points).toEqual([{ effort: 'low', intelligence: 20.9, costPerTask: 0.004 }]);
         expect(result.models.find((model) => model.id === 'gpt-5.3-codex-spark')?.points).toEqual([]);
         expect(JSON.stringify(result)).not.toContain('pricing');
@@ -2142,7 +2173,8 @@ describe('model benchmarks', () => {
             [page(1, true, [measured(measuredId('claude-opus-5-5', 'low'), 1, 1)]), 500],
             [page(1, false, [measured(measuredId('claude-opus-5-5', 'low'), 1, 1)]).data],
             [page(1, false, [measured('not-a-model-of-ruimte', 70, 1)])],
-            [429]
+            [429],
+            [page(1, true, [measured(measuredId('claude-opus-5-5', 'low'), 1, 1)]), { ...page(2, false, []), intelligence_index_version: 8 }]
         ]) {
             pages = broken;
             await refresh();
@@ -2152,11 +2184,11 @@ describe('model benchmarks', () => {
     });
 
     test('stops after a bounded number of pages when the answer never ends', async () => {
+        const before = await (await read()).json();
         pages = Array.from({ length: MAX_PAGES + 5 }, (_, index) => page(index + 1, true, [measured(measuredId('gpt-6-sol', 'high'), 44, 0.5)]));
         await refresh();
         expect(asked).toHaveLength(MAX_PAGES);
-        const result = (await (await read()).json()) as ModelBenchmarksResult;
-        expect(result.models.find((model) => model.id === 'gpt-6-sol')?.points).toEqual([{ effort: 'high', intelligence: 44, costPerTask: 0.5 }]);
+        expect(await (await read()).json()).toEqual(before);
     });
 
     test('the daily cleanup does not ask Artificial Analysis', async () => {

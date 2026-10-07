@@ -282,6 +282,45 @@
       "error"
     ]
   },
+  "BenchmarkMeasurementSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "modelId": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "effort": {
+        "type": "string",
+        "maxLength": 32
+      },
+      "intelligence": {
+        "type": "number"
+      },
+      "coding": {
+        "type": "number"
+      },
+      "agentic": {
+        "type": "number"
+      },
+      "costPerTask": {
+        "type": "number",
+        "minimum": 0
+      },
+      "totalCost": {
+        "type": "number",
+        "minimum": 0
+      },
+      "outputSpeed": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      }
+    },
+    "required": [
+      "modelId",
+      "effort"
+    ]
+  },
   "BenchmarkModelSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -708,6 +747,51 @@
             "points"
           ]
         }
+      },
+      "measurements": {
+        "maxItems": 1024,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "modelId": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "effort": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "intelligence": {
+              "type": "number"
+            },
+            "coding": {
+              "type": "number"
+            },
+            "agentic": {
+              "type": "number"
+            },
+            "costPerTask": {
+              "type": "number",
+              "minimum": 0
+            },
+            "totalCost": {
+              "type": "number",
+              "minimum": 0
+            },
+            "outputSpeed": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "required": [
+            "modelId",
+            "effort"
+          ]
+        }
+      },
+      "intelligenceIndexVersion": {
+        "type": "number"
       }
     },
     "required": [
