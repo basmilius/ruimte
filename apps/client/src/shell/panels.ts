@@ -8,8 +8,8 @@ import { panelHidden, type PanelKind } from '@/state/ui';
    and has no button. Launches has none either: the launch chip opens it and shows it pressed. */
 export const PANELS: { kind: PanelKind; icon: LucideIcon; minWidth: number; toolbar: boolean }[] = [
     { kind: 'files', icon: Folder, minWidth: 240, toolbar: true },
-    { kind: 'git', icon: GitBranch, minWidth: 240, toolbar: true },
     { kind: 'databases', icon: Database, minWidth: 260, toolbar: true },
+    { kind: 'git', icon: GitBranch, minWidth: 240, toolbar: true },
     { kind: 'devices', icon: TabletSmartphone, minWidth: 320, toolbar: true },
     { kind: 'processes', icon: Activity, minWidth: 420, toolbar: false },
     { kind: 'launches', icon: Rocket, minWidth: 480, toolbar: false },

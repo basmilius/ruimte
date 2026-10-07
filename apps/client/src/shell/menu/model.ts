@@ -349,8 +349,8 @@ export function menuModel(context: MenuContext): MenuSpec {
                 ...only(
                     !context.scratch,
                     command('panel-files', t('files'), { checked: context.panel === 'files' }),
-                    command('panel-git', t('git'), { checked: context.panel === 'git' }),
                     command('panel-databases', t('databases'), { checked: context.panel === 'databases' }),
+                    command('panel-git', t('git'), { checked: context.panel === 'git' }),
                     command('panel-devices', t('devices'), { checked: context.panel === 'devices' })
                 ),
                 command('panel-toggle', t('togglePanel'), { shortcut: CANVAS_SHORTCUTS.togglePanel }),

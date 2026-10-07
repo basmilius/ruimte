@@ -642,12 +642,12 @@ export function appCommands(): Command[] {
                       ? []
                       : [
                             { id: 'panel-files', label: i18next.t('shell:palette.commands.toggleFiles'), run: () => useUi.getState().togglePanel('files') },
-                            { id: 'panel-git', label: i18next.t('shell:palette.commands.toggleGit'), run: () => useUi.getState().togglePanel('git') },
                             {
                                 id: 'panel-databases',
                                 label: i18next.t('shell:palette.commands.toggleDatabases'),
                                 run: () => useUi.getState().togglePanel('databases')
                             },
+                            { id: 'panel-git', label: i18next.t('shell:palette.commands.toggleGit'), run: () => useUi.getState().togglePanel('git') },
                             {
                                 id: 'database-console-new',
                                 label: i18next.t('shell:palette.commands.newDatabaseConsole'),
