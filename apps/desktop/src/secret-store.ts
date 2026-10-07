@@ -13,8 +13,17 @@ export interface SecretStore {
     write(secret: string | null): Promise<void>;
 }
 
+export interface SecretStoreOptions {
+    /* Throw for a secret that is on disk but cannot be read, rather than take it for unset. */
+    reportUnreadable?: boolean;
+}
+
+function isMissing(error: unknown): boolean {
+    return (error as NodeJS.ErrnoException | null)?.code === 'ENOENT';
+}
+
 /* A secret is only persisted when Electron can encrypt it through the operating system's keychain. */
-export function fileSecretStore(path: string, cipher: StringCipher): SecretStore {
+export function fileSecretStore(path: string, cipher: StringCipher, { reportUnreadable = false }: SecretStoreOptions = {}): SecretStore {
     let memory: string | null = null;
 
     return {
@@ -25,7 +34,10 @@ export function fileSecretStore(path: string, cipher: StringCipher): SecretStore
             }
             try {
                 return cipher.decryptString(await readFile(path));
-            } catch {
+            } catch (error: unknown) {
+                if (reportUnreadable && !isMissing(error)) {
+                    throw error;
+                }
                 return null;
             }
         },

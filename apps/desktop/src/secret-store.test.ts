@@ -65,4 +65,17 @@ describe('fileSecretStore', () => {
         };
         expect(await fileSecretStore(path, unavailableCipher).read()).toBeNull();
     });
+
+    test('says why a secret on disk cannot be read when asked to, and still takes a missing one for unset', async () => {
+        const rejecting: StringCipher = {
+            ...fakeCipher(),
+            decryptString: () => {
+                throw new Error('Keychain rejected the file');
+            }
+        };
+        expect(await fileSecretStore(path, rejecting, { reportUnreadable: true }).read()).toBeNull();
+        await fileSecretStore(path, fakeCipher()).write('hunter2');
+        await expect(fileSecretStore(path, rejecting, { reportUnreadable: true }).read()).rejects.toThrow('Keychain rejected the file');
+        expect(await fileSecretStore(path, fakeCipher(), { reportUnreadable: true }).read()).toBe('hunter2');
+    });
 });

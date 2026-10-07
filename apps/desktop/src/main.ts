@@ -1066,7 +1066,8 @@ function databaseSecrets(key: string): SecretStore {
     const path = databaseSecretFile(join(app.getPath('userData'), 'database-secrets'), key);
     let store = databaseSecretStores.get(path);
     if (store === undefined) {
-        store = fileSecretStore(path, safeStorage);
+        // A password the keychain no longer opens is said, or a person only sees the server turn the login down.
+        store = fileSecretStore(path, safeStorage, { reportUnreadable: true });
         databaseSecretStores.set(path, store);
     }
     return store;
@@ -1075,6 +1076,8 @@ function databaseSecrets(key: string): SecretStore {
 handleFromApp('database:secret-read', (_event, key: unknown) => databaseSecrets(parseSecretKey(key)).read());
 
 handleFromApp('database:secret-write', (_event, key: unknown, secret: unknown) => databaseSecrets(parseSecretKey(key)).write(parseSecret(secret)));
+
+handleFromApp('database:secret-persistent', () => safeStorage.isEncryptionAvailable());
 
 handleFromApp('openai:save-api-key', async (_event, apiKey: unknown) => {
     if (typeof apiKey !== 'string' || apiKey.trim() === '') {

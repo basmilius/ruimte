@@ -100,7 +100,8 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
     },
     databaseSecrets: {
         read: (key: string): Promise<string | null> => ipcRenderer.invoke('database:secret-read', key),
-        write: (key: string, secret: string | null): Promise<void> => ipcRenderer.invoke('database:secret-write', key, secret)
+        write: (key: string, secret: string | null): Promise<void> => ipcRenderer.invoke('database:secret-write', key, secret),
+        persistent: (): Promise<boolean> => ipcRenderer.invoke('database:secret-persistent')
     },
     speech: {
         state: (): Promise<unknown> => ipcRenderer.invoke('speech:state'),
