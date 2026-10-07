@@ -175,6 +175,9 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   pre { white-space: pre-wrap; overflow-wrap: anywhere; }
   .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
 }
+
+.doc-status { margin: 20px 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--highlight); color: var(--ink); }
+.doc-status p { margin: 0; font-size: 15px; }
 </style>
 </head>
 <body>
@@ -182,6 +185,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 <header>
 <p class="eyebrow">Ruimte / Provideronderzoek / 25 september 2026</p>
 <h1>Meer providers,<br>dezelfde Ruimte-chat</h1>
+<aside class="doc-status" aria-label="Actualiteitscontrole"><p><strong>7 oktober 2026: Copilot en Gemini blijven terminal-only.</strong> Beide providers hebben nog chat: false; Copilot geeft zijn eerste prompt nog met -p mee. Apple Foundation Models heeft inmiddels een native helper en chatbackend. Neem het Apple-gedeelte dus niet opnieuw als bouwopdracht over. SDK-, ACP- en CLI-keuzes vragen een nieuwe versiecontrole zodra die implementatie start. De codecontrole gebruikte aada37fe5; externe productinformatie is niet opnieuw onderzocht.</p></aside>
 <p class="intro">Copilot, Grok en Google's agents kunnen aansluiten op de bestaande chatbackend. Apple Foundation Models kan lokaal tools aanroepen, maar vraagt een eigen native helper en een kleinere taakopzet.</p>
 <p class="status">Onderzoeksrapport · vier onderzoekswerkstromen · implementatievoorstel</p>
 <p class="caption">Codebasis Ruimte <code>a42db32a4120</code><br>Officiële documentatie en broncode onderzocht. Geen provider geïnstalleerd, account aangemeld of model uitgevoerd.</p>

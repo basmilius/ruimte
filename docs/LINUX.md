@@ -1,9 +1,11 @@
 # Linux
 
-What is left before Ruimte ships on Linux. Almost all of it is packaging, CI and the Electron
-shell. The daemon needs nothing: it has no native module, already runs on Debian in
-`apps/server/docker`, spawns its PTYs through `Bun.spawn({ terminal })`, reads DMI and the device
-tree for the machine model, reveals through `xdg-open` and falls back to per-directory watching.
+Linux packaging exists; CI coverage and packaged-app acceptance remain open. Reviewed on
+October 7, 2026. The daemon has a Debian setup in `apps/server/docker`, spawns PTYs through
+`Bun.spawn({ terminal })`, reads DMI and the device tree for the machine model, reveals through
+`xdg-open` and falls back to per-directory watching. New native dependencies, including the
+ADE CORE database helper and the separately installed PHP language server, need their own
+Linux build and runtime checks; the older shell smoke test below does not cover them.
 
 An rpm and an AppImage were built and run on Fedora 44 (x64, Wayland) on 11 September 2026. The
 packaged app brought its daemon up, loaded the window and shut down cleanly on SIGTERM. The rpm
@@ -53,13 +55,14 @@ The `linux` job in `.github/workflows/release.yml` builds x64 on `ubuntu-22.04` 
 - **`rpm` from apt.** The rpm goes through fpm, which needs `rpmbuild` on the runner. The default
   rpm dependencies are the right ones, so no `rpm.depends` block is needed.
 - **A draft job of its own**, so three parallel builds do not wait on the macOS job.
-- **No check and no tests.** The macOS job runs both on the same commit, and `bun test` has never
-  run on Linux.
+- **CI gates the release.** The reusable CI workflow runs verification and integration tests on
+  macOS. Its Ubuntu jobs handle changed-path detection and the final status; they do not run the
+  application tests on Linux.
 
 ## Open
 
-1. **A Linux line in `.github/workflows/ci.yml`.** It runs on `macos-latest` only, so nothing
-   catches a Linux regression before a tag.
+1. **Linux verification and integration jobs in `.github/workflows/ci.yml`.** Those jobs currently
+   run on `macos-latest`; the presence of Ubuntu bookkeeping jobs does not cover Linux behavior.
 2. **Fonts with a Linux face.** `--font-sans` and `--font-mono` in `@adecore/ui/theme.css`
    name Apple, Microsoft and web faces only (an issue for that library, not a patch here), so both fall through to the generic on a Linux
    desktop. Cantarell, Ubuntu and Noto Sans for the first, DejaVu Sans Mono, Liberation Mono and
@@ -73,5 +76,6 @@ names `libgtk-3-0` and `libxss1`, both renamed or dropped in the t64 transition,
 trixie and noble); arm64; the
 AppImage on Ubuntu 24.04, whose AppArmor policy takes away the unprivileged user namespaces
 Fedora allows; the frameless window under GNOME on X11 and under KDE, where resize borders and the
-compositor's own title bar menu are worth a look; and `bun test`, which spawns real shells and has
-never run here.
+compositor's own title bar menu are worth a look; and Linux execution of both test suites. Deterministic cases run under `bun run test`; real
+shells, processes, sockets and watchers belong to `bun run test:integration`. No Linux run is
+established by the September smoke result.

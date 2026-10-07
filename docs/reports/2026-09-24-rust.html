@@ -177,6 +177,9 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 }
 .prompt pre { white-space: pre-wrap; font-size: 13px; line-height: 1.6; }
 .prompt-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+
+.doc-status { margin: 20px 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--highlight); color: var(--ink); }
+.doc-status p { margin: 0; font-size: 15px; }
 </style>
 </head>
 <body>
@@ -184,6 +187,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 <header>
   <p class="eyebrow">Ruimte / Werkrapport / 24 september 2026</p>
   <h1>Rust-broker en Rust-terminalkern</h1>
+<aside class="doc-status" aria-label="Actualiteitscontrole"><p><strong>7 oktober 2026: Rust-broker en terminalspike niet geland.</strong> De broker gebruikt nog Bun.serve en Session nog @xterm/headless met SerializeAddon. De meetbestanden blijven de baseline van 24 september. De startprompt hieronder is een historisch voorstel, geen lopende opdracht of bewijs dat branches zijn uitgevoerd. De codecontrole gebruikte aada37fe5; externe productinformatie is niet opnieuw onderzocht.</p></aside>
   <p class="intro">Twee losse stukken werk. De Pulsar-broker wordt een Rust-binary op de eigen VPS. De daemon krijgt een Rust-terminalkern achter een naad in <code>Session</code>, als spike naast xterm.</p>
   <p class="caption">Bron: <code>main</code> op <code>b95126ea</code>. Meting op een Apple M4 Max met 64 GiB, macOS 27.2 en Bun 1.4.0, met <code>@xterm/headless</code> 6.0.0 en <code>@xterm/addon-serialize</code> 0.14.0.</p>
   <nav aria-label="Inhoud">

@@ -31,15 +31,15 @@ The implementation record for the code editor, with language servers as its brai
 - A person can add servers of their own (a command, its arguments and environment, the languages and file patterns it serves, optionally the projects it runs for) in Settings, Editor, Language servers. They live under `$RUIMTE_HOME`, only the local secret saves them, and a save approves exactly that command.
 - Schemas for JSON and YAML are fetched from their hosts when a matching file opens. The YAML schema store is off, since it downloads its whole catalog when the server starts.
 - Completion follows design 1c (documentation beside the list), diagnostics follow 1e (calm: squiggles, the message in the hover and in Problems).
-- Typing stays within a frame of an editor with no language service. A host setter that changes nothing draws nothing, a draw reads the viewport's scroll and size once at its start (a read after the first write makes the browser lay the page out again, and each setter used to draw on its own), the suggestion list draws only the rows in or near view, and a signature that was highlighted before is not tokenized again. One rule outside the editor still costs a page-wide style pass per keystroke: `:root:has(.popup-positioner[data-open]) *` in `@adecore/ui/theme.css`.
+- Typing stays within a frame of an editor with no language service. A host setter that changes nothing draws nothing, a draw reads the viewport's scroll and size once at its start (a read after the first write makes the browser lay the page out again, and each setter used to draw on its own), the suggestion list draws only the rows in or near view, and a signature that was highlighted before is not tokenized again.
 - Tabs (1a) and a file per view (1b) both exist in Ruimte, so the editor carries both the breadcrumb and sticky scroll.
 - An edit across files lands as unsaved drafts; nothing is written to disk on a server's word alone. The exception is an edit that also moves a file (Move class): the edits and the move are one change, so every file it edits is saved through the machine and the move is made there, in the order the edit says (`@adecore/editor-react`). An edit is checked against every text first, so one that does not fit changes nothing.
-- Refactors are code actions of kind `refactor.extract`, `refactor.inline`, `refactor.move` and `refactor.rewrite`, and the session declares all four, `workspace.workspaceEdit.documentChanges` and `resourceOperations: ['rename']`, and `workspace.fileOperations` (`willRename`, `didRename`, dynamic registration). It does not declare `snippetEditSupport`: a server that writes a name for the person to change then sends the command `php.rename` with the document and the position of the name in the text after the edits, and the client answers it with its own inline rename at that position instead of running it on the server, so the name is selected in the rename input and typing replaces it in every occurrence, as after the platform's extraction. Alt+Enter lists quick fixes, rewrites, then the refactorings grouped as Extract, Inline and Move; Refactor This (Ctrl+T, Ctrl+Alt+Shift+T off macOS, the Code menu and the palette) lists only the refactorings, structure first, and the context menu's Refactor submenu follows that order. A refactor an expensive server resolves on demand can refuse, and the reason it gives shows under the list the moment its row is active (and on Enter, which then keeps the list open), the way a failed rename keeps its input; from the context menu, which has no list, it is a toast.
+- Refactors are code actions of kind `refactor.extract`, `refactor.inline`, `refactor.move` and `refactor.rewrite`, and the session declares all four, `workspace.workspaceEdit.documentChanges` and `resourceOperations: ['create', 'rename']`, and `workspace.fileOperations` (`willRename`, `didRename`, dynamic registration). It does not declare `snippetEditSupport`: a server that writes a name for the person to change then sends the command `php.rename` with the document and the position of the name in the text after the edits, and the client answers it with its own inline rename at that position instead of running it on the server, so the name is selected in the rename input and typing replaces it in every occurrence, as after the platform's extraction. Alt+Enter lists quick fixes, rewrites, then the refactorings grouped as Extract, Inline and Move; Refactor This (Ctrl+T, Ctrl+Alt+Shift+T off macOS, the Code menu and the palette) lists only the refactorings, structure first, and the context menu's Refactor submenu follows that order. A refactor an expensive server resolves on demand can refuse, and the reason it gives shows under the list the moment its row is active (and on Enter, which then keeps the list open), the way a failed rename keeps its input; from the context menu, which has no list, it is a toast.
 - A file that moves tells the language servers. The daemon asks every running process of the project that registered `workspace/willRenameFiles` for a filter that takes the file (glob and `matches: file | folder`) what it would change, makes those edits, moves the file (`fs.rename`) and then sends `workspace/didRenameFiles`. A document a client holds open takes the edits in its editor as one undo step, any other file is written, and a server that is slow, fails or answers nothing never holds up the move: each has 5 seconds (`WILL_RENAME_DEADLINE_MS`; a merged call gets 1 second, but a rename may search a whole project). The TypeScript 6 sidecar is not asked, since it answers code actions only and does not watch the files. Servers are asked one after the other, each after the edit of the one before is made. An edit that cannot be made ends the rename before anything moved. The Files panel moves files through the context menu's Rename and by dropping a row on a folder; unsaved text in the moved files is saved first, and the tabs, the editors and where they were (`editor-view-state.ts`) follow the new path. A refactor that moves a file asks `fs.rename` with `edits: false`, since it made the edits itself, and the servers only hear that it moved.
 - The file tree no longer follows the open file.
 - Inline edit (⌘I) follows design 2b: the proposal sits under the selection, and the code stays untouched until Apply.
 - Agent changes in open files follow the settings design: Off, Gutter (2c) or Review (2d).
-- The editor's settings are one section, Editor, with a tab per kind (General, Smart keys, Language servers); the AI tab arrives with phase 5. The code font face stays under Appearance because terminals share it.
+- The editor's settings are one section, Editor, with General, Smart keys, Language servers and AI tabs. The code font face stays under Appearance because terminals share it.
 
 ## Code vision
 
@@ -116,7 +116,7 @@ Left out: effects a scope cannot carry (the underline under a TypeScript paramet
 
 ### Test round
 
-Bas tests the editor without AI features. Findings are fixed before phase 5 starts. Areas:
+The pre-AI test round is complete. Use the same cases for shared-package regression acceptance; AI and refactor acceptance remain open where no result is recorded. Areas:
 
 - Typing, IME and dead keys, copy, cut and paste, undo and redo, multiple carets.
 - Scrolling with a trackpad (native again, with the gutter and the pinned headers stuck to the scroll container's corner), sticky scroll, folding, soft wrap.
@@ -148,7 +148,7 @@ From the "Code Editor AI" design:
 - Ask Claude Code and Ask Codex in the context menu and the problem card.
 - Settings: Editor → AI.
 
-The hard part sits in the daemon (chats, outbox, lineage); its brief gets written with care first.
+The daemon owns the inline chats, outbox and lineage. Phase 5 is implemented; the remaining work is acceptance and the limits listed above.
 
 ### Phase 6: on the device
 
@@ -183,7 +183,7 @@ Until then a person can add any of these as a server of their own.
     - Snippets have tab stops (Tab and Shift+Tab, Escape ends them), but a mirror of a stop is not edited along, a multi-line snippet is not re-indented and accepting a suggestion inside a stop ends the outer snippet.
     - The status bar shows no progress percentage (the servers send none).
     - Semantic tokens go without deltas.
-    - Workspace edits refuse creating and deleting files; renaming one is made through the machine.
+    - Workspace edits can create and rename files through the machine; deleting files is not supported.
     - A file node or view on the canvas that shows a file which moved keeps its old path.
     - Problems lists only open files, since servers report only on documents they were given.
     - A link to another file opens on its line, not its column (`file.preview` knows only a line).

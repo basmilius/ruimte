@@ -98,7 +98,7 @@ figcaption { margin-top: 10px; }
 .diagram .grid { stroke: var(--line); }
 .plot { max-width: none; }
 .steps { list-style: none; padding: 0; counter-reset: step; }
-.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
 .step::before { content: counter(step); font-size: 26px; color: var(--accent); }
 .step h3 { margin: 0 0 10px; }
 code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
@@ -157,7 +157,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 }
 @media (max-width: 420px) {
   .stats { grid-template-columns: 1fr; }
-  .step { grid-template-columns: 30px 1fr; }
+  .step { grid-template-columns: 30px minmax(0, 1fr); }
 }
 @media print {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -176,6 +176,9 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
 }
 .col-where { min-width: 220px; }
+
+.doc-status { margin: 20px 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--highlight); color: var(--ink); }
+.doc-status p { margin: 0; font-size: 15px; }
 </style>
 </head>
 <body>
@@ -183,6 +186,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 <header>
   <p class="eyebrow">Ruimte / platformonderzoek / 24 september 2026</p>
   <h1>Hoe macOS-specifiek is Ruimte nog?</h1>
+<aside class="doc-status" aria-label="Actualiteitscontrole"><p><strong>7 oktober 2026: Platformwerk niet afgerond.</strong> De verificatie- en integratiejobs draaien nog op macOS. Windows blijft uitgesteld; ConPTY en een Windows-release ontbreken. Linux heeft distributiecode. De bronpaden en helperinventaris hieronder zijn historisch; gedeelde code woont nu in ADE CORE. Gebruik LINUX.md voor de resterende Linux-acceptatie. De codecontrole gebruikte aada37fe5; externe productinformatie is niet opnieuw onderzocht.</p></aside>
   <p class="intro">Minder dan je zou denken. Linux wordt al uitgebracht. Windows heeft één harde blokkade: de terminal. Bun opent een PTY alleen op POSIX-systemen. Daaromheen staat een handvol aannames over een POSIX-shell. De client, de contracten en de Electron-shell zijn grotendeels platformneutraal.</p>
   <p class="status">Linux: uitgebracht, niet getest in CI · Windows: start niet voorbij de terminal</p>
   <p class="caption">Statische analyse van <code>main</code> op <code>4a9be828</code> plus de ongecommitte computer-use-wijzigingen. Op 25 september aangevuld met de Windows-audit van 22 september en de regelnummers gecontroleerd op <code>e4ca4990</code>. Niets is gedraaid op Windows of Linux. De iPhone-app valt buiten de telling.</p>

@@ -162,6 +162,9 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
   pre { white-space: pre-wrap; overflow-wrap: anywhere; }
   .recommendation, .panel, .badge { print-color-adjust: exact; }
 }
+
+.doc-status { margin: 20px 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--highlight); color: var(--ink); }
+.doc-status p { margin: 0; font-size: 15px; }
 </style>
 </head>
 <body>
@@ -169,6 +172,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 <header>
   <p class="eyebrow">Ruimte / Onderzoek / 15 september 2026</p>
   <h1>Protocolversies: een nieuwere client op een oudere machine, en andersom</h1>
+<aside class="doc-status" aria-label="Actualiteitscontrole"><p><strong>7 oktober 2026: Protocolvenster nog niet gebouwd.</strong> De wire gebruikt nog PROTOCOL_VERSION = 1 en acceptsOfferedProtocol controleert gelijkheid. Het voorgestelde venster en versieadapters blijven open. Pairing is intussen verwijderd; de historische pairinganalyse hieronder is geen werkopdracht. Gebruik het huidige account- en channel-auth-model. De codecontrole gebruikte aada37fe5; externe productinformatie is niet opnieuw onderzocht.</p></aside>
   <p class="intro">Vervang de gelijkheidscheck door een venster. Beide kanten publiceren welke protocolversies ze nog spreken, de verbinding loopt op de hoogste die beide kennen, en de nieuwere kant past zich aan. Bijna alles wat daarvoor nodig is (het versienummer op de socket, in <code>endpoint.info</code> en in de directe handshake) staat er al; wat ontbreekt is de regel dat een verschil geen weigering is, plus een plek waar een oud frame vertaald wordt. De drie vertrouwensstukken (pairing, statements, de handshake van het directe kanaal) blijven buiten het venster en worden nooit omlaag onderhandeld.</p>
   <p class="status">Onderzoek, niets gebouwd. Bas beslist na lezen.</p>
   <p class="caption">Gelezen op commit <code>d081d13</code> (main). Scope: <code>packages/contracts</code>, <code>packages/pulsar</code>, de transportlaag van de client, de dispatcher en de kanaal-handshake van de daemon, en de manier waarop vergelijkbare systemen versieverschil toelaten.</p>

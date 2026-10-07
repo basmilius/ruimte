@@ -204,6 +204,9 @@ footer p { margin-bottom: 6px; }
   .step { padding-top: 16px; margin-top: 16px; }
   article { margin-top: 20px; }
 }
+
+.doc-status { margin: 20px 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--highlight); color: var(--ink); }
+.doc-status p { margin: 0; font-size: 15px; }
 </style>
 </head>
 <body>
@@ -211,6 +214,7 @@ footer p { margin-bottom: 6px; }
 <header>
   <p class="eyebrow">Ruimte · Architectuuradvies · 1 oktober 2026</p>
   <h1>De desktoppackages verder verdiepen</h1>
+<aside class="doc-status" aria-label="Actualiteitscontrole"><p><strong>7 oktober 2026: Extractieadvies nog deels open.</strong> De ADE CORE-migratie is uitgevoerd, maar DesktopBridge staat nog in de client; login-PATH, navigatiewiring en native shortcutconversie zijn nog lokaal. Ook de palette onderhoudt eigen selectiegedrag. De algemene migratie is geen reden om dit gerichte refactoradvies als afgerond te markeren. Pakketnamen en aantallen hieronder horen bij de oorspronkelijke revisie. De codecontrole gebruikte aada37fe5; externe productinformatie is niet opnieuw onderzocht.</p></aside>
   <p class="intro">Verplaats gedeeld interactiegedrag naar Desktop UI en gedeeld Electron-gedrag naar Desktop Shell. Laat Ruimte het projectbeleid en de registratie van vertrouwde IPC-kanalen houden.</p>
   <div class="metadata"><span>Onderzocht: Desktop UI 0.9.0 · Desktop Shell 0.8.0</span><span>Ruimte <code>b45fec10</code> · Alleen advies en een migratieplan</span></div>
   <nav aria-label="Inhoud van het rapport">

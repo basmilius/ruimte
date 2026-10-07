@@ -183,6 +183,9 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   .prompt-box button { display: none; }
   .prompt-box pre { padding-top: 18px; }
 }
+
+.doc-status { margin: 20px 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--highlight); color: var(--ink); }
+.doc-status p { margin: 0; font-size: 15px; }
 </style>
 </head>
 <body>
@@ -190,6 +193,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 <header>
   <p class="eyebrow">RUIMTE / ONDERZOEK / 14 SEPTEMBER 2026</p>
   <h1>Plugins in Ruimte</h1>
+<aside class="doc-status" aria-label="Actualiteitscontrole"><p><strong>7 oktober 2026: Keuzes en implementatie nog open.</strong> Een installeerbare pluginlifecycle ontbreekt. De actiecatalogus en onbekende view-kinds hebben inmiddels eigen implementaties. Inventariseer die vóór een nieuwe registryrefactor. Verwijzingen naar pairing en de oude packages beschrijven de stand van september, niet het huidige toegangsbeleid. De codecontrole gebruikte aada37fe5; externe productinformatie is niet opnieuw onderzocht.</p></aside>
   <p class="intro">Een plugin kan veel in Ruimte, maar de vraag die alles bepaalt is waar zijn code vandaan komt. Begin met plugins die alleen data zijn: een manifest met verbs, commando's, web-panels en -nodes, thema's en link providers. Code die in de client zelf draait, kan elke gepairde machine bedienen, dus die komt pas later, geïsoleerd, of alleen van Ruimte zelf.</p>
   <p class="status">Onderzoek afgerond, er is niets gebouwd</p>
   <p class="caption">Gebaseerd op main bij 676a671. <span class="badge confirmed">Geverifieerd</span> betekent: gecontroleerd in de broncode of op deze Mac. <span class="badge info">Afgeleid</span> betekent: niet gecontroleerd.</p>

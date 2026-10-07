@@ -4,6 +4,10 @@ Only open implementation, decisions and verification belong in this plan. Each n
 is a reviewable change; split larger packages into issues when implementation starts. The order
 is a priority recommendation. Run measurements or a design spike before estimating larger work.
 
+Reviewed against `aada37fe5` on October 7, 2026. Implementation, acceptance and product decisions
+are separate tasks below. The ADE CORE extraction, initial language-server implementation and
+multiwindow implementation are complete; their remaining acceptance does not require rebuilding them.
+
 ## Implementation order
 
 | Package                               | Priority                             | Depends on                                     |
@@ -19,9 +23,9 @@ is a priority recommendation. Run measurements or a design spike before estimati
 | 9. Accounts                           | Next                                 | 1 for continuation/recovery                    |
 | 10. Remote access and media           | Next                                 | 2; measurements from 3                         |
 | 11. iOS, devices and worktrees        | Next                                 | 1 for task status; 5 for locations             |
-| 12. Multiple windows                  | Later                                | 2 and 4; baseline from 3                       |
+| 12. Multiple windows                  | Acceptance                           | Existing implementation; baseline from 3      |
 | 13. Copilot and Gemini chat           | Later                                | 1 and 9; compatibility checks below            |
-| 14. Language servers                  | Later                                | 5; design spike and permission decisions       |
+| 14. Editor and language servers        | Acceptance and remaining features    | Existing implementation; server policy per addition |
 | 15. Plugins                           | Decision first                       | Registry inventory and a compatibility release |
 | 16. Linux and Windows                 | Linux checks early, Windows deferred | Platform spikes and CI                         |
 
@@ -32,28 +36,9 @@ choosing media buffer sizes.
 
 Sources: `@adecore/agents/chat`, task coordination and the host's resume handlers.
 
-The completed lifecycle fixes and CLI captures are recorded in
-[the orchestration report](reports/private/2026-09-30-orchestration-upstream.html#resultaat).
-The [October 1 follow-up plan](reports/private/2026-09-30-orchestration-upstream.html#vervolgplan) maps the remaining
-changes to the current code and defines their acceptance cases. B1 through B6 and R1 are complete;
-the audit's historical start prompt must not be run again.
-
-The implementation, real Claude nesting/reuse and direct resume/compact captures, and verified
-mixed-provider child context are recorded in the
-[app acceptance results](reports/private/2026-09-30-orchestration-upstream.html#appacceptatie-1-oktober).
-No remaining implementation step from B1 through B6 or R1 is open.
-
-The first current baseline is recorded in the
-[October 2 scan](reports/private/2026-10-02-orchestration-scan-061736.html).
-The additional B01/B02 fixes and current verification are recorded in the
-[October 2 recovery results](reports/private/2026-10-02-orchestration-scan-061736.html#herstel).
-No implementation step from those findings remains open. The natural captures and measurements
-below remain separate evidence tasks.
-
-The [next full scan](reports/private/2026-10-02-orchestration-scan-222325.html) rechecked those fixes and found
-a Claude queue-release bug (B01). Its [repair and verification](reports/private/2026-10-02-orchestration-scan-222325.html#herstel)
-are complete: withdrawal of the last request rechecks the queue, while live work, pending requests,
-Claude reports, Stop and unknown resets retain their existing guards. All 6,451 tests pass.
+Completed fixes and retained evidence are in the
+[consolidated orchestration report](reports/private/2026-09-30-orchestration-upstream.html).
+Only the following live evidence remains; do not rerun historical implementation prompts.
 
 1. Capture a natural provider-limit/reset sequence when one occurs, using the bounded probe in
    the report. A quota read alone is not a refusal/reset replay. Do not consume budget to force
@@ -66,21 +51,36 @@ The remaining full-client memory verification belongs to package 3.
 
 ## 2. Ownership and persistent files
 
-1. Make `ProjectStore.mutate` notify drawing and diagram stores when a view disappears, using the
-   same orphan cleanup as save. Its current id update can hide the deletion from a later save too.
-   Test deletion through `view delete`, a failed write, shared/private files and unknown kinds that
-   must retain their assets.
-2. Apply the CLI's service ownership check to the desktop service controller before install,
-   replacement, uninstall or stop. Preserve a service installed by another Ruimte executable.
-   Retain the existing update/restart path for a service owned by this app.
-3. Reproduce the remaining status-routing problem when someone types `codex` manually in a shell.
-   Use the supported launch route in `apps/server/src/providers/launch.ts` as a baseline and
-   determine a supported remedy for handwritten launches. Do not silently replace the person's
-   shell configuration or guess status from terminal output.
+The [October 7 audit](reports/private/2026-10-07-codebase-audit.html) records B01 through B08
+with isolated probes. These are implementation tasks, not missing manual acceptance:
 
-Done when deleting a view cleans only its unused files, the app cannot take over a CLI-owned
-service, and the handwritten Codex case has either a verified fix or a documented limitation with
-a usable launch route.
+1. Serialize saves per canonical file and recheck the version inside that operation. Two clients
+   saving the same old version must produce one whole file and one conflict, including hardlinks,
+   shortened files and writes in the same millisecond (B01).
+2. Enforce MachineHome protection throughout recursive grep, including its JavaScript fallback.
+   Searching an allowed parent folder must not reveal protected descendants (B02).
+3. Bind database write grants to the approved destination and scope. Changing a connection's
+   target or reusing its id must invalidate the old grant (B03).
+4. Make shared/private database configuration writes recover together. Failure between writes
+   must retain a complete old or new configuration after restart (B04).
+5. Decode truncated UTF-8 correctly at the binary-sniff boundary. Valid multibyte text must stay
+   text without accepting invalid UTF-8 later in the file (B05).
+6. Order secret reads, writes and deletes per path, with unique temporary files. A completed
+   delete must not be undone by an earlier write (B06).
+7. Make `ProjectStore.mutate` notify drawing and diagram stores when a view disappears, using the
+   same orphan cleanup as save. Test failed writes, shared/private files and unknown kinds (B08).
+8. Extend the desktop service check from the standard CLI path to every unknown installation.
+   Preserve another executable's service during start, replacement, uninstall and stop, while
+   retaining the update/restart path for this app's own service (B07).
+9. Reproduce the status-routing problem when someone types `codex` manually in a shell. Use
+   `apps/server/src/providers/launch.ts` as the baseline. Do not replace shell configuration or
+   infer status from terminal output.
+10. Implement the separate [home-maintenance plan](reports/2026-10-01-ruimte-home-maintenance.html):
+    screenshot expiry without another capture, writer-owned crash leftovers and durable deletion
+    of cold sessions. Log rotation remains a separate patch; age never authorizes deleting work.
+
+Done when the audit's regression cases pass, deleted views lose only their unused files,
+unknown services remain unchanged, and handwritten launches have a verified route or limitation.
 
 ## 3. Test floor and measurements
 
@@ -93,13 +93,13 @@ a usable launch route.
 3. Measure the fixed ten-context WebGL budget on representative hardware and under context loss.
    Choose any cap/adaptation change from those results. A user setting is not automatically required.
 4. Finish the collected Electron heap and frame/latency measurement for the prepared 100-idle-chat
-   full-client fixture. The fixture opened in Ruimte Dev; after Inspect, the computer helper stopped
-   resolving the running dev app and reports taken-over. Resume computer use before continuing.
+   full-client fixture. The previous run stopped before collecting that evidence. Recreate the
+   fixture against the current ADE CORE packages; obtain app access for any computer-use round.
    The [orchestration report](reports/private/2026-09-30-orchestration-upstream.html#afwerking-1-oktober)
    records the completed 1,000-child deterministic probe, genuine nine-child Claude replay,
    full Electron view-switch baseline and Bun/JSC/mimalloc attribution. Do not infer collected
    Electron heap from RSS or change cache/GC policy before measuring this workload.
-   The [October 2 protocol probe](reports/private/2026-10-02-orchestration-scan-061736.html#R01)
+   The [October 2 protocol probe](reports/private/2026-09-30-orchestration-upstream.html#retention)
    also retains 10,000 text and 10,000 thinking counters after completed turns and `forgetPending()`.
    Determine a safe lifetime for these message-id maps with replay, deduplication and late background
    frames before choosing cleanup or a cap. This process-lifetime retention does not prove an
@@ -109,6 +109,12 @@ a usable launch route.
    replies/chat events and repair dropped terminal output through `session.resync`.
 6. Measure workspace startup and composer chunk cost before splitting CodeMirror. Split it only
    when the measurement shows a startup improvement, then repeat that same measurement.
+7. Record desktop, visual and screen-reader acceptance of the ADE CORE cutover: file navigation
+   and selection, staged/mixed Git checkboxes, menus and drags, editor typing/undo/search, language
+   popups and AI actions. Shared source already lives in ADE CORE; do not repeat the extraction.
+8. Recheck the [remaining October 2 audit cases](reports/private/2026-10-02-codebase-audit.html#restpunten)
+   against current code. Its historical completion badges do not close the explicitly recorded
+   follow-ups or prove device, deployment and accessibility acceptance.
 
 Done when the baseline, hardware/build, fixture sizes and results are recorded with units, and
 any measured regression has a bounded follow-up. Choose performance acceptance budgets from the
@@ -250,13 +256,17 @@ remaining provider limitation. Folder-isolation tests alone cannot establish log
 6. Decide a supported protocol-version window using
    [the protocol report](reports/2026-09-15-protocol-versions.html). Implement negotiation and
    cross-version fixtures only after that decision; today's gate accepts exactly the same version.
-7. Verify the door on the local network on real devices
-   ([the plan](reports/2026-10-04-remote-access-plan.html)): iPhone and iPad on the same Wi-Fi as
+7. Verify the implemented LAN door on real devices: iPhone and iPad on the same Wi-Fi as
    the MacBook show Local network, also with `--no-broker` after a first connection; on 4G the
    connection opens through the broker with at most a second more. Check whether the macOS firewall
    asks about the npm binary listening on the LAN, and what the iPhone does when Local Network access
    is denied. (Electron 44 lets the `app://ruimte` page open `ws://` and `fetch` to loopback and to a
-   LAN address; checked with a probe on 2026-10-04.)
+   LAN address; checked with a probe on 2026-10-04.) Check the same login and connection flow on
+   a fresh Linux machine. The LAN door, account-only access, route race and `ruimte status` exist;
+   pairing has been removed.
+8. Decide whether Bonjour discovery is still wanted for first use and changed LAN addresses.
+   It is not implemented. If chosen, specify an anonymous advertisement, iOS local-network
+   permission, desktop discovery and Linux multicast behavior before building it.
 
 Done when connection drops have an explained, tested outcome, real-network media/terminal
 measurements meet the agreed budgets, and broker migration has verified rollback. Preserve the
@@ -270,23 +280,27 @@ existing binary reply path, range streaming and explicit direct-connection failu
 2. Decide how to merge into a branch checked out nowhere. The current code intentionally refuses
    `target-not-checked-out`. A ref-only merge needs its own conflict/result path and must never move
    a ref behind a working tree; implement it only after updating that invariant deliberately.
+3. Verify the implemented visual replies on a real iPhone in both themes, with links opening in
+   Safari. Check desktop/station rendering and the machine's off switch too. The daemon verb,
+   preview renderer, sandbox host and native iOS presentation are already built; the current
+   behavior is documented in the server and iOS READMEs.
 
 Done when phone acceptance checks are recorded and worktree actions show/resolve conflicts
 without losing work. Installing apps and device logs remain out of scope.
 
 ## 12. Multiple windows
 
-1. Write a file map and acceptance cases against today's code. Keep one start screen or one
-   project per window; views of that project may still occupy a grid.
-2. Replace Electron's singleton window with a window registry and resolve window-specific IPC,
-   menus, dialogs, browser guests and notification routing from the sender/owning window.
-3. Open another project in its own window. Define same-project window presence, restore URLs,
-   shared settings/endpoint storage synchronization and window bounds recovery.
-4. Verify closing a window detaches its client and preserves the daemon's sessions. Explicitly
-   closing a project still follows the existing last-client rule.
+Acceptance only. `createWindows`, project claims, sender-bound IPC, restored window targets and
+shared-storage synchronization already exist.
 
-Done when two local/remote projects work side by side, reload/reopen restores the right project,
-and actions in one window cannot change another window's menu, dialog parent or active view.
+1. Use two local/remote projects side by side. Check menus, dialogs, browser guests, notifications,
+   shared settings and project claims from both windows.
+2. Reload and reopen the app; verify project URLs and window bounds, including a removed display.
+3. Close a window and confirm its client detaches while daemon sessions survive. Explicit project
+   closure still follows the last-client rule. Exercise unsaved edits during a window move.
+
+Done when these cases have recorded desktop evidence. Fix any reproduced gap in the existing
+implementation; do not introduce another window registry.
 
 ## 13. Copilot and Gemini chat
 
@@ -309,22 +323,28 @@ Source: [the provider research](reports/2026-09-25-provider-research.html).
 Done per provider when two turns, denied writes, an open approval stopped by the person, restart
 and account/login failures work in the packaged app. Do not promise an SDK/API choice before the spike.
 
-## 14. Language servers
+## 14. Editor and language servers
 
-Source: [the language-server design](reports/2026-09-23-language-servers.html).
+Implementation and current limits: [SMART-EDITOR.md](SMART-EDITOR.md) and
+[the daemon README](../apps/server/README.md#language-servers). The ADE CORE editor/LSP host,
+server installation, multiple servers, custom commands, TypeScript sidecar and native PHP
+integration are built. Monaco is removed.
 
-1. Spike Monaco's language-id separation from its TS worker, definition opening without a loaded
-   target model, and suggestions/hover in a zoomed file node. Verify the current TypeScript LSP.
-2. Build daemon stdio framing, a process seam/fake server, per-root lifecycle, cancellation,
-   document ownership and versioned diagnostics. Start with TypeScript.
-3. Add optional contracts and client synchronization, permission to run project code, editor
-   providers/markers and a visible status/restart path. Use the file locations from package 5.
-4. Add other installed servers one at a time after their execution rules are settled, especially
-   build scripts/proc macros in agent worktrees. Keep diagnostics outside open editors a separate choice.
+1. Finish manual editor, AI and accessibility acceptance with the shared packages, including
+   zoomed file nodes, navigation to unopened files, typing/undo, search, language popups,
+   multi-file create/rename edits, stale results, crash/restart and local/remote clients.
+2. Check install, update, rebuild and previous-version actions with actual server binaries.
+   Keep installation and custom-command approval with the person on the machine.
+3. Decide the formatter policy recorded in SMART-EDITOR.md. A project's existing formatter is a
+   candidate; no new formatter runner is implied by the completed editor migration.
+4. Add remaining native/toolchain servers only after specifying installation and execution rules,
+   especially project code, build scripts and proc macros in agent worktrees. Rust, Go, Swift,
+   TOML, Lua, Zig and Markdown remain candidates, not completed catalog entries.
+5. Track remaining editor limits in SMART-EDITOR.md and the shared package's docs. Project-wide
+   diagnostics, richer snippet behavior and hidden unchanged review ranges are separate features.
 
-Done when real TypeScript completion, hover, signatures, definitions and diagnostics work across
-local/remote machines, stale responses are discarded, and crashes/cancellation close their work.
-Fake-server tests are standard tests; real servers belong in integration tests.
+Done per accepted feature when the required runtime/device evidence exists. Fake-server tests
+remain deterministic tests; real language servers belong in integration tests.
 
 ## 15. Plugins
 
@@ -361,11 +381,11 @@ architectures/formats.
 
 ## Decisions and completion rules
 
-The decision-dependent steps are automatic result redelivery after an accepted parent turn fails,
-shared-folder restore with concurrent edits, Claude account configuration sharing, ref-only merges,
-the protocol window, plugin scope and the later language-server execution rules. Decide each before
+The decision-dependent steps are shared-folder restore with concurrent edits, Claude account configuration sharing, ref-only merges,
+the protocol window, Bonjour discovery, plugin scope, formatter policy and the later language-server execution rules. Decide each before
 its dependent implementation, while continuing the other steps. Measurements settle buffer, cap
-and chunk choices.
+and chunk choices. Automatic redelivery after an accepted parent turn fails remains disabled by
+the existing product decision; it is not an unanswered implementation question.
 
 For each code change, run focused deterministic regressions and the repository's required checks.
 Use integration tests for real shells, watchers, sockets and provider/server processes. Verify UI
