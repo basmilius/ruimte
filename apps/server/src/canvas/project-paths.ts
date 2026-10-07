@@ -53,6 +53,7 @@ async function checkInsideProject(
 const CWD_RULE: InsideRule = { flag: '--cwd', badCode: 'bad-cwd', outsideCode: 'cwd-outside-project' };
 const PROMPT_FILE_RULE: InsideRule = { flag: '--prompt-file', badCode: 'bad-prompt-file', outsideCode: 'prompt-file-outside-project' };
 const RESULT_FILE_RULE: InsideRule = { flag: '--result-file', badCode: 'bad-result-file', outsideCode: 'result-file-outside-project' };
+const FILE_RULE: InsideRule = { flag: 'the path', badCode: 'bad-path', outsideCode: 'path-outside-project' };
 
 /* Where a shell or an agent may start: a directory inside the project folder or a worktree of it. */
 export async function checkCwd(folder: string, cwd: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> {
@@ -95,6 +96,15 @@ async function readInsideFile(rule: InsideRule, folder: string, path: string, wo
         throw new VerbRefusal(rule.badCode, `${resolved} is not a file; ${rule.flag} is resolved against the project folder unless it is absolute`);
     }
     return Bun.file(real).text();
+}
+
+/* A file of the project or of a worktree of it, as the path a caller gave resolves; a link that leads out of them is refused. */
+export async function checkInsideFile(folder: string, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> {
+    const { resolved, real } = await checkInsideProject(folder, FILE_RULE, path, worktreePaths);
+    if (!(await stat(real)).isFile()) {
+        throw new VerbRefusal(FILE_RULE.badCode, `${resolved} is not a file; ${FILE_RULE.flag} is resolved against the project folder unless it is absolute`);
+    }
+    return resolved;
 }
 
 /* The prompt a caller put in a file, under the same folder rule a cwd follows. */

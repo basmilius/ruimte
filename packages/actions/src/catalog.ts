@@ -376,6 +376,17 @@ const PERSON_VOICE_AND_AGENT: readonly ActionActorKind[] = ['person', 'voice', '
 
 const databaseConnection = z.string().trim().min(1).describe('The connection by id, or by its name when no other connection of the project carries that name');
 const databaseSchema = z.string().min(1).nullable();
+const languagePath = z
+    .string()
+    .trim()
+    .min(1)
+    .describe('The file, relative to the project folder or absolute; it has to be inside the project folder or a worktree of its repository');
+const languageLine = z.number().int().min(1).describe('The line, counting from 1');
+const languageColumn = z.number().int().min(1).describe('The column, counting characters from 1');
+const languageServers = z.array(z.object({ kind: z.string(), state: z.string(), message: z.string().optional() }));
+const languageSpan = z.object({ path: z.string(), line: z.number().int(), column: z.number().int(), endLine: z.number().int(), endColumn: z.number().int() });
+// What every answer of the language servers says besides itself: the file, whether its text is an editor's, and the servers.
+const languageHead = { path: z.string(), unsaved: z.boolean(), servers: languageServers };
 export const DATABASE_QUERY_ROWS = 100;
 export const DATABASE_QUERY_MAX_ROWS = 1000;
 const launchName = z.string().trim().min(1).describe('The id of a launch, or its name when no other launch of the project carries that name');
@@ -3466,6 +3477,98 @@ export const ACTION_DEFINITIONS = {
             connection: z.string(),
             results: z.array(z.looseObject({ kind: z.enum(['rows', 'done', 'error']), sql: z.string(), elapsedMs: z.number() })),
             inTransaction: z.boolean()
+        })
+    },
+    'language.diagnostics': {
+        title: 'Read the problems of a file',
+        description:
+            "Reads what the project's language servers find in one file: errors, warnings, information and hints, each with where it sits and which server found it.",
+        effect: 'read',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({ path: languagePath }),
+        output: z.object({
+            ...languageHead,
+            diagnostics: z.array(
+                languageSpan.extend({
+                    severity: z.enum(['error', 'warning', 'information', 'hint']),
+                    server: z.string(),
+                    source: z.string().nullable(),
+                    code: z.string().nullable(),
+                    message: z.string()
+                })
+            )
+        })
+    },
+    'language.hover': {
+        title: 'Read what a name in a file is',
+        description: "Reads what the project's language servers say of the name at a place in a file: its type, signature and documentation.",
+        effect: 'read',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({ path: languagePath, line: languageLine, column: languageColumn }),
+        output: z.object({ ...languageHead, contents: z.string().nullable() })
+    },
+    'language.definition': {
+        title: 'Find where a name is defined',
+        description: 'Finds where the name at a place in a file is defined, as the language servers of the project know it.',
+        effect: 'read',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({ path: languagePath, line: languageLine, column: languageColumn }),
+        output: z.object({ ...languageHead, locations: z.array(languageSpan) })
+    },
+    'language.references': {
+        title: 'Find where a name is used',
+        description: 'Finds every place the name at a place in a file is used, its definition included, as the language servers of the project know it.',
+        effect: 'read',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({ path: languagePath, line: languageLine, column: languageColumn }),
+        output: z.object({ ...languageHead, locations: z.array(languageSpan) })
+    },
+    'language.symbols': {
+        title: 'List the symbols of a file',
+        description: 'Lists what a file defines, such as classes, functions, tables and columns, nested as the language servers of the project see them.',
+        effect: 'read',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({ path: languagePath }),
+        output: z.object({
+            ...languageHead,
+            symbols: z.array(
+                z.object({
+                    name: z.string(),
+                    kind: z.string(),
+                    detail: z.string().nullable(),
+                    depth: z.number().int(),
+                    line: z.number().int(),
+                    column: z.number().int(),
+                    endLine: z.number().int(),
+                    endColumn: z.number().int()
+                })
+            )
+        })
+    },
+    'language.sql': {
+        title: 'Read what a SQL file is read against',
+        description:
+            'Reads which database connection, database and schema snapshot a .sql file of the project is read against, and the command that checks it from a shell.',
+        effect: 'read',
+        domain: 'developer',
+        actors: AGENT,
+        input: z.object({ path: languagePath }),
+        output: z.object({
+            path: z.string(),
+            source: z.enum(['file', 'console', 'default', 'none', 'unbound']),
+            connection: z.object({ id: z.string(), name: z.string(), engine: z.string() }).nullable(),
+            database: z.string().nullable(),
+            dialect: z.string().nullable(),
+            version: z.string().nullable(),
+            snapshot: z.string().nullable(),
+            takenAt: z.string().nullable(),
+            command: z.string(),
+            installed: z.boolean()
         })
     },
     'usage.summary': {

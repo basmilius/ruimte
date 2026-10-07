@@ -115,12 +115,15 @@ import { DatabaseService } from './database/database-service.ts';
 import { DatabaseAccessStore } from './database/agent-access.ts';
 import { AgentDatabases } from './database/agent-databases.ts';
 import { DatabasePasswords } from './database/agent-passwords.ts';
+import { SchemaSnapshots } from './database/schema-snapshots.ts';
+import { SqlAnalysis } from './database/sql-analysis.ts';
 import { registerLaunchHandlers } from './handlers/launches.ts';
 import { registerLanguageHandlers } from './handlers/language.ts';
 import { registerOnDeviceHandlers } from './handlers/ondevice.ts';
 import { OnDeviceModel } from './ondevice/model.ts';
+import { AgentLanguage } from './language/agent-language.ts';
 import { LanguageHost } from './language/host.ts';
-import { NativePolicy, phpLanguageServerCheckout } from './language/native.ts';
+import { NativePolicy, phpLanguageServerCheckout, sqlLanguageServerCheckout } from './language/native.ts';
 import { agentLaunches } from './launches/agent-host.ts';
 import { LaunchRunner } from './launches/runner.ts';
 import { managerSessions } from './launches/sessions.ts';
@@ -434,17 +437,38 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     const machineHome = new MachineHome(config.home);
     const databases = new DatabaseService({ machineHome });
     const databaseConnections = new DatabaseConnectionStore({
-        projects: { folderOf: (projectId) => projects.index.folderOf(projectId), holdersOf: (projectId) => projects.holdersOf(projectId) }
+        projects: { folderOf: (projectId) => projects.index.folderOf(projectId), holdersOf: (projectId) => projects.holdersOf(projectId) },
+        onChanged: (projectId, connections) => {
+            void sqlAnalysis
+                .connectionsChanged(projectId, connections)
+                .catch((e: unknown) => console.warn('Following a change of the connections failed:', errorText(e)));
+        }
     });
     const databaseAccess = new DatabaseAccessStore(config.home);
     await databaseAccess.load();
+    const databasePasswords = new DatabasePasswords();
     const agentDatabases = new AgentDatabases({
         service: databases,
         connections: databaseConnections,
         projects,
         access: databaseAccess,
-        passwords: new DatabasePasswords(),
+        passwords: databasePasswords,
         scratchFolder: projects.scratchFolder
+    });
+    const sqlAnalysis = new SqlAnalysis({
+        projects: {
+            folderOf: (projectId) => projects.index.folderOf(projectId),
+            holdersOf: (projectId) => projects.holdersOf(projectId),
+            read: (projectId) => projects.read(projectId),
+            mutate: (projectId, apply) => projects.mutate(projectId, apply)
+        },
+        connections: databaseConnections,
+        snapshots: new SchemaSnapshots({
+            root: join(config.home, 'database-snapshots'),
+            service: databases,
+            passwordOf: (projectId, connectionId, target) => databasePasswords.passwordOf(projectId, connectionId, target)
+        }),
+        access: databaseAccess
     });
     const outboxWiring = wireOutbox({
         link: outboxLink,
@@ -660,6 +684,10 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         computer,
         launches: agentLaunches(launchStore, launches, (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null)),
         databases: agentDatabases,
+        language: new AgentLanguage({
+            host: { forAgent: (projectId, request, work) => language.forAgent(projectId, request, work), programOf: (kind) => language.programOf(kind) },
+            sql: sqlAnalysis
+        }),
         visuals: {
             enabled: () => identity.visualReplies,
             publish: (chatId: string, input: { title: string; html: string; maxHeight?: number; heights?: VisualHeight[] }) =>
@@ -897,10 +925,12 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         folderOf: (projectId) => projects.index.folderOf(projectId),
         holders: (projectId) => projects.holdersOf(projectId),
         machineHome,
-        // A compiled daemon ignores local PHP sources and installs the pinned native release.
-        native: new NativePolicy({ checkout: phpLanguageServerCheckout(compiled) })
+        // A compiled daemon ignores local sources and installs the pinned native releases.
+        native: new NativePolicy({ checkouts: { 'php-native': phpLanguageServerCheckout(compiled), 'sql-native': sqlLanguageServerCheckout(compiled) } }),
+        sqlSettings: (projectId) => sqlAnalysis.settingsOf(projectId)
     });
     await language.load();
+    sqlAnalysis.attach(language);
     projects.attachLanguage(language);
     registerLanguageHandlers(dispatcher, language);
     const onDevice = new OnDeviceModel();
@@ -921,7 +951,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
             agentDatabases.letGo(projectId);
         }
     });
-    registerDatabaseHandlers(dispatcher, databases, databaseConnections, agentDatabases);
+    registerDatabaseHandlers(dispatcher, databases, databaseConnections, agentDatabases, sqlAnalysis);
     registerFsHandlers(
         dispatcher,
         folders,
@@ -1080,6 +1110,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         databaseConnections,
         databaseAgents: agentDatabases,
         language,
+        sqlAnalysis,
         folders,
         statuses,
         usage,

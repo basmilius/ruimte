@@ -26,6 +26,7 @@ import type { DriveOutcome, ShotOutcome } from '../browser/drive.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
 import type { DeviceDriver } from '../devices/agent-driver.ts';
 import type { DatabaseAgentHost } from '../database/agent-databases.ts';
+import type { AgentLanguage } from '../language/agent-language.ts';
 import type { Notice } from '@adecore/agents/messages/notice-store';
 import type { NoticeDelivery } from '../context/notices.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
@@ -143,7 +144,12 @@ export interface CanvasHost {
     visuals?: VisualHost;
     /* The databases of the caller's project as an agent may reach them; absent on a host without them. */
     databases?: DatabaseAgentHost;
+    /* The project's running language servers as an agent may ask them; absent on a host without them. */
+    language?: LanguageAgentHost;
 }
+
+/* What an agent's `language` call reaches: the answers of the servers for one file, and what a `.sql` file is read against. */
+export type LanguageAgentHost = Pick<AgentLanguage, 'diagnostics' | 'hover' | 'definition' | 'references' | 'symbols' | 'sqlFile'>;
 
 /* The visuals of a chat, kept beside its record, and the machine's switch that lets an agent show a new one. */
 export interface VisualHost {
@@ -284,7 +290,7 @@ export const { defineVerb, defineAction, defineNoun, defineHelp, dryRunVerbNames
 
 /* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
 export const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify, alert, answer, worktree, launches and database are the project itself, and plan and visual are the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify, alert, answer, worktree, launches, database and language are the project itself, and plan and visual are the chat of the caller, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you';
 
 /* What `help` says of the last row of every list of the project file. */
 export const REVISION_ROW = `revision\tThe last row is revision and the revision of the project file; --${REVISION_FLAG} on a write that follows refuses it once the project moved on`;

@@ -15,6 +15,7 @@ import { diagramAction } from './diagram-verb.ts';
 import { flagVerb } from './flag-verb.ts';
 import { nodeEditAction } from './edit-verb.ts';
 import { groupAction } from './group-verb.ts';
+import { LANGUAGE_ACTIONS, LANGUAGE_DETAIL, LANGUAGE_SUMMARY } from './language-verb.ts';
 import { LAUNCHES_ACTIONS, LAUNCHES_DETAIL, LAUNCHES_SUMMARY } from './launch-verb.ts';
 import { linkDeleteAction, linkListAction, linkNewAction } from './link-verb.ts';
 import { notifyVerb } from './notify-verb.ts';
@@ -159,6 +160,13 @@ const databaseNoun = defineNoun({
     actions: [...DATABASE_ACTIONS]
 });
 
+const languageNoun = defineNoun({
+    name: 'language',
+    summary: LANGUAGE_SUMMARY,
+    detail: LANGUAGE_DETAIL,
+    actions: [...LANGUAGE_ACTIONS]
+});
+
 const taskNoun = defineNoun({
     name: 'task',
     summary:
@@ -194,6 +202,7 @@ export const VERBS: readonly VerbEntry[] = [
     operationVerb,
     launchesNoun,
     databaseNoun,
+    languageNoun,
     computerNoun
 ];
 

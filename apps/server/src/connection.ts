@@ -63,6 +63,8 @@ export interface ConnectionServices {
     /* What a person set for the agents of a project's databases, which every client that holds it hears. */
     databaseAgents?: Subscribable;
     language?: Subscribable;
+    /* The choices and snapshots of the SQL of a project, which every client that holds it hears. */
+    sqlAnalysis?: Subscribable;
     folders: Attachable;
     statuses: Attachable;
     usage: Subscribable;
@@ -140,6 +142,7 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
             services.databaseConnections?.subscribe(clientId, sink) ?? (() => undefined),
             services.databaseAgents?.subscribe(clientId, sink) ?? (() => undefined),
             services.language?.subscribe(clientId, sink) ?? (() => undefined),
+            services.sqlAnalysis?.subscribe(clientId, sink) ?? (() => undefined),
             services.folders.subscribe(clientId, sink),
             services.statuses.subscribe(clientId, sink),
             services.usage.subscribe(clientId, sink),
