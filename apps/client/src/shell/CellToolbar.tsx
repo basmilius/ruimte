@@ -142,7 +142,8 @@ export function CellToolbar({
                             name: visibleTitle ?? t('cellToolbar.view')
                         })}
                         className={clsx(
-                            'flex h-10 shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border pr-1.5 pl-2 text-xs active:cursor-grabbing',
+                            'flex h-10 shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border pr-1.5 text-xs active:cursor-grabbing',
+                            !hosted && 'pl-2',
                             tabDrop !== null && !hosted
                                 ? 'bg-accent/15 text-text outline-2 -outline-offset-2 outline-accent'
                                 : focused
@@ -162,14 +163,18 @@ export function CellToolbar({
                     in the bar has to move. A host has its tabs in its place. */}
                         <span
                             className={clsx(
-                                'flex items-center gap-2 pl-1',
-                                hosted ? 'min-w-24 self-stretch' : 'min-w-5',
+                                'flex items-center gap-2',
+                                hosted ? 'min-w-24 self-stretch' : 'min-w-5 pl-1',
                                 folded || !hasViewToolbar || (hosted && loose) ? 'grow' : hosted ? 'max-w-[60%] shrink' : 'shrink'
                             )}
                         >
                             {maximized && (
                                 <Tooltip label={t('cellToolbar.maximized')}>
-                                    <span role="img" aria-label={t('cellToolbar.maximized')} className="inline-flex shrink-0 text-text-muted">
+                                    <span
+                                        role="img"
+                                        aria-label={t('cellToolbar.maximized')}
+                                        className={clsx('inline-flex shrink-0 text-text-muted', hosted && 'pl-3')}
+                                    >
                                         <Icon icon={Expand} size={14} />
                                     </span>
                                 </Tooltip>
