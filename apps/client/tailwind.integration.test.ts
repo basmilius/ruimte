@@ -11,7 +11,7 @@ test('Tailwind updates CSS when linked ADE CORE source classes change', async ()
     const client = join(temporary, 'ruimte/apps/client');
     const source = join(client, 'src');
     const directives = [...readFileSync(join(import.meta.dir, 'src/styles.css'), 'utf8').matchAll(/^@source "\.\.\/node_modules\/@adecore\/([^"/]+)\/src";/gm)];
-    expect(directives.map((match) => match[1])).toEqual(['ui', 'agents-react', 'editor-react']);
+    expect(directives.map((match) => match[1])).toEqual(['ui', 'agents-react', 'editor-react', 'database']);
     mkdirSync(source, { recursive: true });
     writeFileSync(join(temporary, 'ruimte/package.json'), JSON.stringify({ private: true, workspaces: ['apps/*'] }));
     writeFileSync(join(client, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
