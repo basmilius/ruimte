@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionManager } from '@adecore/database';
 import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
-import { Database } from 'lucide-react';
+import { Database, KeyRound } from 'lucide-react';
 import { Button, CloseButton, Dialog, Field, FormError, Icon, Select, Switch } from '@adecore/ui';
 import {
     asViewConnections,
@@ -11,7 +11,8 @@ import {
     fromViewConnections,
     isOutsideProject,
     useDatabaseConnectionList,
-    useDatabaseConnections
+    useDatabaseConnections,
+    useWithheldPasswords
 } from '@/database/connections';
 import { databaseBrowse } from '@/database/environment';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
@@ -32,9 +33,11 @@ export function DatabaseConnectionsDialog() {
     const selected = useDatabasePanel((state) => state.dialog.selected);
     const saveError = useDatabaseConnections((state) => state.saveError);
     const connections = useDatabaseConnectionList();
+    const withheld = useWithheldPasswords();
     const { endpointId } = useConnection();
     const browse = useMemo(() => databaseBrowse(endpointId, desktop()), [endpointId]);
     const shown = connections.find((connection) => connection.id === selected) ?? connections[0] ?? null;
+    const held = shown === null ? undefined : withheld[shown.id];
 
     useEffect(() => {
         if (open) {
@@ -53,6 +56,12 @@ export function DatabaseConnectionsDialog() {
                         <CloseButton label={t('common:action.close')} dialog />
                     </div>
                     <Dialog.Description className="sr-only">{t('dialog.description')}</Dialog.Description>
+                    {held !== undefined && (
+                        <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface-sunken px-5 py-2" role="status">
+                            <Icon icon={KeyRound} size={14} className="shrink-0 text-status-needs-you" />
+                            <span className="min-w-0 grow text-sm text-text">{t(`dialog.withheld.${held}`)}</span>
+                        </div>
+                    )}
                     <ConnectionManager
                         value={asViewConnections(connections)}
                         onValueChange={(next) => void databaseConnections.edit(fromViewConnections(next))}

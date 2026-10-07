@@ -1,5 +1,6 @@
 import type { Connection } from '@adecore/database';
 import i18next from 'i18next';
+import { useMemo } from 'react';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import {
     isAbsolutePath,
@@ -10,7 +11,21 @@ import {
     type DatabaseConnectionsChangedEvent
 } from '@ruimte/contracts';
 import { messageOf } from '@adecore/ui';
-import { databaseSecretStore, secretKeyOf, secretWrites, splitPasswords, withPasswords, type DatabaseSecretStore } from '@/database/secrets';
+import {
+    bindPasswords,
+    boundPasswordOf,
+    databaseSecretStore,
+    opensWith,
+    secretKeyOf,
+    secretWrites,
+    splitPasswords,
+    storedSecretOf,
+    withheldPasswords,
+    withPasswords,
+    type BoundPassword,
+    type DatabaseSecretStore,
+    type WithheldPassword
+} from '@/database/secrets';
 import { endpointKey } from '@/state/keys';
 import { defaultProjectStore } from '@/state/project';
 import { useToasts } from '@/state/toasts';
@@ -32,8 +47,8 @@ export interface DatabaseConnectionsState {
     local: DatabaseConnection[] | null;
     /* Why the machine refused the last save, for the dialog to say. */
     saveError: string | null;
-    /* The password of each connection by id, as this window knows them. Never in `saved` or `local`. */
-    passwords: Record<string, string>;
+    /* The saved password of each connection by id, with the address it was saved for, as this window knows them. Never in `saved` or `local`. */
+    passwords: Record<string, BoundPassword>;
     /* What agents may do with each connection, by id, where a person set it; one that is not in it is `read`. */
     agentAccess: Record<string, DatabaseAgentAccess>;
 }
@@ -102,7 +117,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
     /* Goes up with every load and every change from elsewhere, so one that waited on its secrets never lands over a later one. */
     let reads = 0;
     /* What the secret store holds for this project, as far as this window wrote or read it. */
-    let stored: Record<string, string> = {};
+    let stored: Record<string, BoundPassword> = {};
     /* The connections whose secret this window read or wrote, found or not. */
     const checked = new Set<string>();
     const waiting: (() => void)[] = [];
@@ -148,21 +163,23 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         if (found.length === 0) {
             return;
         }
-        for (const [id, secret] of found) {
-            stored[id] = secret;
-        }
-        store.setState({ passwords: { ...Object.fromEntries(found), ...store.getState().passwords } });
+        const bound = Object.fromEntries(found.map(([id, secret]) => [id, boundPasswordOf(secret)] as const));
+        Object.assign(stored, bound);
+        store.setState({ passwords: { ...bound, ...store.getState().passwords } });
     };
 
     /*
      * The machine keeps them in memory for the project's agents, each bound to where its connection
-     * points now. Only a load and a person's own edit hand them over: a change made outside this
-     * window, such as an agent pointing a connection elsewhere, must not take a password along.
+     * points now, and gets only those saved for exactly there. Only a load and a person's own edit hand
+     * them over: a change made outside this window must not take a password along.
      */
     const handPasswords = async (of: ConnectionsTarget): Promise<void> => {
         const { saved, passwords } = store.getState();
         const listed = Object.fromEntries(
-            saved.flatMap((connection) => (passwords[connection.id] === undefined ? [] : [[connection.id, passwords[connection.id]!]]))
+            saved.flatMap((connection) => {
+                const bound = passwords[connection.id];
+                return bound !== undefined && opensWith(connection, bound) ? [[connection.id, bound.password]] : [];
+            })
         );
         const text = JSON.stringify(listed);
         if (text === handed) {
@@ -222,7 +239,9 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
     const writeSecrets = async (of: ConnectionsTarget, ids: readonly string[]): Promise<void> => {
         const { passwords } = store.getState();
         for (const { id, secret } of secretWrites(stored, passwords, ids)) {
-            await deps.secrets.write(secretKeyOf(of.endpointId, of.projectId, id), secret).catch(() => undefined);
+            await deps.secrets
+                .write(secretKeyOf(of.endpointId, of.projectId, id), secret === null ? null : storedSecretOf(secret.password, secret.target))
+                .catch(() => undefined);
             checked.add(id);
             if (secret === null) {
                 delete stored[id];
@@ -349,8 +368,9 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         // The list a person edits is the one `useDatabaseConnectionList` handed out, passwords in it, so what it holds is the whole truth.
         edit(next) {
             version += 1;
-            const { connections, passwords } = splitPasswords(next);
-            store.setState({ local: connections, passwords, saveError: null });
+            const state = store.getState();
+            const passwords = bindPasswords(state.local ?? state.saved, state.passwords, next);
+            store.setState({ local: splitPasswords(next).connections, passwords, saveError: null });
             return flush();
         },
         reload: load,
@@ -434,6 +454,13 @@ export function keepUnchanged(previous: readonly DatabaseConnection[], next: rea
 /* The connections as the views take them: a person's latest edit, each with its password. */
 export function useDatabaseConnectionList(): DatabaseConnection[] {
     return useDatabaseConnections(databaseConnections.list);
+}
+
+/* The servers whose saved password stays out, by id, and why: the connection was pointed elsewhere outside this window, or the password predates addresses. */
+export function useWithheldPasswords(): Readonly<Record<string, WithheldPassword>> {
+    const connections = useDatabaseConnectionList();
+    const passwords = useDatabaseConnections((state) => state.passwords);
+    return useMemo(() => withheldPasswords(connections, passwords), [connections, passwords]);
 }
 
 /* The connections as the views type them. The machine checks every config whole before it opens one, so the views get them as the files hold them. */

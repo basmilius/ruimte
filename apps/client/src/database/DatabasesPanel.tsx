@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CircleAlert, Container, Database, Plus, Settings2, SquareTerminal } from 'lucide-react';
+import { CircleAlert, Container, Database, KeyRound, Plus, Settings2, SquareTerminal } from 'lucide-react';
 import { connectionFromContainer, containerTitle, DatabaseExplorer, useDatabaseClient } from '@adecore/database';
 import type { DockerContainer } from '@adecore/database/protocol';
+import type { DatabaseConnection } from '@ruimte/contracts';
 import { Button, ButtonGroup, Icon, IconButton, ListRow, PanelEmpty, SectionLabel } from '@adecore/ui';
 import {
     asViewConnections,
@@ -10,7 +11,8 @@ import {
     ensureDatabaseConnections,
     fromViewConnections,
     useDatabaseConnectionList,
-    useDatabaseConnections
+    useDatabaseConnections,
+    useWithheldPasswords
 } from '@/database/connections';
 import { containersFor } from '@/database/docker';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
@@ -91,6 +93,7 @@ function DatabasesPanelBody() {
     return (
         <>
             {header}
+            <WithheldPasswords connections={connections} />
             <DatabaseExplorer
                 connections={asViewConnections(connections)}
                 value={selection}
@@ -100,6 +103,34 @@ function DatabasesPanelBody() {
                 className="min-h-0 grow"
             />
             {consoles.dialogs}
+        </>
+    );
+}
+
+/* A connection pointed elsewhere outside Ruimte opens without its saved password until a person enters it again. */
+function WithheldPasswords({ connections }: { connections: readonly DatabaseConnection[] }) {
+    const { t } = useTranslation('databases');
+    const withheld = useWithheldPasswords();
+
+    return (
+        <>
+            {connections.map((connection) => {
+                const reason = withheld[connection.id];
+                if (reason === undefined) {
+                    return null;
+                }
+                return (
+                    <div key={connection.id} className="flex shrink-0 items-center gap-2 border-b border-border bg-surface-sunken px-3 py-2">
+                        <Icon icon={KeyRound} size={14} className="shrink-0 text-status-needs-you" />
+                        <span className="min-w-0 grow text-xs text-text">
+                            {t(`panel.withheld.${reason}`, { name: connection.name || t('console.untitled') })}
+                        </span>
+                        <Button size="sm" variant="secondary" onClick={() => useDatabasePanel.getState().openConnections(connection.id)}>
+                            {t('panel.withheld.enter')}
+                        </Button>
+                    </div>
+                );
+            })}
         </>
     );
 }

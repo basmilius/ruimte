@@ -38,7 +38,12 @@
         "add": "Add connection",
         "containers": "Running database containers",
         "addContainer": "Add {{name}}",
-        "consoles": "Consoles"
+        "consoles": "Consoles",
+        "withheld": {
+            "moved": "The address of {{name}} changed outside Ruimte. Enter its password again to use it there.",
+            "unbound": "Enter the password of {{name}} again. Ruimte now keeps a password with the address it is for.",
+            "enter": "Enter password"
+        }
     },
     "dialog": {
         "title": "Database connections",
@@ -57,7 +62,11 @@
             "writeRemote": "Only from the app on that machine",
             "failed": "Could not change what agents may do"
         },
-        "saveFailed": "The machine did not save the connections: {{reason}}"
+        "saveFailed": "The machine did not save the connections: {{reason}}",
+        "withheld": {
+            "moved": "The address of this connection changed outside Ruimte, so its saved password is not sent there. Enter the password again to use it at this address.",
+            "unbound": "Enter the password of this connection again. Ruimte now keeps a password with the address it is for."
+        }
     },
     "connections": {
         "conflict": {

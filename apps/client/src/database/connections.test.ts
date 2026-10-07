@@ -10,9 +10,23 @@ import type {
 import { TransportError } from '@/transport/transport';
 import { createDatabaseConnections, isOutsideProject, keepUnchanged, type ConnectionsTarget } from './connections.ts';
 import { isSavable } from './savable.ts';
-import { memorySecretStore, secretKeyOf } from './secrets.ts';
+import { boundPasswordOf, memorySecretStore, passwordTarget, secretKeyOf, storedSecretOf, withheldPasswords, type DatabaseSecretStore } from './secrets.ts';
 
 const SHOP: DatabaseConnection = { id: 'shop', name: 'Shop', shared: true, config: { engine: 'mysql', host: '127.0.0.1', user: 'root' } };
+
+/* What the secret store holds after a person saved this password for the connection as it points now. */
+async function savePassword(secrets: DatabaseSecretStore, connection: DatabaseConnection, password: string): Promise<void> {
+    await secrets.write(secretKeyOf('local', 'p', connection.id), storedSecretOf(password, passwordTarget(connection.config)));
+}
+
+async function savedPassword(secrets: DatabaseSecretStore, id: string) {
+    const secret = await secrets.read(secretKeyOf('local', 'p', id));
+    return secret === null ? null : boundPasswordOf(secret);
+}
+
+function at(connection: DatabaseConnection, config: Record<string, unknown>): DatabaseConnection {
+    return { ...connection, config: { ...connection.config, ...config } as DatabaseConnection['config'] };
+}
 
 /* Lets every pending promise run, without a timer. */
 function drained(): Promise<void> {
@@ -110,9 +124,14 @@ async function opened(initial: DatabaseConnections, secrets = memorySecretStore(
 describe('the connections of a project', () => {
     test('reads the list and the password of each from the secret store', async () => {
         const secrets = memorySecretStore();
-        await secrets.write(secretKeyOf('local', 'p', 'shop'), 'hunter2');
+        await savePassword(secrets, SHOP, 'hunter2');
         const { model } = await opened({ rev: 3, connections: [SHOP] }, secrets);
-        expect(model.store.getState()).toMatchObject({ status: 'ready', rev: 3, saved: [SHOP], passwords: { shop: 'hunter2' } });
+        expect(model.store.getState()).toMatchObject({
+            status: 'ready',
+            rev: 3,
+            saved: [SHOP],
+            passwords: { shop: { password: 'hunter2', target: passwordTarget(SHOP.config) } }
+        });
         expect(await model.ready()).toEqual([{ ...SHOP, config: { ...SHOP.config, password: 'hunter2' } }]);
     });
 
@@ -120,7 +139,7 @@ describe('the connections of a project', () => {
         const { model, fake, secrets } = await opened({ rev: 1, connections: [] });
         await model.edit([{ ...SHOP, config: { ...SHOP.config, password: 'hunter2' } }]);
         expect(fake.saves).toEqual([{ projectId: 'p', baseRev: 1, connections: [SHOP] }]);
-        expect(await secrets.read(secretKeyOf('local', 'p', 'shop'))).toBe('hunter2');
+        expect(await savedPassword(secrets, 'shop')).toEqual({ password: 'hunter2', target: passwordTarget(SHOP.config) });
         expect(model.store.getState()).toMatchObject({ rev: 2, local: null, saved: [SHOP] });
     });
 
@@ -189,7 +208,7 @@ describe('the connections of a project', () => {
 
     test('shows the connections only once their passwords are read, so nothing opens one without its password', async () => {
         const secrets = memorySecretStore();
-        await secrets.write(secretKeyOf('local', 'p', 'shop'), 'hunter2');
+        await savePassword(secrets, SHOP, 'hunter2');
         let asked = (): void => undefined;
         const reading = new Promise<void>((resolve) => {
             asked = resolve;
@@ -219,7 +238,7 @@ describe('the connections of a project', () => {
 
     test('a connection new to this window comes in with its password, and a later change is not overtaken by it', async () => {
         const secrets = memorySecretStore();
-        await secrets.write(secretKeyOf('local', 'p', 'logs'), 'swordfish');
+        await savePassword(secrets, { ...SHOP, id: 'logs' }, 'swordfish');
         const { model, fake } = await opened({ rev: 1, connections: [SHOP] }, secrets);
         const logs: DatabaseConnection = { ...SHOP, id: 'logs', name: 'Logs' };
         fake.elsewhere([SHOP, logs]);
@@ -237,10 +256,76 @@ describe('the connections of a project', () => {
 
     test('a connection that is removed takes its password with it', async () => {
         const secrets = memorySecretStore();
-        await secrets.write(secretKeyOf('local', 'p', 'shop'), 'hunter2');
+        await savePassword(secrets, SHOP, 'hunter2');
         const { model } = await opened({ rev: 1, connections: [SHOP] }, secrets);
         await model.edit([]);
-        expect(await secrets.read(secretKeyOf('local', 'p', 'shop'))).toBeNull();
+        expect(await savedPassword(secrets, 'shop')).toBeNull();
+        expect(model.store.getState().passwords).toEqual({});
+    });
+});
+
+describe('a password and the address it was saved for', () => {
+    const evil = at(SHOP, { host: 'db.evil.example' });
+
+    test('a connection pointed elsewhere outside this window opens without its password, and gets it back where it was saved for', async () => {
+        const secrets = memorySecretStore();
+        await savePassword(secrets, SHOP, 'hunter2');
+        const { model, fake } = await opened({ rev: 1, connections: [evil] }, secrets);
+        expect(model.list(model.store.getState())[0]!.config).not.toHaveProperty('password');
+        expect(withheldPasswords(model.list(model.store.getState()), model.store.getState().passwords)).toEqual({ shop: 'moved' });
+        expect(fake.handed).toEqual([{}]);
+
+        fake.elsewhere([SHOP]);
+        expect(model.list(model.store.getState())[0]!.config.password).toBe('hunter2');
+        fake.elsewhere([at(SHOP, { port: 3307 })]);
+        expect(model.list(model.store.getState())[0]!.config).not.toHaveProperty('password');
+        expect(fake.handed).toEqual([{}]);
+    });
+
+    test('a password saved before addresses were kept is asked for again, and typing it saves it for the address', async () => {
+        const secrets = memorySecretStore();
+        await secrets.write(secretKeyOf('local', 'p', 'shop'), 'hunter2');
+        const { model, fake } = await opened({ rev: 1, connections: [SHOP] }, secrets);
+        expect(model.list(model.store.getState())[0]!.config).not.toHaveProperty('password');
+        expect(withheldPasswords(model.list(model.store.getState()), model.store.getState().passwords)).toEqual({ shop: 'unbound' });
+        expect(fake.handed).toEqual([{}]);
+
+        await model.edit([at(SHOP, { password: 'hunter2' })]);
+        expect(await savedPassword(secrets, 'shop')).toEqual({ password: 'hunter2', target: passwordTarget(SHOP.config) });
+        expect(fake.handed.at(-1)).toEqual({ shop: 'hunter2' });
+    });
+
+    test('a person who moves a connection with its password in the form takes the password along', async () => {
+        const secrets = memorySecretStore();
+        await savePassword(secrets, SHOP, 'hunter2');
+        const { model, fake } = await opened({ rev: 1, connections: [SHOP] }, secrets);
+        const [shown] = model.list(model.store.getState());
+        await model.edit([at(shown!, { host: 'db.internal' })]);
+        expect(await savedPassword(secrets, 'shop')).toEqual({ password: 'hunter2', target: passwordTarget(at(SHOP, { host: 'db.internal' }).config) });
+        expect(model.list(model.store.getState())[0]!.config).toMatchObject({ host: 'db.internal', password: 'hunter2' });
+        expect(fake.handed.at(-1)).toEqual({ shop: 'hunter2' });
+    });
+
+    test('an edit that leaves a held-back password out of the form keeps it for where it was saved for', async () => {
+        const secrets = memorySecretStore();
+        await savePassword(secrets, SHOP, 'hunter2');
+        const { model, fake } = await opened({ rev: 1, connections: [evil] }, secrets);
+        await model.edit(model.list(model.store.getState()).map((connection) => ({ ...connection, name: 'Shop two' })));
+        expect(await savedPassword(secrets, 'shop')).toEqual({ password: 'hunter2', target: passwordTarget(SHOP.config) });
+        expect(model.list(model.store.getState())[0]!.config).not.toHaveProperty('password');
+        expect(fake.handed.every((passwords) => passwords.shop === undefined)).toBe(true);
+
+        await model.edit([at({ ...evil, name: 'Shop two' }, { password: 'correct horse' })]);
+        expect(await savedPassword(secrets, 'shop')).toEqual({ password: 'correct horse', target: passwordTarget(evil.config) });
+        expect(fake.handed.at(-1)).toEqual({ shop: 'correct horse' });
+    });
+
+    test('a password the form showed and a person cleared is gone', async () => {
+        const secrets = memorySecretStore();
+        await savePassword(secrets, SHOP, 'hunter2');
+        const { model } = await opened({ rev: 1, connections: [SHOP] }, secrets);
+        await model.edit([SHOP]);
+        expect(await savedPassword(secrets, 'shop')).toBeNull();
         expect(model.store.getState().passwords).toEqual({});
     });
 });
@@ -248,7 +333,7 @@ describe('the connections of a project', () => {
 describe('what the agents of the project get', () => {
     test("the machine gets the passwords on a load and after a person's edit, never after a change from elsewhere", async () => {
         const secrets = memorySecretStore();
-        await secrets.write(secretKeyOf('local', 'p', 'shop'), 'hunter2');
+        await savePassword(secrets, SHOP, 'hunter2');
         const { model, fake } = await opened({ rev: 1, connections: [SHOP] }, secrets);
         expect(fake.handed).toEqual([{ shop: 'hunter2' }]);
 
