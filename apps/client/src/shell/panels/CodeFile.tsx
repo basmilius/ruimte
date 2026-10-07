@@ -233,7 +233,7 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
             return;
         }
         useFiles.getState().clearCaret();
-        // A frame later: the files cell takes the keyboard for the tab that just opened, and the editor comes after it.
+        // A frame later: the cell takes the keyboard for the tab that just opened, and the editor comes after it.
         requestAnimationFrame(() => editor.focus());
     }, [caret, editor, readOnlyReason]);
     useEffect(() => {

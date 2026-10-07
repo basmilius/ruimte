@@ -2,8 +2,7 @@ import { ComputerIndicator } from '@/computer/ComputerIndicator';
 import { useNodeComputerSession } from '@/computer/indicator';
 import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
 import { useDictation } from '@/dictation/controller';
-import { isFilesView, type CellView } from '@/shell/files-view';
-import { FileTabs } from '@/shell/panels/FileTabs';
+import { isLooseView, type CellView } from '@/shell/cell-view';
 import { runtimeModeHint, runtimeModeLabel } from '@adecore/agents-react/chat/runtime-modes';
 import { ForkPill } from '@/chat/ForkPill';
 import { PlanPill } from '@/plan/PlanPill';
@@ -27,15 +26,9 @@ export function ViewToolbar({ view, focused }: { view: CellView | null; focused:
     const endpointId = useEndpointId();
     const operating = useNodeComputerSession(endpointId, view?.kind === 'chat' || view?.kind === 'terminal' ? view.id : '') !== null;
 
-    /* The tabs take the slack and the file's own controls close the bar, the way they do for a
-       file view: one strip that says which files are open and what can be done to the one in front. */
-    if (isFilesView(view)) {
-        return (
-            <div className="flex h-full min-w-0 grow items-center gap-1">
-                <FileTabs />
-                <div ref={mount} className="flex shrink-0 items-center gap-1" />
-            </div>
-        );
+    // The file's own controls portal up into this slot, the way they do for a file view.
+    if (isLooseView(view)) {
+        return <div ref={mount} className="flex min-w-0 grow items-center justify-end gap-1" />;
     }
     if (!view || !KINDS_WITH_TOOLBAR.has(view.kind)) {
         return null;

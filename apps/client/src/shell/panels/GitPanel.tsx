@@ -24,6 +24,7 @@ import { worktreeBase, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { revealNode } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 import { fileTabOf, useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useGitCheckouts, useProjectRepos, visibleRepos, withoutNestedRepos, type GitCheckoutRef } from '@/state/git-repos';
@@ -131,7 +132,8 @@ export function GitPanel() {
         Record<string, { refs: readonly GitRef[]; stashes: readonly GitStash[]; loading: boolean; error: string | null }>
     >({});
     /* The change the preview is showing, so the row a person is reading stands out in its own list. */
-    const readingTab = useFiles((s) => fileTabOf(s, s.active));
+    const readingId = useDocument((s) => s.activeViewId);
+    const readingTab = useFiles((s) => fileTabOf(s, readingId));
     const reading = useMemo(() => activeDiff(readingTab), [readingTab]);
     const readingCommit = readingTab?.view?.commit ?? null;
     const [dialog, setDialog] = useState<Dialog | null>(null);

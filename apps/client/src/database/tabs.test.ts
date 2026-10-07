@@ -4,7 +4,6 @@ import { applyDatabaseAction, databaseTabId, databaseTabKey, reopenAction, type 
 
 const ORDERS = { connectionId: 'shop', schema: 'shop', table: 'orders' };
 const EMPTY: TabState = { tabs: [], active: null };
-const LIMIT = 10;
 
 /* Ids in the order they are asked for, so a test reads which tab is which. */
 function ids(): () => string {
@@ -16,8 +15,8 @@ function keys(state: TabState): string[] {
     return state.tabs.map((tab) => tab.key);
 }
 
-function apply(state: TabState, action: DatabaseTabAction, createId: () => string, source: string | null = null, limit = LIMIT): TabState {
-    return applyDatabaseAction(state, action, limit, createId, () => false, source);
+function apply(state: TabState, action: DatabaseTabAction, createId: () => string, source: string | null = null): TabState {
+    return applyDatabaseAction(state, action, createId, source);
 }
 
 describe('opening a table', () => {
@@ -63,38 +62,26 @@ describe('opening a table', () => {
 });
 
 describe('a click and a double click in the explorer', () => {
-    test('a click opens an unpinned tab, and the limit lets the oldest unpinned one go as it does for files', () => {
+    test("a click opens an unpinned tab beside the others, and the limit is the host's to apply", () => {
         const createId = ids();
         const file: Tab = { key: '/repo/a.ts', path: '/repo/a.ts', pinned: false };
         const start: TabState = { tabs: [file], active: file.key };
-        const looked = apply(start, { kind: 'open-table', ref: ORDERS, view: 'data', preview: true }, createId, null, 2);
-        const next = apply(looked, { kind: 'open-table', ref: { ...ORDERS, table: 'items' }, view: 'data', preview: true }, createId, null, 2);
-        expect(keys(next)).toEqual(['database:t1', 'database:t2']);
+        const looked = apply(start, { kind: 'open-table', ref: ORDERS, view: 'data', preview: true }, createId);
+        const next = apply(looked, { kind: 'open-table', ref: { ...ORDERS, table: 'items' }, view: 'data', preview: true }, createId);
+        expect(keys(next)).toEqual(['/repo/a.ts', 'database:t1', 'database:t2']);
+        expect(next.active).toBe('database:t2');
         expect(next.tabs.every((tab) => !tab.pinned)).toBe(true);
     });
 
-    test('a double click keeps the tab the click opened, and a pinned tab survives the limit', () => {
+    test('a double click keeps the tab the click opened', () => {
         const createId = ids();
         const looked = apply(EMPTY, { kind: 'open-table', ref: ORDERS, view: 'data', preview: true }, createId);
         const kept = apply(looked, { kind: 'open-table', ref: ORDERS, view: 'data', preview: false }, createId);
         expect(kept.tabs).toEqual([{ key: 'database:t1', kind: 'table', pinned: true, ...ORDERS }]);
-        const more = apply(kept, { kind: 'open-table', ref: { ...ORDERS, table: 'items' }, view: 'data' }, createId, null, 1);
+        const more = apply(kept, { kind: 'open-table', ref: { ...ORDERS, table: 'items' }, view: 'data' }, createId);
         expect(keys(more)).toEqual(['database:t1', 'database:t2']);
         // Another look at a kept tab leaves it kept.
         expect(apply(kept, { kind: 'open-table', ref: ORDERS, view: 'data', preview: true }, createId).tabs[0]!.pinned).toBe(true);
-    });
-
-    test('a table with edits nobody submitted stays when the limit is reached', () => {
-        const createId = ids();
-        const first = apply(EMPTY, { kind: 'open-table', ref: ORDERS, view: 'data' }, createId);
-        const next = applyDatabaseAction(
-            first,
-            { kind: 'open-table', ref: { ...ORDERS, table: 'items' }, view: 'data' },
-            1,
-            createId,
-            (tab) => tab.key === 'database:t1'
-        );
-        expect(keys(next)).toEqual(['database:t1', 'database:t2']);
     });
 });
 
@@ -130,7 +117,7 @@ describe('closing and pinning a database tab', () => {
         let state = apply(EMPTY, { kind: 'open-table', ref: ORDERS, view: 'data' }, createId);
         state = apply(state, { kind: 'open-table', ref: ORDERS, view: 'structure' }, createId);
         expect(pinTab(state, 'database:t1', true).tabs[0]!.pinned).toBe(true);
-        expect(closeTab(state, 'database:t2')).toEqual({ tabs: [state.tabs[0]!], active: 'database:t1' });
+        expect(closeTab(state, 'database:t2')).toEqual({ tabs: [state.tabs[0]!] });
     });
 });
 

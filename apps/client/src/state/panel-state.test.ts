@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { ProjectLocalSchema } from '@ruimte/contracts';
-import { parsePanels, serializePanels, type PanelsState } from './panel-state.ts';
+import { parsePanels, serializePanels, stripOf, type PanelsState } from './panel-state.ts';
 
 const defaults: PanelsState = {
     panel: { open: false, kind: 'files' },
@@ -189,5 +189,19 @@ describe('panels in the machine-local file', () => {
         const local = { activeViewId: 'main', views: {}, panels: serializePanels(full) };
         expect(ProjectLocalSchema.parse(local)).toEqual(local);
         expect(ProjectLocalSchema.parse({ activeViewId: null, views: {} }).panels).toBeUndefined();
+    });
+});
+
+describe('stripOf', () => {
+    test('names the loose views in the order they were opened, and the one that was in front', () => {
+        const stored = serializePanels(full);
+        const strip = stripOf(stored);
+        expect(strip.keys).toEqual(full.tabs.map((tab) => tab.key));
+        expect(strip.active).toBe(full.active);
+    });
+
+    test('falls back to the first view when the one in front is gone, and is empty for a file without panels', () => {
+        expect(stripOf({ tabs: [{ path: '/a', pinned: false }], activeTab: '/missing' }).active).toBe('/a');
+        expect(stripOf(undefined)).toEqual({ keys: [], active: null });
     });
 });

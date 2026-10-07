@@ -64,7 +64,7 @@ import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';
 import { offerViewUndo } from '@/project/view-trash';
 import { openInNewWindow, wantsNewWindow } from '@/project/windows';
 import type { ChatPromptClients } from '@adecore/agents-react/prompts/logic/subjects';
-import { FILES_VIEW_ID } from '@/shell/files-view';
+import { looseTabLabel } from '@/shell/panels/tab-label';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { canSplit, cellAt, cellCount, focusedViewId, freeViewFor, isSameCell, locateView, type SplitDirection, type SplitZone } from '@/shell/split';
 import { sightOf, visibleNodes } from '@/state/attention';
@@ -73,6 +73,8 @@ import { useChats } from '@adecore/agents-react/state/chats';
 import { liveDiagram } from '@/state/diagram';
 import { activeViewOf, cellViewOf, useDocument, viewOfNode, type DocumentState } from '@/state/document';
 import { liveDrawing } from '@/state/drawing';
+import { useFiles } from '@/state/files';
+import { useSettings } from '@/state/settings';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { providersOf } from '@adecore/agents-react/state/providers';
@@ -225,9 +227,10 @@ function lastCanvasOf(state: DocumentState): (ProjectView & { kind: 'canvas' }) 
     return state.views.filter(isCanvasView).find((view) => view.id === state.lastCanvasViewId) ?? state.views.find(isCanvasView) ?? null;
 }
 
-/* What stands in a cell: a view of the project, or this client's files, which the document does not have. */
+/* What stands in a cell: a view of the project, or a loose view of this client, which the document does not have. */
 function cellName(state: DocumentState, viewId: string): string {
-    return viewId === FILES_VIEW_ID ? 'Files' : (cellViewOf(state, viewId)?.name ?? viewId);
+    const loose = useFiles.getState().tabs.find((tab) => tab.key === viewId);
+    return cellViewOf(state, viewId)?.name ?? (loose === undefined ? viewId : looseTabLabel(loose));
 }
 
 /* The cells of the grid column by column, each named by the view standing in it. */
@@ -1246,8 +1249,10 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
             if (at === null || closing === null) {
                 throw new ActionRefusal('view-not-shown', `“${cellName(state, viewId ?? '')}” does not stand in a cell.`);
             }
+            // Named first: a loose view is gone from the pool once its cell is.
+            const view = cellName(state, closing.viewId);
             state.closeCellAt(at);
-            return { output: { viewId: closing.viewId, view: cellName(state, closing.viewId) } };
+            return { output: { viewId: closing.viewId, view } };
         },
         'split.focus': ({ direction }) => {
             const state = document.getState();
@@ -1279,20 +1284,23 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
             }
             if (viewId !== null) {
                 const view = cellViewOf(state, viewId);
-                if (viewId !== FILES_VIEW_ID && (!view || !isOpenableView(view))) {
+                // A loose view is nobody's to name from outside the grid, so it counts only while it stands in a cell.
+                if (view === null ? locateView(layout, viewId) === null : !isOpenableView(view)) {
                     throw unknownView(viewId);
                 }
             }
             const folder = useProject.getState().current?.folder ?? null;
-            // Validate every path before changing the grid.
-            const stored = (paths ?? []).map((path) => storedPathOf(folder, projectPathOf(folder, path, call.actor.kind)));
+            // Validate every path before changing the grid. A loose view names its file the way the daemon does.
+            const absolute = (paths ?? []).map((path) => projectPathOf(folder, path, call.actor.kind));
             if (!canSplit(layout, at, zone, viewId)) {
                 throw new ActionRefusal('no-room', 'The grid has no room there, or the view already stands in that cell.');
             }
             const created: string[] = [];
             let fileAt = at;
-            for (const path of stored) {
-                const id = document.getState().dropFileAt(basenameOf(path), path, fileAt, created.length > 0 && zone === 'center' ? 'down' : zone);
+            for (const path of absolute) {
+                const id = useFiles
+                    .getState()
+                    .dropFile(path, useSettings.getState().filesTabLimit, fileAt, created.length > 0 && zone === 'center' ? 'down' : zone);
                 if (id === null) {
                     break;
                 }
@@ -1706,6 +1714,19 @@ export function splitAction(direction: 'right' | 'down'): void {
 /* Null closes the focused cell. */
 export function closeCellAction(viewId: string | null = null): void {
     void runAsPerson('split.close', { viewId });
+}
+
+/*
+ * A tab of a host goes. A loose view closes for good, with the guards a file with unsaved changes and a
+ * table with unsubmitted edits have; a view of the project only leaves the screen, its session and its
+ * place in the list stay. The cell goes with its last tab, except the last cell there is.
+ */
+export function closeTabAction(viewId: string): void {
+    if (cellViewOf(useDocument.getState(), viewId) === null) {
+        useFiles.getState().close(viewId);
+        return;
+    }
+    useDocument.getState().closeViewTab(viewId);
 }
 
 export function focusCellAction(direction: SplitDirection): void {

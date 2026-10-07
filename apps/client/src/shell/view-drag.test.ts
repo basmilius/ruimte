@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { carriesView, draggedViewId, edgeZoneAt, shapeOf, VIEW_DRAG_TYPE, zoneAt } from './view-drag';
+import { carriesView, draggedViewId, dragging, draggingWholeCell, edgeZoneAt, setDragging, shapeOf, VIEW_DRAG_TYPE, zoneAt } from './view-drag';
 
 function transfer(types: string[], data: Record<string, string> = {}): Pick<DataTransfer, 'types' | 'getData'> {
     return {
@@ -21,6 +21,19 @@ describe('what a drag carries', () => {
     test('the types alone answer during dragover, where the payload is kept from the page', () => {
         expect(carriesView(transfer([VIEW_DRAG_TYPE]))).toBe(true);
         expect(carriesView(transfer(['Files']))).toBe(false);
+    });
+});
+
+describe('which drag is in progress', () => {
+    test('a drag of a host by its bar carries the whole cell, and the end of any drag clears it', () => {
+        setDragging('view-1', true);
+        expect(dragging()).toBe('view-1');
+        expect(draggingWholeCell()).toBe(true);
+        setDragging('view-2');
+        expect(draggingWholeCell()).toBe(false);
+        setDragging(null, true);
+        expect(dragging()).toBeNull();
+        expect(draggingWholeCell()).toBe(false);
     });
 });
 

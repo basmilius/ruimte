@@ -5,7 +5,8 @@ import { focusedCanvas } from '../state/canvas';
 import { useDocument } from '../state/document';
 import { currentEndpointId } from '../state/keys';
 import { providerSinkFor } from '@adecore/agents-react/state/providers';
-import { askAgentAboutDiagram, newFileViewsAfter, openSessionInKind } from './views';
+import { useFiles } from '../state/files';
+import { askAgentAboutDiagram, newFileViewsAfter, openSessionInKind, promoteLooseFile } from './views';
 
 function installed(kind: string, name: string) {
     return { kind, name, installed: true, capabilities: { chat: true, terminal: true } } as unknown as ProviderInfo;
@@ -107,7 +108,6 @@ describe('files dropped on the list', () => {
         expect(views.map((view) => view.name)).toEqual(['Main', 'a.md', 'b.md', 'Flow']);
         expect(views[1]).toMatchObject({ kind: 'file', path: '/elsewhere/a.md' });
         expect(useDocument.getState().fileViews()).toEqual(views);
-        expect(useDocument.getState().temporaryFileViews).toEqual([]);
     });
 
     test('go to the very top from the gap above the first row', async () => {
@@ -116,13 +116,39 @@ describe('files dropped on the list', () => {
         expect(useDocument.getState().views.map((view) => view.name)).toEqual(['a.md', 'Main', 'Flow']);
     });
 
-    test('a file from a temporary cell becomes a saved view when dropped on the list', async () => {
+    test('a loose file becomes a view of the project, in the cell and the gap it was let go of', async () => {
+        useFiles.setState({ tabs: [], recent: [] });
         useDocument.getState().load(document, { activeViewId: 'main', views: {} });
-        const id = useDocument.getState().dropFileAt('a.md', '/elsewhere/a.md', { column: 0, cell: 0 }, 'right')!;
-        const temporary = useDocument.getState().temporaryFileViews.find((view) => view.id === id)!;
-        await newFileViewsAfter([temporary.path], 'main');
-        expect(useDocument.getState().views[1]).toMatchObject({ kind: 'file', name: 'a.md', path: '/elsewhere/a.md' });
-        expect(useDocument.getState().temporaryFileViews).toEqual([]);
-        expect(useDocument.getState().fileViews()).toEqual(useDocument.getState().views);
+        const key = useFiles.getState().dropFile('/elsewhere/a.md', 5, { column: 0, cell: 0 }, 'right')!;
+        expect(await promoteLooseFile(key, 'main')).toBe(true);
+        const views = useDocument.getState().views;
+        expect(views.map((view) => view.name)).toEqual(['Main', 'a.md', 'Flow']);
+        expect(views[1]).toMatchObject({ kind: 'file', path: '/elsewhere/a.md' });
+        expect(useDocument.getState().layout!.columns.map((column) => column.cells.map((cell) => cell.viewId))).toEqual([['main'], [views[1]!.id]]);
+        expect(useDocument.getState().activeViewId).toBe(views[1]!.id);
+        expect(useFiles.getState().tabs).toEqual([]);
+        expect(useFiles.getState().recent).toEqual([]);
+        expect(useDocument.getState().fileViews()).toEqual(views);
+    });
+
+    test('a loose file inside a host keeps its tab in it', async () => {
+        useFiles.setState({ tabs: [], recent: [] });
+        useDocument.getState().load(document, { activeViewId: 'main', views: {} });
+        useFiles.getState().open('/elsewhere/a.md', 5);
+        useFiles.getState().open('/elsewhere/b.md', 5);
+        await promoteLooseFile('/elsewhere/a.md', null);
+        const [file] = useDocument.getState().views;
+        expect(file).toMatchObject({ kind: 'file', path: '/elsewhere/a.md' });
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: '/elsewhere/b.md', tabs: [file!.id, '/elsewhere/b.md'] });
+        expect(useFiles.getState().tabs.map((tab) => tab.key)).toEqual(['/elsewhere/b.md']);
+    });
+
+    test('a diff is no file to make a view of', async () => {
+        useFiles.setState({ tabs: [], recent: [] });
+        useDocument.getState().load(document, { activeViewId: 'main', views: {} });
+        useFiles.getState().open('/repo/a.ts', 5, { kind: 'diff', cwd: '/repo', scope: 'worktree', staged: false });
+        expect(await promoteLooseFile('diff:/repo/a.ts', null)).toBe(false);
+        expect(useDocument.getState().views).toHaveLength(2);
+        expect(useFiles.getState().tabs).toHaveLength(1);
     });
 });

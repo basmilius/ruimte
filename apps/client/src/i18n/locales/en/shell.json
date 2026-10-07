@@ -222,7 +222,6 @@
         "restore": "Restore the split"
     },
     "filesView": {
-        "name": "Files",
         "failed": "These files failed to draw"
     },
     "viewKinds": {

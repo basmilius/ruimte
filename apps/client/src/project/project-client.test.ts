@@ -76,6 +76,7 @@ class FakeTransport implements Transport {
     views: ProjectDocument['views'] = [canvasView('main')];
     rev = 3;
     panels: ProjectPanels | undefined = undefined;
+    layout: ProjectLocal['layout'] = undefined;
     /* Set to keep a save on the wire, so a test can let something else reach the daemon first. */
     holdSave: Promise<void> | null = null;
     saveError: TransportError | null = null;
@@ -93,6 +94,7 @@ class FakeTransport implements Transport {
                 const local: ProjectLocal = {
                     activeViewId: 'main',
                     views: { main: { camera: { center: { x: 5, y: 6 }, zoom: 1 }, focusedNodeId: null } },
+                    ...(this.layout ? { layout: this.layout } : {}),
                     panels: this.panels
                 };
                 return Promise.resolve({ summary: target, document: document(this.rev, this.views), local } as RequestMap[T]['result']);
@@ -247,7 +249,7 @@ function setup(
     const stores = options.stores ?? defaultWorkspaceStores;
     stores.document.getState().load(null, null);
     useUi.setState({ panel: { open: false, kind: 'files' }, panelWidth: null });
-    useFiles.setState({ projectId: null, tabs: [], active: null, expandedDirs: [] });
+    useFiles.setState({ projectId: null, tabs: [], expandedDirs: [] });
     const transport = new FakeTransport();
     if (options.projects) {
         transport.projects = options.projects;
@@ -713,10 +715,13 @@ describe('ProjectClient', () => {
             activeTab: '/repo/readme.md',
             expandedDirs: ['src/']
         };
+        // A project written before every cell could be a host has its files in a cell of their own.
+        transport.layout = { columns: [{ size: 1, cells: [{ viewId: 'files', size: 1 }] }], focus: { column: 0, cell: 0 } };
         await tick(10);
         expect(useUi.getState().panel).toEqual({ open: true, kind: 'git' });
         expect(useUi.getState().panelWidth).toBe(420);
-        expect(useFiles.getState().active).toBe('/repo/readme.md');
+        expect(useFiles.getState().tabs.map((tab) => tab.key)).toEqual(['/repo/readme.md']);
+        expect(defaultWorkspaceStores.document.getState().layout?.columns[0]?.cells[0]).toMatchObject({ viewId: '/repo/readme.md', tabs: ['/repo/readme.md'] });
         expect(useFiles.getState().expandedDirs).toEqual(['src/']);
         expect(transport.of('project.save-local')).toHaveLength(0);
         dispose();

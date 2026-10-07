@@ -3,7 +3,7 @@ import { RUNTIME_MODES } from '@adecore/agents-react/chat/runtime-modes';
 import { useSubagentTrail } from '@adecore/agents-react/chat/subagent-view';
 import { useDictation } from '@/dictation/controller';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
-import { isFilesView, type CellView } from '@/shell/files-view';
+import { isLooseView, type CellView } from '@/shell/cell-view';
 import { useChatRow } from '@adecore/agents-react/state/chats';
 import { useHasPlans } from '@/state/plans';
 
@@ -14,9 +14,9 @@ export function modeOf(host: NodeHost | null): RuntimeMode | undefined {
     return RUNTIME_MODES.find((mode) => mode === host?.runtimeMode);
 }
 
-/* The id a hook that only knows the document may be asked about; a canvas has its own store and the files are in neither. */
+/* The id a hook that only knows the document may be asked about; a canvas has its own store and a loose view is in neither. */
 export function hostIdOf(view: CellView | null): string {
-    return view !== null && view.kind !== 'canvas' && !isFilesView(view) ? view.id : '';
+    return view !== null && view.kind !== 'canvas' && !isLooseView(view) ? view.id : '';
 }
 
 /* Whether a chat view shows a sub-agent in its place, where its title turns into the first crumb and needs no separator after it. */
@@ -31,8 +31,8 @@ export function useHasViewToolbar(view: CellView | null): boolean {
     const subagents = useShowsSubagents(view);
     const forked = useIsFork(view);
     const planned = useHasPlans(view?.kind === 'chat' ? view.id : '');
-    // The tabs are the files' toolbar, so the cell always has one, even with nothing open.
-    if (isFilesView(view)) {
+    // The file's controls are portaled into the bar, which is where its renderer puts them.
+    if (isLooseView(view)) {
         return true;
     }
     if (view === null || !KINDS_WITH_TOOLBAR.has(view.kind)) {
@@ -60,10 +60,7 @@ const LEADING_TOOLBAR_KINDS = new Set<ProjectViewKind>(['browser', 'chat', 'term
    with one, since the panels are right there; this is about the one that opens it. */
 export function useViewToolbarLeads(view: CellView | null): boolean {
     const has = useHasViewToolbar(view);
-    if (isFilesView(view)) {
-        return true;
-    }
-    return has && view !== null && LEADING_TOOLBAR_KINDS.has(view.kind);
+    return has && view !== null && !isLooseView(view) && LEADING_TOOLBAR_KINDS.has(view.kind);
 }
 
 export function useIsFork(view: CellView | null): boolean {

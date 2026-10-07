@@ -1,19 +1,22 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Expand, Files, MoreHorizontal } from 'lucide-react';
+import { Expand, MoreHorizontal } from 'lucide-react';
 import { viewIconOf } from '@ruimte/contracts';
 import { closeCellAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { isFilesView, type CellView } from '@/shell/files-view';
+import { isLooseView, type CellView } from '@/shell/cell-view';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
+import { FileMenuItems } from '@/shell/panels/FileMenuItems';
+import { LooseGlyph } from '@/shell/panels/LooseGlyph';
+import { TabStrip } from '@/shell/TabStrip';
 import { SubagentTitleCrumb } from '@adecore/agents-react/chat/ui/SubagentControls';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { ViewToolbar } from '@/shell/ViewToolbar';
 import { useHasViewToolbar, useShowsSubagents, useViewToolbarLeads } from '@/shell/view-toolbar';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
-import { cellCount, type CellAt } from '@/shell/split';
+import { cellAt, cellCount, type CellAt } from '@/shell/split';
 import { CloseButton, Icon, IconButton, Separator, ContextMenu, Popover, Tooltip } from '@adecore/ui';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
@@ -84,15 +87,20 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     const maximized = useDocument((s) => s.maximized === view.id);
     /* The last cell stays (`split.close`), so its bar has nothing to offer there. */
     const closable = useDocument((s) => s.layout !== null && cellCount(s.layout) > 1);
-    const files = isFilesView(view);
+    /* The tabs of the cell when it is a host. A host keeps its bar whatever the view in front is. */
+    const tabs = useDocument((s) => (s.layout === null ? undefined : cellAt(s.layout, at)?.tabs));
+    const hosted = tabs !== undefined;
+    const loose = isLooseView(view);
     const hasViewToolbar = useHasViewToolbar(view);
-    /* The files never fold: their controls are the tab strip, and a strip inside a popover is a list
-       of files you have to open a menu to see. It gives way by scrolling sideways instead. */
-    const folded = useFolded(bar, actions, hasViewToolbar && !files);
+    /* The controls of a loose view in a host never fold: the strip beside them is the list of what is open,
+       and a strip inside a popover is a list you have to open a menu to see. It gives way by scrolling
+       sideways instead. */
+    const stripBeside = hosted && loose;
+    const folded = useFolded(bar, actions, hasViewToolbar && !stripBeside);
     const leads = useViewToolbarLeads(view);
     /* A lone cell with nothing to do takes no bar. The wrapper stays, so the body keeps its place
        in the tree and a session inside it survives the bar coming and going. */
-    const bare = !closable && !hasViewToolbar;
+    const bare = !hosted && !closable && !hasViewToolbar;
     const inSubagents = useShowsSubagents(view);
     const title = useBrowserDisplayTitle(view.id, view.name ?? '', 'titleSource' in view ? view.titleSource : undefined);
     const visibleTitle = view.kind === 'browser' ? title : view.name;
@@ -128,13 +136,19 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                         onDragStart={(event) => {
                             event.dataTransfer.setData(VIEW_DRAG_TYPE, view.id);
                             event.dataTransfer.effectAllowed = 'move';
-                            setDragging(view.id);
+                            setDragging(view.id, hosted);
                         }}
                         onDragEnd={() => setDragging(null)}
                     >
                         {/* The title is what gives way: it truncates down to its glyph before anything else
-                    in the bar has to move. */}
-                        <span className={clsx('flex min-w-5 items-center gap-2 pl-1', folded || !hasViewToolbar ? 'grow' : 'shrink')}>
+                    in the bar has to move. A host has its tabs in its place. */}
+                        <span
+                            className={clsx(
+                                'flex items-center gap-2 pl-1',
+                                hosted ? 'min-w-24 self-stretch' : 'min-w-5',
+                                folded || !hasViewToolbar || (hosted && loose) ? 'grow' : hosted ? 'max-w-[60%] shrink' : 'shrink'
+                            )}
+                        >
                             {maximized && (
                                 <Tooltip label={t('cellToolbar.maximized')}>
                                     <span role="img" aria-label={t('cellToolbar.maximized')} className="inline-flex shrink-0 text-text-muted">
@@ -142,10 +156,13 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                                     </span>
                                 </Tooltip>
                             )}
-                            {/* The tabs beside it say which files are open, so the glyph stands alone:
-                            a name here would take the room the strip needs. */}
-                            {files ? (
-                                <Icon icon={Files} size={14} className="shrink-0" />
+                            {tabs !== undefined ? (
+                                <TabStrip at={at} ids={tabs} active={view.id} />
+                            ) : isLooseView(view) ? (
+                                <>
+                                    <LooseGlyph tab={view.tab} />
+                                    <span className="min-w-0 truncate font-medium">{visibleTitle}</span>
+                                </>
                             ) : view.kind === 'browser' ? (
                                 /* The address field beside it already says where the page is, so the
                                    title would only take its room. */
@@ -171,12 +188,11 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                         </span>
                         {hasViewToolbar && !folded && (
                             <>
-                                {leads && !inSubagents && <Separator />}
+                                {(hosted || (leads && !inSubagents)) && <Separator />}
                                 {/* At least as wide as the controls at their smallest, so a bar too narrow
-                            for them overflows, and that is how it knows to fold. The files never fold,
-                            so their strip may shrink and scroll. The bar centers what it holds, so a
-                            tab strip that runs its full height has to say so. */}
-                                <span ref={actions} className={clsx('flex grow items-center', files ? 'min-w-0 self-stretch' : 'min-w-min')}>
+                            for them overflows, and that is how it knows to fold. Beside a strip they never
+                            fold, so the strip may shrink and scroll. */}
+                                <span ref={actions} className={clsx('flex grow items-center', stripBeside ? 'min-w-0 self-stretch' : 'min-w-min')}>
                                     {controls}
                                 </span>
                             </>
@@ -211,8 +227,8 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                     </ContextMenu.Trigger>
                     <ContextMenu.Popup>
                         <SplitItems at={at} separated />
-                        {/* The files are no view of the project: nothing to rename, share or delete. */}
-                        {!files && <ViewMenuItems viewId={view.id} kind={view.kind} />}
+                        {/* A loose view is no view of the project: nothing to rename, share or delete. */}
+                        {isLooseView(view) ? <FileMenuItems tabKey={view.id} /> : <ViewMenuItems viewId={view.id} kind={view.kind} />}
                     </ContextMenu.Popup>
                 </ContextMenu.Root>
             )}

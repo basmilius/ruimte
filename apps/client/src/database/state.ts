@@ -21,7 +21,7 @@ interface DatabasePanelStore {
 
 /*
  * The explorer's selection and the connections dialog. The tables, structures and designers a person
- * opens are tabs of the files cell (`state/files.ts`, `database/tabs.ts`).
+ * opens are loose views in a tab host (`state/files.ts`, `database/tabs.ts`).
  */
 export const useDatabasePanel = create<DatabasePanelStore>((set, get) => ({
     selection: null,

@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { FILES_VIEW_ID } from '@/shell/files-view';
 import { viewIdsIn } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { useFiles, type DatabaseTab } from '@/state/files';
@@ -8,10 +7,10 @@ import { useDatabasePanel } from './state.ts';
 
 const ORDERS = { connectionId: 'shop', schema: 'shop', table: 'orders' };
 
-describe('a database view in the files cell', () => {
+describe('a database view as a loose view', () => {
     beforeEach(() => {
-        useFiles.getState().load(null, { tabs: [], active: null, expandedDirs: [] });
-        useFiles.setState({ focusRequest: 0 });
+        useFiles.getState().load(null, { tabs: [], expandedDirs: [] });
+        useFiles.setState({ focusRequest: null, recent: [], unsubmitted: {}, discarding: null });
         useDatabasePanel.getState().reset();
         useDocument.getState().load(
             {
@@ -28,19 +27,28 @@ describe('a database view in the files cell', () => {
         );
     });
 
-    test('opening a table puts the files on the grid in place of the focused cell, and the keyboard in them', () => {
+    test('opening a table puts a host on the grid in place of the focused cell, and the keyboard in it', () => {
         useDocument.getState().splitFocused('right', 'b');
         actOnDatabase({ kind: 'open-table', ref: ORDERS, view: 'data' });
-        expect(viewIdsIn(useDocument.getState().layout!)).toEqual(['a', FILES_VIEW_ID]);
-        expect(useDocument.getState().activeViewId).toBe(FILES_VIEW_ID);
+        const [tab] = useFiles.getState().tabs;
+        expect(viewIdsIn(useDocument.getState().layout!)).toEqual(['a', tab!.key]);
+        expect(useDocument.getState().activeViewId).toBe(tab!.key);
         expect(useDocument.getState().bodyFocused).toBe(true);
-        expect(useFiles.getState().focusRequest).toBe(1);
+        expect(useFiles.getState().focusRequest).toEqual({ key: tab!.key, nonce: 1 });
+    });
+
+    test('a second table is a tab of the host the first one stands in', () => {
+        actOnDatabase({ kind: 'open-table', ref: ORDERS, view: 'data' });
+        actOnDatabase({ kind: 'open-table', ref: { ...ORDERS, table: 'items' }, view: 'data' });
+        const keys = useFiles.getState().tabs.map((tab) => tab.key);
+        expect(keys).toHaveLength(2);
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: keys[1], tabs: keys });
     });
 
     test('a row the explorer opens shows the tab and leaves the keyboard in the tree', () => {
         actOnDatabase({ kind: 'open-table', ref: ORDERS, view: 'data', preview: true }, { focus: false });
         expect(useFiles.getState().tabs).toHaveLength(1);
-        expect(useFiles.getState().focusRequest).toBe(0);
+        expect(useFiles.getState().focusRequest).toBeNull();
     });
 
     test('the last tab that closes takes the cell with it', () => {
@@ -49,7 +57,7 @@ describe('a database view in the files cell', () => {
         const [tab] = useFiles.getState().tabs;
         useFiles.getState().close(tab!.key);
         expect(useFiles.getState().tabs).toEqual([]);
-        expect(viewIdsIn(useDocument.getState().layout!)).not.toContain(FILES_VIEW_ID);
+        expect(viewIdsIn(useDocument.getState().layout!)).toEqual(['a']);
     });
 
     test('a table with edits nobody submitted asks before it closes', () => {

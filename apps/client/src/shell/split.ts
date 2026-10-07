@@ -1,5 +1,4 @@
 import { isOpenableView, type ProjectLocal, type ProjectView, type SplitCell, type SplitColumn, type SplitLayout } from '@ruimte/contracts';
-import { FILES_VIEW_ID } from '@/shell/files-view';
 
 /*
  * The whole limit of the model. Columns of cells instead of a free tree means "at most three by
@@ -153,6 +152,11 @@ function canPlace(layout: SplitLayout, at: CellAt, zone: SplitZone, source: Cell
     }
     const leaving = source !== null && leavesCell && source.column === at.column ? 1 : 0;
     return layout.columns[at.column].cells.length - leaving < MAX_CELLS;
+}
+
+/* Whether the whole cell at `from` may land in the zone of the cell at `at`, which is what dragging a host by its bar asks. */
+export function canMoveCell(layout: SplitLayout, from: CellAt, at: CellAt, zone: SplitZone): boolean {
+    return cellAt(layout, from) !== null && canPlace(layout, at, zone, from, true);
 }
 
 function fillsCellAlone(layout: SplitLayout, source: CellAt): boolean {
@@ -380,7 +384,7 @@ export interface ShowOptions {
 }
 
 /* The host holding `preferred`, else the first host in reading order: columns left to right, cells top to bottom. */
-function hostFor(layout: SplitLayout, preferred: string | null): CellAt | null {
+export function hostFor(layout: SplitLayout, preferred: string | null): CellAt | null {
     if (preferred !== null) {
         const at = locateView(layout, preferred);
         if (at !== null && isTabHost(cellAt(layout, at)!)) {
@@ -572,8 +576,7 @@ export function focusDirection(layout: SplitLayout, direction: SplitDirection): 
  * `extraIds` stand in cells without being project views (loose views), which the caller knows.
  */
 export function cleanLayout(layout: SplitLayout, viewIds: readonly string[], extraIds: readonly string[] = []): SplitLayout | null {
-    // The files stand in a cell without being in the document, so their id passes on its own.
-    const known = new Set([...viewIds, ...extraIds, FILES_VIEW_ID]);
+    const known = new Set([...viewIds, ...extraIds]);
     const seen = new Set<string>();
     const columns: SplitColumn[] = [];
     for (const column of layout.columns) {
@@ -628,10 +631,14 @@ export function openableViewIds(views: readonly ProjectView[]): string[] {
  * What a machine-local file means. No layout at all is the file of a client that never split, and of
  * every project that stands on one view: one column, one cell, on the view that was active.
  */
-export function layoutOf(local: Pick<ProjectLocal, 'activeViewId' | 'layout'>, views: readonly ProjectView[]): SplitLayout | null {
+export function layoutOf(
+    local: Pick<ProjectLocal, 'activeViewId' | 'layout'>,
+    views: readonly ProjectView[],
+    extraIds: readonly string[] = []
+): SplitLayout | null {
     const ids = openableViewIds(views);
     if (local.layout) {
-        return cleanLayout(local.layout, ids);
+        return cleanLayout(local.layout, ids, extraIds);
     }
     if (local.activeViewId !== null && ids.includes(local.activeViewId)) {
         return singleLayout(local.activeViewId);

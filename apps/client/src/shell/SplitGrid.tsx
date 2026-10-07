@@ -5,17 +5,18 @@ import { isCanvasView, type SplitLayout } from '@ruimte/contracts';
 import { PromptStack } from '@/canvas/PromptStack';
 import { carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { carriesDiff, droppedDiff } from '@/shell/diff-drag';
-import { FILES_VIEW_ID, isFilesView } from '@/shell/files-view';
+import { isLooseView } from '@/shell/cell-view';
 import { useCellView } from '@/shell/use-cell-view';
 import { placeFilesAction, placeViewAction } from '@/actions/client-actions';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
 import { CellViewContext } from '@/state/workspace-stores';
-import { canSplit, cellCount, isSameCell, locateView, draggedSizes, maximizedCell, type CellAt, type SplitZone } from '@/shell/split';
+import { canMoveCell, canSplit, cellCount, cellViewIds, isSameCell, locateView, draggedSizes, maximizedCell, type CellAt, type SplitZone } from '@/shell/split';
+import type { SplitCell } from '@ruimte/contracts';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { Button, Kbd, Surface, Tooltip } from '@adecore/ui';
-import { carriesView, draggedViewId, dragging, edgeZoneAt, isNowhereDrop, setGridTakesPath, shapeOf, zoneAt } from '@/shell/view-drag';
+import { carriesView, draggedViewId, dragging, draggingWholeCell, edgeZoneAt, isNowhereDrop, setGridTakesPath, shapeOf, zoneAt } from '@/shell/view-drag';
 import { ViewSurface } from '@/shell/ViewHost';
 import { CellToolbar } from '@/shell/CellToolbar';
 import { cellsMoved, registerCell } from '@/shell/cell-rects';
@@ -121,6 +122,11 @@ function DropIndicator({ box, zone }: { box: { top: number; height: number }; zo
     );
 }
 
+/* What a cell is called in the tree: its first view, which a switch between its tabs never changes, so the bar and its menus stay mounted. */
+function cellKey(cell: SplitCell): string {
+    return cellViewIds(cell)[0]!;
+}
+
 /* The cell's box, kept up to date for the parking layer: one observer per cell, cleared with it. */
 const observers = new Map<string, ResizeObserver>();
 
@@ -172,13 +178,19 @@ function Cell({
         // The payload is kept from the page during a drag, so the limit is asked about the view the
         // grid knows is moving, which for a drag out of the sidebar is no view in the grid at all.
         const moving = dragging();
-        // A change dropped on the files cell itself has nowhere to move it, and still opens there.
-        if (here === 'center' && viewId === FILES_VIEW_ID && carriesDiff(event.dataTransfer)) {
+        if (layout === null) {
+            return null;
+        }
+        // A change dropped in the middle of a cell opens as a tab of it, whatever the cell holds.
+        if (here === 'center' && carriesDiff(event.dataTransfer)) {
             return here;
         }
-        return layout !== null && canSplit(layout, at, here, moving) && !isNowhereDrop(moving === null ? null : locateView(layout, moving), at, here)
-            ? here
-            : null;
+        // The bar of a host carries every tab, so the question is whether the whole cell fits there.
+        const from = moving === null ? null : locateView(layout, moving);
+        if (draggingWholeCell()) {
+            return from !== null && canMoveCell(layout, from, at, here) ? here : null;
+        }
+        return canSplit(layout, at, here, moving) && !isNowhereDrop(from, at, here) ? here : null;
     };
 
     /*
@@ -226,13 +238,14 @@ function Cell({
            with a splitter drag, which moves no state at all, hence the observer. A cell hidden behind
            a maximized one leaves the registry, which hides its pages without moving a <webview>. */
         <div ref={(element) => watchCell(viewId, hidden ? null : element)} className="relative min-h-0 grow overflow-hidden">
-            <ViewSurface view={view} />
+            {/* A loose view keeps one surface for the tabs of its host, which keeps the editors of the tabs shown last. */}
+            <ViewSurface key={isLooseView(view) ? 'loose' : view.id} view={view} />
             <CellOverlay slot="cell">
                 {/* The dock belongs to the canvas under it, so it is drawn in the cell that has the
                     focus and nowhere else: nine docks would be nine rows of the same buttons. */}
                 {focused && <Dock onHiddenChange={setDockHidden} />}
                 {/* A stack per canvas, not per dock: a cell without the focus has no dock, and its prompts still need a place. */}
-                {!isFilesView(view) && isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
+                {!isLooseView(view) && isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
                 {filling && <MaximizedIndicator at={at} />}
             </CellOverlay>
         </div>
@@ -282,9 +295,14 @@ function Cell({
                         const dragged = draggedViewId(event.dataTransfer);
                         const diff = droppedDiff(event.dataTransfer);
                         if (diff !== null) {
-                            useFiles.getState().openHidden(diff.path, useSettings.getState().filesTabLimit, diff.view);
+                            useFiles.getState().dropDiff(diff.path, diff.view, useSettings.getState().filesTabLimit, at, here);
+                            return;
                         }
-                        if (dragged === viewId) {
+                        const layout = useDocument.getState().layout;
+                        const from = dragged === null || layout === null ? null : locateView(layout, dragged);
+                        if (draggingWholeCell() && from !== null) {
+                            useDocument.getState().moveCellTo(from, at, here);
+                        } else if (dragged === viewId) {
                             useDocument.getState().focusCellAt(at);
                         } else if (dragged !== null) {
                             placeViewAction(dragged, viewId, here);
@@ -317,10 +335,10 @@ function MaximizedIndicator({ at }: { at: CellAt }) {
                     {/* Whole pixels for one, two or three of either, with a pixel between them. */}
                     <span aria-hidden className="flex h-2.75 w-4.25 gap-px">
                         {layout.columns.map((column, columnIndex) => (
-                            <span key={column.cells[0]!.viewId} className="flex flex-1 flex-col gap-px">
+                            <span key={cellKey(column.cells[0]!)} className="flex flex-1 flex-col gap-px">
                                 {column.cells.map((cell, cellIndex) => (
                                     <span
-                                        key={cell.viewId}
+                                        key={cellKey(cell)}
                                         className={clsx(
                                             'flex-1 rounded-xs',
                                             isSameCell(at, { column: columnIndex, cell: cellIndex }) ? 'bg-text-muted' : 'bg-border-strong'
@@ -359,7 +377,7 @@ function Column({ layout, at, maximized }: { layout: SplitLayout; at: number; ma
         >
             {drop !== null && <DropIndicator box={drop.box} zone={drop.zone} />}
             {column.cells.map((cell, index) => (
-                <Fragment key={cell.viewId}>
+                <Fragment key={cellKey(cell)}>
                     {index > 0 && (
                         <Splitter
                             axis="y"
@@ -417,7 +435,7 @@ export function SplitGrid(): ReactElement | null {
         /* Isolated, so a maximized cell stands over its neighbors and never over the parked pages. */
         <div className="absolute inset-0 isolate flex bg-border">
             {layout.columns.map((column, index) => (
-                <Fragment key={column.cells[0]!.viewId}>
+                <Fragment key={cellKey(column.cells[0]!)}>
                     {index > 0 && (
                         <Splitter
                             axis="x"

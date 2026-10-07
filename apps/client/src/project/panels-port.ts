@@ -1,7 +1,9 @@
 import type { ProjectPanels } from '@ruimte/contracts';
 import { faviconsOfProject, useBrowser } from '@/browser/registry';
 import { useDatabasePanel } from '@/database/state';
-import { useFiles } from '@/state/files';
+import { shownViewIdsIn } from '@/shell/split';
+import { useDocument } from '@/state/document';
+import { useFiles, type Tab } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE, useGit } from '@/state/git';
 import { parsePanels, serializePanels, type PanelsState } from '@/state/panel-state';
@@ -22,6 +24,16 @@ function defaults(): PanelsState {
     };
 }
 
+/* The loose view in front: the one with the focus, else the one a cell shows, else the first opened. */
+function activeLoose(tabs: readonly Tab[]): string | null {
+    const { layout, activeViewId } = useDocument.getState();
+    const keys = new Set(tabs.map((tab) => tab.key));
+    if (activeViewId !== null && keys.has(activeViewId)) {
+        return activeViewId;
+    }
+    return (layout === null ? [] : shownViewIdsIn(layout)).find((id) => keys.has(id)) ?? tabs[0]?.key ?? null;
+}
+
 function read(): PanelsState {
     const ui = useUi.getState();
     const files = useFiles.getState();
@@ -31,7 +43,7 @@ function read(): PanelsState {
         planAnchor: ui.planAnchor,
         planWidth: ui.planWidth,
         tabs: files.tabs,
-        active: files.active,
+        active: activeLoose(files.tabs),
         expandedDirs: files.expandedDirs,
         gitScope: useGit.getState().scope,
         gitCollapsedDirs: useGit.getState().collapsedDirs,
@@ -66,7 +78,7 @@ export class PanelsPort {
         this.applying = true;
         try {
             useUi.getState().setPanels(state);
-            useFiles.getState().load(projectId, { tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs });
+            useFiles.getState().load(projectId, { tabs: state.tabs, expandedDirs: state.expandedDirs });
             useGit.getState().setScope(state.gitScope);
             useGit.getState().setCollapsedDirs(state.gitCollapsedDirs);
             useGit.getState().setLogHeight(state.gitLogHeight);

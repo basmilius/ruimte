@@ -94,6 +94,12 @@ describe('isAppShortcut', () => {
         expect(isAppShortcut(key('KeyR', { ctrlKey: true }), false)).toBe(false);
     });
 
+    test('the tabs of a host step on Ctrl+Tab, which never reaches the program', () => {
+        expect(isAppShortcut(shortcut('Tab', { ctrlKey: true }), true)).toBe(true);
+        expect(isAppShortcut(shortcut('Tab', { ctrlKey: true, shiftKey: true }), false)).toBe(true);
+        expect(isAppShortcut(shortcut('Tab'), true)).toBe(false);
+    });
+
     test('everything else in a terminal belongs to the program', () => {
         expect(isAppShortcut(key('KeyK', { metaKey: true }), true)).toBe(false);
         expect(isAppShortcut(key('KeyZ', { metaKey: true }), true)).toBe(false);

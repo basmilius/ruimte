@@ -2,6 +2,7 @@ import type { TableKind } from '@adecore/database/protocol';
 import type { GitDiffScope, ProjectConsoleBinding, ProjectFileTabView } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
+import { canSplit, cellAt, cellViewIds, locateView, viewIdsIn, type CellAt, type SplitZone } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
 import { textDrafts } from '@/state/text-drafts';
@@ -39,11 +40,16 @@ export type DatabaseTab =
     | (DatabaseTabBase & { kind: 'structure'; table: string; tableKind?: TableKind })
     | (DatabaseTabBase & { kind: 'designer'; table?: string });
 
-/* One tab of the files cell. */
+/* One loose view: a tab of a tab host that has no row in the sidebar. */
 export type Tab = FileTab | DatabaseTab;
 
-export interface TabState {
+/* The content of the loose views, in the order they were opened. Where they stand is the layout's. */
+export interface TabPool {
     tabs: Tab[];
+}
+
+/* A pool and the tab an operation on it leaves in front, which the caller puts on screen. */
+export interface TabState extends TabPool {
     active: string | null;
 }
 
@@ -52,7 +58,7 @@ export function isDatabaseTab(tab: Tab): tab is DatabaseTab {
 }
 
 /* The file tab under a key, or undefined for a database tab or a key that is not open. */
-export function fileTabOf(state: TabState, key: string | null): FileTab | undefined {
+export function fileTabOf(state: TabPool, key: string | null): FileTab | undefined {
     const tab = state.tabs.find((entry) => entry.key === key);
     return tab === undefined || isDatabaseTab(tab) ? undefined : tab;
 }
@@ -77,26 +83,39 @@ export function tabKey(path: string, view?: FileTabView): string {
     return view ? `diff:${path}` : path;
 }
 
+/* A new tab at the end of the pool. Where it stands and how many may stand there is the host's (`tabsOverLimit`). */
+export function placeTab(state: TabPool, tab: Tab): TabState {
+    return { tabs: [...state.tabs, tab], active: tab.key };
+}
+
 /*
- * A new tab at the end, the way a preview tab works in an editor: the oldest unpinned one makes room
- * when the limit is reached. The tab that opens is never the one that goes, or opening a file could
- * close the file it just opened, and neither is one `keeps` holds on to, such as a file with unsaved
- * changes or a table with edits nobody submitted.
+ * The tabs of one host that have to close for the limit, the way a preview tab works in an editor:
+ * the leftmost unpinned one makes room. `tabs` are the loose tabs of the host in strip order. The tab
+ * that opened is never the one that goes, or opening a file could close the file it just opened, and
+ * neither is one `keeps` holds on to, such as a file with unsaved changes or a table with edits nobody
+ * submitted.
  */
-export function placeTab(state: TabState, tab: Tab, limit: number, keeps: (tab: Tab) => boolean = () => false): TabState {
-    const tabs = [...state.tabs, tab];
-    while (tabs.length > Math.max(1, limit)) {
-        const index = tabs.findIndex((entry) => !entry.pinned && entry.key !== tab.key && !keeps(entry));
+export function tabsOverLimit(tabs: readonly Tab[], limit: number, opened: string, keeps: (tab: Tab) => boolean = () => false): string[] {
+    const remaining = [...tabs];
+    const closing: string[] = [];
+    while (remaining.length > Math.max(1, limit)) {
+        const index = remaining.findIndex((entry) => !entry.pinned && entry.key !== opened && !keeps(entry));
         if (index < 0) {
             break;
         }
-        tabs.splice(index, 1);
+        closing.push(remaining[index]!.key);
+        remaining.splice(index, 1);
     }
-    return { tabs, active: tab.key };
+    return closing;
 }
 
-/* A tab per open file, under the limit `placeTab` keeps. */
-export function openTab(state: TabState, path: string, limit: number, view?: FileTabView, keeps: (tab: Tab) => boolean = () => false): TabState {
+/* What opening a path did to the pool; `replaced` is the key of the diff tab it took over, which the layout has to rename. */
+export interface OpenedTab extends TabState {
+    replaced?: string;
+}
+
+/* A tab per open file; one that is open already is the one that comes to the front. */
+export function openTab(state: TabPool, path: string, view?: FileTabView): OpenedTab {
     const key = tabKey(path, view);
     const open = fileTabOf(state, key);
     if (open) {
@@ -110,35 +129,24 @@ export function openTab(state: TabState, path: string, limit: number, view?: Fil
         const reused = state.tabs.findIndex((tab) => !isDatabaseTab(tab) && tab.view !== undefined && !tab.pinned);
         if (reused >= 0) {
             const tabs = [...state.tabs];
+            const was = tabs[reused]!.key;
             tabs[reused] = { key, path, view, pinned: false };
-            return { tabs, active: key };
+            return { tabs, active: key, replaced: was };
         }
     }
-    return placeTab(state, { key, path, ...(view ? { view } : {}), pinned: false }, limit, keeps);
+    return placeTab(state, { key, path, ...(view ? { view } : {}), pinned: false });
 }
 
-/* The neighbor takes over when the active tab closes: the one to its right, or the one before it. */
-export function closeTab(state: TabState, key: string): TabState {
-    const index = state.tabs.findIndex((tab) => tab.key === key);
-    if (index < 0) {
-        return state;
-    }
-    const tabs = state.tabs.filter((tab) => tab.key !== key);
-    if (state.active !== key) {
-        return { tabs, active: state.active };
-    }
-    return { tabs, active: tabs[Math.min(index, tabs.length - 1)]?.key ?? null };
+export function closeTab(state: TabPool, key: string): TabPool {
+    return { tabs: state.tabs.filter((tab) => tab.key !== key) };
 }
 
-export function pinTab(state: TabState, key: string, pinned: boolean): TabState {
-    return {
-        tabs: state.tabs.map((tab) => (tab.key === key ? { ...tab, pinned } : tab)),
-        active: state.active
-    };
+export function pinTab(state: TabPool, key: string, pinned: boolean): TabPool {
+    return { tabs: state.tabs.map((tab) => (tab.key === key ? { ...tab, pinned } : tab)) };
 }
 
 /* The tabs of a file or folder that moved follow it, a diff of the file too since its key names the path. A commit or a whole checkout is no file. */
-export function moveTabs(state: TabState, from: string, to: string): TabState {
+export function moveTabs(state: TabPool, from: string, to: string): TabPool & { renamed: Map<string, string> } {
     const renamed = new Map<string, string>();
     const tabs = state.tabs.map((tab) => {
         if (isDatabaseTab(tab)) {
@@ -152,7 +160,7 @@ export function moveTabs(state: TabState, from: string, to: string): TabState {
         renamed.set(tab.key, key);
         return { ...tab, path, key };
     });
-    return { tabs, active: (state.active !== null ? renamed.get(state.active) : undefined) ?? state.active };
+    return { tabs, renamed };
 }
 
 export interface RevealLineRequest {
@@ -185,23 +193,23 @@ export interface CreateRequest {
 }
 
 /* Where a `.sql` file runs, or none: it opens as the file itself. */
-export function bindConsole(state: TabState, key: string, binding: ConsoleBinding | null): TabState {
+export function bindConsole(state: TabPool, key: string, binding: ConsoleBinding | null): TabPool {
     const tab = fileTabOf(state, key);
     if (tab === undefined) {
         return state;
     }
     const { console: _was, ...rest } = tab;
     const next: FileTab = binding === null ? rest : { ...rest, console: binding };
-    return { tabs: state.tabs.map((entry) => (entry === tab ? next : entry)), active: state.active };
+    return { tabs: state.tabs.map((entry) => (entry === tab ? next : entry)) };
 }
 
 /* What the database said a tab's table is, which corrects what the tab was opened with. */
-export function correctTableKind(state: TabState, key: string, tableKind: TableKind): TabState {
+export function correctTableKind(state: TabPool, key: string, tableKind: TableKind): TabPool {
     const tab = state.tabs.find((entry) => entry.key === key);
     if (tab === undefined || !isDatabaseTab(tab) || tab.kind === 'designer' || tab.tableKind === tableKind) {
         return state;
     }
-    return { tabs: state.tabs.map((entry) => (entry === tab ? { ...tab, tableKind } : entry)), active: state.active };
+    return { tabs: state.tabs.map((entry) => (entry === tab ? { ...tab, tableKind } : entry)) };
 }
 
 /* What the empty preview offers to open again: a file by its path, or a database view as it stood. */
@@ -236,19 +244,25 @@ export function rememberClosed(recent: readonly ClosedTab[], tab: Tab | undefine
 }
 
 export interface OpenOptions {
-    /* False leaves the keyboard where it is; the files cell takes it otherwise. */
+    /* False leaves the keyboard where it is; the cell that shows the tab takes it otherwise. */
     focus?: boolean;
 }
 
-interface FilesStore extends TabState {
+/* The tab whose body is asked to take the keyboard; `nonce` goes up on every ask, so the same tab twice is two asks. */
+export interface FocusRequest {
+    key: string;
+    nonce: number;
+}
+
+interface FilesStore extends TabPool {
     /* Whose tabs these are; a canvas that is not open has none. */
     projectId: string | null;
     /* Tabs of this project closed in this session, newest first. Not saved: the tabs that are open are what the project keeps. */
     recent: ClosedTab[];
-    /* Counts the tabs opened by hand. The files cell watches it to take the keyboard, so the tab
+    /* Set by the tabs opened by hand. The body that shows the tab watches it to take the keyboard, so the tab
        that just opened answers to ⌘W. Restoring a project does not count: nothing was asked for, and
        neither does a tree that opens its row, since the next arrow key belongs to the tree. */
-    focusRequest: number;
+    focusRequest: FocusRequest | null;
     /* The database tabs whose table holds edits nobody submitted. Not saved: the edits are not either. */
     unsubmitted: Record<string, true>;
     /* A database tab a person asked to close while it holds such edits, which waits for their answer. */
@@ -263,20 +277,30 @@ interface FilesStore extends TabState {
     caret: CaretRequest | null;
     /* A new file or folder asked of the files panel from a menu or the palette, which names it inline. */
     createRequest: CreateRequest | null;
-    load(projectId: string | null, state: TabState & { expandedDirs: string[] }): void;
+    /* The pool of a project that opens; a tab the layout does not stand anywhere has no view to be and is left out. */
+    load(projectId: string | null, state: { tabs: Tab[]; expandedDirs: string[] }): void;
+    /* A tab in the host the last focused one leads to, brought to the front with the keyboard in it. The limit is that host's. */
     open(path: string, limit: number, view?: FileTabView, line?: number, options?: OpenOptions): void;
-    /* The tab without the cell, for a caller that puts the files on the grid itself, such as a drop. */
+    /* The tab without moving the focus, for a caller that wants the file on the grid and the keyboard where it is. */
     openHidden(path: string, limit: number, view?: FileTabView, line?: number, options?: OpenOptions): void;
     /* Tabs a caller worked out itself, such as for a database view (`database/open.ts`), put on screen the way an open file is. */
-    show(next: TabState, options?: OpenOptions): void;
+    show(next: TabState, limit: number, options?: OpenOptions): void;
+    /* A file dragged to a cell's edge becomes a tab there, in a cell of its own. The key, or null when the grid has no room. */
+    dropFile(path: string, limit: number, at: CellAt, zone: SplitZone): string | null;
+    /* A change dragged to a cell: the middle joins its tabs, an edge makes a cell of its own. False when nothing landed. */
+    dropDiff(path: string, view: FileTabView, limit: number, at: CellAt, zone: SplitZone): boolean;
     /* What the limit leaves alone besides a pin: a file with unsaved changes and a table with edits nobody submitted. */
     keepsOpen(tab: Tab): boolean;
-    /* A file or folder moved on the machine; its tabs go with it. */
-    moved(from: string, to: string): void;
+    /* A file or folder moved on the machine; its tabs go with it, and the cells that hold them. Answers what was renamed. */
+    moved(from: string, to: string): Map<string, string>;
     /* A file with unsaved changes is saved first, and a table with edits nobody submitted asks first. */
     close(key: string): void;
+    /* The other loose tabs of the host the tab stands in; a pinned tab goes too, and a project view stays. */
     closeOthers(key: string): void;
-    closeAll(): void;
+    /* Every loose tab of the host the tab stands in. */
+    closeAll(key: string): void;
+    /* Takes the tab out of the pool without remembering it, for a tab that goes on as something else. */
+    release(key: string): void;
     /* The answer to that question. */
     confirmDiscard(): void;
     cancelDiscard(): void;
@@ -290,53 +314,77 @@ interface FilesStore extends TabState {
     requestCreate(kind: CreateRequest['kind']): void;
     requestCaret(key: string): void;
     clearCaret(): void;
-    activate(key: string): void;
     setExpandedDirs(dirs: string[]): void;
 }
 
 /*
- * Which files and database views the viewer has open and what the tree has unfolded. Machine state:
- * it travels with the project's local file on this machine (`project/panels-port.ts`), never in
- * `project.json`, so another person opening the same canvas gets none of it.
+ * What the loose views are: the files, diffs, commits and database views a person opened, with what
+ * the tree has unfolded. Machine state: it travels with the project's local file on this machine
+ * (`project/panels-port.ts`), never in `project.json`, so another person opening the same canvas gets
+ * none of it. The layout owns where they stand and which one is in front; a loose view that leaves
+ * the layout leaves the pool, and the pool never holds one the layout does not place.
  */
 export const useFiles = create<FilesStore>((set, get) => {
-    /* The last close takes the cell away again, the way an open brought it. */
+    const hostTabs = (key: string): Tab[] => {
+        const { layout } = useDocument.getState();
+        const at = layout === null ? null : locateView(layout, key);
+        const cell = layout === null || at === null ? null : cellAt(layout, at);
+        return cell === null ? [] : cellViewIds(cell).flatMap((id) => get().tabs.find((entry) => entry.key === id) ?? []);
+    };
+    /* Leaves the pool and the cell that holds the tab, and goes where a closed tab goes. */
     const closeNow = (key: string): void => {
         const { [key]: _dropped, ...unsubmitted } = get().unsubmitted;
-        const next = closeTab(get(), key);
+        const tab = get().tabs.find((entry) => entry.key === key);
         set({
-            ...next,
+            ...closeTab(get(), key),
             unsubmitted,
             discarding: get().discarding === key ? null : get().discarding,
-            recent: rememberClosed(
-                get().recent,
-                get().tabs.find((entry) => entry.key === key)
-            )
+            recent: rememberClosed(get().recent, tab)
         });
-        if (next.tabs.length === 0) {
-            useDocument.getState().hideFiles();
+        useDocument.getState().closeLoose(key);
+    };
+    /* The host the tab stands in is over its limit once a tab arrives, and its leftmost tab nobody holds on to makes room. */
+    const makeRoom = (key: string, limit: number): void => {
+        for (const closing of tabsOverLimit(hostTabs(key), limit, key, get().keepsOpen)) {
+            closeNow(closing);
         }
     };
-    const focusRequestAfter = (options: OpenOptions | undefined): number => (options?.focus === false ? get().focusRequest : get().focusRequest + 1);
+    const focusRequestAfter = (key: string, options: OpenOptions | undefined): FocusRequest | null =>
+        options?.focus === false ? get().focusRequest : { key, nonce: (get().focusRequest?.nonce ?? 0) + 1 };
+    /* The pool as an open left it, and the cell that followed a diff tab taking over another's key. */
+    const take = (opened: OpenedTab, line: number | undefined, options: OpenOptions | undefined): void => {
+        const key = opened.active!;
+        const reveal = line === undefined ? get().revealLine : { key, line, nonce: (get().revealLine?.nonce ?? 0) + 1 };
+        set({ tabs: opened.tabs, focusRequest: focusRequestAfter(key, options), revealLine: reveal });
+        if (opened.replaced !== undefined) {
+            useDocument.getState().replaceViewKey(opened.replaced, key);
+        }
+    };
+    const openIn = (opened: OpenedTab, limit: number, line: number | undefined, options: OpenOptions | undefined, quietly: boolean): void => {
+        const key = opened.active!;
+        take(opened, line, options);
+        useDocument.getState().showLoose(key, { focus: !quietly });
+        makeRoom(key, limit);
+    };
 
     return {
         projectId: null,
         recent: [],
-        focusRequest: 0,
+        focusRequest: null,
         unsubmitted: {},
         discarding: null,
         tabs: [],
-        active: null,
         expandedDirs: [],
         reveal: null,
         revealLine: null,
         caret: null,
         createRequest: null,
         load(projectId, state) {
+            const { layout } = useDocument.getState();
+            const placed = new Set(layout === null ? [] : viewIdsIn(layout));
             set({
                 projectId,
-                tabs: state.tabs,
-                active: state.active,
+                tabs: state.tabs.filter((tab) => placed.has(tab.key)),
                 expandedDirs: state.expandedDirs,
                 unsubmitted: {},
                 discarding: null,
@@ -348,25 +396,62 @@ export const useFiles = create<FilesStore>((set, get) => {
             });
         },
         /* A tab and the cell that draws it are one thing to the person opening a file: an open puts the
-           files in the cell they were working in, like any view, and the last close takes the cell away
-           again. Beside it is a drag. */
+           tab in the host they were working in, like any view. Beside it is a drag. */
         open(path, limit, view, line, options) {
-            get().openHidden(path, limit, view, line, options);
-            useDocument.getState().showFiles();
+            openIn(openTab(get(), path, view), limit, line, options, false);
         },
         openHidden(path, limit, view, line, options) {
-            const reveal = line === undefined ? get().revealLine : { key: tabKey(path, view), line, nonce: (get().revealLine?.nonce ?? 0) + 1 };
-            set({ ...openTab(get(), path, limit, view, get().keepsOpen), focusRequest: focusRequestAfter(options), revealLine: reveal });
+            openIn(openTab(get(), path, view), limit, line, options, true);
         },
-        show(next, options) {
-            set({ ...next, focusRequest: focusRequestAfter(options) });
-            useDocument.getState().showFiles();
+        show(next, limit, options) {
+            const key = next.active;
+            set({ tabs: next.tabs, focusRequest: key === null ? get().focusRequest : focusRequestAfter(key, options) });
+            if (key !== null) {
+                useDocument.getState().showLoose(key, { focus: true });
+                makeRoom(key, limit);
+            }
+        },
+        dropFile(path, limit, at, zone) {
+            const key = tabKey(path);
+            const { layout } = useDocument.getState();
+            if (layout === null || !canSplit(layout, at, zone, key)) {
+                return null;
+            }
+            if (fileTabOf(get(), key) === undefined) {
+                set(placeTab(get(), { key, path, pinned: false }));
+            }
+            if (!useDocument.getState().dropLooseAt(key, at, zone)) {
+                pruneLoose();
+                return null;
+            }
+            makeRoom(key, limit);
+            return key;
+        },
+        dropDiff(path, view, limit, at, zone) {
+            const key = tabKey(path, view);
+            const { layout } = useDocument.getState();
+            if (layout === null || (zone !== 'center' && !canSplit(layout, at, zone, key))) {
+                return false;
+            }
+            take(openTab(get(), path, view), undefined, undefined);
+            const landed = zone === 'center' ? useDocument.getState().dropLooseAsTab(key, at) : useDocument.getState().dropLooseAt(key, at, zone);
+            if (!landed) {
+                pruneLoose();
+                return false;
+            }
+            makeRoom(key, limit);
+            return true;
         },
         keepsOpen(tab) {
             return isDatabaseTab(tab) ? get().unsubmitted[tab.key] === true : tab.view === undefined && textDrafts.isUnsaved(currentEndpointId(), tab.path);
         },
         moved(from, to) {
-            set(moveTabs(get(), from, to));
+            const { renamed, ...next } = moveTabs(get(), from, to);
+            set(next);
+            for (const [was, key] of renamed) {
+                useDocument.getState().replaceViewKey(was, key);
+            }
+            return renamed;
         },
         close(key) {
             const tab = get().tabs.find((entry) => entry.key === key);
@@ -382,16 +467,20 @@ export const useFiles = create<FilesStore>((set, get) => {
         },
         /* A pinned tab goes with the rest, since the person asked for this one tab and nothing else. */
         closeOthers(key) {
-            for (const tab of get().tabs) {
+            for (const tab of hostTabs(key)) {
                 if (tab.key !== key) {
                     get().close(tab.key);
                 }
             }
         },
-        closeAll() {
-            for (const tab of get().tabs) {
+        closeAll(key) {
+            for (const tab of hostTabs(key)) {
                 get().close(tab.key);
             }
+        },
+        release(key) {
+            const { [key]: _dropped, ...unsubmitted } = get().unsubmitted;
+            set({ ...closeTab(get(), key), unsubmitted });
         },
         confirmDiscard() {
             const key = get().discarding;
@@ -426,7 +515,7 @@ export const useFiles = create<FilesStore>((set, get) => {
             set(correctTableKind(get(), key, tableKind));
         },
         /* The files panel listens for this; it comes up if it was closed, the way opening a file brings
-           the files cell onto the grid. */
+           the tab onto the grid. */
         revealInFiles(path) {
             useUi.getState().setPanel({ open: true, kind: 'files' });
             set({ reveal: { path, nonce: (get().reveal?.nonce ?? 0) + 1 } });
@@ -442,11 +531,35 @@ export const useFiles = create<FilesStore>((set, get) => {
         clearCaret() {
             set({ caret: null });
         },
-        activate(key) {
-            set({ active: key });
-        },
         setExpandedDirs(dirs) {
             set({ expandedDirs: dirs });
         }
     };
+});
+
+/*
+ * A loose view that left the layout is closed: a cell that closed, a view that took its place, a
+ * project that went. It goes where a closed tab goes, so what was in it can be opened again.
+ */
+function pruneLoose(): void {
+    const { layout } = useDocument.getState();
+    const placed = new Set(layout === null ? [] : viewIdsIn(layout));
+    const { tabs, unsubmitted, recent } = useFiles.getState();
+    const gone = tabs.filter((tab) => !placed.has(tab.key));
+    if (gone.length === 0) {
+        return;
+    }
+    const rest = Object.fromEntries(Object.entries(unsubmitted).filter(([key]) => placed.has(key)));
+    useFiles.setState({
+        tabs: tabs.filter((tab) => placed.has(tab.key)),
+        unsubmitted: rest as Record<string, true>,
+        recent: gone.reduceRight((list, tab) => rememberClosed(list, tab), recent)
+    });
+}
+
+// A project that loads is no close: its pool comes with it (`load`), and the stale one goes there.
+useDocument.subscribe((state, previous) => {
+    if (state.layout !== previous.layout && !state.loading) {
+        pruneLoose();
+    }
 });

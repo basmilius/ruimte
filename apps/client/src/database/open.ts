@@ -12,11 +12,11 @@ export interface ActOptions {
     focus?: boolean;
 }
 
-/* A database tab opened the way a file opens: in the files cell, which comes on screen, under the same limit. */
+/* A database tab opened the way a file opens: a loose view in a tab host, under the same limit. */
 export function openDatabaseTab(action: DatabaseTabAction, options: ActOptions = {}): void {
     const files = useFiles.getState();
-    const next = applyDatabaseAction(files, action, useSettings.getState().filesTabLimit, () => crypto.randomUUID(), files.keepsOpen, options.source ?? null);
-    files.show(next, { focus: options.focus !== false });
+    const next = applyDatabaseAction(files, action, () => crypto.randomUUID(), options.source ?? null);
+    files.show(next, useSettings.getState().filesTabLimit, { focus: options.focus !== false });
 }
 
 /* What a database view asks of the app: a tab, a console file, or the connections dialog. */

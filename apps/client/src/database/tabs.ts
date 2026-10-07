@@ -1,5 +1,5 @@
 import type { DatabaseAction } from '@adecore/database';
-import { isDatabaseTab, placeTab, type DatabaseTab, type Tab, type TabState } from '@/state/files';
+import { isDatabaseTab, placeTab, type DatabaseTab, type TabPool, type TabState } from '@/state/files';
 
 /* What opens a tab. A console is a file (`database/console-file.ts`), and managing a connection opens a dialog. */
 export type DatabaseTabAction = Exclude<DatabaseAction, { kind: 'manage-connection' } | { kind: 'open-console' }>;
@@ -15,25 +15,19 @@ export function databaseTabId(key: string): string {
     return key.startsWith(KEY_PREFIX) ? key.slice(KEY_PREFIX.length) : key;
 }
 
-const focus = (state: TabState, key: string): TabState => (state.active === key ? state : { tabs: state.tabs, active: key });
+const focus = (state: TabPool, key: string): TabState => ({ tabs: state.tabs, active: key });
 
 /*
- * What a database view asked for, as tabs of the files cell, under the limit and the pins the files keep.
+ * What a database view asked for, as loose tabs, with the one to bring to the front. How many a host holds
+ * is the limit's to say once they are placed (`tabsOverLimit`).
  * A table opens once per table and view, and opening it again brings that tab up, except a filtered one:
  * the filter is what the person asked to see, so it gets a tab of its own. A table is designed in one tab,
  * and the designer that just created or renamed a table (`source`) becomes the designer of that table
  * rather than leaving it to a second one. `preview: false` is a double click in the explorer, which pins
  * the tab the way a double click on the tab does.
  */
-export function applyDatabaseAction(
-    state: TabState,
-    action: DatabaseTabAction,
-    limit: number,
-    createId: () => string,
-    keeps: (tab: Tab) => boolean = () => false,
-    source: string | null = null
-): TabState {
-    const place = (tab: DatabaseTab): TabState => placeTab(state, tab, limit, keeps);
+export function applyDatabaseAction(state: TabPool, action: DatabaseTabAction, createId: () => string, source: string | null = null): TabState {
+    const place = (tab: DatabaseTab): TabState => placeTab(state, tab);
     switch (action.kind) {
         case 'open-table': {
             const { connectionId, schema, table } = action.ref;

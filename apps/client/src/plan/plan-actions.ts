@@ -6,6 +6,7 @@ import { focusNodeAction, performAsPerson } from '@/actions/client-actions';
 import { offerDraft } from '@adecore/agents-react/chat/drafts';
 import { foldableIds, resultsText, revealOptions, type PlanFilter } from '@/plan/plan-view';
 import { revealNode, showView } from '@/project/views';
+import { viewIdsIn } from '@/shell/split';
 import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
@@ -101,7 +102,7 @@ export function focusChat(chatId: string): void {
         showView(chatId);
         return;
     }
-    const inCells = new Set(layout?.columns.flatMap((column) => column.cells.map((cell) => cell.viewId)) ?? []);
+    const inCells = new Set(layout === null ? [] : viewIdsIn(layout));
     const holding = views.find((view) => isCanvasView(view) && inCells.has(view.id) && liveCanvas(view.id)?.nodes[chatId] !== undefined);
     if (holding) {
         setActiveView(holding.id);

@@ -22,7 +22,6 @@ import {
     type NodeAccent,
     type NodeTitleSource,
     type ProjectDocument,
-    type ProjectFileView,
     type ProjectFlags,
     type ProjectIconChoice,
     type ProjectLocal,
@@ -31,28 +30,39 @@ import {
     type DeviceReference,
     type StandaloneNode
 } from '@ruimte/contracts';
-import { FILES_VIEW_ID } from '@/shell/files-view';
+import { migrateFilesCell, NO_LOOSE, type LooseStrip } from '@/shell/legacy-files-cell';
 import type { CanvasPatch } from '@/project/merge';
 import { NODE_SIZE, defaultCanvases, nextId, type CanvasState } from '@/state/canvas';
 import { defaultDiagrams, type DiagramState } from '@/state/diagram';
 import { defaultDrawings, type DrawingState } from '@/state/drawing';
 import type { EditorRegistry } from '@/state/editors';
 import {
+    activateTab,
+    canDropAsTab,
+    canMoveCell,
     canSplit,
     cellAt,
     cellCount,
+    cellViewIds,
     closeCell,
     closeCellsRightOf,
     closeOtherCells,
+    closeTab,
+    dropAsTab,
     dropView,
     evenCells,
     evenColumns,
     focusCell,
     focusDirection,
     focusedViewId,
+    hostFor,
     isSameCell,
+    isTabHost,
     layoutOf,
     locateView,
+    moveCell,
+    openableViewIds,
+    replaceViewId,
     showViewIn,
     singleLayout,
     undoShowView,
@@ -67,8 +77,6 @@ import { CellViewContext, storeHook } from '@/state/workspace-stores';
 export interface DocumentState {
     /* In sidebar order. The active canvas view is stale here, since the canvas store is the editor of that one. */
     views: ProjectView[];
-    /* Files dropped into the grid live only as long as their cell does. */
-    temporaryFileViews: ProjectFileView[];
     /*
      * The view of the cell that has the focus. It is derived from the layout and kept beside it,
      * because it is what the sidebar marks, what a shortcut acts on and what everything outside the
@@ -82,6 +90,8 @@ export interface DocumentState {
     maximized: string | null;
     /* The canvas that was up last, which is where a node put back on a canvas lands. */
     lastCanvasViewId: string | null;
+    /* A view in the tab host that last had the focus, which is where a loose view goes when the focus is elsewhere. */
+    lastHostViewId: string | null;
     /* Machine state beside the document, never in the shared file: where every view stood. */
     viewLocal: Record<string, ProjectViewLocal>;
     /* Whether the keyboard is inside the body of a standalone view; Escape leaves it to the sidebar. */
@@ -109,8 +119,9 @@ export interface DocumentState {
      */
     trashed: TrashedView[];
 
-    load(document: ProjectDocument | null, local: ProjectLocal | null): void;
-    /* `load` for the project already on screen, as the file now has it. */
+    /* `loose` is what the project's panels hold of loose views (`state/panel-state.ts`), which the layout may stand in cells. */
+    load(document: ProjectDocument | null, local: ProjectLocal | null, loose?: LooseStrip): void;
+    /* `load` for the project already on screen, as the file now has it. The loose views on screen stay. */
     reload(document: ProjectDocument, local: ProjectLocal | null): void;
     /*
      * What another writer changed, taken in beside what this machine is editing: the merged list of
@@ -140,11 +151,28 @@ export interface DocumentState {
     dismissNotice(): void;
     /* A view into a cell's zone: the four edges split, the middle takes the place of what is there. */
     dropViewAt(viewId: string, at: CellAt, zone: SplitZone): void;
-    dropFileAt(name: string, path: string, at: CellAt, zone: SplitZone): string | null;
-    /* The files in place of the focused cell, the way any view opens; the focus when they already stand somewhere. */
-    showFiles(): void;
-    /* Takes that cell off the grid again, which is what closing the last tab does. */
-    hideFiles(): void;
+    /*
+     * A loose view, whose content `state/files.ts` holds, put on screen: a tab in the focused host or in the
+     * one that last had the focus, else a host of its own in the focused cell. `focus: false` leaves the
+     * focus where it is unless the view took a cell's place. Null when nothing moved.
+     */
+    showLoose(key: string, options?: { focus?: boolean }): ShownView | null;
+    /* A loose view lands in a cell's zone, standing nowhere yet or moving from where it stands. False when the grid has no room. */
+    dropLooseAt(key: string, at: CellAt, zone: SplitZone): boolean;
+    /* A loose view joins the tabs of a cell, which becomes a host. False when it already fills that cell alone. */
+    dropLooseAsTab(key: string, at: CellAt): boolean;
+    /* A loose view leaves the grid; its cell goes with its last tab, and the last cell falls back to the first view there is. */
+    closeLoose(key: string): void;
+    /* A view of the project leaves the screen, its cell with its last tab; the last cell stays. */
+    closeViewTab(viewId: string): void;
+    /* A loose view that got another key (a file that moved) keeps its place wherever it stands. */
+    replaceViewKey(from: string, to: string): void;
+    /* The view becomes the active tab of its cell and the cell takes the focus. */
+    activateTab(viewId: string): void;
+    /* The focused host steps along its tabs, round the ends. */
+    stepTab(delta: 1 | -1): void;
+    /* A whole cell, tabs and all, lands in the zone of another: what dragging a bar does. */
+    moveCellTo(from: CellAt, at: CellAt, zone: SplitZone): void;
     /* Splits the focused cell and puts a view in the new one. */
     splitFocused(direction: SplitDirection, viewId: string): void;
     /* Takes a cell off the grid; the neighbors grow into it. The last cell stays, there has to be one. */
@@ -173,9 +201,8 @@ export interface DocumentState {
     /* A sketch of its own. Its elements live in a file of their own, which the daemon keeps. */
     addDrawingView(name: string): string;
     addDiagramView(name: string): string;
-    /* A file as a view of its own. `opens` is false for a caller that places it on the grid itself:
-       opening it first would take the cell that has the focus, and the view standing there is gone
-       by the time that caller says where this one really goes. */
+    /* A file as a view of its own. `opens` is false for a caller that puts it on the grid itself, such as a loose
+       view that becomes this one: opening it first would take the cell that has the focus. */
     addFileView(name: string, path: string, opens?: boolean): string;
     /* A chat, terminal or browser without a canvas under it. The id is the session id, as for a node. */
     addStandaloneView(view: StandaloneRequest): string;
@@ -345,27 +372,34 @@ function settledOn(
     views: ProjectView[],
     viewLocal: Record<string, ProjectViewLocal>,
     layout: SplitLayout | null,
-    was: Pick<DocumentState, 'lastCanvasViewId'> & Partial<Pick<DocumentState, 'temporaryFileViews'>>
-): Pick<DocumentState, 'views' | 'viewLocal' | 'layout' | 'activeViewId' | 'lastCanvasViewId' | 'bodyFocused'> {
+    was: Pick<DocumentState, 'lastCanvasViewId' | 'lastHostViewId'>
+): Pick<DocumentState, 'views' | 'viewLocal' | 'layout' | 'activeViewId' | 'lastCanvasViewId' | 'lastHostViewId' | 'bodyFocused'> {
     const activeViewId = layout === null ? null : focusedViewId(layout);
-    const active = cellViewOf({ views, temporaryFileViews: was.temporaryFileViews }, activeViewId);
+    const active = cellViewOf({ views }, activeViewId);
     const canvas = active !== null && isCanvasView(active);
+    const focused = layout === null ? null : cellAt(layout, layout.focus);
     return {
         views,
         viewLocal,
         layout,
         activeViewId,
         lastCanvasViewId: canvas ? activeViewId : was.lastCanvasViewId,
+        lastHostViewId: focused !== null && isTabHost(focused) ? focused.viewId : was.lastHostViewId,
         /* A view of its own has no canvas to fall back to, so the keyboard starts inside its body.
-           The files tab strip has no view object, hence its id. */
-        bodyFocused: activeViewId === FILES_VIEW_ID || (active !== null && !canvas)
+           A loose view is not in the list, and is no canvas either. */
+        bodyFocused: activeViewId !== null && !canvas
     };
 }
 
-/* Temporary file cells and the files tab strip are openable without belonging to the document. */
-function canStandInCell(state: Pick<DocumentState, 'views' | 'temporaryFileViews'>, id: string): boolean {
+/* The ids standing in cells that are not views of the project: loose views, whose content the files hold. */
+function looseIdsOf(state: Pick<DocumentState, 'views' | 'layout'>): string[] {
+    return state.layout === null ? [] : viewIdsIn(state.layout).filter((id) => !state.views.some((view) => view.id === id));
+}
+
+/* A project view that can stand in a cell, or a loose view that stands in one already. */
+function canStandInCell(state: Pick<DocumentState, 'views' | 'layout'>, id: string): boolean {
     const view = cellViewOf(state, id);
-    return id === FILES_VIEW_ID || (view !== null && isOpenableView(view));
+    return view === null ? state.layout !== null && locateView(state.layout, id) !== null : isOpenableView(view);
 }
 
 /* Which view a banner would put on screen if its button were pressed; null for one that offers nothing. */
@@ -408,13 +442,12 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
          * cell that is about to close may be holding edits and a camera that are only in that editor;
          * then the layout moves and the editors are opened and let go of to match it.
          */
-        const commit = (layout: SplitLayout | null, files = get().temporaryFileViews): void => {
+        const commit = (layout: SplitLayout | null): void => {
             const state = get();
             const views = state.exportViews();
             const viewLocal = { ...state.viewLocal, ...state.exportLocal().views };
-            const temporaryFileViews = files.filter((view) => layout !== null && locateView(layout, view.id) !== null);
-            const settled = settledOn(views, viewLocal, layout, { ...state, temporaryFileViews });
-            set({ ...settled, temporaryFileViews, maximized: null, viewNotice: afterMove(state.viewNotice, settled.activeViewId) });
+            const settled = settledOn(views, viewLocal, layout, state);
+            set({ ...settled, maximized: null, viewNotice: afterMove(state.viewNotice, settled.activeViewId) });
             openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), layout === null ? null : focusedViewId(layout), peers);
         };
 
@@ -440,10 +473,11 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             /* The cell it stood in falls away and the neighbors grow into it. Only when it was
                the last cell is a view picked: the nearest one under it, or the last one over it. */
             const next = views.slice(at).find(isOpenableView) ?? views.filter(isOpenableView).at(-1);
+            // Only its tab goes when the view stood in a host; the other tabs of the cell stay where they are.
             const stood =
                 state.layout === null || standing === null
                     ? null
-                    : { before: state.layout, after: closeCell(state.layout, standing) ?? (next ? singleLayout(next.id) : null) };
+                    : { before: state.layout, after: closeTab(state.layout, id) ?? (next ? singleLayout(next.id) : null) };
             set({
                 views,
                 viewLocal,
@@ -467,11 +501,11 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
 
         return {
             views: [],
-            temporaryFileViews: [],
             activeViewId: null,
             layout: null,
             maximized: null,
             lastCanvasViewId: null,
+            lastHostViewId: null,
             viewLocal: {},
             bodyFocused: false,
             viewNotice: null,
@@ -483,26 +517,24 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             flags: {},
             trashed: [],
 
-            load(document, local) {
+            load(document, local, loose = NO_LOOSE) {
                 const kept = splitTrash(document?.views ?? [], get().trashed);
                 const views = kept.views;
                 const state = get();
-                const files = state.reloading ? state.temporaryFileViews : [];
                 // A view deleted since the local state was written has nothing left to stand for.
                 const viewLocal = Object.fromEntries(Object.entries(local?.views ?? {}).filter(([viewId]) => views.some((view) => view.id === viewId)));
+                // The loose views on screen stay through a reload; a project that opens brings its own with its panels.
+                const standing = state.reloading ? looseIdsOf(state) : loose.keys;
+                const stored = local ?? { activeViewId: null, layout: undefined };
                 // A file written before views could stand side by side reads as one cell on the view it named.
-                const layout = layoutOf(
-                    state.reloading && files.length > 0
-                        ? { activeViewId: state.activeViewId, layout: state.layout ?? undefined }
-                        : (local ?? { activeViewId: null, layout: undefined }),
-                    [...views, ...files]
-                );
-                const temporaryFileViews = files.filter((view) => layout !== null && locateView(layout, view.id) !== null);
-                const settled = settledOn(views, viewLocal, layout, { lastCanvasViewId: views.find(isCanvasView)?.id ?? null, temporaryFileViews });
+                const layout = layoutOf(state.reloading ? stored : migrateFilesCell(stored, loose), views, standing);
+                const settled = settledOn(views, viewLocal, layout, {
+                    lastCanvasViewId: views.find(isCanvasView)?.id ?? null,
+                    lastHostViewId: state.reloading ? state.lastHostViewId : null
+                });
                 // Another project is another set of views, so a banner about the one that just left goes with it.
                 set({
                     ...settled,
-                    temporaryFileViews,
                     maximized: null,
                     viewNotice: null,
                     loading: true,
@@ -584,7 +616,9 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             undoShowView(shown) {
                 const state = get();
                 if (state.layout !== null) {
-                    commit(undoShowView(state.layout, shown));
+                    // A loose view that was replaced is closed by now, and a closed tab does not come back with this.
+                    const back = shown.replaced !== null && !canStandInCell(state, shown.replaced) ? { ...shown, replaced: null } : shown;
+                    commit(undoShowView(state.layout, back));
                 }
             },
 
@@ -618,35 +652,95 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
                 commit(dropView(state.layout, viewId, at, zone));
             },
 
-            dropFileAt(name, path, at, zone) {
+            showLoose(key, options) {
                 const state = get();
-                if (state.layout === null || !canSplit(state.layout, at, zone)) {
+                const layout = state.layout;
+                if (layout === null) {
+                    commit({ columns: [{ size: 1, cells: [{ viewId: key, tabs: [key], size: 1 }] }], focus: { column: 0, cell: 0 } });
                     return null;
                 }
-                const view: ProjectFileView = { kind: 'file', id: nextId('view'), name, path };
-                commit(dropView(state.layout, view.id, at, zone), [...state.temporaryFileViews, view]);
-                return view.id;
+                const focused = cellAt(layout, layout.focus);
+                // A loose view alone in its cell grows tabs rather than being replaced, since nothing would bring it back.
+                const grows =
+                    focused !== null && !isTabHost(focused) && cellViewOf(state, focused.viewId) === null && hostFor(layout, state.lastHostViewId) === null;
+                const shown = showViewIn(layout, key, { loose: true, host: state.lastHostViewId, newTab: grows });
+                if (shown === null) {
+                    return null;
+                }
+                // Quietly the view lands in a host the focus is not in; where it took a cell's place the focus goes with it.
+                commit(options?.focus === false && shown.replaced === null ? focusCell(shown.layout, layout.focus) : shown.layout);
+                return shown;
             },
 
-            showFiles() {
+            dropLooseAt(key, at, zone) {
                 const state = get();
-                if (state.layout === null) {
-                    commit(singleLayout(FILES_VIEW_ID));
+                if (state.layout === null || !canSplit(state.layout, at, zone, key)) {
+                    return false;
+                }
+                commit(dropView(state.layout, key, at, zone));
+                return true;
+            },
+
+            dropLooseAsTab(key, at) {
+                const state = get();
+                if (state.layout === null || !canDropAsTab(state.layout, at, key)) {
+                    return false;
+                }
+                commit(dropAsTab(state.layout, key, at, null));
+                return true;
+            },
+
+            closeLoose(key) {
+                const state = get();
+                if (state.layout === null || locateView(state.layout, key) === null) {
                     return;
                 }
-                const shown = showViewIn(state.layout, FILES_VIEW_ID);
-                if (shown !== null) {
-                    commit(shown.layout);
+                // The last tab of the last cell leaves nothing to look at, so the first view of the project takes the grid.
+                const first = openableViewIds(state.views)[0];
+                commit(closeTab(state.layout, key) ?? (first === undefined ? null : singleLayout(first)));
+            },
+
+            closeViewTab(viewId) {
+                const state = get();
+                const next = state.layout === null ? null : closeTab(state.layout, viewId);
+                if (next !== null && next !== state.layout) {
+                    commit(next);
                 }
             },
 
-            /* Unlike a cell a person closes, the files go even as the last one: the grid without a
-               cell has a view of its own to show. */
-            hideFiles() {
+            replaceViewKey(from, to) {
                 const state = get();
-                const at = state.layout === null ? null : locateView(state.layout, FILES_VIEW_ID);
-                if (state.layout !== null && at !== null) {
-                    commit(closeCell(state.layout, at));
+                if (state.layout !== null && locateView(state.layout, from) !== null) {
+                    commit(replaceViewId(state.layout, from, to));
+                }
+            },
+
+            activateTab(viewId) {
+                const state = get();
+                if (state.layout === null) {
+                    return;
+                }
+                const next = activateTab(state.layout, viewId);
+                if (next !== state.layout) {
+                    commit(next);
+                }
+            },
+
+            stepTab(delta) {
+                const state = get();
+                const cell = state.layout === null ? null : cellAt(state.layout, state.layout.focus);
+                if (state.layout === null || cell === null || cell.tabs === undefined || cell.tabs.length < 2) {
+                    return;
+                }
+                const tabs = cellViewIds(cell);
+                const next = tabs[(tabs.indexOf(cell.viewId) + delta + tabs.length) % tabs.length]!;
+                commit(activateTab(state.layout, next));
+            },
+
+            moveCellTo(from, at, zone) {
+                const state = get();
+                if (state.layout !== null && canMoveCell(state.layout, from, at, zone)) {
+                    commit(moveCell(state.layout, from, at, zone));
                 }
             },
 
@@ -966,7 +1060,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             },
 
             exportLocal() {
-                const { activeViewId, viewLocal, views, layout, temporaryFileViews } = get();
+                const { viewLocal, views, layout } = get();
                 const open = new Set([
                     ...peers.canvases.live().map(([viewId]) => viewId),
                     ...peers.drawings.live().map(([viewId]) => viewId),
@@ -979,11 +1073,10 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
                         peers
                     );
                 }
-                const savedLayout = temporaryFileViews.length === 0 ? layout : layoutOf({ activeViewId, layout: layout ?? undefined }, views);
                 return {
-                    activeViewId: savedLayout === null ? null : focusedViewId(savedLayout),
+                    activeViewId: layout === null ? null : focusedViewId(layout),
                     views: next,
-                    ...(savedLayout === null ? {} : { layout: savedLayout })
+                    ...(layout === null ? {} : { layout })
                 };
             }
         };
@@ -1008,11 +1101,12 @@ export function viewOfNode(views: ProjectView[], nodeId: string): ProjectView | 
     return views.find((view) => (isCanvasView(view) ? view.nodes.some((node) => node.id === nodeId) : view.id === nodeId)) ?? null;
 }
 
-export function cellViewOf(state: Pick<DocumentState, 'views'> & Partial<Pick<DocumentState, 'temporaryFileViews'>>, id: string | null): ProjectView | null {
-    return state.views.find((view) => view.id === id) ?? state.temporaryFileViews?.find((view) => view.id === id) ?? null;
+/* The view of the project with this id; a loose view is none, since the document does not hold it. */
+export function cellViewOf(state: Pick<DocumentState, 'views'>, id: string | null): ProjectView | null {
+    return state.views.find((view) => view.id === id) ?? null;
 }
 
-export function activeViewOf(state: Pick<DocumentState, 'views' | 'activeViewId'> & Partial<Pick<DocumentState, 'temporaryFileViews'>>): ProjectView | null {
+export function activeViewOf(state: Pick<DocumentState, 'views' | 'activeViewId'>): ProjectView | null {
     return cellViewOf(state, state.activeViewId);
 }
 

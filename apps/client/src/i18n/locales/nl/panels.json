@@ -79,10 +79,7 @@
     "file": {
         "cannotShow": "{{name}} ({{mime}}, {{size}}) kan hier niet getoond worden.",
         "empty": {
-            "findInFiles": "Zoeken in bestanden",
-            "hint": "Hier opent een bestand vanuit het bestandenpaneel of via een link in een chat.",
-            "openFile": "Bestand openen",
-            "recent": "Net gesloten"
+            "findInFiles": "Zoeken in bestanden"
         },
         "html": {
             "failed": "{{name}} is niet geladen ({{error}})",

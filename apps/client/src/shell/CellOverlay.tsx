@@ -2,7 +2,7 @@ import { useContext, useLayoutEffect, useMemo, useRef, useSyncExternalStore, typ
 import { createPortal } from 'react-dom';
 import { focusCellOfView } from '@/browser/guest-focus';
 import { cellElement, subscribeCells } from '@/shell/cell-rects';
-import { viewIdsIn } from '@/shell/split';
+import { shownViewIdsIn } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { CellViewContext } from '@/state/workspace-stores';
 
@@ -72,7 +72,7 @@ function OverlayBox({ viewId }: { readonly viewId: string }) {
 /* The layer itself, mounted once over the parked pages. */
 export function CellOverlayLayer() {
     const layout = useDocument((s) => s.layout);
-    const ids = useMemo(() => (layout === null ? [] : viewIdsIn(layout)), [layout]);
+    const ids = useMemo(() => (layout === null ? [] : shownViewIdsIn(layout)), [layout]);
     const root = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {

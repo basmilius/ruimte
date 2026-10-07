@@ -7,13 +7,12 @@ import { LaunchChip } from '@/launches/LaunchChip';
 import { PanelControls } from '@/shell/PanelControls';
 import { ProjectMenu } from '@/shell/ProjectMenu';
 import { ViewMenu } from '@/shell/ViewMenu';
-import { FILES_VIEW_ID } from '@/shell/files-view';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { IS_STATION } from '@/station';
 import { useDiagram } from '@/state/diagram';
 import { useDrawing } from '@/state/drawing';
-import { useDocument } from '@/state/document';
+import { activeViewOf, useDocument } from '@/state/document';
 import { toolbarPanels } from '@/shell/panels';
 import { isScratchProject, useProject } from '@/state/project';
 import { useShownPanel, useUi } from '@/state/ui';
@@ -40,9 +39,9 @@ export function Toolbar() {
     const hasPanelButtons = toolbarPanels(scratch).length > 0;
     const voiceOpen = useVoice((s) => s.open);
     const sidebarOpen = useUi((s) => s.sidebarOpen);
-    /* The files are in no document, so the switcher has nothing to name while they hold the cell;
+    /* A loose view is in no document, so the switcher has nothing to name while it holds the cell;
        the tabs beside it say which file is up. */
-    const hasView = useDocument((s) => s.activeViewId !== null && s.activeViewId !== FILES_VIEW_ID);
+    const hasView = useDocument((s) => activeViewOf(s) !== null);
     const inset = useTrafficLightInset();
 
     return (

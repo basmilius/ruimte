@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { viewStateKey, viewStates } from '@/shell/panels/editor-view-state-host';
 import type { Transport } from '@/transport/transport';
+import { useDocument } from './document.ts';
 import { followMove, moveFile, saveBeforeMove } from './file-moves.ts';
 import { useFiles } from './files.ts';
 import { useTextDrafts, type TextDraft, type TextDrafts } from './text-drafts.ts';
@@ -56,7 +57,9 @@ describe('moving a file', () => {
     }
 
     beforeEach(() => {
-        useFiles.setState({ tabs: [{ key: '/p/a.ts', path: '/p/a.ts', pinned: false }], active: '/p/a.ts', caret: null });
+        useDocument.getState().load({ version: 3, rev: 1, name: 'p', color: '#000', views: [] }, null);
+        useFiles.setState({ tabs: [{ key: '/p/a.ts', path: '/p/a.ts', pinned: false }], caret: null });
+        useDocument.getState().showLoose('/p/a.ts');
         viewStates.clear();
     });
 
@@ -67,7 +70,7 @@ describe('moving a file', () => {
         await moveFile(transport, 'm', 'p1', '/p/a.ts', '/p/b.ts', { edits: true });
         expect(asked).toEqual([{ type: 'fs.rename', payload: { path: '/p/a.ts', to: '/p/b.ts', projectId: 'p1', edits: true } }]);
         expect(useFiles.getState().tabs.map((tab) => tab.key)).toEqual(['/p/b.ts']);
-        expect(useFiles.getState().active).toBe('/p/b.ts');
+        expect(useDocument.getState().activeViewId).toBe('/p/b.ts');
         expect([...viewStates.keys()]).toEqual(['m:/p/b.ts']);
         expect(viewStateKey('m:/p/a.ts')).toBe('m:/p/b.ts');
     });
@@ -93,6 +96,11 @@ describe('moving a file', () => {
         );
         expect(asked).toEqual([]);
         expect(useFiles.getState().tabs.map((tab) => tab.key)).toEqual(['/p/a.ts']);
+    });
+
+    test('the cell that holds the tab follows the file', () => {
+        followMove('m', '/p/a.ts', '/p/b.ts');
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: '/p/b.ts', tabs: ['/p/b.ts'] });
     });
 
     test('keeps the keyboard where it is unless asked', () => {

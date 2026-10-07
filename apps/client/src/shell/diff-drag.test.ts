@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { FILES_VIEW_ID } from '@/shell/files-view';
 import { dragging, setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
-import { carriesDiff, DIFF_DRAG_TYPE, droppedDiff, startDiffDrag } from './diff-drag.ts';
+import { carriesDiff, DIFF_DRAG_ID, DIFF_DRAG_TYPE, droppedDiff, startDiffDrag } from './diff-drag.ts';
 
 function transfer(data: Record<string, string> = {}): DataTransfer {
     const store = new Map(Object.entries(data));
@@ -20,11 +19,11 @@ function transfer(data: Record<string, string> = {}): DataTransfer {
 const diff = { path: '/repo/src/main.ts', view: { kind: 'diff' as const, cwd: '/repo', scope: 'worktree' as const, staged: false } };
 
 describe('a change dragged out of the git panel', () => {
-    test('travels as the files view, with the tab it opens on', () => {
+    test('travels as a drag of no view of the grid, with the change it opens', () => {
         const carried = transfer();
         startDiffDrag(carried, diff);
-        expect(carried.getData(VIEW_DRAG_TYPE)).toBe(FILES_VIEW_ID);
-        expect(dragging()).toBe(FILES_VIEW_ID);
+        expect(carried.getData(VIEW_DRAG_TYPE)).toBe(DIFF_DRAG_ID);
+        expect(dragging()).toBe(DIFF_DRAG_ID);
         expect(carriesDiff(carried)).toBe(true);
         expect(droppedDiff(carried)).toEqual(diff);
         setDragging(null);

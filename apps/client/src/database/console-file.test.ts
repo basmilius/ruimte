@@ -150,7 +150,7 @@ describe('a console opened from the tree', () => {
     const path = '/repo/.ruimte/private/consoles/shop/shop 1.sql';
 
     beforeEach(() => {
-        useFiles.getState().load(null, { tabs: [], active: null, expandedDirs: [] });
+        useFiles.getState().load(null, { tabs: [], expandedDirs: [] });
     });
 
     test('opens bound to the connection of its folder, a click unpinned and a double click pinned', () => {

@@ -10,7 +10,9 @@ import {
     type ProjectView
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
+import type { LooseStrip } from '@/shell/legacy-files-cell';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import { stripOf } from '@/state/panel-state';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { forgetClosedProject, rememberClosedProject } from './closed-projects';
 import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
@@ -51,9 +53,10 @@ interface DocumentAccess {
         flags: ProjectFlags;
         trashed: ReadonlyArray<{ view: ProjectView }>;
         activeViewId: string | null;
+        layout: unknown;
         edits: number;
         loading: boolean;
-        load(document: ProjectDocument | null, local: ProjectLocal | null): void;
+        load(document: ProjectDocument | null, local: ProjectLocal | null, loose?: LooseStrip): void;
         reload(document: ProjectDocument, local: ProjectLocal | null): void;
         applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>, shared: string[], flags: ProjectFlags): void;
         heldNodeIds(): Set<string>;
@@ -433,7 +436,7 @@ export class ProjectClient {
             const local = overlayLocal(result.local, readClientLocal(this.storage, this.endpointId(), result.summary.projectId));
             this.onLoad(result.summary);
             this.opened = true;
-            this.documents.getState().load(draft?.document ?? result.document, local);
+            this.documents.getState().load(draft?.document ?? result.document, local, stripOf(local.panels));
             // In the same tick as the canvas, so the panels never paint the project that just left.
             this.panels.load(result.summary.projectId, local.panels);
             this.sink.setChosenIcon(draft?.document.icon ?? result.document.icon ?? null);
@@ -495,7 +498,8 @@ export class ProjectClient {
             this.sink.setDirty(true);
             this.scheduleSave();
         }
-        if (state.activeViewId !== previous.activeViewId) {
+        // A tab that closed or moved in a host changes the layout and nothing else.
+        if (state.activeViewId !== previous.activeViewId || state.layout !== previous.layout) {
             this.scheduleLocal();
         }
     }

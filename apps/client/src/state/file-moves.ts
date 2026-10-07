@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import type { Transport } from '@/transport/transport';
 import { followViewStates } from '@/shell/panels/editor-view-state-host';
+import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { endpointKey, splitKey } from '@/state/keys';
 import { isUnsavedDraft, textDrafts, useTextDrafts, type TextDrafts } from '@/state/text-drafts';
@@ -24,11 +25,11 @@ export async function saveBeforeMove(endpointId: string, path: string, drafts: T
 
 /* The editors, tabs and places of a file or folder that moved follow it; with `focus` the keyboard goes to the editor of the active tab again. */
 export function followMove(endpointId: string, from: string, to: string, focus = false): void {
-    const { active } = useFiles.getState();
-    useFiles.getState().moved(from, to);
+    const { activeViewId } = useDocument.getState();
+    const renamed = useFiles.getState().moved(from, to);
     followViewStates(endpointId, from, to);
-    const moved = useFiles.getState().active;
-    if (focus && moved !== null && moved !== active) {
+    const moved = activeViewId === null ? undefined : renamed.get(activeViewId);
+    if (focus && moved !== undefined && moved !== activeViewId) {
         useFiles.getState().requestCaret(moved);
     }
 }

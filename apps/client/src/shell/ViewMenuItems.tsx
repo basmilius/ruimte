@@ -27,7 +27,7 @@ import { askDeleteView, askViewSettings, openSessionInKind, setViewShared } from
 import { sessionHandoffs, viewOffers } from '@/shell/view-offers';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
-import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, maximizedCell, type CellAt } from '@/shell/split';
+import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, isTabHost, maximizedCell, type CellAt } from '@/shell/split';
 import { useChatRow } from '@adecore/agents-react/state/chats';
 import { cellViewOf, hasActiveCanvas, useDocument } from '@/state/document';
 import { isScratchProject, useProject } from '@/state/project';
@@ -184,7 +184,9 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
     const filling = useDocument((s) => maximizedCell(s.layout, s.maximized) !== null);
     const cell = at ?? layout?.focus ?? null;
     const closable = layout !== null && cellCount(layout) > 1;
-    const standing = layout !== null && cell !== null ? (cellAt(layout, cell)?.viewId ?? null) : null;
+    const held = layout !== null && cell !== null ? cellAt(layout, cell) : null;
+    const standing = held?.viewId ?? null;
+    const hosted = held !== null && isTabHost(held);
     const closesRight = layout !== null && cell !== null && standing !== null && cellsRightOf(layout, cell) > 0;
     const room = (direction: 'right' | 'down'): boolean => layout !== null && free !== null && cell !== null && canSplit(layout, cell, direction, free);
     if (!room('right') && !room('down') && !closable) {
@@ -222,7 +224,8 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
             )}
             {closable && standing !== null && (
                 <Menu.Item onClick={() => closeCellAction(standing)}>
-                    <Icon icon={X} size={14} /> {t('cellToolbar.closeCell')} <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
+                    {/* In a host the key closes the tab in front, and the cell goes with its last one. */}
+                    <Icon icon={X} size={14} /> {t('cellToolbar.closeCell')} {!hosted && <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />}
                 </Menu.Item>
             )}
             {closable && cell !== null && standing !== null && (

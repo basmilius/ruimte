@@ -6,7 +6,7 @@ import { browserRegistry, useBrowser } from '@/browser/registry';
 import { nodesOverBrowsers } from '@/canvas/stacking';
 import { pageClipPath, type PageHole } from '@/browser/page-clip';
 import { cellElement, subscribeCells } from '@/shell/cell-rects';
-import { viewIdsIn } from '@/shell/split';
+import { shownViewIdsIn } from '@/shell/split';
 import { GROUP_HEADER_PX, isNodeActive, liveCanvas, maximizedNodeOf, subscribeCanvases, type CanvasState } from '@/state/canvas';
 import { splitKey } from '@/state/keys';
 import { useDocument } from '@/state/document';
@@ -84,7 +84,8 @@ function DesktopWebviewParking() {
         const place = (): void => {
             const { layout } = useDocument.getState();
             const box = root.current?.getBoundingClientRect();
-            const open = layout === null ? [] : viewIdsIn(layout);
+            // Only the view in front of each cell has a place; a page in a background tab stays parked, hidden, with its session.
+            const open = layout === null ? [] : shownViewIdsIn(layout);
             for (const [key, host] of hosts.current) {
                 const nodeId = splitKey(key).id;
                 const clip = clips.current.get(key);
@@ -184,7 +185,7 @@ function DesktopWebviewParking() {
             offs.push(
                 watchGuestFocus(element, () => {
                     const { layout } = useDocument.getState();
-                    const view = pageViewOf(splitKey(key).id, layout === null ? [] : viewIdsIn(layout));
+                    const view = pageViewOf(splitKey(key).id, layout === null ? [] : shownViewIdsIn(layout));
                     if (view !== null) {
                         focusCellOfView(view.viewId);
                     }

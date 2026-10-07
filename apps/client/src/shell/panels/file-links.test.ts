@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { openFileLink, parseFileRef, resolveFileRef } from '@/shell/panels/file-links';
-import { FILES_VIEW_ID } from '@/shell/files-view';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
@@ -80,7 +79,7 @@ describe('resolveFileRef', () => {
 describe('openFileLink', () => {
     beforeEach(() => {
         // Without a project id, the tabs stay out of the storage the test environment does not have.
-        useFiles.setState({ projectId: null, tabs: [], active: null, focusRequest: 0, reveal: null, revealLine: null });
+        useFiles.setState({ projectId: null, tabs: [], focusRequest: null, reveal: null, revealLine: null });
         useDocument.getState().load(null, null);
         useProject.setState({ current: { folder: '/repo' } as never });
     });
@@ -89,10 +88,10 @@ describe('openFileLink', () => {
         useProject.setState({ current: null });
     });
 
-    test('a file opens as a tab, and the files take a cell of the grid', async () => {
+    test('a file opens as a tab, and a host takes a cell of the grid', async () => {
         await openFileLink('/repo', { path: 'src/main.ts', directory: false });
         expect(useFiles.getState().tabs.map((tab) => tab.key)).toEqual(['/repo/src/main.ts']);
-        expect(useDocument.getState().activeViewId).toBe(FILES_VIEW_ID);
+        expect(useDocument.getState().activeViewId).toBe('/repo/src/main.ts');
     });
 
     test('the line a reference names travels to the viewer, once per ask', async () => {

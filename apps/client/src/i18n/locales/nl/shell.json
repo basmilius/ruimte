@@ -222,7 +222,6 @@
         "restore": "De splitsing herstellen"
     },
     "filesView": {
-        "name": "Bestanden",
         "failed": "Deze bestanden konden niet worden getekend"
     },
     "viewKinds": {

@@ -79,10 +79,7 @@
     "file": {
         "cannotShow": "{{name}} ({{mime}}, {{size}}) cannot be shown here.",
         "empty": {
-            "findInFiles": "Find in files",
-            "hint": "A file opens here from the Files panel or a link in a chat.",
-            "openFile": "Open file",
-            "recent": "Closed a moment ago"
+            "findInFiles": "Find in files"
         },
         "html": {
             "failed": "{{name}} did not load ({{error}})",

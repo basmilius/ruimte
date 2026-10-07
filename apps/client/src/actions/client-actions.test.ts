@@ -6,6 +6,7 @@ import { defaultCanvases } from '@/state/canvas';
 import { defaultDiagrams } from '@/state/diagram';
 import { useDocument } from '@/state/document';
 import { defaultDrawings } from '@/state/drawing';
+import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 
 const PROJECT: ProjectSummary = {
@@ -58,6 +59,7 @@ const document: ProjectDocument = {
 };
 
 beforeEach(() => {
+    useFiles.setState({ tabs: [], unsubmitted: {}, recent: [] });
     useDocument.getState().load(document, { activeViewId: 'main', views: {} });
     defaultCanvases.of('main').getState().loadView(main, null);
     defaultCanvases.focus('main');
@@ -998,7 +1000,7 @@ describe('client actions', () => {
             });
         });
 
-        test('dropped files open temporary cells; Voice stays inside the project folder', async () => {
+        test('dropped files open loose cells; Voice stays inside the project folder', async () => {
             useProject.setState({ current: { ...PROJECT, folder: '/repo' } });
             try {
                 const outside = await clientActions.execute(
@@ -1008,7 +1010,7 @@ describe('client actions', () => {
                 );
                 expect(outside).toMatchObject({ error: { code: 'outside-project' } });
                 expect(useDocument.getState().views).toHaveLength(2);
-                expect(useDocument.getState().temporaryFileViews).toEqual([]);
+                expect(useFiles.getState().tabs).toEqual([]);
                 const placed = await clientActions.execute(
                     'split.placeView',
                     { viewId: null, paths: ['/repo/a.ts', '/elsewhere/b.ts'], cellViewId: null, zone: 'right' },
@@ -1018,7 +1020,7 @@ describe('client actions', () => {
                     throw new Error('Expected the files to be placed');
                 }
                 expect(placed.output.created).toHaveLength(2);
-                expect(useDocument.getState().temporaryFileViews.map((view) => view.path)).toEqual(['a.ts', '/elsewhere/b.ts']);
+                expect(useFiles.getState().tabs.map((tab) => tab.key)).toEqual(['/repo/a.ts', '/elsewhere/b.ts']);
                 expect(useDocument.getState().views).toHaveLength(2);
                 expect(useDocument.getState().fileViews()).toHaveLength(2);
                 expect(useDocument.getState().edits).toBe(0);
@@ -1032,8 +1034,8 @@ describe('client actions', () => {
             }
         });
 
-        test('a temporary file can move between cells and close without becoming a saved view', async () => {
-            const id = useDocument.getState().dropFileAt('a.ts', 'a.ts', { column: 0, cell: 0 }, 'right')!;
+        test('a loose file can move between cells and close without becoming a saved view', async () => {
+            const id = useFiles.getState().dropFile('/repo/a.ts', 5, { column: 0, cell: 0 }, 'right')!;
             expect(
                 await clientActions.execute('split.placeView', { viewId: id, paths: null, cellViewId: 'main', zone: 'down' }, PERSON_ACTION_CALL)
             ).toMatchObject({
@@ -1045,7 +1047,7 @@ describe('client actions', () => {
                 status: 'completed',
                 output: { viewId: id, view: 'a.ts' }
             });
-            expect(useDocument.getState().temporaryFileViews).toEqual([]);
+            expect(useFiles.getState().tabs).toEqual([]);
             expect(useDocument.getState().views).toHaveLength(2);
         });
     });

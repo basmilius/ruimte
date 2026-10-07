@@ -25,7 +25,7 @@ import { useProject } from '@/state/project';
 
 /*
  * The connections of the project, with their schemas, tables and columns, and the consoles of each. A table
- * or a console opens in the files cell on a click, the way a file does in the files panel, and a double click
+ * or a console opens as a tab on a click, the way a file does in the files panel, and a double click
  * keeps its tab. The keyboard stays in the tree, since the next arrow key is the tree's.
  */
 export function DatabasesPanel() {

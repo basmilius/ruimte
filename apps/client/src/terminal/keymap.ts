@@ -54,6 +54,8 @@ export const TERMINAL_HANDED_BACK: readonly Shortcut[] = [
     CANVAS_SHORTCUTS.maximizeCell,
     CANVAS_SHORTCUTS.previousView,
     CANVAS_SHORTCUTS.nextView,
+    CANVAS_SHORTCUTS.previousTab,
+    CANVAS_SHORTCUTS.nextTab,
     CANVAS_SHORTCUTS.togglePanel,
     CANVAS_SHORTCUTS.toggleFlag,
     CANVAS_SHORTCUTS.launchRun,

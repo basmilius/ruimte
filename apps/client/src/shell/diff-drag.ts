@@ -1,13 +1,15 @@
 import { ProjectFileTabViewSchema, type ProjectFileTabView } from '@ruimte/contracts';
-import { FILES_VIEW_ID } from '@/shell/files-view';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 
 /*
- * A change dragged out of the git panel. It travels as the files view, so the grid draws and places
- * it like any view, and carries the diff tab that view opens on. Every change shares that one tab,
- * so whichever file is dragged, the changes go where it is dropped.
+ * A change dragged out of the git panel. It travels as a view drag of its own id, so the grid draws
+ * where it would land like it does for any view, and carries the diff the cell opens as a loose tab.
+ * Every change shares one diff tab, so whichever file is dragged, the changes go where it is dropped.
  */
 export const DIFF_DRAG_TYPE = 'application/x-ruimte-diff';
+
+/* What the drag says it is moving: no view of the grid, so a drop never takes a cell along. */
+export const DIFF_DRAG_ID = 'diff';
 
 export interface DraggedDiff {
     path: string;
@@ -15,10 +17,10 @@ export interface DraggedDiff {
 }
 
 export function startDiffDrag(transfer: DataTransfer, diff: DraggedDiff): void {
-    transfer.setData(VIEW_DRAG_TYPE, FILES_VIEW_ID);
+    transfer.setData(VIEW_DRAG_TYPE, DIFF_DRAG_ID);
     transfer.setData(DIFF_DRAG_TYPE, JSON.stringify(diff));
     transfer.effectAllowed = 'move';
-    setDragging(FILES_VIEW_ID);
+    setDragging(DIFF_DRAG_ID);
 }
 
 /* `getData` is empty during dragover, so the types decide. */

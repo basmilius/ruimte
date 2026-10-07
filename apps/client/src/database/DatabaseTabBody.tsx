@@ -8,7 +8,7 @@ import { DatabaseTabProvider, RuimteDatabaseProvider } from '@/database/RuimteDa
 import { useFiles, type DatabaseTab } from '@/state/files';
 
 /*
- * One database tab of the files cell: a table's rows, its structure or the designer, on the connection the
+ * One database tab of a tab host: a table's rows, its structure or the designer, on the connection the
  * tab names, with where the table is at the start of the view's own bar. Each tab answers its views' actions
  * itself, so a designer that saved a table turns its own tab into that table's designer.
  */

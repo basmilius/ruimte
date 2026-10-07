@@ -1,7 +1,8 @@
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
-import { isFilesView, type CellView } from '@/shell/files-view';
+import { isLooseView, type CellView } from '@/shell/cell-view';
+import { cellAt, locateView } from '@/shell/split';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { Canvas } from '@/canvas/Canvas';
 import { newChatOn } from '@/project/new-chat';
@@ -63,26 +64,33 @@ function StandaloneView({ view }: { view: ProjectView }) {
 }
 
 /*
- * The files of this client in their cell: the body under the tabs, which stand in the bar above.
- * It takes the keyboard the way a standalone view does, so the file that just opened answers to the
- * shortcuts the workspace binds for a files cell (`canvas/canvas-shortcuts.ts`).
+ * A loose view in its cell: the body under the tabs, which stand in the bar above. It takes the
+ * keyboard the way a standalone view does, so the file that just opened answers to the shortcuts
+ * the workspace binds for a tab (`canvas/canvas-shortcuts.ts`).
  */
-function FilesSurface() {
+function FilesSurface({ tabKey }: { tabKey: string }) {
     const { t } = useTranslation('shell');
-    const active = useFiles((s) => s.active);
-    /* Counts what was opened by hand, in the files panel, the git panel or the palette. */
+    /* The views of the cell, whose loose ones keep their editors while another is in front. */
+    const tabs = useDocument((s) => {
+        const at = s.layout === null ? null : locateView(s.layout, tabKey);
+        return s.layout === null || at === null ? undefined : cellAt(s.layout, at)?.tabs;
+    });
+    const ids = useMemo(() => tabs ?? [tabKey], [tabs, tabKey]);
+    /* Set by what was opened by hand, in the files panel, the git panel or the palette. */
     const focusRequest = useFiles((s) => s.focusRequest);
+    const handled = useRef<number | null>(null);
     const bodyRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (focusRequest === 0) {
+        if (focusRequest === null || focusRequest.key !== tabKey || handled.current === focusRequest.nonce) {
             return;
         }
+        handled.current = focusRequest.nonce;
         /* A frame later, not now: the palette that opened this file is still closing, and a dialog
            puts focus back where it found it on its way out. */
         const frame = requestAnimationFrame(() => bodyRef.current?.focus());
         return () => window.cancelAnimationFrame(frame);
-    }, [focusRequest]);
+    }, [focusRequest, tabKey]);
 
     return (
         <div
@@ -92,8 +100,8 @@ function FilesSurface() {
             onPointerDownCapture={() => useDocument.getState().setBodyFocused(true)}
         >
             {/* The tabs stay in the bar above, so another file is one click away from a broken one. */}
-            <ErrorBoundary label={t('filesView.failed')} resetKeys={[active]} className="flex min-h-0 grow flex-col">
-                <FileViewer />
+            <ErrorBoundary label={t('filesView.failed')} resetKeys={[tabKey]} className="flex min-h-0 grow flex-col">
+                <FileViewer active={tabKey} ids={ids} />
             </ErrorBoundary>
         </div>
     );
@@ -119,8 +127,8 @@ export function ViewSurface({ view }: { view: CellView }) {
     const rev = useProject((s) => s.rev);
     const drawing = useDrawing((s) => s.elements);
     const diagram = useDiagram((s) => s.content);
-    if (isFilesView(view)) {
-        return <FilesSurface />;
+    if (isLooseView(view)) {
+        return <FilesSurface tabKey={view.id} />;
     }
     return (
         /* Inside the cell and around the view alone: the cell's toolbar and the dock stay usable,

@@ -9,6 +9,7 @@ import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS }
 import { isApplePlatform } from '@/desktop/bridge';
 import {
     closeCellAction,
+    closeTabAction,
     createNodeAction,
     createViewAction,
     fitAction,
@@ -37,10 +38,8 @@ import { focusViewRow } from '@/shell/sidebar-focus';
 import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { transportFor } from '@/transport';
 import { activeViewOf, useDocument } from '@/state/document';
-import { FILES_VIEW_ID } from '@/shell/files-view';
-import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
-import { cellCount, type SplitDirection } from '@/shell/split';
+import { cellAt, cellCount, isTabHost, type SplitDirection } from '@/shell/split';
 import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
 import { endpointKey } from '@/state/keys';
 import { windowWorkspace } from '@/state/window';
@@ -54,14 +53,14 @@ function entryFor<T extends string>(table: Record<T, Shortcut>, e: KeyboardEvent
     return (Object.keys(table) as T[]).find((name) => matchesShortcut(table[name], e, apple)) ?? null;
 }
 
-/* The canvas keeps its own keys to itself while a view of its own has the focus; the files are one. */
+/* The canvas keeps its own keys to itself while a view of its own has the focus; a loose view is one, and is no project view. */
 function onStandaloneView(): boolean {
     const state = useDocument.getState();
-    if (state.activeViewId === FILES_VIEW_ID) {
-        return true;
+    if (state.activeViewId === null) {
+        return false;
     }
     const view = activeViewOf(state);
-    return view !== null && !isCanvasView(view);
+    return view === null || !isCanvasView(view);
 }
 
 /*
@@ -88,9 +87,21 @@ function leaveStandaloneView(e: KeyboardEvent): void {
     focusViewRow(view.id);
 }
 
-/* The tab the files cell has up, or null when another cell has the focus or the cell holds none. */
-function focusedFileTab(): string | null {
-    return useDocument.getState().activeViewId === FILES_VIEW_ID ? useFiles.getState().active : null;
+/* The tab in front of the focused cell when that cell is a tab host, else null. */
+function focusedHostTab(): string | null {
+    const { layout } = useDocument.getState();
+    const cell = layout === null ? null : cellAt(layout, layout.focus);
+    return cell !== null && isTabHost(cell) ? cell.viewId : null;
+}
+
+/* What the close key takes: the tab in front of a host, or the loose view that fills its cell alone, which has the same guards. */
+function focusedClosableTab(): string | null {
+    const state = useDocument.getState();
+    const hosted = focusedHostTab();
+    if (hosted !== null) {
+        return hosted;
+    }
+    return state.activeViewId !== null && activeViewOf(state) === null ? state.activeViewId : null;
 }
 
 /* The page the keyboard means: a browser view in the focused cell, or the active browser node on its canvas. */
@@ -223,30 +234,24 @@ export function useCanvasShortcuts(): void {
                 focusCellAction(direction);
                 return;
             }
-            /* Stepping between the open tabs, which is the one thing a files cell has that no other
-               cell does. It never leaves the cell, so the grid's own keys stay where they are. */
-            if (e.key === 'Tab' && e.ctrlKey && !e.metaKey && !e.altKey && focusedFileTab() !== null) {
-                const { tabs, active } = useFiles.getState();
-                if (tabs.length > 1) {
-                    e.preventDefault();
-                    const index = tabs.findIndex((tab) => tab.key === active);
-                    const next = tabs[(index + (e.shiftKey ? -1 : 1) + tabs.length) % tabs.length];
-                    if (next) {
-                        useFiles.getState().activate(next.key);
-                    }
-                    return;
-                }
+            /* Stepping between the tabs of the focused host, whatever the host holds: a terminal in it hands
+               the key back (`terminal/keymap.ts`) so it never reaches the PTY. It never leaves the cell, so
+               the grid's own keys stay where they are. */
+            if ((is(CANVAS_SHORTCUTS.nextTab) || is(CANVAS_SHORTCUTS.previousTab)) && focusedHostTab() !== null) {
+                e.preventDefault();
+                useDocument.getState().stepTab(is(CANVAS_SHORTCUTS.nextTab) ? 1 : -1);
+                return;
             }
-            /* The files cell closes its tab, and the cell goes with the last one (`state/files.ts`), so
+            /* A host closes its tab in front, and the cell goes with the last one (`state/document.ts`), so
                one shortcut walks out of a stack of tabs and then out of the cell that held them. A file
                with unsaved changes is saved first, and a table with edits nobody submitted asks first.
                Off macOS the window menu's Close answers Ctrl+W, so the shortcut is always taken there,
                even with nothing to close. */
             if (is(CANVAS_SHORTCUTS.closeCell)) {
-                const tab = focusedFileTab();
+                const tab = focusedClosableTab();
                 if (tab !== null) {
                     e.preventDefault();
-                    useFiles.getState().close(tab);
+                    closeTabAction(tab);
                     return;
                 }
                 const layout = useDocument.getState().layout;

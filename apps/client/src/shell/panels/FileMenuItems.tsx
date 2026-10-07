@@ -4,6 +4,8 @@ import { Copy, FileText, ListX, Minus, Pin, PinOff, Plus, RefreshCw, SquareX, X 
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
+import { cellAt, cellViewIds, locateView } from '@/shell/split';
+import { useDocument } from '@/state/document';
 import { isCheckoutDiff, isDatabaseTab, useFiles } from '@/state/files';
 import { copyText, Icon, Kbd, Menu } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
@@ -18,7 +20,11 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
     const { t } = useTranslation('panels');
     const tab = useFiles((s) => s.tabs.find((entry) => entry.key === tabKey) ?? null);
     const pinned = tab?.pinned ?? false;
-    const hasOthers = useFiles((s) => s.tabs.some((entry) => entry.key !== tabKey));
+    const hasOthers = useDocument((s) => {
+        const at = s.layout === null ? null : locateView(s.layout, tabKey);
+        const cell = s.layout === null || at === null ? null : cellAt(s.layout, at);
+        return cell !== null && cellViewIds(cell).some((id) => id !== tabKey && !s.views.some((view) => view.id === id));
+    });
 
     if (tab === null) {
         return null;
@@ -35,7 +41,7 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
             <Menu.Item disabled={!hasOthers} onClick={() => useFiles.getState().closeOthers(tabKey)}>
                 <Icon icon={ListX} size={14} /> {t('file.tab.closeOthers')}
             </Menu.Item>
-            <Menu.Item onClick={() => useFiles.getState().closeAll()}>
+            <Menu.Item onClick={() => useFiles.getState().closeAll(tabKey)}>
                 <Icon icon={SquareX} size={14} /> {t('file.tab.closeAll')}
             </Menu.Item>
         </>

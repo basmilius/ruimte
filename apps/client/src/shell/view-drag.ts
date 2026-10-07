@@ -22,6 +22,7 @@ export function carriesView(transfer: Pick<DataTransfer, 'types'>): boolean {
 }
 
 let held: string | null = null;
+let heldWhole = false;
 
 /*
  * Which view is being dragged right now. The payload itself is kept from the page until the drop,
@@ -33,8 +34,15 @@ export function dragging(): string | null {
     return held;
 }
 
-export function setDragging(viewId: string | null): void {
+/* `whole` is the bar of a tab host dragging, which carries every tab; a tab or a row in the sidebar carries its view alone. */
+export function setDragging(viewId: string | null, whole = false): void {
     held = viewId;
+    heldWhole = viewId !== null && whole;
+}
+
+/* Whether the drag in progress takes the whole cell of the view it names, tabs and all. */
+export function draggingWholeCell(): boolean {
+    return heldWhole;
 }
 
 /*

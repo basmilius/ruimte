@@ -4,6 +4,7 @@ import { draggedSizes, EVEN_SNAP_PX, evenCells, evenColumns, maximizedCell, snap
 import {
     activateTab,
     canDropAsTab,
+    canMoveCell,
     canSplit,
     cellAt,
     cellCount,
@@ -980,6 +981,16 @@ describe('moveCell', () => {
         expect(moveCell(layout, first, first, 'center')).toBe(layout);
         expect(moveCell(layout, first, first, 'right')).toBe(layout);
         expect(moveCell(layout, { column: 5, cell: 0 }, first, 'center')).toBe(layout);
+    });
+});
+
+describe('canMoveCell', () => {
+    test('asks whether the whole cell fits, as the cell leaves where it stood', () => {
+        const full = gridOf([['[a *b]'], ['c'], ['d']]);
+        expect(canMoveCell(full, { column: 0, cell: 0 }, { column: 1, cell: 0 }, 'right')).toBe(true);
+        expect(canMoveCell(gridOf([['[a *b]', 'c']]), first, first, 'right')).toBe(false);
+        expect(canMoveCell(gridOf([['a', 'b', 'c'], ['[d *e]']]), { column: 1, cell: 0 }, first, 'down')).toBe(false);
+        expect(canMoveCell(full, { column: 5, cell: 0 }, first, 'center')).toBe(false);
     });
 });
 

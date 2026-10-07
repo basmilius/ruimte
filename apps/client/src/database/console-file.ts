@@ -7,6 +7,7 @@ import { useDatabasePanel } from '@/database/state';
 import { extensionOf } from '@/shell/panels/file-kind';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { moveFile } from '@/state/file-moves';
+import { useDocument } from '@/state/document';
 import { fileTabOf, isDatabaseTab, useFiles, type ConsoleBinding, type TabState } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -251,7 +252,9 @@ export async function openNewConsole(asked?: ConsoleBinding, sql?: string): Prom
     }
     const ids = connections.map((connection) => connection.id);
     const binding =
-        asked !== undefined && ids.includes(asked.connectionId) ? asked : consoleContext(useFiles.getState(), useDatabasePanel.getState().selection, ids);
+        asked !== undefined && ids.includes(asked.connectionId)
+            ? asked
+            : consoleContext({ tabs: useFiles.getState().tabs, active: useDocument.getState().activeViewId }, useDatabasePanel.getState().selection, ids);
     const connection = connections.find((candidate) => candidate.id === binding?.connectionId);
     if (binding === null || connection === undefined) {
         useDatabasePanel.getState().openConnections(null);

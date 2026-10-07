@@ -7,13 +7,16 @@ import {
     type ProjectStripTab
 } from '@ruimte/contracts';
 import { databaseTabId, databaseTabKey } from '@/database/tabs';
+import type { LooseStrip } from '@/shell/legacy-files-cell';
 import { isDatabaseTab, tabKey, type DatabaseTab, type FileTab, type Tab } from '@/state/files';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE } from '@/state/git';
 import type { PanelDefaults, PanelKind } from '@/state/ui';
 
 /* Everything the surfaces around the canvas remember for one project on this machine. */
 export interface PanelsState extends PanelDefaults {
+    /* The loose views, in the order they were opened. Where they stand is the layout's. */
     tabs: Tab[];
+    /* The one in front, for a client from before every cell could be a tab host. */
     active: string | null;
     expandedDirs: string[];
     gitScope: GitDiffScope;
@@ -112,14 +115,24 @@ function storedTab(tab: Tab): ProjectStripTab {
     return isDatabaseTab(tab) ? storedDatabaseTab(tab) : { kind: 'file', ...storedFileTab(tab) };
 }
 
+/* The tab in front, which has to be one of them, or the first. */
+function activeOf(tabs: readonly Tab[], stored: ProjectPanels | undefined): string | null {
+    return tabs.some((tab) => tab.key === stored?.activeTab) ? (stored?.activeTab ?? null) : (tabs[0]?.key ?? null);
+}
+
+/* The loose views a project had open and the one in front, which the layout may stand in its cells. */
+export function stripOf(stored: ProjectPanels | undefined): LooseStrip {
+    const tabs = tabsOf(stored);
+    return { keys: tabs.map((tab) => tab.key), active: activeOf(tabs, stored) };
+}
+
 /*
  * What the project's local file says, with the app's defaults filling in for whatever it leaves
  * out. A file written before the panels lived here says nothing, so it opens on the defaults.
  */
 export function parsePanels(stored: ProjectPanels | undefined, defaults: PanelsState): PanelsState {
     const tabs = tabsOf(stored);
-    /* A tab that is not among them would leave the viewer pointing at nothing. */
-    const active = tabs.some((tab) => tab.key === stored?.activeTab) ? (stored?.activeTab ?? null) : (tabs[0]?.key ?? null);
+    const active = activeOf(tabs, stored);
     return {
         panel: stored?.panel === undefined ? defaults.panel : { open: stored.panel.open, kind: storedPanelKind(stored, stored.panel.kind) },
         panelWidth: width(stored?.panelWidth, defaults.panelWidth),

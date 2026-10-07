@@ -42,10 +42,11 @@ import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
-import { askDeleteView, askViewSettings, newFileViewsAfter, revealNode, showView } from '@/project/views';
+import { askDeleteView, askViewSettings, newFileViewsAfter, promoteLooseFile, revealNode, showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state/chats';
 import { useDocument } from '@/state/document';
+import { fileTabOf, useFiles } from '@/state/files';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useUi } from '@/state/ui';
@@ -941,14 +942,19 @@ export function Sidebar() {
     /* A file dragged onto the list becomes a view of its own, in the gap it was let go of. */
     const dropFilesAt = (index: number, transfer: DataTransfer): void => {
         setInsertAt(null);
-        const { views, temporaryFileViews } = useDocument.getState();
-        const temporary = temporaryFileViews.find((view) => view.id === draggedViewId(transfer));
+        const { views } = useDocument.getState();
+        const after = index === 0 ? null : (views[Math.min(index, views.length) - 1]?.id ?? null);
+        const loose = draggedViewId(transfer);
+        // A loose file takes its place in the grid with it; anything else a person drags here is a file by its path.
+        if (loose !== null && fileTabOf(useFiles.getState(), loose) !== undefined) {
+            void promoteLooseFile(loose, after);
+            return;
+        }
         // A drag out of the file manager is named by the shell of the machine the project runs on.
-        const paths = temporary ? [temporary.path] : carriesPaths(transfer.types) ? droppedPaths(transfer) : finderPaths(transfer, endpointId);
+        const paths = carriesPaths(transfer.types) ? droppedPaths(transfer) : finderPaths(transfer, endpointId);
         if (paths.length === 0) {
             return;
         }
-        const after = index === 0 ? null : (views[Math.min(index, views.length) - 1]?.id ?? null);
         void newFileViewsAfter(paths, after);
     };
 
@@ -1040,7 +1046,7 @@ export function Sidebar() {
                                     onDragOver={
                                         takesDrop
                                             ? (e) => {
-                                                  const temporary = useDocument.getState().temporaryFileViews.some((view) => view.id === draggedView());
+                                                  const temporary = fileTabOf(useFiles.getState(), draggedView()) !== undefined;
                                                   if (
                                                       !reorderable &&
                                                       !temporary &&

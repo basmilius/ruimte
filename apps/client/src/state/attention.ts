@@ -3,7 +3,7 @@ import { isCanvasView, type ProjectView, type SplitLayout } from '@ruimte/contra
 import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas/math';
 import { desktop } from '@/desktop/bridge';
 import { projectNodes } from '@/project/views';
-import { viewIdsIn } from '@/shell/split';
+import { shownViewIdsIn } from '@/shell/split';
 import { nodeWorking } from '@/state/agent-work';
 import { nodesInSight, seenNodes, type CanvasSight } from '@/state/in-sight';
 import { seePushNotifications, clearPushNotification, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
@@ -38,7 +38,7 @@ export interface ChatSightWorkspace {
  * panel cannot push its own chat out of sight and immediately close it.
  */
 export function chatsInSight(workspace: ChatSightWorkspace, { planWidth }: { planWidth: number }): Set<string> {
-    const onScreen = new Set(workspace.layout === null ? [] : viewIdsIn(workspace.layout));
+    const onScreen = new Set(workspace.layout === null ? [] : shownViewIdsIn(workspace.layout));
     const chats = new Set<string>();
     for (const view of workspace.views) {
         if (!onScreen.has(view.id)) {

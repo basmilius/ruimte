@@ -1,7 +1,7 @@
 import { isCanvasView, isSessionView } from '@ruimte/contracts';
 import { READABLE_ZOOM } from '@/canvas/culling';
 import { intersects, isMeasured, visibleRect, type Camera, type Rect } from '@/canvas/math';
-import { viewIdsIn } from '@/shell/split';
+import { shownViewIdsIn } from '@/shell/split';
 import { liveCanvas, maximizedNodeOf, type CanvasState } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 
@@ -70,7 +70,7 @@ function windowFocused(): boolean {
 // All grid cells are visible; standalone sessions need no camera test, while canvases use `readableNodes`.
 export function nodesInSight(): string[][] {
     const { views, layout } = useDocument.getState();
-    const onScreen = new Set(layout === null ? [] : viewIdsIn(layout));
+    const onScreen = new Set(layout === null ? [] : shownViewIdsIn(layout));
     return views.flatMap((view) => {
         if (!onScreen.has(view.id)) {
             return [];

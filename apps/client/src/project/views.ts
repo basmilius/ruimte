@@ -16,8 +16,10 @@ import {
 import { offerDraft } from '@adecore/agents-react/chat/drafts';
 import { GRID, type Point } from '@/canvas/math';
 import { filesOfView } from '@/project/view-deletion';
+import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { NODE_SIZE, focusedCanvas, liveCanvas } from '@/state/canvas';
+import { fileTabOf, useFiles } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
 import { useDocument, viewOfNode } from '@/state/document';
 import { useProject } from '@/state/project';
@@ -136,6 +138,25 @@ export async function newFileViewsAfter(paths: readonly string[], after: string 
         await moveViewAction(id, previous);
         previous = id;
     }
+}
+
+/*
+ * A loose file dropped on the list becomes a view of the project, standing where the loose one stood.
+ * The view is added without opening, so nothing else in the grid moves; false for what cannot become one
+ * yet, a diff, a commit or a database view.
+ */
+export async function promoteLooseFile(key: string, after: string | null): Promise<boolean> {
+    const files = useFiles.getState();
+    const tab = fileTabOf(files, key);
+    if (tab === undefined || tab.view !== undefined) {
+        return false;
+    }
+    const id = useDocument.getState().addFileView(basenameOf(tab.path), storedPathOf(useProject.getState().current?.folder ?? null, tab.path), false);
+    // Out of the pool first: the key is no loose view any more, and a close here would remember it as one.
+    files.release(key);
+    useDocument.getState().replaceViewKey(key, id);
+    await moveViewAction(id, after);
+    return true;
 }
 
 /*

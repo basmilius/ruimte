@@ -849,7 +849,7 @@ export const ProjectConsoleBindingSchema = z.object({
 });
 export type ProjectConsoleBinding = z.infer<typeof ProjectConsoleBindingSchema>;
 
-// One file the files cell has open. Whether it is edited is view state and stays out of the file.
+// One file open as a loose view. Whether it is edited is view state and stays out of the file.
 export const ProjectFileTabSchema = z.object({
     path: z.string().min(1),
     pinned: z.boolean(),
@@ -860,7 +860,7 @@ export const ProjectFileTabSchema = z.object({
 export type ProjectFileTab = z.infer<typeof ProjectFileTabSchema>;
 
 /*
- * One tab of the files cell in `strip`, of any kind. A database tab carries an id of its own, since
+ * One loose view in `strip`, of any kind. A database tab carries an id of its own, since
  * two tabs may show one table: a filtered one, or a new table's designer before it has a name.
  */
 const ProjectDatabaseTabFields = {
@@ -907,8 +907,9 @@ export const ProjectPanelsSchema = z.object({
     // The file tabs alone, for a client from before `strip`.
     tabs: z.array(ProjectFileTabSchema).optional(),
     activeTab: z.string().nullable().optional(),
-    // Every tab of the files cell in its order, files and database views alike (`ProjectStripTabSchema`). The client
-    // reads each tab on its own, so a kind a newer release adds drops that tab and not the list.
+    // Every loose view in the order it was opened, files and database views alike (`ProjectStripTabSchema`); the
+    // layout says which cell holds each. A release from before tab hosts had them in a cell of its own, in this order.
+    // The client reads each tab on its own, so a kind a newer release adds drops that tab and not the list.
     strip: z.array(z.unknown()).optional(),
     // What the file tree had open, the way the tree names a directory: relative, POSIX, trailing slash.
     expandedDirs: z.array(z.string()).optional(),
