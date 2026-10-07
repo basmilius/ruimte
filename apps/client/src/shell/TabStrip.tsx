@@ -19,7 +19,7 @@ import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { TabMenuItems } from '@/shell/TabMenuItems';
 import { useCellView } from '@/shell/use-cell-view';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
-import type { CellAt } from '@/shell/split';
+import { isSameCell, type CellAt } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { isCheckoutDiff, isDatabaseTab, useFiles, type DatabaseTab, type FileTab } from '@/state/files';
 import { useGit } from '@/state/git';
@@ -31,9 +31,10 @@ import { ContextMenu, Icon, IconButton, Menu, Tooltip } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 /* A tab lifts on hover instead of sinking (`surface-raised` is the step above the panel's ground),
-   and the active one carries its mark inside itself, so turning it on moves nothing. */
+   and the active one carries its mark inside itself, so turning it on moves nothing. The mark is
+   the accent only in the cell that has the focus, so several hosts never compete for it. */
 const TAB =
-    "group relative inline-flex h-full shrink-0 items-center gap-1 pr-2 pl-3 text-text-muted hover:bg-surface-raised hover:text-text data-[active=true]:text-text data-[active=true]:after:absolute data-[active=true]:after:inset-x-0 data-[active=true]:after:bottom-0 data-[active=true]:after:h-[2px] data-[active=true]:after:bg-accent data-[active=true]:after:content-['']";
+    "group relative inline-flex h-full shrink-0 items-center gap-1 pr-2 pl-3 text-text-muted hover:bg-surface-raised hover:text-text data-[active=true]:text-text data-[active=true]:after:absolute data-[active=true]:after:inset-x-0 data-[active=true]:after:bottom-0 data-[active=true]:after:h-[2px] data-[active=true]:after:bg-text-muted group-data-[focused=true]/strip:data-[active=true]:after:bg-accent data-[active=true]:after:content-['']";
 
 /* The strip clips, so the focus ring goes inside the tab. A diff tab carries the mark that says so
    next to the name, which needs the room. */
@@ -294,6 +295,7 @@ function StripTab({ at, id, active }: { at: CellAt; id: string; active: boolean 
  */
 export function TabStrip({ at, ids, active, insertAt = null }: { at: CellAt; ids: readonly string[]; active: string; insertAt?: number | null }) {
     const counts = useGit((s) => s.counts);
+    const focused = useDocument((s) => s.layout !== null && isSameCell(s.layout.focus, at));
     const stripRef = useRef<HTMLDivElement>(null);
     const [edges, setEdges] = useState({ start: false, end: false });
     const [lineLeft, setLineLeft] = useState<number | null>(null);
@@ -345,7 +347,8 @@ export function TabStrip({ at, ids, active, insertAt = null }: { at: CellAt; ids
     return (
         <div
             ref={stripRef}
-            className="scroll-fade-x relative flex h-full min-w-0 flex-1 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="group/strip scroll-fade-x relative flex h-full min-w-0 flex-1 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            data-focused={focused}
             data-fade-start={edges.start || undefined}
             data-fade-end={edges.end || undefined}
             onWheel={onWheel}
