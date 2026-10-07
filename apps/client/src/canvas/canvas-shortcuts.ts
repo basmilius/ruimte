@@ -80,8 +80,8 @@ function leaveStandaloneView(e: KeyboardEvent): void {
     if (!leaving) {
         return;
     }
-    // A drawing clears its draft, its selection and its tool first, whichever of the two listeners hears the key first.
-    if (view.kind === 'drawing' && (e.defaultPrevented || drawingHasSomethingToClear(focusedDrawing().getState()))) {
+    // A drawing clears its draft, its selection and its tool first, also when its own listener hears the key after this one.
+    if (view.kind === 'drawing' && drawingHasSomethingToClear(focusedDrawing().getState())) {
         return;
     }
     e.preventDefault();
@@ -165,6 +165,10 @@ export function useCanvasShortcuts(): void {
             cancelDictation();
         };
         const onKeyDown = (e: KeyboardEvent): void => {
+            // A key something on the page already acted on is that thing's: the views of a database cell mark the keys they took that way.
+            if (e.defaultPrevented) {
+                return;
+            }
             const s = focusedCanvas().getState();
             if (e.code === 'Space' && !isTypingTarget(e.target) && !spaceWorksTarget(e.target)) {
                 holdSpace();
@@ -254,18 +258,17 @@ export function useCanvasShortcuts(): void {
             }
             /* A cell of this client closes its tab, and the cell goes with the last one (`state/files.ts`,
                `database/state.ts`), so one shortcut walks out of a stack of tabs and then out of the cell
-               that held them. A handler that already answered says so by stopping the event. Off macOS
-               the window menu's Close answers Ctrl+W, so the shortcut is always taken there, even with
-               nothing to close. */
+               that held them. Off macOS the window menu's Close answers Ctrl+W, so the shortcut is always
+               taken there, even with nothing to close. */
             if (is(CANVAS_SHORTCUTS.closeCell)) {
                 const tab = cellTabs?.active ?? null;
-                if (cellTabs !== null && tab !== null && !e.defaultPrevented) {
+                if (cellTabs !== null && tab !== null) {
                     e.preventDefault();
                     cellTabs.close(tab);
                     return;
                 }
                 const layout = useDocument.getState().layout;
-                const closes = !e.defaultPrevented && layout !== null && cellCount(layout) > 1;
+                const closes = layout !== null && cellCount(layout) > 1;
                 if (closes || !apple) {
                     e.preventDefault();
                 }

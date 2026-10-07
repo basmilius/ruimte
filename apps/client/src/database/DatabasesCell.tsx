@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, type KeyboardEvent } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PencilRuler, SquareTerminal, Table, TableProperties, Unplug, type LucideIcon } from 'lucide-react';
 import type { DatabaseConnection } from '@ruimte/contracts';
@@ -22,17 +22,6 @@ const ICONS: Record<DatabaseTab['kind'], LucideIcon> = {
     console: SquareTerminal,
     designer: PencilRuler
 };
-
-/*
- * A key a view answered never reaches the window's shortcuts: the console's Run all is the grid's
- * maximize, and a grid's own copy or select all is nothing the canvas behind it should hear. The
- * views say they answered by preventing the default, so only those keys stop here.
- */
-function keepAnsweredKeys(event: KeyboardEvent<HTMLDivElement>): void {
-    if (event.defaultPrevented) {
-        event.stopPropagation();
-    }
-}
 
 /* The tables, consoles and designers this client has open, as tabs. Tabs in the back stay mounted, so edits nobody submitted survive a look elsewhere. */
 export function DatabasesCell() {
@@ -76,7 +65,7 @@ export function DatabasesCell() {
     const closingTab = tabs.find((tab) => tab.id === closing);
 
     return (
-        <div ref={root} tabIndex={-1} className="flex min-h-0 grow flex-col outline-none" onKeyDown={keepAnsweredKeys}>
+        <div ref={root} tabIndex={-1} className="flex min-h-0 grow flex-col outline-none">
             <RuimteDatabaseProvider>
                 <Tabs.Root value={active} onValueChange={(id) => useDatabaseTabs.getState().activate(String(id))} className="flex min-h-0 grow flex-col">
                     <Tabs.List

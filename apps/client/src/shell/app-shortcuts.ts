@@ -89,6 +89,10 @@ export function runAppShortcut(shortcut: AppShortcut): void {
 export function useAppShortcuts(): void {
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent): void => {
+            // A key something on the page already acted on is that thing's, such as Run all in a database console.
+            if (e.defaultPrevented) {
+                return;
+            }
             const shortcut = appShortcutFor(e, {
                 inNode: isInNodeBody(e.target),
                 apple: isApplePlatform(),
