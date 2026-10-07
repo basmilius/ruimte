@@ -75,7 +75,7 @@ function TabShell({
     const { t } = useTranslation('panels');
     return (
         <ContextMenu.Root>
-            /* The bar around the strip has a menu of its own, which a right click on a tab does not open as well. */
+            {/* The bar around the strip has a menu of its own, which a right click on a tab does not open as well. */}
             <ContextMenu.Trigger
                 render={<span />}
                 className={TAB}
