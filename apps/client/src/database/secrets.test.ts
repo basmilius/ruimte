@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { DatabaseConnection } from '@ruimte/contracts';
+import type { DesktopBridge } from '@/desktop/bridge';
 import {
     bindPasswords,
     boundPasswordOf,
@@ -113,6 +114,21 @@ describe('passwords beside the connections', () => {
         await store.write('a', null);
         expect(await store.read('a')).toBeNull();
         expect(databaseSecretStore(null)).toBe(databaseSecretStore(null));
+        expect(await databaseSecretStore(null).persistence()).toBe('page');
+    });
+
+    test('the shell says whether a password outlasts the app, and one from before is taken to keep them', async () => {
+        const shell = (persistent?: boolean): DesktopBridge =>
+            ({
+                databaseSecrets: {
+                    read: async () => null,
+                    write: async () => undefined,
+                    ...(persistent === undefined ? {} : { persistent: async () => persistent })
+                }
+            }) as unknown as DesktopBridge;
+        expect(await databaseSecretStore(shell(true)).persistence()).toBe('kept');
+        expect(await databaseSecretStore(shell(false)).persistence()).toBe('app');
+        expect(await databaseSecretStore(shell()).persistence()).toBe('kept');
     });
 });
 

@@ -66,6 +66,10 @@
         "withheld": {
             "moved": "The address of this connection changed outside Ruimte, so its saved password is not sent there. Enter the password again to use it at this address.",
             "unbound": "Enter the password of this connection again. Ruimte now keeps a password with the address it is for."
+        },
+        "persistence": {
+            "app": "This computer cannot encrypt passwords, so Ruimte keeps them only until it quits.",
+            "page": "Passwords stay in this page only, until it closes or reloads."
         }
     },
     "connections": {
@@ -73,5 +77,13 @@
             "title": "The database connections changed elsewhere",
             "description": "They were read again, and your last change was not saved."
         }
+    },
+    "secrets": {
+        "readFailed_one": "Could not read the saved password of {{name}}",
+        "readFailed_other": "Could not read the saved passwords of {{count}} connections",
+        "writeFailed_one": "The password of {{name}} was not saved on this computer",
+        "writeFailed_other": "The passwords of {{count}} connections were not saved on this computer",
+        "removeFailed_one": "The password of {{name}} was not removed from this computer",
+        "removeFailed_other": "The passwords of {{count}} connections were not removed from this computer"
     }
 }

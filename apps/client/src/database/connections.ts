@@ -62,8 +62,8 @@ export interface ConnectionsTarget {
 
 export interface ConnectionsDeps {
     secrets: DatabaseSecretStore;
-    /* Says what happened to an edit nobody saved: the list moved on elsewhere. */
-    notify(title: string, description: string): void;
+    /* Says what went wrong out of sight: an edit the list moved on from, or a secret store that failed. One with an `id` takes the place of the last with it. */
+    notify(title: string, description: string, id?: string): void;
 }
 
 const INITIAL: DatabaseConnectionsState = {
@@ -77,6 +77,13 @@ const INITIAL: DatabaseConnectionsState = {
     passwords: {},
     agentAccess: {}
 };
+
+type SecretRead = { connection: DatabaseConnection; secret: string | null } | { connection: DatabaseConnection; error: unknown };
+
+interface SecretFailure {
+    name: string;
+    error: unknown;
+}
 
 /* Whether a connection cannot go into the shared file: a SQLite file outside the project folder, which the machine refuses to share. */
 export function isOutsideProject(folder: string | null, connection: DatabaseConnection): boolean {
@@ -141,29 +148,50 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         return listed.list;
     };
 
+    /* One note for what one read or one save of the secrets could not do, under an id of its own so a retry replaces it. */
+    const sayFailed = (kind: 'readFailed' | 'writeFailed' | 'removeFailed', failed: readonly SecretFailure[]): void => {
+        const [first] = failed;
+        if (first !== undefined) {
+            const name = first.name || i18next.t('databases:console.untitled');
+            deps.notify(i18next.t(`databases:secrets.${kind}`, { count: failed.length, name }), messageOf(first.error), `database-secrets-${kind}`);
+        }
+    };
+
     const unread = (connections: readonly DatabaseConnection[]): DatabaseConnection[] => {
         const { passwords } = store.getState();
         return connections.filter((connection) => passwords[connection.id] === undefined && !checked.has(connection.id));
     };
 
+    /* A read that fails is said, and the connection opens without a password until the next read of the list tries again. */
     const readSecrets = async (of: ConnectionsTarget, connections: readonly DatabaseConnection[]): Promise<void> => {
         const read = await Promise.all(
-            unread(connections).map(
-                async (connection) =>
-                    [connection.id, await deps.secrets.read(secretKeyOf(of.endpointId, of.projectId, connection.id)).catch(() => null)] as const
-            )
+            unread(connections).map(async (connection): Promise<SecretRead> => {
+                try {
+                    return { connection, secret: await deps.secrets.read(secretKeyOf(of.endpointId, of.projectId, connection.id)) };
+                } catch (error: unknown) {
+                    return { connection, error };
+                }
+            })
         );
         if (target !== of) {
             return;
         }
-        for (const [id] of read) {
-            checked.add(id);
+        sayFailed(
+            'readFailed',
+            read.flatMap((entry) => ('error' in entry ? [{ name: entry.connection.name, error: entry.error }] : []))
+        );
+        const bound: Record<string, BoundPassword> = {};
+        for (const entry of read) {
+            if ('secret' in entry) {
+                checked.add(entry.connection.id);
+                if (entry.secret !== null) {
+                    bound[entry.connection.id] = boundPasswordOf(entry.secret);
+                }
+            }
         }
-        const found = read.filter((entry): entry is readonly [string, string] => entry[1] !== null);
-        if (found.length === 0) {
+        if (Object.keys(bound).length === 0) {
             return;
         }
-        const bound = Object.fromEntries(found.map(([id, secret]) => [id, boundPasswordOf(secret)] as const));
         Object.assign(stored, bound);
         store.setState({ passwords: { ...bound, ...store.getState().passwords } });
     };
@@ -236,18 +264,30 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         }
     };
 
+    /* A write that fails is said and tried again with the next save; the password works in this window meanwhile. */
     const writeSecrets = async (of: ConnectionsTarget, ids: readonly string[]): Promise<void> => {
-        const { passwords } = store.getState();
+        const { passwords, local, saved } = store.getState();
+        // A connection that is being removed is only in the list as it was saved.
+        const named = [...(local ?? []), ...saved];
+        const failed: Record<'writeFailed' | 'removeFailed', SecretFailure[]> = { writeFailed: [], removeFailed: [] };
         for (const { id, secret } of secretWrites(stored, passwords, ids)) {
-            await deps.secrets
-                .write(secretKeyOf(of.endpointId, of.projectId, id), secret === null ? null : storedSecretOf(secret.password, secret.target))
-                .catch(() => undefined);
+            try {
+                await deps.secrets.write(secretKeyOf(of.endpointId, of.projectId, id), secret === null ? null : storedSecretOf(secret.password, secret.target));
+            } catch (error: unknown) {
+                const name = named.find((candidate) => candidate.id === id)?.name ?? '';
+                failed[secret === null ? 'removeFailed' : 'writeFailed'].push({ name, error });
+                continue;
+            }
             checked.add(id);
             if (secret === null) {
                 delete stored[id];
             } else {
                 stored[id] = secret;
             }
+        }
+        if (target === of) {
+            sayFailed('writeFailed', failed.writeFailed);
+            sayFailed('removeFailed', failed.removeFailed);
         }
     };
 
@@ -407,7 +447,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
 
 export const databaseConnections = createDatabaseConnections({
     secrets: databaseSecretStore(),
-    notify: (title, description) => useToasts.getState().show({ kind: 'error', title, description })
+    notify: (title, description, id) => useToasts.getState().show({ kind: 'error', title, description, ...(id === undefined ? {} : { id }) })
 });
 
 export const useDatabaseConnections = databaseConnections.store;

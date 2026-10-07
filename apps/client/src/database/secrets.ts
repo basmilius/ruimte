@@ -1,11 +1,15 @@
 import type { DatabaseConnection } from '@ruimte/contracts';
 import { desktop, type DesktopBridge } from '@/desktop/bridge';
 
+/* How long a password lasts: across restarts in the keychain, until the app quits where the system cannot encrypt, or as long as the page. */
+export type SecretPersistence = 'kept' | 'app' | 'page';
+
 /* Where a password is kept: the desktop shell's secret store, or this page's memory where there is none. */
 export interface DatabaseSecretStore {
     read(key: string): Promise<string | null>;
     /* Null deletes it. */
     write(key: string, secret: string | null): Promise<void>;
+    persistence(): Promise<SecretPersistence>;
 }
 
 /* A connection id is only unique within its project, and a project id within its machine. */
@@ -206,7 +210,8 @@ export function memorySecretStore(): DatabaseSecretStore {
             } else {
                 secrets.set(key, secret);
             }
-        }
+        },
+        persistence: async () => 'page'
     };
 }
 
@@ -214,5 +219,17 @@ export function memorySecretStore(): DatabaseSecretStore {
 const pageMemory = memorySecretStore();
 
 export function databaseSecretStore(bridge: DesktopBridge | null = desktop()): DatabaseSecretStore {
-    return bridge?.databaseSecrets ?? pageMemory;
+    const secrets = bridge?.databaseSecrets;
+    if (secrets === undefined) {
+        return pageMemory;
+    }
+    return {
+        read: (key) => secrets.read(key),
+        write: (key, secret) => secrets.write(key, secret),
+        persistence: async () => {
+            // A shell from before it could say keeps them in the keychain wherever the system lets it.
+            const persistent = (await secrets.persistent?.()) ?? true;
+            return persistent ? 'kept' : 'app';
+        }
+    };
 }

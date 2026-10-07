@@ -330,6 +330,79 @@ describe('a password and the address it was saved for', () => {
     });
 });
 
+describe('a secret store that fails', () => {
+    function failing(secrets: DatabaseSecretStore, fail: { read?: boolean; write?: boolean }): DatabaseSecretStore {
+        return {
+            ...secrets,
+            read: async (key) => {
+                if (fail.read === true) {
+                    throw new Error('The keychain is locked');
+                }
+                return secrets.read(key);
+            },
+            write: async (key, secret) => {
+                if (fail.write === true) {
+                    throw new Error('The disk is full');
+                }
+                return secrets.write(key, secret);
+            }
+        };
+    }
+
+    async function noted(initial: DatabaseConnections, secrets: DatabaseSecretStore) {
+        const notes: { title: string; description: string; id?: string }[] = [];
+        const fake = machine(initial);
+        const model = createDatabaseConnections({ secrets, notify: (title, description, id) => notes.push({ title, description, id }) });
+        model.attach({ endpointId: 'local', projectId: 'p', transport: fake.transport });
+        await model.ready();
+        return { model, fake, notes };
+    }
+
+    test('a password that cannot be read is said, the connection opens without it, and the next read tries again', async () => {
+        const secrets = memorySecretStore();
+        await savePassword(secrets, SHOP, 'hunter2');
+        const fail = { read: true };
+        const { model, notes } = await noted({ rev: 1, connections: [SHOP] }, failing(secrets, fail));
+        expect(model.store.getState().status).toBe('ready');
+        expect(model.list(model.store.getState())[0]!.config).not.toHaveProperty('password');
+        expect(notes).toEqual([
+            { title: 'Could not read the saved password of Shop', description: 'The keychain is locked', id: 'database-secrets-readFailed' }
+        ]);
+
+        fail.read = false;
+        await model.reload();
+        expect(model.list(model.store.getState())[0]!.config.password).toBe('hunter2');
+    });
+
+    test('a password that cannot be saved is said, works in this window, and is saved with the next edit', async () => {
+        const secrets = memorySecretStore();
+        const fail = { write: true };
+        const { model, fake, notes } = await noted({ rev: 1, connections: [] }, failing(secrets, fail));
+        await model.edit([at(SHOP, { password: 'hunter2' })]);
+        expect(fake.document().connections).toEqual([SHOP]);
+        expect(model.list(model.store.getState())[0]!.config.password).toBe('hunter2');
+        expect(notes).toEqual([
+            { title: 'The password of Shop was not saved on this computer', description: 'The disk is full', id: 'database-secrets-writeFailed' }
+        ]);
+        expect(await savedPassword(secrets, 'shop')).toBeNull();
+
+        fail.write = false;
+        await model.edit([{ ...at(SHOP, { password: 'hunter2' }), name: 'Shop two' }]);
+        expect(await savedPassword(secrets, 'shop')).toEqual({ password: 'hunter2', target: passwordTarget(SHOP.config) });
+        expect(notes).toHaveLength(1);
+    });
+
+    test('a password that cannot be removed with its connection is said', async () => {
+        const secrets = memorySecretStore();
+        await savePassword(secrets, SHOP, 'hunter2');
+        const { model, notes } = await noted({ rev: 1, connections: [SHOP] }, failing(secrets, { write: true }));
+        await model.edit([]);
+        expect(notes).toEqual([
+            { title: 'The password of Shop was not removed from this computer', description: 'The disk is full', id: 'database-secrets-removeFailed' }
+        ]);
+    });
+});
+
 describe('what the agents of the project get', () => {
     test("the machine gets the passwords on a load and after a person's edit, never after a change from elsewhere", async () => {
         const secrets = memorySecretStore();

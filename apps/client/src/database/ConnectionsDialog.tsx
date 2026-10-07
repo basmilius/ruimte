@@ -1,8 +1,8 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionManager } from '@adecore/database';
 import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
-import { Database, KeyRound } from 'lucide-react';
+import { Database, KeyRound, TriangleAlert } from 'lucide-react';
 import { Button, CloseButton, Dialog, Field, FormError, Icon, Select, Switch } from '@adecore/ui';
 import {
     asViewConnections,
@@ -16,6 +16,7 @@ import {
 } from '@/database/connections';
 import { databaseBrowse } from '@/database/environment';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
+import { databaseSecretStore, type SecretPersistence } from '@/database/secrets';
 import { useDatabasePanel } from '@/database/state';
 import { desktop } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
@@ -34,6 +35,7 @@ export function DatabaseConnectionsDialog() {
     const saveError = useDatabaseConnections((state) => state.saveError);
     const connections = useDatabaseConnectionList();
     const withheld = useWithheldPasswords();
+    const persistence = useSecretPersistence();
     const { endpointId } = useConnection();
     const browse = useMemo(() => databaseBrowse(endpointId, desktop()), [endpointId]);
     const shown = connections.find((connection) => connection.id === selected) ?? connections[0] ?? null;
@@ -81,7 +83,17 @@ export function DatabaseConnectionsDialog() {
                     />
                     <div className="flex shrink-0 items-center gap-2 border-t border-border px-5 py-3">
                         <span className="min-w-0 grow">
-                            {saveError !== null && <FormError className="truncate">{t('dialog.saveFailed', { reason: saveError })}</FormError>}
+                            {saveError !== null ? (
+                                <FormError className="truncate">{t('dialog.saveFailed', { reason: saveError })}</FormError>
+                            ) : (
+                                persistence !== null &&
+                                persistence !== 'kept' && (
+                                    <span className="flex items-center gap-2 text-sm text-text-muted">
+                                        <Icon icon={TriangleAlert} size={14} className="shrink-0 text-status-needs-you" />
+                                        {t(`dialog.persistence.${persistence}`)}
+                                    </span>
+                                )
+                            )}
                         </span>
                         <Dialog.Close render={<Button variant="secondary" />}>{t('common:action.done')}</Dialog.Close>
                     </div>
@@ -89,6 +101,29 @@ export function DatabaseConnectionsDialog() {
             </Dialog.Popup>
         </Dialog.Root>
     );
+}
+
+/* How long this window's passwords last, once the store said; null until then. */
+function useSecretPersistence(): SecretPersistence | null {
+    const [persistence, setPersistence] = useState<SecretPersistence | null>(null);
+
+    useEffect(() => {
+        let live = true;
+        // A shell that cannot say leaves the line out rather than guess.
+        databaseSecretStore()
+            .persistence()
+            .then((next) => {
+                if (live) {
+                    setPersistence(next);
+                }
+            })
+            .catch(() => undefined);
+        return () => {
+            live = false;
+        };
+    }, []);
+
+    return persistence;
 }
 
 /* Whether the connection goes into the repository's file or stays this person's. A SQLite file outside the project folder can only stay. */

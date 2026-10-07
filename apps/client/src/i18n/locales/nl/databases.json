@@ -66,6 +66,10 @@
         "withheld": {
             "moved": "Het adres van deze verbinding is buiten Ruimte gewijzigd, dus het bewaarde wachtwoord gaat daar niet heen. Voer het wachtwoord opnieuw in om het op dit adres te gebruiken.",
             "unbound": "Voer het wachtwoord van deze verbinding opnieuw in. Ruimte bewaart een wachtwoord nu bij het adres waarvoor het is."
+        },
+        "persistence": {
+            "app": "Deze computer kan wachtwoorden niet versleutelen, dus Ruimte bewaart ze alleen tot het afsluit.",
+            "page": "Wachtwoorden blijven alleen in deze pagina, tot die sluit of opnieuw laadt."
         }
     },
     "connections": {
@@ -73,5 +77,13 @@
             "title": "De databaseverbindingen zijn elders gewijzigd",
             "description": "Ze zijn opnieuw gelezen, en je laatste wijziging is niet opgeslagen."
         }
+    },
+    "secrets": {
+        "readFailed_one": "Kon het bewaarde wachtwoord van {{name}} niet lezen",
+        "readFailed_other": "Kon de bewaarde wachtwoorden van {{count}} verbindingen niet lezen",
+        "writeFailed_one": "Het wachtwoord van {{name}} is niet op deze computer bewaard",
+        "writeFailed_other": "De wachtwoorden van {{count}} verbindingen zijn niet op deze computer bewaard",
+        "removeFailed_one": "Het wachtwoord van {{name}} is niet van deze computer verwijderd",
+        "removeFailed_other": "De wachtwoorden van {{count}} verbindingen zijn niet van deze computer verwijderd"
     }
 }
