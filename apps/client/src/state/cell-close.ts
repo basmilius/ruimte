@@ -10,9 +10,10 @@ import { useFiles } from '@/state/files';
  * tab in their way is closed.
  */
 
+/* What has a question to ask: a loose tab, and a database view of the project that holds edits nobody submitted. */
 function looseKeysIn(ids: readonly string[]): string[] {
-    const pool = useFiles.getState().tabs;
-    return ids.filter((id) => pool.some((tab) => tab.key === id));
+    const { tabs, unsubmitted } = useFiles.getState();
+    return ids.filter((id) => unsubmitted[id] === true || tabs.some((tab) => tab.key === id));
 }
 
 /* The cell a view stands in now, since closing the tabs before it may have moved or removed cells. */

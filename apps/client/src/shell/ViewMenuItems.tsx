@@ -18,6 +18,7 @@ import {
     X
 } from 'lucide-react';
 import { canShareView, isCanvasView, type ProjectView } from '@ruimte/contracts';
+import { useDatabaseViewShareRefusal } from '@/database/view-sharing';
 import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui/BookmarkSubmenu';
 import { ForkMenuItem } from '@/chat/ForkMenuItem';
 import { useOffersFork } from '@/chat/use-offers-fork';
@@ -44,7 +45,7 @@ import { useSessionRow } from '@/state/sessions';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Icon, Kbd, KEY_SHORTCUTS, Menu } from '@adecore/ui';
+import { Icon, Kbd, KEY_SHORTCUTS, Menu, Tooltip } from '@adecore/ui';
 
 interface ViewMenuItemsProps {
     viewId: string;
@@ -73,6 +74,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     const view = useDocument((state) => cellViewOf(state, viewId) ?? undefined);
     /* A canvas to land on. Without one the rows that put a view on a canvas would do nothing at all,
        so they are left out rather than greyed, which a menu has no room to explain. */
+    const shareRefusal = useDatabaseViewShareRefusal(view);
     const hasCanvas = useDocument((state) => state.views.some(isCanvasView));
     const onCanvas = useDocument(hasActiveCanvas);
     const folder = useProject((state) => state.current?.folder ?? null);
@@ -94,7 +96,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     const offers = viewOffers({
         kind,
         shared,
-        canShare: view !== undefined && canShareView(view),
+        canShare: view !== undefined && canShareView(view) && shareRefusal === null,
         hasCanvas,
         onCanvas,
         offersFork,
@@ -166,6 +168,19 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
                     <Menu.Item onClick={() => void setViewShared(viewId, !shared)}>
                         <Icon icon={shared ? UserRoundMinus : Users} size={14} /> {t(shared ? 'share.stop' : 'share.start')}
                     </Menu.Item>
+                </>
+            )}
+            {/* A row cannot explain why it is off, so the reason rides on a tooltip around it. */}
+            {!offerShare && saved && !shared && shareRefusal !== null && (
+                <>
+                    <Menu.Separator />
+                    <Tooltip label={t('share.privateConnection')} side="right">
+                        <div>
+                            <Menu.Item disabled>
+                                <Icon icon={Users} size={14} /> {t('share.start')}
+                            </Menu.Item>
+                        </div>
+                    </Tooltip>
                 </>
             )}
 

@@ -43,11 +43,11 @@ import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
-import { askDeleteView, askViewSettings, newFileViewsAfter, promoteLooseFile, revealNode, showView } from '@/project/views';
+import { askDeleteView, askViewSettings, newFileViewsAfter, promoteLooseDatabase, promoteLooseFile, revealNode, showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state/chats';
 import { useDocument } from '@/state/document';
-import { fileTabOf, useFiles } from '@/state/files';
+import { isDatabaseTab, isPromotableTab, useFiles } from '@/state/files';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useUi } from '@/state/ui';
@@ -956,9 +956,10 @@ export function Sidebar() {
         const { views } = useDocument.getState();
         const after = index === 0 ? null : (views[Math.min(index, views.length) - 1]?.id ?? null);
         const loose = draggedViewId(transfer);
-        // A loose file takes its place in the grid with it; anything else a person drags here is a file by its path.
-        if (loose !== null && fileTabOf(useFiles.getState(), loose) !== undefined) {
-            void promoteLooseFile(loose, after);
+        // A loose file or table takes its place in the grid with it; anything else a person drags here is a file by its path.
+        const tab = useFiles.getState().tabs.find((entry) => entry.key === loose);
+        if (loose !== null && tab !== undefined && isPromotableTab(tab)) {
+            void (isDatabaseTab(tab) ? promoteLooseDatabase(loose, after) : promoteLooseFile(loose, after));
             return;
         }
         // A drag out of the file manager is named by the shell of the machine the project runs on.
@@ -1057,9 +1058,9 @@ export function Sidebar() {
                                     onDragOver={
                                         takesDrop
                                             ? (e) => {
-                                                  // Only a file promotes: a diff, a commit or a database view has no row to become, and a whole host is no file.
-                                                  const loose = fileTabOf(useFiles.getState(), draggedView());
-                                                  const temporary = loose !== undefined && loose.view === undefined && !draggingWholeCell();
+                                                  // Only a file or a table promotes: a diff, a commit or a designer has no row to become, and a whole host is no tab.
+                                                  const loose = useFiles.getState().tabs.find((entry) => entry.key === draggedView());
+                                                  const temporary = isPromotableTab(loose) && !draggingWholeCell();
                                                   if (
                                                       !reorderable &&
                                                       !temporary &&

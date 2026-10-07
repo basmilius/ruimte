@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { createStore, type StoreApi } from 'zustand';
-import type { SplitLayout } from '@ruimte/contracts';
+import type { ProjectDatabaseTarget, SplitLayout } from '@ruimte/contracts';
 import {
     emptyCanvasView,
     isCanvasView,
@@ -214,6 +214,8 @@ export interface DocumentState {
     /* A file as a view of its own. `opens` is false for a caller that puts it on the grid itself, such as a loose
        view that becomes this one: opening it first would take the cell that has the focus. */
     addFileView(name: string, path: string, opens?: boolean): string;
+    /* A table of a database connection as a view of its own; `opens` means the same as for a file. */
+    addDatabaseView(name: string, table: ProjectDatabaseTarget, opens?: boolean): string;
     /* A chat, terminal or browser without a canvas under it. The id is the session id, as for a node. */
     addStandaloneView(view: StandaloneRequest): string;
     renameView(id: string, name: string, source?: NodeTitleSource | null): void;
@@ -909,6 +911,10 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
 
             addFileView(name, path, opens = true) {
                 return addView({ kind: 'file', id: nextId('view'), name, path }, opens);
+            },
+
+            addDatabaseView(name, table, opens = true) {
+                return addView({ kind: 'database', id: nextId('view'), name, ...table }, opens);
             },
 
             addStandaloneView(request) {

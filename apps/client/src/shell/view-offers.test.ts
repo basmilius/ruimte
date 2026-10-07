@@ -19,6 +19,11 @@ describe('what a view offers', () => {
         expect(viewOffers(chat)).toMatchObject({ reveal: true, share: true });
     });
 
+    test('a database view is no node, so it is never offered a place on the canvas', () => {
+        expect(viewOffers({ ...chat, kind: 'database', hasCanvas: true })).toMatchObject({ putOnCanvas: false, share: true });
+        expect(viewOffers({ ...chat, kind: 'chat', hasCanvas: true })).toMatchObject({ putOnCanvas: true });
+    });
+
     test('a chat in the Chats project offers neither', () => {
         expect(viewOffers({ ...chat, scratch: true })).toMatchObject({ reveal: false, share: false });
     });

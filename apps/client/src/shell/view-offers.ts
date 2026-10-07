@@ -50,7 +50,7 @@ export function viewOffers(input: ViewOffersInput): ViewOffers {
         openInChat: input.asChat !== null,
         openInTerminal: input.asTerminal !== null,
         fork: input.kind === 'chat' && input.offersFork,
-        putOnCanvas: !drawn && input.kind !== 'file' && input.hasCanvas,
+        putOnCanvas: !drawn && input.kind !== 'file' && input.kind !== 'database' && input.hasCanvas,
         showOnCanvas: (input.kind === 'drawing' || input.kind === 'diagram') && input.onCanvas,
         reveal: input.workingFolder !== null && input.scratch !== true,
         // A divider goes where the group under it goes and is nobody's to share.

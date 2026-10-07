@@ -80,4 +80,13 @@ describe('a database view as a loose view', () => {
         expect(useDatabasePanel.getState().dialog).toEqual({ open: true, selected: 'shop' });
         expect(useFiles.getState().tabs).toEqual([]);
     });
+
+    test('a table the project keeps as a view is shown instead of opened a second time', () => {
+        const id = useDocument.getState().addDatabaseView('orders', { ...ORDERS, mode: 'data' }, false);
+        actOnDatabase({ kind: 'open-table', ref: ORDERS, view: 'data' });
+        expect(useFiles.getState().tabs).toEqual([]);
+        expect(useDocument.getState().activeViewId).toBe(id);
+        actOnDatabase({ kind: 'open-table', ref: ORDERS, view: 'structure' });
+        expect(useFiles.getState().tabs).toHaveLength(1);
+    });
 });

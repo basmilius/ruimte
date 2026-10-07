@@ -16,6 +16,11 @@
             "confirm": "Discard and close"
         }
     },
+    "view": {
+        "manage": "Manage connections",
+        "gone": "The connection of {{table}} is not on this machine. Add it in the connections, or ask whoever shared this view.",
+        "withheld": "The password of the connection of {{table}} has to be entered again before the table opens."
+    },
     "console": {
         "runOn": "Run on a connection",
         "asFile": "Just the file",

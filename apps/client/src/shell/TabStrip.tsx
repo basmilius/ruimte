@@ -247,14 +247,17 @@ function TerminalAttention({ id }: { id: string }) {
 /* A view of the project as a tab: its mark and its name, the cell's own menu, and a close that only takes it off the screen. */
 function ProjectTabItem({ at, view, active }: { at: CellAt; view: ProjectView; active: boolean }) {
     const { t } = useTranslation('panels');
+    const { t: td } = useTranslation('databases');
     const title = useBrowserDisplayTitle(view.id, view.name ?? '', 'titleSource' in view ? view.titleSource : undefined);
     const label = view.kind === 'browser' ? title : (view.name ?? '');
+    const unsubmitted = useFiles((s) => view.kind === 'database' && s.unsubmitted[view.id] === true);
     return (
         <TabShell
             id={view.id}
             active={active}
             label={label}
             hint={label}
+            unsavedLabel={unsubmitted ? td('tab.unsubmitted') : undefined}
             glyph={
                 <ViewGlyph
                     id={view.id}

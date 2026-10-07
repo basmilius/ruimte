@@ -261,7 +261,8 @@
         "start": "Delen met je team",
         "stop": "Alleen voor jou",
         "shared": "{{name}} gedeeld",
-        "private": "{{name}} is weer privé"
+        "private": "{{name}} is weer privé",
+        "privateConnection": "Deze tabel staat op een privéverbinding. Deel eerst de verbinding, anders kan een teamgenoot de view niet openen."
     },
     "planPanel": {
         "failed": "Dit plan kon niet worden getekend",

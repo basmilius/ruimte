@@ -1,6 +1,6 @@
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, isDatabaseView, isFileView, type ProjectDatabaseView, type ProjectView } from '@ruimte/contracts';
 import { isLooseView, type CellView } from '@/shell/cell-view';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { Canvas } from '@/canvas/Canvas';
@@ -22,6 +22,7 @@ import { ErrorBoundary, lazyNamed } from '@adecore/ui';
 
 const DrawingView = lazyNamed(() => import('@/drawing/DrawingView'), 'DrawingView');
 const DiagramView = lazyNamed(() => import('@/diagram/DiagramView'), 'DiagramView');
+const DatabaseViewBody = lazyNamed(() => import('@/database/DatabaseViewBody'), 'DatabaseViewBody');
 
 function StandaloneView({ view }: { view: ProjectView }) {
     // `bodyFocused` is one flag for the whole grid, so without the cell every chat and terminal would grab it.
@@ -102,6 +103,30 @@ function FilesSurface({ tabKey, ids }: { tabKey: string | null; ids: readonly st
     );
 }
 
+/*
+ * The database views of a cell. One in front is drawn here, and one with edits nobody submitted stays
+ * mounted, hidden, while another tab of its host is in front, the way a loose table does. It is one list
+ * under stable keys, so a view that goes from the front to the back keeps the table it holds.
+ */
+function DatabaseViewSlots({ views, activeId }: { views: readonly ProjectDatabaseView[]; activeId: string }) {
+    const { t } = useTranslation('shell');
+    const rev = useProject((s) => s.rev);
+    return views.map((view) => (
+        <div
+            key={view.id}
+            className={`absolute inset-0 bg-surface ${view.id === activeId ? '' : 'invisible'}`}
+            inert={view.id !== activeId}
+            onPointerDownCapture={() => useDocument.getState().setBodyFocused(true)}
+        >
+            <ErrorBoundary label={t('viewHost.failed')} resetKeys={[view.id, rev]}>
+                <Suspense fallback={null}>
+                    <DatabaseViewBody view={view} />
+                </Suspense>
+            </ErrorBoundary>
+        </div>
+    ));
+}
+
 /* The page of a browser view is the parked element, placed over this whole column by the layer. A
    view without an address has no page yet, so what is left under it is the splash. */
 function BrowserViewSurface({ id }: { id: string }) {
@@ -124,9 +149,20 @@ export function ViewSurface({ view, hostIds }: { view: CellView; hostIds?: reado
     const diagram = useDiagram((s) => s.content);
     const loose = isLooseView(view);
     const holdsLoose = useFiles((s) => hostIds !== undefined && hostIds.some((id) => s.tabs.some((tab) => tab.key === id)));
+    const unsubmitted = useFiles((s) => s.unsubmitted);
+    const views = useDocument((s) => s.views);
+    const tables = useMemo(
+        () =>
+            views.filter(
+                (candidate): candidate is ProjectDatabaseView =>
+                    isDatabaseView(candidate) && (candidate.id === view.id || (hostIds?.includes(candidate.id) === true && unsubmitted[candidate.id] === true))
+            ),
+        [views, view.id, hostIds, unsubmitted]
+    );
     return (
         <>
-            {!loose && (
+            {tables.length > 0 && <DatabaseViewSlots views={tables} activeId={view.id} />}
+            {!loose && !isDatabaseView(view) && (
                 /* Inside the cell and around the view alone: the cell's toolbar and the dock stay usable,
                    and the cells beside it never notice. */
                 <ErrorBoundary key={view.id} label={t('viewHost.failed')} resetKeys={[view.id, rev, drawing, diagram]}>

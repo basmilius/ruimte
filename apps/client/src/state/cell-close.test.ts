@@ -116,6 +116,28 @@ describe('closing cells through the guards of their loose tabs', () => {
         expect(useFiles.getState().tabs).toEqual([]);
     });
 
+    test('asks before a database view of the project with edits nobody submitted leaves its cell', async () => {
+        const id = useDocument.getState().addDatabaseView('orders', { connectionId: 'shop', schema: 'shop', table: 'orders', mode: 'data' });
+        useFiles.getState().setUnsubmitted(id, true);
+        const closing = closeCellGuarded(useDocument.getState().layout!.focus);
+        await settle();
+        expect(useFiles.getState().discarding).toBe(id);
+        useFiles.getState().cancelDiscard();
+        expect(await closing).toBe(false);
+        expect(useDocument.getState().layout!.columns.flatMap((column) => column.cells.flatMap(cellViewIds))).toContain(id);
+    });
+
+    test('closes the tab of such a view once the person confirms, and the view stays in the project', async () => {
+        const id = useDocument.getState().addDatabaseView('orders', { connectionId: 'shop', schema: 'shop', table: 'orders', mode: 'data' });
+        useFiles.getState().setUnsubmitted(id, true);
+        useFiles.getState().close(id);
+        expect(useFiles.getState().discarding).toBe(id);
+        useFiles.getState().confirmDiscard();
+        expect(useFiles.getState().unsubmitted[id]).toBeUndefined();
+        expect(useDocument.getState().views.some((view) => view.id === id)).toBe(true);
+        expect(cells().flat()).not.toContain(id);
+    });
+
     test('a cell of a view of the project closes as it always did', async () => {
         expect(await closeCellGuarded({ column: 0, cell: 0 })).toBe(true);
         expect(cells()).toEqual([['/p/one.ts', '/p/two.ts']]);

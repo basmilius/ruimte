@@ -445,6 +445,27 @@ describe('client actions', () => {
             expect(await createView(registry(), { kind: 'file' })).toMatchObject({ status: 'failed', error: { code: 'missing-path' } });
         });
 
+        test('a database view opens on its table, is named after it, and needs a connection, a schema and a table', async () => {
+            const made = await createView(registry(), { kind: 'database', connection: 'shop', schema: 'shop', table: 'orders', where: "status = 'open'" });
+            if (made.status !== 'completed') {
+                throw new Error('Expected a database view');
+            }
+            expect(made.output.view).toBe("orders (status = 'open')");
+            expect(useDocument.getState().views.find((view) => view.id === made.output.viewId)).toMatchObject({
+                kind: 'database',
+                connectionId: 'shop',
+                schema: 'shop',
+                table: 'orders',
+                mode: 'data',
+                where: "status = 'open'"
+            });
+            expect(useDocument.getState().activeViewId).toBe(made.output.viewId);
+            expect(await createView(registry(), { kind: 'database', connection: 'shop' })).toMatchObject({
+                status: 'failed',
+                error: { code: 'missing-table' }
+            });
+        });
+
         test('an agent view runs the CLI it names, and only one this machine has', async () => {
             const chat = await createView(registry(), { kind: 'chat', provider: 'claude' });
             if (chat.status !== 'completed') {
@@ -613,6 +634,14 @@ describe('client actions', () => {
             expect(await clientActions.execute('view.share', { viewId: separator, shared: true }, PERSON_ACTION_CALL)).toMatchObject({
                 error: { code: 'view-not-shareable' }
             });
+        });
+
+        test('a database view on a connection nobody shared stays out of the shared file', async () => {
+            const orders = useDocument.getState().addDatabaseView('orders', { connectionId: 'shop', schema: 'shop', table: 'orders', mode: 'data' });
+            expect(await clientActions.execute('view.share', { viewId: orders, shared: true }, PERSON_ACTION_CALL)).toMatchObject({
+                error: { code: 'view-not-shareable' }
+            });
+            expect(useDocument.getState().shared).toEqual([]);
         });
     });
 

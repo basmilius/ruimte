@@ -119,6 +119,7 @@
             "closeNamed": "{{name}} sluiten",
             "closeOthers": "Andere tabs sluiten",
             "copyCommit": "Commit hash kopiëren",
+            "keepInSidebar": "In sidebar houden",
             "openItself": "Het bestand zelf openen",
             "pin": "Tab vastzetten",
             "stage": "Dit bestand stagen",

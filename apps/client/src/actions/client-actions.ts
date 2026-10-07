@@ -38,6 +38,7 @@ import {
     type NodeAccent,
     type NodeTitleSource,
     type NoteColor,
+    type ProjectDatabaseTarget,
     type ProjectIconChoice,
     type ProjectNode,
     type ProjectView,
@@ -46,6 +47,8 @@ import {
     viewIconOf
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
+import { databaseViewName } from '@/database/view-name';
+import { databaseViewShareRefusal } from '@/database/view-sharing';
 import { addAgentView, agentNodeOptions, type AgentSession, type AgentTarget } from '@/agents/nodes';
 import { LOCK_KEYS } from '@/canvas/locks';
 import { toWorld, type Point } from '@/canvas/math';
@@ -144,6 +147,7 @@ const VIEW_BASE_NAMES: Record<CreatableViewKind, string> = {
     browser: 'Browser',
     chat: 'AI Chat',
     file: 'File',
+    database: 'Table',
     separator: 'Separator',
     subheader: 'Section',
     device: 'Device'
@@ -166,10 +170,13 @@ export function freeName(views: readonly ProjectView[], base: string): string {
 function derivedViewName(
     state: DocumentState,
     kind: CreatableViewKind,
-    { url, path, device }: { url: string | null; path: string | null; device: DeviceReference | null | undefined }
+    { url, path, device, table }: { url: string | null; path: string | null; device: DeviceReference | null | undefined; table: ProjectDatabaseTarget | null }
 ): string {
     if (kind === 'file' && path !== null) {
         return basenameOf(path);
+    }
+    if (kind === 'database' && table !== null) {
+        return databaseViewName(table);
     }
     if (kind === 'browser' && url !== null) {
         return url;
@@ -343,7 +350,21 @@ function addViewOf(
     state: DocumentState,
     kind: CreatableViewKind,
     title: string,
-    { url, command, path, device, cwd }: { url: string | null; command: string | null; path: string | null; device: DeviceReference | null; cwd: string | null }
+    {
+        url,
+        command,
+        path,
+        device,
+        cwd,
+        table
+    }: {
+        url: string | null;
+        command: string | null;
+        path: string | null;
+        device: DeviceReference | null;
+        cwd: string | null;
+        table: ProjectDatabaseTarget | null;
+    }
 ): string {
     const folder = cwd === null ? {} : { cwd };
     switch (kind) {
@@ -362,6 +383,11 @@ function addViewOf(
                 throw new ActionRefusal('missing-path', 'Name the file a file view shows.');
             }
             return state.addFileView(title, storedFilePath(path));
+        case 'database':
+            if (table === null) {
+                throw new ActionRefusal('missing-table', 'Name the connection, the schema and the table a database view shows.');
+            }
+            return state.addDatabaseView(title, table);
         case 'browser':
             return state.addStandaloneView({ kind, name: title, url: url ?? 'https://www.google.com' });
         case 'chat':
@@ -545,17 +571,24 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
                     : {})
             };
         },
-        'view.create': ({ kind, name, url, command, path, provider, account, device, resume, cwd }) => {
+        'view.create': ({ kind, name, url, command, path, provider, account, device, resume, cwd, connection, schema, table, mode, where }) => {
             refuseResumeWithout(resume, provider);
             const agent = agentFor(providers(), kind, provider, command);
             if (account != null && agent === null) {
                 throw new ActionRefusal('missing-provider', 'An account belongs to an agent CLI. Name the provider as well.');
             }
             const state = document.getState();
-            const title = kind === 'separator' ? VIEW_BASE_NAMES.separator : (name ?? agent?.info.name ?? derivedViewName(state, kind, { url, path, device }));
+            const shown: ProjectDatabaseTarget | null =
+                connection != null && schema != null && table != null
+                    ? { connectionId: connection, schema, table, mode: mode ?? 'data', ...(where == null ? {} : { where }) }
+                    : null;
+            const title =
+                kind === 'separator'
+                    ? VIEW_BASE_NAMES.separator
+                    : (name ?? agent?.info.name ?? derivedViewName(state, kind, { url, path, device, table: shown }));
             const viewId =
                 agent === null
-                    ? addViewOf(state, kind, title, { url, command, path, device: device ?? null, cwd: cwd ?? null })
+                    ? addViewOf(state, kind, title, { url, command, path, device: device ?? null, cwd: cwd ?? null, table: shown })
                     : addAgentView(agent.target, agent.info, title, { ...sessionOf(resume, cwd), ...(account == null ? {} : { account }) });
             if (!viewId) {
                 throw new ActionRefusal('view-create-failed', `Ruimte could not create the ${kind} view.`);
@@ -1040,7 +1073,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
             if (!view) {
                 throw unknownView(viewId);
             }
-            if (shared && !canShareView(view)) {
+            if (shared && (!canShareView(view) || databaseViewShareRefusal(view) !== null)) {
                 throw new ActionRefusal('view-not-shareable', `“${view.name ?? viewId}” cannot go in the shared file.`);
             }
             const changed = state.shared.includes(viewId) !== shared;
@@ -1758,11 +1791,12 @@ export function closeCellsRightOfAction(at: CellAt): void {
 
 /*
  * A tab of a host goes. A loose view closes for good, with the guards a file with unsaved changes and a
- * table with unsubmitted edits have; a view of the project only leaves the screen, its session and its
- * place in the list stay. The cell goes with its last tab, except the last cell there is.
+ * table with unsubmitted edits have. A view of the project only leaves the screen, its session and its
+ * place in the list stay, but a database view with unsubmitted edits asks first as well. The cell goes
+ * with its last tab, except the last cell there is.
  */
 export function closeTabAction(viewId: string): void {
-    if (cellViewOf(useDocument.getState(), viewId) === null) {
+    if (cellViewOf(useDocument.getState(), viewId) === null || useFiles.getState().unsubmitted[viewId] === true) {
         useFiles.getState().close(viewId);
         return;
     }

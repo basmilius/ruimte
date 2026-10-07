@@ -63,6 +63,14 @@ export function fileTabOf(state: TabPool, key: string | null): FileTab | undefin
     return tab === undefined || isDatabaseTab(tab) ? undefined : tab;
 }
 
+/* A tab that can become a row of the sidebar: a file and a table, not a diff, a commit or the designer of a table that is not there yet. */
+export function isPromotableTab(tab: Tab | undefined): boolean {
+    if (tab === undefined) {
+        return false;
+    }
+    return isDatabaseTab(tab) ? tab.kind !== 'designer' : tab.view === undefined;
+}
+
 /* A base diff of the checkout itself rather than of a file in it: everything a worktree holds over where it came from. */
 export function isCheckoutDiff(path: string, view: FileTabView | undefined): boolean {
     return view !== undefined && view.commit === undefined && view.scope === 'base' && path === view.cwd;
@@ -293,7 +301,7 @@ interface FilesStore extends TabPool {
     keepsOpen(tab: Tab): boolean;
     /* A file or folder moved on the machine; its tabs go with it, and the cells that hold them. Answers what was renamed. */
     moved(from: string, to: string): Map<string, string>;
-    /* A file with unsaved changes is saved first, and a table with edits nobody submitted asks first. */
+    /* A file with unsaved changes is saved first, and a table with edits nobody submitted asks first. A key that is no loose tab is a database view of the project, which only leaves its cell. */
     close(key: string): void;
     /* `close`, answering whether the tab is gone: false when a person kept it at one of those questions. */
     closeGuarded(key: string): Promise<boolean>;
@@ -342,7 +350,7 @@ export const useFiles = create<FilesStore>((set, get) => {
         waiting.delete(key);
         resolvers?.forEach((resolve) => resolve(closed));
     };
-    /* Leaves the pool and the cell that holds the tab, and goes where a closed tab goes. */
+    /* Leaves the pool and the cell that holds the tab, and goes where a closed tab goes. A view of the project only leaves its cell. */
     const closeNow = (key: string): void => {
         const { [key]: _dropped, ...unsubmitted } = get().unsubmitted;
         const tab = get().tabs.find((entry) => entry.key === key);
@@ -352,7 +360,11 @@ export const useFiles = create<FilesStore>((set, get) => {
             discarding: get().discarding === key ? null : get().discarding,
             recent: rememberClosed(get().recent, tab)
         });
-        useDocument.getState().closeLoose(key);
+        if (tab === undefined) {
+            useDocument.getState().closeViewTab(key);
+        } else {
+            useDocument.getState().closeLoose(key);
+        }
         settle(key, true);
     };
     /* The host the tab stands in is over its limit once a tab arrives, and its leftmost tab nobody holds on to makes room. */
@@ -467,12 +479,12 @@ export const useFiles = create<FilesStore>((set, get) => {
         },
         close(key) {
             const tab = get().tabs.find((entry) => entry.key === key);
-            if (tab !== undefined && isDatabaseTab(tab)) {
-                if (get().unsubmitted[key] === true) {
-                    set({ discarding: key });
-                } else {
-                    closeNow(key);
-                }
+            if (get().unsubmitted[key] === true) {
+                set({ discarding: key });
+                return;
+            }
+            if (tab === undefined || isDatabaseTab(tab)) {
+                closeNow(key);
                 return;
             }
             closeAfterSaving(
@@ -483,7 +495,7 @@ export const useFiles = create<FilesStore>((set, get) => {
             );
         },
         closeGuarded(key) {
-            if (get().tabs.every((entry) => entry.key !== key)) {
+            if (get().tabs.every((entry) => entry.key !== key) && get().unsubmitted[key] !== true) {
                 return Promise.resolve(true);
             }
             return new Promise((resolve) => {

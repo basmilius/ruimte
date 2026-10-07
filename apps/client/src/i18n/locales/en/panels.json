@@ -119,6 +119,7 @@
             "closeNamed": "Close {{name}}",
             "closeOthers": "Close other tabs",
             "copyCommit": "Copy commit hash",
+            "keepInSidebar": "Keep in sidebar",
             "openItself": "Open the file itself",
             "pin": "Pin tab",
             "stage": "Stage this file",

@@ -1,5 +1,6 @@
 import i18next from 'i18next';
 import { canShareView, isCanvasView, isOpenableView, type ProjectView, type SplitLayout } from '@ruimte/contracts';
+import { databaseViewShareRefusal } from '@/database/view-sharing';
 import { forkRefusal, lastSettledTurn } from '@adecore/agents-react/chat/logic/fork';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { keepAwakeAvailable, keepAwakeChoice } from '@/state/keep-awake';
@@ -60,7 +61,7 @@ export function activeViewFacts(): ActiveViewFacts | null {
     const offers = viewOffers({
         kind: view.kind,
         shared,
-        canShare: canShareView(view),
+        canShare: canShareView(view) && databaseViewShareRefusal(view) === null,
         hasCanvas: documentState.views.some(isCanvasView),
         onCanvas: hasActiveCanvas(documentState),
         offersFork: forkTurn !== null,

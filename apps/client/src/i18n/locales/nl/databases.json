@@ -16,6 +16,11 @@
             "confirm": "Weggooien en sluiten"
         }
     },
+    "view": {
+        "manage": "Verbindingen beheren",
+        "gone": "De verbinding van {{table}} staat niet op deze machine. Voeg hem toe bij de verbindingen, of vraag het aan wie deze view deelde.",
+        "withheld": "Het wachtwoord van de verbinding van {{table}} moet opnieuw worden ingevoerd voordat de tabel opent."
+    },
     "console": {
         "runOn": "Uitvoeren op een verbinding",
         "asFile": "Alleen het bestand",

@@ -1,4 +1,5 @@
 import type { DatabaseAction } from '@adecore/database';
+import { isDatabaseView, type ProjectDatabaseView, type ProjectView } from '@ruimte/contracts';
 import { isDatabaseTab, placeTab, type DatabaseTab, type TabPool, type TabState } from '@/state/files';
 
 /* What opens a tab. A console is a file (`database/console-file.ts`), and managing a connection opens a dialog. */
@@ -99,4 +100,26 @@ export function reopenAction(tab: DatabaseTab): DatabaseTabAction | null {
         case 'designer':
             return { kind: 'edit-table', ref };
     }
+}
+
+/*
+ * The database view of the project that already shows what an open-table action asks for, so a table is
+ * never in the grid twice. The filter is part of what the person asked to see, and an empty one is none.
+ */
+export function databaseViewFor(views: readonly ProjectView[], action: DatabaseTabAction): ProjectDatabaseView | undefined {
+    if (action.kind !== 'open-table') {
+        return undefined;
+    }
+    const { connectionId, schema, table } = action.ref;
+    const mode = action.view === 'data' ? 'data' : 'structure';
+    const where = mode === 'data' ? (action.where?.trim() ?? '') : '';
+    return views.find(
+        (view): view is ProjectDatabaseView =>
+            isDatabaseView(view) &&
+            view.connectionId === connectionId &&
+            view.schema === schema &&
+            view.table === table &&
+            view.mode === mode &&
+            (view.where ?? '') === where
+    );
 }

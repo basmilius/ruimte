@@ -6,7 +6,7 @@ import { useDocument } from '../state/document';
 import { currentEndpointId } from '../state/keys';
 import { providerSinkFor } from '@adecore/agents-react/state/providers';
 import { useFiles } from '../state/files';
-import { askAgentAboutDiagram, newFileViewsAfter, openSessionInKind, promoteLooseFile } from './views';
+import { askAgentAboutDiagram, newFileViewsAfter, openSessionInKind, promoteLooseDatabase, promoteLooseFile } from './views';
 
 function installed(kind: string, name: string) {
     return { kind, name, installed: true, capabilities: { chat: true, terminal: true } } as unknown as ProviderInfo;
@@ -150,5 +150,68 @@ describe('files dropped on the list', () => {
         expect(await promoteLooseFile('diff:/repo/a.ts', null)).toBe(false);
         expect(useDocument.getState().views).toHaveLength(2);
         expect(useFiles.getState().tabs).toHaveLength(1);
+    });
+});
+
+describe('a loose table kept in the sidebar', () => {
+    const ORDERS = { connectionId: 'shop', schema: 'shop', table: 'orders' };
+
+    beforeEach(() => {
+        useFiles.setState({ tabs: [], recent: [], unsubmitted: {}, discarding: null });
+        useDocument.getState().load(document, { activeViewId: 'main', views: {} });
+    });
+
+    function openTable(extra: Record<string, unknown> = {}): string {
+        useFiles.getState().show({ tabs: [{ key: 'database:t1', kind: 'table', pinned: false, ...ORDERS, ...extra } as never], active: 'database:t1' }, 5);
+        return 'database:t1';
+    }
+
+    test('becomes a database view in the gap it was let go of, standing where the tab stood', async () => {
+        const key = openTable();
+        expect(await promoteLooseDatabase(key, 'main')).toBe(true);
+        const views = useDocument.getState().views;
+        expect(views.map((view) => view.name)).toEqual(['Main', 'orders', 'Flow']);
+        expect(views[1]).toMatchObject({ kind: 'database', ...ORDERS, mode: 'data' });
+        expect(views[1]).not.toHaveProperty('where');
+        expect(useDocument.getState().layout!.columns.map((column) => column.cells.map((cell) => cell.viewId))).toEqual([[views[1]!.id]]);
+        expect(useDocument.getState().activeViewId).toBe(views[1]!.id);
+        expect(useFiles.getState().tabs).toEqual([]);
+        expect(useFiles.getState().recent).toEqual([]);
+    });
+
+    test('goes last when the menu asks and no gap is named', async () => {
+        const key = openTable();
+        await promoteLooseDatabase(key);
+        expect(useDocument.getState().views.map((view) => view.name)).toEqual(['Main', 'Flow', 'orders']);
+    });
+
+    test('keeps its filter and shows it in the name', async () => {
+        const key = openTable({ where: "status = 'open'", tableKind: 'view' });
+        await promoteLooseDatabase(key, null);
+        expect(useDocument.getState().views[0]).toMatchObject({
+            kind: 'database',
+            where: "status = 'open'",
+            tableKind: 'view',
+            name: "orders (status = 'open')"
+        });
+    });
+
+    test('a structure tab becomes a view of the structure', async () => {
+        useFiles.getState().show({ tabs: [{ key: 'database:t2', kind: 'structure', pinned: false, ...ORDERS }], active: 'database:t2' }, 5);
+        await promoteLooseDatabase('database:t2');
+        expect(useDocument.getState().views.at(-1)).toMatchObject({ kind: 'database', mode: 'structure', name: 'orders (structure)' });
+    });
+
+    test('the designer has no table to keep, and a table with edits nobody submitted stays loose', async () => {
+        useFiles
+            .getState()
+            .show({ tabs: [{ key: 'database:d', kind: 'designer', pinned: false, connectionId: 'shop', schema: 'shop' }], active: 'database:d' }, 5);
+        expect(await promoteLooseDatabase('database:d')).toBe(false);
+        const designer = useFiles.getState().tabs;
+        useFiles.getState().show({ tabs: [...designer, { key: 'database:t1', kind: 'table', pinned: false, ...ORDERS }], active: 'database:t1' }, 5);
+        useFiles.getState().setUnsubmitted('database:t1', true);
+        expect(await promoteLooseDatabase('database:t1')).toBe(false);
+        expect(useDocument.getState().views).toHaveLength(2);
+        expect(useFiles.getState().tabs).toHaveLength(2);
     });
 });

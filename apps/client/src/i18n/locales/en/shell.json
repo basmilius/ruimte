@@ -261,7 +261,8 @@
         "start": "Share with your team",
         "stop": "Keep to yourself",
         "shared": "Shared {{name}}",
-        "private": "Made {{name}} private"
+        "private": "Made {{name}} private",
+        "privateConnection": "This table is on a private connection. Share the connection first, or a teammate could not open the view."
     },
     "planPanel": {
         "failed": "This plan failed to render",

@@ -9,6 +9,7 @@ import {
     Minus,
     PenTool,
     Smartphone,
+    Table,
     Terminal,
     Workflow,
     type LucideIcon
@@ -29,6 +30,7 @@ const VIEW_KIND_GLYPHS: Record<ProjectViewKind, LucideIcon> = {
     drawing: PenTool,
     diagram: Workflow,
     file: FileText,
+    database: Table,
     separator: Minus,
     subheader: Heading,
     unknown: CircleQuestionMark

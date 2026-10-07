@@ -1,7 +1,9 @@
 import type { DatabaseAction } from '@adecore/database';
 import { openNewConsole } from '@/database/console-file';
 import { useDatabasePanel } from '@/database/state';
-import { applyDatabaseAction, type DatabaseTabAction } from '@/database/tabs';
+import { applyDatabaseAction, databaseViewFor, type DatabaseTabAction } from '@/database/tabs';
+import { showView } from '@/project/views';
+import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
 
@@ -12,8 +14,16 @@ export interface ActOptions {
     focus?: boolean;
 }
 
-/* A database tab opened the way a file opens: a loose view in a tab host, under the same limit. */
+/*
+ * A database tab opened the way a file opens: a loose view in a tab host, under the same limit. A table
+ * the project already keeps as a view of its own is shown instead, so it is never in the grid twice.
+ */
 export function openDatabaseTab(action: DatabaseTabAction, options: ActOptions = {}): void {
+    const kept = databaseViewFor(useDocument.getState().views, action);
+    if (kept !== undefined) {
+        showView(kept.id);
+        return;
+    }
     const files = useFiles.getState();
     const next = applyDatabaseAction(files, action, () => crypto.randomUUID(), options.source ?? null);
     files.show(next, useSettings.getState().filesTabLimit, { focus: options.focus !== false });

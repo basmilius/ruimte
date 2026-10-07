@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { runAsPerson } from '@/actions/client-actions';
-import { Copy, FileText, ListX, Minus, Pin, PinOff, Plus, RefreshCw, SquareX, X } from 'lucide-react';
+import { promoteLooseDatabase } from '@/project/views';
+import { Copy, FileText, ListX, Minus, PanelLeftOpen, Pin, PinOff, Plus, RefreshCw, SquareX, X } from 'lucide-react';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { cellAt, cellViewIds, locateView } from '@/shell/split';
 import { useDocument } from '@/state/document';
-import { isCheckoutDiff, isDatabaseTab, useFiles } from '@/state/files';
+import { isCheckoutDiff, isDatabaseTab, isPromotableTab, useFiles } from '@/state/files';
 import { copyText, Icon, Kbd, Menu } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
@@ -20,6 +21,7 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
     const { t } = useTranslation('panels');
     const tab = useFiles((s) => s.tabs.find((entry) => entry.key === tabKey) ?? null);
     const pinned = tab?.pinned ?? false;
+    const unsubmitted = useFiles((s) => s.unsubmitted[tabKey] === true);
     const hasOthers = useDocument((s) => {
         const at = s.layout === null ? null : locateView(s.layout, tabKey);
         const cell = s.layout === null || at === null ? null : cellAt(s.layout, at);
@@ -46,9 +48,21 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
             </Menu.Item>
         </>
     );
-    // A database view is about no file, so only what is about the tab is left.
+    // A database view is about no file, so only what is about the tab is left, and a table that can stay as a row of the sidebar.
     if (isDatabaseTab(tab)) {
-        return tabItems;
+        return (
+            <>
+                {isPromotableTab(tab) && (
+                    <>
+                        <Menu.Item disabled={unsubmitted} onClick={() => void promoteLooseDatabase(tabKey)}>
+                            <Icon icon={PanelLeftOpen} size={14} /> {t('file.tab.keepInSidebar')}
+                        </Menu.Item>
+                        <Menu.Separator />
+                    </>
+                )}
+                {tabItems}
+            </>
+        );
     }
 
     const { path, view } = tab;

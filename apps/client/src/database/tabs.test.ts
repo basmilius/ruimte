@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { closeTab, pinTab, type DatabaseTab, type Tab, type TabState } from '@/state/files';
-import { applyDatabaseAction, databaseTabId, databaseTabKey, reopenAction, type DatabaseTabAction } from './tabs.ts';
+import type { ProjectView } from '@ruimte/contracts';
+import { applyDatabaseAction, databaseTabId, databaseTabKey, databaseViewFor, reopenAction, type DatabaseTabAction } from './tabs.ts';
 
 const ORDERS = { connectionId: 'shop', schema: 'shop', table: 'orders' };
 const EMPTY: TabState = { tabs: [], active: null };
@@ -134,5 +135,39 @@ describe('a closed tab opened again', () => {
 
     test('a key carries its id', () => {
         expect(databaseTabId(databaseTabKey('abc'))).toBe('abc');
+    });
+});
+
+describe('a table the project keeps as a view', () => {
+    const view = (id: string, extra: Record<string, unknown> = {}): ProjectView =>
+        ({ kind: 'database', id, name: id, ...ORDERS, mode: 'data', ...extra }) as ProjectView;
+    const open = (extra: Partial<Extract<DatabaseTabAction, { kind: 'open-table' }>> = {}): DatabaseTabAction => ({
+        kind: 'open-table',
+        ref: ORDERS,
+        view: 'data',
+        ...extra
+    });
+
+    test('is the one an open of exactly that connection, schema, table and mode finds', () => {
+        const views = [view('orders'), view('structure', { mode: 'structure' })];
+        expect(databaseViewFor(views, open())?.id).toBe('orders');
+        expect(databaseViewFor(views, open({ view: 'structure' }))?.id).toBe('structure');
+        expect(databaseViewFor(views, open({ ref: { ...ORDERS, table: 'items' } }))).toBeUndefined();
+        expect(databaseViewFor(views, open({ ref: { ...ORDERS, connectionId: 'other' } }))).toBeUndefined();
+        expect(databaseViewFor(views, open({ ref: { ...ORDERS, schema: 'other' } }))).toBeUndefined();
+    });
+
+    test('has its filter in common with the open, an empty filter being none', () => {
+        const views = [view('open', { where: "status = 'open'" }), view('all')];
+        expect(databaseViewFor(views, open({ where: " status = 'open' " }))?.id).toBe('open');
+        expect(databaseViewFor(views, open({ where: '  ' }))?.id).toBe('all');
+        expect(databaseViewFor(views, open())?.id).toBe('all');
+        expect(databaseViewFor([view('open', { where: "status = 'open'" })], open())).toBeUndefined();
+        expect(databaseViewFor(views, open({ where: "status = 'closed'" }))).toBeUndefined();
+    });
+
+    test('is asked for by no designer, and never by what is no view of a table', () => {
+        expect(databaseViewFor([view('orders')], { kind: 'new-table', connectionId: 'shop', schema: 'shop' })).toBeUndefined();
+        expect(databaseViewFor([{ kind: 'drawing', id: 'orders', name: 'orders' } as ProjectView], open())).toBeUndefined();
     });
 });
