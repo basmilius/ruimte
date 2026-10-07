@@ -105,18 +105,6 @@ function connectionLines(connections: readonly AgentConnection[]): string[] {
     return connections.map((connection) => `connection\t${field(connection.id)}\t${field(connection.name)}`);
 }
 
-/*
- * `page` reads a statement as a subquery, and MariaDB and MySQL drop an ORDER BY in a subquery that
- * has no LIMIT, so "the last ten" would come back as the first ten. A statement without a LIMIT of
- * its own gets one; one that has a LIMIT anywhere is left as written.
- */
-export function boundedStatement(sql: string, rows: number): string {
-    if (/\blimit\b/i.test(sql)) {
-        return sql;
-    }
-    return `${sql.replace(/[\s;]+$/, '')}\nLIMIT ${rows}`;
-}
-
 /* A failure of the package, under its own code and the server's words, so an agent can fix its SQL. */
 function failure(error: DatabaseError): never {
     const state = error.sqlState === undefined ? '' : ` (SQLSTATE ${error.sqlState})`;
@@ -232,8 +220,7 @@ export class AgentDatabases {
     async query(place: DatabasePlace, caller: string, wanted: string, sql: string, options: { schema: string | null; limit: number }): Promise<AgentQuery> {
         return this.withSession(place, caller, wanted, 'read', async ({ connection, call }) => {
             const result = await call<RowsResult>('page', {
-                // One past the limit, so `page` still learns whether more rows follow.
-                sql: boundedStatement(sql, options.limit + 1),
+                sql,
                 offset: 0,
                 limit: options.limit,
                 cellLimit: AGENT_CELL_LIMIT,

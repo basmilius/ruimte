@@ -261,6 +261,9 @@ describe.skipIf(!MYSQL_URL || databaseHelperPath() === null)('the database helpe
         const direct = await ok<{ results: { rows: Cell[][] }[] }>(call(service, 'client-1', 'execute', { session, sql: `${sql} LIMIT 10` }));
         expect(query.result.rows).toEqual(direct.results[0]!.rows);
         expect(query.result.rows).toHaveLength(10);
+        // The statement's own ORDER BY holds: these are the newest orders, newest first, and no LIMIT was added to get them.
+        const placed = query.result.rows.map((row) => String(row[2]));
+        expect(placed).toEqual([...placed].sort().reverse());
         expect(query.result.hasMore).toBe(true);
         expect(query.result.rows.every((row) => Number(row[1]) > 1000)).toBe(true);
 

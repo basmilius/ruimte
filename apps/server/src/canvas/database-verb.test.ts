@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { DatabaseConnection, ProjectContent, RuntimeMode } from '@ruimte/contracts';
 import { refusalBody } from '@adecore/agents/context/refusal';
 import { DatabaseAccessStore } from '../database/agent-access.ts';
-import { AgentDatabases, boundedStatement, connectionTarget } from '../database/agent-databases.ts';
+import { AgentDatabases, connectionTarget } from '../database/agent-databases.ts';
 import { DatabasePasswords } from '../database/agent-passwords.ts';
 import { DatabaseService } from '../database/database-service.ts';
 import { FakeHelper, type FakeAnswer } from '../database/fake-helper.ts';
@@ -191,16 +191,10 @@ describe('ruimte-context database', () => {
         ]);
         expect(opened()).toEqual([{ engine: 'sqlite', path: join(folder, 'data', 'local.sqlite'), readOnly: true }]);
         const page = helper.written.find((message) => message.method === 'page')!;
-        expect(page.params).toMatchObject({ sql: 'SELECT id, note, total FROM orders\nLIMIT 4', offset: 0, limit: 3, cellLimit: 256 });
+        expect(page.params).toMatchObject({ sql: 'SELECT id, note, total FROM orders', offset: 0, limit: 3, cellLimit: 256 });
         expect(released).toHaveLength(1);
         expect(released[0]).toStartWith('agent:chat-1:');
         expect(helper.written.at(-1)).toMatchObject({ method: 'close', params: { session: 's1' } });
-    });
-
-    test('a statement without a LIMIT gets one, so an ORDER BY in the subquery holds', () => {
-        expect(boundedStatement('SELECT * FROM orders ORDER BY placed_at DESC;\n', 101)).toBe('SELECT * FROM orders ORDER BY placed_at DESC\nLIMIT 101');
-        expect(boundedStatement('SELECT * FROM orders -- newest first', 11)).toBe('SELECT * FROM orders -- newest first\nLIMIT 11');
-        expect(boundedStatement('SELECT * FROM orders ORDER BY id DESC limit 10', 101)).toBe('SELECT * FROM orders ORDER BY id DESC limit 10');
     });
 
     test('a failure of the server comes back under its own code with its words, and the session still goes', async () => {
@@ -416,7 +410,7 @@ describe('ruimte-context database', () => {
             expect(stdout).toBe(
                 ['columns\tid\tnote\ttotal', 'row\t1\t<script>alert(1)</script>\t1234.50', 'row\t2\tNULL\t99.00', 'rows\t2', 'elapsed\t1.3 ms', ''].join('\n')
             );
-            expect(helper.written.find((message) => message.method === 'page')?.params.sql).toBe('SELECT id, note, total\nFROM orders\nLIMIT 101');
+            expect(helper.written.find((message) => message.method === 'page')?.params.sql).toBe('SELECT id, note, total\nFROM orders;');
             expect(await runContext(['database', 'execute', 'local', '--sql', 'DELETE FROM orders'], env)).toBe(3);
             expect(stderr).toStartWith('refused\tdatabase-write-off\t');
         } finally {
