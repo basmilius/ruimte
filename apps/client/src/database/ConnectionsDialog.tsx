@@ -2,7 +2,8 @@ import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionManager } from '@adecore/database';
 import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
-import { Button, Dialog, Field, FormError, Select, Switch } from '@adecore/ui';
+import { Database } from 'lucide-react';
+import { Button, CloseButton, Dialog, Field, FormError, Icon, Select, Switch } from '@adecore/ui';
 import {
     asViewConnections,
     databaseConnections,
@@ -43,11 +44,15 @@ export function DatabaseConnectionsDialog() {
 
     return (
         <Dialog.Root open={open} onOpenChange={(next) => useDatabaseTabs.getState().setConnectionsOpen(next)}>
-            <Dialog.Popup className="flex h-[600px] w-[900px] flex-col overflow-hidden">
+            <Dialog.Popup className="flex h-[640px] w-[800px] flex-col overflow-hidden">
                 <RuimteDatabaseProvider>
-                    <div className="shrink-0 border-b border-border px-4 py-3">
-                        <Dialog.Title>{t('dialog.title')}</Dialog.Title>
+                    <div className="flex shrink-0 items-center gap-4 border-b border-border px-5 py-4">
+                        <Dialog.Title className="flex grow items-center gap-2">
+                            <Icon icon={Database} size={16} /> {t('dialog.title')}
+                        </Dialog.Title>
+                        <CloseButton label={t('common:action.close')} dialog />
                     </div>
+                    <Dialog.Description className="sr-only">{t('dialog.description')}</Dialog.Description>
                     <ConnectionManager
                         value={asViewConnections(connections)}
                         onValueChange={(next) => void databaseConnections.edit(fromViewConnections(next))}
@@ -65,10 +70,12 @@ export function DatabaseConnectionsDialog() {
                         }}
                         className="min-h-0 flex-1"
                     />
-                    <Dialog.Footer className="mt-0 shrink-0 border-t border-border px-4 py-3">
-                        {saveError !== null && <FormError className="mr-auto min-w-0 truncate">{t('dialog.saveFailed', { reason: saveError })}</FormError>}
+                    <div className="flex shrink-0 items-center gap-2 border-t border-border px-5 py-3">
+                        <span className="min-w-0 grow">
+                            {saveError !== null && <FormError className="truncate">{t('dialog.saveFailed', { reason: saveError })}</FormError>}
+                        </span>
                         <Dialog.Close render={<Button variant="secondary" />}>{t('common:action.done')}</Dialog.Close>
-                    </Dialog.Footer>
+                    </div>
                 </RuimteDatabaseProvider>
             </Dialog.Popup>
         </Dialog.Root>

@@ -35,6 +35,7 @@
     },
     "dialog": {
         "title": "Databaseverbindingen",
+        "description": "De verbindingen van dit project, en waarvoor elk gebruikt mag worden.",
         "share": {
             "label": "Delen in de repository",
             "description": "Bewaart de verbinding in .ruimte/databases.json voor iedereen die aan dit project werkt. Het wachtwoord komt nooit in het bestand.",

@@ -35,6 +35,7 @@
     },
     "dialog": {
         "title": "Database connections",
+        "description": "The connections of this project, and what each may be used for.",
         "share": {
             "label": "Share in the repository",
             "description": "Saves the connection in .ruimte/databases.json for everyone who works on this project. The password never goes into the file.",
