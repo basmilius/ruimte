@@ -9,6 +9,7 @@ import {
     type ProjectCanvasView,
     type ProjectContent,
     type ProjectFlags,
+    type ProjectSql,
     type ProjectView,
     type ViewSessionNode
 } from '@ruimte/contracts';
@@ -24,7 +25,7 @@ export interface IndexedPlace {
 
 interface IndexedProject {
     folder: string;
-    content: Pick<ProjectContent, 'views' | 'flags'>;
+    content: Pick<ProjectContent, 'views' | 'flags' | 'sql'>;
     sources: Map<string, ContextSource[]>;
     places: Map<string, string | null>;
 }
@@ -90,7 +91,7 @@ export class ProjectIndex {
     }
 
     /* The content in its daemon-side form: cwds absolute, file paths still as stored. */
-    set(projectId: string, folder: string, content: Pick<ProjectContent, 'views' | 'flags'>): void {
+    set(projectId: string, folder: string, content: Pick<ProjectContent, 'views' | 'flags' | 'sql'>): void {
         const places = placesOf(content.views);
         this.projects.set(projectId, { folder, content, sources: flaggedSources(deriveProjectContextSources(content.views, folder), content.flags), places });
         this.changedPlaces(projectId);
@@ -115,6 +116,10 @@ export class ProjectIndex {
 
     flagsOf(projectId: string): ProjectFlags | undefined {
         return this.projects.get(projectId)?.content.flags;
+    }
+
+    sqlOf(projectId: string): ProjectSql | undefined {
+        return this.projects.get(projectId)?.content.sql;
     }
 
     /* What the agent under this id may read. Empty for an id no known project places on a canvas. */

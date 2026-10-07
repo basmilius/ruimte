@@ -696,7 +696,9 @@ export class ProjectStore {
         const moved = [...new Set([...ids, ...state.shared])].filter((id) => ids.includes(id) !== state.shared.includes(id));
         // A client from before flags sends none and would otherwise take every flag away.
         const flags = content.flags ?? this.index.flagsOf(projectId);
-        const portable = toPortable({ ...content, ...(flags ? { flags } : {}) }, state.entry.folder);
+        // A client never sends the SQL choices, which only `language.sql.bind` changes, so a save keeps them.
+        const sql = content.sql ?? this.index.sqlOf(projectId);
+        const portable = toPortable({ ...content, ...(flags ? { flags } : {}), ...(sql ? { sql } : {}) }, state.entry.folder);
         const document: ProjectDocument = { version: PROJECT_VERSION, rev: state.rev + 1, ...portable, shared: ids };
         const written = await this.writeFiles(this.documentPath(state.entry), portable, ids, document.rev, moved);
         state.lastText = written.text;

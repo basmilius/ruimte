@@ -167,10 +167,13 @@ export class DatabaseConnectionStore {
     private readonly sinks = new ClientSinks();
     private readonly loaded = new Map<string, LoadedConnections>();
     private readonly writes = new Serializer();
+    private readonly onChanged: ((projectId: string, connections: DatabaseConnection[]) => void) | undefined;
 
-    constructor(options: { projects: DatabaseProjects; seams?: WatchSeams }) {
+    /* `onChanged` hears every change of a project's connections, a save here or an edit on disk. */
+    constructor(options: { projects: DatabaseProjects; seams?: WatchSeams; onChanged?: (projectId: string, connections: DatabaseConnection[]) => void }) {
         this.projects = options.projects;
         this.seams = options.seams ?? SYSTEM_WATCH;
+        this.onChanged = options.onChanged;
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -274,6 +277,7 @@ export class DatabaseConnectionStore {
     }
 
     private emitChanged(projectId: string, document: DatabaseConnections, except: string | null = null): void {
+        this.onChanged?.(projectId, document.connections);
         const event: SessionEvent = { event: 'database.connections.changed', payload: { projectId, ...document } };
         for (const clientId of this.projects.holdersOf(projectId)) {
             if (clientId !== except) {

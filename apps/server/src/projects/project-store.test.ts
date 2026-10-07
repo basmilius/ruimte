@@ -121,6 +121,18 @@ describe('ProjectStore', () => {
         expect(canvas(again.document).edges).toEqual([edge]);
     });
 
+    test('the SQL choices live in the private file, and a save that does not send them keeps them', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        const sql = { default: { connectionId: 'shop' }, files: { 'db/a.sql': { connectionId: null } } };
+        await store.mutate(projectId, (current) => ({ content: { ...current, sql }, result: undefined }));
+        expect((await privateFileOnDisk(folder)).sql).toEqual(sql);
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).not.toContain('shop');
+        await store.save(projectId, 1, content());
+        expect((await privateFileOnDisk(folder)).sql).toEqual(sql);
+        expect((await store.read(projectId)).sql).toEqual(sql);
+    });
+
     test('a save based on an older rev is refused', async () => {
         const opened = await store.openProject({ folder });
         await store.save(opened.summary.projectId, 0, content());

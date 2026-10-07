@@ -10,10 +10,11 @@ function keyOf(connectionId: string, target: string): string {
 }
 
 /*
- * The passwords the clients of a project handed over for its connections, so its agents can open a
- * server the way the person's own views do. In memory only: never written, never logged, and gone
- * once the last client lets the project go, or with the daemon. A password answers only for the
- * target it was handed over with, so a connection an agent points elsewhere afterwards gets none.
+ * The passwords the clients of a project handed over for its connections, so its agents and its
+ * schema snapshots can open a server the way the person's own views do. In memory only: never
+ * written, never logged, and gone once the last client lets the project go, or with the daemon. A
+ * password answers only for the target it was handed over with, so a connection an agent points
+ * elsewhere afterwards gets none.
  */
 export class DatabasePasswords {
     // Per project, per client; a newer hand-over from the same client replaces its last one.
