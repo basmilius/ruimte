@@ -929,6 +929,11 @@ describe('dropView with tabs', () => {
         expect(tabShapeOf(dropView(gridOf([['[a *b]']]), 'b', first, 'right'))).toEqual([['[*a]'], ['b']]);
     });
 
+    test('the active tab dragged off its own host leaves the tab after it in front, else the one before', () => {
+        expect(tabShapeOf(dropView(gridOf([['[a *b c]']]), 'b', first, 'down'))).toEqual([['[a *c]', 'b']]);
+        expect(tabShapeOf(dropView(gridOf([['[a b *c]']]), 'c', first, 'left'))).toEqual([['c'], ['[a *b]']]);
+    });
+
     test('the middle trades a tab with the active view of a plain target', () => {
         const layout = dropView(gridOf([['[a *b]'], ['c']]), 'b', second, 'center');
         expect(tabShapeOf(layout)).toEqual([['[a *c]'], ['b']]);

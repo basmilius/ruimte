@@ -391,7 +391,8 @@ function Cell({
                         const from = dragged === null || layout === null ? null : locateView(layout, dragged);
                         if (draggingWholeCell() && from !== null) {
                             useDocument.getState().moveCellTo(from, at, here);
-                        } else if (dragged === viewId) {
+                        } else if (dragged === viewId && (layout === null || cellViewIds(cellAt(layout, at)!).length === 1)) {
+                            // Only a view that fills its cell alone is back where it was; the active tab of a host leaves it.
                             useDocument.getState().focusCellAt(at);
                         } else if (dragged !== null) {
                             placeViewAction(dragged, viewId, here);
