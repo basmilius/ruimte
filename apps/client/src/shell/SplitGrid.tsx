@@ -136,14 +136,14 @@ function Splitter({
             role="separator"
             aria-orientation={axis === 'x' ? 'vertical' : 'horizontal'}
             className={clsx(
-                'split-handle relative z-20 shrink-0 bg-border transition-colors hover:bg-accent',
+                'split-handle relative z-20 shrink-0 bg-border',
                 axis === 'x' ? 'w-px cursor-col-resize' : 'h-px cursor-row-resize',
                 hidden && 'invisible'
             )}
             onPointerDown={onPointerDown}
             onDoubleClick={(event) => onEven(event.altKey)}
         >
-            {/* The line is one pixel, but nobody can hit one pixel: the grab area reaches past it. */}
+            {/* A thin divider still needs a wider grab area. */}
             <span className={clsx('absolute', axis === 'x' ? '-inset-x-1 inset-y-0' : 'inset-x-0 -inset-y-1')} />
         </div>
     );
