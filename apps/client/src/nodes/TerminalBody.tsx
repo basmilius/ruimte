@@ -3,7 +3,8 @@ import { clearTerminalAction, restartTerminalAction, resumeTerminalAgentAction }
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import i18next from 'i18next';
 import clsx from 'clsx';
-import { TerminalView, type TerminalViewHandle } from '@adecore/terminal';
+import type { TerminalViewHandle } from '@adecore/terminal';
+import { MachineTerminal } from '@/terminal/MachineTerminal';
 import { ClipboardPaste, Copy, Play, RotateCw, Scan } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useEndpointId } from '@/state/keys';
@@ -251,8 +252,10 @@ function TerminalSession({ id, endpointId, viewRef, onFailure }: TerminalSession
     }
     // A camera zoom is a transform on an ancestor, so it never changes the grid: the body is sized in world units.
     return (
-        <TerminalView
+        <MachineTerminal
             ref={viewRef}
+            endpointId={endpointId}
+            sourceId={id}
             className="absolute inset-0"
             fontSize={fontSize}
             lineHeight={lineHeight}

@@ -21,6 +21,7 @@ import { formatShortcut, lazyNamed } from '@adecore/ui';
 const PANES: Record<SettingsSectionId, ComponentType> = {
     appearance: lazyNamed(() => import('@/shell/settings/panes/AppearancePane'), 'AppearancePane'),
     editor: lazyNamed(() => import('@/shell/settings/panes/EditorPane'), 'EditorPane'),
+    terminal: lazyNamed(() => import('@/shell/settings/panes/TerminalPane'), 'TerminalPane'),
     views: lazyNamed(() => import('@/shell/settings/panes/ViewsPane'), 'ViewsPane'),
     files: lazyNamed(() => import('@/shell/settings/panes/FilesPane'), 'FilesPane'),
     providers: lazyNamed(() => import('@/shell/settings/panes/ProvidersPane'), 'ProvidersPane'),

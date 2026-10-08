@@ -56,13 +56,6 @@
                 "label": "Monospace-lettertype",
                 "description": "Voor terminals en code. Valt terug op het systeemlettertype als het niet is geïnstalleerd.",
                 "system": "Systeem"
-            },
-            "terminalSize": {
-                "label": "Tekstgrootte terminal"
-            },
-            "terminalLineHeight": {
-                "label": "Regelhoogte terminal",
-                "description": "Als veelvoud van de rijhoogte die het lettertype nodig heeft."
             }
         },
         "sidebar": {
@@ -389,6 +382,28 @@
             "preview": "Voorbeeld van {{theme}}"
         }
     },
+    "terminal": {
+        "font": {
+            "title": "Lettertype",
+            "size": {
+                "label": "Tekstgrootte terminal",
+                "description": "Het lettertype zelf staat onder Uiterlijk."
+            },
+            "lineHeight": {
+                "label": "Regelhoogte terminal",
+                "description": "Als veelvoud van de rijhoogte die het lettertype nodig heeft."
+            }
+        },
+        "links": {
+            "title": "Links",
+            "label": "Terminallinks openen in",
+            "description": "Ruimte opent een nieuwe browserweergave, of een browsernode naast de terminal op het canvas. Zonder project op dezelfde machine openen links in je externe browser.",
+            "options": {
+                "external": "Externe browser",
+                "ruimte": "Ruimte"
+            }
+        }
+    },
     "sections": {
         "appearance": {
             "label": "Uiterlijk",
@@ -401,6 +416,10 @@
         "editor": {
             "label": "Editor",
             "description": "De code-editor: het lettertype, regelafbreking en slimme toetsen, en de language servers erachter."
+        },
+        "terminal": {
+            "label": "Terminal",
+            "description": "Lettergrootte, regelhoogte en links."
         },
         "views": {
             "label": "Weergaven",

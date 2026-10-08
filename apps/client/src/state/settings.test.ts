@@ -140,6 +140,35 @@ describe('GPT-Live speech', () => {
     });
 });
 
+describe('terminal link destination', () => {
+    test('keeps external browsers as the default and accepts only the explicit internal choice', () => {
+        expect(settingsFrom({}).terminalLinkDestination).toBe('external');
+        expect(settingsFrom({ terminalLinkDestination: 'ruimte' }).terminalLinkDestination).toBe('ruimte');
+        expect(settingsFrom({ terminalLinkDestination: 'browser' as Settings['terminalLinkDestination'] }).terminalLinkDestination).toBe('external');
+    });
+
+    test('persists through unrelated updates and reloads in another window', () => {
+        const previousStorage = globalThis.localStorage;
+        const previous = useSettings.getState();
+        const items = new Map<string, string>();
+        globalThis.localStorage = {
+            getItem: (key: string) => items.get(key) ?? null,
+            setItem: (key: string, value: string) => items.set(key, value)
+        } as unknown as Storage;
+        try {
+            useSettings.getState().update({ terminalLinkDestination: 'ruimte' });
+            useSettings.getState().update({ browserSwipe: false });
+            useSettings.setState({ terminalLinkDestination: 'external' });
+            useSettings.getState().reload();
+            expect(useSettings.getState().terminalLinkDestination).toBe('ruimte');
+            expect(useSettings.getState().browserSwipe).toBe(false);
+        } finally {
+            globalThis.localStorage = previousStorage;
+            useSettings.setState(previous);
+        }
+    });
+});
+
 describe('swiping between pages', () => {
     test('starts on, the way every browser on macOS does it', () => {
         expect(settingsFrom({}).browserSwipe).toBe(true);

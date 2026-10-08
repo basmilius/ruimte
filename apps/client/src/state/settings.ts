@@ -152,6 +152,7 @@ export interface Settings {
     codeLineHeight: number;
     /* Terminal line height as xterm's `lineHeight` multiplier of the cell, 1 being the font's own. */
     terminalLineHeight: number;
+    terminalLinkDestination: 'external' | 'ruimte';
     /* How many files the viewer keeps open before the oldest unpinned tab makes room. */
     filesTabLimit: number;
     /* Whether the files tree shows dotfiles; the panel's eye button writes the same value. */
@@ -276,6 +277,7 @@ const DEFAULT_SETTINGS: Settings = {
     codeFontSize: 13,
     codeLineHeight: 1.5,
     terminalLineHeight: 1,
+    terminalLinkDestination: 'external',
     filesTabLimit: 5,
     filesShowHidden: false,
     browseStartFolder: '',
@@ -346,6 +348,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         codeFontSize: clampSize(stored.codeFontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.codeFontSize),
         codeLineHeight: clampRatio(stored.codeLineHeight, CODE_LINE_HEIGHT_RANGE, DEFAULT_SETTINGS.codeLineHeight),
         terminalLineHeight: clampRatio(stored.terminalLineHeight, TERMINAL_LINE_HEIGHT_RANGE, DEFAULT_SETTINGS.terminalLineHeight),
+        terminalLinkDestination: stored.terminalLinkDestination === 'ruimte' ? 'ruimte' : 'external',
         filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
         // A path is typed by hand and read back as one; anything else in the blob is no folder.
         browseStartFolder: typeof stored.browseStartFolder === 'string' ? stored.browseStartFolder : DEFAULT_SETTINGS.browseStartFolder,
@@ -471,6 +474,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 codeFontSize,
                 codeLineHeight,
                 terminalLineHeight,
+                terminalLinkDestination,
                 filesTabLimit,
                 filesShowHidden,
                 browseStartFolder,
@@ -525,6 +529,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 codeFontSize,
                 codeLineHeight,
                 terminalLineHeight,
+                terminalLinkDestination,
                 filesTabLimit,
                 filesShowHidden,
                 browseStartFolder,

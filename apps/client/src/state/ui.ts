@@ -7,6 +7,7 @@ export type SettingsSectionId =
     | 'appearance'
     | 'keyboard'
     | 'editor'
+    | 'terminal'
     | 'views'
     | 'files'
     | 'providers'

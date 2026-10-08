@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { TerminalView, type TerminalViewHandle } from '@adecore/terminal';
+import type { TerminalViewHandle } from '@adecore/terminal';
+import { MachineTerminal } from '@/terminal/MachineTerminal';
 import { Check, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ProviderAccountStatus } from '@ruimte/contracts';
@@ -202,8 +203,9 @@ function LoginTerminal({ request, onRetry }: { request: LoginRequest; onRetry():
                 <CloseButton label={t('common:action.close')} dialog />
             </div>
             <div className="relative min-h-0 grow bg-term-bg">
-                <TerminalView
+                <MachineTerminal
                     ref={viewRef}
+                    endpointId={endpointId}
                     className="absolute inset-0"
                     fontSize={fontSize}
                     lineHeight={lineHeight}

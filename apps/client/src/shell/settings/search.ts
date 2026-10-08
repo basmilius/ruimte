@@ -72,13 +72,6 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         label: 'settings:appearance.font.mono.label',
         description: 'settings:appearance.font.mono.description'
     },
-    { id: 'appearance.font.terminalSize', section: 'appearance', label: 'settings:appearance.font.terminalSize.label' },
-    {
-        id: 'appearance.font.terminalLineHeight',
-        section: 'appearance',
-        label: 'settings:appearance.font.terminalLineHeight.label',
-        description: 'settings:appearance.font.terminalLineHeight.description'
-    },
     {
         id: 'editor.colors.light',
         section: 'editor',
@@ -245,6 +238,14 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     { id: 'editor.servers', section: 'editor', label: 'settings:editor.servers.title', description: 'settings:editor.servers.description' },
     { id: 'editor.servers.own', section: 'editor', label: 'settings:editor.servers.own.title', description: 'settings:editor.servers.own.description' },
+    { id: 'terminal.font.size', section: 'terminal', label: 'settings:terminal.font.size.label', description: 'settings:terminal.font.size.description' },
+    {
+        id: 'terminal.font.lineHeight',
+        section: 'terminal',
+        label: 'settings:terminal.font.lineHeight.label',
+        description: 'settings:terminal.font.lineHeight.description'
+    },
+    { id: 'terminal.links', section: 'terminal', label: 'settings:terminal.links.label', description: 'settings:terminal.links.description' },
     { id: 'views.drawing.snap', section: 'views', label: 'settings:views.drawing.snap.label', description: 'settings:views.drawing.snap.description' },
     {
         id: 'views.browser.swipe',

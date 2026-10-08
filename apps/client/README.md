@@ -29,6 +29,23 @@ panning keeps wheel input with the canvas over focused node bodies and browser g
 Text entry retains its own keys. Geometry and input ownership are covered by the canvas
 unit tests and `canvas-interaction.integration.test.ts`.
 
+## Terminal links
+
+Hover an HTTP/HTTPS link to see its target and activation hint in a tooltip. Cmd+click opens it on macOS;
+Ctrl+click does so on other platforms. Ordinary clicks focus the terminal, and dragging selects
+text. Wrapped URLs and OSC 8 web hyperlinks retain their complete target.
+
+Settings → Terminal chooses between the external browser (the default) and Ruimte.
+Externally, the desktop uses the system browser through its bridge; the web client opens a new tab.
+Inside Ruimte, a canvas terminal opens a browser node beside itself on that same canvas; a standalone
+terminal opens a new browser view. Without a project on the terminal's machine, links open externally.
+The tooltip shows the destination, centered above or below the hovered line of the link.
+
+A localhost, loopback or bind address belongs to the terminal's machine. Only the desktop's local
+machine opens these addresses directly. Other terminals explain that Ruimte does not forward
+remote ports; the link is not opened against the client computer. Plain file paths and file-scheme
+links are outside this web-link route.
+
 ## Model comparison
 
 The models dialog (`src/shell/models`) shares model, provider, legacy and reasoning filters

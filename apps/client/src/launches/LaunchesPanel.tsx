@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { TerminalView, type TerminalViewHandle } from '@adecore/terminal';
+import type { TerminalViewHandle } from '@adecore/terminal';
+import { MachineTerminal } from '@/terminal/MachineTerminal';
 import { ChevronDown, ExternalLink, Play, Plus, Rocket } from 'lucide-react';
 import { Button, ButtonGroup, Icon, Menu, PanelEmpty, useNow } from '@adecore/ui';
 import { formatAgo, formatDuration } from '@adecore/ui/format';
@@ -251,8 +252,9 @@ function LaunchTerminal({ sessionId }: { sessionId: string }) {
     return (
         <div className="relative min-h-0 grow bg-term-bg">
             {sessions && (
-                <TerminalView
+                <MachineTerminal
                     ref={viewRef}
+                    endpointId={endpointId}
                     className="absolute inset-0"
                     fontSize={fontSize}
                     lineHeight={lineHeight}

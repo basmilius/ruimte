@@ -56,13 +56,6 @@
                 "label": "Monospace font",
                 "description": "For terminals and code. Falls back to the system font if it is not installed.",
                 "system": "System"
-            },
-            "terminalSize": {
-                "label": "Terminal font size"
-            },
-            "terminalLineHeight": {
-                "label": "Terminal line height",
-                "description": "As a multiple of the row height the font needs."
             }
         },
         "sidebar": {
@@ -389,6 +382,28 @@
             "preview": "Preview of {{theme}}"
         }
     },
+    "terminal": {
+        "font": {
+            "title": "Font",
+            "size": {
+                "label": "Terminal font size",
+                "description": "The font itself is under Appearance."
+            },
+            "lineHeight": {
+                "label": "Terminal line height",
+                "description": "As a multiple of the row height the font needs."
+            }
+        },
+        "links": {
+            "title": "Links",
+            "label": "Open terminal links in",
+            "description": "Ruimte opens a new browser view, or a browser node beside the terminal on its canvas. Without a project on the same machine, links use your external browser.",
+            "options": {
+                "external": "External browser",
+                "ruimte": "Ruimte"
+            }
+        }
+    },
     "sections": {
         "appearance": {
             "label": "Appearance",
@@ -401,6 +416,10 @@
         "editor": {
             "label": "Editor",
             "description": "The code editor: its font, wrapping and smart keys, and the language servers behind it."
+        },
+        "terminal": {
+            "label": "Terminal",
+            "description": "Font size, line height and links."
         },
         "views": {
             "label": "Views",

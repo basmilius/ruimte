@@ -216,6 +216,13 @@
         "reconnecting": "Opnieuw verbinden met de machine"
     },
     "terminal": {
+        "links": {
+            "open": "{{modifier}}+klik om in je browser te openen",
+            "openInRuimte": "{{modifier}}+klik om in Ruimte te openen",
+            "remoteLoopback": "Dit adres hoort bij {{machine}}. Ruimte stuurt de lokale poorten van die machine niet door naar deze computer.",
+            "unavailable": "Deze lokale link kan hier niet worden geopend",
+            "thisMachine": "de machine van de terminal"
+        },
         "startFailed": "De sessie kon niet worden gestart",
         "sessionEnded": "[sessie beëindigd]",
         "exited": "[proces gestopt met code {{code}}]",

@@ -18,6 +18,7 @@ describe('searching the settings', () => {
     test('a row is found by its label and by its description', () => {
         expect(searchSettings('wrap long').map((result) => result.id)).toEqual(['editor.general.display.wrap']);
         expect(searchSettings('pinned tab').map((result) => result.id)).toContain('files.files.openFiles');
+        expect(searchSettings('terminal links').map((result) => result.id)).toContain('terminal.links');
         expect(searchSettings('whitespace changes')[0]).toMatchObject({ section: 'files', id: 'files.git.whitespace', label: 'Show whitespace changes' });
     });
 

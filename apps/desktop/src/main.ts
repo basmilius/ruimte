@@ -50,6 +50,7 @@ import {
     createGestureGate,
     hardenGuestPreferences,
     isExternalLink,
+    isWebLink,
     isSystemSettingsPane,
     PREVIEW_PARTITION
 } from './web-guards';
@@ -976,7 +977,7 @@ handleFromApp('dialog:choose-open-path', async (event, request: unknown) => {
 });
 
 handleFromApp('shell:open-external', async (_event, url: string) => {
-    if (/^https?:\/\//.test(url)) {
+    if (isWebLink(url)) {
         await shell.openExternal(url);
     }
 });

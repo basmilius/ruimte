@@ -216,6 +216,13 @@
         "reconnecting": "Reconnecting to the machine"
     },
     "terminal": {
+        "links": {
+            "open": "{{modifier}}+click to open in your browser",
+            "openInRuimte": "{{modifier}}+click to open in Ruimte",
+            "remoteLoopback": "This address belongs to {{machine}}. Ruimte does not forward its local ports to this computer.",
+            "unavailable": "This machine-local link cannot be opened here",
+            "thisMachine": "the terminal’s machine"
+        },
         "startFailed": "The session could not be started",
         "sessionEnded": "[session ended]",
         "exited": "[process exited with code {{code}}]",
