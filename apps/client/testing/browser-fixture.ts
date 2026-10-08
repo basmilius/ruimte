@@ -30,10 +30,14 @@ export async function withBrowserFixture(entryCode: string, styles: string, run:
             conditions: ['source'],
             plugins: [
                 {
-                    name: 'shared-react',
+                    name: 'fixture-imports',
                     setup(builder) {
                         builder.onResolve({ filter: /^(react|react-dom|react-i18next|i18next)(\/.*)?$/ }, ({ path }) => ({
                             path: Bun.resolveSync(path, clientDirectory)
+                        }));
+                        // Bun's browser bundler misses this transitive workspace export in CI.
+                        builder.onResolve({ filter: /^@adecore\/shell\/bridge$/ }, ({ path, resolveDir }) => ({
+                            path: Bun.resolveSync(path, resolveDir)
                         }));
                         builder.onResolve({ filter: /\?(worker|url)$/ }, ({ path, resolveDir }) => ({
                             path: `${Bun.resolveSync(path.replace(/\?(worker|url)$/, ''), resolveDir)}${path.endsWith('?worker') ? '?worker' : '?url'}`,
