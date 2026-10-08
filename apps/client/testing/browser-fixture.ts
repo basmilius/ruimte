@@ -35,9 +35,9 @@ export async function withBrowserFixture(entryCode: string, styles: string, run:
                         builder.onResolve({ filter: /^(react|react-dom|react-i18next|i18next)(\/.*)?$/ }, ({ path }) => ({
                             path: Bun.resolveSync(path, clientDirectory)
                         }));
-                        // Bun's browser bundler misses this transitive workspace export in CI.
-                        builder.onResolve({ filter: /^@adecore\/shell\/bridge$/ }, ({ path, resolveDir }) => ({
-                            path: Bun.resolveSync(path, resolveDir)
+                        // Resolve the shell through its desktop consumer in isolated installs.
+                        builder.onResolve({ filter: /^@adecore\/shell\/bridge$/ }, ({ path }) => ({
+                            path: Bun.resolveSync(path, join(clientDirectory, '../desktop'))
                         }));
                         builder.onResolve({ filter: /\?(worker|url)$/ }, ({ path, resolveDir }) => ({
                             path: `${Bun.resolveSync(path.replace(/\?(worker|url)$/, ''), resolveDir)}${path.endsWith('?worker') ? '?worker' : '?url'}`,
