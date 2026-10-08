@@ -16,7 +16,7 @@ import { ViewToolbar } from '@/shell/ViewToolbar';
 import { useHasViewToolbar, useShowsSubagents, useViewToolbarLeads } from '@/shell/view-toolbar';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
-import { cellAt, cellCount, type CellAt } from '@/shell/split';
+import { cellAt, type CellAt } from '@/shell/split';
 import { CloseButton, Icon, IconButton, Menu, Separator, ContextMenu, Popover, Tooltip } from '@adecore/ui';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
@@ -64,12 +64,6 @@ function useFolded(bar: React.RefObject<HTMLElement | null>, actions: React.RefO
     return enabled && foldedAt !== null;
 }
 
-/*
- * The bar over one cell of the grid. With the views side by side the window's toolbar goes back to
- * being the application's, and every cell says for itself which view it holds and what that view can
- * do. The bar is the handle as well: drag it anywhere to move the view to another cell, which is
- * where a tab bar would be in an app that had tabs, and this app does not.
- */
 export function CellToolbar({ at, view, focused, children }: { at: CellAt; view: CellView; focused: boolean; children: ReactElement }) {
     const { t } = useTranslation('shell');
     /* The file's controls are portaled up into this bar, so every cell holds a host of its own:
@@ -85,8 +79,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     const actions = useRef<HTMLSpanElement>(null);
     const bodyFocused = useDocument((s) => s.bodyFocused);
     const maximized = useDocument((s) => s.maximized === view.id);
-    /* The last cell stays (`split.close`), so its bar has nothing to offer there. */
-    const closable = useDocument((s) => s.layout !== null && cellCount(s.layout) > 1);
+    const closable = useDocument((s) => s.layout !== null);
     /* The tabs of the cell when it is a host. A host keeps its bar whatever the view in front is. */
     const tabs = useDocument((s) => (s.layout === null ? undefined : cellAt(s.layout, at)?.tabs));
     const hosted = tabs !== undefined;

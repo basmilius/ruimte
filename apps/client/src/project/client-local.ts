@@ -161,6 +161,7 @@ export function overlayLocal(machine: ProjectLocal, client: ProjectLocal | null)
         activeViewId: client.activeViewId,
         views,
         ...(client.panels ? { panels: client.panels } : {}),
-        ...(client.layout ? { layout: client.layout } : {})
+        ...(client.layout ? { layout: client.layout } : {}),
+        ...(client.emptyLayout === undefined ? {} : { emptyLayout: client.emptyLayout })
     };
 }

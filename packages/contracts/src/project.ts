@@ -1066,7 +1066,9 @@ export const ProjectLocalSchema = z.object({
     panels: ProjectPanelsSchema.optional(),
     /* Absent means one column with one cell on `activeViewId`, which is every file written before
        views could stand side by side and every project that has never been split. */
-    layout: SplitLayoutSchema.optional()
+    layout: SplitLayoutSchema.optional(),
+    /* Distinguishes closing every view from an older client that has never saved a layout. */
+    emptyLayout: z.boolean().optional()
 });
 export type ProjectLocal = z.infer<typeof ProjectLocalSchema>;
 

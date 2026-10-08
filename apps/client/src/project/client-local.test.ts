@@ -38,6 +38,16 @@ const machine: ProjectLocal = {
 };
 
 describe('overlayLocal', () => {
+    test('an explicitly empty client layout survives storage and wins over a machine layout', () => {
+        const storage = memory();
+        const local: ProjectLocal = { activeViewId: null, views: {}, emptyLayout: true };
+        writeClientLocal(storage, 'daemon-a', 'p1', local);
+        const restored = readClientLocal(storage, 'daemon-a', 'p1');
+        expect(restored).toEqual(local);
+        expect(overlayLocal({ ...machine, layout }, restored)).toMatchObject({ activeViewId: null, emptyLayout: true });
+        expect(overlayLocal({ ...machine, layout }, restored).layout).toBeUndefined();
+    });
+
     test('a project this client never saw uses the machine layout without its legacy favicons', () => {
         expect(overlayLocal(machine, null)).toEqual({ ...machine, panels: { panel: { open: true, kind: 'git' } } });
     });

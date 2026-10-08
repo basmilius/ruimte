@@ -206,7 +206,8 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
     const free = useDocument(freeViewFor);
     const filling = useDocument((s) => maximizedCell(s.layout, s.maximized) !== null);
     const cell = at ?? layout?.focus ?? null;
-    const closable = layout !== null && cellCount(layout) > 1;
+    const closable = layout !== null;
+    const multiple = layout !== null && cellCount(layout) > 1;
     const held = layout !== null && cell !== null ? cellAt(layout, cell) : null;
     const standing = held?.viewId ?? null;
     const hosted = held !== null && isTabHost(held);
@@ -239,7 +240,7 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
                     <Icon icon={PanelBottom} size={14} /> {t('viewMenu.splitDown')} <Kbd shortcut={CANVAS_SHORTCUTS.splitDown} />
                 </Menu.Item>
             )}
-            {closable && standing !== null && (
+            {multiple && standing !== null && (
                 <Menu.Item onClick={toggleMaximized}>
                     <Icon icon={filling ? Shrink : Expand} size={14} /> {t(filling ? 'viewMenu.restoreSplit' : 'viewMenu.maximizeCell')}{' '}
                     <Kbd shortcut={CANVAS_SHORTCUTS.maximizeCell} />
@@ -251,7 +252,7 @@ export function SplitItems({ at, separated = false }: { at?: CellAt; separated?:
                     <Icon icon={X} size={14} /> {t('cellToolbar.closeCell')} {!hosted && <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />}
                 </Menu.Item>
             )}
-            {closable && cell !== null && standing !== null && (
+            {multiple && cell !== null && standing !== null && (
                 <Menu.Item onClick={() => closeOtherCellsAction(cell)}>
                     <Icon icon={ListX} size={14} /> {t('viewMenu.closeOthers')}
                 </Menu.Item>

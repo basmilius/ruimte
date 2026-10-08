@@ -26730,6 +26730,9 @@
               "columns",
               "focus"
             ]
+          },
+          "emptyLayout": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -30175,6 +30178,9 @@
               "columns",
               "focus"
             ]
+          },
+          "emptyLayout": {
+            "type": "boolean"
           }
         },
         "required": [

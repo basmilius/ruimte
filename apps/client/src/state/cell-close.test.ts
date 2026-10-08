@@ -143,6 +143,39 @@ describe('closing cells through the guards of their loose tabs', () => {
         expect(cells()).toEqual([['/p/one.ts', '/p/two.ts']]);
     });
 
+    test('closing the last host saves its files before leaving the empty screen', async () => {
+        useDocument.getState().closeCellAt({ column: 0, cell: 0 });
+        leaveUnsaved('/p/one.ts');
+        expect(await closeCellGuarded({ column: 0, cell: 0 })).toBe(true);
+        expect(saves).toHaveBeenCalledTimes(1);
+        expect(useFiles.getState().tabs).toEqual([]);
+        expect(useDocument.getState().layout).toBeNull();
+    });
+
+    test('the last database tab stays when edits are kept and closes once discarded', async () => {
+        useFiles.getState().show({ tabs: [...useFiles.getState().tabs, ORDERS], active: ORDERS.key }, 5);
+        useDocument.getState().closeCellAt({ column: 0, cell: 0 });
+        useFiles.getState().setUnsubmitted(ORDERS.key, true);
+        const closing = closeCellGuarded({ column: 0, cell: 0 });
+        await settle();
+        useFiles.getState().cancelDiscard();
+        expect(await closing).toBe(false);
+        expect(cells()).toEqual([[ORDERS.key]]);
+        const again = closeCellGuarded({ column: 0, cell: 0 });
+        await settle();
+        useFiles.getState().confirmDiscard();
+        expect(await again).toBe(true);
+        expect(useDocument.getState().layout).toBeNull();
+    });
+
+    test('a mixed last host closes completely after its file leaves a plain project view', async () => {
+        useDocument.getState().closeCellAt({ column: 0, cell: 0 });
+        useDocument.getState().showView('b');
+        expect(await closeCellGuarded({ column: 0, cell: 0 })).toBe(true);
+        expect(useDocument.getState().layout).toBeNull();
+        expect(useDocument.getState().views.some((view) => view.id === 'b')).toBe(true);
+    });
+
     test('closing the other cells goes through the guards of the loose tabs in them and keeps the cell it was asked from', async () => {
         saves.mockResolvedValue(false);
         leaveUnsaved('/p/two.ts');

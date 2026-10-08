@@ -64,7 +64,7 @@ interface DocumentAccess {
         fileViews(): ProjectView[];
         deleteView(id: string): void;
         purgeTrash(): void;
-        exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout'>;
+        exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout' | 'emptyLayout'>;
     };
     subscribe: StoreApi<DocumentAccess extends { getState(): infer S } ? S : never>['subscribe'];
 }

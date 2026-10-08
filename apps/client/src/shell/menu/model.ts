@@ -235,15 +235,14 @@ export function menuModel(context: MenuContext): MenuSpec {
         ...only(agent.chat, command(`agent-view-chat-${agent.kind}`, t('agentChat', { name: agent.name }))),
         ...only(agent.terminal, command(`agent-view-terminal-${agent.kind}`, t('agentTerminal', { name: agent.name })))
     ]);
-    // With one cell Cmd+W closes the window, as the stock Window menu's Close did before this menu.
     // In a host the key closes the tab in front, so Close Cell keeps no key of its own there.
     const hosted = context.tabs.hosted;
     const close =
-        context.cells > 1 || !desktop
-            ? command('close-cell', t('closeCell'), { shortcut: hosted ? undefined : CANVAS_SHORTCUTS.closeCell, enabled: context.cells > 1 })
-            : hosted
-              ? command('close-cell', t('closeCell'), { enabled: false })
-              : role('close', t('closeWindow'));
+        workspace && context.cells > 0
+            ? command('close-cell', t('closeCell'), { shortcut: hosted ? undefined : CANVAS_SHORTCUTS.closeCell })
+            : desktop
+              ? role('close', t('closeWindow'))
+              : command('close-cell', t('closeCell'), { enabled: false });
     const fileMenu = {
         id: 'file',
         label: t('file'),

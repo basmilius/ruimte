@@ -22,6 +22,8 @@ import { useDatabasePanel } from '@/database/state';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useProject } from '@/state/project';
+import { startDatabaseDrag } from '@/database/drag';
+import { setDragging } from '@/shell/view-drag';
 
 /*
  * The connections of the project, with their schemas, tables and columns, and the consoles of each. A table
@@ -99,6 +101,8 @@ function DatabasesPanelBody() {
                 value={selection}
                 onValueChange={(next) => useDatabasePanel.getState().setSelection(next)}
                 openOnClick
+                onTableDragStart={(ref, event, kind) => startDatabaseDrag(event.dataTransfer, ref, kind)}
+                onTableDragEnd={() => setDragging(null)}
                 folders={consoles.folders}
                 className="min-h-0 grow"
             />

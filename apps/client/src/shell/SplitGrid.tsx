@@ -5,6 +5,8 @@ import { isCanvasView, type SplitLayout } from '@ruimte/contracts';
 import { PromptStack } from '@/canvas/PromptStack';
 import { carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { carriesDiff, droppedDiff } from '@/shell/diff-drag';
+import { carriesDatabase, droppedDatabase } from '@/database/drag';
+import { dropDatabaseTab } from '@/database/open';
 import { isLooseView } from '@/shell/cell-view';
 import { useCellView } from '@/shell/use-cell-view';
 import { placeFilesAction, placeViewAction } from '@/actions/client-actions';
@@ -47,8 +49,8 @@ import {
     dragging,
     draggingTabWidth,
     draggingWholeCell,
-    edgeZoneAt,
     isNowhereDrop,
+    pathZoneAt,
     setGridTakesPath,
     shapeOf,
     shapeRect,
@@ -66,7 +68,7 @@ import { CellOverlay } from '@/shell/CellOverlay';
  * What a surface inside a cell says about the paths dropped on it, so the grid does not carry a list
  * of which view kinds handle a drop. `all` keeps the grid out entirely (a chat's composer, which
  * mentions the file); `middle` leaves the grid the strip along the edge and takes the rest (the
- * canvas, which makes a node of it). A surface that says nothing lets the whole cell split.
+ * canvas, which makes a node of it). Other surfaces let the grid split or replace the view.
  */
 function takesDrop(target: EventTarget | null): string | null {
     return (target as HTMLElement | null)?.closest?.('[data-takes-drop]')?.getAttribute('data-takes-drop') ?? null;
@@ -216,7 +218,8 @@ function Cell({
     };
 
     const overBar = (event: ReactDragEvent<HTMLElement>): boolean =>
-        carriesView(event.dataTransfer) && ((event.target as HTMLElement | null)?.closest?.('[data-cell-bar]') ?? null) !== null;
+        (carriesView(event.dataTransfer) || carriesPaths(event.dataTransfer.types)) &&
+        ((event.target as HTMLElement | null)?.closest?.('[data-cell-bar]') ?? null) !== null;
 
     /* Where the pointer would put a tab, or null when the bar cannot take this drag. A whole cell
        is not a tab, and a view that fills this cell alone has nowhere to go in it. */
@@ -226,7 +229,7 @@ function Cell({
             return null;
         }
         const moving = dragging();
-        if (!carriesDiff(event.dataTransfer)) {
+        if (!carriesDiff(event.dataTransfer) && !carriesDatabase(event.dataTransfer) && !usesPaths(event)) {
             if (moving === null || draggingWholeCell() || !canStandInCell(useDocument.getState(), moving) || !canDropAsTab(layout, at, moving)) {
                 return null;
             }
@@ -275,7 +278,7 @@ function Cell({
             return null;
         }
         // A change dropped in the middle of a cell opens as a tab of it, whatever the cell holds.
-        if (here === 'center' && carriesDiff(event.dataTransfer)) {
+        if (here === 'center' && (carriesDiff(event.dataTransfer) || carriesDatabase(event.dataTransfer))) {
             return here;
         }
         // The bar of a host carries every tab, so the question is whether the whole cell fits there.
@@ -286,23 +289,12 @@ function Cell({
         return canSplit(layout, at, here, moving) && !isNowhereDrop(from, at, here) ? here : null;
     };
 
-    /*
-     * Where a path out of the files panel would land, which is always an edge and never the middle:
-     * a file dropped on the grid becomes a view of its own, in a cell beside the one it was aimed
-     * at. How much of the cell answers is the surface under the pointer's to say, so a cell whose
-     * contents do nothing with a path splits over its whole face and a drag over it always has an
-     * answer, however large the cell or the page filling it.
-     */
     const pathZoneFor = (event: ReactDragEvent<HTMLElement>): SplitZone | null => {
-        const taken = takesDrop(event.target);
-        if (taken === 'all') {
-            return null;
-        }
         const box = event.currentTarget.getBoundingClientRect();
         const spot = { x: event.clientX - box.left, y: event.clientY - box.top };
-        const here = taken === 'middle' ? zoneAt(box, spot) : edgeZoneAt(box, spot);
+        const here = pathZoneAt(box, spot, takesDrop(event.target));
         const layout = useDocument.getState().layout;
-        return here !== 'center' && layout !== null && canSplit(layout, at, here) ? here : null;
+        return here !== null && layout !== null && canSplit(layout, at, here) ? here : null;
     };
 
     /* The claim, staked before anything inside the cell sees the drag; the canvas reads it and holds off. */
@@ -310,9 +302,9 @@ function Cell({
         if (!usesPaths(event)) {
             return;
         }
-        const zone = pathZoneFor(event);
-        setGridTakesPath(zone !== null);
-        if (zone === null) {
+        const claimed = overBar(event) ? tabDropFor(event) !== null : pathZoneFor(event) !== null;
+        setGridTakesPath(claimed);
+        if (!claimed) {
             /* A surface that takes the drop itself stops the event, so the handler below never runs
                and the hint the grid left standing has to be taken back here. */
             hideDropPreview();
@@ -357,7 +349,7 @@ function Cell({
                             // Only a prevented dragover accepts the drop.
                             event.preventDefault();
                         }
-                        event.dataTransfer.dropEffect = tab === null ? 'none' : 'move';
+                        event.dataTransfer.dropEffect = tab === null ? 'none' : usesPaths(event) ? dropEffectFor(event.dataTransfer.effectAllowed) : 'move';
                         if (tab === null) {
                             hideDropPreview();
                         } else {
@@ -399,6 +391,15 @@ function Cell({
                         }
                         event.preventDefault();
                         event.stopPropagation();
+                        const database = droppedDatabase(event.dataTransfer);
+                        if (database !== null) {
+                            dropDatabaseTab(database, at, 'center', tabIndexFor(tab.gap, dragging() ?? ''));
+                            return;
+                        }
+                        if (usesPaths(event)) {
+                            placeFilesAction(droppedPaths(event.dataTransfer), viewId, 'center', tabs === undefined ? null : tab.gap);
+                            return;
+                        }
                         const diff = droppedDiff(event.dataTransfer);
                         if (diff !== null) {
                             const key = tabKey(diff.path, diff.view);
@@ -420,6 +421,11 @@ function Cell({
                     }
                     event.preventDefault();
                     event.stopPropagation();
+                    const database = droppedDatabase(event.dataTransfer);
+                    if (database !== null) {
+                        dropDatabaseTab(database, at, here);
+                        return;
+                    }
                     if (paths.length === 0) {
                         const dragged = draggedViewId(event.dataTransfer);
                         const diff = droppedDiff(event.dataTransfer);
@@ -439,7 +445,7 @@ function Cell({
                         }
                         return;
                     }
-                    // Keep the file beside this cell without adding it to the sidebar.
+                    // A dropped file stays out of the sidebar.
                     placeFilesAction(paths, viewId, here);
                 }}
             >

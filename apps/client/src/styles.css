@@ -436,7 +436,8 @@
        its own document absorbs the event before the cell underneath can see the drag arrive. The
        attribute is set in `shell/view-drag.ts` for as long as the drag lasts. */
     body[data-dragging] .browser-host,
-    body[data-dragging] .file-preview-page {
+    body[data-dragging] .file-preview-page,
+    body[data-dragging] iframe {
         pointer-events: none;
     }
 

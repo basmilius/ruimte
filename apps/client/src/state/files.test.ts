@@ -367,10 +367,10 @@ describe('the store and the tab hosts', () => {
             expect(useFiles.getState().tabs).toEqual([]);
         });
 
-        test('the last tab of the last cell leaves the first view of the project', () => {
+        test('the last tab of the last cell leaves an empty layout', () => {
             useFiles.getState().open('/p/a.ts', 5);
             useFiles.getState().close('/p/a.ts');
-            expect(shape()).toEqual([['a']]);
+            expect(shape()).toEqual([]);
         });
 
         test('with no view in the project it leaves an empty grid', () => {

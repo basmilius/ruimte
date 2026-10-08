@@ -175,9 +175,8 @@ export function ViewSurface({ view, hostIds }: { view: CellView; hostIds?: reado
 }
 
 /*
- * The Chats project has no kinds of view to pick from, so an empty window holds a chat: a new one, or
- * the one nobody wrote in yet, which the machine hands out again. Asked once each time the window is
- * empty; until the chat is on screen nothing is drawn, and a machine that gave none gets the tiles.
+ * The Chats project starts its first chat automatically. A deliberately closed layout must leave
+ * the start screen instead of reopening a chat immediately.
  */
 function ChatsStart() {
     const endpointId = useProject((s) => s.currentEndpointId);
@@ -203,9 +202,10 @@ export function ViewHost() {
     const empty = useDocument((s) => s.layout === null);
     const projectId = useProject((s) => s.current?.projectId);
     const scratch = useProject((s) => isScratchProject(s.current));
+    const closed = useDocument((s) => s.emptyLayout);
     return empty ? (
         <ErrorBoundary label={t('projectStart.failed')} resetKeys={[projectId]}>
-            {scratch ? <ChatsStart key={projectId} /> : <ProjectStartScreen />}
+            {scratch && !closed ? <ChatsStart key={projectId} /> : <ProjectStartScreen />}
         </ErrorBoundary>
     ) : (
         <SplitGrid />

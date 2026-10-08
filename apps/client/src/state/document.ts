@@ -48,6 +48,7 @@ import {
     closeCellsRightOf,
     closeOtherCells,
     closeTab,
+    collapseTabHosts,
     dropAsTab,
     dropView,
     evenCells,
@@ -62,7 +63,6 @@ import {
     locateView,
     moveCell,
     moveTabBy,
-    openableViewIds,
     replaceViewId,
     showViewIn,
     singleLayout,
@@ -87,6 +87,8 @@ export interface DocumentState {
     activeViewId: string | null;
     /* How the views stand beside each other on this machine. Null while no view is open at all. */
     layout: SplitLayout | null;
+    /* A deliberate empty screen must not trigger the Chats project's automatic first chat. */
+    emptyLayout: boolean;
     /* The view filling the whole grid for a while, the layout under it untouched. Never saved, and
        any move of the grid ends it, so the grid a person gets back is the one they left. */
     maximized: string | null;
@@ -171,9 +173,8 @@ export interface DocumentState {
     splitTabOff(viewId: string): boolean;
     /* A host with a single tab becomes a plain cell again. */
     ungroupCell(at: CellAt): void;
-    /* A loose view leaves the grid; its cell goes with its last tab, and the last cell falls back to the first view there is. */
     closeLoose(key: string): void;
-    /* A view of the project leaves the screen, its cell with its last tab; the last cell stays. */
+    /* Closing a tab leaves the view available in the sidebar. */
     closeViewTab(viewId: string): void;
     /* A loose view that got another key (a file that moved) keeps its place wherever it stands. */
     replaceViewKey(from: string, to: string): void;
@@ -185,7 +186,6 @@ export interface DocumentState {
     moveCellTo(from: CellAt, at: CellAt, zone: SplitZone): void;
     /* Splits the focused cell and puts a view in the new one. */
     splitFocused(direction: SplitDirection, viewId: string): void;
-    /* Takes a cell off the grid; the neighbors grow into it. The last cell stays, there has to be one. */
     closeCellAt(at: CellAt): void;
     /* Every cell but this one; the views stay in the project, as with closing one. */
     closeOtherCells(at: CellAt): void;
@@ -245,7 +245,7 @@ export interface DocumentState {
     exportViews(): ProjectView[];
     /* What the project file holds: the exported views with the trashed ones still in their place. */
     fileViews(): ProjectView[];
-    exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout'>;
+    exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout' | 'emptyLayout'>;
 }
 
 /*
@@ -385,7 +385,8 @@ function settledOn(
     viewLocal: Record<string, ProjectViewLocal>,
     layout: SplitLayout | null,
     was: Pick<DocumentState, 'lastCanvasViewId' | 'lastHostViewId'>
-): Pick<DocumentState, 'views' | 'viewLocal' | 'layout' | 'activeViewId' | 'lastCanvasViewId' | 'lastHostViewId' | 'bodyFocused'> {
+): Pick<DocumentState, 'views' | 'viewLocal' | 'layout' | 'emptyLayout' | 'activeViewId' | 'lastCanvasViewId' | 'lastHostViewId' | 'bodyFocused'> {
+    layout = collapseTabHosts(layout, views);
     const activeViewId = layout === null ? null : focusedViewId(layout);
     const active = cellViewOf({ views }, activeViewId);
     const canvas = active !== null && isCanvasView(active);
@@ -394,6 +395,7 @@ function settledOn(
         views,
         viewLocal,
         layout,
+        emptyLayout: layout === null,
         activeViewId,
         lastCanvasViewId: canvas ? activeViewId : was.lastCanvasViewId,
         lastHostViewId: focused !== null && isTabHost(focused) ? focused.viewId : was.lastHostViewId,
@@ -460,7 +462,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             const viewLocal = { ...state.viewLocal, ...state.exportLocal().views };
             const settled = settledOn(views, viewLocal, layout, state);
             set({ ...settled, maximized: null, viewNotice: afterMove(state.viewNotice, settled.activeViewId) });
-            openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), layout === null ? null : focusedViewId(layout), peers);
+            openEditors(views, viewLocal, settled.layout === null ? [] : viewIdsIn(settled.layout), settled.activeViewId, peers);
         };
 
         /* What the pure operations in contracts hand back: a new list, or null for a call that asked
@@ -489,7 +491,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             const stood =
                 state.layout === null || standing === null
                     ? null
-                    : { before: state.layout, after: closeTab(state.layout, id) ?? (next ? singleLayout(next.id) : null) };
+                    : { before: state.layout, after: collapseTabHosts(closeTab(state.layout, id) ?? (next ? singleLayout(next.id) : null), views) };
             set({
                 views,
                 viewLocal,
@@ -515,6 +517,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             views: [],
             activeViewId: null,
             layout: null,
+            emptyLayout: false,
             maximized: null,
             lastCanvasViewId: null,
             lastHostViewId: null,
@@ -547,6 +550,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
                 // Another project is another set of views, so a banner about the one that just left goes with it.
                 set({
                     ...settled,
+                    emptyLayout: local?.emptyLayout === true,
                     maximized: null,
                     viewNotice: null,
                     loading: true,
@@ -741,15 +745,13 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
                 if (state.layout === null || locateView(state.layout, key) === null) {
                     return;
                 }
-                // The last tab of the last cell leaves nothing to look at, so the first view of the project takes the grid.
-                const first = openableViewIds(state.views)[0];
-                commit(closeTab(state.layout, key) ?? (first === undefined ? null : singleLayout(first)));
+                commit(closeTab(state.layout, key));
             },
 
             closeViewTab(viewId) {
                 const state = get();
                 const next = state.layout === null ? null : closeTab(state.layout, viewId);
-                if (next !== null && next !== state.layout) {
+                if (next !== state.layout) {
                     commit(next);
                 }
             },
@@ -802,9 +804,8 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
                 if (state.layout === null) {
                     return;
                 }
-                // The last cell stays, since a project always has a view open, and an empty grid is not a state.
                 const next = closeCell(state.layout, at);
-                if (next !== null) {
+                if (next !== state.layout) {
                     commit(next);
                 }
             },
@@ -1110,7 +1111,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             },
 
             exportLocal() {
-                const { viewLocal, views, layout } = get();
+                const { viewLocal, views, layout, emptyLayout } = get();
                 const open = new Set([
                     ...peers.canvases.live().map(([viewId]) => viewId),
                     ...peers.drawings.live().map(([viewId]) => viewId),
@@ -1126,7 +1127,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
                 return {
                     activeViewId: layout === null ? null : focusedViewId(layout),
                     views: next,
-                    ...(layout === null ? {} : { layout })
+                    ...(layout !== null ? { layout } : emptyLayout ? { emptyLayout: true } : {})
                 };
             }
         };

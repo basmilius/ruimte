@@ -56,7 +56,6 @@ export function cellCount(layout: SplitLayout): number {
     return layout.columns.reduce((total, column) => total + column.cells.length, 0);
 }
 
-/* A tab host is a cell with a `tabs` list, which stays a host until its last tab is gone. */
 export function isTabHost(cell: SplitCell): boolean {
     return cell.tabs !== undefined;
 }
@@ -318,8 +317,8 @@ export function activateTab(layout: SplitLayout, viewId: string): SplitLayout {
 
 /*
  * Takes a view out of its cell. A cell that held only this view closes (null when it was the last
- * cell, which the caller decides on); a host with more tabs hands the active tab to the right
- * neighbor, else the left one, and stays a host even when one tab is left.
+ * cell); a host hands the active tab to the right neighbor, else the left one. The document
+ * collapses a remaining single-tab host once it knows what kind of view it holds.
  */
 export function closeTab(layout: SplitLayout, viewId: string): SplitLayout | null {
     const at = locateView(layout, viewId);
@@ -357,6 +356,29 @@ export function ungroup(layout: SplitLayout, at: CellAt): SplitLayout {
         return layout;
     }
     return { ...layout, columns: replaceCell(layout.columns, at, { viewId: cell.tabs[0], size: cell.size }) };
+}
+
+/* Loose views have no sidebar entry to return to, so they keep their tab and its close button. */
+export function collapseTabHosts(layout: SplitLayout | null, views: readonly ProjectView[]): SplitLayout | null {
+    if (layout === null) {
+        return null;
+    }
+    let changed = false;
+    const columns = layout.columns.map((column) => {
+        const cells = column.cells.map((cell) => {
+            if (cell.tabs?.length !== 1) {
+                return cell;
+            }
+            const view = views.find((view) => view.id === cell.viewId);
+            if (view === undefined || view.kind === 'file' || view.kind === 'database') {
+                return cell;
+            }
+            changed = true;
+            return { viewId: cell.viewId, size: cell.size };
+        });
+        return cells.every((cell, index) => cell === column.cells[index]) ? column : { ...column, cells };
+    });
+    return changed ? { ...layout, columns } : layout;
 }
 
 /* A view that got another id (a file that moved) keeps its place wherever it stands. */
@@ -637,15 +659,15 @@ export function openableViewIds(views: readonly ProjectView[]): string[] {
     return views.filter(isOpenableView).map((view) => view.id);
 }
 
-/*
- * What a machine-local file means. No layout at all is the file of a client that never split, and of
- * every project that stands on one view: one column, one cell, on the view that was active.
- */
+/* Legacy clients omitted the layout for a single view; only an explicit emptyLayout closes every view. */
 export function layoutOf(
-    local: Pick<ProjectLocal, 'activeViewId' | 'layout'>,
+    local: Pick<ProjectLocal, 'activeViewId' | 'layout' | 'emptyLayout'>,
     views: readonly ProjectView[],
     extraIds: readonly string[] = []
 ): SplitLayout | null {
+    if (local.emptyLayout === true) {
+        return null;
+    }
     const ids = openableViewIds(views);
     if (local.layout) {
         return cleanLayout(local.layout, ids, extraIds);

@@ -131,7 +131,7 @@ export function menuContext(host: MenuHost): MenuContext {
         selection: onCanvas ? canvas.selection.length : 0,
         promote: onCanvas && selected !== undefined && canOpenAsView(selected.kind),
         anyLocked: Object.values(canvas.locks).some(Boolean),
-        cells: layout === null ? 1 : cellCount(layout),
+        cells: layout === null ? 0 : cellCount(layout),
         tabs: tabsOf(layout),
         split: { right: room('right'), down: room('down') },
         maximized: maximizedCell(layout, documentState.maximized) !== null,

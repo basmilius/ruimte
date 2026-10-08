@@ -71,9 +71,10 @@ import type { ChatPromptClients } from '@adecore/agents-react/prompts/logic/subj
 import { looseTabLabel } from '@/shell/panels/tab-label';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import {
+    canDropAsTab,
     canSplit,
     cellAt,
-    cellCount,
+    cellViewIds,
     focusedViewId,
     freeViewFor,
     isSameCell,
@@ -82,6 +83,7 @@ import {
     type SplitDirection,
     type SplitZone
 } from '@/shell/split';
+import { positionAfterLifting } from '@/shell/tab-drop';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { defaultCanvases, focusedCanvas, liveCanvas, NODE_SIZE, type AddNodeOptions, type CanvasState, type Locks, type NodeKind } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state/chats';
@@ -89,7 +91,7 @@ import { liveDiagram } from '@/state/diagram';
 import { activeViewOf, cellViewOf, useDocument, viewOfNode, type DocumentState } from '@/state/document';
 import { liveDrawing } from '@/state/drawing';
 import { closeCellGuarded, closeCellsRightOfGuarded, closeOtherCellsGuarded } from '@/state/cell-close';
-import { useFiles } from '@/state/files';
+import { openTab, useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -1287,8 +1289,8 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         'split.close': async ({ viewId }) => {
             const state = document.getState();
             const layout = state.layout;
-            if (layout === null || cellCount(layout) < 2) {
-                throw new ActionRefusal('last-cell', 'Only one cell is open, and the last one stays.');
+            if (layout === null) {
+                throw new ActionRefusal('no-grid', 'No view is open.');
             }
             const at = viewId === null ? layout.focus : locateView(layout, viewId);
             const closing = at === null ? null : cellAt(layout, at);
@@ -1316,7 +1318,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
             }
             return { output: { viewId, view: cellName(state, viewId), changed: !isSameCell(before, after.focus) } };
         },
-        'split.placeView': ({ viewId, paths, cellViewId, zone }, call) => {
+        'split.placeView': ({ viewId, paths, cellViewId, zone, tabGap }, call) => {
             const state = document.getState();
             const layout = state.layout;
             if (layout === null) {
@@ -1340,24 +1342,37 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
             const folder = useProject.getState().current?.folder ?? null;
             // Validate every path before changing the grid. A loose view names its file the way the daemon does.
             const absolute = (paths ?? []).map((path) => projectPathOf(folder, path, call.actor.kind));
-            if (!canSplit(layout, at, zone, viewId)) {
+            const asTab = zone === 'center' && tabGap !== undefined;
+            if (asTab ? viewId !== null && !canDropAsTab(layout, at, viewId) : !canSplit(layout, at, zone, viewId)) {
                 throw new ActionRefusal('no-room', 'The grid has no room there, or the view already stands in that cell.');
             }
             const created: string[] = [];
             let fileAt = at;
+            let gap = tabGap ?? null;
             for (const path of absolute) {
-                const id = useFiles
-                    .getState()
-                    .dropFile(path, useSettings.getState().filesTabLimit, fileAt, created.length > 0 && zone === 'center' ? 'down' : zone);
+                const files = useFiles.getState();
+                const cell = cellAt(document.getState().layout!, fileAt)!;
+                const index = gap === null || cell.tabs === undefined ? null : positionAfterLifting(cell.tabs, gap, path);
+                const id = asTab
+                    ? files.dropTab(openTab(files, path), useSettings.getState().filesTabLimit, fileAt, 'center', index)
+                        ? path
+                        : null
+                    : files.dropFile(path, useSettings.getState().filesTabLimit, fileAt, created.length > 0 && zone === 'center' ? 'down' : zone);
                 if (id === null) {
                     break;
                 }
                 created.push(id);
                 fileAt = locateView(document.getState().layout!, id)!;
+                gap = cellViewIds(cellAt(document.getState().layout!, fileAt)!).indexOf(id) + 1;
             }
-            const target = viewId ?? created[0]!;
+            const target = viewId ?? created[0] ?? standing.viewId;
             if (viewId !== null) {
-                document.getState().dropViewAt(target, at, zone);
+                if (asTab) {
+                    const index = tabGap == null || standing.tabs === undefined ? null : positionAfterLifting(standing.tabs, tabGap, viewId);
+                    document.getState().dropViewAsTab(target, at, index);
+                } else {
+                    document.getState().dropViewAt(target, at, zone);
+                }
             }
             return { output: { viewId: target, view: cellName(document.getState(), target), cellViewId: standing.viewId, zone, created } };
         },
@@ -1792,8 +1807,7 @@ export function closeCellsRightOfAction(at: CellAt): void {
 /*
  * A tab of a host goes. A loose view closes for good, with the guards a file with unsaved changes and a
  * table with unsubmitted edits have. A view of the project only leaves the screen, its session and its
- * place in the list stay, but a database view with unsubmitted edits asks first as well. The cell goes
- * with its last tab, except the last cell there is.
+ * place in the list stay, but a database view with unsubmitted edits asks first as well.
  */
 export function closeTabAction(viewId: string): void {
     if (cellViewOf(useDocument.getState(), viewId) === null || useFiles.getState().unsubmitted[viewId] === true) {
@@ -1812,9 +1826,9 @@ export function placeViewAction(viewId: string, cellViewId: string, zone: SplitZ
     void runAsPerson('split.placeView', { viewId, paths: null, cellViewId, zone });
 }
 
-export function placeFilesAction(paths: readonly string[], cellViewId: string, zone: SplitZone): void {
+export function placeFilesAction(paths: readonly string[], cellViewId: string, zone: SplitZone, tabGap?: number | null): void {
     if (paths.length > 0) {
-        void runAsPerson('split.placeView', { viewId: null, paths: [...paths], cellViewId, zone });
+        void runAsPerson('split.placeView', { viewId: null, paths: [...paths], cellViewId, zone, ...(tabGap === undefined ? {} : { tabGap }) });
     }
 }
 

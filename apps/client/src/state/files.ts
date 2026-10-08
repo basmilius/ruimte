@@ -2,7 +2,7 @@ import type { TableKind } from '@adecore/database/protocol';
 import type { GitDiffScope, ProjectConsoleBinding, ProjectFileTabView } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
-import { canSplit, cellAt, cellViewIds, locateView, viewIdsIn, type CellAt, type SplitZone } from '@/shell/split';
+import { canDropAsTab, canSplit, cellAt, cellViewIds, locateView, viewIdsIn, type CellAt, type SplitZone } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
 import { textDrafts } from '@/state/text-drafts';
@@ -293,6 +293,8 @@ interface FilesStore extends TabPool {
     openHidden(path: string, limit: number, view?: FileTabView, line?: number, options?: OpenOptions): void;
     /* Tabs a caller worked out itself, such as for a database view (`database/open.ts`), put on screen the way an open file is. */
     show(next: TabState, limit: number, options?: OpenOptions): void;
+    /* The center joins the cell's tabs; an edge splits it. */
+    dropTab(next: TabState, limit: number, at: CellAt, zone: SplitZone, index?: number | null): boolean;
     /* A file dragged to a cell's edge becomes a tab there, in a cell of its own. The key, or null when the grid has no room. */
     dropFile(path: string, limit: number, at: CellAt, zone: SplitZone): string | null;
     /* A change dragged to a cell: the middle joins its tabs, an edge makes a cell of its own. False when nothing landed. */
@@ -434,6 +436,26 @@ export const useFiles = create<FilesStore>((set, get) => {
                 useDocument.getState().showLoose(key, { focus: true });
                 makeRoom(key, limit);
             }
+        },
+        dropTab(next, limit, at, zone, index = null) {
+            const key = next.active;
+            const { layout } = useDocument.getState();
+            const cell = layout === null ? null : cellAt(layout, at);
+            if (key !== null && zone === 'center' && cell !== null && cell.viewId === key && cellViewIds(cell).length === 1) {
+                useDocument.getState().activateTab(key);
+                return true;
+            }
+            if (key === null || layout === null || !(zone === 'center' ? canDropAsTab(layout, at, key) : canSplit(layout, at, zone, key))) {
+                return false;
+            }
+            set({ tabs: next.tabs, focusRequest: focusRequestAfter(key, undefined) });
+            const landed = zone === 'center' ? useDocument.getState().dropLooseAsTab(key, at, index) : useDocument.getState().dropLooseAt(key, at, zone);
+            if (!landed) {
+                pruneLoose();
+                return false;
+            }
+            makeRoom(key, limit);
+            return true;
         },
         dropFile(path, limit, at, zone) {
             const key = tabKey(path);

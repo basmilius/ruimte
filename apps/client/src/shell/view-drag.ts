@@ -1,4 +1,4 @@
-import { MAX_COLUMNS, type CellAt, type SplitDirection, type SplitZone } from '@/shell/split';
+import { MAX_COLUMNS, type CellAt, type SplitZone } from '@/shell/split';
 import type { PreviewRect } from '@/shell/tab-drop';
 
 /*
@@ -57,12 +57,9 @@ export function draggingWholeCell(): boolean {
 }
 
 /*
- * A <webview> eats the drag events of the page around it, so a drag passing over a cell holding one
- * would lose its `dragover` and that cell would never light up. Every embedded page (a browser node
- * or view, the preview of an HTML file) steps out of the pointer's way for as long as any drag
- * lasts (`body[data-dragging]` in `styles.css`), whatever is being dragged: a view, a file out of
- * the tree, or something out of the file manager. An attribute rather than state, because the pages
- * are not all in one tree.
+ * Embedded pages absorb drag events before the cell sees them. Browser views, HTML previews and
+ * chat visuals step out of the pointer's way for the whole drag (`body[data-dragging]` in
+ * `styles.css`). An attribute rather than state, because the pages are not all in one tree.
  *
  * Watched on the window and not set by each source, since a source that forgets it leaves a drag
  * that works everywhere except over a page, which is the hardest kind of gap to find.
@@ -96,10 +93,8 @@ export function watchDrags(): () => void {
 let gridTakes = false;
 
 /*
- * Whether the grid has claimed the path being dragged, which it does along the edge of a cell and
- * never in its middle. What stands in the cell reads this and leaves the drop alone, so one file
- * dropped once never becomes both a node on the canvas and a view beside it. Module state for the
- * same reason `dragging()` is: there is one pointer, so there is one drag.
+ * What stands in the cell reads this claim and leaves the drop alone, so one file never becomes
+ * both a canvas node and a view. Like `dragging()`, there is only one claim for the one pointer.
  *
  * The cell sets it while the drag passes over it, before what is inside the cell has seen the event,
  * and clears it on the way out. Nothing here stops the event: a drop on a page mid-drag is decided
@@ -156,26 +151,13 @@ export function zoneAt(box: Box, spot: Spot): SplitZone {
     return top <= bottom ? 'up' : 'down';
 }
 
-/*
- * The same points minus the middle: whichever edge is nearest, measured as a share of the cell's own
- * width and height so the corners divide it along its diagonals and a wide cell does not answer
- * sideways everywhere. For a cell whose contents do nothing with what is being dragged, which has
- * no reason to keep a middle free, so the whole of it splits and the drag always has an answer.
- */
-export function edgeZoneAt(box: Box, spot: Spot): SplitDirection {
-    const width = box.width || 1;
-    const height = box.height || 1;
-    const left = spot.x / width;
-    const right = (box.width - spot.x) / width;
-    const top = spot.y / height;
-    const nearest = Math.min(left, right, top, (box.height - spot.y) / height);
-    if (nearest === left) {
-        return 'left';
+/* A canvas keeps middle drops for nodes; a composer keeps every drop for attachments. */
+export function pathZoneAt(box: Box, spot: Spot, taken: string | null = null): SplitZone | null {
+    if (taken === 'all') {
+        return null;
     }
-    if (nearest === right) {
-        return 'right';
-    }
-    return nearest === top ? 'up' : 'down';
+    const zone = zoneAt(box, spot);
+    return zone === 'center' && taken === 'middle' ? null : zone;
 }
 
 /*

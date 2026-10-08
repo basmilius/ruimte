@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { ProjectCanvasView, ProjectDocument, SplitLayout } from '@ruimte/contracts';
+import type { ProjectCanvasView, ProjectDocument, ProjectView, SplitLayout } from '@ruimte/contracts';
 import { focusedCanvas, liveCanvases } from './canvas';
 import { activeViewOf, useDocument } from './document';
 
@@ -19,7 +19,7 @@ function node(id: string, x = 0, y = 0): ProjectCanvasView['nodes'][number] {
     return { id, kind: 'terminal', title: id, x, y, w: 100, h: 80 };
 }
 
-function document(views: ProjectCanvasView[]): ProjectDocument {
+function document(views: ProjectView[]): ProjectDocument {
     return { version: 3, rev: 1, name: 'p', color: '#000', views };
 }
 
@@ -174,9 +174,16 @@ describe('closing a cell', () => {
         expect(useDocument.getState().activeViewId).toBe('a');
     });
 
-    test('the last cell stays, because a project always has a view open', () => {
+    test('the last cell closes without removing its view from the project', () => {
         useDocument.getState().closeCellAt({ column: 0, cell: 0 });
+        expect(useDocument.getState().layout).toBeNull();
+        expect(useDocument.getState().activeViewId).toBeNull();
+        expect(useDocument.getState().emptyLayout).toBe(true);
+        expect(openEditors()).toEqual([]);
+        expect(useDocument.getState().views.map((view) => view.id)).toEqual(['a', 'b', 'c', 'd']);
+        useDocument.getState().setActiveView('a');
         expect(shape()).toEqual([['a']]);
+        expect(useDocument.getState().emptyLayout).toBe(false);
     });
 
     test('what the closing cell held is written back first', () => {
@@ -308,20 +315,91 @@ describe('tab hosts in the document', () => {
         expect(tabsOf()).toEqual([['b'], ['/p/a.md', '/p/b.md']]);
     });
 
-    test('a view of the project closes as a tab without leaving the project, and the last cell stays', () => {
+    test('a view of the project closes as a tab without leaving the project, including the last tab', () => {
         hostOf('/p/a.md');
         useDocument.getState().showView('b');
         useDocument.getState().closeViewTab('b');
         expect(tabsOf()).toEqual([['/p/a.md']]);
         expect(useDocument.getState().views.map((each) => each.id)).toContain('b');
         useDocument.getState().closeViewTab('/p/a.md');
-        expect(tabsOf()).toEqual([['/p/a.md']]);
+        expect(useDocument.getState().layout).toBeNull();
     });
 
-    test('the last tab of the last cell leaves the first view of the project', () => {
+    test('the last loose tab leaves an empty layout', () => {
         hostOf('/p/a.md');
         useDocument.getState().closeLoose('/p/a.md');
-        expect(shape()).toEqual([['a']]);
+        expect(useDocument.getState().layout).toBeNull();
+        expect(useDocument.getState().activeViewId).toBeNull();
+    });
+
+    test.each(['/p/a.md', 'diff:/p/a.md', 'database:orders'])('a lone loose view keeps its host: %s', (key) => {
+        hostOf(key);
+        useDocument.getState().showView('b');
+        useDocument.getState().closeViewTab('b');
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: key, tabs: [key] });
+    });
+
+    test.each(['file', 'database'] as const)('a lone project %s view keeps its host and can close', (kind) => {
+        hostOf('/p/a.md');
+        const id =
+            kind === 'file'
+                ? useDocument.getState().addFileView('notes', '/p/notes.md')
+                : useDocument.getState().addDatabaseView('orders', { connectionId: 'shop', schema: 'shop', table: 'orders', mode: 'data' });
+        useDocument.getState().closeLoose('/p/a.md');
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toMatchObject({ viewId: id, tabs: [id] });
+        useDocument.getState().closeViewTab(id);
+        expect(useDocument.getState().layout).toBeNull();
+        expect(useDocument.getState().views.some((view) => view.id === id)).toBe(true);
+    });
+
+    test('a host that held files becomes a plain view once only the project view remains', () => {
+        hostOf('/p/a.md');
+        useDocument.getState().showView('b');
+        useDocument.getState().closeLoose('/p/a.md');
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toEqual({ viewId: 'b', size: 1 });
+    });
+
+    test('an empty layout survives saving, loading and reloading, and a view can open again', () => {
+        useDocument.getState().closeCellAt({ column: 0, cell: 0 });
+        const local = JSON.parse(JSON.stringify(useDocument.getState().exportLocal()));
+        expect(local).toMatchObject({ activeViewId: null, emptyLayout: true });
+        const saved = document(useDocument.getState().exportViews());
+        useDocument.getState().load(saved, local);
+        expect(useDocument.getState().layout).toBeNull();
+        expect(useDocument.getState().emptyLayout).toBe(true);
+        useDocument.getState().reload(saved, local);
+        expect(useDocument.getState().layout).toBeNull();
+        useDocument.getState().setActiveView('b');
+        expect(shape()).toEqual([['b']]);
+        expect(useDocument.getState().exportLocal().emptyLayout).toBeUndefined();
+    });
+
+    test('an untouched empty project is distinct from closing its last loose tab', () => {
+        useDocument.getState().load(document([]), null);
+        expect(useDocument.getState().emptyLayout).toBe(false);
+        expect(useDocument.getState().exportLocal().emptyLayout).toBeUndefined();
+        useDocument.getState().showLoose('/p/a.md');
+        useDocument.getState().closeLoose('/p/a.md');
+        expect(useDocument.getState().emptyLayout).toBe(true);
+        expect(useDocument.getState().exportLocal().emptyLayout).toBe(true);
+    });
+
+    test('loading an old one-tab host restores a plain view', () => {
+        useDocument.getState().load(document([view('a')]), {
+            activeViewId: 'a',
+            views: {},
+            layout: { columns: [{ size: 1, cells: [{ viewId: 'a', tabs: ['gone', 'a'], size: 1 }] }], focus: { column: 0, cell: 0 } }
+        });
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toEqual({ viewId: 'a', size: 1 });
+    });
+
+    test('deleting a tab collapses its host and restoring it brings the original host back', () => {
+        useDocument.getState().dropViewAsTab('b', { column: 0, cell: 0 }, null);
+        const before = useDocument.getState().layout;
+        expect(useDocument.getState().trashView('b')).toBe(true);
+        expect(useDocument.getState().layout!.columns[0]!.cells[0].tabs).toBeUndefined();
+        expect(useDocument.getState().restoreView('b')).toBe(true);
+        expect(useDocument.getState().layout).toBe(before);
     });
 });
 
@@ -487,6 +565,7 @@ describe('tabs dragged and commanded', () => {
         useDocument.getState().splitFocused('right', 'c');
         useDocument.getState().dropViewAsTab('a', { column: 1, cell: 0 }, 0);
         expect(tabsOf()).toEqual([['b'], ['a', 'c']]);
+        expect(useDocument.getState().layout!.columns[0]!.cells[0].tabs).toBeUndefined();
         expect(useDocument.getState().layout!.focus).toEqual({ column: 1, cell: 0 });
     });
 
@@ -522,15 +601,30 @@ describe('tabs dragged and commanded', () => {
         useDocument.getState().dropViewAsTab('b', { column: 0, cell: 0 }, null);
         expect(useDocument.getState().splitTabOff('b')).toBe(true);
         expect(tabsOf()).toEqual([['a'], ['b']]);
+        expect(
+            useDocument
+                .getState()
+                .layout!.columns.flatMap((column) => column.cells)
+                .every((cell) => cell.tabs === undefined)
+        ).toBe(true);
         expect(useDocument.getState().splitTabOff('b')).toBe(false);
     });
 
-    test('a host with one tab left ungroups into a plain cell', () => {
+    test('a host with one tab left automatically ungroups and keeps the editor and its state', () => {
+        focusedCanvas().getState().addText({ x: 20, y: 30 });
+        const editor = focusedCanvas();
         useDocument.getState().dropViewAsTab('b', { column: 0, cell: 0 }, null);
         useDocument.getState().closeViewTab('b');
-        expect(useDocument.getState().layout!.columns[0]!.cells[0]!.tabs).toEqual(['a']);
-        useDocument.getState().ungroupCell({ column: 0, cell: 0 });
         expect(useDocument.getState().layout!.columns[0]!.cells[0]!.tabs).toBeUndefined();
+        expect(focusedCanvas()).toBe(editor);
+        expect((useDocument.getState().exportViews()[0] as ProjectCanvasView).texts).toHaveLength(1);
+    });
+
+    test('closing a background tab also ungroups the remaining active view', () => {
+        useDocument.getState().dropViewAsTab('b', { column: 0, cell: 0 }, null);
+        useDocument.getState().closeViewTab('a');
+        expect(useDocument.getState().layout!.columns[0]!.cells[0]).toEqual({ viewId: 'b', size: 1 });
+        expect(useDocument.getState().activeViewId).toBe('b');
     });
 
     test('showing a view as a new tab makes a host of the focused cell and can be undone', () => {

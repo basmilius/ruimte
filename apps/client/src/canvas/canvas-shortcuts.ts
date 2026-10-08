@@ -264,7 +264,7 @@ export function useCanvasShortcuts(): void {
                     return;
                 }
                 const layout = useDocument.getState().layout;
-                const closes = layout !== null && cellCount(layout) > 1;
+                const closes = layout !== null;
                 if (closes || !apple) {
                     e.preventDefault();
                 }

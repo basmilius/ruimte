@@ -282,6 +282,29 @@ function setup(
 }
 
 describe('ProjectClient', () => {
+    test('closing every view persists the empty screen across reopening the project', async () => {
+        const storage = new Map<string, string>();
+        const first = setup({ storage });
+        await tick();
+        useDocument.getState().closeCellAt({ column: 0, cell: 0 });
+        await tick(10);
+        const saved = first.transport.of('project.save-local').at(-1)?.payload as { local: ProjectLocal };
+        expect(saved.local).toMatchObject({ activeViewId: null, emptyLayout: true });
+        first.dispose();
+
+        const reopened = setup({ storage });
+        await tick();
+        expect(useDocument.getState().layout).toBeNull();
+        expect(useDocument.getState().emptyLayout).toBe(true);
+        expect(useDocument.getState().views.map((view) => view.id)).toEqual(['main']);
+        useDocument.getState().setActiveView('main');
+        await tick(10);
+        const opened = reopened.transport.of('project.save-local').at(-1)?.payload as { local: ProjectLocal };
+        expect(opened.local.emptyLayout).toBeUndefined();
+        expect(opened.local.layout?.columns[0]!.cells[0]!.viewId).toBe('main');
+        reopened.dispose();
+    });
+
     test('opens its project, and loads its document and camera', async () => {
         const { transport, state, dispose } = setup();
         await tick();

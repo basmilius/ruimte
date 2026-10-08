@@ -198,12 +198,21 @@ describe('the menus', () => {
         expect(commandIds(menuModel(START_SCREEN))).not.toContain('project-settings');
     });
 
-    test('Cmd+W closes the window with one cell and the cell with more', () => {
-        const one = menu(menuModel(context({ cells: 1 })), 'File');
-        expect(one.some((node) => node.kind === 'role' && node.role === 'close')).toBe(true);
-        expect(one.some((node) => node.kind === 'command' && node.id === 'close-cell')).toBe(false);
+    test('Cmd+W closes the last cell before it closes the window', () => {
+        const one = menuModel(context({ cells: 1 }));
+        expect(menu(one, 'File').some((node) => node.kind === 'role' && node.role === 'close')).toBe(false);
+        expect(find(one, 'close-cell')?.accelerator).toBe('CommandOrControl+W');
         const two = menuModel(context({ cells: 2 }));
         expect(find(two, 'close-cell')?.accelerator).toBe('CommandOrControl+W');
+        const empty = menu(menuModel(context({ cells: 0, view: null })), 'File');
+        expect(empty.some((node) => node.kind === 'role' && node.role === 'close')).toBe(true);
+    });
+
+    test('a single-tab host offers closing its tab and its cell', () => {
+        const spec = menuModel(context({ cells: 1, tabs: { hosted: true, count: 1, index: 0, splitOff: false } }));
+        expect(find(spec, 'tab-close')?.accelerator).toBe('CommandOrControl+W');
+        expect(find(spec, 'close-cell')?.enabled).not.toBe(false);
+        expect(find(spec, 'close-cell')?.accelerator).toBeUndefined();
     });
 
     test('what waits on a selection or a split is greyed rather than gone', () => {

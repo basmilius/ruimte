@@ -981,7 +981,7 @@ describe('client actions', () => {
     });
 
     describe('the grid', () => {
-        test('splits with the view that is not on screen yet, moves the focus and closes down to one cell', async () => {
+        test('splits with the view that is not on screen yet, moves the focus and closes every cell', async () => {
             expect(await clientActions.execute('split.create', { direction: 'right', viewId: null }, VOICE_ACTION_CALL)).toMatchObject({
                 status: 'completed',
                 output: { viewId: 'release', view: 'Release', direction: 'right' }
@@ -999,7 +999,12 @@ describe('client actions', () => {
                 output: { viewId: 'release', view: 'Release' }
             });
             expect(useDocument.getState().views.some((view) => view.id === 'release')).toBe(true);
-            expect(await clientActions.execute('split.close', { viewId: null }, VOICE_ACTION_CALL)).toMatchObject({ error: { code: 'last-cell' } });
+            expect(await clientActions.execute('split.close', { viewId: null }, VOICE_ACTION_CALL)).toMatchObject({
+                status: 'completed',
+                output: { viewId: 'main', view: 'Main' }
+            });
+            expect(useDocument.getState().layout).toBeNull();
+            expect(await clientActions.execute('split.close', { viewId: null }, VOICE_ACTION_CALL)).toMatchObject({ error: { code: 'no-grid' } });
         });
 
         test('places a view against the edge of a named cell, and workspace.inspect names the cells', async () => {
@@ -1061,6 +1066,71 @@ describe('client actions', () => {
             } finally {
                 useProject.setState({ current: null });
             }
+        });
+
+        test('files from the panel join a plain view as tabs without first opening or replacing it', async () => {
+            expect(
+                await clientActions.execute(
+                    'split.placeView',
+                    {
+                        viewId: null,
+                        paths: ['/repo/a.ts', '/repo/b.ts'],
+                        cellViewId: 'main',
+                        zone: 'center',
+                        tabGap: null
+                    },
+                    PERSON_ACTION_CALL
+                )
+            ).toMatchObject({ status: 'completed', output: { created: ['/repo/a.ts', '/repo/b.ts'] } });
+            expect(useDocument.getState().layout!.columns).toHaveLength(1);
+            expect(useDocument.getState().layout!.columns[0]!.cells[0].tabs).toEqual(['main', '/repo/a.ts', '/repo/b.ts']);
+            expect(useDocument.getState().views).toHaveLength(2);
+            expect(useDocument.getState().edits).toBe(0);
+        });
+
+        test('files dropped on a gap keep their order and move existing tabs instead of duplicating them', async () => {
+            useDocument.getState().dropViewAsTab('release', { column: 0, cell: 0 }, null);
+            await clientActions.execute(
+                'split.placeView',
+                {
+                    viewId: null,
+                    paths: ['/repo/a.ts', '/repo/b.ts'],
+                    cellViewId: 'main',
+                    zone: 'center',
+                    tabGap: 1
+                },
+                PERSON_ACTION_CALL
+            );
+            expect(useDocument.getState().layout!.columns[0]!.cells[0].tabs).toEqual(['main', '/repo/a.ts', '/repo/b.ts', 'release']);
+            await clientActions.execute(
+                'split.placeView',
+                {
+                    viewId: null,
+                    paths: ['/repo/a.ts'],
+                    cellViewId: 'main',
+                    zone: 'center',
+                    tabGap: 4
+                },
+                PERSON_ACTION_CALL
+            );
+            expect(useDocument.getState().layout!.columns[0]!.cells[0].tabs).toEqual(['main', '/repo/b.ts', 'release', '/repo/a.ts']);
+            expect(useFiles.getState().tabs).toHaveLength(2);
+        });
+
+        test('a multi-file drop continues when its first file already fills the target', async () => {
+            useFiles.getState().open('/repo/a.ts', 5);
+            await clientActions.execute(
+                'split.placeView',
+                {
+                    viewId: null,
+                    paths: ['/repo/a.ts', '/repo/b.ts'],
+                    cellViewId: '/repo/a.ts',
+                    zone: 'center',
+                    tabGap: null
+                },
+                PERSON_ACTION_CALL
+            );
+            expect(useDocument.getState().layout!.columns[0]!.cells[0].tabs).toEqual(['/repo/a.ts', '/repo/b.ts']);
         });
 
         test('a loose file can move between cells and close without becoming a saved view', async () => {

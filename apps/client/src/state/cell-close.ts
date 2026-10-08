@@ -22,7 +22,6 @@ function cellOfView(viewId: string): CellAt | null {
     return layout === null ? null : locateView(layout, viewId);
 }
 
-/* True when the cell is gone, or was already the last one, which stays. */
 export async function closeCellGuarded(at: CellAt): Promise<boolean> {
     const { layout } = useDocument.getState();
     const cell = layout === null ? null : cellAt(layout, at);
