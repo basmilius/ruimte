@@ -10,6 +10,25 @@ const CLI_NAMES = AgentKindSchema.options.join(', ');
    the canvas stays empty, so the kinds `node new` opens are named where the command is introduced. */
 const NODE_KINDS = NODE_VERB_KINDS.join(', ');
 
+const PRODUCT_NOTE = 'Ruimte is a workspace for AI engineering, built around projects, views and persistent sessions.';
+
+// A model with tool search otherwise looks for a tool named ruimte-context and gives up.
+const COMMANDS_NOTE =
+    '`ruimte-context` is a shell command for working with project views and resources. ' +
+    '`ruimte-context help` lists its commands; `ruimte-context help <verb or noun>` explains one.';
+
+const CHAT_VIEW_NOTE = 'You are working in a chat view. Skip linked-context discovery.';
+
+const TERMINAL_VIEW_NOTE =
+    'You are working in a terminal view. Skip linked-context discovery. ' +
+    'For agents, notes or drawings you open in Ruimte, select a destination with --view.';
+
+const CANVAS_NODE_NOTE =
+    'You are working in a node on a canvas. ' +
+    '`ruimte-context list` lists your linked context, and `ruimte-context read <id>` reads a source. ' +
+    `\`ruimte-context node new\` creates nodes in this view: ${NODE_KINDS}. ` +
+    'Use these commands for notes or drawings the person requests in this view.';
+
 /* The brake below reads as "use your own means" exactly when the person asked for a second agent
    beside this one, so the difference between answering yourself and hiding the work is spelled out. */
 const NOT_A_SUBAGENT = 'An agent the person asks for is one of these, never a subagent of your own.';
@@ -61,6 +80,7 @@ const DEVICE_NOTE =
 export function verbsNote({
     depth,
     standalone = false,
+    terminal = false,
     computer = false,
     device = false,
     visuals = false,
@@ -68,14 +88,17 @@ export function verbsNote({
 }: {
     depth: number;
     standalone?: boolean;
+    terminal?: boolean;
     computer?: boolean;
     device?: boolean;
     visuals?: boolean;
     databases?: boolean;
 }): string {
-    if (standalone) {
+    if (standalone && !terminal) {
         return [
-            "Ruimte: `ruimte-context` is a command you run in your shell, not a tool. This chat runs in a view with no canvas links, so skip linked-context discovery. It manages the project's views; `ruimte-context help` lists its verbs and nouns.",
+            PRODUCT_NOTE,
+            COMMANDS_NOTE,
+            CHAT_VIEW_NOTE,
             "Delegate routine work with your CLI's own subagents. Keep any model the person asked for.",
             ...(depth < MAX_AGENT_DEPTH
                 ? [
@@ -92,17 +115,13 @@ export function verbsNote({
             'Ids in its output are for your commands; to the person, name things by their title, never by id.'
         ].join(' ');
     }
-    const parts = [
-        // A model with a tool search otherwise goes looking for a tool of that name and gives up.
-        `Ruimte: \`ruimte-context\` is a command you run in your shell, not a tool. It reads context linked to you and opens nodes on the person's canvas (\`node new\`): ${NODE_KINDS}. A note or drawing they ask for is one of those, not a file you write.`,
-        '`ruimte-context help` lists the verbs and nouns, and `ruimte-context help <verb or noun>` details one.'
-    ];
+    const parts = [PRODUCT_NOTE, COMMANDS_NOTE, standalone ? TERMINAL_VIEW_NOTE : CANVAS_NODE_NOTE];
     parts.push(ALERT_NOTE);
     const opens = opensAt(depth);
     if (opens !== null) {
         parts.push(opens);
     }
-    if (depth < MAX_AGENT_DEPTH) {
+    if (depth < MAX_AGENT_DEPTH && !standalone) {
         parts.push('With `--task` a result comes back as your next message once it settles, so end your turn instead of polling.');
     }
     if (visuals) {
@@ -195,12 +214,22 @@ export function chatPrompt({
 export function hookContext(
     event: string,
     sources: ContextSource[],
-    turn: { changed?: string | null; messages?: readonly string[]; depth?: number; verbs?: boolean; computer?: boolean } = {}
+    turn: { changed?: string | null; messages?: readonly string[]; depth?: number; verbs?: boolean; computer?: boolean; standalone?: boolean } = {}
 ): string | null {
     const start = event === 'SessionStart';
     const hint = contextHint(sources);
     const parts = [
-        ...(start && turn.verbs !== false ? [verbsNote({ depth: turn.depth ?? 0, computer: turn.computer === true, device: linksDevice(sources) })] : []),
+        ...(start && turn.verbs !== false
+            ? [
+                  verbsNote({
+                      depth: turn.depth ?? 0,
+                      standalone: turn.standalone,
+                      terminal: true,
+                      computer: turn.computer === true,
+                      device: linksDevice(sources)
+                  })
+              ]
+            : []),
         ...(hint === null ? [] : [hint]),
         ...(start || !turn.changed ? [] : [turn.changed]),
         ...(turn.messages ?? [])

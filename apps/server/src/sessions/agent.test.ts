@@ -6,6 +6,7 @@ import { verbsNote } from '../context/context-note.ts';
 import { CLAUDE_ALLOW_CONTEXT } from '../providers/claude-provider.ts';
 import { terminalCommand } from '../providers/launch.ts';
 import { SessionError, type SessionManagerOptions } from './manager.ts';
+import { START_LINE_ENV } from './session.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
 
 const ALLOW = `'${CLAUDE_ALLOW_CONTEXT}'`;
@@ -63,6 +64,28 @@ async function endShell(sessionId: string, exitCode = 0): Promise<void> {
 }
 
 describe('agent status via hooks', () => {
+    test('launches and resume fallbacks receive the context of their terminal placement', async () => {
+        await harness.cleanup();
+        await freshHarness({ standalone: (sessionId) => sessionId === 'terminal-view' });
+
+        for (const sessionId of ['terminal-view', 'canvas-terminal']) {
+            await createAgent(sessionId, { kind: 'codex', resume: 'saved-session' });
+            const pty = harness.adapter.forSession(sessionId);
+            const line = pty.options.env[START_LINE_ENV] ?? pty.input.join('');
+            expect(line).toContain('codex resume');
+            expect(line).toContain('Ruimte is a workspace for AI engineering');
+            expect(line).not.toContain('You are working in a chat view');
+            if (sessionId === 'terminal-view') {
+                expect(line).toContain('You are working in a terminal view');
+                expect(line).toContain('select a destination with --view');
+                expect(line).not.toContain('You are working in a node on a canvas');
+            } else {
+                expect(line).toContain('You are working in a node on a canvas');
+                expect(line).not.toContain('You are working in a terminal view');
+            }
+        }
+    });
+
     test('the shell gets the hook variables and a matching token routes a hook to the session', async () => {
         const recorder = new Recorder();
         harness.manager.subscribe('c1', recorder.sink());

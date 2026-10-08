@@ -1,6 +1,6 @@
 # Visuals
 
-The invariants of this folder. The repository root's `CLAUDE.md` has the map, the wire protocol and the rules that hold everywhere; `apps/server/README.md` (`visual` under the canvas verbs) has the whole of how a page is shown, previewed and measured.
+The invariants of this folder. The repository root's `CLAUDE.md` has the map, the wire protocol and the rules that hold everywhere; `apps/server/README.md` (`visual` under the agent commands) has the whole of how a page is shown, previewed and measured.
 
 - A render child (`render-child.ts`, the daemon started again as `ruimte visual-render`) runs a Chrome of its own with a throwaway profile in a temporary folder, never the daemon's browser profile under `$RUIMTE_HOME/browser`, so a page an agent wrote never sees a person's cookies, logins or history.
 - Everything a child's Chrome sends goes through the child's public-only SOCKS5 proxy (`socks-proxy.ts`). Loopback, local networks and every address an interface of the machine holds are refused (`local-address.ts`), checked on the addresses a name resolves to, and the proxy connects only to an address it checked. WebRTC is held to proxied UDP and QUIC is off, since either would go around it.

@@ -97,6 +97,7 @@ export interface SessionManagerOptions {
     firstNotices?: (sessionId: string) => string[];
     // How deep a session sits in a chain of agents, which decides what the note about the verbs offers its CLI.
     depthOf?: (sessionId: string) => number;
+    standalone?: (sessionId: string) => boolean;
     // Whether computer use is on for this machine, which is when the note names the `computer` noun.
     computerUse?: () => boolean;
     // Lets a test move the clock the resume guard reads.
@@ -173,6 +174,7 @@ export class SessionManager {
     private readonly firstPrompt: (sessionId: string) => Promise<string | null>;
     private readonly firstNotices: (sessionId: string) => string[];
     private readonly depthOf: (sessionId: string) => number;
+    private readonly standalone: (sessionId: string) => boolean;
     private readonly computerUse: () => boolean;
     private readonly commands: CommandGate | null;
     private readonly modeCeiling: (sessionId: string) => RuntimeMode | null;
@@ -199,6 +201,7 @@ export class SessionManager {
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
         this.firstNotices = options.firstNotices ?? (() => []);
         this.depthOf = options.depthOf ?? (() => 0);
+        this.standalone = options.standalone ?? (() => false);
         this.computerUse = options.computerUse ?? (() => false);
         this.now = options.now ?? Date.now;
         this.claudeTitles = options.claudeTitles ?? null;
@@ -644,7 +647,7 @@ export class SessionManager {
         if (!launch || restored) {
             return undefined;
         }
-        const note = verbsNote({ depth: this.depthOf(sessionId), computer: this.computerUse() });
+        const note = verbsNote({ depth: this.depthOf(sessionId), standalone: this.standalone(sessionId), terminal: true, computer: this.computerUse() });
         if (launch.resume) {
             return resumeOrFreshCommand(launch, launch.resume, note);
         }
@@ -659,7 +662,7 @@ export class SessionManager {
     private resumeLine(session: Session, agent: AgentInfo): string {
         // A person who started another CLI by hand in this shell is resumed as that CLI, not as the node's.
         const launch: AgentLaunch = session.launch?.kind === agent.kind ? session.launch : { kind: agent.kind };
-        const note = verbsNote({ depth: this.depthOf(session.id), computer: this.computerUse() });
+        const note = verbsNote({ depth: this.depthOf(session.id), standalone: this.standalone(session.id), terminal: true, computer: this.computerUse() });
         if (agent.transcriptPath === null) {
             return resumeOrFreshCommand(launch, agent.agentSessionId, note);
         }

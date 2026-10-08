@@ -322,6 +322,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         firstPrompt: (sessionId) => prompts.take(sessionId),
         firstNotices: messagesFor,
         depthOf: (sessionId) => lineage.depthOf(sessionId),
+        standalone: (sessionId) => projects.index.locate(sessionId)?.canvasId === null,
         computerUse: () => computer.usable,
         // A node no project places yet has no folder to approve against, so its command waits for the save that adds it.
         commands: {
@@ -350,7 +351,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     });
     const snapshotSchedule = scheduleSnapshots(manager, snapshots);
     void probeCodexNoDaemon();
-    // A bearer token speaks for a terminal session or a chat, for reading context and for canvas verbs alike.
+    // A bearer token speaks for a terminal session or a chat, for reading context and for agent commands alike.
     const targetForToken = (token: string): string | null => manager.sessionIdForToken(token) ?? chats.chatIdForToken(token);
     const context: ContextStore = new ContextStore({
         sources: (targetId) =>
@@ -1279,6 +1280,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
                     changed,
                     messages: messagesFor(sessionId),
                     depth: lineage.depthOf(sessionId),
+                    standalone: projects.index.locate(sessionId)?.canvasId === null,
                     verbs,
                     computer: computer.usable
                 });

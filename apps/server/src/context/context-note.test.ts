@@ -97,9 +97,9 @@ describe('verbsNote', () => {
             for (const kind of NODE_VERB_KINDS) {
                 expect(note).toContain(kind);
             }
-            expect(note).toContain('not a file you write');
+            expect(note).toContain('Use these commands for notes or drawings the person requests in this view');
             expect(note).toContain('`ruimte-context help <verb or noun>`');
-            expect(note).toContain('a command you run in your shell, not a tool');
+            expect(note).toContain('a shell command for working with project views and resources');
             expect(note).toEndWith('never by id.');
             expect(note).not.toContain('  ');
         }
@@ -107,7 +107,7 @@ describe('verbsNote', () => {
 });
 
 describe('contextPrompt', () => {
-    test('names the sources a chat has and says the canvas comes first', () => {
+    test('names the sources a chat has and prefers the context the person supplied', () => {
         expect(contextPrompt([])).toBeNull();
         expect(contextPrompt([device])).toBe(
             'Ruimte: linked context is available with ruimte-context (list, read <id>): "iPhone 18 Pro Max" (device). This is what the person means, so prefer it over anything your own tools or servers turn up.'
@@ -121,13 +121,14 @@ describe('contextPrompt', () => {
     });
 });
 
-test('a chat view skips canvas context discovery and opens hidden agents with the requested model', () => {
+test('a chat view skips linked-context discovery and opens hidden agents with the requested model', () => {
     for (const depth of [0, 1]) {
         const note = chatPrompt({ sources: [device], depth, standalone: true });
-        expect(note).toContain('a command you run in your shell, not a tool');
+        expect(note).toContain('a shell command for working with project views and resources');
         expect(note).toContain("your CLI's own subagents");
         expect(note).toContain('Keep any model the person asked for');
-        expect(note).toContain('no canvas links, so skip linked-context discovery');
+        expect(note).toContain('You are working in a chat view. Skip linked-context discovery');
+        expect(note).not.toContain('You are working in a node on a canvas');
         expect(note).not.toContain('context linked to this chat');
         expect(note).toContain('These agents stay hidden');
         expect(note).toContain('end your turn after delegating instead of polling');
@@ -154,6 +155,16 @@ describe('chatPrompt', () => {
 });
 
 describe('hookContext', () => {
+    test('a terminal view receives its own placement instructions at startup', () => {
+        const note = hookContext('SessionStart', [], { standalone: true });
+        expect(note).toContain('You are working in a terminal view. Skip linked-context discovery');
+        expect(note).toContain('select a destination with --view');
+        expect(note).not.toContain('You are working in a node on a canvas');
+        expect(note).not.toContain('You are working in a chat view');
+        expect(note).not.toContain('These agents stay hidden');
+        expect(note).not.toContain('--task');
+    });
+
     test('SessionStart always carries the verbs, a prompt only the links', () => {
         expect(hookContext('SessionStart', [])).toBe(VERBS_NOTE);
         expect(hookContext('SessionStart', [text])).toBe(`${VERBS_NOTE} ${contextHint([text])}`);

@@ -2332,7 +2332,7 @@ export const ACTION_DEFINITIONS = {
     },
     'agent.start': {
         title: 'Start an agent',
-        description: 'Starts an agent on your canvas, or a hidden agent from a chat view; --view explicitly places it on a canvas',
+        description: 'Starts an agent in this project',
         effect: 'external',
         domain: 'agents',
         actors: AGENT,
@@ -2369,7 +2369,7 @@ export const ACTION_DEFINITIONS = {
     },
     'team.start': {
         title: 'Start a team',
-        description: `Starts up to ${MAX_OPENED_PER_CALLER} agents, grouped on your canvas or hidden from a chat view; --view explicitly places the team on a canvas`,
+        description: `Starts a team of up to ${MAX_OPENED_PER_CALLER} agents in this project`,
         effect: 'external',
         domain: 'agents',
         actors: AGENT,
