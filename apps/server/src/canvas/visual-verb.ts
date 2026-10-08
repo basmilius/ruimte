@@ -29,6 +29,31 @@ const EXAMPLE_LINES: readonly string[] = [
     'example\tEOF'
 ];
 
+const write = defineActionVerb('visual', {
+    name: 'write',
+    action: 'visual.write',
+    usage: '--name N [--html H]',
+    params: [
+        { syntax: '--name N', need: 'required', field: 'name' },
+        { syntax: '--html H', need: 'optional', field: 'html', more: 'HTML on stdin when omitted; a heredoc needs no project file' }
+    ],
+    detail: [
+        "stdin\tGenerate the HTML directly into a heredoc: ruimte-context visual write --name chart.html <<'HTML' ... HTML",
+        "storage\tThe source lives under the machine's configured RUIMTE_HOME, in chats/<chatId>.visuals, and goes with a clear or deletion of the chat. The same name replaces that chat's source file",
+        'prints\tfile\tpath\tthe absolute path to use as stdin for visual preview and visual show; this saves the source without publishing it',
+        'refusals\tvisual-needs-chat\tvisuals-off\tvisual-invalid\tvisual-too-large\tthe codes this action refuses with'
+    ],
+    positionals: z.tuple([], { error: 'visual write takes no arguments; name the file with --name and send HTML on stdin' }),
+    flags: z.object({ name: z.string({ error: 'visual write needs --name, an HTML filename such as chart.html' }), html: z.string().optional() }),
+    async run({ flags }, call) {
+        const { path } = await runAction(call, 'visual.write', { name: flags.name, html: flags.html ?? '' });
+        return [
+            `file\t${field(path)}`,
+            'next\tUse this absolute path as stdin for visual preview, then visual show. Use visual write with the same name to update the source'
+        ];
+    }
+});
+
 const show = defineActionVerb('visual', {
     name: 'show',
     action: 'visual.show',
@@ -171,13 +196,14 @@ const remove = defineActionVerb('visual', {
     }
 });
 
-export const VISUAL_ACTIONS = [preview, show, list, remove] as const;
+export const VISUAL_ACTIONS = [write, preview, show, list, remove] as const;
 
-export const VISUAL_SUMMARY = 'Previews a self-contained HTML page, shows it above your reply in this chat, and lists and removes the ones it shows';
+export const VISUAL_SUMMARY = 'Saves visual sources outside the project, previews and shows them in this chat, and lists and removes the ones it shows';
 
 export const VISUAL_DETAIL: readonly string[] = [
     'when\tA chart, a table, a diagram, a collage of images or a mockup that says more than prose; never for what a sentence or a short list says',
     `page\t${VISUAL_PAGE_RULES}`,
+    'storage\tSave HTML directly with ruimte-context visual write --name chart.html and the page on stdin. Use its returned absolute path for preview and show, and the same name to update the source. Sources and previews live with this chat under RUIMTE_HOME, outside the project; only an explicit export belongs in a project file',
     IMAGES_LINE,
     `layout\t${VISUAL_LAYOUT_GUIDE}`,
     `theme\t${VISUAL_THEME_GUIDE}`,

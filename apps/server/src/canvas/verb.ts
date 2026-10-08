@@ -154,12 +154,13 @@ export type LanguageAgentHost = Pick<AgentLanguage, 'diagnostics' | 'hover' | 'd
 /* The visuals of a chat, kept beside its record, and the machine's switch that lets an agent show a new one. */
 export interface VisualHost {
     enabled(): boolean;
+    writeSource?(chatId: string, name: string, html: string): Promise<string>;
     /* Refuses with the store's own code, `visual-invalid` or `visual-too-large`, and a message that says what to change. */
     publish(chatId: string, input: { title: string; html: string; maxHeight?: number; heights?: VisualHeight[] }): Promise<ChatVisual>;
     list(chatId: string): Promise<ChatVisual[]>;
     remove(chatId: string, visualId: string): Promise<ChatVisual[]>;
     /* Refuses with `preview-unavailable`, `preview-timeout` or `preview-failed`; absent on a host that renders no page. */
-    preview?(input: { html: string; width: number; appearance: VisualAppearance }): Promise<VisualPreview>;
+    preview?(chatId: string, input: { html: string; width: number; appearance: VisualAppearance }): Promise<VisualPreview>;
     /* Undefined when measuring took too long or failed, which never stops a page from being shown. */
     measure?(html: string): Promise<VisualHeight[] | undefined>;
 }

@@ -13,6 +13,7 @@ import { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { AttachmentStore } from '@adecore/agents/chat/attachment-store';
 import { BookmarkStore } from '@adecore/agents/chat/bookmark-store';
+import { VisualStore } from '@adecore/agents/chat/visual-store';
 import { chatReferenceNote } from '../context/chat-references.ts';
 import { ChatManager } from './chat-manager.ts';
 import { INLINE_EDIT_PREAMBLE } from './inline-edit.ts';
@@ -395,13 +396,15 @@ describe('ChatManager', () => {
 
     test('the system prompt names visuals while the machine has them on, and never to an inline edit', async () => {
         await retire(manager);
-        manager = makeManager({ visualReplies: () => true, inlineChat: (chatId) => chatId === 'chat-inline' });
+        const visuals = new VisualStore(home, attachments);
+        manager = makeManager({ visuals, visualReplies: () => true, inlineChat: (chatId) => chatId === 'chat-inline' });
         manager.subscribe('c1', recorder.sink());
         await manager.create({ chatId: 'chat-shows', cwd: home });
         manager.attach('chat-shows', 'c1');
         await manager.send('chat-shows', 'system?');
         await recorder.until(idle);
         expect(recorder.ofKind('assistant')[0]?.text).toBe(verbsNote({ depth: 0, visuals: true }));
+        expect(claude.started[0]!.argv.filter((arg) => arg.startsWith('--add-dir='))).toEqual([`--add-dir=${visuals.workspacePath('chat-shows')}`]);
 
         const inline = new ChatRecorder();
         manager.subscribe('c2', inline.sink());
@@ -413,6 +416,7 @@ describe('ChatManager', () => {
         await manager.send('chat-inline', 'system?');
         await inline.until(() => inline.ofKind('assistant').length === 2 && inline.info?.activeTurnId === null);
         expect(inline.ofKind('assistant')[1]?.text).toBe(verbsNote({ depth: 0 }));
+        expect(claude.started[1]!.argv.some((arg) => arg.startsWith('--add-dir='))).toBe(false);
     });
 
     test('the system prompt names the verbs always and the linked sources by name when there are some', async () => {

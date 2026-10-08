@@ -235,7 +235,7 @@ describe('visual verbs', () => {
     test('help visual carries the rules for a page and an example to copy', async () => {
         const daemon = await boot();
         const lines = await runVerb(daemon, 'chat-lead', 'help', ['visual']);
-        expect(lines[0]).toBe('usage\tvisual\t<preview|show|list|remove> ...');
+        expect(lines[0]).toBe('usage\tvisual\t<write|preview|show|list|remove> ...');
         expect(lines.some((line) => line.startsWith('preview\tPreview first, then show: ruimte-context visual preview < page.html'))).toBe(true);
         expect(lines).toContain(
             'action\tvisual preview\t[--width W] [--appearance dark|light] (< page.html | --html H)\tRenders a self-contained HTML page the way this chat would draw it, without showing it, and answers a png of it, the height it needs and what it wrote to its console.'
@@ -247,7 +247,8 @@ describe('visual verbs', () => {
             `example\truimte-context visual show --title "Open issues per label" --height 160 <<'EOF'`
         );
         expect(lines.filter((line) => line.startsWith('example\t')).at(-1)).toBe('example\tEOF');
-        expect(lines[lines.findIndex((line) => line.startsWith('page\t')) + 1]).toBe(IMAGES_LINE);
+        expect(lines).toContain(IMAGES_LINE);
+        expect(lines.some((line) => line.startsWith('storage\t') && line.includes('outside the project'))).toBe(true);
     });
 
     test('help visual show and help visual preview say under stdin that local images are embedded', async () => {
@@ -277,8 +278,8 @@ describe('previews and measured heights', () => {
 
     test('visual preview prints the shot, the height, the console and that show publishes it, at the reply width in dark by default', async () => {
         const asked: unknown[] = [];
-        const preview = async (input: { html: string; width: number; appearance: 'dark' | 'light' }): Promise<VisualPreview> => {
-            asked.push(input);
+        const preview = async (chatId: string, input: { html: string; width: number; appearance: 'dark' | 'light' }): Promise<VisualPreview> => {
+            asked.push({ chatId, ...input });
             return previewed({
                 width: input.width,
                 console: [
@@ -299,8 +300,8 @@ describe('previews and measured heights', () => {
         ]);
         await runVerb(daemon, 'chat-lead', 'visual', ['preview', '--width', '400', '--appearance', 'light', `--html=${PAGE}`]);
         expect(asked).toEqual([
-            { html: PAGE, width: 768, appearance: 'dark' },
-            { html: PAGE, width: 400, appearance: 'light' }
+            { chatId: 'chat-lead', html: PAGE, width: 768, appearance: 'dark' },
+            { chatId: 'chat-lead', html: PAGE, width: 400, appearance: 'light' }
         ]);
         expect(await daemon.chats.listVisuals('chat-lead')).toEqual([]);
     });
@@ -390,6 +391,22 @@ describe('previews and measured heights', () => {
 });
 
 describe('visuals and the chat they belong to', () => {
+    test("writes and replaces source only in the caller's chat storage, without publishing it", async () => {
+        const daemon = await bootWithChat();
+        const path = join(home, 'chats', 'chat-lead.visuals', 'chart.html');
+        const lines = await runVerb(daemon, 'chat-lead', 'visual', ['write', '--name', 'chart.html', `--html=${PAGE}`]);
+        expect(lines[0]).toBe(`file\t${path}`);
+        expect(await readFile(path, 'utf8')).toBe(PAGE);
+        await runVerb(daemon, 'chat-lead', 'visual', ['write', '--name', 'chart.html', '--html=<p>Updated</p>']);
+        expect(await readFile(path, 'utf8')).toBe('<p>Updated</p>');
+        expect(await daemon.chats.listVisuals('chat-lead')).toEqual([]);
+        expect(await exists(join(folder, 'chart.html'))).toBe(false);
+        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'visual', ['write', '--name', '../other.html', `--html=${PAGE}`]))).toBe('visual-invalid');
+        expect(refusalCode(await runVerb(daemon, 'term-lead', 'visual', ['write', '--name', 'chart.html', `--html=${PAGE}`]))).toBe('visual-needs-chat');
+        const off = await bootWithChat({ visualReplies: false });
+        expect(refusalCode(await runVerb(off, 'chat-lead', 'visual', ['write', '--name', 'other.html', `--html=${PAGE}`]))).toBe('visuals-off');
+    });
+
     const turnsOf = (items: readonly ChatItem[]) => items.filter((item) => item.kind === 'turn');
 
     const say = async (daemon: TestDaemon, chatId: string, text: string): Promise<void> => {
@@ -422,6 +439,8 @@ describe('visuals and the chat they belong to', () => {
 
     test('clearing a chat removes its visuals and their pages, and the attached client hears an empty list', async () => {
         const daemon = await bootWithChat();
+        const source = await daemon.visuals.writeSource('chat-lead', 'chart.html', PAGE);
+        const preview = await daemon.visuals.writePreview('chat-lead', new Uint8Array([137, 80, 78, 71]));
         await daemon.request('chat.attach', { chatId: 'chat-lead' });
         const id = await shown(daemon, 'Bars');
         const events = listen(daemon);
@@ -429,17 +448,21 @@ describe('visuals and the chat they belong to', () => {
         expect(await daemon.request('chat.clear', { chatId: 'chat-lead' })).toMatchObject({ ok: true });
         expect(await exists(join(home, 'chats', visualFileName('chat-lead')))).toBe(false);
         expect(await exists(pagePath('chat-lead', id))).toBe(false);
+        expect(await exists(source)).toBe(false);
+        expect(await exists(preview)).toBe(false);
         expect(visualEvents(events)).toEqual([[]]);
         expect(await daemon.chats.listVisuals('chat-lead')).toEqual([]);
     });
 
     test('deleting a chat removes its visuals and their pages', async () => {
         const daemon = await bootWithChat();
+        const source = await daemon.visuals.writeSource('chat-lead', 'chart.html', PAGE);
         const id = await shown(daemon, 'Bars');
 
         expect(await daemon.request('chat.kill', { chatId: 'chat-lead' })).toMatchObject({ ok: true });
         expect(await exists(join(home, 'chats', visualFileName('chat-lead')))).toBe(false);
         expect(await exists(pagePath('chat-lead', id))).toBe(false);
+        expect(await exists(source)).toBe(false);
     });
 
     test('after a restart the page is found by its id before anyone opened the chat, and goes out as a download', async () => {

@@ -1799,6 +1799,19 @@ export const ACTION_DEFINITIONS = {
         input: z.object({ planId: z.string().min(1).describe('The plan by id; never the newest by default, since this cannot be undone') }),
         output: z.object({ planId: z.string(), title: z.string() })
     },
+    'visual.write': {
+        title: 'Save visual source',
+        description:
+            "Saves or replaces an HTML source file in this chat's private visual folder, outside the project, and returns its absolute path. It does not publish the page.",
+        effect: 'shared',
+        domain: 'communicate',
+        actors: AGENT,
+        input: z.object({
+            name: z.string().describe('An HTML filename such as chart.html, without a directory'),
+            html: z.string().describe('The page, one self-contained HTML document')
+        }),
+        output: z.object({ path: z.string() })
+    },
     /* The store checks a page and its title and refuses under its own codes, which an input schema would turn into one invalid-input. */
     'visual.show': {
         title: 'Show a visual',

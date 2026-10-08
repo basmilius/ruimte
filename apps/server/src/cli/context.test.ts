@@ -318,7 +318,7 @@ describe('runContext', () => {
         expect(seen[2]!.argv).toEqual(['note', 'a', '--text=x\\\\y']);
     });
 
-    test('visual show and preview send stdin as --html byte for byte, and leave stdin unread when --html is given', async () => {
+    test('visual write, show and preview send stdin as --html byte for byte, and leave stdin unread when --html is given', async () => {
         const page = '<!doctype html>\n<p title="a\\nb">Ten\tcases</p>\n';
         await runContext(['visual', 'show', '--title', 'Cases', '--height', '200'], env, async () => page);
         expect(seen[0]!.argv).toEqual(['show', '--title', 'Cases', '--height', '200', `--html=${page}`]);
@@ -331,6 +331,10 @@ describe('runContext', () => {
         expect(seen[2]!.argv).toEqual(['list']);
         await runContext(['visual', 'preview', '--width', '400'], env, async () => page);
         expect(seen[3]!.argv).toEqual(['preview', '--width', '400', `--html=${page}`]);
+        await runContext(['visual', 'write', '--name', 'cases.html'], env, async () => page);
+        expect(seen[4]!.argv).toEqual(['write', '--name', 'cases.html', `--html=${page}`]);
+        await runContext(['visual', 'write', '--name', 'cases.html', '--html=<p>Updated</p>'], env, stdin);
+        expect(seen[5]!.argv).toEqual(['write', '--name', 'cases.html', '--html=<p>Updated</p>']);
     });
 
     test('a refusal exits 3 and goes to stderr', async () => {

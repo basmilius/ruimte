@@ -1,11 +1,9 @@
-import { randomBytes } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { VISUAL_MEASURE_WIDTHS, type VisualAppearance, type VisualHeight } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents/coded-error';
 import { errorText } from '../error-text.ts';
-import { writeShot } from '../shots.ts';
 import type { ConsoleEntry } from './page-console.ts';
 import { RENDER_COMMAND, RenderAnswerSchema, type RenderAnswer, type RenderRequest } from './render-protocol.ts';
 
@@ -351,12 +349,12 @@ export class VisualRenderer {
     }
 }
 
-/* A preview with its png written under the machine's screenshots, by a name no other preview takes. */
+/* The host keeps the rendered png with the chat that requested it. */
 export async function previewVisual(
     renderer: VisualRenderer,
-    home: string,
+    save: (png: Uint8Array) => Promise<string>,
     input: { html: string; width: number; appearance: VisualAppearance }
 ): Promise<VisualPreview> {
     const { png, ...rest } = await renderer.preview(input.html, input.width, input.appearance);
-    return { path: await writeShot(home, `visual-${randomBytes(6).toString('hex')}`, png), ...rest };
+    return { path: await save(png), ...rest };
 }

@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { mkdirSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type {
@@ -25,7 +26,7 @@ import { limitedTurn } from '@adecore/agents/chat/limit-resume';
 import { storedAccount } from '@adecore/agents/providers/accounts/launch';
 import { narrowerMode } from '@adecore/agents/modes';
 import { chatReferenceNote, resolveChatReferences } from '../context/chat-references.ts';
-import { chatPrompt, contextChangeNote, contextPrompt } from '../context/context-note.ts';
+import { chatPrompt, contextChangeNote, contextPrompt, VISUAL_FILES_NOTE } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { continueOnWake, continuedInForkNote } from './continue-on.ts';
@@ -467,7 +468,19 @@ export class ChatManager extends ChatCore {
     }
 
     protected override resumeNoteFor(chatId: string): string | null {
-        return contextPrompt(this.contextSources(chatId));
+        const context = contextPrompt(this.contextSources(chatId));
+        const files = this.visualReplies() && !this.inlineChat(chatId) ? VISUAL_FILES_NOTE : null;
+        return [context, files].filter((part) => part !== null).join(' ') || null;
+    }
+
+    protected override foldersFor(chatId: string): readonly string[] {
+        if (!this.visuals || !this.visualReplies() || this.inlineChat(chatId)) {
+            return [];
+        }
+        const path = this.visuals.workspacePath(chatId);
+        // Claude validates --add-dir at startup, including the first turn after a chat was cleared.
+        mkdirSync(path, { recursive: true, mode: 0o700 });
+        return [path];
     }
 
     protected override promptNotesFor(chatId: string): PromptNotes {

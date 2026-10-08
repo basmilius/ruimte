@@ -36,8 +36,12 @@ const COMPUTER_NOTE =
     'With `ruimte-context computer` you read and operate the apps of this Mac, each only once the person lets you into it; use it only when they ask you to work in an app. You work in the background by default, so the person can go on with their own work; ask them before you use `--front`, which brings the app forward and interrupts them. The person can pause you, take over or stop you at any moment: then wait for them, or ask them, instead of calling again in a loop. A call holds 6 s for their answer or their pause; `--wait 60` holds longer and goes on as soon as they are done, so give that shell command a timeout above the wait.';
 
 /* Said only to an AI chat while visual replies are on for this machine; a terminal has no thread to show a page in. */
+export const VISUAL_FILES_NOTE =
+    "Keep visual source files outside the project: save HTML directly with `ruimte-context visual write --name chart.html` and the page on stdin, using a distinct name per visual. It returns an absolute path in this chat's private storage under RUIMTE_HOME; use that path for preview and show, and visual write with the same name to update it. Create a project file only when the person explicitly asks for an export.";
+
 export const VISUAL_NOTE =
-    'When a chart, a table, a diagram, a collage of images or a mockup would say more than prose, show a self-contained HTML page above your reply with `ruimte-context visual show --title T < page.html` after checking it with `visual preview` (`ruimte-context help visual` has the rules), and let the reply add only what the page does not say.';
+    'When a chart, a table, a diagram, a collage of images or a mockup would say more than prose, show a self-contained HTML page above your reply with `ruimte-context visual show --title T < page.html` after checking it with `visual preview` (`ruimte-context help visual` has the rules), and let the reply add only what the page does not say. ' +
+    VISUAL_FILES_NOTE;
 
 /* Said only in a project with database connections: without it a model asked about the data reads the schema from migrations and guesses. */
 function databaseNote(visuals: boolean): string {

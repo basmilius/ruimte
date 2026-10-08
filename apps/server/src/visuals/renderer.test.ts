@@ -3,6 +3,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { VISUAL_MEASURE_WIDTHS } from '@ruimte/contracts';
+import { AttachmentStore } from '@adecore/agents/chat/attachment-store';
+import { VisualStore } from '@adecore/agents/chat/visual-store';
 import type { RenderAnswer } from './render-protocol.ts';
 import { previewVisual, renderCommand, VisualRenderer, type RenderJob, type RenderProcess } from './renderer.ts';
 
@@ -152,17 +154,19 @@ describe('VisualRenderer.preview', () => {
         expect((await second).code).toBe('preview-failed');
     });
 
-    test('writes the png under the screenshots of the machine by a name of its own', async () => {
+    test("writes the png into the caller's visual workspace by a name of its own", async () => {
         const home = await mkdtemp(join(tmpdir(), 'ruimte-preview-'));
         try {
             const { renderer, children } = setup();
-            const first = previewVisual(renderer, home, { html: '<p>x</p>', width: 600, appearance: 'dark' });
-            const second = previewVisual(renderer, home, { html: '<p>x</p>', width: 600, appearance: 'dark' });
+            const store = new VisualStore(home, new AttachmentStore(home));
+            const save = (png: Uint8Array) => store.writePreview('chat-one', png);
+            const first = previewVisual(renderer, save, { html: '<p>x</p>', width: 600, appearance: 'dark' });
+            const second = previewVisual(renderer, save, { html: '<p>x</p>', width: 600, appearance: 'dark' });
             await flush();
             children[0]!.reply(rendered(600, 340));
             children[1]!.reply(rendered(600, 340));
             const [one, two] = await Promise.all([first, second]);
-            expect(one.path.startsWith(join(home, 'screenshots', 'visual-'))).toBe(true);
+            expect(one.path.startsWith(join(home, 'chats', 'chat-one.visuals', 'preview-'))).toBe(true);
             expect(one.path).not.toBe(two.path);
             expect(await readFile(one.path)).toEqual(PNG);
             expect(one).toMatchObject({ width: 600, height: 340, shotHeight: 340, console: [{ level: 'log', text: 'drawn' }], omitted: 2 });

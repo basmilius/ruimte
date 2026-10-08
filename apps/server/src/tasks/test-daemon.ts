@@ -316,6 +316,7 @@ export async function bootTestDaemon({
         requests: chatRequests(chats),
         visuals: {
             enabled: () => machine.visualReplies !== false,
+            writeSource: (chatId, name, html) => visuals.writeSource(chatId, name, html),
             publish: (chatId, input) => chats.publishVisual(chatId, input),
             list: (chatId) => chats.listVisuals(chatId),
             remove: (chatId, visualId) => chats.removeVisual(chatId, visualId),

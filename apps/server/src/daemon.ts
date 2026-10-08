@@ -690,11 +690,13 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         }),
         visuals: {
             enabled: () => identity.visualReplies,
+            writeSource: (chatId: string, name: string, html: string) => visuals.writeSource(chatId, name, html),
             publish: (chatId: string, input: { title: string; html: string; maxHeight?: number; heights?: VisualHeight[] }) =>
                 chats.publishVisual(chatId, input),
             list: (chatId: string) => chats.listVisuals(chatId),
             remove: (chatId: string, visualId: string) => chats.removeVisual(chatId, visualId),
-            preview: (input: { html: string; width: number; appearance: VisualAppearance }) => previewVisual(visualRenderer, config.home, input),
+            preview: (chatId: string, input: { html: string; width: number; appearance: VisualAppearance }) =>
+                previewVisual(visualRenderer, (png) => visuals.writePreview(chatId, png), input),
             measure: (html: string) => visualRenderer.measure(html)
         },
         context: {

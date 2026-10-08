@@ -82,12 +82,28 @@ export async function showVisual(
 }
 
 export const visualActions: ActionHandlers<ServerActionContext> = {
+    'visual.write': async ({ name, html }, { actor, context }) => {
+        const visuals = visualsOf(context);
+        const chatId = await callerChat(context, actor.id);
+        requireEnabled(visuals);
+        if (!visuals.writeSource) {
+            throw new VerbRefusal('unavailable', 'This machine keeps no visual source files; pass the page directly to visual preview and visual show');
+        }
+        try {
+            return { output: { path: await visuals.writeSource(chatId, name, html) } };
+        } catch (e) {
+            if (e instanceof CodedError && STORE_REFUSALS.has(e.code)) {
+                throw new VerbRefusal(e.code, e.message, [HELP_LINE]);
+            }
+            throw e;
+        }
+    },
     'visual.show': async ({ title, html, maxHeight }, { actor, context }) => ({
         output: { visual: await showVisual(context, actor.id, { title, html, maxHeight }) }
     }),
     'visual.preview': async ({ html, width, appearance }, { actor, context }) => {
         const visuals = visualsOf(context);
-        await callerChat(context, actor.id);
+        const chatId = await callerChat(context, actor.id);
         requireEnabled(visuals);
         if (html.trim() === '') {
             throw new VerbRefusal('visual-invalid', 'The page is empty; pass one self-contained HTML document', [HELP_LINE]);
@@ -103,7 +119,7 @@ export const visualActions: ActionHandlers<ServerActionContext> = {
             throw new VerbRefusal('preview-unavailable', 'This machine renders no previews; show the page with visual show without a preview');
         }
         try {
-            return { output: await visuals.preview({ html, width: width ?? PREVIEW_WIDTH.default, appearance: appearance ?? 'dark' }) };
+            return { output: await visuals.preview(chatId, { html, width: width ?? PREVIEW_WIDTH.default, appearance: appearance ?? 'dark' }) };
         } catch (e) {
             if (e instanceof CodedError && PREVIEW_REFUSALS.has(e.code)) {
                 throw new VerbRefusal(e.code, e.message);
