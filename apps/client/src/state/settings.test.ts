@@ -3,6 +3,35 @@ import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { DEFAULT_CODE_FOLDING } from './code-folding';
 import { codeLineHeight, codeThemesOf, iceServersFrom, settingsFrom, useSettings, type KeepAwakeMode, type Settings } from './settings';
 
+describe('panel layout', () => {
+    test('keeps existing installations compact and accepts only the roomy option', () => {
+        expect(settingsFrom({}).panelLayout).toBe('standard');
+        expect(settingsFrom({ panelLayout: 'roomy' }).panelLayout).toBe('roomy');
+        expect(settingsFrom({ panelLayout: 'wide' as Settings['panelLayout'] }).panelLayout).toBe('standard');
+    });
+
+    test('persists the choice through unrelated updates and reloads it for another window', () => {
+        const previousStorage = globalThis.localStorage;
+        const previous = useSettings.getState();
+        const items = new Map<string, string>();
+        globalThis.localStorage = {
+            getItem: (key: string) => items.get(key) ?? null,
+            setItem: (key: string, value: string) => items.set(key, value)
+        } as unknown as Storage;
+        try {
+            useSettings.getState().update({ panelLayout: 'roomy' });
+            useSettings.getState().update({ dockAutoHide: true });
+            useSettings.setState({ panelLayout: 'standard' });
+            useSettings.getState().reload();
+            expect(useSettings.getState().panelLayout).toBe('roomy');
+            expect(useSettings.getState().dockAutoHide).toBe(true);
+        } finally {
+            globalThis.localStorage = previousStorage;
+            useSettings.setState(previous);
+        }
+    });
+});
+
 describe('a view an agent asks for', () => {
     test('is not followed until a person says so', () => {
         expect(settingsFrom({}).agentsShowViews).toBe(false);

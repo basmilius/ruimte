@@ -22,8 +22,7 @@ import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { VoiceButton } from '@/voice/VoiceButton';
 import { useVoice } from '@/voice/state';
 
-/* The band above the canvas: which project is open, and the panels that sit next to it. It is as
-   tall as the sidebar's own strip, so the two read as one title bar across the window. The left
+/* The band above the canvas: which project is open, and the panels that sit next to it. The left
    padding follows the sidebar's width, which keeps the breadcrumb from jumping when the list
    slides away. */
 export function Toolbar() {
@@ -46,7 +45,7 @@ export function Toolbar() {
 
     return (
         <header
-            className="app-drag relative flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface pr-2 pl-2 text-xs text-text-muted transition-[padding] duration-200 ease-out"
+            className="workspace-toolbar app-drag relative flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface pr-2 pl-2 text-xs text-text-muted transition-[padding] duration-200 ease-out"
             style={sidebarOpen ? undefined : { paddingLeft: inset ?? STRIP_PADDING_PX }}
         >
             {/* The web client's menu goes where the wordmark went, so it stays one press away. */}

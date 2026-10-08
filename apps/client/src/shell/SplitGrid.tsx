@@ -62,8 +62,6 @@ import { cellsMoved, registerCell } from '@/shell/cell-rects';
 import { Dock } from '@/shell/Dock';
 import { CellOverlay } from '@/shell/CellOverlay';
 
-/* The smallest a cell may be dragged to, as a share of its axis. Below this nothing in it is legible. */
-
 /*
  * What a surface inside a cell says about the paths dropped on it, so the grid does not carry a list
  * of which view kinds handle a drop. `all` keeps the grid out entirely (a chat's composer, which
@@ -84,9 +82,14 @@ function splitDrag(axis: 'x' | 'y', sizes: readonly number[], at: number, onSize
     return (event: ReactPointerEvent<HTMLElement>): void => {
         event.preventDefault();
         const handle = event.currentTarget;
-        // The splitter's parent is the box the items share, which is what a share is a share of.
-        const box = handle.parentElement?.getBoundingClientRect();
-        const span = axis === 'x' ? (box?.width ?? 0) : (box?.height ?? 0);
+        // Shares divide the available pane space; fixed-width separators take no share.
+        const span = Array.from(handle.parentElement?.children ?? []).reduce((total, child) => {
+            if (child.getAttribute('role') === 'separator') {
+                return total;
+            }
+            const rect = child.getBoundingClientRect();
+            return total + (axis === 'x' ? rect.width : rect.height);
+        }, 0);
         if (span === 0) {
             return;
         }
@@ -99,11 +102,19 @@ function splitDrag(axis: 'x' | 'y', sizes: readonly number[], at: number, onSize
         const onUp = (): void => {
             handle.removeEventListener('pointermove', onMove);
             handle.removeEventListener('pointerup', onUp);
-            handle.releasePointerCapture(event.pointerId);
+            handle.removeEventListener('pointercancel', onUp);
+            handle.removeEventListener('lostpointercapture', onUp);
+            delete handle.dataset.resizing;
+            if (handle.hasPointerCapture(event.pointerId)) {
+                handle.releasePointerCapture(event.pointerId);
+            }
         };
+        handle.dataset.resizing = '';
         handle.setPointerCapture(event.pointerId);
         handle.addEventListener('pointermove', onMove);
         handle.addEventListener('pointerup', onUp);
+        handle.addEventListener('pointercancel', onUp);
+        handle.addEventListener('lostpointercapture', onUp);
     };
 }
 
@@ -125,7 +136,7 @@ function Splitter({
             role="separator"
             aria-orientation={axis === 'x' ? 'vertical' : 'horizontal'}
             className={clsx(
-                'relative shrink-0 bg-border transition-colors hover:bg-accent',
+                'split-handle relative z-20 shrink-0 bg-border transition-colors hover:bg-accent',
                 axis === 'x' ? 'w-px cursor-col-resize' : 'h-px cursor-row-resize',
                 hidden && 'invisible'
             )}
@@ -318,7 +329,7 @@ function Cell({
         /* Registered so the parking layer can put a browser page over this box; its size changes
            with a splitter drag, which moves no state at all, hence the observer. A cell hidden behind
            a maximized one leaves the registry, which hides its pages without moving a <webview>. */
-        <div ref={(element) => watchCell(viewId, hidden ? null : element)} className="relative min-h-0 grow overflow-hidden">
+        <div ref={(element) => watchCell(viewId, hidden ? null : element)} className="split-cell-body relative min-h-0 grow overflow-hidden">
             {/* A host keeps one surface for its loose tabs, which keeps the editors of the tabs shown last. */}
             <ViewSurface view={view} hostIds={tabs} />
             <CellOverlay slot="cell">
@@ -334,6 +345,8 @@ function Cell({
     return (
         <CellViewContext.Provider value={viewId}>
             <div
+                data-split-cell
+                data-maximized={filling ? '' : undefined}
                 className={clsx('flex min-h-0 min-w-0 grow flex-col overflow-hidden', filling && 'absolute inset-0 z-10 bg-bg')}
                 // A press anywhere in a cell is what moves the focus to it, the way it moves between panels.
                 onPointerDownCapture={() => useDocument.getState().focusCellAt(at)}
@@ -520,6 +533,7 @@ function Column({ layout, at, maximized }: { layout: SplitLayout; at: number; ma
                         />
                     )}
                     <div
+                        data-split-slot
                         className={clsx('flex min-h-0 flex-col', maximized !== null && !isSameCell(maximized, { column: at, cell: index }) && 'invisible')}
                         style={{ flex: `${cell.size} 1 0` }}
                     >

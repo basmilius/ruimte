@@ -94,6 +94,7 @@ export function CellOverlayLayer() {
                 element.style.transform = `translate(${rect.left - box!.left}px, ${rect.top - box!.top}px)`;
                 element.style.width = `${rect.width}px`;
                 element.style.height = `${rect.height}px`;
+                element.style.borderRadius = getComputedStyle(cell).borderRadius;
             }
         };
         place();

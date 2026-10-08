@@ -84,17 +84,17 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     }, []);
     return (
         <ConnectionProvider connection={workspace.connection}>
-            <div className="flex h-full w-full bg-bg">
+            <div className="workspace flex h-full w-full bg-bg">
                 <ErrorBoundary label={i18next.t('common:state.sidebarFailed')} className="h-full w-[248px] shrink-0 border-r border-border">
                     <Sidebar />
                 </ErrorBoundary>
                 <main className="flex min-w-0 grow">
                     <FileToolbarSlotProvider value={{ host: fileToolbarHost, mount: setFileToolbarHost }}>
-                        <div className="flex min-w-0 grow flex-col">
+                        <div className="workspace-center flex min-w-0 grow flex-col">
                             <ErrorBoundary label={failed('toolbar')} resetKeys={[workspace]} compact className="shrink-0 border-b border-border">
                                 <Toolbar />
                             </ErrorBoundary>
-                            <div className="relative min-h-0 grow">
+                            <div className="workspace-content relative min-h-0 grow">
                                 <ViewHost />
                                 <ErrorBoundary label={failed('pages')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                                     <WebviewParking />

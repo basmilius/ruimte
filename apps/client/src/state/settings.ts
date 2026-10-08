@@ -134,6 +134,7 @@ export function codeLineHeight(size: number, ratio: number): number {
 
 export interface Settings {
     sidebarScope: 'current' | 'all-open';
+    panelLayout: 'standard' | 'roomy';
     /* "Needs you" lists what waits in every open project, not only the one on screen. The combined sidebar always does. */
     needsYouAllProjects: boolean;
     /* One of the node accents. Blue is the brand's own and the one a fresh client starts on. */
@@ -265,6 +266,7 @@ interface SettingsStore extends Settings {
 
 const DEFAULT_SETTINGS: Settings = {
     sidebarScope: 'current',
+    panelLayout: 'standard',
     needsYouAllProjects: true,
     accent: 'blue',
     interfaceFont: 'system',
@@ -336,6 +338,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
     return {
         ...DEFAULT_SETTINGS,
         ...stored,
+        panelLayout: stored.panelLayout === 'roomy' ? 'roomy' : 'standard',
         sidebarScope: stored.sidebarScope === 'all-open' ? 'all-open' : 'current',
         needsYouAllProjects: stored.needsYouAllProjects !== false,
         fontSize: clampSize(stored.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize),
@@ -418,6 +421,7 @@ function apply(settings: Settings): void {
     if (typeof document === 'undefined') {
         return;
     }
+    document.documentElement.dataset.panelLayout = settings.panelLayout;
     const root = document.documentElement.style;
     root.setProperty('font-size', `${settings.interfaceFontSize}px`);
     root.setProperty('--code-font-size', `${settings.codeFontSize}px`);
@@ -457,6 +461,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
         update(patch) {
             const {
                 sidebarScope,
+                panelLayout,
                 needsYouAllProjects,
                 accent,
                 interfaceFont,
@@ -510,6 +515,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
             } = get();
             const next: Settings = {
                 sidebarScope,
+                panelLayout,
                 needsYouAllProjects,
                 accent,
                 interfaceFont,
@@ -562,6 +568,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 onboardingIntroSeen,
                 ...patch
             };
+            next.panelLayout = next.panelLayout === 'roomy' ? 'roomy' : 'standard';
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);
             next.interfaceFontSize = clampSize(next.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize);
             next.codeFontSize = clampSize(next.codeFontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.codeFontSize);

@@ -19,6 +19,12 @@
             "dock": {
                 "label": "Hide the dock",
                 "description": "The bar under a canvas or drawing hides until the pointer nears the bottom edge."
+            },
+            "layout": {
+                "label": "Panel layout",
+                "description": "Roomy adds space and rounded corners between panels.",
+                "standard": "Standard",
+                "roomy": "Roomy"
             }
         },
         "language": {

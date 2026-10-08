@@ -19,6 +19,12 @@
             "dock": {
                 "label": "Dock verbergen",
                 "description": "De balk onder een canvas of tekening blijft weg tot de muis de onderrand nadert."
+            },
+            "layout": {
+                "label": "Paneelindeling",
+                "description": "Ruim voegt tussenruimte en afgeronde hoeken toe aan panelen.",
+                "standard": "Standaard",
+                "roomy": "Ruim"
             }
         },
         "language": {

@@ -1,6 +1,7 @@
 import { Suspense, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
+import { usePanelGap } from '@/shell/panel-layout';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { PANELS } from '@/shell/panels';
 import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
@@ -42,6 +43,7 @@ function PanelBody({ kind }: { kind: PanelKind }) {
 
 /* Keep the inner column at its stored width while the outer split animates, avoiding content reflow. */
 export function Panel() {
+    const gap = usePanelGap();
     const { t } = useTranslation('shell');
     const panel = useShownPanel();
     const open = panel.open;
@@ -59,7 +61,7 @@ export function Panel() {
     const label = entry === undefined ? t('panel.fallback') : t(`panel.names.${entry.kind}`);
 
     return (
-        <SlidingColumn open={open} width={width} bounds={bounds} instant={instant} onWidthChange={(next) => useUi.getState().setPanelWidth(next)}>
+        <SlidingColumn open={open} gap={gap} width={width} bounds={bounds} instant={instant} onWidthChange={(next) => useUi.getState().setPanelWidth(next)}>
             {/* An open panel is the rightmost column, so on Windows and Linux the close button
                         would land under the native window controls; the inset keeps their width free. */}
             <PanelHeader className={clsx('app-drag', open && hasOverlayControls() && 'toolbar-overlay-inset')}>

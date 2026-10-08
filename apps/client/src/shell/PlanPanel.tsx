@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
+import { usePanelGap } from '@/shell/panel-layout';
 import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, LockOpen, MoreHorizontal, Send } from 'lucide-react';
 import type { Plan } from '@ruimte/contracts';
 import { allSteps, effectiveChecks } from '@adecore/plan';
@@ -55,6 +56,7 @@ function hasLockedStep(plan: Plan): boolean {
  * what is on screen.
  */
 export function PlanPanel() {
+    const gap = usePanelGap();
     const { t } = useTranslation('shell');
     const anchor = useUi((s) => s.planAnchor);
     const open = useUi((s) => s.planOpen);
@@ -75,7 +77,7 @@ export function PlanPanel() {
         max: (): number => {
             const column = ref.current;
             const grid = column?.previousElementSibling;
-            return grid instanceof HTMLElement && column ? grid.clientWidth + column.clientWidth - MIN_GRID_WIDTH : window.innerWidth - MIN_GRID_WIDTH;
+            return grid instanceof HTMLElement && column ? grid.clientWidth + column.clientWidth - gap - MIN_GRID_WIDTH : window.innerWidth - MIN_GRID_WIDTH;
         }
     };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
@@ -83,7 +85,15 @@ export function PlanPanel() {
     const instant = useInstantWidth();
 
     return (
-        <SlidingColumn open={open} width={width} bounds={bounds} instant={instant} ref={ref} onWidthChange={(next) => useUi.getState().setPlanWidth(next)}>
+        <SlidingColumn
+            open={open}
+            gap={gap}
+            width={width}
+            bounds={bounds}
+            instant={instant}
+            ref={ref}
+            onWidthChange={(next) => useUi.getState().setPlanWidth(next)}
+        >
             {shown !== null && (
                 <>
                     <PlanHeader

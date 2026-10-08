@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
+import { usePanelGap } from '@/shell/panel-layout';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { isCanvasView, isSessionView, isUnlistedChatView, type AgentKind, type AgentStatus, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
@@ -822,6 +823,7 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow, snoozable }: Ro
 }
 
 export function Sidebar() {
+    const gap = usePanelGap();
     const { t } = useTranslation('shell');
     const source = useSidebarSource();
     const combined = useSettings((s) => s.sidebarScope === 'all-open');
@@ -1004,9 +1006,12 @@ export function Sidebar() {
             inert={!open}
             data-instant={instant ? '' : undefined}
             className="sliding-column h-full shrink-0 overflow-hidden"
-            style={{ width: open ? SIDEBAR_WIDTH_PX : 0 }}
+            style={{ width: open ? SIDEBAR_WIDTH_PX + gap : 0 }}
         >
-            <div className="relative isolate flex h-full flex-col border-r border-border bg-surface" style={{ width: SIDEBAR_WIDTH_PX }}>
+            <div
+                className={clsx('relative isolate flex h-full flex-col bg-surface', gap === 0 && 'border-r border-border')}
+                style={{ width: SIDEBAR_WIDTH_PX }}
+            >
                 <SidebarGlow />
                 <div
                     className="app-drag relative flex h-12 shrink-0 items-center justify-between pr-2"

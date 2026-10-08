@@ -5,6 +5,7 @@
 @import '@adecore/agents-react/theme.css';
 @import '@adecore/editor/editor.css';
 @import '@adecore/editor-react/editor-react.css';
+@import './shell/panel-layout.css';
 
 /* The components of @adecore/ui and the chat of @adecore/agents-react carry their own classes, outside the folder Tailwind scans by itself.
    The library through `node_modules`, so a linked checkout, the published package and the station build read the same path. */
@@ -92,6 +93,7 @@
 /* Ruimte's own tokens, beside the ones @adecore/ui defines. */
 :root,
 [data-theme='light'] {
+    --border: var(--separator);
     --canvas-bg: #eeeef1;
     --canvas-dot: #cfcfd6;
     /* A connector is solid, never an alpha over the canvas the way a border is: two lines that cross
@@ -183,6 +185,7 @@
 
 /* The same tokens in the dark theme; a value that does not change between themes is not repeated here. */
 [data-theme='dark'] {
+    --border: var(--separator);
     --canvas-bg: #0d0d10;
     --canvas-dot: #202024;
     /* A connector is solid, never an alpha over the canvas the way a border is: two lines that cross

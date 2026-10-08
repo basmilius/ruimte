@@ -106,6 +106,7 @@ function DesktopWebviewParking() {
                 clip.style.transform = `translate(${rect.left - box.left}px, ${rect.top - box.top}px)`;
                 clip.style.width = `${rect.width}px`;
                 clip.style.height = `${rect.height}px`;
+                clip.style.borderRadius = getComputedStyle(cell).borderRadius;
 
                 // A view of its own is one page over the whole cell; there is no canvas under it.
                 if (!view.onCanvas) {

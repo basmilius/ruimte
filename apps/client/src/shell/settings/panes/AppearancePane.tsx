@@ -160,6 +160,7 @@ function RegionRow() {
 
 export function AppearancePane() {
     const { t } = useTranslation('settings');
+    const panelLayout = useSettings((s) => s.panelLayout);
     const sidebarScope = useSettings((s) => s.sidebarScope);
     const needsYouAllProjects = useSettings((s) => s.needsYouAllProjects);
     const dockAutoHide = useSettings((s) => s.dockAutoHide);
@@ -179,6 +180,20 @@ export function AppearancePane() {
                 />
             </SettingsSection>
             <SettingsSection title={t('appearance.interface.title')}>
+                <SettingsRow
+                    searchId="appearance.interface.layout"
+                    label={t('appearance.interface.layout.label')}
+                    description={t('appearance.interface.layout.description')}
+                    control={
+                        <Select
+                            value={panelLayout}
+                            label={t('appearance.interface.layout.label')}
+                            align="end"
+                            items={(['standard', 'roomy'] as const).map((value) => ({ value, label: t(`appearance.interface.layout.${value}`) }))}
+                            onValueChange={(value) => update({ panelLayout: value })}
+                        />
+                    }
+                />
                 <SettingsRow
                     searchId="appearance.interface.dock"
                     label={t('appearance.interface.dock.label')}
