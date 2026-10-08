@@ -16,6 +16,7 @@ import { ViewToolbar } from '@/shell/ViewToolbar';
 import { useHasViewToolbar, useShowsSubagents, useViewToolbarLeads } from '@/shell/view-toolbar';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
+import { isDatabaseTab } from '@/state/files';
 import { cellAt, type CellAt } from '@/shell/split';
 import { CloseButton, Icon, IconButton, Menu, Separator, ContextMenu, Popover, Tooltip } from '@adecore/ui';
 import { useBrowserDisplayTitle } from '@/browser/title';
@@ -76,6 +77,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     const [grabbable, setGrabbable] = useState(true);
     const [menuOpen, setMenuOpen] = useState(false);
     const bar = useRef<HTMLDivElement>(null);
+    const viewBar = useRef<HTMLDivElement>(null);
     const actions = useRef<HTMLSpanElement>(null);
     const bodyFocused = useDocument((s) => s.bodyFocused);
     const maximized = useDocument((s) => s.maximized === view.id);
@@ -83,13 +85,10 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     /* The tabs of the cell when it is a host. A host keeps its bar whatever the view in front is. */
     const tabs = useDocument((s) => (s.layout === null ? undefined : cellAt(s.layout, at)?.tabs));
     const hosted = tabs !== undefined;
-    const loose = isLooseView(view);
     const hasViewToolbar = useHasViewToolbar(view);
-    /* The controls of a loose view in a host never fold: the strip beside them is the list of what is open,
-       and a strip inside a popover is a list you have to open a menu to see. It gives way by scrolling
-       sideways instead. */
-    const stripBeside = hosted && loose;
-    const folded = useFolded(bar, actions, hasViewToolbar && !stripBeside);
+    const compactToolbar = view.kind === 'file' || view.kind === 'terminal' || (isLooseView(view) && !isDatabaseTab(view.tab));
+    const separateToolbar = hosted && !compactToolbar;
+    const folded = useFolded(separateToolbar ? viewBar : bar, actions, hasViewToolbar);
     const leads = useViewToolbarLeads(view);
     /* A lone cell with nothing to do takes no bar. The wrapper stays, so the body keeps its place
        in the tree and a session inside it survives the bar coming and going. */
@@ -105,6 +104,34 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
         <span className="contents" onContextMenu={(event) => event.stopPropagation()}>
             <ViewToolbar view={view} focused={focused && bodyFocused} />
         </span>
+    );
+    const toolbarActions = hasViewToolbar && (
+        <>
+            {!folded && (
+                <>
+                    {!hosted && leads && !inSubagents && <Separator />}
+                    {/* The controls keep their minimum width so overflow can trigger folding. */}
+                    <span ref={actions} className={clsx('flex min-w-min items-center', hosted && compactToolbar ? 'shrink-0' : 'grow')}>
+                        {controls}
+                    </span>
+                </>
+            )}
+            {folded && (
+                <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
+                    <IconButton icon={MoreHorizontal} size="sm" label={t('cellToolbar.moreActions')} className="cursor-default" render={<Popover.Trigger />} />
+                    {/* A popover preserves the keys of controls such as the browser's address field. */}
+                    <Popover.Popup sideOffset={6} align="end" className="flex min-w-72 items-center gap-2 p-2 text-xs">
+                        {controls}
+                    </Popover.Popup>
+                </Popover.Root>
+            )}
+            {/* Keep the portal host mounted while folded, or file renderers draw their own toolbar. */}
+            {folded && !menuOpen && (
+                <span hidden className="hidden">
+                    {controls}
+                </span>
+            )}
+        </>
     );
     return (
         <FileToolbarSlotProvider value={{ host, mount: setHost }}>
@@ -142,7 +169,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                             className={clsx(
                                 'flex items-center gap-2',
                                 hosted ? 'min-w-24 self-stretch' : 'min-w-5 pl-1',
-                                folded || !hasViewToolbar || (hosted && loose) ? 'grow' : 'shrink'
+                                hosted || folded || !hasViewToolbar ? 'grow' : 'shrink'
                             )}
                         >
                             {maximized && (
@@ -186,42 +213,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                                 </>
                             )}
                         </span>
-                        {hasViewToolbar && !folded && (
-                            <>
-                                {/* A strip ends where the controls begin, and a view without controls would leave a line on its own. */}
-                                {!hosted && leads && !inSubagents && <Separator />}
-                                {/* At least as wide as the controls at their smallest, so a bar too narrow
-                            for them overflows, and that is how it knows to fold. Beside a strip they never
-                            fold, so the strip may shrink and scroll. */}
-                                <span ref={actions} className={clsx('flex grow items-center', stripBeside ? 'min-w-0 self-stretch' : 'min-w-min')}>
-                                    {controls}
-                                </span>
-                            </>
-                        )}
-                        {hasViewToolbar && folded && (
-                            <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
-                                <IconButton
-                                    icon={MoreHorizontal}
-                                    size="sm"
-                                    label={t('cellToolbar.moreActions')}
-                                    className="cursor-default"
-                                    render={<Popover.Trigger />}
-                                />
-                                {/* A popover and not a menu: a browser's address field is among these,
-                            and a menu would take its keys for moving between items. */}
-                                <Popover.Popup sideOffset={6} align="end" className="flex min-w-72 items-center gap-2 p-2 text-xs">
-                                    {controls}
-                                </Popover.Popup>
-                            </Popover.Root>
-                        )}
-                        {/* Folded and closed, the controls still have to be mounted somewhere: a file's
-                    renderer portals into their host, and with no host it would draw a bar of its
-                    own inside the cell. */}
-                        {hasViewToolbar && folded && !menuOpen && (
-                            <span hidden className="hidden">
-                                {controls}
-                            </span>
-                        )}
+                        {!separateToolbar && toolbarActions}
                         {closable && (
                             <CloseButton label={t('cellToolbar.closeCell')} size="sm" className="cursor-default" onClick={() => closeCellAction(view.id)} />
                         )}
@@ -240,6 +232,19 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                         {isLooseView(view) ? <FileMenuItems tabKey={view.id} /> : <ViewMenuItems viewId={view.id} kind={view.kind} />}
                     </ContextMenu.Popup>
                 </ContextMenu.Root>
+            )}
+            {separateToolbar && hasViewToolbar && (
+                <div
+                    ref={viewBar}
+                    data-view-bar=""
+                    className={clsx(
+                        'flex h-10 shrink-0 items-center gap-2 overflow-hidden border-b border-border px-2 text-xs',
+                        folded && 'justify-end',
+                        focused ? 'bg-surface text-text' : 'bg-surface-idle text-text-muted'
+                    )}
+                >
+                    {toolbarActions}
+                </div>
             )}
             {children}
         </FileToolbarSlotProvider>
