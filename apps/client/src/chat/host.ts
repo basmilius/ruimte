@@ -95,6 +95,7 @@ export function connectChatHost(): void {
             custom: CODE_THEMES
         },
         useStreaming: () => useSettings((s) => s.chatStreaming),
+        useSendDelivery: () => useSettings((s) => (s.chatSteerByDefault ? 'steer' : 'queue')),
         tasks: {
             useTasks: (endpointId) => useTasks((s) => s.byEndpoint[endpointId]),
             useTask: (endpointId, taskId) => useTasks((s) => (taskId === null ? null : (s.byEndpoint[endpointId]?.[taskId] ?? null)))

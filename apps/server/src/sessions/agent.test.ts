@@ -64,6 +64,25 @@ async function endShell(sessionId: string, exitCode = 0): Promise<void> {
 }
 
 describe('agent status via hooks', () => {
+    test('a terminal permission keeps the actual request until its tool settles', async () => {
+        await createAgent('permission-terminal', { kind: 'codex' });
+        const token = harness.manager.get('permission-terminal')!.hookToken;
+        await harness.manager.applyHook(
+            'codex',
+            token,
+            hook('PermissionRequest', {
+                tool_name: 'Bash',
+                tool_input: { command: 'git push', description: 'Publish the branch' }
+            })
+        );
+        expect(harness.manager.list()[0]?.agent).toMatchObject({
+            status: 'needs-you',
+            requests: [{ kind: 'approval', toolName: 'Bash', text: 'git push', title: 'Publish the branch' }]
+        });
+        await harness.manager.applyHook('codex', token, hook('PostToolUse', { tool_name: 'Bash' }));
+        expect(harness.manager.list()[0]?.agent?.requests ?? []).toEqual([]);
+    });
+
     test('launches and resume fallbacks receive the context of their terminal placement', async () => {
         await harness.cleanup();
         await freshHarness({ standalone: (sessionId) => sessionId === 'terminal-view' });

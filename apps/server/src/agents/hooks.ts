@@ -1,4 +1,4 @@
-import type { AgentKind, AgentStatus, RuntimeMode } from '@ruimte/contracts';
+import type { AgentKind, AgentRequest, AgentStatus, RuntimeMode } from '@ruimte/contracts';
 
 interface HookOutcome {
     agentSessionId: string;
@@ -36,7 +36,54 @@ const EVENT_STATUS: Record<string, AgentStatus | 'gone'> = {
 };
 
 // Tools that stop and wait for the person, even though they arrive as a plain tool call.
-export const ASKING_TOOLS: ReadonlySet<string> = new Set(['AskUserQuestion']);
+export const ASKING_TOOLS: ReadonlySet<string> = new Set(['AskUserQuestion', 'request_user_input']);
+
+export function requestOfHook(body: unknown, createdAt: number): AgentRequest | null {
+    if (typeof body !== 'object' || body === null) {
+        return null;
+    }
+    const hook = body as Record<string, unknown>;
+    const toolName = asString(hook.tool_name);
+    const question = hook.hook_event_name === 'PreToolUse' && toolName !== null && ASKING_TOOLS.has(toolName);
+    if (!toolName || (!question && hook.hook_event_name !== 'PermissionRequest')) {
+        return null;
+    }
+    const input = typeof hook.tool_input === 'object' && hook.tool_input !== null ? (hook.tool_input as Record<string, unknown>) : {};
+    const questions = Array.isArray(input.questions) ? input.questions : [];
+    const text = question
+        ? questions
+              .map((entry: unknown) => {
+                  if (typeof entry !== 'object' || entry === null) {
+                      return '';
+                  }
+                  const item = entry as Record<string, unknown>;
+                  const options = Array.isArray(item.options)
+                      ? item.options
+                            .map((option: unknown) =>
+                                typeof option === 'string'
+                                    ? option
+                                    : typeof option === 'object' && option !== null
+                                      ? asString((option as Record<string, unknown>).label)
+                                      : null
+                            )
+                            .filter(Boolean)
+                      : [];
+                  return [asString(item.question) ?? asString(item.title), ...options.map((option) => `• ${option}`)].filter(Boolean).join('\n');
+              })
+              .filter(Boolean)
+              .join('\n\n')
+        : (asString(input.command) ?? JSON.stringify(input, null, 2));
+    const source = asString(hook.agent_id) ?? '';
+    return {
+        id: `${source}:${asString(hook.tool_use_id) ?? asString(hook.turn_id) ?? String(hook.hook_event_name)}:${toolName}`,
+        source,
+        kind: question ? 'question' : 'approval',
+        toolName,
+        title: asString(input.description),
+        text: text.slice(0, 16_000),
+        createdAt
+    };
+}
 
 // Notification types that mean the CLI is blocked on the person; the others are informational.
 const NOTIFICATION_STATUS: Record<string, AgentStatus> = {

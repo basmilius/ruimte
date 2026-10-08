@@ -15,7 +15,7 @@ export function RuimtePromptView({ prompt, props }: { prompt: RuimtePrompt; prop
         return (
             <PromptCard
                 kind="waiting"
-                heading={t('waiting.heading')}
+                heading={data.request ? t(`waiting.${data.request.kind}`, { tool: data.request.toolName }) : t('waiting.heading')}
                 top={top}
                 busy={false}
                 notice={null}
@@ -26,6 +26,10 @@ export function RuimtePromptView({ prompt, props }: { prompt: RuimtePrompt; prop
                     </div>
                 }
             >
+                {data.request?.title && <p className="text-sm text-text">{data.request.title}</p>}
+                {data.request?.text && (
+                    <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-text select-text">{data.request.text}</pre>
+                )}
                 <p className="text-sm text-text-muted">{t('waiting.body')}</p>
             </PromptCard>
         );

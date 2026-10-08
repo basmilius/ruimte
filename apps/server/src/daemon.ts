@@ -350,7 +350,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         preferredAccount: (kind) => chats.composerPreferences.for(kind).account
     });
     const snapshotSchedule = scheduleSnapshots(manager, snapshots);
-    void probeCodexNoDaemon();
+    await probeCodexNoDaemon();
     // A bearer token speaks for a terminal session or a chat, for reading context and for agent commands alike.
     const targetForToken = (token: string): string | null => manager.sessionIdForToken(token) ?? chats.chatIdForToken(token);
     const context: ContextStore = new ContextStore({

@@ -84,6 +84,35 @@ describe('agent notifications', () => {
     });
 });
 
+describe('sending to a running agent', () => {
+    test('queues by default and enables steering only on a stored true', () => {
+        expect(settingsFrom({}).chatSteerByDefault).toBe(false);
+        expect(settingsFrom({ chatSteerByDefault: true }).chatSteerByDefault).toBe(true);
+        expect(settingsFrom({ chatSteerByDefault: 'yes' as unknown as boolean }).chatSteerByDefault).toBe(false);
+    });
+
+    test('keeps the choice through other updates and reloads it in another window', () => {
+        const previousStorage = globalThis.localStorage;
+        const previous = useSettings.getState();
+        const items = new Map<string, string>();
+        globalThis.localStorage = {
+            getItem: (key: string) => items.get(key) ?? null,
+            setItem: (key: string, value: string) => items.set(key, value)
+        } as unknown as Storage;
+        try {
+            useSettings.getState().update({ chatSteerByDefault: true });
+            useSettings.getState().update({ chatStreaming: 'blocks' });
+            useSettings.setState({ chatSteerByDefault: false });
+            useSettings.getState().reload();
+            expect(useSettings.getState().chatSteerByDefault).toBe(true);
+            expect(useSettings.getState().chatStreaming).toBe('blocks');
+        } finally {
+            globalThis.localStorage = previousStorage;
+            useSettings.setState(previous);
+        }
+    });
+});
+
 describe('streaming replies', () => {
     test('starts a word at a time, and a mode that is stored is kept', () => {
         expect(settingsFrom({}).chatStreaming).toBe('words');

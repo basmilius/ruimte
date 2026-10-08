@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { ComputerApproval, ComputerApprovalChoice } from '@ruimte/contracts';
+import type { AgentRequest, ComputerApproval, ComputerApprovalChoice } from '@ruimte/contracts';
 import type { PromptAction } from '@adecore/agents-react/prompts/logic/prompts';
 import type { ApprovalButtonSpec, HostPrompt, PromptSubject } from '@adecore/agents-react/prompts/logic/subjects';
 
@@ -7,7 +7,7 @@ import type { ApprovalButtonSpec, HostPrompt, PromptSubject } from '@adecore/age
  * What Ruimte asks beside a chat's own prompts: the machine's approval for an agent to operate an app,
  * which the machine asks and not the CLI, and a terminal whose TUI waits, which only the TUI answers.
  */
-export type RuimtePromptData = { kind: 'computer-approval'; request: ComputerApproval } | { kind: 'terminal-waiting'; since: number };
+export type RuimtePromptData = { kind: 'computer-approval'; request: ComputerApproval } | { kind: 'terminal-waiting'; since: number; request?: AgentRequest };
 
 export interface RuimtePrompt extends HostPrompt {
     data: RuimtePromptData;
@@ -29,13 +29,13 @@ export function computerPrompt(nodeId: string, request: ComputerApproval): Ruimt
     };
 }
 
-export function waitingPrompt(nodeId: string, since: number): RuimtePrompt {
+export function waitingPrompt(nodeId: string, since: number, request?: AgentRequest): RuimtePrompt {
     return {
-        id: `waiting:${nodeId}`,
+        id: `waiting:${nodeId}${request ? `:${request.id}` : ''}`,
         createdAt: since,
         blocking: true,
-        asks: 'approval',
-        data: { kind: 'terminal-waiting', since }
+        asks: request?.kind ?? 'approval',
+        data: { kind: 'terminal-waiting', since, ...(request ? { request } : {}) }
     };
 }
 
@@ -44,7 +44,7 @@ export function isRuimtePrompt(prompt: HostPrompt): prompt is RuimtePrompt {
     return data?.kind === 'computer-approval' || data?.kind === 'terminal-waiting';
 }
 
-/* What a card is about, which stays the same object while it waits, so a stack that reads the same draws nothing again. */
+/* Terminal status snapshots rebuild requests, so equal content must still keep the stack steady. */
 export function ruimtePayloadOf(subject: PromptSubject): unknown {
     if (subject.kind === 'chat') {
         return subject.item;
@@ -53,7 +53,10 @@ export function ruimtePayloadOf(subject: PromptSubject): unknown {
         return subject.prompt.data;
     }
     const { data } = subject.prompt;
-    return data.kind === 'computer-approval' ? data.request : data.since;
+    if (data.kind === 'computer-approval') {
+        return data.request;
+    }
+    return data.request ? JSON.stringify(data.request) : data.since;
 }
 
 /* The buttons of an approval to operate an app: Deny, Always allow, and Allow this time as the primary. */

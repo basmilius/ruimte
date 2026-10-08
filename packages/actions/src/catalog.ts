@@ -4,6 +4,7 @@ import {
     ChatAttachmentUploadsSchema,
     ChatBackgroundTaskSchema,
     ChatCheckpointDiffSchema,
+    ChatDeliverySchema,
     ChatSubagentSourceSchema,
     ChatSubagentStatusSchema,
     ChatVisualSchema,
@@ -1057,6 +1058,7 @@ export const ACTION_DEFINITIONS = {
             chatId: z.string().min(1),
             // Not trimmed here: the composer sends what was typed, and a message of attachments alone has no text.
             prompt: z.string(),
+            delivery: forActors(PERSON_AND_VOICE, ChatDeliverySchema).describe('Steer the running agent, or queue until its current turn finishes'),
             mentions: forActors(PERSON, z.array(z.string().min(1)).max(64)).describe('Paths picked with @'),
             skills: forActors(PERSON, z.array(z.string().min(1)).max(16)).describe('Skills picked with $'),
             chats: forActors(PERSON, z.array(z.string().min(1)).max(16)).describe('Chats of this project picked with @'),

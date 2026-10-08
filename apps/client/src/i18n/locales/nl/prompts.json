@@ -11,6 +11,8 @@
         "deny": "Weigeren"
     },
     "waiting": {
+        "approval": "Toestemming gevraagd door {{tool}}",
+        "question": "Vraag van {{tool}}",
         "heading": "Wacht op jou in de terminal",
         "body": "Deze vraag kan alleen in de terminal beantwoord worden.",
         "goToTerminal": "Ga naar de terminal"

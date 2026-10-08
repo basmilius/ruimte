@@ -280,6 +280,12 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     { id: 'agents.defaults.permissions', section: 'agents', label: 'settings:agents.defaults.permissions' },
     { id: 'agents.defaults.terminalMode', section: 'agents', label: 'settings:agents.defaults.terminalMode' },
     {
+        id: 'agents.chats.steerByDefault',
+        section: 'agents',
+        label: 'settings:agents.chats.steerByDefault.label',
+        description: 'settings:agents.chats.steerByDefault.description'
+    },
+    {
         id: 'agents.chats.streaming',
         section: 'agents',
         label: 'settings:agents.chats.streaming.label',

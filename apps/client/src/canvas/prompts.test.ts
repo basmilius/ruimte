@@ -74,6 +74,29 @@ function computerCard(nodeId: string, createdAt: number): ComputerApproval {
 }
 
 describe('canvasPrompts', () => {
+    test('a terminal card carries the actual approval instead of an empty waiting placeholder', () => {
+        const base = input();
+        const request = {
+            id: 'permission',
+            source: '',
+            kind: 'approval' as const,
+            toolName: 'Bash',
+            title: 'Publish the branch',
+            text: 'git push',
+            createdAt: 500
+        };
+        const sessions = { ...base.sessions, [key('ios')]: { attached: false, agent: { ...agent('needs-you', 500), requests: [request] } } };
+        const collected = canvasPrompts({ ...base, sessions });
+        const card = collected.prompts.find((prompt) => prompt.title === 'ios')!;
+        expect(card.subject).toEqual({ kind: 'host', nodeId: 'ios', prompt: waitingPrompt('ios', 500, request) });
+        expect(samePrompts(collected.prompts, canvasPrompts({ ...base, sessions }).prompts)).toBe(true);
+        const repeatedRequest = { ...request };
+        const repeated = { ...sessions, [key('ios')]: { attached: false, agent: { ...agent('needs-you', 500), requests: [repeatedRequest] } } };
+        expect(samePrompts(collected.prompts, canvasPrompts({ ...base, sessions: repeated }).prompts)).toBe(true);
+        repeatedRequest.text = 'git push origin main';
+        expect(samePrompts(collected.prompts, canvasPrompts({ ...base, sessions: repeated }).prompts)).toBe(false);
+    });
+
     test('prompts come blocking first, oldest first, with an optional question last', () => {
         const { prompts } = canvasPrompts(input());
         expect(prompts.map((prompt) => [kindOf(prompt), prompt.title])).toEqual([

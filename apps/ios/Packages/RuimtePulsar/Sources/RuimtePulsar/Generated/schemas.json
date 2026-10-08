@@ -5030,6 +5030,14 @@
       "cancelled"
     ]
   },
+  "ChatDeliverySchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "steer",
+      "queue"
+    ]
+  },
   "ChatRequestKindSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "string",
@@ -5649,6 +5657,52 @@
                   "error",
                   "exited"
                 ]
+              },
+              "requests": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "approval",
+                        "question"
+                      ]
+                    },
+                    "toolName": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "source",
+                    "kind",
+                    "toolName",
+                    "title",
+                    "text",
+                    "createdAt"
+                  ]
+                }
               },
               "live": {
                 "type": "boolean"
@@ -6350,6 +6404,52 @@
                         "exited"
                       ]
                     },
+                    "requests": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "source": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "approval",
+                              "question"
+                            ]
+                          },
+                          "toolName": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "source",
+                          "kind",
+                          "toolName",
+                          "title",
+                          "text",
+                          "createdAt"
+                        ]
+                      }
+                    },
                     "live": {
                       "type": "boolean"
                     },
@@ -6603,6 +6703,52 @@
                   "error",
                   "exited"
                 ]
+              },
+              "requests": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "approval",
+                        "question"
+                      ]
+                    },
+                    "toolName": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "source",
+                    "kind",
+                    "toolName",
+                    "title",
+                    "text",
+                    "createdAt"
+                  ]
+                }
               },
               "live": {
                 "type": "boolean"
@@ -16932,6 +17078,13 @@
       },
       "text": {
         "type": "string"
+      },
+      "delivery": {
+        "type": "string",
+        "enum": [
+          "steer",
+          "queue"
+        ]
       },
       "mentions": {
         "maxItems": 64,
@@ -46249,6 +46402,52 @@
                   "error",
                   "exited"
                 ]
+              },
+              "requests": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "approval",
+                        "question"
+                      ]
+                    },
+                    "toolName": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "source",
+                    "kind",
+                    "toolName",
+                    "title",
+                    "text",
+                    "createdAt"
+                  ]
+                }
               },
               "live": {
                 "type": "boolean"

@@ -206,6 +206,7 @@ export interface Settings {
     /* How a reply in a chat appears while it is written. Only how this client draws it: the daemon
        sends the deltas either way. */
     chatStreaming: ChatStreamingMode;
+    chatSteerByDefault: boolean;
     voiceLanguage: VoiceLanguage;
     liveVoice: LiveVoice;
     voiceInputDeviceId: string;
@@ -303,6 +304,7 @@ const DEFAULT_SETTINGS: Settings = {
     drawingSnap: false,
     dockAutoHide: false,
     chatStreaming: 'words',
+    chatSteerByDefault: false,
     voiceLanguage: 'nl',
     liveVoice: 'marin',
     voiceInputDeviceId: 'default',
@@ -377,6 +379,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         keepAwakeOnBattery: stored.keepAwakeOnBattery === true,
         keepAwakeDisplay: stored.keepAwakeDisplay === true,
         chatStreaming: chatStreamingFrom(stored.chatStreaming),
+        chatSteerByDefault: stored.chatSteerByDefault === true,
         voiceLanguage: isVoiceLanguage(stored.voiceLanguage) ? stored.voiceLanguage : 'nl',
         liveVoice: isLiveVoice(stored.liveVoice)
             ? stored.liveVoice
@@ -500,6 +503,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 drawingSnap,
                 dockAutoHide,
                 chatStreaming,
+                chatSteerByDefault,
                 voiceLanguage,
                 liveVoice,
                 voiceInputDeviceId,
@@ -555,6 +559,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 drawingSnap,
                 dockAutoHide,
                 chatStreaming,
+                chatSteerByDefault,
                 voiceLanguage,
                 liveVoice,
                 voiceInputDeviceId,

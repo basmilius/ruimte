@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, RuntimeMode, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
 import { codexIndexIn } from '../agents/codex-title.ts';
-import { modeOfHook, normalizeHook, settleWaiting } from '../agents/hooks.ts';
+import { modeOfHook, normalizeHook, requestOfHook, settleWaiting } from '../agents/hooks.ts';
 import { isTerminalReply } from './terminal-replies.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { narrowerMode } from '@adecore/agents/modes';
@@ -404,6 +404,14 @@ export class SessionManager {
         }
         const settled = settleWaiting(this.waiting.get(session.id) ?? new Set(), outcome);
         this.waiting.set(session.id, settled.waiting);
+        const updatedAt = Date.now();
+        const request = requestOfHook(body, updatedAt);
+        const requests = (session.agent?.agentSessionId === outcome.agentSessionId ? (session.agent.requests ?? []) : []).filter(
+            (entry) => settled.waiting.has(entry.source) && entry.source !== request?.source
+        );
+        if (request && settled.waiting.has(request.source)) {
+            requests.push(request);
+        }
         // A name belongs to the conversation it was given in; a new one in the same shell starts without.
         const suggestedTitle = session.agent?.agentSessionId === outcome.agentSessionId ? session.agent.suggestedTitle : undefined;
         const agent: AgentInfo | null =
@@ -415,8 +423,9 @@ export class SessionManager {
                       transcriptPath: outcome.transcriptPath ?? session.agent?.transcriptPath ?? null,
                       ...(suggestedTitle !== undefined ? { suggestedTitle } : {}),
                       status: settled.status,
+                      ...(requests.length > 0 ? { requests } : {}),
                       live: true,
-                      updatedAt: Date.now()
+                      updatedAt
                   };
         if (agent !== null) {
             // The CLI is up and speaking for itself, so the resume it answers to is done.

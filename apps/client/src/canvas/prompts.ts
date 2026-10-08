@@ -71,7 +71,14 @@ export function canvasPrompts({ nodes, endpointId, sessions, chats, computer, wa
         }
         const first = since.get(key) ?? session?.agent?.updatedAt ?? 0;
         since.set(key, first);
-        add(node, { kind: 'host', nodeId: node.id, prompt: waitingPrompt(node.id, first) }, provider, 'terminal');
+        const requests = session?.agent?.requests ?? [];
+        if (requests.length === 0) {
+            add(node, { kind: 'host', nodeId: node.id, prompt: waitingPrompt(node.id, first) }, provider, 'terminal');
+        } else {
+            for (const request of requests) {
+                add(node, { kind: 'host', nodeId: node.id, prompt: waitingPrompt(node.id, request.createdAt, request) }, provider, 'terminal');
+            }
+        }
     }
     return {
         prompts: orderPrompts(

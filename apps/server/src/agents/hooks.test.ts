@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { modeOfHook, normalizeHook, settleWaiting } from './hooks.ts';
+import { modeOfHook, normalizeHook, requestOfHook, settleWaiting } from './hooks.ts';
 
 function hook(event: string, extra: Record<string, unknown> = {}) {
     return {
@@ -12,6 +12,16 @@ function hook(event: string, extra: Record<string, unknown> = {}) {
 }
 
 describe('normalizeHook', () => {
+    test('recognizes the native Codex question tool and keeps its questions readable', () => {
+        const body = hook('PreToolUse', {
+            tool_name: 'request_user_input',
+            tool_input: { questions: [{ id: 'color', question: 'Which color?', options: [{ label: 'Blue' }, { label: 'Red' }] }] }
+        });
+        expect(normalizeHook(body)?.status).toBe('needs-you');
+        expect(requestOfHook(body, 1)).toMatchObject({ kind: 'question', text: 'Which color?\n• Blue\n• Red', createdAt: 1 });
+        expect(requestOfHook(hook('PostToolUse'), 2)).toBeNull();
+    });
+
     test('maps the lifecycle to running, needs-you, idle and gone', () => {
         expect(normalizeHook(hook('SessionStart'))?.status).toBe('idle');
         expect(normalizeHook(hook('UserPromptSubmit'))?.status).toBe('running');

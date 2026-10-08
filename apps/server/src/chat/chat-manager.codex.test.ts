@@ -131,7 +131,7 @@ describe('ChatManager with Codex', () => {
         await open('chat-queued-image');
         await manager.send('chat-queued-image', 'slow');
         await recorder.until(() => recorder.ofKind('assistant').length === 1);
-        expect(await manager.send('chat-queued-image', '', {}, [png])).toMatchObject({ queued: true });
+        expect(await manager.send('chat-queued-image', '', { delivery: 'queue' }, [png])).toMatchObject({ queued: true });
         const queued = recorder.info!.queue![0]!.attachments![0]!;
         manager.cancel('chat-queued-image');
         await recorder.until(idle);
@@ -159,7 +159,7 @@ describe('ChatManager with Codex', () => {
         await open('chat-missing-image');
         await manager.send('chat-missing-image', 'slow');
         await recorder.until(() => recorder.ofKind('assistant').length === 1);
-        await manager.send('chat-missing-image', 'Look', {}, [png]);
+        await manager.send('chat-missing-image', 'Look', { delivery: 'queue' }, [png]);
         await rm(recorder.info!.queue![0]!.attachments![0]!.path);
         manager.cancel('chat-missing-image');
         await recorder.until(idle);

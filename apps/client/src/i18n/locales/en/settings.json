@@ -767,6 +767,10 @@
             "showViews": {
                 "label": "Let an agent show you a view",
                 "description": "On, a view an agent opens replaces the one you are working in, and a banner takes you back. Off, the banner offers a button to go there."
+            },
+            "steerByDefault": {
+                "label": "Steer running agents by default",
+                "description": "Send messages to Codex or Claude at the next tool call. With this off, messages wait until the turn ends. Hold Option or Alt when sending to use the other behavior."
             }
         }
     },

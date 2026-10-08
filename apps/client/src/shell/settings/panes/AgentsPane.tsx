@@ -41,6 +41,7 @@ export function AgentsPane() {
     const { keepAwake, keepAwakeOnBattery, keepAwakeDisplay } = useKeepAwakeChoice();
     const agentsTurnSound = useSettings((s) => s.agentsTurnSound);
     const chatStreaming = useSettings((s) => s.chatStreaming);
+    const chatSteerByDefault = useSettings((s) => s.chatSteerByDefault);
     const update = useSettings((s) => s.update);
     // A browser cannot keep anything awake, so it is told nothing about a choice it has no way to honor.
     const awake = useKeepAwakeAvailable();
@@ -109,6 +110,18 @@ export function AgentsPane() {
                 />
             </SettingsSection>
             <SettingsSection title={t('agents.chats.title')} scope="client">
+                <SettingsRow
+                    searchId="agents.chats.steerByDefault"
+                    label={t('agents.chats.steerByDefault.label')}
+                    description={t('agents.chats.steerByDefault.description')}
+                    control={
+                        <Switch
+                            checked={chatSteerByDefault}
+                            onCheckedChange={(checked) => update({ chatSteerByDefault: checked })}
+                            label={t('agents.chats.steerByDefault.label')}
+                        />
+                    }
+                />
                 <SettingsRow
                     searchId="agents.chats.streaming"
                     label={t('agents.chats.streaming.label')}

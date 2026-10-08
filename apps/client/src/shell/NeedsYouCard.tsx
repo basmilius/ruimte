@@ -14,6 +14,7 @@ import { PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
 import { canvasPrompts, stackFront, type CanvasPrompt } from '@/canvas/prompts';
 import { useComputer } from '@/state/computer';
 import { endpointKey, useEndpointId } from '@/state/keys';
+import { useSessions } from '@/state/sessions';
 import { machineTransport } from '@/transport';
 import { chatScopeOf } from '@/transport/chat-scope';
 import { chatClientFor } from '@/transport/connections';
@@ -63,10 +64,11 @@ interface WaitingPrompts {
 /*
  * What one chat or terminal asks, as the prompt stack would show it. A chat this window holds is read
  * from the store; any other is read from its machine, again whenever that machine says it changed.
- * A terminal's own question stays in its TUI, so a terminal only brings the cards about operating an app.
+ * A terminal's hooks carry the request to read here; its TUI still takes the answer.
  */
 function useWaitingPrompts(endpointId: string, node: SidebarNode): WaitingPrompts {
     const key = endpointKey(endpointId, node.id);
+    const session = useSessions((state) => (node.kind === 'terminal' ? state.byKey[key] : undefined));
     const local = useEndpointId() === endpointId;
     const [held] = useState(() => node.kind === 'chat' && (chatClientFor(endpointId)?.isMounted(node.id) ?? false));
     const inspects = node.kind === 'chat' && !held;
@@ -119,12 +121,12 @@ function useWaitingPrompts(endpointId: string, node: SidebarNode): WaitingPrompt
         return canvasPrompts({
             nodes: [{ id: node.id, kind: node.kind, title: node.title, provider: node.provider ?? undefined }],
             endpointId,
-            sessions: {},
+            sessions: session ? { [key]: session } : {},
             chats: chat ? { [key]: chat } : {},
             computer,
             waitingSince: new Map()
         }).prompts;
-    }, [inspects, read, chat, computer, endpointId, key, node.id, node.kind, node.title, node.provider]);
+    }, [inspects, read, chat, session, computer, endpointId, key, node.id, node.kind, node.title, node.provider]);
 
     return { prompts, failed: read?.failed ?? false, reread: () => setRevision((before) => before + 1) };
 }

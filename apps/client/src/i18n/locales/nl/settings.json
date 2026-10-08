@@ -767,6 +767,10 @@
             "showViews": {
                 "label": "Een agent een weergave laten tonen",
                 "description": "Aan vervangt de weergave waarin je werkt door de weergave die een agent opent, en een banner brengt je terug. Uit biedt de banner een knop om ernaartoe te gaan."
+            },
+            "steerByDefault": {
+                "label": "Werkende agents standaard bijsturen",
+                "description": "Stuur berichten naar Codex of Claude bij de volgende toolaanroep. Als dit uitstaat, wachten berichten tot de beurt klaar is. Houd Option of Alt ingedrukt bij het sturen om het andere gedrag te gebruiken."
             }
         }
     },

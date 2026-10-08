@@ -12,6 +12,8 @@
     },
     "waiting": {
         "heading": "Waiting for you in its terminal",
+        "approval": "Approval requested by {{tool}}",
+        "question": "Question from {{tool}}",
         "body": "This question can only be answered in the terminal.",
         "goToTerminal": "Go to terminal"
     },
