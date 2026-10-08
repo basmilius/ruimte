@@ -76,7 +76,7 @@ export function PlanPanel() {
         // Measured at drag time: the files panel beside it takes its share of the window too.
         max: (): number => {
             const column = ref.current;
-            const grid = column?.previousElementSibling;
+            const grid = column?.closest('.ade-workspace')?.querySelector('.ade-workspace-center');
             return grid instanceof HTMLElement && column ? grid.clientWidth + column.clientWidth - gap - MIN_GRID_WIDTH : window.innerWidth - MIN_GRID_WIDTH;
         }
     };

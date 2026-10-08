@@ -1,7 +1,7 @@
-import { Fragment, useEffect, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactElement } from 'react';
+import { useEffect, useState, type DragEvent as ReactDragEvent, type ReactElement } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { isCanvasView, type SplitLayout } from '@ruimte/contracts';
+import { isCanvasView } from '@ruimte/contracts';
 import { PromptStack } from '@/canvas/PromptStack';
 import { carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { carriesDiff, droppedDiff } from '@/shell/diff-drag';
@@ -14,20 +14,7 @@ import { canStandInCell, useDocument } from '@/state/document';
 import { tabKey, useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
 import { CellViewContext } from '@/state/workspace-stores';
-import {
-    canDropAsTab,
-    canMoveCell,
-    canSplit,
-    cellAt,
-    cellCount,
-    cellViewIds,
-    isSameCell,
-    locateView,
-    draggedSizes,
-    maximizedCell,
-    type CellAt,
-    type SplitZone
-} from '@/shell/split';
+import { canDropAsTab, canMoveCell, canSplit, cellAt, cellCount, cellViewIds, isSameCell, locateView, type CellAt, type SplitZone } from '@/shell/split';
 import {
     clampTabLeft,
     DEFAULT_TAB_WIDTH,
@@ -42,7 +29,7 @@ import {
 import { hideDropPreview, showDropPreview } from '@/shell/drop-preview';
 import type { SplitCell } from '@ruimte/contracts';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Button, Kbd, Surface, Tooltip } from '@adecore/ui';
+import { Button, Kbd, SplitView, Surface, Tooltip, type SplitCommand } from '@adecore/ui';
 import {
     carriesView,
     draggedViewId,
@@ -60,6 +47,7 @@ import { ViewSurface } from '@/shell/ViewHost';
 import { CellToolbar } from '@/shell/CellToolbar';
 import { cellsMoved, registerCell } from '@/shell/cell-rects';
 import { Dock } from '@/shell/Dock';
+import { cellForPane, columnForSplit, coreLayout } from '@/shell/core-layout';
 import { CellOverlay } from '@/shell/CellOverlay';
 
 /*
@@ -70,83 +58,6 @@ import { CellOverlay } from '@/shell/CellOverlay';
  */
 function takesDrop(target: EventTarget | null): string | null {
     return (target as HTMLElement | null)?.closest?.('[data-takes-drop]')?.getAttribute('data-takes-drop') ?? null;
-}
-
-/*
- * Dragging the line in front of item `at` of an axis. Sizes are shares of an axis rather than pixels,
- * so the grid keeps its proportions when the window changes size; the drag measures against the box
- * the items share, which is the only place a share can be turned back into a pointer position.
- * Option is read on every move, so it can be pressed or let go halfway through a drag.
- */
-function splitDrag(axis: 'x' | 'y', sizes: readonly number[], at: number, onSizes: (sizes: number[]) => void): (event: ReactPointerEvent<HTMLElement>) => void {
-    return (event: ReactPointerEvent<HTMLElement>): void => {
-        event.preventDefault();
-        const handle = event.currentTarget;
-        // Shares divide the available pane space; fixed-width separators take no share.
-        const span = Array.from(handle.parentElement?.children ?? []).reduce((total, child) => {
-            if (child.getAttribute('role') === 'separator') {
-                return total;
-            }
-            const rect = child.getBoundingClientRect();
-            return total + (axis === 'x' ? rect.width : rect.height);
-        }, 0);
-        if (span === 0) {
-            return;
-        }
-        const start = axis === 'x' ? event.clientX : event.clientY;
-        const total = sizes.reduce((sum, size) => sum + size, 0);
-        const onMove = (move: PointerEvent): void => {
-            const moved = (((axis === 'x' ? move.clientX : move.clientY) - start) / span) * total;
-            onSizes(draggedSizes(sizes, at, moved, span / total, move.altKey));
-        };
-        const onUp = (): void => {
-            handle.removeEventListener('pointermove', onMove);
-            handle.removeEventListener('pointerup', onUp);
-            handle.removeEventListener('pointercancel', onUp);
-            handle.removeEventListener('lostpointercapture', onUp);
-            delete handle.dataset.resizing;
-            if (handle.hasPointerCapture(event.pointerId)) {
-                handle.releasePointerCapture(event.pointerId);
-            }
-        };
-        handle.dataset.resizing = '';
-        handle.setPointerCapture(event.pointerId);
-        handle.addEventListener('pointermove', onMove);
-        handle.addEventListener('pointerup', onUp);
-        handle.addEventListener('pointercancel', onUp);
-        handle.addEventListener('lostpointercapture', onUp);
-    };
-}
-
-/* A double click evens out the two neighbors, and with Option every column, or every cell of the column.
-   Dragging with Option moves the mirroring splitter along, the other way. */
-function Splitter({
-    axis,
-    hidden,
-    onPointerDown,
-    onEven
-}: {
-    axis: 'x' | 'y';
-    hidden: boolean;
-    onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
-    onEven: (all: boolean) => void;
-}) {
-    return (
-        <div
-            role="separator"
-            aria-orientation={axis === 'x' ? 'vertical' : 'horizontal'}
-            className={clsx(
-                'split-handle relative z-20 shrink-0 bg-border',
-                axis === 'x' ? 'w-px cursor-col-resize' : 'h-px cursor-row-resize',
-                hidden && 'invisible'
-            )}
-            onPointerDown={onPointerDown}
-            onDoubleClick={(event) => onEven(event.altKey)}
-        >
-            {/* A thin divider still needs a wider grab area. */}
-            <span className={clsx('absolute', axis === 'x' ? '-inset-x-1 inset-y-0' : 'inset-x-0 -inset-y-1')} />
-        </div>
-    );
 }
 
 /* The box of an element in the grid's coordinates, which the drop preview is drawn in. */
@@ -164,9 +75,18 @@ function boxInGrid(element: Element, grid: DOMRect): PreviewRect {
  */
 function previewZone(cell: HTMLElement, zone: SplitZone, filling: boolean): void {
     const grid = cell.closest('[data-split-grid]')!.getBoundingClientRect();
-    const column = filling
-        ? { x: 0, y: 0, width: Math.round(grid.width), height: Math.round(grid.height) }
-        : boxInGrid(cell.closest('[data-split-column]')!, grid);
+    const at = locateView(useDocument.getState().layout!, cell.dataset.viewId!);
+    const peers =
+        at === null
+            ? []
+            : Array.from(cell.closest('[data-split-grid]')!.querySelectorAll<HTMLElement>(`[data-split-cell][data-column="${at.column}"]`)).filter(
+                  (peer) => !peer.closest('[hidden]')
+              );
+    const boxes = peers.map((peer) => boxInGrid(peer, grid));
+    const column =
+        filling || boxes.length === 0
+            ? { x: 0, y: 0, width: Math.round(grid.width), height: Math.round(grid.height) }
+            : { x: Math.min(...boxes.map((box) => box.x)), y: 0, width: boxes[0]!.width, height: Math.round(grid.height) };
     showDropPreview(rectPreview(shapeRect(shapeOf(zone), column, boxInGrid(cell, grid))));
 }
 
@@ -199,8 +119,8 @@ function watchCell(viewId: string, element: HTMLElement | null): void {
 }
 
 /*
- * One cell: the view it holds and nothing about the grid around it. What is inside reads `useCanvas`
- * and `useDrawing` without naming a view, because the context says which one this cell is.
+ * A view and its cell chrome share a stable host while the grid moves them. The context selects
+ * its canvas, drawing and diagram stores independently of which pane currently has focus.
  */
 function Cell({
     at,
@@ -330,15 +250,14 @@ function Cell({
            with a splitter drag, which moves no state at all, hence the observer. A cell hidden behind
            a maximized one leaves the registry, which hides its pages without moving a <webview>. */
         <div ref={(element) => watchCell(viewId, hidden ? null : element)} className="split-cell-body relative min-h-0 grow overflow-hidden">
-            {/* A host keeps one surface for its loose tabs, which keeps the editors of the tabs shown last. */}
-            <ViewSurface view={view} hostIds={tabs} />
+            <ViewSurface view={view} />
             <CellOverlay slot="cell">
                 {/* The dock belongs to the canvas under it, so it is drawn in the cell that has the
                     focus and nowhere else: nine docks would be nine rows of the same buttons. */}
-                {focused && <Dock onHiddenChange={setDockHidden} />}
+                {focused && !hidden && <Dock onHiddenChange={setDockHidden} />}
                 {/* A stack per canvas, not per dock: a cell without the focus has no dock, and its prompts still need a place. */}
-                {!isLooseView(view) && isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
-                {filling && <MaximizedIndicator at={at} />}
+                {!hidden && !isLooseView(view) && isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
+                {filling && !hidden && <MaximizedIndicator at={at} />}
             </CellOverlay>
         </div>
     );
@@ -346,8 +265,11 @@ function Cell({
         <CellViewContext.Provider value={viewId}>
             <div
                 data-split-cell
+                data-view-id={viewId}
+                data-column={at.column}
+                style={{ borderRadius: 'inherit' }}
                 data-maximized={filling ? '' : undefined}
-                className={clsx('flex min-h-0 min-w-0 grow flex-col overflow-hidden', filling && 'absolute inset-0 z-10 bg-bg')}
+                className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
                 // A press anywhere in a cell is what moves the focus to it, the way it moves between panels.
                 onPointerDownCapture={() => useDocument.getState().focusCellAt(at)}
                 /* A press inside a <webview> never reaches this page, only the focus it takes does. The
@@ -506,49 +428,37 @@ function MaximizedIndicator({ at }: { at: CellAt }) {
     );
 }
 
-function Column({ layout, at, maximized }: { layout: SplitLayout; at: number; maximized: CellAt | null }) {
-    const column = layout.columns[at]!;
-    const resize = (cell: number): ((event: ReactPointerEvent<HTMLElement>) => void) =>
-        splitDrag(
-            'y',
-            column.cells.map((entry) => entry.size),
-            cell,
-            (sizes) => useDocument.getState().resizeCells(at, sizes)
-        );
-    return (
-        /* Not positioned while a cell is maximized, so that cell is drawn against the whole grid. */
-        <div
-            data-split-column
-            className={clsx('flex min-h-0 min-w-0 flex-col', maximized === null ? 'relative' : maximized.column !== at && 'invisible')}
-            style={{ flex: `${column.size} 1 0` }}
-        >
-            {column.cells.map((cell, index) => (
-                <Fragment key={cellKey(cell)}>
-                    {index > 0 && (
-                        <Splitter
-                            axis="y"
-                            hidden={maximized !== null}
-                            onPointerDown={resize(index)}
-                            onEven={(all) => useDocument.getState().evenCells(at, index, all)}
-                        />
-                    )}
-                    <div
-                        data-split-slot
-                        className={clsx('flex min-h-0 flex-col', maximized !== null && !isSameCell(maximized, { column: at, cell: index }) && 'invisible')}
-                        style={{ flex: `${cell.size} 1 0` }}
-                    >
-                        <Cell
-                            at={{ column: at, cell: index }}
-                            viewId={cell.viewId}
-                            focused={isSameCell(layout.focus, { column: at, cell: index })}
-                            filling={maximized !== null && isSameCell(maximized, { column: at, cell: index })}
-                            hidden={maximized !== null && !isSameCell(maximized, { column: at, cell: index })}
-                        />
-                    </div>
-                </Fragment>
-            ))}
-        </div>
-    );
+function applyCommand(command: SplitCommand): void {
+    const document = useDocument.getState();
+    if (command.type === 'focus') {
+        const at = cellForPane(command.paneId);
+        if (at !== null) {
+            document.focusCellAt(at);
+        }
+    } else if (command.type === 'equalizeAxis') {
+        if (command.axis === 'horizontal') {
+            document.evenColumns(1, true);
+        } else {
+            document.layout?.columns.forEach((_, column) => document.evenCells(column, 1, true));
+        }
+    } else if (command.type === 'resize' || command.type === 'equalize') {
+        const column = columnForSplit(command.splitId);
+        if (command.type === 'resize') {
+            if (column === null) {
+                document.resizeColumns(command.sizes);
+            } else {
+                document.resizeCells(column, command.sizes);
+            }
+        } else {
+            const at = (command.index ?? 0) + 1;
+            const all = command.index === undefined;
+            if (column === null) {
+                document.evenColumns(at, all);
+            } else {
+                document.evenCells(column, at, all);
+            }
+        }
+    }
 }
 
 /*
@@ -577,30 +487,28 @@ export function SplitGrid(): ReactElement | null {
     if (layout === null) {
         return null;
     }
-    const maximized = maximizedCell(layout, maximizedId);
-    const resize = (column: number): ((event: ReactPointerEvent<HTMLElement>) => void) =>
-        splitDrag(
-            'x',
-            layout.columns.map((entry) => entry.size),
-            column,
-            (sizes) => useDocument.getState().resizeColumns(sizes)
-        );
+    const value = coreLayout(layout, maximizedId);
     return (
-        /* Isolated, so a maximized cell stands over its neighbors and never over the parked pages. */
-        <div data-split-grid className="absolute inset-0 isolate flex bg-border">
-            {layout.columns.map((column, index) => (
-                <Fragment key={cellKey(column.cells[0]!)}>
-                    {index > 0 && (
-                        <Splitter
-                            axis="x"
-                            hidden={maximized !== null}
-                            onPointerDown={resize(index)}
-                            onEven={(all) => useDocument.getState().evenColumns(index, all)}
-                        />
-                    )}
-                    <Column layout={layout} at={index} maximized={maximized} />
-                </Fragment>
-            ))}
-        </div>
+        <SplitView
+            data-split-grid
+            value={value}
+            onValueChange={(_, command) => applyCommand(command)}
+            showTabs={false}
+            minimumSize={{ width: 0, height: 0 }}
+            minimumResizeShare={0.15}
+            onViewBoundsChange={() => cellsMoved()}
+            renderView={(viewId, info) => {
+                const at = cellForPane(info.paneId)!;
+                return (
+                    <Cell
+                        at={at}
+                        viewId={viewId}
+                        focused={value.focused === info.paneId && info.active}
+                        filling={value.maximized === info.paneId}
+                        hidden={!info.active}
+                    />
+                );
+            }}
+        />
     );
 }
