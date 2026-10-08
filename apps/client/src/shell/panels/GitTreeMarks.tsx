@@ -3,7 +3,7 @@ import type { DecorationPart } from './git-tree';
 
 export function GitTreeMarks({ parts }: { parts: readonly DecorationPart[] }) {
     return (
-        <FileTree.Decoration className="font-mono text-xs tabular-nums">
+        <FileTree.Decoration className="font-mono text-2xs tabular-nums">
             {parts.map((part, index) => (
                 <span
                     key={index}
