@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { focusNodeAction, renameNodeAction } from '@/actions/client-actions';
 import { AgentIcon } from '@adecore/agents-react/agents/AgentIcon';
+import { taskStatusWord } from '@adecore/agents-react/agents/status-look';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { WorkingMark } from '@/attention/WorkingMark';
 import { TaskMark } from '@/tasks/TaskMark';
@@ -407,9 +408,9 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                         </Tooltip>
                     )}
                     {status && !renaming && <StatusMark status={status} work={work} />}
+                    {task && !renaming && (work === null || taskStatusWord(task) !== 'running') && <TaskMark task={task} />}
                     {/* Up close this is already gone, since looking clears it. It is for the canvas
                         zoomed out over everything and for the window standing beside another app. */}
-                    {task && !renaming && <TaskMark task={task} />}
                     {unseen && !renaming && <UnseenMark />}
                     {!renaming && <ProcessAlertMark alerts={processAlerts} />}
                     {unsavedFile && (
