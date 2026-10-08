@@ -26,7 +26,7 @@ import { limitedTurn } from '@adecore/agents/chat/limit-resume';
 import { storedAccount } from '@adecore/agents/providers/accounts/launch';
 import { narrowerMode } from '@adecore/agents/modes';
 import { chatReferenceNote, resolveChatReferences } from '../context/chat-references.ts';
-import { chatPrompt, contextChangeNote, contextPrompt, VISUAL_FILES_NOTE } from '../context/context-note.ts';
+import { chatPrompt, contextChangeNote, contextPrompt, VISUAL_FILES_NOTE, VISUAL_LAYOUT_NOTE } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { continueOnWake, continuedInForkNote } from './continue-on.ts';
@@ -469,8 +469,8 @@ export class ChatManager extends ChatCore {
 
     protected override resumeNoteFor(chatId: string): string | null {
         const context = contextPrompt(this.contextSources(chatId));
-        const files = this.visualReplies() && !this.inlineChat(chatId) ? VISUAL_FILES_NOTE : null;
-        return [context, files].filter((part) => part !== null).join(' ') || null;
+        const visuals = this.visualReplies() && !this.inlineChat(chatId) ? `${VISUAL_FILES_NOTE} ${VISUAL_LAYOUT_NOTE}` : null;
+        return [context, visuals].filter((part) => part !== null).join(' ') || null;
     }
 
     protected override foldersFor(chatId: string): readonly string[] {

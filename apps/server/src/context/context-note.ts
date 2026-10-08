@@ -39,9 +39,14 @@ const COMPUTER_NOTE =
 export const VISUAL_FILES_NOTE =
     "Keep visual source files outside the project: save HTML directly with `ruimte-context visual write --name chart.html` and the page on stdin, using a distinct name per visual. It returns an absolute path in this chat's private storage under RUIMTE_HOME; use that path for preview and show, and visual write with the same name to update it. Create a project file only when the person explicitly asks for an export.";
 
+export const VISUAL_LAYOUT_NOTE =
+    'Visuals follow the reply column by default. For an application mockup or dashboard that benefits from more width, opt in with `visual show --layout wide`. The host chooses the width within the chat pane; keep the page responsive and preview it at both 360px and 1200px with `visual preview --width`.';
+
 export const VISUAL_NOTE =
     'When a chart, a table, a diagram, a collage of images or a mockup would say more than prose, show a self-contained HTML page above your reply with `ruimte-context visual show --title T < page.html` after checking it with `visual preview` (`ruimte-context help visual` has the rules), and let the reply add only what the page does not say. ' +
-    VISUAL_FILES_NOTE;
+    VISUAL_FILES_NOTE +
+    ' ' +
+    VISUAL_LAYOUT_NOTE;
 
 /* Said only in a project with database connections: without it a model asked about the data reads the schema from migrations and guesses. */
 function databaseNote(visuals: boolean): string {

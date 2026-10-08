@@ -149,12 +149,30 @@ describe('visual verbs', () => {
         expect(attached).toMatchObject({ ok: true, result: { visuals: [visual!] } });
     });
 
+    test('an agent opts into a wide visual and the layout reaches clients and persisted records', async () => {
+        const daemon = await bootWithChat();
+        const events = listen(daemon);
+        await daemon.request('chat.attach', { chatId: 'chat-lead' });
+        const lines = await show(daemon, 'chat-lead', ['--title', 'Dashboard', '--layout', 'wide', `--html=${PAGE}`]);
+        expect(lines[0]).toStartWith('visual\t');
+        const [visual] = await daemon.chats.listVisuals('chat-lead');
+        expect(visual?.layout).toBe('wide');
+        expect(visualEvents(events)).toEqual([[visual!]]);
+        expect(await daemon.request('chat.attach', { chatId: 'chat-lead' })).toMatchObject({ ok: true, result: { visuals: [visual] } });
+        const stored = JSON.parse(await readFile(join(home, 'chats', visualFileName('chat-lead')), 'utf8'));
+        expect(stored.visuals[0].layout).toBe('wide');
+        const invalid = await show(daemon, 'chat-lead', ['--title', 'Bad', '--layout', 'fullscreen', `--html=${PAGE}`]);
+        expect(refusalCode(invalid)).toBe('bad-arguments');
+        expect(await daemon.chats.listVisuals('chat-lead')).toEqual([visual!]);
+    });
+
     test('without --height the frame may take the most a visual may, and the page arrives byte for byte through --html', async () => {
         const daemon = await bootWithChat();
         const page = '<p title="a\\nb">Ten\tcases</p>\n';
         const id = await shown(daemon, 'Cases', page);
         const [visual] = await daemon.chats.listVisuals('chat-lead');
         expect(visual).toMatchObject({ id, maxHeight: VISUAL_LIMITS.maxHeight });
+        expect(visual).not.toHaveProperty('layout');
         expect(await readFile(pagePath('chat-lead', id), 'utf8')).toEndWith(page);
     });
 
@@ -192,7 +210,7 @@ describe('visual verbs', () => {
         const daemon = await bootWithChat();
         expect(await show(daemon, 'chat-lead', [`--html=${PAGE}`])).toEqual([
             'refused\tbad-arguments\tvisual show needs --title, a few words that say what the page shows',
-            'usage\tvisual show\t--title T [--height H] (< page.html | --html H)',
+            'usage\tvisual show\t--title T [--layout inline|wide] [--height H] (< page.html | --html H)',
             'detail\truimte-context help visual show'
         ]);
         expect((await show(daemon, 'chat-lead', ['--title', 'Bars', '--height', 'tall', `--html=${PAGE}`]))[0]).toBe(

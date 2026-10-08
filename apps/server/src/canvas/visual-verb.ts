@@ -1,4 +1,4 @@
-import { VISUAL_LAYOUT_GUIDE, VISUAL_LIMITS, VISUAL_PAGE_RULES, VISUAL_THEME_GUIDE } from '@ruimte/contracts';
+import { VISUAL_LAYOUT_GUIDE, VISUAL_LIMITS, VISUAL_PAGE_RULES, VISUAL_THEME_GUIDE, VisualLayoutSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import { visualRow, visualRows } from '../actions/visual-actions.ts';
 import { VISUAL_IMAGE_BYTES } from '../cli/visual-images.ts';
@@ -57,9 +57,15 @@ const write = defineActionVerb('visual', {
 const show = defineActionVerb('visual', {
     name: 'show',
     action: 'visual.show',
-    usage: '--title T [--height H] (< page.html | --html H)',
+    usage: '--title T [--layout inline|wide] [--height H] (< page.html | --html H)',
     params: [
         { syntax: '--title T', need: 'required', field: 'title', more: `at most ${VISUAL_LIMITS.title} characters` },
+        {
+            syntax: '--layout inline|wide',
+            need: 'optional',
+            field: 'layout',
+            more: 'inline follows the reply column (default); wide uses the available chat pane for app mockups and dashboards'
+        },
         {
             syntax: '--height H',
             need: 'optional',
@@ -83,6 +89,7 @@ const show = defineActionVerb('visual', {
     positionals: z.tuple([], { error: 'visual show takes no arguments; the page goes on stdin and its title in --title' }),
     flags: z.object({
         title: z.string({ error: 'visual show needs --title, a few words that say what the page shows' }),
+        layout: VisualLayoutSchema.optional(),
         height: z
             .string()
             .regex(/^\d+$/, '--height takes a whole number of CSS pixels')
@@ -95,7 +102,12 @@ const show = defineActionVerb('visual', {
         html: z.string().optional()
     }),
     async run({ flags }, call) {
-        const { visual } = await runAction(call, 'visual.show', { title: flags.title, html: flags.html ?? '', maxHeight: flags.height ?? null });
+        const { visual } = await runAction(call, 'visual.show', {
+            title: flags.title,
+            html: flags.html ?? '',
+            maxHeight: flags.height ?? null,
+            ...(flags.layout === undefined ? {} : { layout: flags.layout })
+        });
         return [visualRow(visual), SHOWN_LINE];
     }
 });

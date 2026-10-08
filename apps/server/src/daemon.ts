@@ -22,7 +22,8 @@ import {
     type MachineWork,
     type RuntimeMode,
     type VisualAppearance,
-    type VisualHeight
+    type VisualHeight,
+    type VisualLayout
 } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
 import { ClaudeTitleReader } from '@adecore/agents/chat/claude-title';
@@ -691,7 +692,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         visuals: {
             enabled: () => identity.visualReplies,
             writeSource: (chatId: string, name: string, html: string) => visuals.writeSource(chatId, name, html),
-            publish: (chatId: string, input: { title: string; html: string; maxHeight?: number; heights?: VisualHeight[] }) =>
+            publish: (chatId: string, input: { title: string; html: string; maxHeight?: number; layout?: VisualLayout; heights?: VisualHeight[] }) =>
                 chats.publishVisual(chatId, input),
             list: (chatId: string) => chats.listVisuals(chatId),
             remove: (chatId: string, visualId: string) => chats.removeVisual(chatId, visualId),

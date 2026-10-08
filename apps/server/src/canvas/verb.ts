@@ -16,6 +16,7 @@ import {
     type ModelSelection,
     type VisualAppearance,
     type VisualHeight,
+    type VisualLayout,
     type Worktree,
     type WorktreeMergePayload,
     type WorktreeMergeResult
@@ -156,7 +157,7 @@ export interface VisualHost {
     enabled(): boolean;
     writeSource?(chatId: string, name: string, html: string): Promise<string>;
     /* Refuses with the store's own code, `visual-invalid` or `visual-too-large`, and a message that says what to change. */
-    publish(chatId: string, input: { title: string; html: string; maxHeight?: number; heights?: VisualHeight[] }): Promise<ChatVisual>;
+    publish(chatId: string, input: { title: string; html: string; maxHeight?: number; layout?: VisualLayout; heights?: VisualHeight[] }): Promise<ChatVisual>;
     list(chatId: string): Promise<ChatVisual[]>;
     remove(chatId: string, visualId: string): Promise<ChatVisual[]>;
     /* Refuses with `preview-unavailable`, `preview-timeout` or `preview-failed`; absent on a host that renders no page. */

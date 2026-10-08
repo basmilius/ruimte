@@ -7,6 +7,7 @@ import {
     ChatSubagentSourceSchema,
     ChatSubagentStatusSchema,
     ChatVisualSchema,
+    VisualLayoutSchema,
     ChatVisualsSchema,
     ComputerApprovalChoiceSchema,
     ContextSourceSchema,
@@ -1822,7 +1823,10 @@ export const ACTION_DEFINITIONS = {
         input: z.object({
             title: z.string().describe('What the page shows, in a few words'),
             html: z.string().describe('The page, one self-contained HTML document'),
-            maxHeight: z.number().nullable().describe('The tallest the frame may grow, in CSS pixels; without it the most a frame may take')
+            maxHeight: z.number().nullable().describe('The tallest the frame may grow, in CSS pixels; without it the most a frame may take'),
+            layout: VisualLayoutSchema.optional().describe(
+                'inline follows the reply column (default); wide uses the available chat pane for app mockups and dashboards'
+            )
         }),
         output: z.object({ visual: ChatVisualSchema })
     },

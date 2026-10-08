@@ -1,5 +1,5 @@
 import type { ActionHandlers } from '@ruimte/actions';
-import { VISUAL_LIMITS, type ChatVisual } from '@ruimte/contracts';
+import { VISUAL_LIMITS, type ChatVisual, type VisualLayout } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents/coded-error';
 import { callerKind } from '../canvas/tasks.ts';
 import { VerbRefusal, field, orNote, type VisualHost } from '../canvas/verb.ts';
@@ -60,7 +60,7 @@ async function callerChat({ host, place }: ServerActionContext, caller: string):
 export async function showVisual(
     context: ServerActionContext,
     caller: string,
-    input: { title: string; html: string; maxHeight: number | null }
+    input: { title: string; html: string; maxHeight: number | null; layout?: VisualLayout }
 ): Promise<ChatVisual> {
     const visuals = visualsOf(context);
     const chatId = await callerChat(context, caller);
@@ -70,6 +70,7 @@ export async function showVisual(
         return await visuals.publish(chatId, {
             title: input.title,
             html: input.html,
+            ...(input.layout === undefined ? {} : { layout: input.layout }),
             ...(input.maxHeight === null ? {} : { maxHeight: input.maxHeight }),
             ...(heights === undefined ? {} : { heights })
         });
@@ -98,8 +99,8 @@ export const visualActions: ActionHandlers<ServerActionContext> = {
             throw e;
         }
     },
-    'visual.show': async ({ title, html, maxHeight }, { actor, context }) => ({
-        output: { visual: await showVisual(context, actor.id, { title, html, maxHeight }) }
+    'visual.show': async ({ title, html, maxHeight, layout }, { actor, context }) => ({
+        output: { visual: await showVisual(context, actor.id, { title, html, maxHeight, ...(layout === undefined ? {} : { layout }) }) }
     }),
     'visual.preview': async ({ html, width, appearance }, { actor, context }) => {
         const visuals = visualsOf(context);

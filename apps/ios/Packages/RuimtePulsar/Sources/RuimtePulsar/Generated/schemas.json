@@ -16853,6 +16853,13 @@
               "type": "number",
               "exclusiveMinimum": 0
             },
+            "layout": {
+              "type": "string",
+              "enum": [
+                "inline",
+                "wide"
+              ]
+            },
             "heights": {
               "type": "array",
               "items": {
@@ -20858,6 +20865,13 @@
             "maxHeight": {
               "type": "number",
               "exclusiveMinimum": 0
+            },
+            "layout": {
+              "type": "string",
+              "enum": [
+                "inline",
+                "wide"
+              ]
             },
             "heights": {
               "type": "array",
@@ -50538,6 +50552,13 @@
             "maxHeight": {
               "type": "number",
               "exclusiveMinimum": 0
+            },
+            "layout": {
+              "type": "string",
+              "enum": [
+                "inline",
+                "wide"
+              ]
             },
             "heights": {
               "type": "array",
