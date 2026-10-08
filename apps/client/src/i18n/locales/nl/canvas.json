@@ -244,5 +244,9 @@
         "error": {
             "openExternal": "In systeembrowser openen"
         }
+    },
+    "gaps": {
+        "adjust": "Pas afstand tussen {{from}} en {{to}} aan: {{value}}",
+        "shared": "Pas gelijke afstanden aan: {{value}}"
     }
 }

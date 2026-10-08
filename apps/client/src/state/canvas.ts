@@ -3,7 +3,9 @@ import { canLink, textRect } from '@/canvas/edge-lines';
 import { editorBindings } from '@/state/editor-bindings';
 import { mergeSelection } from '@/state/selection';
 import { createEditorRegistry } from '@/state/editors';
-import { cameraCenteredOn, cameraOfView, intersects, snapToGrid, unionOf, type Point, type Rect } from '@/canvas/math';
+import { cameraCenteredOn, cameraOfView, cameraToFit, intersects, snapToGrid, toWorld, unionOf, type Point, type Rect } from '@/canvas/math';
+import { cameraToReveal, neighboringNode, type NodeDirection } from '@/canvas/node-navigation';
+import { parentGroupOf } from '@/canvas/editable-gaps';
 import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
 
 import type { CanvasPatch } from '@/project/merge';
@@ -102,6 +104,14 @@ export interface Snapshot {
 
 const HISTORY_LIMIT = 100;
 
+interface GapMove {
+    snapshot: Snapshot;
+    origins: Record<string, Point>;
+    carried: Record<string, string>;
+    parents: { id: string; members: string[] }[];
+    fixed: string[];
+}
+
 export type { CameraRequest, Viewport } from '@/canvas/camera-slice';
 
 export interface CanvasState extends CameraSlice {
@@ -120,6 +130,7 @@ export interface CanvasState extends CameraSlice {
     /* Node ids inside a collapsed group; they keep running, they are just not drawn. */
     hidden: Set<string>;
     selection: string[];
+    navigationId: string | null;
     /*
      * The node whose content has the keyboard. It is not a second selection: a node is selected to be
      * moved, resized or removed, and it has the focus to be typed in. Dragging one never gives it the
@@ -132,8 +143,10 @@ export interface CanvasState extends CameraSlice {
     locks: Locks;
     /* Node currently under a resize handle, so it can show its size. Transient. */
     resizing: string | null;
-    /* A pointer gesture is running (pan, box, move, resize, link), so nothing else may take the pointer. */
+    /* A pointer gesture is running, so nothing else may take the pointer. */
     gesturing: boolean;
+    panning: boolean;
+    gapMove: GapMove | null;
     /* True for the one update that swaps in another project's content, so nobody reads it as edits. */
     loading: boolean;
     /*
@@ -144,8 +157,13 @@ export interface CanvasState extends CameraSlice {
     past: Snapshot[];
     future: Snapshot[];
 
-    /* Brings the camera to one node and selects it; the only camera move a canvas has of its own. */
+    /* Brings the camera to one node and selects it. */
     goToNode(id: string): void;
+    zoomToNode(id?: string): void;
+    selectNeighbor(direction: NodeDirection): void;
+    beginGapMove(ids: string[], fixed?: string[]): boolean;
+    moveGapNodes(offsets: Record<string, Point>): void;
+    endGapMove(cancel?: boolean): void;
 
     /* `additive` is shift: what is already selected stays, and something clicked again drops out. */
     select(ids: string[], additive?: boolean): void;
@@ -164,6 +182,7 @@ export interface CanvasState extends CameraSlice {
     resizeNode(id: string, rect: Rect): void;
     setResizing(id: string | null): void;
     setGesturing(gesturing: boolean): void;
+    setPanning(panning: boolean): void;
     bringToFront(id: string): void;
     setNodeAccent(id: string, accent: string | null): void;
     /* A rename is a person's unless the session that named itself says otherwise. */
@@ -362,12 +381,15 @@ export function createCanvasStore(): StoreApi<CanvasState> {
         linkDraft: null,
         hidden: new Set(),
         selection: [],
+        navigationId: null,
         bodyFocusId: null,
         maximizedId: null,
         editingTextId: null,
         locks: { pan: false, zoom: false, move: false, resize: false },
         resizing: null,
         gesturing: false,
+        panning: false,
+        gapMove: null,
         loading: false,
         merging: false,
         past: [],
@@ -389,11 +411,49 @@ export function createCanvasStore(): StoreApi<CanvasState> {
                 selection: [id]
             });
         },
+        zoomToNode(id) {
+            const state = get();
+            const target = id ?? zoomNodeTargetOf(state);
+            const node = target === null || target === undefined ? undefined : state.nodes[target];
+            if (!node || state.hidden.has(node.id) || maximizedNodeOf(state) !== null || state.gesturing) {
+                return;
+            }
+            const camera = cameraToFit(node, state.viewport, 48, 1);
+            if (camera !== null) {
+                set({ camera, pendingCamera: null });
+            }
+        },
+        selectNeighbor(direction) {
+            const state = get();
+            if (maximizedNodeOf(state) !== null || state.gesturing) {
+                return;
+            }
+            const from =
+                state.navigationId !== null && state.selection.includes(state.navigationId)
+                    ? state.navigationId
+                    : (state.selection.find((id) => state.nodes[id] !== undefined) ?? null);
+            const target = neighboringNode(
+                Object.values(state.nodes).filter((node) => !state.hidden.has(node.id)),
+                from,
+                direction,
+                toWorld(state.camera, { x: state.viewport.w / 2, y: state.viewport.h / 2 })
+            );
+            const node = target === null ? undefined : state.nodes[target];
+            if (!node) {
+                return;
+            }
+            const camera = state.viewport.w > 0 && state.viewport.h > 0 ? cameraToReveal(node, state.camera, state.viewport) : state.camera;
+            set({ selection: [node.id], navigationId: node.id, bodyFocusId: null, camera });
+        },
         select(ids, additive = false) {
-            set((state) => ({ selection: mergeSelection(state.selection, ids, additive ? 'toggle' : 'replace') }));
+            set((state) => {
+                const selection = mergeSelection(state.selection, ids, additive ? 'toggle' : 'replace');
+                const last = ids.findLast((id) => state.nodes[id] !== undefined && selection.includes(id));
+                return { selection, navigationId: last ?? (state.navigationId !== null && selection.includes(state.navigationId) ? state.navigationId : null) };
+            });
         },
         clearSelection() {
-            set({ selection: [] });
+            set({ selection: [], navigationId: null });
         },
         selectInRect(rect, additive = false) {
             const { nodes, texts, selection, hidden } = get();
@@ -410,10 +470,10 @@ export function createCanvasStore(): StoreApi<CanvasState> {
         },
         activateNode(id) {
             get().bringToFront(id);
-            set({ selection: [id], bodyFocusId: id, editingTextId: null });
+            set({ selection: [id], navigationId: id, bodyFocusId: id, editingTextId: null });
         },
         setBodyFocus(id) {
-            set({ bodyFocusId: id });
+            set({ bodyFocusId: id, ...(id === null ? {} : { navigationId: id }) });
         },
         toggleMaximizedNode(id) {
             if (maximizedNodeOf(get()) === id) {
@@ -467,6 +527,117 @@ export function createCanvasStore(): StoreApi<CanvasState> {
         },
         setGesturing(gesturing) {
             set({ gesturing });
+        },
+        setPanning(panning) {
+            if (get().panning !== panning) {
+                set({ panning });
+            }
+        },
+        beginGapMove(ids, fixed = []) {
+            const state = get();
+            if (state.locks.move || state.gapMove !== null || ids.length === 0 || ids.some((id) => state.nodes[id] === undefined || state.hidden.has(id))) {
+                return false;
+            }
+            const carried: Record<string, string> = {};
+            for (const id of ids) {
+                for (const member of carriedByGroups(state.nodes, state.texts, [id])) {
+                    if (!ids.includes(member)) {
+                        carried[member] = id;
+                    }
+                }
+            }
+            const origins: Record<string, Point> = {};
+            for (const id of [...ids, ...Object.keys(carried)]) {
+                const element = state.nodes[id] ?? state.texts[id];
+                if (element) {
+                    origins[id] = { x: element.x, y: element.y };
+                }
+            }
+            const parentIds = new Set<string>();
+            const nodes = Object.values(state.nodes);
+            for (const id of ids) {
+                let parent = parentGroupOf(state.nodes[id]!, nodes);
+                while (parent !== null && !parentIds.has(parent)) {
+                    parentIds.add(parent);
+                    parent = parentGroupOf(state.nodes[parent]!, nodes);
+                }
+            }
+            const parents = [...parentIds]
+                .sort((first, second) => state.nodes[first]!.w * state.nodes[first]!.h - state.nodes[second]!.w * state.nodes[second]!.h)
+                .map((id) => ({ id, members: membersOf(state.nodes[id]!, state.nodes, state.texts) }));
+            set({ gapMove: { snapshot: snapshotOf(state), origins, carried, parents, fixed }, gesturing: true });
+            return true;
+        },
+        moveGapNodes(offsets) {
+            const state = get();
+            const move = state.gapMove;
+            if (move === null || state.locks.move) {
+                return;
+            }
+            const nodes = { ...state.nodes };
+            const texts = { ...state.texts };
+            let changed = false;
+            for (const [id, origin] of Object.entries(move.origins)) {
+                const offset = offsets[move.carried[id] ?? id];
+                const element = nodes[id] ?? texts[id];
+                if (!offset || !element) {
+                    continue;
+                }
+                const point = { x: origin.x + offset.x, y: origin.y + offset.y };
+                if (element.x === point.x && element.y === point.y) {
+                    continue;
+                }
+                changed = true;
+                if (nodes[id]) {
+                    nodes[id] = { ...nodes[id]!, ...point };
+                } else {
+                    texts[id] = { ...texts[id]!, ...point };
+                }
+            }
+            if (changed) {
+                set({ nodes, texts });
+            }
+        },
+        endGapMove(cancel = false) {
+            const state = get();
+            const move = state.gapMove;
+            if (move === null) {
+                return;
+            }
+            const nodes = { ...state.nodes };
+            const texts = { ...state.texts };
+            const changed = Object.entries(move.origins).some(([id, point]) => {
+                const element = nodes[id] ?? texts[id];
+                return element !== undefined && (element.x !== point.x || element.y !== point.y);
+            });
+            if (cancel) {
+                for (const [id, point] of Object.entries(move.origins)) {
+                    if (nodes[id]) {
+                        nodes[id] = { ...nodes[id]!, ...point };
+                    } else if (texts[id]) {
+                        texts[id] = { ...texts[id]!, ...point };
+                    }
+                }
+            } else if (changed) {
+                for (const parent of move.parents) {
+                    const group = nodes[parent.id];
+                    if (!group || group.collapsed) {
+                        continue;
+                    }
+                    const frame = groupFrame(parent.members.flatMap((id) => (nodes[id] ? [nodes[id]!] : texts[id] ? [textRect(texts[id]!)] : [])));
+                    const rect = frame === null ? null : unionOf([group, frame]);
+                    if (rect !== null) {
+                        nodes[parent.id] = { ...group, ...rect };
+                    }
+                }
+            }
+            set({
+                nodes,
+                texts,
+                gapMove: null,
+                gesturing: false,
+                ...(!cancel && changed ? { past: [...state.past.slice(-(HISTORY_LIMIT - 1)), move.snapshot], future: [] } : {})
+            });
         },
         /* A node of an unknown kind is written back as it was read, apart from its frame, so an accent,
            a title or a patch on it would be an edit that never reaches the file. */
@@ -728,6 +899,10 @@ export function createCanvasStore(): StoreApi<CanvasState> {
                 maximizedId: null,
                 editingTextId: null,
                 resizing: null,
+                navigationId: null,
+                gapMove: null,
+                panning: false,
+                gesturing: false,
                 past: [],
                 future: [],
                 pendingCamera: null,
@@ -793,7 +968,8 @@ export function createCanvasStore(): StoreApi<CanvasState> {
                     ...(reshapes
                         ? {
                               past: s.past.map((snapshot) => patchSnapshot(snapshot, arrived)),
-                              future: s.future.map((snapshot) => patchSnapshot(snapshot, arrived))
+                              future: s.future.map((snapshot) => patchSnapshot(snapshot, arrived)),
+                              ...(s.gapMove === null ? {} : { gapMove: { ...s.gapMove, snapshot: patchSnapshot(s.gapMove.snapshot, arrived) } })
                           }
                         : {}),
                     ...(gone.size === 0
@@ -810,7 +986,10 @@ export function createCanvasStore(): StoreApi<CanvasState> {
             set({ merging: false });
         },
         heldNodeIds() {
-            const { gesturing, resizing, selection, nodes, texts } = get();
+            const { gesturing, resizing, selection, nodes, texts, gapMove } = get();
+            if (gapMove !== null) {
+                return [...new Set([...Object.keys(gapMove.origins), ...gapMove.parents.map((parent) => parent.id), ...gapMove.fixed])];
+            }
             if (!gesturing && resizing === null) {
                 return [];
             }
@@ -828,6 +1007,9 @@ export function createCanvasStore(): StoreApi<CanvasState> {
         },
         undo() {
             const s = get();
+            if (s.gapMove !== null) {
+                return;
+            }
             const previous = s.past[s.past.length - 1];
             if (!previous) {
                 return;
@@ -843,6 +1025,9 @@ export function createCanvasStore(): StoreApi<CanvasState> {
         },
         redo() {
             const s = get();
+            if (s.gapMove !== null) {
+                return;
+            }
             const next = s.future[0];
             if (!next) {
                 return;
@@ -936,4 +1121,9 @@ export function maximizeTargetOf(s: Pick<CanvasState, 'maximizedId' | 'nodes' | 
 /* A node's content has the keyboard, which is what a page, a terminal and the wheel all read. */
 export function isNodeActive(bodyFocusId: string | null, id: string): boolean {
     return bodyFocusId === id;
+}
+
+export function zoomNodeTargetOf(state: Pick<CanvasState, 'nodes' | 'hidden' | 'bodyFocusId' | 'selection'>): string | null {
+    const id = state.bodyFocusId ?? (state.selection.length === 1 ? state.selection[0]! : null);
+    return id !== null && state.nodes[id] !== undefined && !state.hidden.has(id) ? id : null;
 }

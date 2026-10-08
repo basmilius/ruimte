@@ -34,7 +34,7 @@ import { openFocusedFind } from '@/find/hosts';
 import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSubheaderView } from '@/project/views';
 import { copyDiagram, exportDiagram, openDiagramJson } from '@/diagram/diagram-actions';
 import { copyDrawing, exportDrawing } from '@/drawing/drawing-actions';
-import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, type CanvasState } from '@/state/canvas';
+import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, zoomNodeTargetOf, type CanvasState } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
 import { focusedDrawing } from '@/state/drawing';
 import { chosenLaunchId, startLaunch, stopLaunch } from '@/launches/actions';
@@ -52,7 +52,7 @@ import { useTheme } from '@/state/theme';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
-import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, NODE_NAVIGATION_SHORTCUTS } from '@/canvas/shortcuts';
 import { runAppShortcut } from '@/shell/app-shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { canSplit, cellAt, cellCount, cellsRightOf, isTabHost, maximizedCell } from '@/shell/split';
@@ -583,6 +583,33 @@ export function appCommands(): Command[] {
                                 shortcut: CANVAS_SHORTCUTS.zoomReset,
                                 run: () => zoomTarget().zoomTo(1)
                             }
+                        ]
+                      : []),
+                  ...(onCanvas
+                      ? [
+                            ...(
+                                [
+                                    { id: 'node-left', direction: 'left' },
+                                    { id: 'node-right', direction: 'right' },
+                                    { id: 'node-up', direction: 'up' },
+                                    { id: 'node-down', direction: 'down' }
+                                ] as const
+                            ).map(({ id, direction }) => ({
+                                id,
+                                label: i18next.t(`shell:menu.node${direction[0]!.toUpperCase()}${direction.slice(1)}`),
+                                shortcut: NODE_NAVIGATION_SHORTCUTS[direction],
+                                run: () => focusedCanvas().getState().selectNeighbor(direction)
+                            })),
+                            ...(zoomNodeTargetOf(canvas) !== null
+                                ? [
+                                      {
+                                          id: 'zoom-node',
+                                          label: i18next.t('shell:menu.zoomToNode'),
+                                          shortcut: CANVAS_SHORTCUTS.zoomNode,
+                                          run: () => focusedCanvas().getState().zoomToNode()
+                                      }
+                                  ]
+                                : [])
                         ]
                       : []),
                   ...(maximizeTarget !== null

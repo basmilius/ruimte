@@ -5,7 +5,7 @@ import { cancelDictation, stopDictation, toggleFocusedDictation, useDictation } 
 import { useEffect } from 'react';
 import { isCanvasView, isDiagramView } from '@ruimte/contracts';
 import { browserRegistry } from '@/browser/registry';
-import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
+import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, NODE_NAVIGATION_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
 import {
     closeCellAction,
@@ -26,11 +26,13 @@ import { undoLatestDeletion } from '@/project/view-trash';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { isInNodeBody } from '@/canvas/node-body';
 import { followSpaceRelease, holdSpace, releaseSpace, spaceWorksTarget } from '@/canvas/space-pan';
+import { setGapModifierDown } from '@/canvas/gap-modifier';
+import { cancelCanvasGesture } from '@/canvas/gesture-cancel';
 import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/prompt-stack';
 import { useSubagentView } from '@adecore/agents-react/chat/subagent-view';
 import { stepTimelineMessage } from '@adecore/agents-react/chat/timeline-scroll';
 import { openFocusedFind } from '@/find/hosts';
-import { focusedCanvas, maximizeTargetOf } from '@/state/canvas';
+import { focusedCanvas, maximizeTargetOf, zoomNodeTargetOf } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
 import { drawingHasSomethingToClear, focusedDrawing } from '@/state/drawing';
 import { isScratchProject, useProject } from '@/state/project';
@@ -153,13 +155,14 @@ export function useCanvasShortcuts(): void {
         });
         let dictationPress: number | null = null;
         const onBlur = (): void => {
+            setGapModifierDown(false);
             voiceShortcut.blur();
             dictationPress = null;
             cancelDictation();
         };
         const onKeyDown = (e: KeyboardEvent): void => {
             // A key something on the page already acted on is that thing's: the views of a database cell mark the keys they took that way.
-            if (e.defaultPrevented) {
+            if (e.defaultPrevented || e.isComposing) {
                 return;
             }
             const s = focusedCanvas().getState();
@@ -192,6 +195,13 @@ export function useCanvasShortcuts(): void {
             }
             const apple = isApplePlatform();
             const is = (target: Shortcut): boolean => matchesShortcut(target, e, apple);
+            if (is(CANVAS_SHORTCUTS.zoomNode) && !onStandaloneView() && !isInFloatingLayer(e.target) && !useUi.getState().settings.open) {
+                if (zoomNodeTargetOf(s) !== null) {
+                    e.preventDefault();
+                    s.zoomToNode();
+                }
+                return;
+            }
             // A surface with nothing to search lets the key go, so a browser tab still gets its own find.
             if (is(CANVAS_SHORTCUTS.find)) {
                 if (!isInFloatingLayer(e.target) && !useUi.getState().settings.open && openFocusedFind()) {
@@ -380,7 +390,29 @@ export function useCanvasShortcuts(): void {
             }
             // A dialog owns the keyboard while it is up; Backspace there must not delete nodes. Nor may
             // a key reach the canvas that is parked behind a view of its own.
-            if (isTypingTarget(e.target) || isInNodeBody(e.target) || useUi.getState().settings.open || onStandaloneView()) {
+            if (
+                isTypingTarget(e.target) ||
+                isInNodeBody(e.target) ||
+                s.bodyFocusId !== null ||
+                s.gesturing ||
+                isInFloatingLayer(e.target) ||
+                useUi.getState().settings.open ||
+                onStandaloneView()
+            ) {
+                return;
+            }
+            const nodeDirection = entryFor(NODE_NAVIGATION_SHORTCUTS, e, apple);
+            if (nodeDirection !== null) {
+                e.preventDefault();
+                s.selectNeighbor(nodeDirection);
+                return;
+            }
+            if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && s.selection.length === 1) {
+                const node = s.nodes[s.selection[0]!];
+                if (node !== undefined && node.kind !== 'group' && !s.hidden.has(node.id)) {
+                    e.preventDefault();
+                    s.activateNode(node.id);
+                }
                 return;
             }
             const addKind = entryFor(ADD_NODE_SHORTCUTS, e, apple);
@@ -418,6 +450,7 @@ export function useCanvasShortcuts(): void {
         /* In the capture phase, because leaving the node and leaving a view of its own listen on the
            window too, and only stopping the key here keeps them from also acting on it. */
         const onEscapeCapture = (e: KeyboardEvent): void => {
+            setGapModifierDown(e.altKey);
             if (!e.isComposing && !isInFloatingLayer(e.target) && matchesShortcut(CANVAS_SHORTCUTS.voiceControl, e, isApplePlatform())) {
                 if (voiceShortcut.press(e.timeStamp, e.repeat)) {
                     e.preventDefault();
@@ -465,6 +498,11 @@ export function useCanvasShortcuts(): void {
             if (isInFloatingLayer(e.target)) {
                 return;
             }
+            if (cancelCanvasGesture(focusedCanvas())) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                return;
+            }
             // A card of a prompt stack hands the keyboard back, before a chat or a node behind it hears the key.
             if (isInPromptStack(e.target)) {
                 e.preventDefault();
@@ -483,6 +521,7 @@ export function useCanvasShortcuts(): void {
             }
         };
         const onKeyUp = (e: KeyboardEvent): void => {
+            setGapModifierDown(e.altKey);
             voiceShortcut.release(e);
             if (dictationPress !== null && (e.code === 'KeyD' || e.key === 'Meta' || e.key === 'Control' || e.key === 'Shift')) {
                 if (e.timeStamp - dictationPress >= 400) {
@@ -505,6 +544,7 @@ export function useCanvasShortcuts(): void {
             window.removeEventListener('keyup', onKeyUp, true);
             window.removeEventListener('blur', onBlur);
             stopSpaceRelease();
+            setGapModifierDown(false);
             voiceShortcut.blur();
             cancelDictation();
         };

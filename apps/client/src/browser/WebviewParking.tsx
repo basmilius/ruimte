@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { BrowserContextMenu } from '@/browser/BrowserContextMenu';
+import { createGuestCanvasInput } from '@/browser/guest-canvas-input';
 import { isDesktop } from '@/desktop/bridge';
 import { focusCellOfView, watchGuestFocus } from '@/browser/guest-focus';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { nodesOverBrowsers } from '@/canvas/stacking';
+import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
 import { pageClipPath, type PageHole } from '@/browser/page-clip';
 import { cellElement, subscribeCells } from '@/shell/cell-rects';
 import { shownViewIdsIn } from '@/shell/split';
-import { GROUP_HEADER_PX, isNodeActive, liveCanvas, maximizedNodeOf, subscribeCanvases, type CanvasState } from '@/state/canvas';
+import { defaultCanvases, GROUP_HEADER_PX, isNodeActive, liveCanvas, maximizedNodeOf, subscribeCanvases, type CanvasState } from '@/state/canvas';
 import { splitKey } from '@/state/keys';
 import { useDocument } from '@/state/document';
 
@@ -75,6 +77,21 @@ function DesktopWebviewParking() {
     const root = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        const inputs = new Map<string, ReturnType<typeof createGuestCanvasInput>>();
+        const configurations = new Map<string, string>();
+        const tellCanvas = (key: string, enabled: boolean, pan: boolean): void => {
+            const configuration = { enabled, pan };
+            const saved = JSON.stringify(configuration);
+            if (configurations.get(key) === saved) {
+                return;
+            }
+            try {
+                browserRegistry.get(key)?.send('ruimte:canvas-input', configuration);
+                configurations.set(key, saved);
+            } catch {
+                // A guest that has not attached hears this again on dom-ready.
+            }
+        };
         /*
          * Every page is placed against the cell of the view it belongs to, not the focused one. With
          * the views side by side, a page on a canvas two cells over still has to land on that canvas.
@@ -95,6 +112,8 @@ function DesktopWebviewParking() {
                 const view = pageViewOf(nodeId, open);
                 const cell = view === null ? null : cellElement(view.viewId);
                 if (view === null || cell === null) {
+                    inputs.get(key)?.end();
+                    tellCanvas(key, false, false);
                     // Both boxes are hidden here; a child marked visible would still show through a parent marked hidden.
                     clip.style.visibility = 'hidden';
                     host.style.visibility = 'hidden';
@@ -110,6 +129,8 @@ function DesktopWebviewParking() {
 
                 // A view of its own is one page over the whole cell; there is no canvas under it.
                 if (!view.onCanvas) {
+                    inputs.get(key)?.end();
+                    tellCanvas(key, false, false);
                     host.dataset.square = '';
                     host.style.clipPath = '';
                     host.style.visibility = 'visible';
@@ -131,9 +152,17 @@ function DesktopWebviewParking() {
                     !canvas.hidden.has(nodeId) &&
                     (maximized === null || maximized === nodeId);
                 host.style.visibility = shown ? 'visible' : 'hidden';
+                if (!shown) {
+                    inputs.get(key)?.end();
+                }
+                tellCanvas(key, shown, shown && !canvas!.locks.pan && maximized === null);
                 /* Only the active node hands the pointer to its page, and never while a gesture runs.
                    A page that always took it would swallow the wheel, and panning over it would stop. */
-                host.style.pointerEvents = shown && isNodeActive(canvas!.bodyFocusId, nodeId) && !canvas!.gesturing ? 'auto' : 'none';
+                host.style.pointerEvents =
+                    shown &&
+                    (inputs.get(key)?.isPanning() || (isNodeActive(canvas!.bodyFocusId, nodeId) && !canvas!.gesturing && !canvas!.panning && !isSpaceDown()))
+                        ? 'auto'
+                        : 'none';
                 if (!shown) {
                     continue;
                 }
@@ -162,16 +191,63 @@ function DesktopWebviewParking() {
                 host.style.clipPath = pageClipPath(width, height, holes) ?? '';
             }
         };
+        const offGuests: Array<() => void> = [];
+        for (const key of keys) {
+            const element = browserRegistry.get(key);
+            if (!element) {
+                continue;
+            }
+            const nodeId = splitKey(key).id;
+            const input = createGuestCanvasInput(
+                nodeId,
+                () => {
+                    const { layout } = useDocument.getState();
+                    const view = pageViewOf(nodeId, layout === null ? [] : shownViewIdsIn(layout));
+                    return view?.onCanvas ? (defaultCanvases.peek(view.viewId) ?? null) : null;
+                },
+                () => {
+                    element.blur();
+                    const { layout } = useDocument.getState();
+                    const view = pageViewOf(nodeId, layout === null ? [] : shownViewIdsIn(layout));
+                    if (view !== null) {
+                        cellElement(view.viewId)?.querySelector<HTMLElement>('[data-canvas-surface]')?.focus({ preventScroll: true });
+                    }
+                }
+            );
+            inputs.set(key, input);
+            const message = (event: Event): void => {
+                const { channel, args } = event as unknown as { channel: string; args: unknown[] };
+                input.handle(channel, args[0]);
+            };
+            const ready = (): void => {
+                input.end();
+                configurations.delete(key);
+                place();
+            };
+            element.addEventListener('ipc-message', message);
+            element.addEventListener('dom-ready', ready);
+            offGuests.push(() => {
+                element.removeEventListener('ipc-message', message);
+                element.removeEventListener('dom-ready', ready);
+                input.end();
+                tellCanvas(key, false, false);
+            });
+        }
         place();
         const offCanvas = subscribeCanvases(place);
         const offDocument = useDocument.subscribe(place);
         const offCells = subscribeCells(place);
+        const offSpace = subscribeSpacePan(place);
         // The grid moves with the window as well, and a resize moves no state at all.
         window.addEventListener('resize', place);
         return () => {
             offCanvas();
             offDocument();
             offCells();
+            offSpace();
+            for (const off of offGuests) {
+                off();
+            }
             window.removeEventListener('resize', place);
         };
     }, [keys]);

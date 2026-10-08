@@ -13,7 +13,7 @@ import { useLaunches } from '@/launches/state';
 import type { MenuContext, MenuHost, MenuLaunch } from '@/shell/menu/model';
 import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, isTabHost, maximizedCell } from '@/shell/split';
 import { sessionHandoffs, viewOffers, type ViewOffers } from '@/shell/view-offers';
-import { focusedCanvas, maximizedNodeOf, maximizeTargetOf } from '@/state/canvas';
+import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, zoomNodeTargetOf } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state/chats';
 import { activeViewOf, hasActiveCanvas, useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
@@ -137,6 +137,7 @@ export function menuContext(host: MenuHost): MenuContext {
         maximized: maximizedCell(layout, documentState.maximized) !== null,
         nodeMaximizable: onCanvas && maximizeTargetOf(canvas) !== null,
         nodeMaximized: onCanvas && maximizedNodeOf(canvas) !== null,
+        nodeZoomable: onCanvas && zoomNodeTargetOf(canvas) !== null,
         closesRight: layout !== null && cellsRightOf(layout, layout.focus) > 0,
         panel: ui.panel.open ? ui.panel.kind : null,
         sidebar: ui.sidebarOpen,

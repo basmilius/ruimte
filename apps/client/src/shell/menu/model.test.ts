@@ -40,6 +40,7 @@ function context(patch: Partial<MenuContext> = {}): MenuContext {
         maximized: false,
         nodeMaximizable: false,
         nodeMaximized: false,
+        nodeZoomable: false,
         closesRight: false,
         panel: null,
         sidebar: true,

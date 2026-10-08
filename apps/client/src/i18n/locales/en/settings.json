@@ -497,7 +497,9 @@
             "zoomIn": "Zoom in",
             "zoomOut": "Zoom out",
             "undo": "Undo",
-            "redo": "Redo"
+            "redo": "Redo",
+            "gaps": "Adjust gaps between nodes",
+            "enterNode": "Focus the selected node's content"
         },
         "selection": {
             "title": "Selection",

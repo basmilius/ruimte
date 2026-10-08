@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import type { ProjectView } from '@ruimte/contracts';
 import type { MenuNode, MenuRole, MenuShellAction, MenuSpec } from '@ruimte/desktop-bridge';
-import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
+import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, NODE_NAVIGATION_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
 import { LANGUAGE_COMMANDS, languageCommandsOf } from '@/language/command-table';
 import { EDITOR_COMMANDS, editorCommandsOf } from '@/shell/editor-commands';
 import { APP_SHORTCUTS, BROWSER_KEEPS } from '@/shell/shortcuts';
@@ -57,6 +57,7 @@ export interface MenuContext {
     nodeMaximizable: boolean;
     /* A node fills that canvas for now. */
     nodeMaximized: boolean;
+    nodeZoomable: boolean;
     /* Columns stand right of the focused cell. */
     closesRight: boolean;
     /* The open panel, or null while none is. */
@@ -388,6 +389,10 @@ export function menuModel(context: MenuContext): MenuSpec {
                 separator,
                 command('fit', t('zoomToFit'), { shortcut: CANVAS_SHORTCUTS.fitAll, enabled: zoomable }),
                 command('zoom-selection', t('zoomToSelection'), { shortcut: CANVAS_SHORTCUTS.zoomSelection, enabled: zoomable }),
+                ...only(
+                    context.view === 'canvas',
+                    command('zoom-node', t('zoomToNode'), { shortcut: CANVAS_SHORTCUTS.zoomNode, enabled: context.nodeZoomable && !context.nodeMaximized })
+                ),
                 command('zoom-reset', t('actualSize'), { shortcut: CANVAS_SHORTCUTS.zoomReset, enabled: zoomable })
             ),
             separator,
@@ -421,6 +426,16 @@ export function menuModel(context: MenuContext): MenuSpec {
                 command('focus-up', t('focusUp'), { shortcut: FOCUS_SHORTCUTS.up, enabled: context.cells > 1 }),
                 command('focus-down', t('focusDown'), { shortcut: FOCUS_SHORTCUTS.down, enabled: context.cells > 1 }),
                 separator,
+                ...only(
+                    context.view === 'canvas',
+                    ...(['left', 'right', 'up', 'down'] as const).map((direction) =>
+                        command(`node-${direction}`, t(`node${direction[0]!.toUpperCase()}${direction.slice(1)}`), {
+                            shortcut: NODE_NAVIGATION_SHORTCUTS[direction],
+                            enabled: !context.nodeMaximized
+                        })
+                    ),
+                    separator
+                ),
                 command('prompts', t('prompts'), { shortcut: CANVAS_SHORTCUTS.focusPrompts }),
                 ...only(
                     !context.settingsOpen,

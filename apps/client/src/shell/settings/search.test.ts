@@ -46,7 +46,7 @@ describe('searching the settings', () => {
 
     test('a shortcut is found by its label, its category and its keys, and leads to its row', () => {
         const rows = shortcutSearchRows(shortcutGroups(true), true);
-        expect(searchSettings('zoom out', rows).map((result) => result.id)).toEqual(['keyboard.canvas.5']);
+        expect(searchSettings('zoom out', rows).map((result) => result.id)).toEqual(['keyboard.canvas.8']);
         expect(searchSettings('selection ⌘a', rows)).toMatchObject([{ section: 'keyboard', label: 'Select everything', description: 'Selection · ⌘A' }]);
         expect(searchSettings('zoom out')).toEqual([]);
     });

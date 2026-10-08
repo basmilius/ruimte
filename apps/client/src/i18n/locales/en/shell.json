@@ -882,6 +882,11 @@
         "moveTabLeft": "Move Tab Left",
         "moveTabRight": "Move Tab Right",
         "moveTabToNewCell": "Move Tab to New Cell",
-        "ungroup": "Ungroup"
+        "ungroup": "Ungroup",
+        "zoomToNode": "Zoom to node",
+        "nodeLeft": "Select node to the left",
+        "nodeRight": "Select node to the right",
+        "nodeUp": "Select node above",
+        "nodeDown": "Select node below"
     }
 }

@@ -882,6 +882,11 @@
         "moveTabLeft": "Tabblad naar links",
         "moveTabRight": "Tabblad naar rechts",
         "moveTabToNewCell": "Tabblad naar nieuwe cel",
-        "ungroup": "Tabbladen ontgroeperen"
+        "ungroup": "Tabbladen ontgroeperen",
+        "zoomToNode": "Zoom naar node",
+        "nodeLeft": "Selecteer node links",
+        "nodeRight": "Selecteer node rechts",
+        "nodeUp": "Selecteer node boven",
+        "nodeDown": "Selecteer node onder"
     }
 }

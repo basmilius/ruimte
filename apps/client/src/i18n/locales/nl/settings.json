@@ -497,7 +497,9 @@
             "zoomIn": "Inzoomen",
             "zoomOut": "Uitzoomen",
             "undo": "Ongedaan maken",
-            "redo": "Opnieuw"
+            "redo": "Opnieuw",
+            "gaps": "Afstanden tussen nodes aanpassen",
+            "enterNode": "Focus de inhoud van de geselecteerde node"
         },
         "selection": {
             "title": "Selectie",

@@ -1,14 +1,27 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+    useSyncExternalStore,
+    type MouseEvent as ReactMouseEvent,
+    type PointerEvent as ReactPointerEvent
+} from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
 import { gridTakesPath } from '@/shell/view-drag';
 import { finderPaths } from '@/canvas/finder-drop';
 import { GRID, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
-import { isSpaceDown } from '@/canvas/space-pan';
+import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
 import type { NodeSide } from '@ruimte/contracts';
-import { rectFromPoints } from '@adecore/drawing';
+import { boxScreenRect, boxWorldRect, startBoxSelection, type BoxSelection } from '@/canvas/box-selection';
 import { alignmentGuides, gapGuides, type AlignmentGuide, type GapGuide } from '@/canvas/alignment-guides';
 import { AlignmentGuides } from '@/canvas/AlignmentGuides';
+import { editableGaps, gapOffsets, type EditableGap } from '@/canvas/editable-gaps';
+import { GapHandles } from '@/canvas/GapHandles';
+import { isGapModifierDown, subscribeGapModifier } from '@/canvas/gap-modifier';
+import { registerGestureCancellation } from '@/canvas/gesture-cancel';
 import { resizedRect } from '@/canvas/resize';
 import { canLink } from '@/canvas/edge-lines';
 import { resizedText } from '@/canvas/text-resize';
@@ -31,8 +44,9 @@ import { isInFloatingLayer, ContextMenu } from '@adecore/ui';
 
 type Gesture =
     | { kind: 'pan'; last: Point }
-    | { kind: 'box'; origin: Point; current: Point; additive: boolean }
+    | ({ kind: 'box' } & BoxSelection)
     | { kind: 'move'; start: Point; applied: Point; moved: boolean }
+    | { kind: 'gap'; gap: EditableGap; start: Point; moved: boolean }
     | { kind: 'text-resize'; textId: string; start: Point; x: number; width: number; side: 'left' | 'right'; moved: boolean }
     | { kind: 'link'; from: string; fromSide?: NodeSide }
     | {
@@ -85,6 +99,11 @@ export function Canvas() {
     const canvasStore = useCanvasStore();
     const rootRef = useRef<HTMLDivElement>(null);
     const gestureRef = useRef<Gesture | null>(null);
+    const captureRef = useRef<{ element: HTMLElement; pointerId: number } | null>(null);
+    const wheelPanning = useRef(false);
+    const spaceDown = useSyncExternalStore(subscribeSpacePan, isSpaceDown, () => false);
+    const altDown = useSyncExternalStore(subscribeGapModifier, isGapModifierDown, () => false);
+    const [gapEdit, setGapEdit] = useState<EditableGap[] | null>(null);
     const [guides, setGuides] = useState<AlignmentGuide[]>([]);
     const [gaps, setGaps] = useState<GapGuide[]>([]);
     const [box, setBox] = useState<Rect | null>(null);
@@ -107,6 +126,19 @@ export function Canvas() {
     );
     const textIds = useMemo(() => Object.keys(texts), [texts]);
     const nodes = useCanvas((s) => s.nodes);
+    const selection = useCanvas((s) => s.selection);
+    const hidden = useCanvas((s) => s.hidden);
+    const editable = useMemo(
+        () =>
+            gapEdit ??
+            (!altDown || activeGesture !== null
+                ? []
+                : editableGaps(
+                      Object.values(nodes).filter((node) => !hidden.has(node.id)),
+                      selection
+                  )),
+        [nodes, hidden, selection, gapEdit, altDown, activeGesture]
+    );
     /* The nodes are drawn in a fixed order and stacked with a z-index instead of being reordered in
        the DOM: moving an element takes it out of the document for a moment, and a body that had the
        keyboard loses it. Bringing a node to the front is a click in it, so that is exactly when it
@@ -166,6 +198,63 @@ export function Canvas() {
     }, [activeGesture, canvasStore]);
 
     useLayoutEffect(() => {
+        const gesture = gestureRef.current;
+        if (gesture?.kind === 'box') {
+            setBox(boxScreenRect(gesture, camera));
+        }
+    }, [camera]);
+
+    useEffect(() => {
+        const cancel = (): void => {
+            const gesture = gestureRef.current;
+            gestureRef.current = null;
+            if (gesture?.kind === 'box') {
+                canvasStore.getState().select(gesture.previous);
+            } else if (gesture?.kind === 'gap') {
+                canvasStore.getState().endGapMove(true);
+            } else if (gesture?.kind === 'move' && gesture.moved) {
+                canvasStore.getState().settleMove();
+            } else if (gesture?.kind === 'resize') {
+                canvasStore.getState().setResizing(null);
+            } else if (gesture?.kind === 'link') {
+                canvasStore.getState().setLinkDraft(null);
+            }
+            const capture = captureRef.current;
+            captureRef.current = null;
+            if (capture?.element.hasPointerCapture(capture.pointerId)) {
+                capture.element.releasePointerCapture(capture.pointerId);
+            }
+            canvasStore.getState().setGesturing(false);
+            canvasStore.getState().setPanning(false);
+            setActiveGesture(null);
+            setBox(null);
+            setGuides([]);
+            setGaps([]);
+            setGapEdit(null);
+        };
+        const offCancel = registerGestureCancellation(canvasStore, () => {
+            if (gestureRef.current?.kind === 'box' || gestureRef.current?.kind === 'gap') {
+                cancel();
+                return true;
+            }
+            return false;
+        });
+        const lostCapture = (event: PointerEvent): void => {
+            if (captureRef.current?.pointerId === event.pointerId && captureRef.current.element === event.target) {
+                cancel();
+            }
+        };
+        window.addEventListener('blur', cancel);
+        window.addEventListener('lostpointercapture', lostCapture, true);
+        return () => {
+            offCancel();
+            window.removeEventListener('blur', cancel);
+            window.removeEventListener('lostpointercapture', lostCapture, true);
+            cancel();
+        };
+    }, [canvasStore]);
+
+    useLayoutEffect(() => {
         const el = rootRef.current;
         if (!el) {
             return;
@@ -181,11 +270,16 @@ export function Canvas() {
         return () => observer.disconnect();
     }, [canvasStore]);
 
-    useWheelCamera(rootRef, canvasStore, {
+    const flushWheel = useWheelCamera(rootRef, canvasStore, {
         // The maximized node stays where it is, so a camera moving behind it would only be lost.
         locks: () => {
             const s = canvasStore.getState();
             return maximizedNodeOf(s) === null ? s.locks : { pan: true, zoom: true };
+        },
+        ownsWheel: () => isSpaceDown() || gestureRef.current?.kind === 'pan' || gestureRef.current?.kind === 'box',
+        onPan: (active) => {
+            wheelPanning.current = active;
+            canvasStore.getState().setPanning(active || gestureRef.current?.kind === 'pan');
         },
         /* The active node owns the wheel inside its body, and a pinch that reaches the canvas is the
            camera's. A pinch over a page that owns the pointer goes nowhere: Chromium applies the page
@@ -208,10 +302,40 @@ export function Canvas() {
         gestureRef.current = g;
         if (g.kind !== 'move') {
             setActiveGesture(g.kind);
+            canvasStore.getState().setGesturing(true);
         }
         // Capture on text itself so a click still targets it when the browser builds a double-click.
         const capture = (e.target as HTMLElement).closest<HTMLElement>('[data-text-resize], [data-text-id]') ?? rootRef.current!;
+        captureRef.current = { element: capture, pointerId: e.pointerId };
         capture.setPointerCapture(e.pointerId);
+    };
+
+    const onPointerDownCapture = (e: ReactPointerEvent): void => {
+        if (isInFloatingLayer(e.target) || (e.button !== 1 && (e.button !== 0 || !isSpaceDown()))) {
+            return;
+        }
+        const state = canvasStore.getState();
+        e.preventDefault();
+        e.stopPropagation();
+        if (!state.locks.pan && maximizedNodeOf(state) === null && gestureRef.current === null) {
+            flushWheel();
+            state.setPanning(true);
+            startGesture({ kind: 'pan', last: screenPoint(e) }, e);
+        }
+    };
+
+    const startGap = (gap: EditableGap, event: ReactPointerEvent): void => {
+        if (event.button !== 0 || gestureRef.current !== null || maximizedNodeOf(canvasStore.getState()) !== null) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        flushWheel();
+        const moving = gap.moves.map((move) => move.id);
+        if (canvasStore.getState().beginGapMove(moving, gap.fixed)) {
+            setGapEdit(editable);
+            startGesture({ kind: 'gap', gap, start: toWorld(canvasStore.getState().camera, screenPoint(event)), moved: false }, event);
+        }
     };
 
     /*
@@ -221,6 +345,10 @@ export function Canvas() {
      */
     const onMouseDown = (e: ReactMouseEvent): void => {
         const target = e.target as HTMLElement;
+        if (e.button === 1 || (e.button === 0 && isSpaceDown())) {
+            e.preventDefault();
+            return;
+        }
         if (e.button !== 0 || target.closest('button, input') || target.closest('[data-node-body]')) {
             return;
         }
@@ -242,13 +370,6 @@ export function Canvas() {
         const nodeId = target.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId ?? null;
         const textId = target.closest<HTMLElement>('[data-text-id]')?.dataset.textId ?? null;
 
-        if (e.button === 1 || (e.button === 0 && isSpaceDown())) {
-            if (!s.locks.pan) {
-                e.preventDefault();
-                startGesture({ kind: 'pan', last: point }, e);
-            }
-            return;
-        }
         if (e.button !== 0) {
             return;
         }
@@ -386,15 +507,14 @@ export function Canvas() {
         }
         s.setBodyFocus(null);
         blurActive();
+        const previous = s.selection;
         if (!e.shiftKey) {
             s.clearSelection();
         }
         startGesture(
             {
                 kind: 'box',
-                origin: point,
-                current: point,
-                additive: e.shiftKey
+                ...startBoxSelection(s.camera, point, previous, e.shiftKey)
             },
             e
         );
@@ -443,13 +563,17 @@ export function Canvas() {
             }
             case 'box':
                 g.current = point;
-                setBox({
-                    x: Math.min(g.origin.x, point.x),
-                    y: Math.min(g.origin.y, point.y),
-                    w: Math.abs(point.x - g.origin.x),
-                    h: Math.abs(point.y - g.origin.y)
-                });
+                setBox(boxScreenRect(g, s.camera));
                 break;
+            case 'gap': {
+                const world = toWorld(s.camera, point);
+                const delta = world[g.gap.axis] - g.start[g.gap.axis];
+                if (g.moved || Math.abs(delta * s.camera.zoom) > 2) {
+                    g.moved = true;
+                    s.moveGapNodes(gapOffsets(g.gap, delta, e.shiftKey));
+                }
+                break;
+            }
             case 'text-resize': {
                 const { x, maxWidth } = resizedText(g.x, g.width, g.side, (point.x - g.start.x) / s.camera.zoom, e.altKey);
                 if ((maxWidth !== s.texts[g.textId]?.maxWidth || x !== s.texts[g.textId]?.x) && (g.moved || Math.abs(point.x - g.start.x) > 2)) {
@@ -479,6 +603,7 @@ export function Canvas() {
     };
 
     const onPointerUp = (e: ReactPointerEvent): void => {
+        flushWheel();
         const g = gestureRef.current;
         gestureRef.current = null;
         setActiveGesture(null);
@@ -488,14 +613,31 @@ export function Canvas() {
             return;
         }
         const s = canvasStore.getState();
-        rootRef.current?.releasePointerCapture(e.pointerId);
+        const capture = captureRef.current;
+        captureRef.current = null;
+        if (capture?.element.hasPointerCapture(capture.pointerId)) {
+            capture.element.releasePointerCapture(capture.pointerId);
+        }
+        s.setGesturing(false);
+        s.setPanning(wheelPanning.current);
         if (g.kind === 'box') {
             setBox(null);
-            if (Math.abs(g.current.x - g.origin.x) > 3 || Math.abs(g.current.y - g.origin.y) > 3) {
-                s.selectInRect(rectFromPoints(toWorld(s.camera, g.origin), toWorld(s.camera, g.current)), g.additive);
+            g.current = screenPoint(e);
+            const bounds = boxScreenRect(g, s.camera);
+            if (e.type === 'pointercancel') {
+                s.select(g.previous);
+            } else if (bounds.w > 3 || bounds.h > 3) {
+                s.selectInRect(boxWorldRect(g, s.camera), g.additive);
             }
         } else if (g.kind === 'move' && g.moved) {
             s.settleMove();
+        } else if (g.kind === 'gap') {
+            if (g.moved && e.type !== 'pointercancel') {
+                const world = toWorld(s.camera, screenPoint(e));
+                s.moveGapNodes(gapOffsets(g.gap, world[g.gap.axis] - g.start[g.gap.axis], e.shiftKey));
+            }
+            s.endGapMove(e.type === 'pointercancel');
+            setGapEdit(null);
         } else if (g.kind === 'resize') {
             s.setResizing(null);
         } else if (g.kind === 'link') {
@@ -573,16 +715,16 @@ export function Canvas() {
                 style={{
                     backgroundSize: `${gridStep}px ${gridStep}px`,
                     backgroundPosition: `${camera.x}px ${camera.y}px`,
-                    // Space is tracked in a ref because a held key must not re-render the canvas; the cursor
-                    // catches up on the next render, which the pointer move that follows always triggers.
-                    // oxlint-disable-next-line react/refs
-                    cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : isSpaceDown() ? 'grab' : undefined
+                    cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : spaceDown ? 'grab' : undefined
                 }}
                 data-gesture={activeGesture ?? undefined}
+                data-canvas-surface
+                tabIndex={-1}
                 /* A file dropped here becomes a node, so the grid keeps the strip along the edge
                    and leaves the rest of the canvas to it (`shell/SplitGrid.tsx`). */
                 data-takes-drop="middle"
                 onMouseDown={onMouseDown}
+                onPointerDownCapture={onPointerDownCapture}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
@@ -616,6 +758,9 @@ export function Canvas() {
                 {/* Over the pages, which the canvas itself cannot draw over. */}
                 <CellOverlay slot="view">
                     <AlignmentGuides guides={guides} gaps={gaps} camera={camera} />
+                    {maximizedId === null && !locks.move && (activeGesture === 'gap' || (!spaceDown && altDown && activeGesture === null)) && (
+                        <GapHandles gaps={editable} nodes={nodes} camera={camera} onStart={startGap} />
+                    )}
                     <TextToolbar />
                     {dropping && <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-accent ring-inset" aria-hidden />}
                     {box && (

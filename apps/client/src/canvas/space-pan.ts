@@ -23,17 +23,33 @@ const SPACE_CONTROLS = [
  * one that is, is a question the pointer answers and not the key.
  */
 let spaceDown = false;
+const listeners = new Set<() => void>();
+
+export function subscribeSpacePan(listener: () => void): () => void {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+}
+
+function setSpaceDown(down: boolean): void {
+    if (spaceDown === down) {
+        return;
+    }
+    spaceDown = down;
+    for (const listener of listeners) {
+        listener();
+    }
+}
 
 export function isSpaceDown(): boolean {
     return spaceDown;
 }
 
 export function holdSpace(): void {
-    spaceDown = true;
+    setSpaceDown(true);
 }
 
 export function releaseSpace(): void {
-    spaceDown = false;
+    setSpaceDown(false);
 }
 
 /* Whether a space press belongs to what has the focus: a control it works, or anything in a popup or a dialog. */

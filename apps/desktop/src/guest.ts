@@ -56,6 +56,137 @@ function onWheel(event: MomentumWheelEvent): void {
 }
 
 let listening = false;
+let canvasInput = { enabled: false, pan: false };
+let panPointer: number | null = null;
+
+function endCanvasPan(): void {
+    const pointer = panPointer;
+    panPointer = null;
+    if (pointer !== null) {
+        ipcRenderer.sendToHost('ruimte:canvas-pan', { phase: 'end' });
+        if (document.documentElement.hasPointerCapture(pointer)) {
+            document.documentElement.releasePointerCapture(pointer);
+        }
+    }
+}
+
+ipcRenderer.on('ruimte:canvas-input', (_event, value: unknown) => {
+    const configuration = value as { enabled?: boolean; pan?: boolean } | null;
+    if (canvasInput.enabled && configuration?.enabled !== true) {
+        ipcRenderer.sendToHost('ruimte:canvas-alt', false);
+    }
+    canvasInput = { enabled: configuration?.enabled === true, pan: configuration?.pan === true };
+    if (!canvasInput.pan) {
+        endCanvasPan();
+    }
+});
+
+window.addEventListener(
+    'pointerdown',
+    (event) => {
+        if (!canvasInput.pan || event.button !== 1 || panPointer !== null) {
+            return;
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        panPointer = event.pointerId;
+        document.documentElement.setPointerCapture(event.pointerId);
+        ipcRenderer.sendToHost('ruimte:canvas-pan', { phase: 'start', x: event.screenX, y: event.screenY });
+    },
+    true
+);
+
+window.addEventListener(
+    'pointermove',
+    (event) => {
+        if (event.pointerId === panPointer) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            // Screen coordinates stay fixed while the host moves the page under the captured pointer.
+            ipcRenderer.sendToHost('ruimte:canvas-pan', { phase: 'move', x: event.screenX, y: event.screenY });
+        }
+    },
+    true
+);
+
+for (const name of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) {
+    window.addEventListener(
+        name,
+        (event) => {
+            if (event.pointerId === panPointer) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                endCanvasPan();
+            }
+        },
+        true
+    );
+}
+
+window.addEventListener(
+    'wheel',
+    (event) => {
+        if (panPointer !== null) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }
+    },
+    { capture: true, passive: false }
+);
+
+window.addEventListener(
+    'keydown',
+    (event) => {
+        if (!canvasInput.enabled) {
+            return;
+        }
+        if (event.key === 'Alt') {
+            ipcRenderer.sendToHost('ruimte:canvas-alt', true);
+        }
+        const apple = process.platform === 'darwin';
+        if (event.code === 'Digit2' && event.shiftKey && !event.altKey && event.metaKey === apple && event.ctrlKey !== apple) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            ipcRenderer.sendToHost('ruimte:canvas-zoom');
+        }
+    },
+    true
+);
+
+window.addEventListener('keydown', (event) => {
+    // A page's editor or dialog gets to consume Escape before focus returns to the canvas.
+    if (
+        canvasInput.enabled &&
+        !event.defaultPrevented &&
+        event.key === 'Escape' &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.shiftKey &&
+        !(event.target instanceof Element && event.target.closest('input, textarea, [contenteditable]:not([contenteditable="false"]), [role="dialog"]')) &&
+        !document.querySelector('dialog[open], [role="dialog"][aria-modal="true"]')
+    ) {
+        event.preventDefault();
+        ipcRenderer.sendToHost('ruimte:canvas-leave');
+    }
+});
+
+window.addEventListener(
+    'keyup',
+    (event) => {
+        if (event.key === 'Alt' && canvasInput.enabled) {
+            ipcRenderer.sendToHost('ruimte:canvas-alt', false);
+        }
+    },
+    true
+);
+
+window.addEventListener('blur', () => {
+    endCanvasPan();
+    if (canvasInput.enabled) {
+        ipcRenderer.sendToHost('ruimte:canvas-alt', false);
+    }
+});
 
 /* The host says whether swipes are on, on every new document. Off, no listener exists at all, so a
    scroll costs a page nothing and nothing crosses to the host. */

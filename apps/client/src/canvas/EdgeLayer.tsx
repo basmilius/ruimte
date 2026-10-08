@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Trash } from 'lucide-react';
+import { Pencil, Trash, X } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
 import { edgeLook, lineMeaning } from '@/canvas/edge-look';
@@ -10,22 +10,27 @@ import { markerPath, type MarkerShape } from '@/canvas/marker-path';
 import type { Point } from '@/canvas/math';
 import { useEndpointId } from '@/state/keys';
 import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
-import { Icon, ContextMenu, Input } from '@adecore/ui';
+import { Icon, IconButton, ContextMenu, Input } from '@adecore/ui';
 
 function EdgeLabel({
     ids,
     label,
     at,
     editing,
-    onEdit
+    onEdit,
+    active,
+    onRemove
 }: {
     ids: string[];
     label: string | undefined;
     at: Point;
     editing: boolean;
     onEdit(editing: boolean): void;
+    active: boolean;
+    onRemove(): void;
 }) {
     const canvasStore = useCanvasStore();
+    const { t } = useTranslation('common');
     if (editing) {
         // A pixel wider on every side than the field, since a foreignObject clips the focus outline around it.
         return (
@@ -54,7 +59,7 @@ function EdgeLabel({
             </foreignObject>
         );
     }
-    if (!label) {
+    if (!label && !active) {
         return null;
     }
     /* HTML, not `<text>` in a fixed 64 by 24 pill: the pill then grows with the label and with the
@@ -62,9 +67,32 @@ function EdgeLabel({
     return (
         <foreignObject x={at.x - 100} y={at.y - 16} width="200" height="32" style={{ overflow: 'visible' }}>
             <div className="flex h-8 items-center justify-center" onDoubleClick={(e) => (e.stopPropagation(), onEdit(true))}>
-                <span className="pointer-events-auto cursor-text rounded-full border border-border bg-surface-raised px-2.5 py-0.5 text-xs whitespace-nowrap text-text-muted">
-                    {label}
-                </span>
+                <div className="relative">
+                    {label && (
+                        <span
+                            className="pointer-events-auto cursor-text rounded-full border border-border bg-surface-raised px-2.5 py-0.5 text-xs whitespace-nowrap text-text-muted"
+                            onPointerDown={(event) => {
+                                event.stopPropagation();
+                                canvasStore.getState().select(ids, event.shiftKey);
+                            }}
+                        >
+                            {label}
+                        </span>
+                    )}
+                    {active && (
+                        <IconButton
+                            icon={X}
+                            size="xs"
+                            label={t('action.remove')}
+                            className="pointer-events-auto absolute top-1/2 left-full ml-1 -translate-y-1/2 rounded-full border border-border bg-surface-raised"
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onRemove();
+                            }}
+                        />
+                    )}
+                </div>
             </div>
         </foreignObject>
     );
@@ -115,117 +143,127 @@ export const EdgeLayer = memo(function EdgeLayer() {
     };
 
     return (
-        <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width="1" height="1">
-            {lines.map((line) => {
-                const key = line.edge.id;
-                const route = routes.get(key);
-                if (route === undefined) {
-                    return null;
-                }
-                const mid = route.mid;
-                const active = hovered === key || line.ids.some((id) => selection.includes(id));
-                // A line a task went along says how the task stands, and only looks open while it is.
-                const task = edgeTask(tasks, line.edge.from, line.edge.to) ?? (line.back === null ? null : edgeTask(tasks, line.back.from, line.back.to));
-                const label = task === null ? line.label : taskEdgeLabel(task.status);
-                const look = edgeLook(lineMeaning(line, readsContext, drivenByAgent), {
-                    pair: line.back !== null,
-                    openTask: task !== null && task.status === 'open'
-                });
-                const stroke = look.accent ? (active ? 'var(--accent)' : 'var(--edge-context)') : active ? 'var(--text-muted)' : 'var(--edge-line)';
-                const remove = (): void => {
-                    for (const id of line.ids) {
-                        canvasStore.getState().removeEdge(id);
-                    }
-                };
-                return (
-                    <ContextMenu.Root key={key}>
-                        <ContextMenu.Trigger
-                            render={<g />}
-                            onPointerEnter={() => setHovered(key)}
-                            onPointerLeave={() => setHovered((h) => (h === key ? null : h))}
-                        >
-                            {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
-                            <path
-                                d={route.d}
-                                fill="none"
-                                stroke="transparent"
-                                strokeWidth="14"
-                                className="pointer-events-auto cursor-pointer"
-                                onPointerDown={(e) => {
-                                    e.stopPropagation();
-                                    // One line is one thing to click, so both of its directions are selected together.
-                                    canvasStore.getState().select(line.ids, e.shiftKey);
-                                }}
-                                onDoubleClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditing(key);
-                                }}
-                            />
-                            <path
-                                d={route.d}
-                                fill="none"
-                                stroke={stroke}
-                                strokeWidth={active ? look.width + 1 : look.width}
-                                strokeDasharray={look.dashed ? '6 6' : undefined}
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                            <EdgeMarker shape={look.tail} at={route.from} side={route.fromSide} stroke={stroke} />
-                            <EdgeMarker shape={look.head} at={route.to} side={route.toSide} stroke={stroke} />
-                            <EdgeLabel ids={line.ids} label={label} at={mid} editing={editing === key} onEdit={(on) => setEditing(on ? key : null)} />
-                            {active && editing !== key && (
-                                <g
-                                    transform={`translate(${mid.x + (label ? 40 : 0)}, ${mid.y})`}
-                                    className="pointer-events-auto cursor-pointer"
-                                    onPointerDown={(e) => {
-                                        e.stopPropagation();
-                                        remove();
-                                    }}
-                                >
-                                    <circle r="9" fill="var(--surface-raised)" stroke="var(--border-strong)" />
-                                    <path d="M -3 -3 L 3 3 M 3 -3 L -3 3" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" />
-                                </g>
-                            )}
-                        </ContextMenu.Trigger>
-                        <ContextMenu.Popup>
-                            <ContextMenu.Item onClick={() => setEditing(key)}>
-                                <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <ContextMenu.Hint>{t('menu.doubleClick')}</ContextMenu.Hint>
-                            </ContextMenu.Item>
-                            <ContextMenu.Separator />
-                            <ContextMenu.Item onClick={remove}>
-                                <Icon icon={Trash} size={14} /> {t('common:action.remove')}
-                            </ContextMenu.Item>
-                        </ContextMenu.Popup>
-                    </ContextMenu.Root>
-                );
-            })}
-            {draft &&
-                (() => {
-                    const from = rectOf(draft.from);
-                    if (!from) {
-                        return null;
-                    }
-                    const route = routeDraft(
-                        from,
-                        draft.to,
-                        obstacles.filter((obstacle) => obstacle.id !== draft.from),
-                        { fromSide: draft.fromSide }
-                    );
-                    return (
-                        <>
-                            <path
-                                d={route.d}
-                                fill="none"
-                                stroke="var(--accent)"
-                                strokeWidth="2"
-                                strokeDasharray="4 4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                            <EdgeMarker shape="dot" at={route.from} side={route.fromSide} stroke="var(--accent)" />
-                        </>
-                    );
-                })()}
-        </svg>
+        <>
+            {(['lines', 'labels'] as const).map((layer) => (
+                <svg key={layer} data-edge-layer={layer} className="pointer-events-none absolute left-0 top-0 overflow-visible" width="1" height="1">
+                    {[...lines]
+                        .sort((first, second) => (layer === 'labels' ? Number(first.edge.id === editing) - Number(second.edge.id === editing) : 0))
+                        .map((line) => {
+                            const key = line.edge.id;
+                            const route = routes.get(key);
+                            if (route === undefined) {
+                                return null;
+                            }
+                            const mid = route.mid;
+                            const active = hovered === key || line.ids.some((id) => selection.includes(id));
+                            // A line a task went along says how the task stands, and only looks open while it is.
+                            const task =
+                                edgeTask(tasks, line.edge.from, line.edge.to) ?? (line.back === null ? null : edgeTask(tasks, line.back.from, line.back.to));
+                            const label = task === null ? line.label : taskEdgeLabel(task.status);
+                            const look = edgeLook(lineMeaning(line, readsContext, drivenByAgent), {
+                                pair: line.back !== null,
+                                openTask: task !== null && task.status === 'open'
+                            });
+                            const stroke = look.accent ? (active ? 'var(--accent)' : 'var(--edge-context)') : active ? 'var(--text-muted)' : 'var(--edge-line)';
+                            const remove = (): void => {
+                                for (const id of line.ids) {
+                                    canvasStore.getState().removeEdge(id);
+                                }
+                            };
+                            return (
+                                <ContextMenu.Root key={key}>
+                                    <ContextMenu.Trigger
+                                        render={<g />}
+                                        onPointerEnter={() => setHovered(key)}
+                                        onPointerLeave={() => setHovered((h) => (h === key ? null : h))}
+                                    >
+                                        {layer === 'lines' && (
+                                            <>
+                                                {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
+                                                <path
+                                                    d={route.d}
+                                                    fill="none"
+                                                    stroke="transparent"
+                                                    strokeWidth="14"
+                                                    className="pointer-events-auto cursor-pointer"
+                                                    onPointerDown={(e) => {
+                                                        e.stopPropagation();
+                                                        // One line is one thing to click, so both of its directions are selected together.
+                                                        canvasStore.getState().select(line.ids, e.shiftKey);
+                                                    }}
+                                                    onDoubleClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setEditing(key);
+                                                    }}
+                                                />
+                                                <path
+                                                    d={route.d}
+                                                    fill="none"
+                                                    stroke={stroke}
+                                                    strokeWidth={active ? look.width + 1 : look.width}
+                                                    strokeDasharray={look.dashed ? '6 6' : undefined}
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                />
+                                                <EdgeMarker shape={look.tail} at={route.from} side={route.fromSide} stroke={stroke} />
+                                                <EdgeMarker shape={look.head} at={route.to} side={route.toSide} stroke={stroke} />
+                                            </>
+                                        )}
+                                        {layer === 'labels' && (
+                                            <EdgeLabel
+                                                ids={line.ids}
+                                                label={label}
+                                                at={mid}
+                                                editing={editing === key}
+                                                active={active}
+                                                onRemove={remove}
+                                                onEdit={(on) => setEditing(on ? key : null)}
+                                            />
+                                        )}
+                                    </ContextMenu.Trigger>
+                                    <ContextMenu.Popup>
+                                        <ContextMenu.Item onClick={() => setEditing(key)}>
+                                            <Icon icon={Pencil} size={14} /> {t('common:action.rename')}{' '}
+                                            <ContextMenu.Hint>{t('menu.doubleClick')}</ContextMenu.Hint>
+                                        </ContextMenu.Item>
+                                        <ContextMenu.Separator />
+                                        <ContextMenu.Item onClick={remove}>
+                                            <Icon icon={Trash} size={14} /> {t('common:action.remove')}
+                                        </ContextMenu.Item>
+                                    </ContextMenu.Popup>
+                                </ContextMenu.Root>
+                            );
+                        })}
+                    {layer === 'lines' &&
+                        draft &&
+                        (() => {
+                            const from = rectOf(draft.from);
+                            if (!from) {
+                                return null;
+                            }
+                            const route = routeDraft(
+                                from,
+                                draft.to,
+                                obstacles.filter((obstacle) => obstacle.id !== draft.from),
+                                { fromSide: draft.fromSide }
+                            );
+                            return (
+                                <>
+                                    <path
+                                        d={route.d}
+                                        fill="none"
+                                        stroke="var(--accent)"
+                                        strokeWidth="2"
+                                        strokeDasharray="4 4"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                    <EdgeMarker shape="dot" at={route.from} side={route.fromSide} stroke="var(--accent)" />
+                                </>
+                            );
+                        })()}
+                </svg>
+            ))}
+        </>
     );
 });

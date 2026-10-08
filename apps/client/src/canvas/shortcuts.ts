@@ -35,6 +35,7 @@ export const CANVAS_SHORTCUTS = {
     zoomReset: shortcut('Mod+0'),
     fitAll: shortcut('Shift+1'),
     zoomSelection: shortcut('Shift+2'),
+    zoomNode: shortcut('Mod+Shift+2'),
     deleteSelection: shortcut('Backspace'),
     zoomIn: shortcut('+'),
     zoomOut: shortcut('-'),
@@ -69,6 +70,13 @@ export const CANVAS_SHORTCUTS = {
     previousMessage: shortcut('Alt+ArrowUp'),
     nextMessage: shortcut('Alt+ArrowDown')
 } as const;
+
+export const NODE_NAVIGATION_SHORTCUTS: Record<SplitDirection, Shortcut> = {
+    left: shortcut('Alt+ArrowLeft'),
+    right: shortcut('Alt+ArrowRight'),
+    up: shortcut('Alt+ArrowUp'),
+    down: shortcut('Alt+ArrowDown')
+};
 
 export const ADD_NODE_SHORTCUTS = {
     terminal: shortcut('Alt+T'),

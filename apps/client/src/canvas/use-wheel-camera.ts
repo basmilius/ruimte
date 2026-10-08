@@ -1,9 +1,10 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import type { StoreApi } from 'zustand';
 import type { CameraSlice } from '@/canvas/camera-slice';
 import { isApplePlatform } from '@/desktop/bridge';
 import { isModHeld } from '@adecore/ui';
 import { createPanBatch } from '@/canvas/pan-batch';
+import { createWheelPanSession, PAN_IDLE_MS } from '@/canvas/wheel-pan-session';
 
 /* How long after the last wheel event a zoom settles on a whole percent. */
 const ZOOM_SETTLE_MS = 160;
@@ -19,6 +20,8 @@ export interface WheelCameraOptions {
     locks?: () => { pan: boolean; zoom: boolean };
     /* True when the wheel belongs to something on the surface rather than to the camera. */
     defer?: (e: WheelEvent, zooming: boolean) => boolean;
+    ownsWheel?: () => boolean;
+    onPan?: (active: boolean) => void;
 }
 
 /*
@@ -29,10 +32,11 @@ export interface WheelCameraOptions {
  * a thread) scrolls itself rather than through a default that could be prevented, and would
  * otherwise scroll and pan at once.
  */
-export function useWheelCamera(rootRef: RefObject<HTMLElement | null>, store: StoreApi<CameraSlice>, options: WheelCameraOptions = {}): void {
+export function useWheelCamera(rootRef: RefObject<HTMLElement | null>, store: StoreApi<CameraSlice>, options: WheelCameraOptions = {}): () => void {
     const latest = useRef(options);
+    const flushRef = useRef<(() => void) | null>(null);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         latest.current = options;
     });
 
@@ -46,10 +50,18 @@ export function useWheelCamera(rootRef: RefObject<HTMLElement | null>, store: St
         // Only a zoom settles. Without this a pan right after one would snap the camera back.
         let zoomed = false;
         const pan = createPanBatch((dx, dy) => store.getState().panBy(dx, dy));
+        flushRef.current = pan.flush;
+        const session = createWheelPanSession();
+        let panTimer: number | null = null;
+        const endPan = (): void => {
+            session.reset();
+            latest.current.onPan?.(false);
+        };
 
         const onWheel = (e: WheelEvent): void => {
             const zooming = wheelZooms(e);
-            if (latest.current.defer?.(e, zooming) === true) {
+            const owns = session.owns(latest.current.ownsWheel?.() === true, e.timeStamp);
+            if ((zooming || !owns) && latest.current.defer?.(e, zooming) === true) {
                 return;
             }
             e.stopPropagation();
@@ -59,7 +71,13 @@ export function useWheelCamera(rootRef: RefObject<HTMLElement | null>, store: St
             const locks = latest.current.locks?.();
             if (!zooming) {
                 if (locks?.pan !== true) {
+                    session.record(e.timeStamp);
+                    latest.current.onPan?.(true);
                     pan.add(-e.deltaX, -e.deltaY);
+                    if (panTimer !== null) {
+                        window.clearTimeout(panTimer);
+                    }
+                    panTimer = window.setTimeout(endPan, PAN_IDLE_MS);
                 }
                 return;
             }
@@ -67,6 +85,11 @@ export function useWheelCamera(rootRef: RefObject<HTMLElement | null>, store: St
                 return;
             }
             pan.flush();
+            if (panTimer !== null) {
+                window.clearTimeout(panTimer);
+                panTimer = null;
+            }
+            endPan();
             store.getState().zoomAt(Math.exp(-e.deltaY * 0.01), at);
             anchor = at;
             zoomed = true;
@@ -94,6 +117,11 @@ export function useWheelCamera(rootRef: RefObject<HTMLElement | null>, store: St
         document.addEventListener('gesturechange', swallowGesture);
         return () => {
             pan.flush();
+            flushRef.current = null;
+            if (panTimer !== null) {
+                window.clearTimeout(panTimer);
+            }
+            endPan();
             if (timer !== null) {
                 window.clearTimeout(timer);
             }
@@ -103,4 +131,5 @@ export function useWheelCamera(rootRef: RefObject<HTMLElement | null>, store: St
             document.removeEventListener('gesturechange', swallowGesture);
         };
     }, [rootRef, store]);
+    return useCallback(() => flushRef.current?.(), []);
 }

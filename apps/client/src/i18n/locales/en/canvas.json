@@ -244,5 +244,9 @@
         "error": {
             "openExternal": "Open in system browser"
         }
+    },
+    "gaps": {
+        "adjust": "Adjust gap between {{from}} and {{to}}: {{value}}",
+        "shared": "Adjust equal gaps: {{value}}"
     }
 }
