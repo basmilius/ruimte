@@ -36,13 +36,13 @@ choosing media buffer sizes.
 
 Sources: `@adecore/agents/chat`, task coordination and the host's resume handlers.
 
-Completed fixes and retained evidence are in the
-[consolidated orchestration report](reports/private/2026-09-30-orchestration-upstream.html).
+Queue, Stop, recovery, durable task delivery and native-request ownership fixes are implemented.
 Only the following live evidence remains; do not rerun historical implementation prompts.
 
-1. Capture a natural provider-limit/reset sequence when one occurs, using the bounded probe in
-   the report. A quota read alone is not a refusal/reset replay. Do not consume budget to force
-   a limit. Unknown reset times keep the queue paused; this capture does not block other fixes.
+1. Capture a natural provider-limit/reset sequence when one occurs, using a new bounded probe
+   against the current packages. A quota read alone is not a refusal/reset replay. Do not consume
+   budget to force a limit. Unknown reset times keep the queue paused; this capture does not block
+   other fixes.
 2. Preserve natural early-before-tool metadata or mid-run child model changes if they occur.
    Current regressions cover those orderings deterministically; the latest live capture shows
    normal nesting and reuse. This is supplementary evidence, not an implementation gate.
@@ -84,26 +84,26 @@ unknown services remain unchanged, and handwritten launches have a verified rout
 
 ## 3. Test floor and measurements
 
-1. Add a DOM test setup alongside the existing i18n/React-deduplication preloads. Start with composer
-   send/queue/Stop and canvas focus/command wiring. Existing pure state and renderer tests stay.
+1. Extend the existing headless browser fixtures to composer send/queue/Stop. Canvas input and
+   workspace gestures already have browser integration coverage. Reuse that setup alongside
+   the existing i18n/React-deduplication preloads; existing pure state and renderer tests stay.
 2. Add the dev-only palette command that creates a reproducible 30-node scene. Measure input
    latency, frame time, heap and mount/read counts for terminals, chats and files, then nine grid
    cells. Measure ten file nodes with representative large files, including zoom below/above the
    editor gate and repeated view switching.
 3. Measure the fixed ten-context WebGL budget on representative hardware and under context loss.
    Choose any cap/adaptation change from those results. A user setting is not automatically required.
-4. Finish the collected Electron heap and frame/latency measurement for the prepared 100-idle-chat
+4. Finish the collected Electron heap and frame/latency measurement for a 100-idle-chat
    full-client fixture. The previous run stopped before collecting that evidence. Recreate the
    fixture against the current ADE CORE packages; obtain app access for any computer-use round.
-   The [orchestration report](reports/private/2026-09-30-orchestration-upstream.html#afwerking-1-oktober)
-   records the completed 1,000-child deterministic probe, genuine nine-child Claude replay,
-   full Electron view-switch baseline and Bun/JSC/mimalloc attribution. Do not infer collected
-   Electron heap from RSS or change cache/GC policy before measuring this workload.
-   The [October 2 protocol probe](reports/private/2026-09-30-orchestration-upstream.html#retention)
-   also retains 10,000 text and 10,000 thinking counters after completed turns and `forgetPending()`.
-   Determine a safe lifetime for these message-id maps with replay, deduplication and late background
-   frames before choosing cleanup or a cap. This process-lifetime retention does not prove an
-   Electron leak; measure the full client separately.
+   Earlier runs covered a 1,000-child deterministic probe, a nine-child Claude replay, Electron
+   view switching and Bun/JSC/mimalloc attribution; they did not collect the required full-client
+   heap and latency evidence. Do not infer collected Electron heap from RSS or change cache/GC
+   policy before measuring this workload. Historical October 2 probes retained 10,000 text and
+   10,000 thinking counters in ClaudeProtocol after completed turns and `forgetPending()`.
+   Reproduce against the current package and determine a safe lifetime for these message-id maps
+   with replay, deduplication and late background frames before choosing cleanup or a cap.
+   This process-lifetime retention does not prove an Electron leak; measure the full client separately.
 5. Measure binary `bytes.read` throughput while terminals and chats are busy, on socket and direct
    connections. If one session can dominate the socket, add fair per-session limits that preserve
    replies/chat events and repair dropped terminal output through `session.resync`.
@@ -111,10 +111,24 @@ unknown services remain unchanged, and handwritten launches have a verified rout
    when the measurement shows a startup improvement, then repeat that same measurement.
 7. Record desktop, visual and screen-reader acceptance of the ADE CORE cutover: file navigation
    and selection, staged/mixed Git checkboxes, menus and drags, editor typing/undo/search, language
-   popups and AI actions. Shared source already lives in ADE CORE; do not repeat the extraction.
-8. Recheck the [remaining October 2 audit cases](reports/private/2026-10-02-codebase-audit.html#restpunten)
-   against current code. Its historical completion badges do not close the explicitly recorded
-   follow-ups or prove device, deployment and accessibility acceptance.
+   popups and AI actions. For the implemented tabs, canvas and model comparison, check browser/
+   terminal state while switching tabs, unsaved database work and shared views, gap undo/cancel at
+   50% and 200% zoom, trackpad selection, browser/device pan ownership and model-chart keyboard,
+   touch and narrow-window use. Shared source already lives in ADE CORE; do not repeat the extraction.
+8. Recheck the remaining October 2 audit scenarios against current code. These are historical
+   follow-ups, not newly confirmed bugs: person-check steps completed through agent substeps
+   (ACT-04); pause/takeover during long device typing (NAT-05); detach during DeviceClient attach
+   (CLI-04); git.unwatch during watch setup (SRV-05); explicit-send queue state after restart
+   (AGT-03); one empty line versus an empty conflict result (ACT-02); plan-Markdown whitespace
+   roundtrips (ACT-08); and unsaved edits during competing project opens (CLI-03). Unknown service
+   ownership is covered by B07 in package 2. Check automated workflow-pin updates and the iOS
+   fixtures in UnifiedProjectsTests, WorkspaceVisualTests, SessionVisualTests, AttentionStoreTests
+   and PhaseZeroTests rather than carrying forward the old failure count.
+   Remaining manual cases include approval focus, sleep/reconnect, quit with no open window,
+   preview script redirects, dictation/Voice across windows, resolve-with-agent via stdin, first
+   service start on a fresh Mac, AppImage quit and daemon-crash recovery, cancellation during
+   long computer/device input, wireless device streaming, closing iPhone media and brief
+   notification-page disconnects. Check existing results before repeating these cases.
 
 Done when the baseline, hardware/build, fixture sizes and results are recorded with units, and
 any measured regression has a bounded follow-up. Choose performance acceptance budgets from the
@@ -173,17 +187,19 @@ belongs to that session, and its chip creates the linked browser.
 
 ## 7. Canvas ergonomics
 
-1. Add directional node focus with its own binding context. Grid focus remains Mod+Alt+Arrow;
-   maximize remains Mod+Shift+Enter. Test groups, hidden nodes and a node body owning the keyboard.
-2. Add local camera back/forward history. Browser Cmd+[ and Cmd+] win while a browser is focused.
+Directional selection, input focus, direct node zoom, gap dragging, selection during scrolling,
+connector label layering and explicit pan ownership are implemented. Current behavior is in
+[the client README](../apps/client/README.md#canvas-interaction); manual checks belong to package 3.
+
+1. Add local camera back/forward history. Browser Cmd+[ and Cmd+] win while a browser is focused.
    History stays out of project persistence and does not record every pan animation frame.
-3. Implement arrange, align and tidy as pure geometry functions, expose them in palette/menu and
+2. Implement arrange, align and tidy as pure geometry functions, expose them in palette/menu and
    undo each operation as one change.
-4. Rank palette results by exact match, prefix and substring; add `>` for actions. Track recently
+3. Rank palette results by exact match, prefix and substring; add `>` for actions. Track recently
    visited nodes independently of recent commands, and use them on an empty query.
-5. Save pasted images under `<folder>/.ruimte/images` and create file nodes pointing at them.
+4. Save pasted images under `<folder>/.ruimte/images` and create file nodes pointing at them.
    Handle a project without a folder, failed writes and unused-image cleanup deliberately.
-6. Add optional color/arrowhead styling to plain lines, preserving the meaning and permissions
+5. Add optional color/arrowhead styling to plain lines, preserving the meaning and permissions
    of context/target/origin edges. Give notes a first body heading derived from their title without
    duplicating or overwriting an existing heading; settle rename behavior before implementation.
 
@@ -267,6 +283,11 @@ remaining provider limitation. Folder-isolation tests alone cannot establish log
 8. Decide whether Bonjour discovery is still wanted for first use and changed LAN addresses.
    It is not implemented. If chosen, specify an anonymous advertisement, iOS local-network
    permission, desktop discovery and Linux multicast behavior before building it.
+9. Verify the deployed broker, worker, station, desktop and iOS versions against their current
+   account/statement and upgrade rules. The old audit's unverified deployment items included
+   worker migration 0014, broker envelope preservation and TURN allocation limits. Inspect actual
+   deployments and run a bounded TURN allocation test; an old source commit or deploy recipe
+   does not establish what is running.
 
 Done when connection drops have an explained, tested outcome, real-network media/terminal
 measurements meet the agreed budgets, and broker migration has verified rollback. Preserve the
@@ -325,7 +346,7 @@ and account/login failures work in the packaged app. Do not promise an SDK/API c
 
 ## 14. Editor and language servers
 
-Implementation and current limits: [SMART-EDITOR.md](SMART-EDITOR.md) and
+Current integration: [the client README](../apps/client/README.md#code-editor) and
 [the daemon README](../apps/server/README.md#language-servers). The ADE CORE editor/LSP host,
 server installation, multiple servers, custom commands, TypeScript sidecar and native PHP
 integration are built. Monaco is removed.
@@ -335,13 +356,20 @@ integration are built. Monaco is removed.
    multi-file create/rename edits, stale results, crash/restart and local/remote clients.
 2. Check install, update, rebuild and previous-version actions with actual server binaries.
    Keep installation and custom-command approval with the person on the machine.
-3. Decide the formatter policy recorded in SMART-EDITOR.md. A project's existing formatter is a
-   candidate; no new formatter runner is implied by the completed editor migration.
+3. Decide the formatter policy. Formatting currently follows the language server's style, with
+   tab size and indent style from `.editorconfig`. Choose server-specific settings, the project's
+   formatter with its repository config, or a Ruimte style translated for each server. No new
+   formatter runner is implied by the completed editor migration.
 4. Add remaining native/toolchain servers only after specifying installation and execution rules,
    especially project code, build scripts and proc macros in agent worktrees. Rust, Go, Swift,
    TOML, Lua, Zig and Markdown remain candidates, not completed catalog entries.
-5. Track remaining editor limits in SMART-EDITOR.md and the shared package's docs. Project-wide
-   diagnostics, richer snippet behavior and hidden unchanged review ranges are separate features.
+5. Address remaining limits as separate features in the owning shared package or host:
+   snippet mirrors, multiline snippet indentation and nested snippet continuation; semantic-token
+   deltas; workspace file deletion; file views retaining their old path after a move; project-wide
+   diagnostics beyond open documents; column-precise file navigation; match highlighting and more
+   than thirty files in peek; and review rows hiding unchanged ranges. Server progress percentages
+   depend on servers reporting them. On-device help currently omits explanations for non-function
+   symbols, Explain in the context menu and automatic suggestions while typing.
 
 Done per accepted feature when the required runtime/device evidence exists. Fake-server tests
 remain deterministic tests; real language servers belong in integration tests.
