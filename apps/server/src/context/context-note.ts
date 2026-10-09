@@ -64,6 +64,7 @@ export const VISUAL_LAYOUT_NOTE =
 
 export const VISUAL_NOTE =
     uiSessionNote() +
+    ' Live data: $name = @Query("source", {args}). Sources: git.status {repo:"."}, git.log {repo:".",limit:30}, launch.status {name:"api"}, chat.tasks {}, database.query {connection:"id",sql:"SELECT ...",schema:null,limit:50}. Database rows are records for Table. Sources are literal; arguments may reference local inputs. Queries only read, never start work or run writes. ' +
     ' For free diagrams, collages, mockups and local images outside the catalog, show a self-contained HTML page above your reply with `ruimte-context visual show --title T < page.html` after checking it with `visual preview` (`ruimte-context help visual` has the rules), and let the reply add only what the page does not say. ' +
     VISUAL_FILES_NOTE +
     ' ' +

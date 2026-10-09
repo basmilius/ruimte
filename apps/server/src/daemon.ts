@@ -130,6 +130,8 @@ import { OnDeviceModel } from './ondevice/model.ts';
 import { AgentLanguage } from './language/agent-language.ts';
 import { LanguageHost } from './language/host.ts';
 import { NativePolicy, phpLanguageServerCheckout, sqlLanguageServerCheckout } from './language/native.ts';
+import { ruimteUiSources } from './chat/ui-sources.ts';
+import { readLog } from './git/log.ts';
 import { agentLaunches } from './launches/agent-host.ts';
 import { LaunchRunner } from './launches/runner.ts';
 import { managerSessions } from './launches/sessions.ts';
@@ -394,6 +396,16 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     const visuals = new VisualStore(config.home, attachments);
     const chats: ChatManager = new ChatManager({
         providers,
+        intelligentUi: ruimteUiSources({
+            place: (chatId) => projects.index.locate(chatId),
+            worktreePaths: (folder) => canvasHost.worktreePaths(folder),
+            gitStatus: (cwd) => statuses.status(cwd),
+            gitLog: readLog,
+            launches: (projectId) =>
+                agentLaunches(launchStore, launches, (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null)).list(projectId),
+            tasks: (chatId) => tasks.ofParent(chatId),
+            databases: () => agentDatabases
+        }),
         store: new ChatStore(config.home, { attachments, isSidecar: isPlanFileName }),
         attachments,
         checkpoints,

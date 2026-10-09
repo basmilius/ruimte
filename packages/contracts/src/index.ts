@@ -423,6 +423,7 @@ export const REQUEST_SCHEMAS = {
     'chat.detach': AGENT_REQUEST_SCHEMAS['chat.detach'],
     'chat.send': AGENT_REQUEST_SCHEMAS['chat.send'],
     'chat.uiChoice': AGENT_REQUEST_SCHEMAS['chat.uiChoice'],
+    'ui.query': AGENT_REQUEST_SCHEMAS['ui.query'],
     'chat.unqueue': AGENT_REQUEST_SCHEMAS['chat.unqueue'],
     'chat.sendNow': AGENT_REQUEST_SCHEMAS['chat.sendNow'],
     'chat.cancel': AGENT_REQUEST_SCHEMAS['chat.cancel'],

@@ -208,6 +208,31 @@ export class AgentDatabases {
         return { connectionId: connection.id, schema: resolved };
     }
 
+    async captureUiAccess(place: DatabasePlace): Promise<{ id: string; target: string; access: DatabaseAgentAccess }[]> {
+        if (place.folder === this.options.scratchFolder) {
+            return [];
+        }
+        const levels = this.options.access.levels(place.projectId);
+        return (await this.connectionsOf(place)).map((connection) => ({
+            id: connection.id,
+            target: JSON.stringify([connectionTarget(connection.config), this.defaultSchema(connection)]),
+            access: levels[connection.id] ?? 'read'
+        }));
+    }
+
+    async authorizeUiRead(place: DatabasePlace, wanted: string, grants: readonly { id: string; target: string; access: DatabaseAgentAccess }[]): Promise<void> {
+        const connection = await this.named(place, wanted);
+        const original = grants.find((grant) => grant.id === connection.id);
+        const target = JSON.stringify([connectionTarget(connection.config), this.defaultSchema(connection)]);
+        if (!original || original.access === 'off' || original.target !== target || this.options.access.levelOf(place.projectId, connection.id) === 'off') {
+            refuse('database-access-off', 'This database was not readable by the writer or is no longer readable.');
+        }
+        const { password } = await this.configFor(place, connection, 'read');
+        if (connection.config.engine === 'mysql' && !password) {
+            refuse('database-locked', 'This machine no longer holds the password for this database.');
+        }
+    }
+
     async tables(place: DatabasePlace, caller: string, wanted: string, schema: string | null): Promise<AgentTables> {
         return this.withSession(place, caller, wanted, 'read', async ({ connection, call }) => {
             const { schemas } = await call<{ schemas: SchemaInfo[] }>('schemas', {});
@@ -230,17 +255,36 @@ export class AgentDatabases {
         });
     }
 
-    async query(place: DatabasePlace, caller: string, wanted: string, sql: string, options: { schema: string | null; limit: number }): Promise<AgentQuery> {
-        return this.withSession(place, caller, wanted, 'read', async ({ connection, call }) => {
-            const result = await call<RowsResult>('page', {
-                sql,
-                offset: 0,
-                limit: options.limit,
-                cellLimit: AGENT_CELL_LIMIT,
-                ...(options.schema === null ? {} : { schema: options.schema })
-            });
-            return { connection: connection.name, schema: options.schema ?? this.defaultSchema(connection), result };
-        });
+    async query(
+        place: DatabasePlace,
+        caller: string,
+        wanted: string,
+        sql: string,
+        options: {
+            schema: string | null;
+            limit: number;
+            signal?: AbortSignal;
+            uiAccess?: readonly { id: string; target: string; access: DatabaseAgentAccess }[];
+        }
+    ): Promise<AgentQuery> {
+        return this.withSession(
+            place,
+            caller,
+            wanted,
+            'read',
+            async ({ connection, call }) => {
+                const result = await call<RowsResult>('page', {
+                    sql,
+                    offset: 0,
+                    limit: options.limit,
+                    cellLimit: AGENT_CELL_LIMIT,
+                    ...(options.schema === null ? {} : { schema: options.schema })
+                });
+                return { connection: connection.name, schema: options.schema ?? this.defaultSchema(connection), result };
+            },
+            options.signal,
+            options.uiAccess
+        );
     }
 
     async execute(place: DatabasePlace, caller: string, wanted: string, sql: string, schema: string | null): Promise<AgentExecution> {
@@ -365,7 +409,9 @@ export class AgentDatabases {
         caller: string,
         wanted: string,
         mode: 'read' | 'write',
-        work: (session: { connection: DatabaseConnection; call: <R>(method: string, params: Record<string, unknown>) => Promise<R> }) => Promise<T>
+        work: (session: { connection: DatabaseConnection; call: <R>(method: string, params: Record<string, unknown>) => Promise<R> }) => Promise<T>,
+        signal?: AbortSignal,
+        uiAccess?: readonly { id: string; target: string; access: DatabaseAgentAccess }[]
     ): Promise<T> {
         const connection = await this.named(place, wanted);
         const access = this.options.access.levelOf(place.projectId, connection.id);
@@ -381,8 +427,22 @@ export class AgentDatabases {
                 `Agents may only read ${connection.name}; a person on this machine can allow writing in the connections dialog of the app, or run the statements themselves`
             );
         }
+        if (uiAccess) {
+            const original = uiAccess.find((grant) => grant.id === connection.id);
+            const target = JSON.stringify([connectionTarget(connection.config), this.defaultSchema(connection)]);
+            if (!original || original.access === 'off' || original.target !== target) {
+                refuse('database-access-off', 'The database target is outside the writer’s original access.');
+            }
+        }
         const { config, password } = await this.configFor(place, connection, mode);
+        if (uiAccess && connection.config.engine === 'mysql' && !password) {
+            refuse('database-locked', 'This machine no longer holds the password for this database.');
+        }
         const owner = `agent:${caller}:${randomUUID()}`;
+        const abort = () => {
+            void this.options.service.release(owner);
+        };
+        signal?.addEventListener('abort', abort, { once: true });
         let requests = 0;
         let timedOut = false;
         const timer = setTimeout(() => {
@@ -390,6 +450,9 @@ export class AgentDatabases {
             void this.options.service.release(owner);
         }, this.limitMs);
         const send = async <R>(method: string, params: Record<string, unknown>): Promise<R> => {
+            if (signal?.aborted) {
+                refuse('database-timeout', 'This UI query was stopped.');
+            }
             const answer = await this.options.service.handle({ id: `a${++requests}`, method, params }, owner);
             if (answer.ok) {
                 return answer.result as R;
@@ -410,6 +473,7 @@ export class AgentDatabases {
             return await work({ connection, call: (method, params) => send(method, { session, ...params }) });
         } finally {
             clearTimeout(timer);
+            signal?.removeEventListener('abort', abort);
             await this.options.service.release(owner);
         }
     }

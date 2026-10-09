@@ -156,7 +156,18 @@ export function renderTranscript(items: ChatItem[]): string {
                 break;
             case 'assistant':
                 if (item.text.trim() !== '') {
-                    lines.push('## Assistant', '', uiFallbackText(item.text, item.ui ?? []), '');
+                    lines.push(
+                        '## Assistant',
+                        '',
+                        uiFallbackText(
+                            item.text,
+                            (item.ui ?? []).map((block) => {
+                                const frozen = item.uiQueries?.blocks[block.id];
+                                return frozen && frozen.revision === block.revision ? { ...block, fallback: frozen.fallback } : block;
+                            })
+                        ),
+                        ''
+                    );
                 }
                 break;
             case 'tool': {

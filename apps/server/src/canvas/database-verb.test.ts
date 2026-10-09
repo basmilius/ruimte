@@ -431,3 +431,41 @@ describe('ruimte-context database', () => {
         expect(query.some((line) => line.startsWith('flag\t--show TITLE\toptional\tAlso shows the rows as a table above your reply'))).toBe(true);
     });
 });
+
+describe('UI database access', () => {
+    const place = () => ({ projectId: 'p1', folder });
+    test('an originally denied connection stays denied after a later grant', async () => {
+        await access.set('p1', 'local', 'off');
+        const grants = await agents.captureUiAccess(place());
+        await access.set('p1', 'local', 'read');
+        await expect(agents.authorizeUiRead(place(), 'local', grants)).rejects.toThrow('not readable');
+    });
+    test('a changed target or a connection added later cannot use the captured rights', async () => {
+        const grants = await agents.captureUiAccess(place());
+        connections[0] = shop({ host: 'other.example' });
+        await expect(agents.authorizeUiRead(place(), 'shop', grants)).rejects.toThrow('not readable');
+        connections.push({ id: 'new', name: 'New', shared: true, config: { engine: 'sqlite', path: join(folder, 'data', 'local.sqlite') } });
+        await expect(agents.authorizeUiRead(place(), 'new', grants)).rejects.toThrow('not readable');
+    });
+    test('a live read requires the in-memory password even when a stored file contains one', async () => {
+        const grants = await agents.captureUiAccess(place());
+        await expect(agents.authorizeUiRead(place(), 'shop', grants)).rejects.toThrow('password');
+        passwords.hand('p1', 'client-1', [{ connectionId: 'shop', target: connectionTarget(connections[0]!.config), password: 'secret' }]);
+        await agents.authorizeUiRead(place(), 'shop', grants);
+        passwords.forget('p1');
+        await expect(agents.authorizeUiRead(place(), 'shop', grants)).rejects.toThrow('password');
+    });
+    test('the read itself rechecks its captured target and current access', async () => {
+        const grants = await agents.captureUiAccess(place());
+        await access.set('p1', 'local', 'off');
+        await expect(agents.query(place(), 'chat-1', 'local', 'SELECT 1', { schema: null, limit: 1, uiAccess: grants })).rejects.toThrow('off');
+        await access.set('p1', 'local', 'read');
+        await expect(agents.query(place(), 'chat-1', 'local', 'SELECT 1', { schema: null, limit: 1, uiAccess: [] })).rejects.toThrow('original access');
+    });
+    test('an aborted UI read never opens a helper session', async () => {
+        const controller = new AbortController();
+        controller.abort();
+        await expect(agents.query(place(), 'chat-1', 'local', 'SELECT 1', { schema: null, limit: 1, signal: controller.signal })).rejects.toThrow('stopped');
+        expect(helper.written).toEqual([]);
+    });
+});

@@ -10660,7 +10660,8 @@
                                 "type": "string"
                               },
                               "additionalProperties": {}
-                            }
+                            },
+                            "expression": {}
                           },
                           "required": [
                             "source",
@@ -10792,6 +10793,76 @@
                       "turnId"
                     ]
                   }
+                },
+                "uiQueries": {
+                  "type": "object",
+                  "properties": {
+                    "authorChatId": {
+                      "type": "string"
+                    },
+                    "access": {},
+                    "blocks": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "revision": {
+                            "type": "string"
+                          },
+                          "readings": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "fresh",
+                                    "failed",
+                                    "refused"
+                                  ]
+                                },
+                                "value": {},
+                                "readId": {
+                                  "type": "string"
+                                },
+                                "readAt": {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "state",
+                                "readAt"
+                              ]
+                            }
+                          },
+                          "fallback": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "revision",
+                          "readings",
+                          "fallback"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "authorChatId",
+                    "access",
+                    "blocks"
+                  ]
                 },
                 "phase": {
                   "type": "string"
@@ -12658,7 +12729,8 @@
                                 "type": "string"
                               },
                               "additionalProperties": {}
-                            }
+                            },
+                            "expression": {}
                           },
                           "required": [
                             "source",
@@ -12790,6 +12862,76 @@
                       "turnId"
                     ]
                   }
+                },
+                "uiQueries": {
+                  "type": "object",
+                  "properties": {
+                    "authorChatId": {
+                      "type": "string"
+                    },
+                    "access": {},
+                    "blocks": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "revision": {
+                            "type": "string"
+                          },
+                          "readings": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "fresh",
+                                    "failed",
+                                    "refused"
+                                  ]
+                                },
+                                "value": {},
+                                "readId": {
+                                  "type": "string"
+                                },
+                                "readAt": {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "state",
+                                "readAt"
+                              ]
+                            }
+                          },
+                          "fallback": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "revision",
+                          "readings",
+                          "fallback"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "authorChatId",
+                    "access",
+                    "blocks"
+                  ]
                 },
                 "phase": {
                   "type": "string"
@@ -13966,7 +14108,8 @@
                                 "type": "string"
                               },
                               "additionalProperties": {}
-                            }
+                            },
+                            "expression": {}
                           },
                           "required": [
                             "source",
@@ -14098,6 +14241,76 @@
                       "turnId"
                     ]
                   }
+                },
+                "uiQueries": {
+                  "type": "object",
+                  "properties": {
+                    "authorChatId": {
+                      "type": "string"
+                    },
+                    "access": {},
+                    "blocks": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "revision": {
+                            "type": "string"
+                          },
+                          "readings": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "fresh",
+                                    "failed",
+                                    "refused"
+                                  ]
+                                },
+                                "value": {},
+                                "readId": {
+                                  "type": "string"
+                                },
+                                "readAt": {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "state",
+                                "readAt"
+                              ]
+                            }
+                          },
+                          "fallback": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "revision",
+                          "readings",
+                          "fallback"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "authorChatId",
+                    "access",
+                    "blocks"
+                  ]
                 },
                 "phase": {
                   "type": "string"
@@ -15268,7 +15481,8 @@
                                         "type": "string"
                                       },
                                       "additionalProperties": {}
-                                    }
+                                    },
+                                    "expression": {}
                                   },
                                   "required": [
                                     "source",
@@ -15400,6 +15614,76 @@
                               "turnId"
                             ]
                           }
+                        },
+                        "uiQueries": {
+                          "type": "object",
+                          "properties": {
+                            "authorChatId": {
+                              "type": "string"
+                            },
+                            "access": {},
+                            "blocks": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                  "revision": {
+                                    "type": "string"
+                                  },
+                                  "readings": {
+                                    "type": "object",
+                                    "propertyNames": {
+                                      "type": "string"
+                                    },
+                                    "additionalProperties": {
+                                      "type": "object",
+                                      "properties": {
+                                        "state": {
+                                          "type": "string",
+                                          "enum": [
+                                            "fresh",
+                                            "failed",
+                                            "refused"
+                                          ]
+                                        },
+                                        "value": {},
+                                        "readId": {
+                                          "type": "string"
+                                        },
+                                        "readAt": {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        "reason": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "state",
+                                        "readAt"
+                                      ]
+                                    }
+                                  },
+                                  "fallback": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "revision",
+                                  "readings",
+                                  "fallback"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "authorChatId",
+                            "access",
+                            "blocks"
+                          ]
                         },
                         "phase": {
                           "type": "string"
@@ -16408,7 +16692,8 @@
                                 "type": "string"
                               },
                               "additionalProperties": {}
-                            }
+                            },
+                            "expression": {}
                           },
                           "required": [
                             "source",
@@ -16472,6 +16757,76 @@
                       "fallback"
                     ]
                   }
+                },
+                "uiQueries": {
+                  "type": "object",
+                  "properties": {
+                    "authorChatId": {
+                      "type": "string"
+                    },
+                    "access": {},
+                    "blocks": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "revision": {
+                            "type": "string"
+                          },
+                          "readings": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "fresh",
+                                    "failed",
+                                    "refused"
+                                  ]
+                                },
+                                "value": {},
+                                "readId": {
+                                  "type": "string"
+                                },
+                                "readAt": {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "state",
+                                "readAt"
+                              ]
+                            }
+                          },
+                          "fallback": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "revision",
+                          "readings",
+                          "fallback"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "authorChatId",
+                    "access",
+                    "blocks"
+                  ]
                 },
                 "textLength": {
                   "type": "integer",
@@ -17898,7 +18253,8 @@
                                           "type": "string"
                                         },
                                         "additionalProperties": {}
-                                      }
+                                      },
+                                      "expression": {}
                                     },
                                     "required": [
                                       "source",
@@ -18030,6 +18386,76 @@
                                 "turnId"
                               ]
                             }
+                          },
+                          "uiQueries": {
+                            "type": "object",
+                            "properties": {
+                              "authorChatId": {
+                                "type": "string"
+                              },
+                              "access": {},
+                              "blocks": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "revision": {
+                                      "type": "string"
+                                    },
+                                    "readings": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string"
+                                      },
+                                      "additionalProperties": {
+                                        "type": "object",
+                                        "properties": {
+                                          "state": {
+                                            "type": "string",
+                                            "enum": [
+                                              "fresh",
+                                              "failed",
+                                              "refused"
+                                            ]
+                                          },
+                                          "value": {},
+                                          "readId": {
+                                            "type": "string"
+                                          },
+                                          "readAt": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "reason": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "state",
+                                          "readAt"
+                                        ]
+                                      }
+                                    },
+                                    "fallback": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "revision",
+                                    "readings",
+                                    "fallback"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "authorChatId",
+                              "access",
+                              "blocks"
+                            ]
                           },
                           "phase": {
                             "type": "string"
@@ -19283,6 +19709,17 @@
         "minLength": 1,
         "maxLength": 256
       },
+      "reads": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "additionalProperties": {
+          "type": "string",
+          "maxLength": 128
+        }
+      },
       "values": {
         "type": "object",
         "propertyNames": {
@@ -19314,6 +19751,80 @@
     },
     "required": [
       "queued"
+    ]
+  },
+  "request.ui.query.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "itemId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "blockId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "revision": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "values": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "additionalProperties": {}
+      }
+    },
+    "required": [
+      "chatId",
+      "itemId",
+      "blockId",
+      "revision",
+      "query"
+    ]
+  },
+  "request.ui.query.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "state": {
+        "type": "string",
+        "enum": [
+          "fresh",
+          "failed",
+          "refused"
+        ]
+      },
+      "value": {},
+      "readId": {
+        "type": "string"
+      },
+      "readAt": {
+        "type": "number",
+        "minimum": 0
+      },
+      "reason": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "state",
+      "readAt"
     ]
   },
   "request.chat.unqueue.payload": {
@@ -22288,7 +22799,8 @@
                                 "type": "string"
                               },
                               "additionalProperties": {}
-                            }
+                            },
+                            "expression": {}
                           },
                           "required": [
                             "source",
@@ -22420,6 +22932,76 @@
                       "turnId"
                     ]
                   }
+                },
+                "uiQueries": {
+                  "type": "object",
+                  "properties": {
+                    "authorChatId": {
+                      "type": "string"
+                    },
+                    "access": {},
+                    "blocks": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "revision": {
+                            "type": "string"
+                          },
+                          "readings": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "fresh",
+                                    "failed",
+                                    "refused"
+                                  ]
+                                },
+                                "value": {},
+                                "readId": {
+                                  "type": "string"
+                                },
+                                "readAt": {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "state",
+                                "readAt"
+                              ]
+                            }
+                          },
+                          "fallback": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "revision",
+                          "readings",
+                          "fallback"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "authorChatId",
+                    "access",
+                    "blocks"
+                  ]
                 },
                 "phase": {
                   "type": "string"
@@ -50090,7 +50672,8 @@
                                       "type": "string"
                                     },
                                     "additionalProperties": {}
-                                  }
+                                  },
+                                  "expression": {}
                                 },
                                 "required": [
                                   "source",
@@ -50222,6 +50805,76 @@
                             "turnId"
                           ]
                         }
+                      },
+                      "uiQueries": {
+                        "type": "object",
+                        "properties": {
+                          "authorChatId": {
+                            "type": "string"
+                          },
+                          "access": {},
+                          "blocks": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "revision": {
+                                  "type": "string"
+                                },
+                                "readings": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {
+                                    "type": "object",
+                                    "properties": {
+                                      "state": {
+                                        "type": "string",
+                                        "enum": [
+                                          "fresh",
+                                          "failed",
+                                          "refused"
+                                        ]
+                                      },
+                                      "value": {},
+                                      "readId": {
+                                        "type": "string"
+                                      },
+                                      "readAt": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      "reason": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "state",
+                                      "readAt"
+                                    ]
+                                  }
+                                },
+                                "fallback": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "revision",
+                                "readings",
+                                "fallback"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "authorChatId",
+                          "access",
+                          "blocks"
+                        ]
                       },
                       "phase": {
                         "type": "string"
@@ -51230,7 +51883,8 @@
                               "type": "string"
                             },
                             "additionalProperties": {}
-                          }
+                          },
+                          "expression": {}
                         },
                         "required": [
                           "source",
@@ -51294,6 +51948,76 @@
                     "fallback"
                   ]
                 }
+              },
+              "uiQueries": {
+                "type": "object",
+                "properties": {
+                  "authorChatId": {
+                    "type": "string"
+                  },
+                  "access": {},
+                  "blocks": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "revision": {
+                          "type": "string"
+                        },
+                        "readings": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "fresh",
+                                  "failed",
+                                  "refused"
+                                ]
+                              },
+                              "value": {},
+                              "readId": {
+                                "type": "string"
+                              },
+                              "readAt": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "reason": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "readAt"
+                            ]
+                          }
+                        },
+                        "fallback": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "revision",
+                        "readings",
+                        "fallback"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "authorChatId",
+                  "access",
+                  "blocks"
+                ]
               },
               "textLength": {
                 "type": "integer",
@@ -52720,7 +53444,8 @@
                                         "type": "string"
                                       },
                                       "additionalProperties": {}
-                                    }
+                                    },
+                                    "expression": {}
                                   },
                                   "required": [
                                     "source",
@@ -52852,6 +53577,76 @@
                               "turnId"
                             ]
                           }
+                        },
+                        "uiQueries": {
+                          "type": "object",
+                          "properties": {
+                            "authorChatId": {
+                              "type": "string"
+                            },
+                            "access": {},
+                            "blocks": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                  "revision": {
+                                    "type": "string"
+                                  },
+                                  "readings": {
+                                    "type": "object",
+                                    "propertyNames": {
+                                      "type": "string"
+                                    },
+                                    "additionalProperties": {
+                                      "type": "object",
+                                      "properties": {
+                                        "state": {
+                                          "type": "string",
+                                          "enum": [
+                                            "fresh",
+                                            "failed",
+                                            "refused"
+                                          ]
+                                        },
+                                        "value": {},
+                                        "readId": {
+                                          "type": "string"
+                                        },
+                                        "readAt": {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        "reason": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "state",
+                                        "readAt"
+                                      ]
+                                    }
+                                  },
+                                  "fallback": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "revision",
+                                  "readings",
+                                  "fallback"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "authorChatId",
+                            "access",
+                            "blocks"
+                          ]
                         },
                         "phase": {
                           "type": "string"
