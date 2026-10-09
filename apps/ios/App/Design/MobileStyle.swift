@@ -39,6 +39,11 @@ enum MobileStyle {
     static let chartContextTools = Color(uiColor: adaptive(RuimteColors.chartContextTools))
     static let chartContextFiles = Color(uiColor: adaptive(RuimteColors.chartContextFiles))
     static let chartContextConversation = Color(uiColor: adaptive(RuimteColors.chartContextConversation))
+    static let chart2 = Color(uiColor: adaptive(RuimteColors.chart2))
+    static let chart3 = Color(uiColor: adaptive(RuimteColors.chart3))
+    static let chart4 = Color(uiColor: adaptive(RuimteColors.chart4))
+    static let chart5 = Color(uiColor: adaptive(RuimteColors.chart5))
+    static let chart6 = Color(uiColor: adaptive(RuimteColors.chart6))
 
     private static func adaptive(_ token: RuimteColorToken) -> UIColor {
         UIColor { traits in

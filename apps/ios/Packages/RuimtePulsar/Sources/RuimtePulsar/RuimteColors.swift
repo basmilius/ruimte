@@ -49,6 +49,12 @@ public enum RuimteColors {
     public static let chartContextTools = RuimteColorToken(light: 0x4d7ce6, dark: 0x8aa7f5)
     public static let chartContextFiles = RuimteColorToken(light: 0x9a63e0, dark: 0xb98af3)
     public static let chartContextConversation = RuimteColorToken(light: 0x2f9e5a, dark: 0x6dd08b)
+    /// The series of a chart after the first, which is the accent, as `--chart-2` to `--chart-6` order them.
+    public static let chart2 = RuimteColorToken(light: 0xeb6834, dark: 0xd95926)
+    public static let chart3 = RuimteColorToken(light: 0x1baf7a, dark: 0x199e70)
+    public static let chart4 = RuimteColorToken(light: 0xeda100, dark: 0xc98500)
+    public static let chart5 = RuimteColorToken(light: 0xe87ba4, dark: 0xd55181)
+    public static let chart6 = RuimteColorToken(light: 0x008300, dark: 0x008300)
     /// The ground a Live Activity puts under its own card, which the system never lightens.
     public static let activityTint = RuimteColorToken(light: 0x1b1b21, dark: 0x1b1b21)
 

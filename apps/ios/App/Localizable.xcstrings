@@ -21369,6 +21369,695 @@
           }
         }
       }
+    },
+    "%@ from %@" : {
+      "comment" : "A change of a number and the value it changed from",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ from %2$@"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ vanaf %2$@"
+          }
+        }
+      }
+    },
+    "%@ of %@" : {
+      "comment" : "Progress: a value of its maximum",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ of %2$@"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ van %2$@"
+          }
+        }
+      }
+    },
+    "%lld categories, highest %@ for %@ at %@" : {
+      "comment" : "What VoiceOver reads for a chart with several series: the count of categories, the series, the category and the value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@count@, highest %2$@ for %3$@ at %4$@"
+          },
+          "substitutions" : {
+            "count" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg category"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg categories"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@count@, hoogste %2$@ bij %3$@ met %4$@"
+          },
+          "substitutions" : {
+            "count" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg categorie"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg categorieën"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld fixes" : {
+      "comment" : "Repairs the block compiler made",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@count@"
+          },
+          "substitutions" : {
+            "count" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg fix"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg fixes"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@count@"
+          },
+          "substitutions" : {
+            "count" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg correctie"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg correcties"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld values, highest %@ at %@" : {
+      "comment" : "What VoiceOver reads for a chart: the count of values, the category with the highest value and that value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@count@, highest %2$@ at %3$@"
+          },
+          "substitutions" : {
+            "count" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg value"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg values"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@count@, hoogste %2$@ met %3$@"
+          },
+          "substitutions" : {
+            "count" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg waarde"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg waarden"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Answered with “%@”" : {
+      "comment" : "%@ is the label of the choice that answered a block",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beantwoord met “%@”"
+          }
+        }
+      }
+    },
+    "Available when the reply is done" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beschikbaar zodra het antwoord klaar is"
+          }
+        }
+      }
+    },
+    "Choices" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keuzes"
+          }
+        }
+      }
+    },
+    "Choices are ready" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De keuzes staan klaar"
+          }
+        }
+      }
+    },
+    "Chose “%@”" : {
+      "comment" : "%@ is the label of the choice a message sent",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gekozen: “%@”"
+          }
+        }
+      }
+    },
+    "Chose “%@” on the reply of %@" : {
+      "comment" : "A choice from an older reply: its label and the time of that reply",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chose “%1$@” on the reply of %2$@"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gekozen: “%1$@”, bij het antwoord van %2$@"
+          }
+        }
+      }
+    },
+    "Copy prompt" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prompt kopiëren"
+          }
+        }
+      }
+    },
+    "Copy text" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekst kopiëren"
+          }
+        }
+      }
+    },
+    "Could not draw this part" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit deel kon niet getekend worden"
+          }
+        }
+      }
+    },
+    "Could not read %@" : {
+      "comment" : "%@ is the source a live block reads, such as git.status",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ lezen lukte niet"
+          }
+        }
+      }
+    },
+    "Could not send. Try again." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versturen lukte niet. Probeer het opnieuw."
+          }
+        }
+      }
+    },
+    "Generated image" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gegenereerde afbeelding"
+          }
+        }
+      }
+    },
+    "Generating image" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afbeelding wordt gemaakt"
+          }
+        }
+      }
+    },
+    "Image actions" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acties voor de afbeelding"
+          }
+        }
+      }
+    },
+    "Image generation failed" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afbeelding maken mislukt"
+          }
+        }
+      }
+    },
+    "Interactive block" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interactief blok"
+          }
+        }
+      }
+    },
+    "Label" : {
+      "comment" : "The axis of a chart that holds the categories",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Label"
+          }
+        }
+      }
+    },
+    "Live" : {
+      "comment" : "A block that reads live data",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live"
+          }
+        }
+      }
+    },
+    "Not allowed to read %@" : {
+      "comment" : "%@ is the source a live block reads",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geen toegang tot %@"
+          }
+        }
+      }
+    },
+    "Not read" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niet gelezen"
+          }
+        }
+      }
+    },
+    "Opens in the project" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opent in het project"
+          }
+        }
+      }
+    },
+    "Options" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opties"
+          }
+        }
+      }
+    },
+    "Outside the project, shown as text" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buiten het project, als tekst getoond"
+          }
+        }
+      }
+    },
+    "Progress" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voortgang"
+          }
+        }
+      }
+    },
+    "Prompt: %@" : {
+      "comment" : "%@ is the prompt an image was generated from",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prompt: %@"
+          }
+        }
+      }
+    },
+    "Queued" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In de wachtrij"
+          }
+        }
+      }
+    },
+    "read %@" : {
+      "comment" : "%@ is how long ago, such as 12 sec. ago",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gelezen %@"
+          }
+        }
+      }
+    },
+    "Reads %@" : {
+      "comment" : "%@ lists the sources a live block reads",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leest %@"
+          }
+        }
+      }
+    },
+    "Save to project…" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opslaan in project…"
+          }
+        }
+      }
+    },
+    "Saved" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opgeslagen"
+          }
+        }
+      }
+    },
+    "Saved to %@" : {
+      "comment" : "%@ is the path in the project",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opgeslagen in %@"
+          }
+        }
+      }
+    },
+    "Sent" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verstuurd"
+          }
+        }
+      }
+    },
+    "Show all %@ rows" : {
+      "comment" : "%@ is the number of rows of a table",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle %@ rijen tonen"
+          }
+        }
+      }
+    },
+    "Shown as text" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als tekst getoond"
+          }
+        }
+      }
+    },
+    "Sources" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bronnen"
+          }
+        }
+      }
+    },
+    "The block could not be read" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het blok kon niet gelezen worden"
+          }
+        }
+      }
+    },
+    "The block is too large to draw" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het blok is te groot om te tekenen"
+          }
+        }
+      }
+    },
+    "The image came back empty" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De afbeelding kwam leeg terug"
+          }
+        }
+      }
+    },
+    "The image is larger than %@" : {
+      "comment" : "%@ is a size, such as 10 MB",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De afbeelding is groter dan %@"
+          }
+        }
+      }
+    },
+    "The image is not available" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De afbeelding is niet beschikbaar"
+          }
+        }
+      }
+    },
+    "The result is not an image" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het resultaat is geen afbeelding"
+          }
+        }
+      }
+    },
+    "This version cannot draw %@" : {
+      "comment" : "%@ is the name of a component, such as Gantt",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze versie kan %@ niet tekenen"
+          }
+        }
+      }
+    },
+    "transparent" : {
+      "comment" : "An image with a transparent background",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "transparant"
+          }
+        }
+      }
+    },
+    "Values" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waarden"
+          }
+        }
+      }
+    },
+    "Waiting" : {
+      "comment" : "A step that has not started",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wacht"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
