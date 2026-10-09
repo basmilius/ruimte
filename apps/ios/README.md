@@ -605,8 +605,10 @@ copying from the image menu. File, diff, commit and node chips open the existing
 after the daemon resolves the link again. Local presentation state includes the machine in its
 cache key. `ImageSaveModel` checks the selected destination, browses only child folders and sends
 an exact checked revision only for explicit replacement. Name changes and cancellation discard
-late checks; a pending write blocks changes and closing. The native save sheet and image-row host
-callback still need to be connected.
+late checks; a pending write blocks changes and closing. The image row opens Claude's native save
+sheet through a per-chat `ImageSaveCoordinator`, so cell reuse preserves the destination and the
+original attachment identity. Cancelling or saving completes the caller once; a target read that
+arrives after leaving the screen cannot reopen its sheet.
 
 Regenerate the interpreter and parity fixtures with `bun run --cwd packages/contracts generate:swift`.
 `bun run check` checks these generated files too. Run the interpreter and controller tests on the Mac

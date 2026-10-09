@@ -99,6 +99,9 @@ final class ChatModel {
                 UiBlockModel(chatID: chatID, itemID: itemID, block: block) { type, payload in
                     try await client.request(type, payload: payload)
                 }
+            },
+            imageSave: ImageSaveCoordinator(chatID: chatID) { type, payload in
+                try await client.request(type, payload: payload)
             })
         self.machineID = machineID
         composition = ChatComposition(machineID: machineID, chatID: chatID, root: draftRoot)

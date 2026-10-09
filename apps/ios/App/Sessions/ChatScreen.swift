@@ -178,6 +178,7 @@ struct ChatScreen: View {
             }
         }
         .modifier(ChatVisualDialogs(model: model))
+        .modifier(ChatImageSaveRouting(coordinator: model.uiModels.imageSave))
         .mobileSheet(
             item: Binding(
                 get: { model.presentation.forkRequest }, set: { model.presentation.forkRequest = $0 })
@@ -248,6 +249,7 @@ struct ChatScreen: View {
         .onDisappear {
             chatPresentationLog.notice("chat disappeared \(model.chatID, privacy: .public)")
             visible = false
+            model.uiModels.imageSave.close()
             if holdingChat {
                 holdingChat = false
                 if let machineSession { machineSession.releaseChat(model) } else { model.stop() }

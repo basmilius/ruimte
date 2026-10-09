@@ -1214,12 +1214,22 @@ private struct ChatTimelineRow: View {
     let chatID: String
     let presentation: ChatPresentation?
     @Environment(\.chatUiModels) private var uiModels
+    @Environment(\.chatContent) private var context
     private var kind: String { item["kind"]?.stringValue ?? "" }
     var body: some View {
         content
             .frame(maxWidth: 720, alignment: kind == "user" ? .trailing : .leading)
             .frame(maxWidth: .infinity)
             .tint(MobileStyle.accent)
+    }
+
+    private var imageSave: (@MainActor (JSONValue) async throws -> String?)? {
+        guard let uiModels, uiModels.chatID == chatID, context?.workspace != nil, context?.connected == true else {
+            return nil
+        }
+        return { attachment in
+            try await uiModels.imageSave.open(attachmentID: attachment.text("id"))
+        }
     }
 
     private var content: some View {
@@ -1246,7 +1256,7 @@ private struct ChatTimelineRow: View {
                         .accessibilityAddTraits(.isHeader)
                     MarkdownMessage(text: report)
                 } else if item.text("name") == "ImageGeneration" {
-                    GeneratedImageRow(item: item)
+                    GeneratedImageRow(item: item, saveToProject: imageSave)
                 } else {
                     ChatToolRow(item: item)
                 }

@@ -20,6 +20,22 @@ struct ChatUiModels {
     let scopeID: String
     let chatID: String
     let cache: UiBlockModelCache
+    let imageSave: ImageSaveCoordinator
+}
+
+struct ChatImageSaveRouting: ViewModifier {
+    let coordinator: ImageSaveCoordinator
+    func body(content: Content) -> some View {
+        content.mobileSheet(
+            isPresented: Binding(
+                get: { coordinator.current != nil },
+                set: { if !$0 { coordinator.close() } })
+        ) {
+            if let model = coordinator.current {
+                GeneratedImageSaveDialog(model: model)
+            }
+        }
+    }
 }
 
 extension EnvironmentValues {
