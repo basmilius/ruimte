@@ -28,7 +28,9 @@
         "folder": "Map",
         "name": "Naam",
         "exists": "{{name}} bestaat al in deze map",
-        "replace": "Vervangen"
+        "replace": "Vervangen",
+        "openFailed": "Afbeelding openen mislukt",
+        "saveFailed": "Afbeelding opslaan mislukt"
     },
     "login": {
         "title": "Inloggen bij {{account}}",

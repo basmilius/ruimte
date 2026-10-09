@@ -21533,6 +21533,106 @@
       "visuals"
     ]
   },
+  "request.chat.imageTarget.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "attachmentId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "chatId",
+      "attachmentId"
+    ]
+  },
+  "request.chat.imageTarget.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "folder": {
+        "type": "string"
+      },
+      "projectName": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "exists": {
+        "type": "boolean"
+      },
+      "revision": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "folder",
+      "projectName",
+      "name",
+      "exists",
+      "revision"
+    ]
+  },
+  "request.chat.saveImage.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "attachmentId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "replace": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "chatId",
+      "attachmentId",
+      "path"
+    ]
+  },
+  "request.chat.saveImage.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "size": {
+        "type": "number"
+      },
+      "mtime": {
+        "type": "number"
+      },
+      "path": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "size",
+      "mtime",
+      "path"
+    ]
+  },
   "request.skills.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

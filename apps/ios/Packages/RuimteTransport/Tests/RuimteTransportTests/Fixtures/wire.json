@@ -167,6 +167,8 @@
     "chat.renameBookmark",
     "chat.removeBookmark",
     "chat.removeVisual",
+    "chat.imageTarget",
+    "chat.saveImage",
     "skills.list",
     "provider.list",
     "accounts.list",

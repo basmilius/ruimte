@@ -28,7 +28,9 @@
         "folder": "Folder",
         "name": "Name",
         "exists": "{{name}} already exists in this folder",
-        "replace": "Replace"
+        "replace": "Replace",
+        "openFailed": "Could not open the image",
+        "saveFailed": "Could not save the image"
     },
     "login": {
         "title": "Log in to {{account}}",

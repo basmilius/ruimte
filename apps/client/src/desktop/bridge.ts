@@ -205,6 +205,8 @@ export interface DesktopBridge {
     /* A native save dialog for bytes the client made (an exported drawing). Optional for the same
        reason `onBrowserContextMenu` is; without it the client falls back to a browser download. */
     saveFile?(suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null>;
+    /* Opens a temporary image copy in the system viewer; older shells fall back to a download. */
+    openImage?(suggestedName: string, bytes: Uint8Array, mime: string): Promise<void>;
     /* Where a person wants a file written, chosen in a native save dialog that writes nothing itself.
        Optional for the same reason `onBrowserContextMenu` is; without it a database offers no export. */
     chooseSavePath?(request: SavePathRequest): Promise<string | null>;

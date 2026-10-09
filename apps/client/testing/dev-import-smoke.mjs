@@ -122,6 +122,22 @@ try {
             result.message = labels.exceptionDetails.exception?.description ?? labels.exceptionDetails.text;
         }
     }
+    if (process.argv[4] === 'image-save') {
+        const saved = await send(
+            'Runtime.evaluate',
+            {
+                expression: `import('/testing/image-save-probe.ts').then((probe) => probe.probeImageSave())`,
+                awaitPromise: true,
+                returnByValue: true
+            },
+            sessionId
+        );
+        result.saved = saved.result.value;
+        if (saved.exceptionDetails) {
+            result.ok = false;
+            result.message = saved.exceptionDetails.exception?.description ?? saved.exceptionDetails.text;
+        }
+    }
     console.log(JSON.stringify({ boot: boot.result?.value, probe: result }, null, 2));
     if (!result.ok) {
         process.exitCode = 1;

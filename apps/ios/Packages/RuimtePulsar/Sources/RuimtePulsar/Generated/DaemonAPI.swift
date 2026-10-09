@@ -75,6 +75,8 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `chatRenameBookmark` = "chat.renameBookmark"
     case `chatRemoveBookmark` = "chat.removeBookmark"
     case `chatRemoveVisual` = "chat.removeVisual"
+    case `chatImageTarget` = "chat.imageTarget"
+    case `chatSaveImage` = "chat.saveImage"
     case `skillsList` = "skills.list"
     case `providerList` = "provider.list"
     case `accountsList` = "accounts.list"

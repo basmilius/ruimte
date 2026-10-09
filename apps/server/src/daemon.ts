@@ -100,6 +100,8 @@ import { MachineUpdates, workEndedByInstall } from './power/machine-update.ts';
 import { BUILD, COMPILED as compiled, VERSION } from './version.ts';
 import { PAIRING_REMOVED, registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
+import { registerChatImageHandlers } from './handlers/chat-image.ts';
+import { ChatImageFiles } from './chat/image-files.ts';
 import { continueOn } from './chat/continue-on.ts';
 import { chatForkDeps, forkChat, readForkInfo } from './chat/fork.ts';
 import { withForkOrigin } from './context/fork-origin.ts';
@@ -890,6 +892,21 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         continueOn: (payload) => continueOn({ chats, fork: (fork) => forkChat(forkDeps, fork) }, payload)
     });
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
+    registerChatImageHandlers(
+        dispatcher,
+        new ChatImageFiles({
+            project: async (chatId, clientId) => {
+                const place = projects.index.locate(chatId);
+                if (place === null || place.folder === projects.scratchFolder || !(await projects.heldFolders(clientId)).includes(place.folder)) {
+                    return null;
+                }
+                const project = (await projects.known()).find((entry) => entry.projectId === place.projectId);
+                return project === undefined ? null : { folder: place.folder, name: project.name };
+            },
+            attachment: (chatId, attachmentId) => chats.findAttachment(chatId, attachmentId),
+            refusePath: (path) => machineHome.refuse(path)
+        })
+    );
     registerPlanHandlers(dispatcher, plans);
     registerProjectHandlers(dispatcher, projects, async (chatId) => (await chats.readChat(chatId))?.items.some((item) => item.kind === 'user') ?? false, {
         start: (payload) => chats.create(payload),

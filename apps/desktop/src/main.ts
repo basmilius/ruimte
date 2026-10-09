@@ -1,7 +1,7 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import { Socket } from 'node:net';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -28,6 +28,7 @@ import { type AgentActivity, type BackgroundServiceState, type KeepAwakeRequest,
 import { isWindowKey, isWindowView, totalActivity, windowUrl } from './app-windows';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { copyablePaths, fileClipboard, osClipboardFormat } from './file-clipboard';
+import { openImageCopy } from './open-image';
 import { allFilesLabel, databaseSecretFile, openDialogPlan, parseOpenPathRequest, parseSavePathRequest, parseSecret, parseSecretKey } from './database-bridge';
 import { editFrameOf, runGuestEdit } from './guest-edit';
 import { askDaemonWork, proveDaemon, type DaemonPort } from './daemon-proof';
@@ -915,6 +916,12 @@ handleFromApp('dialog:save-file', async (event, suggestedName: string, bytes: Ui
     }
     await writeFile(result.filePath, Buffer.from(bytes));
     return result.filePath;
+});
+
+const openedImagesFolder = join(app.getPath('temp'), `ruimte-images-${process.pid}-${randomBytes(8).toString('hex')}`);
+app.on('will-quit', () => void rm(openedImagesFolder, { recursive: true, force: true }).catch(() => undefined));
+handleFromApp('image:open', async (_event, suggestedName: string, bytes: Uint8Array, mime: string) => {
+    await openImageCopy(openedImagesFolder, suggestedName, bytes, mime, (path) => shell.openPath(path));
 });
 
 /* Where a database export goes. Only the path comes back: the machine writes the file, and only for a page on this computer. */

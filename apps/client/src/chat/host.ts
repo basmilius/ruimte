@@ -7,6 +7,7 @@ import { performAsPerson, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas/accents';
 import { searchFiles } from '@/chat/file-search';
+import { requestImageSave } from '@/chat/image-save';
 import { openLogin } from '@/chat/login';
 import { visualHostFor } from '@/chat/visuals';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
@@ -86,6 +87,48 @@ export function connectChatHost(): void {
                     throw new Error(i18next.t('agent-chat:composer.placeholder.disconnected'));
                 }
                 return readResource((piece) => readPiece(transport, piece), { kind: 'attachment', chatId, attachmentId });
+            },
+            open: (endpointId, chatId, attachmentId, suggestedName) => {
+                void (async () => {
+                    const transport = transportFor(endpointId);
+                    if (transport === null) {
+                        throw new Error(i18next.t('agent-chat:composer.placeholder.disconnected'));
+                    }
+                    const image = await readResource((piece) => readPiece(transport, piece), { kind: 'attachment', chatId, attachmentId });
+                    const bridge = desktop();
+                    if (bridge?.openImage) {
+                        await bridge.openImage(suggestedName, new Uint8Array(await image.arrayBuffer()), image.type);
+                    } else {
+                        const url = URL.createObjectURL(image);
+                        const anchor = document.createElement('a');
+                        anchor.href = url;
+                        anchor.download = suggestedName;
+                        anchor.click();
+                        URL.revokeObjectURL(url);
+                    }
+                })().catch((error: unknown) =>
+                    useToasts.getState().show({
+                        kind: 'error',
+                        title: i18next.t('chat:generatedImage.openFailed'),
+                        description: error instanceof Error ? error.message : String(error)
+                    })
+                );
+            },
+            saveToProject: async (endpointId, chatId, attachmentId) => {
+                try {
+                    const transport = transportFor(endpointId);
+                    if (transport === null) {
+                        throw new Error(i18next.t('agent-chat:composer.placeholder.disconnected'));
+                    }
+                    return await requestImageSave(transport, chatId, attachmentId);
+                } catch (error) {
+                    useToasts.getState().show({
+                        kind: 'error',
+                        title: i18next.t('chat:generatedImage.saveFailed'),
+                        description: error instanceof Error ? error.message : String(error)
+                    });
+                    return null;
+                }
             }
         },
         visuals: visualHostFor(window.location.origin, desktop, (url) => void window.open(url, '_blank', 'noopener,noreferrer')),

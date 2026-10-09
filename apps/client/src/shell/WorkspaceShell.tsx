@@ -11,6 +11,7 @@ import { CellOverlayLayer } from '@/shell/CellOverlay';
 import { startLaunchWatch } from '@/launches/watch';
 import { useLaunches } from '@/launches/state';
 import { ForkDialog } from '@/shell/ForkDialog';
+import { ImageSaveHost } from '@/chat/ImageSaveHost';
 import { LayoutDialog } from '@/shell/LayoutDialog';
 import { LeaveConflictDialog } from '@/shell/LeaveConflictDialog';
 import { MachineLostScreen } from '@/shell/MachineLostScreen';
@@ -182,6 +183,9 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                 <DatabaseConnectionsDialog />
             </ErrorBoundary>
             <ForkDialog />
+            <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
+                <ImageSaveHost />
+            </ErrorBoundary>
         </ConnectionProvider>
     );
 }

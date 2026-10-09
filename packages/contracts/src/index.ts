@@ -6,6 +6,7 @@ import {
 } from './terminal-prepare.ts';
 export * from './terminal-prepare.ts';
 import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS, EmptySchema } from '@adecore/agent-contracts/protocol';
+import { ChatImageTargetPayloadSchema, ChatImageTargetResultSchema, ChatImageSavePayloadSchema, ChatImageSaveResultSchema } from './chat-image.ts';
 import { ProjectSidebarResultSchema } from './project-sidebar.ts';
 import { z } from 'zod';
 import { SessionPortsResultSchema, SessionPortVerifyPayloadSchema, SessionPortVerifyResultSchema } from './session-ports.ts';
@@ -312,6 +313,7 @@ export * from './auth.ts';
 export * from './browser.ts';
 export * from './bytes.ts';
 export * from './chat.ts';
+export * from './chat-image.ts';
 export * from './computer.ts';
 export * from './context.ts';
 export * from './direct.ts';
@@ -442,6 +444,8 @@ export const REQUEST_SCHEMAS = {
     'chat.renameBookmark': AGENT_REQUEST_SCHEMAS['chat.renameBookmark'],
     'chat.removeBookmark': AGENT_REQUEST_SCHEMAS['chat.removeBookmark'],
     'chat.removeVisual': AGENT_REQUEST_SCHEMAS['chat.removeVisual'],
+    'chat.imageTarget': { payload: ChatImageTargetPayloadSchema, result: ChatImageTargetResultSchema },
+    'chat.saveImage': { payload: ChatImageSavePayloadSchema, result: ChatImageSaveResultSchema },
     'skills.list': AGENT_REQUEST_SCHEMAS['skills.list'],
     'provider.list': AGENT_REQUEST_SCHEMAS['provider.list'],
     'accounts.list': AGENT_REQUEST_SCHEMAS['accounts.list'],
