@@ -32,7 +32,8 @@ struct UiReplyView: View {
                     UiReplyBlock(
                         block: block, model: model(block), frozen: item["uiQueries"]?["blocks"]?[id],
                         answered: item["uiAnswers"]?[id],
-                        localKey: "\(chat?.chatID ?? "")\n\(item["id"]?.stringValue ?? "")\n\(id)")
+                        localKey:
+                            "\(chat?.scopeID ?? "")\n\(chat?.chatID ?? "")\n\(item["id"]?.stringValue ?? "")\n\(id)")
                 }
             }
         }

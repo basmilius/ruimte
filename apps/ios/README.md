@@ -601,7 +601,9 @@ The native chat timeline now passes a per-chat model cache to `UiReplyView`, whi
 compiled card between its surrounding prose. Connection and visibility drive live reads and
 choice availability. The original user message stays intact below `UiChoiceLine`. Generated
 images use their own row outside settled work folds, with attachment-backed preview and prompt
-copying from the image menu. Project navigation and project saving still need their host callbacks.
+copying from the image menu. File, diff, commit and node chips open the existing project pages
+after the daemon resolves the link again. Local presentation state includes the machine in its
+cache key. Project saving still needs its native host callback.
 
 Regenerate the interpreter and parity fixtures with `bun run --cwd packages/contracts generate:swift`.
 `bun run check` checks these generated files too. Run the interpreter and controller tests on the Mac

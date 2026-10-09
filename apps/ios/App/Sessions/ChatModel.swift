@@ -93,6 +93,7 @@ final class ChatModel {
         self.client = client
         self.chatID = chatID
         uiModels = ChatUiModels(
+            scopeID: machineID,
             chatID: chatID,
             cache: UiBlockModelCache { itemID, block in
                 UiBlockModel(chatID: chatID, itemID: itemID, block: block) { type, payload in

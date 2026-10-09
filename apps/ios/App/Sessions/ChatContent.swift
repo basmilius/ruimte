@@ -1,6 +1,7 @@
 import Foundation
 import ImageIO
 import QuickLook
+import RuimteIntelligentUI
 import RuimtePulsar
 import RuimteTransport
 import SwiftUI
@@ -10,9 +11,13 @@ struct ChatContentContext {
     let client: any MachineRequesting
     let chatID: String
     let cwd: String
+    var workspace: MobileWorkspace? = nil
+    var connected = false
+    var scopeID: String? = nil
 }
 
 struct ChatUiModels {
+    let scopeID: String
     let chatID: String
     let cache: UiBlockModelCache
 }
@@ -80,9 +85,11 @@ struct ChatFileReference: Identifiable, Equatable {
 struct ChatLinkRouting: ViewModifier {
     let context: ChatContentContext
     @State private var target: ChatFileReference?
+    @State private var uiTarget: UiLinkDestination?
     func body(content: Content) -> some View {
         content
             .environment(\.chatContent, context)
+            .environment(\.uiHost, host)
             .environment(
                 \.openURL,
                 OpenURLAction { url in
@@ -105,6 +112,49 @@ struct ChatLinkRouting: ViewModifier {
                     }
                 }
             }
+            .mobileSheet(isPresented: Binding(get: { uiTarget != nil }, set: { if !$0 { uiTarget = nil } })) {
+                if let uiTarget {
+                    NavigationStack {
+                        destination(uiTarget)
+                            .toolbar {
+                                ToolbarItem(placement: .cancellationAction) { Button("Done") { self.uiTarget = nil } }
+                            }
+                    }
+                }
+            }
+    }
+
+    private var host: UiHost {
+        var host = UiHost(projectID: context.workspace?.projectID, connected: context.connected)
+        if context.workspace != nil {
+            host.open = { uiTarget = $0 }
+        }
+        return host
+    }
+
+    @ViewBuilder private func destination(_ target: UiLinkDestination) -> some View {
+        switch target {
+        case .file(let path, let line):
+            FileContentPage(client: context.client, path: path, initialLine: line)
+        case .diff(let cwd, let path, let staged, let conflicted):
+            if conflicted {
+                GitConflictFilePage(client: context.client, session: GitConflictSession(cwd: cwd), path: path)
+            } else {
+                GitDiffPage(
+                    client: context.client, target: GitDiffTarget(cwd: cwd, path: path, staged: staged, commit: nil))
+            }
+        case .commit(let cwd, let sha):
+            GitDiffPage(client: context.client, target: GitDiffTarget(cwd: cwd, path: nil, staged: false, commit: sha))
+        case .node(let viewID, let nodeID):
+            if let workspace = context.workspace,
+                let view = workspace.views.first(where: { $0.stableID == viewID }),
+                let item = view.stableID == nodeID ? view : view.list("nodes").first(where: { $0.stableID == nodeID })
+            {
+                ProjectItemPage(workspace: workspace, item: item, showsProject: true, projectName: workspace.title)
+            } else {
+                ContentUnavailableView(String(localized: "This view was removed"), lucideIcon: "square-x")
+            }
+        }
     }
 }
 

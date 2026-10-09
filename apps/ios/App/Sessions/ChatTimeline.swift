@@ -14,6 +14,7 @@ struct ChatTimeline: UIViewControllerRepresentable {
     let client: any MachineRequesting
     let chatID: String
     var uiModels: ChatUiModels?
+    var workspace: MobileWorkspace?
     var topInset: CGFloat = 0
     var bottomInset: CGFloat = 0
     var composer: AnyView?
@@ -29,7 +30,8 @@ struct ChatTimeline: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> ChatTimelineController {
         chatPresentationLog.notice("timeline made for \(chatID, privacy: .public)")
-        return ChatTimelineController(client: client, chatID: chatID, presentation: presentation, uiModels: uiModels)
+        return ChatTimelineController(
+            client: client, chatID: chatID, presentation: presentation, uiModels: uiModels, workspace: workspace)
     }
 
     static func dismantleUIViewController(_ controller: ChatTimelineController, coordinator: ()) {
@@ -328,13 +330,18 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     private let client: any MachineRequesting
     private let chatID: String
     private let uiModels: ChatUiModels?
+    private let workspace: MobileWorkspace?
     private var presentation: ChatPresentation
-    init(client: any MachineRequesting, chatID: String, presentation: ChatPresentation, uiModels: ChatUiModels? = nil) {
+    init(
+        client: any MachineRequesting, chatID: String, presentation: ChatPresentation, uiModels: ChatUiModels? = nil,
+        workspace: MobileWorkspace? = nil
+    ) {
         self.presentation = presentation
         self.lastItemScrollCommand = presentation.scrollRequest
         self.client = client
         self.chatID = chatID
         self.uiModels = uiModels
+        self.workspace = workspace
         super.init(nibName: nil, bundle: nil)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is unavailable") }
@@ -412,35 +419,38 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
             [weak self] cell, _, id in
             guard let self, let item = self.items[id] else { return }
             cell.host(in: self) {
-                ChatEntryView(entry: item, presentation: self.presentation, client: self.client, chatID: self.chatID)
-                    .environment(\.chatUiModels, self.uiModels)
-                    .id(id)
-                    .environment(
-                        \.chatWillExpand,
-                        ChatWillExpandAction(id: id) { [weak self] expanding, headerOffset in
-                            guard let self else { return }
-                            let ids = self.source.snapshot().itemIdentifiers
-                            let next = ids.firstIndex(of: id).flatMap { index in
-                                ids.indices.contains(index + 1) ? ids[index + 1] : nil
-                            }
-                            self.collection.changeDisclosure(
-                                id: id, followingID: item.kind == .turnFold ? next : nil,
-                                throughEnd: item.kind == .turnFold && next == nil,
-                                expanding: expanding, headerOffset: headerOffset,
-                                animated: !UIAccessibility.isReduceMotionEnabled)
+                ChatEntryView(
+                    entry: item, presentation: self.presentation, client: self.client, chatID: self.chatID,
+                    workspace: self.workspace
+                )
+                .environment(\.chatUiModels, self.uiModels)
+                .id(id)
+                .environment(
+                    \.chatWillExpand,
+                    ChatWillExpandAction(id: id) { [weak self] expanding, headerOffset in
+                        guard let self else { return }
+                        let ids = self.source.snapshot().itemIdentifiers
+                        let next = ids.firstIndex(of: id).flatMap { index in
+                            ids.indices.contains(index + 1) ? ids[index + 1] : nil
                         }
-                    )
-                    .disclosureGroupStyle(ChatDisclosureStyle())
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    // The collection owns toolbar and keyboard insets; individual messages must scroll through them.
-                    .ignoresSafeArea()
-                    .transaction { transaction in
-                        transaction.animation = nil
-                        transaction.disablesAnimations = true
+                        self.collection.changeDisclosure(
+                            id: id, followingID: item.kind == .turnFold ? next : nil,
+                            throughEnd: item.kind == .turnFold && next == nil,
+                            expanding: expanding, headerOffset: headerOffset,
+                            animated: !UIAccessibility.isReduceMotionEnabled)
                     }
-                    .padding(.horizontal, 20).padding(.vertical, 10)
-                    .coordinateSpace(name: "chat.row")
+                )
+                .disclosureGroupStyle(ChatDisclosureStyle())
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .fixedSize(horizontal: false, vertical: true)
+                // The collection owns toolbar and keyboard insets; individual messages must scroll through them.
+                .ignoresSafeArea()
+                .transaction { transaction in
+                    transaction.animation = nil
+                    transaction.disablesAnimations = true
+                }
+                .padding(.horizontal, 20).padding(.vertical, 10)
+                .coordinateSpace(name: "chat.row")
             }
             cell.backgroundConfiguration = .clear()
         }
@@ -1060,6 +1070,8 @@ struct ChatEntryView: View {
     let presentation: ChatPresentation
     let client: any MachineRequesting
     let chatID: String
+    var workspace: MobileWorkspace?
+    @Environment(\.chatUiModels) private var uiModels
     @State private var expanded = false
 
     var body: some View {
@@ -1156,9 +1168,10 @@ struct ChatEntryView: View {
         }
         .modifier(
             ChatLinkRouting(
-                context: ChatContentContext(client: client, chatID: chatID, cwd: presentation.info.text("cwd")))
+                context: ChatContentContext(
+                    client: client, chatID: chatID, cwd: presentation.info.text("cwd"), workspace: workspace,
+                    connected: presentation.connected, scopeID: uiModels?.scopeID))
         )
-        .environment(\.uiHost, UiHost(connected: presentation.connected))
         .frame(maxWidth: 720, alignment: .leading)
         .frame(maxWidth: .infinity)
     }
