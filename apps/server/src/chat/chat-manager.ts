@@ -18,6 +18,7 @@ import type {
     RuntimeMode,
     Task
 } from '@ruimte/contracts';
+import { generatedImageAttachment } from '@ruimte/contracts';
 import { ChatCore, type ChatCoreOptions } from '@adecore/agents/chat/chat-core';
 import type { ChatReferences, ChatSession, PromptNotes, ResumeWords } from '@adecore/agents/chat/chat-session';
 import type { ChatRecord, ChatRecordExtras } from '@adecore/agents/chat/chat-store';
@@ -264,7 +265,28 @@ export class ChatManager extends ChatCore {
         if (this.chats.has(chatId) || this.creating.has(chatId)) {
             throw new ChatError('chat-busy', `Chat ${chatId} is already loaded`);
         }
-        await this.store.write(chatId, info, items, { seq: 0, resetSeq: 0 }, preambles);
+        const copies = new Map<string, Promise<ChatAttachment>>();
+        const copy = (attachment: ChatAttachment): Promise<ChatAttachment> => {
+            let pending = copies.get(attachment.id);
+            if (!pending) {
+                pending = this.attachments.copy(chatId, attachment);
+                copies.set(attachment.id, pending);
+            }
+            return pending;
+        };
+        const copied = await Promise.all(
+            items.map(async (item): Promise<ChatItem> => {
+                if (item.kind === 'user' && item.attachments?.length) {
+                    return { ...item, attachments: await Promise.all(item.attachments.map(copy)) };
+                }
+                const generated = generatedImageAttachment(item);
+                if (item.kind === 'tool' && generated) {
+                    return { ...item, input: { ...(item.input as Record<string, unknown>), attachment: await copy(generated) } };
+                }
+                return item;
+            })
+        );
+        await this.store.write(chatId, info, copied, { seq: 0, resetSeq: 0 }, preambles);
     }
 
     /* Takes back a record `writeRecord` wrote, as long as nobody loaded the chat since. */
@@ -272,6 +294,7 @@ export class ChatManager extends ChatCore {
         if (!this.chats.has(chatId) && !this.creating.has(chatId)) {
             await Promise.all([
                 this.store?.delete(chatId),
+                this.attachments.removeAll(chatId),
                 this.plans?.removeChat(chatId),
                 this.bookmarks?.removeChat(chatId),
                 this.visuals?.removeChat(chatId)

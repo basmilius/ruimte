@@ -9993,6 +9993,16 @@
                   },
                   "path": {
                     "type": "string"
+                  },
+                  "width": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "height": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
                   }
                 },
                 "required": [
@@ -10440,6 +10450,16 @@
                       },
                       "path": {
                         "type": "string"
+                      },
+                      "width": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "height": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -10479,6 +10499,9 @@
                 "kind": {
                   "type": "string",
                   "const": "assistant"
+                },
+                "phase": {
+                  "type": "string"
                 },
                 "text": {
                   "type": "string"
@@ -11630,6 +11653,16 @@
                       },
                       "path": {
                         "type": "string"
+                      },
+                      "width": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "height": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -12049,6 +12082,16 @@
                       },
                       "path": {
                         "type": "string"
+                      },
+                      "width": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "height": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -12088,6 +12131,9 @@
                 "kind": {
                   "type": "string",
                   "const": "assistant"
+                },
+                "phase": {
+                  "type": "string"
                 },
                 "text": {
                   "type": "string"
@@ -13104,6 +13150,16 @@
                       },
                       "path": {
                         "type": "string"
+                      },
+                      "width": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "height": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -13143,6 +13199,9 @@
                 "kind": {
                   "type": "string",
                   "const": "assistant"
+                },
+                "phase": {
+                  "type": "string"
                 },
                 "text": {
                   "type": "string"
@@ -14153,6 +14212,16 @@
                               },
                               "path": {
                                 "type": "string"
+                              },
+                              "width": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "height": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -14192,6 +14261,9 @@
                         "kind": {
                           "type": "string",
                           "const": "assistant"
+                        },
+                        "phase": {
+                          "type": "string"
                         },
                         "text": {
                           "type": "string"
@@ -15327,6 +15399,16 @@
                                 },
                                 "path": {
                                   "type": "string"
+                                },
+                                "width": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "height": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
                                 }
                               },
                               "required": [
@@ -15861,6 +15943,16 @@
                                 },
                                 "path": {
                                   "type": "string"
+                                },
+                                "width": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "height": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
                                 }
                               },
                               "required": [
@@ -16280,6 +16372,16 @@
                                 },
                                 "path": {
                                   "type": "string"
+                                },
+                                "width": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "height": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
                                 }
                               },
                               "required": [
@@ -16319,6 +16421,9 @@
                           "kind": {
                             "type": "string",
                             "const": "assistant"
+                          },
+                          "phase": {
+                            "type": "string"
                           },
                           "text": {
                             "type": "string"
@@ -17545,6 +17650,16 @@
                 },
                 "path": {
                   "type": "string"
+                },
+                "width": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "height": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -17928,6 +18043,16 @@
                   },
                   "path": {
                     "type": "string"
+                  },
+                  "width": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "height": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
                   }
                 },
                 "required": [
@@ -18754,6 +18879,16 @@
                       },
                       "path": {
                         "type": "string"
+                      },
+                      "width": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "height": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -19401,6 +19536,16 @@
                           },
                           "path": {
                             "type": "string"
+                          },
+                          "width": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "height": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -20031,6 +20176,16 @@
                       },
                       "path": {
                         "type": "string"
+                      },
+                      "width": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "height": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -20070,6 +20225,9 @@
                 "kind": {
                   "type": "string",
                   "const": "assistant"
+                },
+                "phase": {
+                  "type": "string"
                 },
                 "text": {
                   "type": "string"
@@ -45102,6 +45260,16 @@
                         },
                         "path": {
                           "type": "string"
+                        },
+                        "width": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "height": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -47344,6 +47512,16 @@
                             },
                             "path": {
                               "type": "string"
+                            },
+                            "width": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "height": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
                             }
                           },
                           "required": [
@@ -47383,6 +47561,9 @@
                       "kind": {
                         "type": "string",
                         "const": "assistant"
+                      },
+                      "phase": {
+                        "type": "string"
                       },
                       "text": {
                         "type": "string"
@@ -48518,6 +48699,16 @@
                               },
                               "path": {
                                 "type": "string"
+                              },
+                              "width": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "height": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -49052,6 +49243,16 @@
                               },
                               "path": {
                                 "type": "string"
+                              },
+                              "width": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "height": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -49471,6 +49672,16 @@
                               },
                               "path": {
                                 "type": "string"
+                              },
+                              "width": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "height": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -49510,6 +49721,9 @@
                         "kind": {
                           "type": "string",
                           "const": "assistant"
+                        },
+                        "phase": {
+                          "type": "string"
                         },
                         "text": {
                           "type": "string"
@@ -50636,6 +50850,16 @@
                       },
                       "path": {
                         "type": "string"
+                      },
+                      "width": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "height": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [

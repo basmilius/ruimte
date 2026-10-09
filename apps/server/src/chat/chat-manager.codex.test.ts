@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/contracts';
+import { generatedImageAttachment, type ChatInfo, type ChatItem, type ChatSubagentItem } from '@ruimte/contracts';
 import type { ContextSource } from '@ruimte/contracts';
 import { CONTEXT_LEAD, chatPrompt, contextPrompt, verbsNote } from '../context/context-note.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
@@ -769,5 +769,98 @@ describe('ChatManager with Codex', () => {
             await open('chat-none');
             await expect(manager.subagent('c1', { chatId: 'chat-none', toolUseId: 'nope' })).rejects.toMatchObject({ code: 'subagent-not-found' });
         });
+    });
+});
+
+describe('Codex generated image attachments', () => {
+    test.each(['success', 'replay'])('generated image %s is readable, reloads without bytes in the log and survives a fork', async (scenario) => {
+        await open('image-chat');
+        await manager.send('image-chat', `image:${scenario}`);
+        await recorder.until(idle);
+        const tool = recorder.ofKind('tool').find((item) => item.name === 'ImageGeneration')!;
+        expect(tool.state).toBe('done');
+        const attachment = generatedImageAttachment(tool)!;
+        expect(attachment).toMatchObject({ name: 'a-rabbit.png', mime: 'image/png', width: 1, height: 1, size: Buffer.from(png.data, 'base64').length });
+        expect(manager.attachment('image-chat', attachment.id)).toEqual(attachment);
+        expect(await readFile(attachment.path)).toEqual(Buffer.from(png.data, 'base64'));
+        expect(await readdir(attachments.folderOf('image-chat'))).toHaveLength(1);
+        expect(manager.attachment('another-chat', attachment.id)).toBeNull();
+        expect(JSON.stringify(recorder.events)).not.toContain(png.data);
+        const info = manager.get('image-chat')!.info;
+        await manager.writeRecord('image-fork', { ...info, chatId: 'image-fork', running: false }, manager.get('image-chat')!.thread.list(), []);
+        const fork = await store.read('image-fork');
+        const copied = fork!.items.map(generatedImageAttachment).find(Boolean)!;
+        expect(copied.id).toBe(attachment.id);
+        expect(copied.path).not.toBe(attachment.path);
+        await retire(manager);
+        const files = await readdir(store.dir);
+        for (const name of files.filter((name) => name.endsWith('.json') || name.endsWith('.jsonl'))) {
+            expect(await readFile(join(store.dir, name), 'utf8')).not.toContain(png.data);
+        }
+        manager = makeManager();
+        await manager.create({ chatId: 'image-chat' });
+        expect(manager.attachment('image-chat', attachment.id)).toEqual(attachment);
+        await attachments.removeAll('image-chat');
+        expect(await readFile(copied.path)).toEqual(Buffer.from(png.data, 'base64'));
+    });
+
+    test.each(['failed', 'empty', 'invalid', 'not-image', 'too-large'])('generated image %s shows an error and saves no attachment', async (scenario) => {
+        await open('image-chat');
+        await manager.send('image-chat', `image:${scenario}`);
+        await recorder.until(idle);
+        const tool = recorder.ofKind('tool').find((item) => item.name === 'ImageGeneration')!;
+        expect(tool.state).toBe('error');
+        expect(generatedImageAttachment(tool)).toBeNull();
+        expect(await Bun.file(attachments.folderOf('image-chat')).exists()).toBe(false);
+        expect(JSON.stringify(recorder.events)).not.toContain(png.data);
+    });
+});
+
+test.each(['clear', 'kill'])('%s waits for an in-flight generated image before deleting its files', async (action) => {
+    let started!: () => void;
+    let release!: () => void;
+    const saving = new Promise<void>((resolve) => {
+        started = resolve;
+    });
+    const resumed = new Promise<void>((resolve) => {
+        release = resolve;
+    });
+    class HeldImages extends AttachmentStore {
+        override async saveGenerated(chatId: string, ref: string, upload: Parameters<AttachmentStore['saveGenerated']>[2]) {
+            started();
+            await resumed;
+            return super.saveGenerated(chatId, ref, upload);
+        }
+    }
+    attachments = new HeldImages(home);
+    manager = makeManager();
+    manager.subscribe('c1', recorder.sink());
+    await open('held-image');
+    await manager.send('held-image', 'image:success');
+    await saving;
+    const deleted = action === 'clear' ? manager.clear('held-image', true) : manager.kill('held-image');
+    release();
+    await deleted;
+    expect(await Bun.file(attachments.folderOf('held-image')).exists()).toBe(false);
+    if (action === 'clear') {
+        expect(manager.get('held-image')!.thread.list()).toEqual([]);
+    }
+});
+
+test('image storage failure remains a tool error and the turn still completes', async () => {
+    class BrokenImages extends AttachmentStore {
+        override async saveGenerated(): Promise<never> {
+            throw new Error('The image store is not writable');
+        }
+    }
+    attachments = new BrokenImages(home);
+    manager = makeManager();
+    manager.subscribe('c1', recorder.sink());
+    await open('broken-image');
+    await manager.send('broken-image', 'image:success');
+    await recorder.until(idle);
+    expect(recorder.ofKind('tool').find((item) => item.name === 'ImageGeneration')).toMatchObject({
+        state: 'error',
+        output: 'The image store is not writable'
     });
 });
