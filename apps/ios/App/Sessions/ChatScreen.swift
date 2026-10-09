@@ -69,6 +69,7 @@ struct ChatScreen: View {
             MobileScrollViewport(edges: .top) { insets in
                 ChatTimeline(
                     presentation: model.presentation, client: model.client, chatID: model.chatID,
+                    uiModels: model.uiModels,
                     topInset: insets.top, composer: AnyView(composerDock), composerFade: composerFade,
                     latestButton: showScrollButton && !scrollButtonBesideComposer ? AnyView(scrollToBottomButton) : nil,
                     status: timelineStatus,

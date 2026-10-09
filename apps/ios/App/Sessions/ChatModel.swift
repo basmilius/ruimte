@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import RuimteIntelligentUI
 import RuimtePulsar
 import RuimteTransport
 
@@ -7,6 +8,7 @@ import RuimteTransport
 final class ChatModel {
     let client: any MachineRequesting
     let chatID: String
+    let uiModels: ChatUiModels
     /// The machine the chat runs on, which is what a remembered account is kept for.
     let machineID: String
     let presentation = ChatPresentation()
@@ -90,6 +92,13 @@ final class ChatModel {
     init(client: any MachineRequesting, chatID: String, machineID: String = "local", draftRoot: URL? = nil) {
         self.client = client
         self.chatID = chatID
+        uiModels = ChatUiModels(
+            chatID: chatID,
+            cache: UiBlockModelCache { itemID, block in
+                UiBlockModel(chatID: chatID, itemID: itemID, block: block) { type, payload in
+                    try await client.request(type, payload: payload)
+                }
+            })
         self.machineID = machineID
         composition = ChatComposition(machineID: machineID, chatID: chatID, root: draftRoot)
         if composition.deliveryUncertain { sendProblem = Self.uncertainSendMessage }

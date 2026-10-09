@@ -15,6 +15,9 @@ struct ChatUserMessage: View {
             ForEach(Array(item.list("attachments").enumerated()), id: \.offset) { _, attachment in
                 ChatAttachmentButton(client: client, chatID: chatID, attachment: attachment)
             }
+            if let origin = item["uiChoice"] {
+                UiChoiceLine(origin: origin)
+            }
             if !item.text("text").isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     MarkdownMessage(text: item.text("text"))

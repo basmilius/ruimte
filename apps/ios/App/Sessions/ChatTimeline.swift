@@ -13,6 +13,7 @@ struct ChatTimeline: UIViewControllerRepresentable {
     let presentation: ChatPresentation
     let client: any MachineRequesting
     let chatID: String
+    var uiModels: ChatUiModels?
     var topInset: CGFloat = 0
     var bottomInset: CGFloat = 0
     var composer: AnyView?
@@ -28,7 +29,7 @@ struct ChatTimeline: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> ChatTimelineController {
         chatPresentationLog.notice("timeline made for \(chatID, privacy: .public)")
-        return ChatTimelineController(client: client, chatID: chatID, presentation: presentation)
+        return ChatTimelineController(client: client, chatID: chatID, presentation: presentation, uiModels: uiModels)
     }
 
     static func dismantleUIViewController(_ controller: ChatTimelineController, coordinator: ()) {
@@ -326,12 +327,14 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     private var messagesBelow = false
     private let client: any MachineRequesting
     private let chatID: String
+    private let uiModels: ChatUiModels?
     private var presentation: ChatPresentation
-    init(client: any MachineRequesting, chatID: String, presentation: ChatPresentation) {
+    init(client: any MachineRequesting, chatID: String, presentation: ChatPresentation, uiModels: ChatUiModels? = nil) {
         self.presentation = presentation
         self.lastItemScrollCommand = presentation.scrollRequest
         self.client = client
         self.chatID = chatID
+        self.uiModels = uiModels
         super.init(nibName: nil, bundle: nil)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is unavailable") }
@@ -410,6 +413,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
             guard let self, let item = self.items[id] else { return }
             cell.host(in: self) {
                 ChatEntryView(entry: item, presentation: self.presentation, client: self.client, chatID: self.chatID)
+                    .environment(\.chatUiModels, self.uiModels)
                     .id(id)
                     .environment(
                         \.chatWillExpand,
@@ -1154,6 +1158,7 @@ struct ChatEntryView: View {
             ChatLinkRouting(
                 context: ChatContentContext(client: client, chatID: chatID, cwd: presentation.info.text("cwd")))
         )
+        .environment(\.uiHost, UiHost(connected: presentation.connected))
         .frame(maxWidth: 720, alignment: .leading)
         .frame(maxWidth: .infinity)
     }
@@ -1195,6 +1200,7 @@ private struct ChatTimelineRow: View {
     let client: any MachineRequesting
     let chatID: String
     let presentation: ChatPresentation?
+    @Environment(\.chatUiModels) private var uiModels
     private var kind: String { item["kind"]?.stringValue ?? "" }
     var body: some View {
         content
@@ -1209,8 +1215,16 @@ private struct ChatTimelineRow: View {
             case "user":
                 ChatUserMessage(item: item, client: client, chatID: chatID)
             case "assistant":
-                ChatStreamingMessage(text: item.text("text"), streaming: item["streaming"]?.boolValue == true)
-                    .accessibilityElement(children: .contain).accessibilityLabel("Agent")
+                Group {
+                    if UiReplyView.hasBlocks(item), let uiModels, uiModels.chatID == chatID {
+                        UiReplyView(item: item) { block in
+                            uiModels.cache.model(itemID: item.text("id"), block: block)
+                        }
+                    } else {
+                        ChatStreamingMessage(text: item.text("text"), streaming: item["streaming"]?.boolValue == true)
+                    }
+                }
+                .accessibilityElement(children: .contain).accessibilityLabel("Agent")
             case "thinking":
                 ChatThinkingRow(item: item)
             case "tool":
@@ -1218,6 +1232,8 @@ private struct ChatTimelineRow: View {
                     Text("Report").font(.caption.weight(.medium)).foregroundStyle(MobileStyle.faint)
                         .accessibilityAddTraits(.isHeader)
                     MarkdownMessage(text: report)
+                } else if item.text("name") == "ImageGeneration" {
+                    GeneratedImageRow(item: item)
                 } else {
                     ChatToolRow(item: item)
                 }

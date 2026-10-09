@@ -12,8 +12,14 @@ struct ChatContentContext {
     let cwd: String
 }
 
+struct ChatUiModels {
+    let chatID: String
+    let cache: UiBlockModelCache
+}
+
 extension EnvironmentValues {
     @Entry var chatContent: ChatContentContext?
+    @Entry var chatUiModels: ChatUiModels?
     @Entry var chatMentions: [String] = []
     @Entry var chatSkills: [String] = []
     @Entry var markdownReferences = ""

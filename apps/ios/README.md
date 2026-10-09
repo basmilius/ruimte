@@ -597,6 +597,12 @@ while a block is visible and connected, at most once per ten seconds. `UiReplyPa
 daemon's UTF-16 positions to retain prose around the blocks. `ChatUiDelta` keeps streamed trees
 and query metadata without accepting a preview for an older text length.
 
+The native chat timeline now passes a per-chat model cache to `UiReplyView`, which places each
+compiled card between its surrounding prose. Connection and visibility drive live reads and
+choice availability. The original user message stays intact below `UiChoiceLine`. Generated
+images use their own row outside settled work folds, with attachment-backed preview and prompt
+copying from the image menu. Project navigation and project saving still need their host callbacks.
+
 Regenerate the interpreter and parity fixtures with `bun run --cwd packages/contracts generate:swift`.
 `bun run check` checks these generated files too. Run the interpreter and controller tests on the Mac
 with `swift test --package-path apps/ios/Packages/RuimteIntelligentUI`; this does not open the app.
