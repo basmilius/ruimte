@@ -8,6 +8,8 @@ import {
     ChatBackgroundTaskSchema,
     ChatCheckpointDiffSchema,
     ChatDeliverySchema,
+    ChatUiChoicePayloadSchema,
+    ChatSendResultSchema,
     ChatSubagentSourceSchema,
     ChatSubagentStatusSchema,
     ChatVisualSchema,
@@ -1094,6 +1096,15 @@ export const ACTION_DEFINITIONS = {
             queued: z.boolean(),
             turnId: z.string().min(1).optional()
         })
+    },
+    'chat.uiChoice': {
+        title: 'Send AI Chat choice',
+        description: 'Sends a choice from a completed reply using its stored label and visible context.',
+        effect: 'external',
+        domain: 'communicate',
+        actors: PERSON,
+        input: ChatUiChoicePayloadSchema,
+        output: ChatSendResultSchema
     },
     'chat.clear': {
         title: 'Clear AI Chat',

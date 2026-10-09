@@ -145,6 +145,7 @@
     "chat.attach",
     "chat.detach",
     "chat.send",
+    "chat.uiChoice",
     "chat.unqueue",
     "chat.sendNow",
     "chat.cancel",

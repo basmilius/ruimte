@@ -13,6 +13,7 @@ import { visualHostFor } from '@/chat/visuals';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
+import { currentEndpointId } from '@/state/keys';
 import { isScratchProject, useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useServers } from '@/state/server';
@@ -78,6 +79,15 @@ export function connectChatHost(): void {
         isApplePlatform,
         notify: (toast) => void useToasts.getState().show(toast),
         actions: PERSON_CHAT_ACTIONS,
+        intelligentUi: {
+            sendChoice: async (endpointId, payload) => {
+                if (endpointId !== currentEndpointId()) {
+                    throw new Error(i18next.t('agent-chat:composer.placeholder.disconnected'));
+                }
+                const result = await performAsPerson('chat.uiChoice', payload);
+                return result.queued ? 'queued' : 'sent';
+            }
+        },
         searchFiles,
         attachments: {
             useUrl: (endpointId, chatId, attachmentId) => useMachineUrl({ kind: 'attachment', chatId, attachmentId }, endpointId),

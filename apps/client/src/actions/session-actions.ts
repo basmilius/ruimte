@@ -366,6 +366,11 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
             await ask('chat.cancel', { chatId, ...(subagents ? { subagents: true } : {}) });
             return { output: { chatId, chat, subagents } };
         },
+        'chat.uiChoice': async (payload, call) => {
+            chatNamed(payload.chatId, call);
+            const result = await ask('chat.uiChoice', payload);
+            return { output: result };
+        },
         'chat.unqueue': async ({ chatId, messageId }, call) => {
             const chat = chatNamed(chatId, call);
             const message = machine.chat(chatId)?.info.queue?.find((entry) => entry.id === messageId);

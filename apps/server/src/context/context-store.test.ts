@@ -577,3 +577,16 @@ test('reading an assistant UI block returns its fallback between the surrounding
     expect(transcript).not.toContain('ruimte-ui');
     expect(transcript).not.toContain('<Summary>');
 });
+
+test('a transcript retains the intent of a chosen UI action without changing the visible message', () => {
+    const item: ChatItem = {
+        id: 'user-choice',
+        kind: 'user',
+        createdAt: 2,
+        turnId: 'turn',
+        text: 'The selected files',
+        uiChoice: { itemId: 'reply', blockId: 'block', revision: 'revision', choiceId: 'choice', label: 'Fix errors', sourceAt: 1, older: false, at: 2 }
+    };
+    expect(renderTranscript([item])).toContain('Chose "Fix errors"\n\nThe selected files');
+    expect(item.text).toBe('The selected files');
+});

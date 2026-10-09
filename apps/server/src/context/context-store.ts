@@ -148,7 +148,11 @@ export function renderTranscript(items: ChatItem[]): string {
                 break;
             }
             case 'user':
-                lines.push('## User', '', item.text, '');
+                lines.push('## User', '');
+                if (item.uiChoice) {
+                    lines.push(`Chose ${JSON.stringify(item.uiChoice.label)}`, '');
+                }
+                lines.push(item.text, '');
                 break;
             case 'assistant':
                 if (item.text.trim() !== '') {

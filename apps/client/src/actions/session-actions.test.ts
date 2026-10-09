@@ -526,6 +526,16 @@ describe('reading', () => {
 });
 
 describe('queued messages and configuration', () => {
+    test('only a person submits a stored UI choice, through the ordinary action registry', async () => {
+        const { registry, of } = fake({ 'chat.uiChoice': () => ({ queued: true, turnId: 'choice-turn' }) });
+        const payload = { chatId: 'chat', itemId: 'reply', blockId: 'block', revision: 'revision', choiceId: 'choice', values: { $count: 4 } };
+        expect(await registry.execute('chat.uiChoice', payload, PERSON_ACTION_CALL)).toMatchObject({ output: { queued: true, turnId: 'choice-turn' } });
+        expect(of('chat.uiChoice')).toEqual([payload]);
+        const refused = await registry.execute('chat.uiChoice', payload, VOICE_ACTION_CALL);
+        expect(refused).toMatchObject({ status: 'failed', error: { code: 'forbidden-action' } });
+        expect(of('chat.uiChoice')).toHaveLength(1);
+    });
+
     test('Voice takes back only a message that waits, and sends one now', async () => {
         const { registry, of } = fake({}, { chat: () => rowOf(info({ queue: [{ id: 'm1', text: 'And the docs', createdAt: 3 }] })) });
         expect(await registry.execute('chat.unqueue', { chatId: 'chat', messageId: 'm1' }, VOICE_ACTION_CALL)).toMatchObject({
