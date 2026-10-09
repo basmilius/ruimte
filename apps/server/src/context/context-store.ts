@@ -1,3 +1,4 @@
+import { uiFallbackText } from '@adecore/intelligent-ui/text';
 import type {
     ChatApprovalDecision,
     ChatItem,
@@ -151,7 +152,7 @@ export function renderTranscript(items: ChatItem[]): string {
                 break;
             case 'assistant':
                 if (item.text.trim() !== '') {
-                    lines.push('## Assistant', '', item.text, '');
+                    lines.push('## Assistant', '', uiFallbackText(item.text, item.ui ?? []), '');
                 }
                 break;
             case 'tool': {

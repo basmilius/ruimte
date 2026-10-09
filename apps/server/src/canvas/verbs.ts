@@ -1,3 +1,4 @@
+import { uiReferenceText } from '@adecore/intelligent-ui/text';
 import { alertVerb } from './alert-verb.ts';
 import { actionDescription } from '@ruimte/actions';
 import { ChatSubagentSourceSchema, ContextSourceSchema } from '@ruimte/contracts';
@@ -139,6 +140,13 @@ const viewNoun = defineNoun({
     actions: [...VIEW_ACTIONS, openAction, diagramAction]
 });
 
+const uiNoun = defineNoun({
+    name: 'ui',
+    summary: 'The catalog and syntax of fenced ruimte-ui blocks in replies; writes no project resource',
+    detail: ['syntax\tWrite a fenced ruimte-ui block in your reply; this is a reference, not a command.', ...uiReferenceText().split('\n')],
+    actions: []
+});
+
 const visualNoun = defineNoun({
     name: 'visual',
     summary: VISUAL_SUMMARY,
@@ -198,6 +206,7 @@ export const VERBS: readonly VerbEntry[] = [
     taskNoun,
     planVerb,
     visualNoun,
+    uiNoun,
     worktreeVerb,
     operationVerb,
     launchesNoun,

@@ -139,6 +139,7 @@
         "@adecore/database": "0.20.1",
         "@adecore/diagram": "0.20.1",
         "@adecore/drawing": "0.20.1",
+        "@adecore/intelligent-ui": "0.0.0",
         "@adecore/lsp": "0.20.1",
         "@adecore/merge": "0.20.1",
         "@adecore/plan": "0.20.1",
@@ -309,6 +310,8 @@
     "@adecore/editor-core": ["@adecore/editor-core@0.20.1", "", {}, "sha512-yjJv4hbBmt8ukLiwwlTgH0GSyCVm4hE38NoyZJusqjjrPS0J9iPhm2GJq8UUzhX52qKO582xvce/yAFEylzvjA=="],
 
     "@adecore/editor-react": ["@adecore/editor-react@0.20.1", "", { "dependencies": { "@adecore/editor": "0.20.1", "@adecore/lsp": "0.20.1", "@adecore/merge": "0.20.1", "lucide-react": "^1.47.0", "react-markdown": "^10.1.0", "remark-breaks": "^4.0.0", "remark-gfm": "^4.0.1", "zustand": "^5.0.15" }, "peerDependencies": { "@adecore/ui": "^0.20.1", "i18next": "^26.4.2", "react": "^19.3.0", "react-dom": "^19.3.0", "react-i18next": "^17.0.15" } }, "sha512-z5isCmp4cv1dM76Y1h2/T6LSpY9j/LQrUhmWsHlutLB/D65uuQEYfH+5SsMlqXgaAluqQ7hnbVLu03MgeTiObw=="],
+
+    "@adecore/intelligent-ui": ["@adecore/intelligent-ui@0.0.0", "", { "dependencies": { "zod": "^4.6.5" } }, "sha512-1VAMznAMA/7eOWGAk6yEKLr+k3bd8nQs/7QfBdZdBJxBagrMFUi6OnSRwEvJqJ89fdpfHjn7V7Rdd+tHKSECag=="],
 
     "@adecore/lsp": ["@adecore/lsp@0.20.1", "", {}, "sha512-3qutWkjBrIoUj/4u0W6Ob3OIERehIDwAg4W532K/4Irk4l15nXcUxNKuQukr5oyxsXZKLNy+UjV+vA1Gg2hULQ=="],
 

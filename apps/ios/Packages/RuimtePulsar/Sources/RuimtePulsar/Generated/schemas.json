@@ -10500,6 +10500,121 @@
                   "type": "string",
                   "const": "assistant"
                 },
+                "ui": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "catalogVersion": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "start": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "end": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "complete": {
+                        "type": "boolean"
+                      },
+                      "defaults": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      },
+                      "queries": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "properties": {
+                            "source": {
+                              "type": "string"
+                            },
+                            "args": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
+                          },
+                          "required": [
+                            "source",
+                            "args"
+                          ]
+                        }
+                      },
+                      "nodes": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "diagnostics": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "end": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "nodeId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message",
+                            "start",
+                            "end"
+                          ]
+                        }
+                      },
+                      "fallback": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "catalogVersion",
+                      "start",
+                      "end",
+                      "complete",
+                      "defaults",
+                      "queries",
+                      "nodes",
+                      "diagnostics",
+                      "fallback"
+                    ]
+                  }
+                },
                 "phase": {
                   "type": "string"
                 },
@@ -11454,7 +11569,80 @@
     "required": [
       "items",
       "history"
-    ]
+    ],
+    "$defs": {
+      "__schema0": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "props": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "expressions": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "bindings": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "fallback": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "props",
+          "expressions",
+          "bindings",
+          "children",
+          "complete",
+          "fallback",
+          "start",
+          "end"
+        ]
+      }
+    }
   },
   "request.chat.attach.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -12131,6 +12319,121 @@
                 "kind": {
                   "type": "string",
                   "const": "assistant"
+                },
+                "ui": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "catalogVersion": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "start": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "end": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "complete": {
+                        "type": "boolean"
+                      },
+                      "defaults": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      },
+                      "queries": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "properties": {
+                            "source": {
+                              "type": "string"
+                            },
+                            "args": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
+                          },
+                          "required": [
+                            "source",
+                            "args"
+                          ]
+                        }
+                      },
+                      "nodes": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "diagnostics": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "end": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "nodeId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message",
+                            "start",
+                            "end"
+                          ]
+                        }
+                      },
+                      "fallback": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "catalogVersion",
+                      "start",
+                      "end",
+                      "complete",
+                      "defaults",
+                      "queries",
+                      "nodes",
+                      "diagnostics",
+                      "fallback"
+                    ]
+                  }
                 },
                 "phase": {
                   "type": "string"
@@ -13200,6 +13503,121 @@
                   "type": "string",
                   "const": "assistant"
                 },
+                "ui": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "catalogVersion": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "start": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "end": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "complete": {
+                        "type": "boolean"
+                      },
+                      "defaults": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      },
+                      "queries": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "properties": {
+                            "source": {
+                              "type": "string"
+                            },
+                            "args": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
+                          },
+                          "required": [
+                            "source",
+                            "args"
+                          ]
+                        }
+                      },
+                      "nodes": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "diagnostics": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "end": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "nodeId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message",
+                            "start",
+                            "end"
+                          ]
+                        }
+                      },
+                      "fallback": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "catalogVersion",
+                      "start",
+                      "end",
+                      "complete",
+                      "defaults",
+                      "queries",
+                      "nodes",
+                      "diagnostics",
+                      "fallback"
+                    ]
+                  }
+                },
                 "phase": {
                   "type": "string"
                 },
@@ -14262,6 +14680,121 @@
                           "type": "string",
                           "const": "assistant"
                         },
+                        "ui": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "catalogVersion": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "start": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "end": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "complete": {
+                                "type": "boolean"
+                              },
+                              "defaults": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              },
+                              "queries": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "source": {
+                                      "type": "string"
+                                    },
+                                    "args": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string"
+                                      },
+                                      "additionalProperties": {}
+                                    }
+                                  },
+                                  "required": [
+                                    "source",
+                                    "args"
+                                  ]
+                                }
+                              },
+                              "nodes": {
+                                "type": "array",
+                                "items": {
+                                  "$ref": "#/$defs/__schema0"
+                                }
+                              },
+                              "diagnostics": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "code": {
+                                      "type": "string"
+                                    },
+                                    "message": {
+                                      "type": "string"
+                                    },
+                                    "start": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "end": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "nodeId": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "code",
+                                    "message",
+                                    "start",
+                                    "end"
+                                  ]
+                                }
+                              },
+                              "fallback": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "catalogVersion",
+                              "start",
+                              "end",
+                              "complete",
+                              "defaults",
+                              "queries",
+                              "nodes",
+                              "diagnostics",
+                              "fallback"
+                            ]
+                          }
+                        },
                         "phase": {
                           "type": "string"
                         },
@@ -15214,6 +15747,126 @@
                 },
                 "text": {
                   "type": "string"
+                },
+                "ui": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "catalogVersion": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "start": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "end": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "complete": {
+                        "type": "boolean"
+                      },
+                      "defaults": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      },
+                      "queries": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "properties": {
+                            "source": {
+                              "type": "string"
+                            },
+                            "args": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
+                          },
+                          "required": [
+                            "source",
+                            "args"
+                          ]
+                        }
+                      },
+                      "nodes": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "diagnostics": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "end": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "nodeId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message",
+                            "start",
+                            "end"
+                          ]
+                        }
+                      },
+                      "fallback": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "catalogVersion",
+                      "start",
+                      "end",
+                      "complete",
+                      "defaults",
+                      "queries",
+                      "nodes",
+                      "diagnostics",
+                      "fallback"
+                    ]
+                  }
+                },
+                "textLength": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -16422,6 +17075,121 @@
                             "type": "string",
                             "const": "assistant"
                           },
+                          "ui": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "catalogVersion": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "start": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "end": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "complete": {
+                                  "type": "boolean"
+                                },
+                                "defaults": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                "queries": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string"
+                                      },
+                                      "args": {
+                                        "type": "object",
+                                        "propertyNames": {
+                                          "type": "string"
+                                        },
+                                        "additionalProperties": {}
+                                      }
+                                    },
+                                    "required": [
+                                      "source",
+                                      "args"
+                                    ]
+                                  }
+                                },
+                                "nodes": {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/$defs/__schema0"
+                                  }
+                                },
+                                "diagnostics": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "code": {
+                                        "type": "string"
+                                      },
+                                      "message": {
+                                        "type": "string"
+                                      },
+                                      "start": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "end": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "nodeId": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "code",
+                                      "message",
+                                      "start",
+                                      "end"
+                                    ]
+                                  }
+                                },
+                                "fallback": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "catalogVersion",
+                                "start",
+                                "end",
+                                "complete",
+                                "defaults",
+                                "queries",
+                                "nodes",
+                                "diagnostics",
+                                "fallback"
+                              ]
+                            }
+                          },
                           "phase": {
                             "type": "string"
                           },
@@ -17459,7 +18227,80 @@
     "required": [
       "info",
       "items"
-    ]
+    ],
+    "$defs": {
+      "__schema0": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "props": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "expressions": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "bindings": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "fallback": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "props",
+          "expressions",
+          "bindings",
+          "children",
+          "complete",
+          "fallback",
+          "start",
+          "end"
+        ]
+      }
+    }
   },
   "request.chat.detach.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -20226,6 +21067,121 @@
                   "type": "string",
                   "const": "assistant"
                 },
+                "ui": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "catalogVersion": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "start": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "end": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "complete": {
+                        "type": "boolean"
+                      },
+                      "defaults": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      },
+                      "queries": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "properties": {
+                            "source": {
+                              "type": "string"
+                            },
+                            "args": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
+                          },
+                          "required": [
+                            "source",
+                            "args"
+                          ]
+                        }
+                      },
+                      "nodes": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      },
+                      "diagnostics": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "end": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "nodeId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message",
+                            "start",
+                            "end"
+                          ]
+                        }
+                      },
+                      "fallback": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "catalogVersion",
+                      "start",
+                      "end",
+                      "complete",
+                      "defaults",
+                      "queries",
+                      "nodes",
+                      "diagnostics",
+                      "fallback"
+                    ]
+                  }
+                },
                 "phase": {
                   "type": "string"
                 },
@@ -21217,7 +22173,80 @@
       "history",
       "source",
       "live"
-    ]
+    ],
+    "$defs": {
+      "__schema0": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "props": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "expressions": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "bindings": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "fallback": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "props",
+          "expressions",
+          "bindings",
+          "children",
+          "complete",
+          "fallback",
+          "start",
+          "end"
+        ]
+      }
+    }
   },
   "request.chat.stopSubagent.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -47662,6 +48691,121 @@
                         "type": "string",
                         "const": "assistant"
                       },
+                      "ui": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "catalogVersion": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "end": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "complete": {
+                              "type": "boolean"
+                            },
+                            "defaults": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            },
+                            "queries": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                  "source": {
+                                    "type": "string"
+                                  },
+                                  "args": {
+                                    "type": "object",
+                                    "propertyNames": {
+                                      "type": "string"
+                                    },
+                                    "additionalProperties": {}
+                                  }
+                                },
+                                "required": [
+                                  "source",
+                                  "args"
+                                ]
+                              }
+                            },
+                            "nodes": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/$defs/__schema0"
+                              }
+                            },
+                            "diagnostics": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string"
+                                  },
+                                  "message": {
+                                    "type": "string"
+                                  },
+                                  "start": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "end": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "nodeId": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "message",
+                                  "start",
+                                  "end"
+                                ]
+                              }
+                            },
+                            "fallback": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "catalogVersion",
+                            "start",
+                            "end",
+                            "complete",
+                            "defaults",
+                            "queries",
+                            "nodes",
+                            "diagnostics",
+                            "fallback"
+                          ]
+                        }
+                      },
                       "phase": {
                         "type": "string"
                       },
@@ -48614,6 +49758,126 @@
               },
               "text": {
                 "type": "string"
+              },
+              "ui": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "catalogVersion": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "start": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "end": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "complete": {
+                      "type": "boolean"
+                    },
+                    "defaults": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "queries": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "source": {
+                            "type": "string"
+                          },
+                          "args": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {}
+                          }
+                        },
+                        "required": [
+                          "source",
+                          "args"
+                        ]
+                      }
+                    },
+                    "nodes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "diagnostics": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "start": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "end": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "nodeId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "message",
+                          "start",
+                          "end"
+                        ]
+                      }
+                    },
+                    "fallback": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "catalogVersion",
+                    "start",
+                    "end",
+                    "complete",
+                    "defaults",
+                    "queries",
+                    "nodes",
+                    "diagnostics",
+                    "fallback"
+                  ]
+                }
+              },
+              "textLength": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -49822,6 +51086,121 @@
                           "type": "string",
                           "const": "assistant"
                         },
+                        "ui": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "catalogVersion": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "start": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "end": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "complete": {
+                                "type": "boolean"
+                              },
+                              "defaults": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              },
+                              "queries": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "source": {
+                                      "type": "string"
+                                    },
+                                    "args": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string"
+                                      },
+                                      "additionalProperties": {}
+                                    }
+                                  },
+                                  "required": [
+                                    "source",
+                                    "args"
+                                  ]
+                                }
+                              },
+                              "nodes": {
+                                "type": "array",
+                                "items": {
+                                  "$ref": "#/$defs/__schema0"
+                                }
+                              },
+                              "diagnostics": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "code": {
+                                      "type": "string"
+                                    },
+                                    "message": {
+                                      "type": "string"
+                                    },
+                                    "start": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "end": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "nodeId": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "code",
+                                    "message",
+                                    "start",
+                                    "end"
+                                  ]
+                                }
+                              },
+                              "fallback": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "catalogVersion",
+                              "start",
+                              "end",
+                              "complete",
+                              "defaults",
+                              "queries",
+                              "nodes",
+                              "diagnostics",
+                              "fallback"
+                            ]
+                          }
+                        },
                         "phase": {
                           "type": "string"
                         },
@@ -50770,7 +52149,80 @@
     "required": [
       "chatId",
       "event"
-    ]
+    ],
+    "$defs": {
+      "__schema0": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "props": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "expressions": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "bindings": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "fallback": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "props",
+          "expressions",
+          "bindings",
+          "children",
+          "complete",
+          "fallback",
+          "start",
+          "end"
+        ]
+      }
+    }
   },
   "event.chat.status": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

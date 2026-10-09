@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { compileUi } from '@adecore/intelligent-ui';
 import type { ChatItem, ChatWorkflowAgent, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import { handleContextRequest } from './context-route.ts';
@@ -556,4 +557,23 @@ describe('a diagram as context', () => {
         expect(await store.read('agent', 'gone')).toBeNull();
         expect((await get('/context/gone', 'tok')).status).toBe(404);
     });
+});
+
+test('reading an assistant UI block returns its fallback between the surrounding prose', () => {
+    const text = 'Before\n```ruimte-ui\n<Summary>Readable result</Summary>\n```\nAfter';
+    const item: ChatItem = {
+        id: 'reply',
+        kind: 'assistant',
+        createdAt: 1,
+        turnId: null,
+        text,
+        streaming: false,
+        ui: compileUi(text, { id: 'reply', final: true })
+    };
+    const transcript = renderTranscript([item]);
+    expect(transcript).toContain('Before');
+    expect(transcript).toContain('Readable result');
+    expect(transcript).toContain('After');
+    expect(transcript).not.toContain('ruimte-ui');
+    expect(transcript).not.toContain('<Summary>');
 });

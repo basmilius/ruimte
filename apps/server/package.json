@@ -21,6 +21,7 @@
         "@adecore/database": "0.20.1",
         "@adecore/diagram": "0.20.1",
         "@adecore/drawing": "0.20.1",
+        "@adecore/intelligent-ui": "0.0.0",
         "@adecore/lsp": "0.20.1",
         "@adecore/merge": "0.20.1",
         "@adecore/plan": "0.20.1",
