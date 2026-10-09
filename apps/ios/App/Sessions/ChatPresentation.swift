@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import RuimtePulsar
+import RuimteIntelligentUI
 
 @MainActor @Observable
 final class ChatItemState: Identifiable {
@@ -274,7 +275,9 @@ final class ChatPresentation {
             }
             let final = work.last { $0.value.text("kind") == "assistant" && Self.parent($0.value) == nil }
             let notices = work.filter { $0.value.text("kind") == "note" }
-            let folded = work.filter { $0 !== final && $0.value.text("kind") != "note" }
+            let images = work.filter { UiGeneratedImage.isGeneration($0.value) && Self.parent($0.value) == nil }
+            let imageIDs = Set(images.map(\.id))
+            let folded = work.filter { $0 !== final && $0.value.text("kind") != "note" && !imageIDs.contains($0.id) }
             if !rowsFor(folded, children: children).isEmpty {
                 let tools = work.filter {
                     $0.value.text("kind") == "tool" && Self.parent($0.value) == nil
@@ -293,6 +296,7 @@ final class ChatPresentation {
             {
                 rows.append(ChatTimelineEntry(id: "files-\(turnID)", kind: .changedFiles, items: [turn] + edits))
             }
+            rows += rowsFor(images, children: children)
             if let final { rows.append(ChatTimelineEntry(id: final.id, kind: .message, items: [final])) }
             rows += rowsFor(notices, children: children)
             if forks[turnID]?.isEmpty == false {
@@ -320,7 +324,7 @@ final class ChatPresentation {
             if kind == "approval" && value.text("decision") == "pending" { continue }
             if kind == "question" && value.text("state") == "pending" { continue }
             // A subagent's `SubagentHandback` call reads as the report it carries rather than as a tool call.
-            if kind == "tool" && value.text("state") != "running" && ChatSubagents.handbackReport(value) == nil {
+            if kind == "tool" && value.text("state") != "running" && ChatSubagents.handbackReport(value) == nil && !UiGeneratedImage.isGeneration(value) {
                 if rows.last?.kind == .tools && !historyBoundaries.contains(item.id) {
                     rows[rows.count - 1].items.append(item)
                 } else {

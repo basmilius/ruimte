@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["react", "typescript", "oxc"],
-    "ignorePatterns": ["apps/ios/App/Resources/document-renderer.js"],
+    "ignorePatterns": ["apps/ios/App/Resources/document-renderer.js", "apps/ios/Packages/RuimteIntelligentUI/Sources/RuimteIntelligentUI/Resources/intelligent-ui.js"],
   "rules": {
     "curly": "error",
     "react/rules-of-hooks": "error",

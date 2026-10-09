@@ -589,6 +589,20 @@ Current iteration agreement: build and install only on Bas's physical iPhone,
 `00008160-000C312926A0000A`. No simulator, UI tests or iPad installation. Targeted
 protocol, crypto and state tests run on the Mac. Do not restart the running daemon.
 
+`RuimteIntelligentUI` bundles the shared bounded interpreter for JavaScriptCore. `UiInterpreter`
+accepts a compiled block, local input values and daemon query readings as JSON arguments. It
+returns evaluated nodes with serializable bindings; model text is never executable source.
+`UiBlockModel` manages local input, once-only choices, opaque query read tickets and live reads
+while a block is visible and connected, at most once per ten seconds. `UiReplyParts` uses the
+daemon's UTF-16 positions to retain prose around the blocks. `ChatUiDelta` keeps streamed trees
+and query metadata without accepting a preview for an older text length.
+
+Regenerate the interpreter and parity fixtures with `bun run --cwd packages/contracts generate:swift`.
+`bun run check` checks these generated files too. Run the interpreter and controller tests on the Mac
+with `swift test --package-path apps/ios/Packages/RuimteIntelligentUI`; this does not open the app.
+The combined UI and visual session instruction measures 582 tokens with `o200k_base` and 589 with
+`cl100k_base`, using `js-tiktoken` 1.0.21. The temporary measurement dependency is outside the repository.
+
 ```sh
 xcodebuild -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debug \
     -destination 'generic/platform=iOS' -derivedDataPath /tmp/ruimte-ios-xcode \

@@ -20,6 +20,8 @@ packages:
     path: Packages/RuimtePulsar
   RuimteTransport:
     path: Packages/RuimteTransport
+  RuimteIntelligentUI:
+    path: Packages/RuimteIntelligentUI
 configFiles:
   Debug: Configuration/Build.xcconfig
   Release: Configuration/Build.xcconfig
@@ -47,6 +49,7 @@ targets:
       - package: LucideSwift
       - package: RuimtePulsar
       - package: RuimteTransport
+      - package: RuimteIntelligentUI
       - package: SwiftTerm
       - package: Highlightr
       - target: RuimteNotificationService

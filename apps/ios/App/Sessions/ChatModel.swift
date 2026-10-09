@@ -271,19 +271,11 @@ final class ChatModel {
             if Self.concernsSubagent(item) { subagentRevision += 1 }
             revision += 1
         case "delta":
-            guard let id = event["itemId"]?.stringValue, let index = positions[id],
-                let delta = event["text"]?.stringValue, var item = items[index].objectValue
-            else { return }
-            if item["kind"]?.stringValue == "tool" {
-                var progress = item["progress"]?.objectValue ?? [:]
-                progress["output"] = .string((progress["output"]?.stringValue ?? "") + delta)
-                item["progress"] = .object(progress)
-            } else {
-                item["text"] = .string((item["text"]?.stringValue ?? "") + delta)
-            }
-            items[index] = .object(item)
-            presentation.upsert(.object(item), textOnly: true)
-            if Self.concernsSubagent(.object(item)) { subagentRevision += 1 }
+            guard let id = event["itemId"]?.stringValue, let index = positions[id] else { return }
+            let item = ChatUiDelta.apply(event, to: items[index])
+            items[index] = item
+            presentation.upsert(item, textOnly: true)
+            if Self.concernsSubagent(item) { subagentRevision += 1 }
             revision += 1
         default: break
         }

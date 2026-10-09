@@ -39,7 +39,7 @@
 		1CA991202CE1A29CEC79B400 /* LocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7648DC1CF8BCDD56D3BDB551 /* LocalizationTests.swift */; };
 		1D2828131C689B78A675A365 /* TerminalCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA81AFC7F3E726AB38C0EE96 /* TerminalCompatibilityTests.swift */; };
 		1D6CEEA1B77289B22B60489B /* ViewSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B046BB9BDAA4FBBD682034 /* ViewSettingsSheet.swift */; };
-		2039449EB696024C64A7D640 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */; };
+		2039449EB696024C64A7D640 /* RuimteIntelligentUI in Frameworks */ = {isa = PBXBuildFile; productRef = EA9DFDE6BD85D7623C050492 /* RuimteIntelligentUI */; };
 		2078E1D5C84F273F381AA240 /* LaunchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D2983C599BF780FEA70F8A /* LaunchModel.swift */; };
 		226093BDE4A09AE44CB9B90A /* GitPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69D1BF9802A60BF9D50BA2B /* GitPage.swift */; };
 		22D4E7461B92CDB6FA1056BB /* ChatSubagentRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2397286316071E20E0ED2DC4 /* ChatSubagentRow.swift */; };
@@ -141,6 +141,7 @@
 		68A0642766D3BCB0B2A961B9 /* GitPanelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BA186BF1980CD600E8D19C1 /* GitPanelTests.swift */; };
 		690018DEE052CF8E2F15A728 /* image.ico in Resources */ = {isa = PBXBuildFile; fileRef = C3C0E3CC0799686666F81365 /* image.ico */; };
 		6A11D3C0C5C55E0730280183 /* ChatForkingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAF32399AA9411213B7BFB06 /* ChatForkingTests.swift */; };
+		6B28EC3AF9DE1B5DB8D62235 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 37621C952E69C77E98AD85B1 /* Highlightr */; };
 		6B9C49BBFF571EE172D408E5 /* ChatSheetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8BC4353277A4019C10B096E /* ChatSheetTests.swift */; };
 		6BAB625D21EB2AECB1D6579C /* tone.wav in Resources */ = {isa = PBXBuildFile; fileRef = BDC7F1DC56F0B5F307881B99 /* tone.wav */; };
 		6DB0A1C6FE1BF1BEB67EFF37 /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = D356DC5C4DF0605AD7A64646 /* RuimtePulsar */; };
@@ -276,7 +277,7 @@
 		CEF23498D3257D01BBB5E7F9 /* GitConflicts.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC0BE5E522E5F6A8F483BC0 /* GitConflicts.swift */; };
 		D039697DB61689EDC2F469C7 /* DrawingToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93D01ABC623CFE597F34A563 /* DrawingToolbar.swift */; };
 		D3AE70D4B71CD32DD8D34D42 /* NotificationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E5C2124CCC572A4A3D407AB /* NotificationCoordinator.swift */; };
-		D43A11554C08D7C39C95FAE9 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 37621C952E69C77E98AD85B1 /* Highlightr */; };
+		D43A11554C08D7C39C95FAE9 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */; };
 		D43CDF040DF82F5E2C648BE7 /* RuimteActivityWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 453AE6630A2DEA42EDBA0A7D /* RuimteActivityWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D5C5B6D3EA9D21DAA758BF79 /* ChatContentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2414AA03D39CF3F8A6A5CC /* ChatContentTests.swift */; };
 		D6FD6C3785D1017DC74B3E80 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 360CC2CFC02B68B045C92968 /* NotificationService.swift */; };
@@ -494,6 +495,7 @@
 		58EC9A184CB76F10292FAF1E /* SessionVisualTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionVisualTests.swift; sourceTree = "<group>"; };
 		59965D01855765D4A850A9AD /* ChatPromptCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPromptCard.swift; sourceTree = "<group>"; };
 		5A672F255CAFCD537E1F2A74 /* UnifiedProjects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedProjects.swift; sourceTree = "<group>"; };
+		5B0A980DBDE3AE589F27EA0B /* RuimteIntelligentUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuimteIntelligentUI; path = Packages/RuimteIntelligentUI; sourceTree = SOURCE_ROOT; };
 		5C7AB3BBCD4DCB62DA65528F /* image.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image.png; sourceTree = "<group>"; };
 		5C7EB90664392C5D8194C594 /* ProcessesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessesTests.swift; sourceTree = "<group>"; };
 		5DAC3BBE10240D8F0B9E349A /* PhoneRouterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneRouterTests.swift; sourceTree = "<group>"; };
@@ -724,8 +726,9 @@
 				A4018BFBF14D0FA6CDCECEA2 /* LucideSwift in Frameworks */,
 				7790DAA9D3367EA110B768DD /* RuimtePulsar in Frameworks */,
 				B949A220D4C8ECC4FF9AA838 /* RuimteTransport in Frameworks */,
-				2039449EB696024C64A7D640 /* SwiftTerm in Frameworks */,
-				D43A11554C08D7C39C95FAE9 /* Highlightr in Frameworks */,
+				2039449EB696024C64A7D640 /* RuimteIntelligentUI in Frameworks */,
+				D43A11554C08D7C39C95FAE9 /* SwiftTerm in Frameworks */,
+				6B28EC3AF9DE1B5DB8D62235 /* Highlightr in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1223,6 +1226,7 @@
 		E7D2E16C602F28AE55AEFEF8 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
+				5B0A980DBDE3AE589F27EA0B /* RuimteIntelligentUI */,
 				277C90606C3586426EE8CE7F /* RuimtePulsar */,
 				5748DC9D2A5D211B6913A122 /* RuimteTransport */,
 			);
@@ -1360,6 +1364,7 @@
 				10DFA2EA63182CCBE1B7810F /* LucideSwift */,
 				9C53340AF650FD1171130411 /* RuimtePulsar */,
 				6FFA42FE75679D801B5D68D6 /* RuimteTransport */,
+				EA9DFDE6BD85D7623C050492 /* RuimteIntelligentUI */,
 				7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */,
 				37621C952E69C77E98AD85B1 /* Highlightr */,
 			);
@@ -1446,6 +1451,7 @@
 				AEF0A7420442EE44D62A6523 /* XCRemoteSwiftPackageReference "Highlightr" */,
 				A8B13974FE087991024A3FCD /* XCRemoteSwiftPackageReference "lucide-swift" */,
 				E4F09FC52CA242014D05DB21 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+				E0C624717CB8CFD5682AA99B /* XCLocalSwiftPackageReference "Packages/RuimteIntelligentUI" */,
 				82AD56BBD81D53B5F164E4FA /* XCLocalSwiftPackageReference "Packages/RuimtePulsar" */,
 				26AAEDEB62D7609C88958B40 /* XCLocalSwiftPackageReference "Packages/RuimteTransport" */,
 			);
@@ -2249,6 +2255,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/RuimtePulsar;
 		};
+		E0C624717CB8CFD5682AA99B /* XCLocalSwiftPackageReference "Packages/RuimteIntelligentUI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/RuimteIntelligentUI;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -2327,6 +2337,10 @@
 		D356DC5C4DF0605AD7A64646 /* RuimtePulsar */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = RuimtePulsar;
+		};
+		EA9DFDE6BD85D7623C050492 /* RuimteIntelligentUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RuimteIntelligentUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

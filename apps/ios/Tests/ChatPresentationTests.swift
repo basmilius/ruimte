@@ -83,6 +83,20 @@ final class ChatPresentationTests: XCTestCase {
         XCTAssertEqual(presentation.entries.map(\.id), ["fold-turn", "tools-tool", "reply", "warning"])
     }
 
+    @MainActor func testGeneratedImageStaysOutsideTheTurnFoldAndNeverDuplicatesOnExpand() {
+        let presentation = ChatPresentation()
+        let turn = item("turn", "turn").setting("turnId", .string("turn")).setting("state", .string("done"))
+        let tool = item("tool", "tool").setting("turnId", .string("turn")).setting("state", .string("done"))
+        let image = item("image", "tool").setting("turnId", .string("turn")).setting("state", .string("done")).setting("name", .string("ImageGeneration"))
+        let reply = item("reply", "assistant").setting("turnId", .string("turn"))
+        presentation.replace([turn, tool, image, reply], info: .null)
+        XCTAssertEqual(presentation.entries.map(\.id), ["fold-turn", "image", "reply"])
+        XCTAssertEqual(presentation.entries[1].kind, .message)
+        presentation.toggleTurn("turn")
+        XCTAssertEqual(presentation.entries.map(\.id), ["fold-turn", "tools-tool", "image", "reply"])
+        XCTAssertEqual(presentation.entries.filter { $0.id == "image" }.count, 1)
+    }
+
     @MainActor func testSubagentTextBelongsToItsAgentAndDeltaRetainsStructure() {
         let presentation = ChatPresentation()
         let agent = item("agent", "subagent").setting("toolUseId", .string("spawn"))
