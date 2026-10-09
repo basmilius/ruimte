@@ -22,6 +22,14 @@
         "gone": "Dat bestand staat er niet meer",
         "notShown": "Een {{format}}-afbeelding, een formaat dat deze app niet toont"
     },
+    "generatedImage": {
+        "saveTitle": "Afbeelding opslaan in project",
+        "saveIn": "De afbeelding wordt opgeslagen in {{project}}.",
+        "folder": "Map",
+        "name": "Naam",
+        "exists": "{{name}} bestaat al in deze map",
+        "replace": "Vervangen"
+    },
     "login": {
         "title": "Inloggen bij {{account}}",
         "description": "{{cli}} draait zijn eigen login in deze terminal. Die sluit vanzelf zodra je bent ingelogd.",
