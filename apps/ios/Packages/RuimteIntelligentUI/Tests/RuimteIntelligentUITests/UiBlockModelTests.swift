@@ -1,6 +1,7 @@
 import Foundation
-import Testing
 import RuimtePulsar
+import Testing
+
 @testable import RuimteIntelligentUI
 
 private actor UiRequestRecorder {
@@ -14,7 +15,10 @@ private actor UiRequestRecorder {
             return .object(["queued": .bool(queued)])
         }
         if name == "ui.query" {
-            return .object(["state": .string("fresh"), "readId": .string("read-ticket"), "readAt": .number(1), "value": .object(["files": .array([.string("a")])])])
+            return .object([
+                "state": .string("fresh"), "readId": .string("read-ticket"), "readAt": .number(1),
+                "value": .object(["files": .array([.string("a")])]),
+            ])
         }
         return .object(["state": .string("plain"), "reason": .string("The file was removed")])
     }
@@ -55,11 +59,13 @@ private actor UiRequestRecorder {
         let model = UiBlockModel(chatID: "chat", itemID: "item", block: block, request: recorder.request)
         await model.update(block: block)
         model.setActive(visible: false, connected: true)
+        #expect(!model.canChoose)
         await model.refresh()
         #expect(await recorder.calls.isEmpty)
         model.setActive(visible: true, connected: true)
         await model.refresh()
         await model.refresh()
+        #expect(model.canChoose)
         model.stop()
         #expect(await recorder.calls.count == 1)
         #expect(model.readings["$status"]?["readId"] == .string("read-ticket"))

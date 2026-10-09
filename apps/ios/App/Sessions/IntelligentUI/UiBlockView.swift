@@ -1,6 +1,7 @@
 import RuimteIntelligentUI
 import RuimtePulsar
 import SwiftUI
+import UIKit
 
 /// One block of a reply as a card in the thread. The model is the block's: the view only draws what it evaluated,
 /// changes inputs and sends a choice through it, and tells it when the card is on screen.
@@ -8,15 +9,19 @@ struct UiBlockView: View {
     let model: UiBlockModel
     /// Chat, item and block, which keys what a person opened here (a tab, a folded section).
     let localKey: String
+    let flash: UUID?
+    @State private var highlighted = false
+    @AccessibilityFocusState private var focused: Bool
     @Environment(\.uiHost) private var host
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var floor: CGFloat = 0
     @State private var streamed: Bool
 
-    init(model: UiBlockModel, localKey: String) {
+    init(model: UiBlockModel, localKey: String, flash: UUID? = nil) {
         self.model = model
         self.localKey = localKey
+        self.flash = flash
         _streamed = State(initialValue: !model.complete)
     }
 
@@ -49,6 +54,21 @@ struct UiBlockView: View {
         }
         .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 20))
         .overlay { RoundedRectangle(cornerRadius: 20).strokeBorder(MobileStyle.border) }
+        .overlay {
+            if highlighted { RoundedRectangle(cornerRadius: 20).strokeBorder(MobileStyle.accent, lineWidth: 2) }
+        }
+        .background(UiBlockRevealMarker(flash: flash))
+        .accessibilityFocused($focused)
+        .task(id: flash) {
+            guard flash != nil else { return }
+            highlighted = true
+            focused = true
+            do { try await Task.sleep(for: .seconds(1.6)) } catch {
+                highlighted = false
+                return
+            }
+            highlighted = false
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(blockName(head))
         .onAppear { activate() }
@@ -306,5 +326,30 @@ struct UiFlowLayout: Layout {
         }
         if !row.indices.isEmpty { rows.append(row) }
         return rows
+    }
+}
+
+private struct UiBlockRevealMarker: UIViewRepresentable {
+    let flash: UUID?
+    final class Coordinator { var last: UUID? }
+    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeUIView(context: Context) -> UIView { UIView() }
+    func updateUIView(_ view: UIView, context: Context) {
+        guard let flash, flash != context.coordinator.last else { return }
+        context.coordinator.last = flash
+        DispatchQueue.main.async {
+            guard view.window != nil else { return }
+            var ancestor = view.superview
+            while let parent = ancestor {
+                if let collection = parent as? UICollectionView {
+                    collection.layoutIfNeeded()
+                    collection.scrollRectToVisible(
+                        view.convert(view.bounds, to: collection).insetBy(dx: 0, dy: -8),
+                        animated: !UIAccessibility.isReduceMotionEnabled)
+                    return
+                }
+                ancestor = parent.superview
+            }
+        }
     }
 }

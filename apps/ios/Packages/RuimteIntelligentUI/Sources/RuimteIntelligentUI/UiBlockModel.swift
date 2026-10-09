@@ -29,7 +29,10 @@ public final class UiBlockModel {
     @ObservationIgnored private var polling: Task<Void, Never>?
     @ObservationIgnored private var lastRead: ContinuousClock.Instant?
 
-    public init(chatID: String, itemID: String, block: JSONValue, interpreter: UiInterpreter = .shared, request: @escaping Request) {
+    public init(
+        chatID: String, itemID: String, block: JSONValue, interpreter: UiInterpreter = .shared,
+        request: @escaping Request
+    ) {
         self.chatID = chatID
         self.itemID = itemID
         self.block = block
@@ -40,7 +43,12 @@ public final class UiBlockModel {
     public var nodes: [JSONValue] { result["nodes"]?.arrayValue ?? [] }
     public var diagnostics: [JSONValue] { result["diagnostics"]?.arrayValue ?? [] }
     public var complete: Bool { block["complete"]?.boolValue == true && block["revision"]?.stringValue != nil }
-    public var canChoose: Bool { complete && connected && !sending && !reading && !queryInputsDirty && answer == nil }
+    public var canChoose: Bool {
+        complete && connected && !sending && !reading && !queryInputsDirty && answer == nil
+            && (block["queries"]?.objectValue ?? [:]).keys.allSatisfy {
+                readTickets[$0] != nil && readings[$0]?["state"] != .string("refused")
+            }
+    }
     public var answerState: String? {
         if sending { return "sending" }
         guard let answer else { return nil }
@@ -93,11 +101,14 @@ public final class UiBlockModel {
     public func change(nodeID: String, prop: String, value: JSONValue) async {
         guard complete, answer == nil, !sending else { return }
         let previous = values
+        let wasDirty = queryInputsDirty
+        if !(block["queries"]?.objectValue ?? [:]).isEmpty { queryInputsDirty = true }
         generation += 1
         await evaluate(change: .object(["nodeId": .string(nodeID), "prop": .string(prop), "value": value]))
         if previous != values {
             resolvedLinks = [:]
-            if !(block["queries"]?.objectValue ?? [:]).isEmpty { queryInputsDirty = true }
+        } else {
+            queryInputsDirty = wasDirty
         }
     }
 
@@ -111,7 +122,10 @@ public final class UiBlockModel {
         do {
             let response = try await request("chat.uiChoice", payload(["choiceId": .string(nodeID)]))
             guard revision == block["revision"], blockID == block["id"] else { return }
-            answer = .object(["choiceId": .string(nodeID), "state": .string(response["queued"]?.boolValue == true ? "queued" : "sent")])
+            answer = .object([
+                "choiceId": .string(nodeID),
+                "state": .string(response["queued"]?.boolValue == true ? "queued" : "sent"),
+            ])
             error = nil
         } catch {
             guard revision == block["revision"], blockID == block["id"] else { return }
@@ -147,13 +161,20 @@ public final class UiBlockModel {
                 let response = try await request("ui.query", payload(["query": .string(name)]))
                 guard visible, connected, current == generation, !Task.isCancelled else { return }
                 readings[name] = response
-                if let value = response["value"] { queryValues[name] = value }
-                if let ticket = response["readId"] { readTickets[name] = ticket }
-                if response["state"] != .string("fresh") { allFresh = false }
+                if response["state"] == .string("fresh"), let ticket = response["readId"], let value = response["value"]
+                {
+                    queryValues[name] = value
+                    readTickets[name] = ticket
+                } else {
+                    allFresh = false
+                }
             } catch {
                 guard visible, connected, current == generation, !Task.isCancelled else { return }
                 allFresh = false
-                readings[name] = .object(["state": .string("failed"), "readAt": .number(Date.now.timeIntervalSince1970 * 1000), "reason": .string(String(describing: error))])
+                readings[name] = .object([
+                    "state": .string("failed"), "readAt": .number(Date.now.timeIntervalSince1970 * 1000),
+                    "reason": .string(String(describing: error)),
+                ])
             }
         }
         await evaluate()
@@ -173,7 +194,8 @@ public final class UiBlockModel {
         evaluationGeneration += 1
         let current = evaluationGeneration
         do {
-            let result = try await interpreter.evaluate(block: block, values: values, queries: .object(queryValues), change: change)
+            let result = try await interpreter.evaluate(
+                block: block, values: values, queries: .object(queryValues), change: change)
             guard current == evaluationGeneration else { return }
             self.result = result
             values = result["values"] ?? .object([:])
@@ -185,15 +207,20 @@ public final class UiBlockModel {
     }
 
     private func payload(_ extra: [String: JSONValue]) -> JSONValue {
-        return .object(extra.merging([
-            "chatId": .string(chatID), "itemId": .string(itemID), "blockId": block["id"] ?? .null,
-            "revision": block["revision"] ?? .null, "values": values, "reads": .object(readTickets),
-        ], uniquingKeysWith: { _, identity in identity }))
+        return .object(
+            extra.merging(
+                [
+                    "chatId": .string(chatID), "itemId": .string(itemID), "blockId": block["id"] ?? .null,
+                    "revision": block["revision"] ?? .null, "values": values, "reads": .object(readTickets),
+                ], uniquingKeysWith: { _, identity in identity }))
     }
 
     private func schedulePolling() {
         polling?.cancel()
-        guard visible, connected, complete, !(block["queries"]?.objectValue ?? [:]).isEmpty else { polling = nil; return }
+        guard visible, connected, complete, !(block["queries"]?.objectValue ?? [:]).isEmpty else {
+            polling = nil
+            return
+        }
         polling = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }

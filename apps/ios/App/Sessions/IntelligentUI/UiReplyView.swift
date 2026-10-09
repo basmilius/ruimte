@@ -8,6 +8,7 @@ import SwiftUI
 struct UiReplyView: View {
     /// The assistant item: `text`, `streaming`, `ui`, `uiAnswers` and `uiQueries` as the wire has them.
     let item: JSONValue
+    var presentation: ChatPresentation?
     /// The model of a block, kept by the caller across rows (`UiBlockModelCache`), created with the block it draws.
     let model: @MainActor (JSONValue) -> UiBlockModel
     @Environment(\.chatContent) private var chat
@@ -30,13 +31,22 @@ struct UiReplyView: View {
                 case .block(let block):
                     let id = block["id"]?.stringValue ?? ""
                     UiReplyBlock(
-                        block: block, model: model(block), frozen: item["uiQueries"]?["blocks"]?[id],
+                        block: block, model: model(block), flash: highlight(block),
+                        frozen: item["uiQueries"]?["blocks"]?[id],
                         answered: item["uiAnswers"]?[id],
                         localKey:
                             "\(chat?.scopeID ?? "")\n\(chat?.chatID ?? "")\n\(item["id"]?.stringValue ?? "")\n\(id)")
                 }
             }
         }
+    }
+
+    private func highlight(_ block: JSONValue) -> UUID? {
+        guard let target = presentation?.uiChoiceHighlight,
+            target.itemID == item.text("id"), target.blockID == block.text("id"),
+            target.revision == block.text("revision")
+        else { return nil }
+        return target.nonce
     }
 
     private struct Identified {
@@ -62,6 +72,7 @@ struct UiReplyView: View {
 private struct UiReplyBlock: View {
     let block: JSONValue
     let model: UiBlockModel
+    let flash: UUID?
     let frozen: JSONValue?
     let answered: JSONValue?
     let localKey: String
@@ -73,7 +84,7 @@ private struct UiReplyBlock: View {
     }
 
     var body: some View {
-        UiBlockView(model: model, localKey: localKey)
+        UiBlockView(model: model, localKey: localKey, flash: flash)
             .task(id: Update(block: block, frozen: frozen, answered: answered)) {
                 await model.update(block: block, frozen: frozen, answered: answered)
             }

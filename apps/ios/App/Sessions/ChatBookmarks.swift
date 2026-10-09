@@ -95,6 +95,24 @@ extension ChatModel {
         }
     }
 
+    func revealUiChoice(_ target: UiChoiceJump) async {
+        while presentation.item(target.itemID) == nil {
+            guard !Task.isCancelled else { return }
+            if loadingHistory {
+                do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+            } else if await !loadOlderNow() {
+                return
+            }
+        }
+        guard !Task.isCancelled, let item = presentation.item(target.itemID),
+            item.list("ui").contains(where: {
+                $0.text("id") == target.blockID && $0.text("revision") == target.revision
+            })
+        else { return }
+        presentation.uiChoiceHighlight = target
+        _ = presentation.revealItem(target.itemID)
+    }
+
     private func changeBookmarks(_ request: String, _ values: [String: JSONValue]) async -> Bool {
         do {
             let result = try await client.request(request, payload: target(values))

@@ -599,7 +599,7 @@ and query metadata without accepting a preview for an older text length.
 
 The native chat timeline now passes a per-chat model cache to `UiReplyView`, which places each
 compiled card between its surrounding prose. Connection and visibility drive live reads and
-choice availability. The original user message stays intact below `UiChoiceLine`. Generated
+choice availability. The original user message stays intact below `UiChoiceLine`. Tapping that heading loads older history when needed, opens the original turn and reveals only the matching item, block and revision. Generated
 images use their own row outside settled work folds, with attachment-backed preview and prompt
 copying from the image menu. File, diff, commit and node chips open the existing project pages
 after the daemon resolves the link again. Local presentation state includes the machine in its

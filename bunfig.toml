@@ -1,6 +1,6 @@
 [test]
 # Real shells, watchers and sockets run through `test:integration`; browser checks through `test:browser`.
-pathIgnorePatterns = ["**/*.integration.test.ts"]
+pathIgnorePatterns = ["**/*.integration.test.ts", "**/docs/reports/private/**"]
 # The client's English words, so a pure function that reads one off i18next is testable
 # without every test file initializing it first. The dedupe preload goes first and by path,
 # since the root has no copy of the library under the isolated install.

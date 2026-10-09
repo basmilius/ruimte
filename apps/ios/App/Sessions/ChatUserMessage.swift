@@ -7,8 +7,14 @@ struct ChatUserMessage: View {
     let item: JSONValue
     let client: any MachineRequesting
     let chatID: String
+    var presentation: ChatPresentation?
     @State private var expanded = false
     private var long: Bool { item.text("text").count > 600 || item.text("text").split(separator: "\n").count > 8 }
+
+    private func choiceReveal(_ origin: JSONValue) -> (() -> Void)? {
+        guard let presentation, let target = UiChoiceJump(origin) else { return nil }
+        return { presentation.uiChoiceRequest = target }
+    }
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 8) {
@@ -16,7 +22,7 @@ struct ChatUserMessage: View {
                 ChatAttachmentButton(client: client, chatID: chatID, attachment: attachment)
             }
             if let origin = item["uiChoice"] {
-                UiChoiceLine(origin: origin)
+                UiChoiceLine(origin: origin, reveal: choiceReveal(origin))
             }
             if !item.text("text").isEmpty {
                 VStack(alignment: .leading, spacing: 4) {

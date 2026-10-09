@@ -158,6 +158,9 @@ struct ChatScreen: View {
             renameAfterList = nil
             askBookmarkName(id)
         }
+        .task(id: model.presentation.uiChoiceRequest) {
+            if let target = model.presentation.uiChoiceRequest { await model.revealUiChoice(target) }
+        }
         .onChange(of: model.presentation.bookmarkRequest) { _, request in
             guard let request else { return }
             model.presentation.bookmarkRequest = nil

@@ -1,7 +1,7 @@
 import Foundation
 import Observation
-import RuimtePulsar
 import RuimteIntelligentUI
+import RuimtePulsar
 
 @MainActor @Observable
 final class ChatItemState: Identifiable {
@@ -58,6 +58,8 @@ final class ChatPresentation {
     private(set) var bookmarks: [String: ChatBookmark] = [:]
     /// A row asked to place, name or take away a bookmark; the screen carries it out.
     var bookmarkRequest: ChatBookmarkRequest?
+    var uiChoiceRequest: UiChoiceJump?
+    var uiChoiceHighlight: UiChoiceJump?
     /// The pages agents published in the chat, as the machine last said.
     private(set) var visuals: [ChatVisual] = []
     /// A card asked to open its visual large or to remove it; the screen carries it out.
@@ -324,7 +326,9 @@ final class ChatPresentation {
             if kind == "approval" && value.text("decision") == "pending" { continue }
             if kind == "question" && value.text("state") == "pending" { continue }
             // A subagent's `SubagentHandback` call reads as the report it carries rather than as a tool call.
-            if kind == "tool" && value.text("state") != "running" && ChatSubagents.handbackReport(value) == nil && !UiGeneratedImage.isGeneration(value) {
+            if kind == "tool" && value.text("state") != "running" && ChatSubagents.handbackReport(value) == nil
+                && !UiGeneratedImage.isGeneration(value)
+            {
                 if rows.last?.kind == .tools && !historyBoundaries.contains(item.id) {
                     rows[rows.count - 1].items.append(item)
                 } else {

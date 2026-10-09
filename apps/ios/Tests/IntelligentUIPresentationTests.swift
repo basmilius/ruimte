@@ -5,6 +5,18 @@ import XCTest
 @testable import Ruimte
 
 final class IntelligentUIPresentationTests: XCTestCase {
+    func testChoiceJumpKeepsExactSourceAndRejectsIncompleteOrigins() throws {
+        let origin: JSONValue = .object([
+            "itemId": .string("item"), "blockId": .string("block"), "revision": .string("revision"),
+        ])
+        let jump = try XCTUnwrap(UiChoiceJump(origin))
+        XCTAssertEqual(jump.itemID, "item")
+        XCTAssertEqual(jump.blockID, "block")
+        XCTAssertEqual(jump.revision, "revision")
+        XCTAssertNotEqual(jump.nonce, UiChoiceJump(origin)?.nonce)
+        XCTAssertNil(UiChoiceJump(.object(["itemId": .string("item")])))
+    }
+
     private func node(_ json: String) throws -> UiNode {
         try XCTUnwrap(UiNode(JSONValue.decode(Data(json.utf8))))
     }

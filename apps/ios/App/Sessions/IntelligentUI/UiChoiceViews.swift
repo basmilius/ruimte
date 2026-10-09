@@ -149,9 +149,27 @@ private struct UiChoiceStyle: ButtonStyle {
 
 /// The line above a person's message that a choice sent: which choice it was, and for an older reply, which one.
 /// The label stays out of the message itself, which holds exactly what the agent read.
+struct UiChoiceJump: Equatable {
+    let itemID: String
+    let blockID: String
+    let revision: String
+    let nonce = UUID()
+
+    init?(_ origin: JSONValue) {
+        guard let itemID = origin["itemId"]?.stringValue, !itemID.isEmpty,
+            let blockID = origin["blockId"]?.stringValue, !blockID.isEmpty,
+            let revision = origin["revision"]?.stringValue, !revision.isEmpty
+        else { return nil }
+        self.itemID = itemID
+        self.blockID = blockID
+        self.revision = revision
+    }
+}
+
 struct UiChoiceLine: View {
     /// The message's `uiChoice`: its `label`, `older` and `sourceAt` in milliseconds.
     let origin: JSONValue
+    var reveal: (() -> Void)?
 
     var body: some View {
         let label = origin["label"]?.stringValue ?? ""
@@ -162,6 +180,16 @@ struct UiChoiceLine: View {
                     "Chose “\(label)” on the reply of \(UiFormat.moment(milliseconds: origin["sourceAt"]?.numberValue ?? 0).formatted(date: .omitted, time: .shortened))"
             )
             : String(localized: "Chose “\(label)”")
+        Group {
+            if let reveal {
+                Button(action: reveal) { choiceLabel(words) }.buttonStyle(.plain)
+            } else {
+                choiceLabel(words)
+            }
+        }
+    }
+
+    private func choiceLabel(_ words: String) -> some View {
         Label {
             Text(words)
         } icon: {

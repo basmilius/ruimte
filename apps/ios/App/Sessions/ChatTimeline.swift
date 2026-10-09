@@ -1236,11 +1236,11 @@ private struct ChatTimelineRow: View {
         VStack(alignment: .leading, spacing: 8) {
             switch kind {
             case "user":
-                ChatUserMessage(item: item, client: client, chatID: chatID)
+                ChatUserMessage(item: item, client: client, chatID: chatID, presentation: presentation)
             case "assistant":
                 Group {
                     if UiReplyView.hasBlocks(item), let uiModels, uiModels.chatID == chatID {
-                        UiReplyView(item: item) { block in
+                        UiReplyView(item: item, presentation: presentation) { block in
                             uiModels.cache.model(itemID: item.text("id"), block: block)
                         }
                     } else {
