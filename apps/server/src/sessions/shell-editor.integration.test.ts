@@ -56,6 +56,8 @@ test('cwd is read after late precmd hooks and the preview only offers that direc
         expect(preview.targets).toHaveLength(1);
         expect(preview.targets[0]!.cwd).toBe(actual);
         await f.prepare.prepare('owner', preview.targets[0]!.token, f.client);
+        // ZLE acknowledges insertion before it redraws the prepared line.
+        await waitForAsync(async () => (await f.session.plainText()).includes('pwd > actual-cwd'), 'prepared line displayed');
         await expect(access(join(actual, 'actual-cwd'))).rejects.toThrow();
         f.manager.write('shell', '\r', 'person');
         await waitForAsync(() => Bun.file(join(actual, 'actual-cwd')).exists(), 'explicit Enter');
