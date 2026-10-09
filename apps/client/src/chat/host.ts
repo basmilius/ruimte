@@ -80,6 +80,13 @@ export function connectChatHost(): void {
         notify: (toast) => void useToasts.getState().show(toast),
         actions: PERSON_CHAT_ACTIONS,
         intelligentUi: {
+            link: async (endpointId, payload) => {
+                const transport = transportFor(endpointId);
+                if (transport === null) {
+                    throw new Error(i18next.t('agent-chat:composer.placeholder.disconnected'));
+                }
+                return transport.request('ui.link', payload);
+            },
             subscribe: (endpointId, chatId, changed) => {
                 const transport = transportFor(endpointId);
                 if (transport === null) {

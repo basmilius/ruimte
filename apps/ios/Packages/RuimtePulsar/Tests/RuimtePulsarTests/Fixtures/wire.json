@@ -147,6 +147,7 @@
     "chat.send",
     "chat.uiChoice",
     "ui.query",
+    "ui.link",
     "chat.unqueue",
     "chat.sendNow",
     "chat.cancel",

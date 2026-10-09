@@ -469,3 +469,10 @@ describe('UI database access', () => {
         expect(helper.written).toEqual([]);
     });
 });
+
+test('UI access snapshots contain connection fingerprints, never target configuration', async () => {
+    const grants = await agents.captureUiAccess({ projectId: 'p1', folder });
+    expect(grants[0]!.target).toMatch(/^[a-f\d]{64}$/);
+    expect(JSON.stringify(grants)).not.toContain('127.0.0.1');
+    expect(JSON.stringify(grants)).not.toContain('written-in-the-file');
+});

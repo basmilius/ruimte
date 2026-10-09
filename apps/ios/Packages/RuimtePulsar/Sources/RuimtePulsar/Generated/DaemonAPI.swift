@@ -55,6 +55,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `chatSend` = "chat.send"
     case `chatUiChoice` = "chat.uiChoice"
     case `uiQuery` = "ui.query"
+    case `uiLink` = "ui.link"
     case `chatUnqueue` = "chat.unqueue"
     case `chatSendNow` = "chat.sendNow"
     case `chatCancel` = "chat.cancel"

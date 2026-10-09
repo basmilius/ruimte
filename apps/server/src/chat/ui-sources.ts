@@ -1,3 +1,4 @@
+import { UiSourceAccessSchema } from './ui-access.ts';
 import { realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { z } from 'zod';
@@ -7,18 +8,12 @@ import type { ChatUiHost, ChatUiSource } from '@adecore/agents/chat/ui-queries';
 import { ChatError } from './errors.ts';
 import { checkCwd, isInside } from '../canvas/project-paths.ts';
 import type { AgentDatabases, DatabasePlace } from '../database/agent-databases.ts';
+import { resolveUiProjectLink } from './ui-links.ts';
 import type { LaunchReading } from '../canvas/verb.ts';
-
-const AccessSchema = z.object({
-    projectId: z.string(),
-    folder: z.string(),
-    cwd: z.string(),
-    roots: z.array(z.string()),
-    databases: z.array(z.object({ id: z.string(), target: z.string(), access: z.enum(['off', 'read', 'write']) }))
-});
 
 export interface UiSourceHosts {
     place(chatId: string): DatabasePlace | null;
+    node(id: string): { projectId: string; title: string; canvasId: string | null } | null;
     worktreePaths(folder: string): Promise<string[]>;
     gitStatus(cwd: string): Promise<z.infer<typeof GitStatusSchema>>;
     gitLog(cwd: string, limit: number): Promise<z.infer<typeof GitLogResultSchema>>;
@@ -36,7 +31,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
         return current;
     };
     const authorize = async (info: ChatInfo, input: unknown) => {
-        const access = AccessSchema.parse(input);
+        const access = UiSourceAccessSchema.parse(input);
         const current = place(info);
         if (current.projectId !== access.projectId || (await realpath(current.folder)) !== access.folder) {
             throw new ChatError('refused-query', 'The query belongs to another project.');
@@ -140,7 +135,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
                 await host.databases().authorizeUiRead(place(info), String(args.connection), access.databases);
             },
             read: async (info, args, signal, input) => {
-                const access = AccessSchema.parse(input);
+                const access = UiSourceAccessSchema.parse(input);
                 const answer = await host.databases().query(place(info), info.chatId, String(args.connection), String(args.sql), {
                     schema: args.schema as string | null,
                     limit: Number(args.limit),
@@ -178,6 +173,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
     }
     return {
         sources,
+        link: (info, access, target) => resolveUiProjectLink(host, info, access, target),
         capture: async (info) => {
             const databaseAccess = host.databases().captureUiAccess(place(info));
             const access = await capturePlace(info);

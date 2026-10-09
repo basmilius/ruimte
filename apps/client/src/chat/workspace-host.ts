@@ -1,10 +1,11 @@
 import i18next from 'i18next';
 import { createElement, useMemo } from 'react';
-import { setChatHost } from '@adecore/agents-react/host';
+import { chatHost, setChatHost } from '@adecore/agents-react/host';
 import { answerComputerAsPerson } from '@/actions/client-actions';
 import { ComposerDictation } from '@/chat/ComposerDictation';
 import { prepareCodeBlockAction } from '@/chat/prepare-code-block';
 import { useProjectChats } from '@/chat/project-chats';
+import { openUiLink, openUiUrl } from '@/chat/ui-links';
 import { ReadImage } from '@/chat/ReadImage';
 import { useTimelineFind } from '@/chat/use-chat-find';
 import { useChatPlace } from '@/chat/use-chat-place';
@@ -25,7 +26,9 @@ import { isShellShortcut } from '@/terminal/keymap';
  * project. Handed over when the workspace chunk loads, before anything in it renders.
  */
 export function connectWorkspaceChatHost(): void {
+    const intelligentUi = chatHost().intelligentUi;
     setChatHost({
+        ...(intelligentUi ? { intelligentUi: { ...intelligentUi, openLink: openUiLink, openUrl: openUiUrl } } : {}),
         isAppShortcut: (event) => isShellShortcut(event, isApplePlatform()),
         ReadImage,
         renderShellCodeBlock: prepareCodeBlockAction,

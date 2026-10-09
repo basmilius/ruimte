@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { realpath } from 'node:fs/promises';
 import { relative } from 'node:path';
 import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
@@ -215,7 +215,7 @@ export class AgentDatabases {
         const levels = this.options.access.levels(place.projectId);
         return (await this.connectionsOf(place)).map((connection) => ({
             id: connection.id,
-            target: JSON.stringify([connectionTarget(connection.config), this.defaultSchema(connection)]),
+            target: this.uiTarget(connection),
             access: levels[connection.id] ?? 'read'
         }));
     }
@@ -223,8 +223,13 @@ export class AgentDatabases {
     async authorizeUiRead(place: DatabasePlace, wanted: string, grants: readonly { id: string; target: string; access: DatabaseAgentAccess }[]): Promise<void> {
         const connection = await this.named(place, wanted);
         const original = grants.find((grant) => grant.id === connection.id);
-        const target = JSON.stringify([connectionTarget(connection.config), this.defaultSchema(connection)]);
-        if (!original || original.access === 'off' || original.target !== target || this.options.access.levelOf(place.projectId, connection.id) === 'off') {
+        const target = this.uiTarget(connection);
+        if (
+            !original ||
+            original.access === 'off' ||
+            this.capturedUiTarget(original.target) !== target ||
+            this.options.access.levelOf(place.projectId, connection.id) === 'off'
+        ) {
             refuse('database-access-off', 'This database was not readable by the writer or is no longer readable.');
         }
         const { password } = await this.configFor(place, connection, 'read');
@@ -361,6 +366,17 @@ export class AgentDatabases {
         refuse('unknown-connection', `This project has no database connection ${wanted}`, connectionLines(listed));
     }
 
+    private uiTarget(connection: DatabaseConnection): string {
+        // UI access travels to clients; keep a fingerprint instead of connection secrets.
+        return createHash('sha256')
+            .update(JSON.stringify([connectionTarget(connection.config), this.defaultSchema(connection)]))
+            .digest('hex');
+    }
+
+    private capturedUiTarget(target: string): string {
+        return /^[a-f\d]{64}$/.test(target) ? target : createHash('sha256').update(target).digest('hex');
+    }
+
     private defaultSchema(connection: DatabaseConnection): string | null {
         if (connection.config.engine === 'sqlite') {
             return 'main';
@@ -429,8 +445,8 @@ export class AgentDatabases {
         }
         if (uiAccess) {
             const original = uiAccess.find((grant) => grant.id === connection.id);
-            const target = JSON.stringify([connectionTarget(connection.config), this.defaultSchema(connection)]);
-            if (!original || original.access === 'off' || original.target !== target) {
+            const target = this.uiTarget(connection);
+            if (!original || original.access === 'off' || this.capturedUiTarget(original.target) !== target) {
                 refuse('database-access-off', 'The database target is outside the writer’s original access.');
             }
         }

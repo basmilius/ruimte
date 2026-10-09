@@ -10848,6 +10848,135 @@
                           },
                           "fallback": {
                             "type": "string"
+                          },
+                          "links": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "chip",
+                                    "plain"
+                                  ]
+                                },
+                                "target": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "File"
+                                        },
+                                        "path": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 4096
+                                        },
+                                        "line": {
+                                          "type": "integer",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 9007199254740991
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "path"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Diff"
+                                        },
+                                        "path": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 4096
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "path"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Commit"
+                                        },
+                                        "sha": {
+                                          "type": "string",
+                                          "pattern": "^[a-f\\d]{7,64}$"
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "sha"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Node"
+                                        },
+                                        "id": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                },
+                                "cwd": {
+                                  "type": "string"
+                                },
+                                "viewId": {
+                                  "type": "string"
+                                },
+                                "projectId": {
+                                  "type": "string"
+                                },
+                                "staged": {
+                                  "type": "boolean"
+                                },
+                                "conflicted": {
+                                  "type": "boolean"
+                                },
+                                "relativePath": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "state"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -12917,6 +13046,135 @@
                           },
                           "fallback": {
                             "type": "string"
+                          },
+                          "links": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "chip",
+                                    "plain"
+                                  ]
+                                },
+                                "target": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "File"
+                                        },
+                                        "path": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 4096
+                                        },
+                                        "line": {
+                                          "type": "integer",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 9007199254740991
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "path"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Diff"
+                                        },
+                                        "path": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 4096
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "path"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Commit"
+                                        },
+                                        "sha": {
+                                          "type": "string",
+                                          "pattern": "^[a-f\\d]{7,64}$"
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "sha"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Node"
+                                        },
+                                        "id": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                },
+                                "cwd": {
+                                  "type": "string"
+                                },
+                                "viewId": {
+                                  "type": "string"
+                                },
+                                "projectId": {
+                                  "type": "string"
+                                },
+                                "staged": {
+                                  "type": "boolean"
+                                },
+                                "conflicted": {
+                                  "type": "boolean"
+                                },
+                                "relativePath": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "state"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -14296,6 +14554,135 @@
                           },
                           "fallback": {
                             "type": "string"
+                          },
+                          "links": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "chip",
+                                    "plain"
+                                  ]
+                                },
+                                "target": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "File"
+                                        },
+                                        "path": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 4096
+                                        },
+                                        "line": {
+                                          "type": "integer",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 9007199254740991
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "path"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Diff"
+                                        },
+                                        "path": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 4096
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "path"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Commit"
+                                        },
+                                        "sha": {
+                                          "type": "string",
+                                          "pattern": "^[a-f\\d]{7,64}$"
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "sha"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Node"
+                                        },
+                                        "id": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                },
+                                "cwd": {
+                                  "type": "string"
+                                },
+                                "viewId": {
+                                  "type": "string"
+                                },
+                                "projectId": {
+                                  "type": "string"
+                                },
+                                "staged": {
+                                  "type": "boolean"
+                                },
+                                "conflicted": {
+                                  "type": "boolean"
+                                },
+                                "relativePath": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "state"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -15669,6 +16056,135 @@
                                   },
                                   "fallback": {
                                     "type": "string"
+                                  },
+                                  "links": {
+                                    "type": "object",
+                                    "propertyNames": {
+                                      "type": "string"
+                                    },
+                                    "additionalProperties": {
+                                      "type": "object",
+                                      "properties": {
+                                        "state": {
+                                          "type": "string",
+                                          "enum": [
+                                            "chip",
+                                            "plain"
+                                          ]
+                                        },
+                                        "target": {
+                                          "oneOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "type": {
+                                                  "type": "string",
+                                                  "const": "File"
+                                                },
+                                                "path": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 4096
+                                                },
+                                                "line": {
+                                                  "type": "integer",
+                                                  "exclusiveMinimum": 0,
+                                                  "maximum": 9007199254740991
+                                                }
+                                              },
+                                              "required": [
+                                                "type",
+                                                "path"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "type": {
+                                                  "type": "string",
+                                                  "const": "Diff"
+                                                },
+                                                "path": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 4096
+                                                }
+                                              },
+                                              "required": [
+                                                "type",
+                                                "path"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "type": {
+                                                  "type": "string",
+                                                  "const": "Commit"
+                                                },
+                                                "sha": {
+                                                  "type": "string",
+                                                  "pattern": "^[a-f\\d]{7,64}$"
+                                                }
+                                              },
+                                              "required": [
+                                                "type",
+                                                "sha"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "type": {
+                                                  "type": "string",
+                                                  "const": "Node"
+                                                },
+                                                "id": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 256
+                                                }
+                                              },
+                                              "required": [
+                                                "type",
+                                                "id"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          ]
+                                        },
+                                        "cwd": {
+                                          "type": "string"
+                                        },
+                                        "viewId": {
+                                          "type": "string"
+                                        },
+                                        "projectId": {
+                                          "type": "string"
+                                        },
+                                        "staged": {
+                                          "type": "boolean"
+                                        },
+                                        "conflicted": {
+                                          "type": "boolean"
+                                        },
+                                        "relativePath": {
+                                          "type": "string"
+                                        },
+                                        "label": {
+                                          "type": "string"
+                                        },
+                                        "reason": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "state"
+                                      ]
+                                    }
                                   }
                                 },
                                 "required": [
@@ -16812,6 +17328,135 @@
                           },
                           "fallback": {
                             "type": "string"
+                          },
+                          "links": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "chip",
+                                    "plain"
+                                  ]
+                                },
+                                "target": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "File"
+                                        },
+                                        "path": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 4096
+                                        },
+                                        "line": {
+                                          "type": "integer",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 9007199254740991
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "path"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Diff"
+                                        },
+                                        "path": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 4096
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "path"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Commit"
+                                        },
+                                        "sha": {
+                                          "type": "string",
+                                          "pattern": "^[a-f\\d]{7,64}$"
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "sha"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Node"
+                                        },
+                                        "id": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                },
+                                "cwd": {
+                                  "type": "string"
+                                },
+                                "viewId": {
+                                  "type": "string"
+                                },
+                                "projectId": {
+                                  "type": "string"
+                                },
+                                "staged": {
+                                  "type": "boolean"
+                                },
+                                "conflicted": {
+                                  "type": "boolean"
+                                },
+                                "relativePath": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "state"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -18441,6 +19086,135 @@
                                     },
                                     "fallback": {
                                       "type": "string"
+                                    },
+                                    "links": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string"
+                                      },
+                                      "additionalProperties": {
+                                        "type": "object",
+                                        "properties": {
+                                          "state": {
+                                            "type": "string",
+                                            "enum": [
+                                              "chip",
+                                              "plain"
+                                            ]
+                                          },
+                                          "target": {
+                                            "oneOf": [
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "type": {
+                                                    "type": "string",
+                                                    "const": "File"
+                                                  },
+                                                  "path": {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 4096
+                                                  },
+                                                  "line": {
+                                                    "type": "integer",
+                                                    "exclusiveMinimum": 0,
+                                                    "maximum": 9007199254740991
+                                                  }
+                                                },
+                                                "required": [
+                                                  "type",
+                                                  "path"
+                                                ],
+                                                "additionalProperties": false
+                                              },
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "type": {
+                                                    "type": "string",
+                                                    "const": "Diff"
+                                                  },
+                                                  "path": {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 4096
+                                                  }
+                                                },
+                                                "required": [
+                                                  "type",
+                                                  "path"
+                                                ],
+                                                "additionalProperties": false
+                                              },
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "type": {
+                                                    "type": "string",
+                                                    "const": "Commit"
+                                                  },
+                                                  "sha": {
+                                                    "type": "string",
+                                                    "pattern": "^[a-f\\d]{7,64}$"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "type",
+                                                  "sha"
+                                                ],
+                                                "additionalProperties": false
+                                              },
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "type": {
+                                                    "type": "string",
+                                                    "const": "Node"
+                                                  },
+                                                  "id": {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 256
+                                                  }
+                                                },
+                                                "required": [
+                                                  "type",
+                                                  "id"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            ]
+                                          },
+                                          "cwd": {
+                                            "type": "string"
+                                          },
+                                          "viewId": {
+                                            "type": "string"
+                                          },
+                                          "projectId": {
+                                            "type": "string"
+                                          },
+                                          "staged": {
+                                            "type": "boolean"
+                                          },
+                                          "conflicted": {
+                                            "type": "boolean"
+                                          },
+                                          "relativePath": {
+                                            "type": "string"
+                                          },
+                                          "label": {
+                                            "type": "string"
+                                          },
+                                          "reason": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "state"
+                                        ]
+                                      }
                                     }
                                   },
                                   "required": [
@@ -19825,6 +20599,186 @@
     "required": [
       "state",
       "readAt"
+    ]
+  },
+  "request.ui.link.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "itemId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "blockId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "revision": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "reads": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "additionalProperties": {
+          "type": "string",
+          "maxLength": 128
+        }
+      },
+      "values": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "additionalProperties": {}
+      },
+      "nodeId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "chatId",
+      "itemId",
+      "blockId",
+      "revision",
+      "nodeId"
+    ]
+  },
+  "request.ui.link.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "state": {
+        "type": "string",
+        "enum": [
+          "chip",
+          "plain"
+        ]
+      },
+      "target": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "File"
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              "line": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "type",
+              "path"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "Diff"
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              }
+            },
+            "required": [
+              "type",
+              "path"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "Commit"
+              },
+              "sha": {
+                "type": "string",
+                "pattern": "^[a-f\\d]{7,64}$"
+              }
+            },
+            "required": [
+              "type",
+              "sha"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "Node"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "viewId": {
+        "type": "string"
+      },
+      "projectId": {
+        "type": "string"
+      },
+      "staged": {
+        "type": "boolean"
+      },
+      "conflicted": {
+        "type": "boolean"
+      },
+      "relativePath": {
+        "type": "string"
+      },
+      "label": {
+        "type": "string"
+      },
+      "reason": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "state"
     ]
   },
   "request.chat.unqueue.payload": {
@@ -22987,6 +23941,135 @@
                           },
                           "fallback": {
                             "type": "string"
+                          },
+                          "links": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "chip",
+                                    "plain"
+                                  ]
+                                },
+                                "target": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "File"
+                                        },
+                                        "path": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 4096
+                                        },
+                                        "line": {
+                                          "type": "integer",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 9007199254740991
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "path"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Diff"
+                                        },
+                                        "path": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 4096
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "path"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Commit"
+                                        },
+                                        "sha": {
+                                          "type": "string",
+                                          "pattern": "^[a-f\\d]{7,64}$"
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "sha"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "Node"
+                                        },
+                                        "id": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                },
+                                "cwd": {
+                                  "type": "string"
+                                },
+                                "viewId": {
+                                  "type": "string"
+                                },
+                                "projectId": {
+                                  "type": "string"
+                                },
+                                "staged": {
+                                  "type": "boolean"
+                                },
+                                "conflicted": {
+                                  "type": "boolean"
+                                },
+                                "relativePath": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "state"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -50860,6 +51943,135 @@
                                 },
                                 "fallback": {
                                   "type": "string"
+                                },
+                                "links": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {
+                                    "type": "object",
+                                    "properties": {
+                                      "state": {
+                                        "type": "string",
+                                        "enum": [
+                                          "chip",
+                                          "plain"
+                                        ]
+                                      },
+                                      "target": {
+                                        "oneOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "type": "string",
+                                                "const": "File"
+                                              },
+                                              "path": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 4096
+                                              },
+                                              "line": {
+                                                "type": "integer",
+                                                "exclusiveMinimum": 0,
+                                                "maximum": 9007199254740991
+                                              }
+                                            },
+                                            "required": [
+                                              "type",
+                                              "path"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "type": "string",
+                                                "const": "Diff"
+                                              },
+                                              "path": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 4096
+                                              }
+                                            },
+                                            "required": [
+                                              "type",
+                                              "path"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "type": "string",
+                                                "const": "Commit"
+                                              },
+                                              "sha": {
+                                                "type": "string",
+                                                "pattern": "^[a-f\\d]{7,64}$"
+                                              }
+                                            },
+                                            "required": [
+                                              "type",
+                                              "sha"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "type": "string",
+                                                "const": "Node"
+                                              },
+                                              "id": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 256
+                                              }
+                                            },
+                                            "required": [
+                                              "type",
+                                              "id"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        ]
+                                      },
+                                      "cwd": {
+                                        "type": "string"
+                                      },
+                                      "viewId": {
+                                        "type": "string"
+                                      },
+                                      "projectId": {
+                                        "type": "string"
+                                      },
+                                      "staged": {
+                                        "type": "boolean"
+                                      },
+                                      "conflicted": {
+                                        "type": "boolean"
+                                      },
+                                      "relativePath": {
+                                        "type": "string"
+                                      },
+                                      "label": {
+                                        "type": "string"
+                                      },
+                                      "reason": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "state"
+                                    ]
+                                  }
                                 }
                               },
                               "required": [
@@ -52003,6 +53215,135 @@
                         },
                         "fallback": {
                           "type": "string"
+                        },
+                        "links": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "chip",
+                                  "plain"
+                                ]
+                              },
+                              "target": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "const": "File"
+                                      },
+                                      "path": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 4096
+                                      },
+                                      "line": {
+                                        "type": "integer",
+                                        "exclusiveMinimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "path"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "const": "Diff"
+                                      },
+                                      "path": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 4096
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "path"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "const": "Commit"
+                                      },
+                                      "sha": {
+                                        "type": "string",
+                                        "pattern": "^[a-f\\d]{7,64}$"
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "sha"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "const": "Node"
+                                      },
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "id"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "cwd": {
+                                "type": "string"
+                              },
+                              "viewId": {
+                                "type": "string"
+                              },
+                              "projectId": {
+                                "type": "string"
+                              },
+                              "staged": {
+                                "type": "boolean"
+                              },
+                              "conflicted": {
+                                "type": "boolean"
+                              },
+                              "relativePath": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "state"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -53632,6 +54973,135 @@
                                   },
                                   "fallback": {
                                     "type": "string"
+                                  },
+                                  "links": {
+                                    "type": "object",
+                                    "propertyNames": {
+                                      "type": "string"
+                                    },
+                                    "additionalProperties": {
+                                      "type": "object",
+                                      "properties": {
+                                        "state": {
+                                          "type": "string",
+                                          "enum": [
+                                            "chip",
+                                            "plain"
+                                          ]
+                                        },
+                                        "target": {
+                                          "oneOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "type": {
+                                                  "type": "string",
+                                                  "const": "File"
+                                                },
+                                                "path": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 4096
+                                                },
+                                                "line": {
+                                                  "type": "integer",
+                                                  "exclusiveMinimum": 0,
+                                                  "maximum": 9007199254740991
+                                                }
+                                              },
+                                              "required": [
+                                                "type",
+                                                "path"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "type": {
+                                                  "type": "string",
+                                                  "const": "Diff"
+                                                },
+                                                "path": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 4096
+                                                }
+                                              },
+                                              "required": [
+                                                "type",
+                                                "path"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "type": {
+                                                  "type": "string",
+                                                  "const": "Commit"
+                                                },
+                                                "sha": {
+                                                  "type": "string",
+                                                  "pattern": "^[a-f\\d]{7,64}$"
+                                                }
+                                              },
+                                              "required": [
+                                                "type",
+                                                "sha"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "type": {
+                                                  "type": "string",
+                                                  "const": "Node"
+                                                },
+                                                "id": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 256
+                                                }
+                                              },
+                                              "required": [
+                                                "type",
+                                                "id"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          ]
+                                        },
+                                        "cwd": {
+                                          "type": "string"
+                                        },
+                                        "viewId": {
+                                          "type": "string"
+                                        },
+                                        "projectId": {
+                                          "type": "string"
+                                        },
+                                        "staged": {
+                                          "type": "boolean"
+                                        },
+                                        "conflicted": {
+                                          "type": "boolean"
+                                        },
+                                        "relativePath": {
+                                          "type": "string"
+                                        },
+                                        "label": {
+                                          "type": "string"
+                                        },
+                                        "reason": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "state"
+                                      ]
+                                    }
                                   }
                                 },
                                 "required": [

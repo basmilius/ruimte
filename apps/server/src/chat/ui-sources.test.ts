@@ -20,6 +20,12 @@ beforeEach(async () => {
     reads = [];
     hosts = {
         place: () => ({ projectId: 'p', folder }),
+        node: (id) =>
+            id === 'local'
+                ? { projectId: 'p', title: 'Local', canvasId: null }
+                : id === 'other'
+                  ? { projectId: 'other', title: 'Other', canvasId: null }
+                  : null,
         worktreePaths: async () => [],
         gitStatus: async (cwd) => {
             reads.push(cwd);
@@ -98,4 +104,102 @@ test('tasks can read only their writing chat and launches only their project', a
         launchId: 'api-id',
         state: 'unstarted'
     });
+});
+
+test('file links resolve to a canonical project file, and refuse symlinks outside it', async () => {
+    const { writeFile } = await import('node:fs/promises');
+    await writeFile(join(folder, 'readme.md'), 'readme');
+    await writeFile(join(root, 'outside', 'secret.md'), 'outside');
+    const host = ruimteUiSources(hosts);
+    const access = await host.capture(info());
+    expect(await host.link!(info(), access, { type: 'File', path: 'readme.md', line: 4 })).toMatchObject({
+        state: 'chip',
+        target: { type: 'File', path: join(folder, 'readme.md'), line: 4 }
+    });
+    await expect(host.link!(info(), access, { type: 'File', path: 'escaped/secret.md' })).rejects.toThrow('outside');
+    await expect(host.link!(info(), access, { type: 'File', path: '.' })).rejects.toThrow('not a file');
+});
+
+test('node links never cross a project and are checked again after removal', async () => {
+    const host = ruimteUiSources(hosts);
+    const access = await host.capture(info());
+    expect(await host.link!(info(), access, { type: 'Node', id: 'local' })).toMatchObject({ state: 'chip', label: 'Local' });
+    await expect(host.link!(info(), access, { type: 'Node', id: 'other' })).rejects.toThrow('outside');
+    hosts.node = () => null;
+    await expect(host.link!(info(), access, { type: 'Node', id: 'local' })).rejects.toThrow('no longer available');
+});
+
+test('a file removed after its initial validation is refused at open time', async () => {
+    const { writeFile, unlink } = await import('node:fs/promises');
+    const path = join(folder, 'readme.md');
+    await writeFile(path, 'readme');
+    const host = ruimteUiSources(hosts);
+    const access = await host.capture(info());
+    expect((await host.link!(info(), access, { type: 'File', path: 'readme.md' })).state).toBe('chip');
+    await unlink(path);
+    await expect(host.link!(info(), access, { type: 'File', path: 'readme.md' })).rejects.toThrow('no longer available');
+});
+
+async function fixtureGit(...args: string[]): Promise<string> {
+    const process = Bun.spawn(['git', '-c', 'commit.gpgsign=false', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', ...args], {
+        cwd: folder,
+        stdout: 'pipe',
+        stderr: 'pipe'
+    });
+    const output = await new Response(process.stdout).text();
+    if ((await process.exited) !== 0) {
+        throw new Error(await new Response(process.stderr).text());
+    }
+    return output.trim();
+}
+
+test('commit links resolve only a real commit of the writer’s repository', async () => {
+    const { writeFile } = await import('node:fs/promises');
+    await fixtureGit('init', '-q');
+    await writeFile(join(folder, 'a.md'), 'initial');
+    await fixtureGit('add', 'a.md');
+    await fixtureGit('commit', '-qm', 'Fixture commit');
+    const sha = await fixtureGit('rev-parse', 'HEAD');
+    const host = ruimteUiSources(hosts);
+    const access = await host.capture(info());
+    expect(await host.link!(info(), access, { type: 'Commit', sha: sha.slice(0, 8) })).toMatchObject({
+        state: 'chip',
+        target: { type: 'Commit', sha },
+        cwd: folder,
+        label: 'Fixture commit'
+    });
+    await expect(host.link!(info(), access, { type: 'Commit', sha: 'aaaaaaaa' })).rejects.toThrow('no longer available');
+});
+
+test('diff links retain a deleted file and select the staged side', async () => {
+    const { writeFile, unlink } = await import('node:fs/promises');
+    await fixtureGit('init', '-q');
+    await writeFile(join(folder, 'a.md'), 'initial');
+    await fixtureGit('add', 'a.md');
+    await fixtureGit('commit', '-qm', 'Fixture commit');
+    await unlink(join(folder, 'a.md'));
+    hosts.gitStatus = async () => ({
+        repo: true,
+        root: folder,
+        branch: 'main',
+        detached: false,
+        upstream: null,
+        ahead: 0,
+        behind: 0,
+        base: null,
+        mergeBase: null,
+        files: [{ path: 'a.md', state: 'staged', status: 'D', added: 0, deleted: 1, binary: false }],
+        truncated: false,
+        live: false
+    });
+    const host = ruimteUiSources(hosts);
+    const access = await host.capture(info());
+    expect(await host.link!(info(), access, { type: 'Diff', path: 'a.md' })).toMatchObject({
+        state: 'chip',
+        target: { type: 'Diff', path: join(folder, 'a.md') },
+        cwd: folder,
+        staged: true,
+        relativePath: 'a.md'
+    });
+    await expect(host.link!(info(), access, { type: 'Diff', path: 'other.md' })).rejects.toThrow('no current diff');
 });
