@@ -1,3 +1,4 @@
+import RuimteIntelligentUI
 import RuimtePulsar
 import XCTest
 
@@ -85,5 +86,59 @@ final class IntelligentUIPresentationTests: XCTestCase {
         XCTAssertEqual(live?.state, .failed)
         XCTAssertEqual(live?.source, "launch.status")
         XCTAssertEqual(live?.readAt, Date(timeIntervalSince1970: 2))
+    }
+
+    @MainActor private func saveModel(
+        list: @escaping @MainActor (String) throws -> JSONValue
+    ) throws -> ImageSaveModel {
+        let root: JSONValue = .object([
+            "folder": .string("/work/ruimte"), "projectName": .string("ruimte"), "name": .string("rabbit.png"),
+        ])
+        return try ImageSaveModel(
+            chatID: "c", attachmentID: "a", root: root,
+            request: { _, payload in try list(payload["path"]?.stringValue ?? "") }, done: { _ in })
+    }
+
+    private func entries(_ names: [String], truncated: Bool = false) -> JSONValue {
+        .object([
+            "entries": .array(names.map { .object(["kind": .string("directory"), "name": .string($0)]) }),
+            "truncated": .bool(truncated),
+        ])
+    }
+
+    @MainActor func testTheFolderPickerStartsAtTheProjectRootAndNestsWhatIsOpen() async throws {
+        struct Unreadable: Error, LocalizedError { var errorDescription: String? { "denied" } }
+        let model = try saveModel { path in
+            switch path {
+            case "/work/ruimte": return self.entries(["docs", "assets"], truncated: true)
+            case "/work/ruimte/assets": return self.entries([])
+            default: throw Unreadable()
+            }
+        }
+        XCTAssertEqual(
+            ImageSaveFolderTree.rows(of: model, expanded: [""]).map(\.kind),
+            [.folder(directory: "", name: "ruimte", expandable: true)])
+        await model.loadFolders()
+        await model.loadFolders("assets")
+        await model.loadFolders("docs")
+        let rows = ImageSaveFolderTree.rows(of: model, expanded: ["", "assets", "docs"])
+        XCTAssertEqual(
+            rows.map(\.kind),
+            [
+                .folder(directory: "", name: "ruimte", expandable: true),
+                .folder(directory: "assets", name: "assets", expandable: false),
+                .folder(directory: "docs", name: "docs", expandable: true),
+                .failed(directory: "docs", message: "denied"),
+                .truncated,
+            ])
+        XCTAssertEqual(rows.map(\.depth), [0, 1, 1, 2, 1])
+        XCTAssertEqual(ImageSaveFolderTree.rows(of: model, expanded: []).count, 1)
+    }
+
+    @MainActor func testTheSaveHintNamesThePathUnderTheProject() throws {
+        let model = try saveModel { _ in self.entries([]) }
+        XCTAssertEqual(ImageSaveFolderTree.hint(model), "ruimte/rabbit.png")
+        model.selectDirectory("assets/art")
+        XCTAssertEqual(ImageSaveFolderTree.hint(model), "ruimte/assets/art/rabbit.png")
     }
 }

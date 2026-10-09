@@ -7,10 +7,9 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-/// The row of an `ImageGeneration` tool item: a result a person wants to see, so it never folds. A header line, the
-/// image at the left edge of the chat's text in the shape its metadata gives, so the row never jumps when the bytes
-/// arrive, and under it the prompt and the actions. Bytes come only from the chat's attachment, never from a path in
-/// the tool's output.
+/// The row of an `ImageGeneration` tool item: a result a person wants to see, so it never folds. The image takes the
+/// shape its metadata gives before the bytes arrive, so the row never jumps, and the prompt stays in the image's menu
+/// as Copy prompt. Bytes come only from the chat's attachment, never from a path in the tool's output.
 struct GeneratedImageRow: View {
     let item: JSONValue
     /// Saves the attachment into the project through the host's own picker and returns the path it chose, or nil
@@ -128,15 +127,6 @@ private struct GeneratedImageReady: View {
             picture
                 .overlay(alignment: .topTrailing) { controls }
                 .contextMenu { actions }
-            if let prompt {
-                Label {
-                    Text(prompt).lineLimit(2)
-                } icon: {
-                    Image(lucide: "text-quote", size: 12)
-                }
-                .font(.footnote).foregroundStyle(MobileStyle.faint)
-                .accessibilityLabel(String(localized: "Prompt: \(prompt)"))
-            }
             if savedFlash {
                 Label(String(localized: "Saved"), lucideIcon: "check", iconSize: 12)
                     .font(.footnote).foregroundStyle(MobileStyle.statusIdle)

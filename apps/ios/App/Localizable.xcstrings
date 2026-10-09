@@ -1,6 +1,57 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ already exists in this folder" : {
+      "comment" : "%@ is a file name",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ bestaat al in deze map"
+          }
+        }
+      }
+    },
+    "Enter a file name without a slash" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vul een bestandsnaam zonder schuine streep in"
+          }
+        }
+      }
+    },
+    "Not every folder is shown" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niet elke map wordt getoond"
+          }
+        }
+      }
+    },
+    "Replace" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vervangen"
+          }
+        }
+      }
+    },
+    "Save image to project" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afbeelding opslaan in project"
+          }
+        }
+      }
+    },
     "Browser owner unavailable" : {
       "localizations" : {
         "nl" : {
@@ -21836,17 +21887,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Voortgang"
-          }
-        }
-      }
-    },
-    "Prompt: %@" : {
-      "comment" : "%@ is the prompt an image was generated from",
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prompt: %@"
           }
         }
       }
