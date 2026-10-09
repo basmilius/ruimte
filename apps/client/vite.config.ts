@@ -148,8 +148,21 @@ export default defineConfig(({ mode }) => ({
         },
         // The library's `source` export is its TypeScript, compiled here like the app's own.
         conditions: ['source', ...defaultClientConditions],
-        // A linked checkout has its own node_modules; a second React or i18next breaks every hook and every word.
-        dedupe: ['react', 'react-dom', 'i18next', 'react-i18next', '@base-ui-components/react']
+        // Linked packages use the app's runtime instances; CodeMirror rejects extensions from a second copy.
+        dedupe: [
+            'react',
+            'react-dom',
+            'i18next',
+            'react-i18next',
+            '@base-ui-components/react',
+            '@codemirror/state',
+            '@codemirror/view',
+            '@codemirror/language',
+            '@codemirror/commands',
+            '@lezer/common',
+            '@lezer/highlight',
+            '@lezer/markdown'
+        ]
     },
     optimizeDeps: {
         // Source exports in the shared React packages are TSX and can import CommonJS dependencies.

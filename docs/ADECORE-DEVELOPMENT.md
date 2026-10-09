@@ -40,7 +40,7 @@ In linked mode, full status also compares installed peer versions, plus shared r
 
 ## Source changes
 
-The Vite client, development daemon, desktop bundler, Pulsar development worker, daemon compiler, TypeScript checks and Bun tests select ADE CORE's `source` exports. You do not need to build ADE CORE between changes to imported TypeScript. Vite keeps one React and i18next instance when the library has its own dependencies installed.
+The Vite client, development daemon, desktop bundler, Pulsar development worker, daemon compiler, TypeScript checks and Bun tests select ADE CORE's `source` exports. You do not need to build ADE CORE between changes to imported TypeScript. Vite keeps one instance of React, i18next, CodeMirror and Lezer when the library has its own dependencies installed. The linked composer and the app's dictation extensions must use the same CodeMirror classes, including when Vite serves their sources without prebundling.
 
 The client, desktop and daemon release builders deliberately keep the source condition. Consumer validation in npm mode bundles the TypeScript sources shipped in the published packages; it does not validate their JavaScript `dist` as Ruimte's runtime input. ADE CORE CI builds the packages and runs `test:pack` to check packed default (`dist`) and source exports and execute their consumers. Pulsar's production deploy keeps Wrangler's default conditions and uses the published default exports.
 
