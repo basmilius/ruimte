@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { compileUi } from '@adecore/intelligent-ui';
 import { AgentKindSchema, type ContextSource } from '@ruimte/contracts';
 import { NODE_VERB_KINDS } from '../canvas/node-verb.ts';
 import { chatPrompt, contextChangeNote, contextHint, contextPrompt, hookContext, verbsNote, VISUAL_NOTE } from './context-note.ts';
@@ -28,6 +29,13 @@ describe('contextHint', () => {
 });
 
 describe('verbsNote', () => {
+    test('the complete agent note contains a closed and compilable UI example', () => {
+        const blocks = compileUi(VISUAL_NOTE, { id: 'agent-note-example', final: true });
+        expect(blocks).toHaveLength(1);
+        expect(blocks[0].diagnostics).toEqual([]);
+        expect(blocks[0].nodes.some((node) => node.type === 'Summary')).toBe(true);
+    });
+
     test('names computer use only while it is on for this machine', () => {
         for (const standalone of [false, true]) {
             expect(verbsNote({ depth: 0, standalone })).not.toContain('computer');

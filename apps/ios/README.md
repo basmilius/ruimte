@@ -613,7 +613,7 @@ arrives after leaving the screen cannot reopen its sheet.
 Regenerate the interpreter and parity fixtures with `bun run --cwd packages/contracts generate:swift`.
 `bun run check` checks these generated files too. Run the interpreter and controller tests on the Mac
 with `swift test --package-path apps/ios/Packages/RuimteIntelligentUI`; this does not open the app.
-The combined UI and visual session instruction measures 582 tokens with `o200k_base` and 589 with
+The combined UI and visual session instruction measures 685 tokens with `o200k_base` and 693 with
 `cl100k_base`, using `js-tiktoken` 1.0.21. The temporary measurement dependency is outside the repository.
 
 ```sh
