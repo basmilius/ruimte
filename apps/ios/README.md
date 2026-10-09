@@ -603,7 +603,10 @@ choice availability. The original user message stays intact below `UiChoiceLine`
 images use their own row outside settled work folds, with attachment-backed preview and prompt
 copying from the image menu. File, diff, commit and node chips open the existing project pages
 after the daemon resolves the link again. Local presentation state includes the machine in its
-cache key. Project saving still needs its native host callback.
+cache key. `ImageSaveModel` checks the selected destination, browses only child folders and sends
+an exact checked revision only for explicit replacement. Name changes and cancellation discard
+late checks; a pending write blocks changes and closing. The native save sheet and image-row host
+callback still need to be connected.
 
 Regenerate the interpreter and parity fixtures with `bun run --cwd packages/contracts generate:swift`.
 `bun run check` checks these generated files too. Run the interpreter and controller tests on the Mac
