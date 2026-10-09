@@ -13,11 +13,11 @@
     },
     "dependencies": {
         "@adecore/agent-contracts": "0.20.1",
-        "@ruimte/pulsar": "workspace:*",
-        "zod": "^4.6.5",
-        "@adecore/drawing": "0.20.1",
         "@adecore/diagram": "0.20.1",
-        "@adecore/plan": "0.20.1"
+        "@adecore/drawing": "0.20.1",
+        "@adecore/plan": "0.20.1",
+        "@ruimte/pulsar": "workspace:*",
+        "zod": "^4.6.5"
     },
     "devDependencies": {
         "@types/bun": "^1.4.2",

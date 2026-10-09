@@ -17,26 +17,26 @@
         "docker:test": "docker/test.sh"
     },
     "dependencies": {
-        "@modelcontextprotocol/client": "^2.1.0",
-        "@ruimte/actions": "workspace:*",
         "@adecore/agents": "0.20.1",
-        "@ruimte/contracts": "workspace:*",
         "@adecore/database": "0.20.1",
         "@adecore/diagram": "0.20.1",
         "@adecore/drawing": "0.20.1",
+        "@adecore/lsp": "0.20.1",
         "@adecore/merge": "0.20.1",
         "@adecore/plan": "0.20.1",
-        "@ruimte/pulsar": "workspace:*",
         "@adecore/service": "0.20.1",
-        "@adecore/lsp": "0.20.1",
+        "@modelcontextprotocol/client": "^2.1.0",
+        "@ruimte/actions": "workspace:*",
+        "@ruimte/contracts": "workspace:*",
+        "@ruimte/pulsar": "workspace:*",
+        "@ruimte/service": "workspace:*",
         "@xterm/addon-serialize": "^0.14.0",
         "@xterm/headless": "^6.0.0",
         "linkedom": "^0.18.13",
         "reflect-metadata": "0.2.2",
         "serve-sim": "0.1.46",
         "werift": "0.24.4",
-        "zod": "^4.6.5",
-        "@ruimte/service": "workspace:*"
+        "zod": "^4.6.5"
     },
     "devDependencies": {
         "@types/bun": "^1.4.2",

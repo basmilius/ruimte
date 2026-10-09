@@ -12,8 +12,8 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "zod": "^4.6.5",
-        "@adecore/agent-contracts": "0.20.1"
+        "@adecore/agent-contracts": "0.20.1",
+        "zod": "^4.6.5"
     },
     "devDependencies": {
         "@types/bun": "^1.4.2",
