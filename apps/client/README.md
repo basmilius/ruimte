@@ -27,7 +27,7 @@ Alt+Arrow selects a neighboring node while the canvas owns the keyboard; Enter g
 node input focus. Mod+Shift+2 fits the focused node in view. Explicit Space or middle-button
 panning keeps wheel input with the canvas over focused node bodies and browser guests.
 Text entry retains its own keys. Geometry and input ownership are covered by the canvas
-unit tests and `canvas-interaction.integration.test.ts`.
+unit tests and `canvas-interaction.browser.integration.test.ts` in the manual browser suite.
 
 ## Terminal links
 

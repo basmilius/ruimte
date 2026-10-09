@@ -6,15 +6,18 @@ async function main(): Promise<void> {
     const fixtureRoot = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-integration-')));
     try {
         const files = process.argv.slice(2);
-        const child = Bun.spawn(
-            [process.execPath, '--config=integration.bunfig.toml', 'test', '--conditions=source', ...(files.length > 0 ? files : ['.integration.test.ts'])],
-            {
-                env: { ...process.env, RUIMTE_INTEGRATION_FIXTURE_ROOT: fixtureRoot },
-                stdin: 'inherit',
-                stdout: 'inherit',
-                stderr: 'inherit'
-            }
-        );
+        const browser = files[0] === '--browser';
+        if (browser) {
+            files.shift();
+        }
+        const config = browser ? 'browser.bunfig.toml' : 'integration.bunfig.toml';
+        const pattern = browser ? '.browser.integration.test.ts' : '.integration.test.ts';
+        const child = Bun.spawn([process.execPath, `--config=${config}`, 'test', '--conditions=source', ...(files.length > 0 ? files : [pattern])], {
+            env: { ...process.env, RUIMTE_INTEGRATION_FIXTURE_ROOT: fixtureRoot },
+            stdin: 'inherit',
+            stdout: 'inherit',
+            stderr: 'inherit'
+        });
         const interrupt = () => child.kill('SIGINT');
         const terminate = () => child.kill('SIGTERM');
         process.once('SIGINT', interrupt);

@@ -34,7 +34,9 @@ bun dev
 
 `bun dev` starts the daemon on `localhost:4211`, the Vite client and the Electron shell. The daemon keeps its state in `~/.ruimte-dev`; set `RUIMTE_DEV_HOME` to choose another folder. The Vite client proxies `/ws` to it. An installed Ruimte keeps `4210` and `~/.ruimte`, so both versions can run on one machine.
 
-`bun run dev:client` and `bun run dev:server` start one side. `bun run dev:desktop` opens the Electron shell against the running development server as "Ruimte Dev", with a profile of its own. Browser nodes only work there. `bun run check` typechecks and lints every package. `bun run build` builds the client, and `bun test` runs all package tests.
+`bun run dev:client` and `bun run dev:server` start one side. `bun run dev:desktop` opens the Electron shell against the running development server as "Ruimte Dev", with a profile of its own. Browser nodes only work there. `bun run check` typechecks and lints every package. `bun run build` builds the client, and `bun test` runs unit tests.
+
+`bun run test:integration` runs the integration tests used by CI. Browser and Electron checks run only on request with `bun run test:browser`, which builds the client first. They can also be started through the Browser tests workflow in GitHub Actions.
 
 `bun run adecore:link` uses the live shared packages in `../adecore`; `bun run adecore:npm` restores the pinned npm versions. `bun run adecore:status` shows which mode is active. Restart `bun dev` after switching. See [developing with ADE CORE](docs/ADECORE-DEVELOPMENT.md) for setup, source updates and release order.
 

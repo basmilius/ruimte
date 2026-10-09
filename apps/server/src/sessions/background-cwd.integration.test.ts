@@ -25,6 +25,8 @@ for (const tostop of [true, false]) {
                 'person'
             );
             await waitForAsync(() => Bun.file(join(shell.home, 'checked')).exists(), 'background job reaped', 1000);
+            // The file can be written before the PTY output reaches the session subscriber.
+            await waitForAsync(async () => shell.output().includes('\x1b]7;unknown\x07'), 'background cwd metadata');
             expect(await readFile(join(shell.home, 'job-status'), 'utf8')).toBe('0\n');
             expect(await readFile(join(shell.home, 'background.out'), 'utf8')).toBe('PERSON_STDOUT\n');
             expect(await readFile(join(shell.home, 'background.err'), 'utf8')).toBe('PERSON_STDERR\n');

@@ -1,0 +1,23 @@
+name: Browser tests
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: browser-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/cache-native-builds
+      - run: bun install --frozen-lockfile
+      - run: bun run test:browser

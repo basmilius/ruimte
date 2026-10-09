@@ -1,4 +1,3 @@
 [test]
-# The integration suite: the same tree as the default run minus its ignore pattern, filtered to
-# `*.integration.test.ts` by the `test:integration` script.
-pathIgnorePatterns = ["**/node_modules/**"]
+# Browser checks run separately through `bun run test:browser`.
+pathIgnorePatterns = ["**/node_modules/**", "**/*.browser.integration.test.ts"]
