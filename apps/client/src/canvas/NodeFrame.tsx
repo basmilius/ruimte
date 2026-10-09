@@ -55,6 +55,7 @@ import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
 import { ButtonGroup, ErrorBoundary, Pill, Tooltip, FileIcon, Icon, IconButton, Input, ContextMenu } from '@adecore/ui';
 import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canvas/culling';
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
+import { SessionPorts } from '@/terminal/SessionPorts';
 import { ChatBody } from '@/nodes/ChatBody';
 import { ForkPill } from '@/chat/ForkPill';
 import { AccountPill } from '@adecore/agents-react/chat/ui/AccountPill';
@@ -380,6 +381,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     {node.kind === 'chat' && !renaming && <ForkPill chatId={id} />}
                     {node.kind === 'chat' && !renaming && <PlanPill chatId={id} />}
                     {node.kind === 'chat' && !renaming && <LimitPill chatId={id} />}
+                    {node.kind === 'terminal' && !renaming && <SessionPorts id={id} />}
                     {(node.kind === 'chat' || node.kind === 'terminal') && !renaming && <ComputerIndicator nodeId={id} />}
                     {nodeWorktree && !renaming && (
                         <Tooltip label={nodeWorktree.path}>

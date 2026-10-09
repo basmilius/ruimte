@@ -2,6 +2,7 @@ import { ActionRefusal, type ActionHandlers, type ActionOutput } from '@ruimte/a
 import { isCanvasView } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { pageStateOf } from '@/browser/page-hold';
+import { browserRouteAvailable } from '@/browser/owner-route';
 import { browserRegistry, normalizeUrl, useBrowser, type BrowserState } from '@/browser/registry';
 import { isDesktop } from '@/desktop/bridge';
 import { readNodeHost, updateHost } from '@/nodes/node-host';
@@ -73,15 +74,15 @@ const LIVE_MACHINE: PageMachine = {
 export function pageActions(document: StoreApi<DocumentState>, overrides: Partial<PageMachine> = {}): ActionHandlers<void> {
     const machine: PageMachine = { ...LIVE_MACHINE, ...overrides };
 
-    const browserOf = (nodeId: string): { title: string; url: string } => {
+    const browserOf = (nodeId: string): { title: string; url: string; browserOwner?: string } => {
         for (const view of document.getState().exportViews()) {
             if (view.kind === 'browser' && view.id === nodeId) {
-                return { title: view.name ?? nodeId, url: view.url ?? '' };
+                return { title: view.name ?? nodeId, url: view.url ?? '', browserOwner: view.browserOwner };
             }
             if (isCanvasView(view)) {
                 const node = view.nodes.find((candidate) => candidate.id === nodeId);
                 if (node?.kind === 'browser') {
-                    return { title: node.title, url: node.url ?? '' };
+                    return { title: node.title, url: node.url ?? '', browserOwner: node.browserOwner };
                 }
             }
         }
@@ -107,7 +108,10 @@ export function pageActions(document: StoreApi<DocumentState>, overrides: Partia
 
     /* Nobody here holding the page is an answer, never an error, the way the daemon says it to an agent. */
     const driven = (nodeId: string, drive: PageDrive) => {
-        browserOf(nodeId);
+        const browser = browserOf(nodeId);
+        if (drive.kind !== 'stop' && !browserRouteAvailable(currentEndpointId(), drive.kind === 'go' ? drive.url : browser.url, browser.browserOwner)) {
+            throw new ActionRefusal('browser-owner-unavailable', 'Open this browser in Ruimte on the machine running the session.');
+        }
         if (machine.holds(nodeId)) {
             machine.drive(nodeId, drive);
         }
@@ -120,8 +124,11 @@ export function pageActions(document: StoreApi<DocumentState>, overrides: Partia
             return { output: outcome(nodeId) };
         },
         'browser.navigate': ({ nodeId, url }, { actor }) => {
-            const { title, url: saved } = browserOf(nodeId);
+            const { title, url: saved, browserOwner } = browserOf(nodeId);
             const address = normalizeUrl(url);
+            if (!browserRouteAvailable(currentEndpointId(), address, browserOwner)) {
+                throw new ActionRefusal('browser-owner-unavailable', 'Open this browser in Ruimte on the machine running the session.');
+            }
             if (actor.kind !== 'person' && !/^https?:\/\//i.test(address)) {
                 throw new ActionRefusal('bad-url', `“${url}” is not an http or https address.`);
             }

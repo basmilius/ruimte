@@ -1,4 +1,4 @@
-import type { AgentLaunch, SessionAttachResult, SessionInfo } from '@ruimte/contracts';
+import type { AgentLaunch, SessionAttachPayload, SessionAttachResult, SessionInfo } from '@ruimte/contracts';
 import type { SessionSink } from '../state/sessions';
 import { HandlerTable } from '../transport/handler-table';
 import { MountedRegistry, type MountedEntry } from '@adecore/agents-react/mounted-registry';
@@ -23,6 +23,14 @@ interface Mounted extends OpenOptions, MountedEntry {
     rows: number;
 }
 
+interface Attachment {
+    renderer: Mounted | null;
+    followers: Set<symbol>;
+    attached: boolean;
+    pending: Set<Promise<SessionAttachResult>>;
+    following: Promise<SessionAttachResult> | null;
+}
+
 /*
  * Recreates and reattaches mounted sessions after a lost socket or daemon restart, then supplies a
  * fresh screen. The injected transport is permanently bound to one machine.
@@ -31,6 +39,8 @@ export class SessionClient {
     private readonly transport: Transport;
     private readonly sink: SessionSink;
     private readonly mounted = new MountedRegistry<Mounted>();
+    private disposed = false;
+    private readonly attachments = new Map<string, Attachment>();
     private readonly opens = new Map<string, OpenOptions>();
     // Cold resumes already typed this page life; a CLI that is not installed must not be retyped on every attach.
     private readonly resumed = new Set<string>();
@@ -46,9 +56,18 @@ export class SessionClient {
         this.transport = transport;
         this.sink = sink;
         this.unsubscribe.push(
-            transport.on('session.output', ({ sessionId, data }) => this.outputHandlers.fanOut(sessionId, data)),
+            transport.on('session.output', ({ sessionId, data }) => {
+                // A hidden follow can stream while a new renderer is still waiting for its initial snapshot.
+                if (this.mounted.get(sessionId)?.attached !== false) {
+                    this.outputHandlers.fanOut(sessionId, data);
+                }
+            }),
             // The daemon dropped output for a slow socket and sent the screen it owns instead; repaint from it.
-            transport.on('session.resync', ({ sessionId, screen }) => this.screenHandlers.fanOut(sessionId, { screen })),
+            transport.on('session.resync', ({ sessionId, screen }) => {
+                if (this.mounted.get(sessionId)?.attached !== false) {
+                    this.screenHandlers.fanOut(sessionId, { screen });
+                }
+            }),
             // The client at work elsewhere moved the PTY to its own grid.
             transport.on('session.size', ({ sessionId, cols, rows }) => this.sizeHandlers.fanOut(sessionId, { cols, rows })),
             transport.on('session.exit', ({ sessionId, exitCode }) => {
@@ -99,12 +118,15 @@ export class SessionClient {
      * Null as well for a node that left before it was attached.
      */
     async open(nodeId: string, options: OpenOptions, cols: number, rows: number): Promise<SessionAttachResult | null> {
+        if (this.disposed) {
+            return null;
+        }
         const registered: Mounted = { ...options, cols, rows, attached: false };
-        this.mounted.set(nodeId, registered);
+        const attachment = this.register(nodeId, registered);
         try {
             await this.ensure(nodeId, options, cols, rows);
             // The node may have left the canvas while the create was on the wire.
-            if (this.mounted.get(nodeId) !== registered) {
+            if (this.mounted.get(nodeId) !== registered || this.attachments.get(nodeId) !== attachment) {
                 return null;
             }
             // A resize meanwhile updated the entry; the attach claims the PTY, so the grid of the mount would undo it.
@@ -113,6 +135,7 @@ export class SessionClient {
             if (isConnectionError(e)) {
                 return null;
             }
+            this.unregister(nodeId, registered, attachment);
             throw e;
         }
     }
@@ -125,17 +148,51 @@ export class SessionClient {
         return this.attachWith(nodeId, cols, rows, () => this.listSessions());
     }
 
-    async detach(nodeId: string): Promise<void> {
-        const entry = this.mounted.get(nodeId);
-        this.mounted.delete(nodeId);
-        this.sink.setAttached(nodeId, false);
-        if (!entry?.attached) {
-            return;
+    /* A preview shares the stream, never another snapshot that could consume a renderer's pending output. */
+    async retain(nodeId: string): Promise<() => void> {
+        if (this.disposed || this.transport.status !== 'open') {
+            throw new TransportError('disconnected', 'The session client is disconnected.');
         }
+        const attachment = this.attachment(nodeId);
+        const holder = Symbol();
+        attachment.followers.add(holder);
+        const release = (): void => {
+            attachment.followers.delete(holder);
+            void this.releaseUnused(nodeId, attachment);
+        };
         try {
-            await this.transport.request('session.detach', { sessionId: nodeId });
-        } catch {
-            // The socket closing detaches every session server-side anyway.
+            if (!attachment.attached) {
+                const pending = [...attachment.pending].at(-1);
+                if (pending) {
+                    await pending;
+                } else {
+                    const following = this.requestAttachment(nodeId, attachment, { sessionId: nodeId, follow: true });
+                    attachment.following = following;
+                    try {
+                        await following;
+                    } finally {
+                        attachment.following = null;
+                    }
+                }
+            }
+            if (this.disposed || this.attachments.get(nodeId) !== attachment) {
+                throw new TransportError('disconnected', 'The session client is disconnected.');
+            }
+            return release;
+        } catch (error) {
+            release();
+            throw error;
+        }
+    }
+
+    async detach(nodeId: string): Promise<void> {
+        this.mounted.delete(nodeId);
+        const attachment = this.attachments.get(nodeId);
+        if (attachment) {
+            attachment.renderer = null;
+            await this.releaseUnused(nodeId, attachment);
+        } else {
+            this.sink.setAttached(nodeId, false);
         }
     }
 
@@ -159,6 +216,7 @@ export class SessionClient {
 
     async kill(nodeId: string): Promise<void> {
         this.mounted.delete(nodeId);
+        this.attachments.delete(nodeId);
         this.opens.delete(nodeId);
         this.resumed.delete(nodeId);
         this.held.delete(nodeId);
@@ -207,13 +265,17 @@ export class SessionClient {
     /* Lets go of the machine, which is not the same as ending its sessions. They keep running; the
        daemon only stops streaming their output to a socket this client no longer reads. */
     dispose(): void {
+        this.disposed = true;
+        this.mounted.clear();
+        for (const [nodeId, attachment] of this.attachments) {
+            attachment.renderer = null;
+            attachment.followers.clear();
+            void this.releaseUnused(nodeId, attachment);
+        }
         for (const off of this.unsubscribe) {
             off();
         }
         this.unsubscribe.length = 0;
-        for (const nodeId of [...this.mounted.keys()]) {
-            void this.detach(nodeId);
-        }
     }
 
     /*
@@ -233,13 +295,19 @@ export class SessionClient {
             void this.mounted.reattachAll((nodeId, entry) => this.reattach(nodeId, entry, sessions));
             return;
         }
+        // The server drops every attachment with the connection; old replies and releases belong to that connection only.
+        for (const nodeId of this.attachments.keys()) {
+            this.sink.setAttached(nodeId, false);
+        }
+        this.attachments.clear();
         this.mounted.detachAll((nodeId) => this.sink.setAttached(nodeId, false));
     }
 
     private async reattach(nodeId: string, entry: Mounted, sessions: () => Promise<SessionInfo[] | null>): Promise<void> {
+        const attachment = this.register(nodeId, entry);
         await this.ensure(nodeId, { cwd: entry.cwd, command: entry.command, agent: entry.agent, follow: entry.follow }, entry.cols, entry.rows);
         // The node may have left the canvas while the create was on the wire, or mounted again with an open of its own.
-        if (this.mounted.get(nodeId) !== entry) {
+        if (this.mounted.get(nodeId) !== entry || this.attachments.get(nodeId) !== attachment) {
             return;
         }
         const result = await this.attachWith(nodeId, entry.cols, entry.rows, sessions);
@@ -252,27 +320,96 @@ export class SessionClient {
 
     /* Null when the node left while the attach was on the wire. */
     private async attachWith(nodeId: string, cols: number, rows: number, sessions: () => Promise<SessionInfo[] | null>): Promise<SessionAttachResult | null> {
-        // Registered before the request, so a socket that drops mid-flight still brings this node back.
+        if (this.disposed) {
+            return null;
+        }
         const entry: Mounted = { ...this.opens.get(nodeId), cols, rows, attached: false };
-        this.mounted.set(nodeId, entry);
+        const attachment = this.register(nodeId, entry);
         try {
-            const result = await this.transport.request('session.attach', { sessionId: nodeId, cols, rows });
-            if (this.mounted.get(nodeId) !== entry) {
-                // The daemon attached a node that is gone, and its detach found nothing to say. A node mounted again since keeps the attach.
-                if (!this.mounted.has(nodeId)) {
-                    void this.transport.request('session.detach', { sessionId: nodeId }).catch(() => undefined);
+            // A hidden follow's unused snapshot must finish before the renderer takes its current screen.
+            if (attachment.following) {
+                await attachment.following.catch(() => undefined);
+                if (this.mounted.get(nodeId) !== entry || this.attachments.get(nodeId) !== attachment) {
+                    return null;
                 }
+            }
+            const result = await this.requestAttachment(nodeId, attachment, { sessionId: nodeId, cols: entry.cols, rows: entry.rows });
+            if (this.mounted.get(nodeId) !== entry || this.attachments.get(nodeId) !== attachment) {
                 return null;
             }
             entry.attached = true;
-            this.sink.setAttached(nodeId, true);
             void this.settle(nodeId, result, sessions);
             return result;
         } catch (e) {
-            if (!isConnectionError(e) && this.mounted.get(nodeId) === entry) {
-                this.mounted.delete(nodeId);
+            if (!isConnectionError(e)) {
+                this.unregister(nodeId, entry, attachment);
             }
             throw e;
+        }
+    }
+
+    private attachment(nodeId: string): Attachment {
+        let attachment = this.attachments.get(nodeId);
+        if (!attachment) {
+            attachment = { renderer: null, followers: new Set(), attached: false, pending: new Set(), following: null };
+            this.attachments.set(nodeId, attachment);
+        }
+        return attachment;
+    }
+
+    private register(nodeId: string, entry: Mounted): Attachment {
+        this.mounted.set(nodeId, entry);
+        const attachment = this.attachment(nodeId);
+        attachment.renderer = entry;
+        return attachment;
+    }
+
+    private unregister(nodeId: string, entry: Mounted, attachment: Attachment): void {
+        if (this.mounted.get(nodeId) === entry) {
+            this.mounted.delete(nodeId);
+        }
+        if (attachment.renderer === entry) {
+            attachment.renderer = null;
+        }
+        void this.releaseUnused(nodeId, attachment);
+    }
+
+    private requestAttachment(nodeId: string, attachment: Attachment, payload: SessionAttachPayload): Promise<SessionAttachResult> {
+        const pending = this.transport
+            .request('session.attach', payload)
+            .then((result) => {
+                if (this.attachments.get(nodeId) === attachment) {
+                    attachment.attached = true;
+                    if (attachment.renderer || attachment.followers.size > 0) {
+                        this.sink.setAttached(nodeId, true);
+                    }
+                }
+                return result;
+            })
+            .finally(() => {
+                attachment.pending.delete(pending);
+                void this.releaseUnused(nodeId, attachment);
+            });
+        attachment.pending.add(pending);
+        return pending;
+    }
+
+    private async releaseUnused(nodeId: string, attachment: Attachment): Promise<void> {
+        if (this.attachments.get(nodeId) !== attachment || attachment.renderer || attachment.followers.size > 0) {
+            return;
+        }
+        this.sink.setAttached(nodeId, false);
+        // A request can still establish the server attachment after its last owner left.
+        if (attachment.pending.size > 0) {
+            return;
+        }
+        this.attachments.delete(nodeId);
+        if (attachment.attached) {
+            try {
+                await this.transport.request('session.detach', { sessionId: nodeId });
+            } catch {
+                // Closing the connection releases the server attachment as well.
+            }
         }
     }
 

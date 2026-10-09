@@ -38,6 +38,7 @@ export interface AddNodeOptions {
     title?: string;
     /* Browsers only: the page it opens on, instead of the default address. */
     url?: string;
+    browserOwner?: string;
     /* Devices only: the portable simulator identity this machine resolves locally. */
     device?: DeviceReference;
     cwd?: string;
@@ -700,6 +701,7 @@ export function createCanvasStore(): StoreApi<CanvasState> {
                 y: snapToGrid(at.y - size.h / 2),
                 ...size,
                 url: options.url,
+                ...(options.browserOwner ? { browserOwner: options.browserOwner } : {}),
                 device: options.device,
                 cwd: options.cwd ?? host?.worktree?.path,
                 command: options.command,

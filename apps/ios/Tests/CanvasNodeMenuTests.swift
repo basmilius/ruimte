@@ -82,5 +82,10 @@ import Testing
         let device = CanvasEditing.view(for: node("dev", "device").setting("device", reference))
         #expect(device["device"] == reference)
         #expect(device["node"] == nil)
+        let browser = CanvasEditing.view(
+            for: node("browser", "browser").setting("url", .string("http://127.0.0.1:5173/"))
+                .setting("browserOwner", .string("owner-machine")))
+        #expect(browser["browserOwner"] == .string("owner-machine"))
+        #expect(browser["url"] == .string("http://127.0.0.1:5173/"))
     }
 }

@@ -37,6 +37,7 @@ export interface NodeHost {
     providerFixed?: boolean;
     runtimeMode?: RuntimeMode;
     url?: string;
+    browserOwner?: string;
     device?: DeviceReference;
     /* False when this is a view of its own: no frame around it, no canvas under it. */
     onCanvas: boolean;
@@ -56,6 +57,7 @@ function hostOfNode(node: ProjectNode): NodeHost {
         providerFixed: node.providerFixed,
         runtimeMode: node.runtimeMode,
         url: node.url,
+        browserOwner: node.browserOwner,
         device: node.device,
         onCanvas: true
     };
@@ -66,7 +68,15 @@ function hostOfView(view: ProjectView): NodeHost | null {
         return null;
     }
     if (view.kind === 'browser') {
-        return { id: view.id, kind: 'browser', title: view.name, titleSource: view.titleSource, url: view.url, onCanvas: false };
+        return {
+            id: view.id,
+            kind: 'browser',
+            title: view.name,
+            titleSource: view.titleSource,
+            url: view.url,
+            browserOwner: view.browserOwner,
+            onCanvas: false
+        };
     }
     if (view.kind === 'device') {
         return { id: view.id, kind: 'device', title: view.name, titleSource: view.titleSource, device: view.device, onCanvas: false };

@@ -1,8 +1,11 @@
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Terminal } from '@xterm/headless';
-import type { AgentInfo, AgentLaunch, RuntimeMode } from '@ruimte/contracts';
+import { trackTerminalCwd, terminalCwdScreenSize, type TerminalCwd, type AgentInfo, type AgentLaunch, type RuntimeMode } from '@ruimte/contracts';
 import type { PtyAdapter, PtyProcess } from '../pty/pty.ts';
 import { fitScreen } from './fit-screen.ts';
+import { basename } from 'node:path';
+import { ShellPrompt } from './shell-prompt.ts';
+import { openShellEditor } from './shell-editor.ts';
 
 const SCROLLBACK_LINES = 10_000;
 
@@ -69,6 +72,9 @@ interface PendingSnapshot {
 }
 
 export class Session {
+    readonly shellPrompt = new ShellPrompt();
+    readonly shell: string;
+    readonly plainShell: boolean;
     readonly id: string;
     readonly cwd: string;
     readonly pid: number;
@@ -86,6 +92,7 @@ export class Session {
     heldCommand: string | null = null;
     private readonly terminal: Terminal;
     private readonly serializer: SerializeAddon;
+    private readonly outputCwd: TerminalCwd;
     private readonly pty: PtyProcess;
     private readonly deliver: (clientId: string, data: string) => void;
     private readonly onExit: (exitCode: number) => void;
@@ -96,12 +103,15 @@ export class Session {
     private readonly parsedWaiters = new Set<() => void>();
     // Whether the screen moved since the snapshot file last took it; a new session has never been taken.
     private dirty = true;
+    private restoring = false;
     private flushTimer: ReturnType<typeof setTimeout> | null = null;
     private killTimer: ReturnType<typeof setTimeout> | null = null;
     // Bytes of one UTF-8 character can straddle two PTY reads; the streaming decoder keeps the tail.
     private readonly decoder = new TextDecoder('utf-8', { fatal: false });
 
     constructor(options: SessionOptions) {
+        this.shell = basename(options.shell);
+        this.plainShell = ['sh', 'bash', 'zsh'].includes(this.shell) && options.args.every((arg) => ['-l', '-i'].includes(arg)) && !options.command;
         this.id = options.id;
         this.cwd = options.cwd;
         this.cols = options.cols;
@@ -113,11 +123,22 @@ export class Session {
         this.launch = options.launch ?? null;
         this.agent = options.restoredAgent ? { ...options.restoredAgent, live: false } : null;
 
-        this.terminal = new Terminal({ cols: options.cols, rows: options.rows, scrollback: SCROLLBACK_LINES, allowProposedApi: true });
+        const restoredSize = options.restoredScreen === undefined ? null : terminalCwdScreenSize(options.restoredScreen);
+        this.restoring = restoredSize !== null;
+        this.terminal = new Terminal({
+            cols: restoredSize?.cols ?? options.cols,
+            rows: restoredSize?.rows ?? options.rows,
+            scrollback: SCROLLBACK_LINES,
+            allowProposedApi: true
+        });
+        this.outputCwd = trackTerminalCwd(this.terminal);
         this.serializer = new SerializeAddon();
         this.terminal.loadAddon(this.serializer);
         if (options.restoredScreen !== undefined) {
-            this.terminal.write(options.restoredScreen + RESTORED_MARKER);
+            this.terminal.write(options.restoredScreen + '\r\n\x1b]7;unknown\x07' + RESTORED_MARKER, () => {
+                this.restoring = false;
+                this.terminal.resize(this.cols, this.rows);
+            });
         }
         if (options.motd) {
             // Written to the screen only, never to the PTY: the shell has not read a byte yet and must not.
@@ -126,15 +147,22 @@ export class Session {
 
         const command = options.command;
         const long = command !== undefined && Buffer.byteLength(command) > MAX_TYPED_LINE;
-        this.pty = options.adapter.spawn({
-            shell: options.shell,
-            args: options.args,
-            cwd: options.cwd,
-            cols: options.cols,
-            rows: options.rows,
-            env: long ? { ...options.env, [START_LINE_ENV]: command } : options.env
-        });
+        const editor = options.env.RUIMTE_ZLE_INTEGRATION === '1' ? openShellEditor(options.env, this.shellPrompt) : null;
+        try {
+            this.pty = options.adapter.spawn({
+                shell: options.shell,
+                args: options.args,
+                cwd: options.cwd,
+                cols: options.cols,
+                rows: options.rows,
+                env: long ? { ...options.env, [START_LINE_ENV]: command } : options.env
+            });
+        } catch (error) {
+            this.shellPrompt.dispose();
+            throw error;
+        }
         this.pid = this.pty.pid;
+        editor?.bind(this.pid);
         this.pty.onData((bytes) => this.receive(bytes));
         this.pty.onExit((exitCode) => this.handleExit(exitCode));
         if (command) {
@@ -248,6 +276,7 @@ export class Session {
     }
 
     write(data: string): void {
+        this.shellPrompt.input();
         this.pty.write(data);
     }
 
@@ -271,6 +300,7 @@ export class Session {
         this.dirty = true;
         return new Promise((resolve) => {
             this.whenParsed(() => {
+                this.outputCwd.clear();
                 this.terminal.clear();
                 const clientIds = this.attachedClients();
                 let open = clientIds.length;
@@ -315,7 +345,9 @@ export class Session {
         this.cols = cols;
         this.rows = rows;
         this.dirty = true;
-        this.terminal.resize(cols, rows);
+        if (!this.restoring) {
+            this.terminal.resize(cols, rows);
+        }
         if (!this.exited) {
             this.pty.resize(cols, rows);
         }
@@ -344,11 +376,13 @@ export class Session {
     }
 
     dispose(): void {
+        this.shellPrompt.dispose();
         this.clearTimers();
         this.clients.clear();
         for (const run of [...this.parsedWaiters]) {
             run();
         }
+        this.outputCwd.dispose();
         this.terminal.dispose();
     }
 
@@ -379,7 +413,7 @@ export class Session {
     }
 
     private serialize(): string {
-        return fitScreen((scrollback) => this.serializer.serialize({ scrollback }), SCROLLBACK_LINES);
+        return fitScreen((scrollback) => this.serializer.serialize({ scrollback }) + this.outputCwd.snapshot(scrollback), SCROLLBACK_LINES);
     }
 
     // xterm calls back in the middle of its write loop: every earlier write is parsed there, no later one is.
@@ -422,6 +456,7 @@ export class Session {
             return;
         }
         this.exitCode = exitCode;
+        this.shellPrompt.dispose();
         this.dirty = true;
         this.clearTimers();
         this.flush();

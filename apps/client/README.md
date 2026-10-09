@@ -46,6 +46,20 @@ machine opens these addresses directly. Other terminals explain that Ruimte does
 remote ports; the link is not opened against the client computer. Plain file paths and file-scheme
 links are outside this web-link route.
 
+On macOS, a live terminal shows a compact `:port` badge in its existing toolbar for TCP listeners
+owned by its process tree. Canvas nodes and standalone terminal views use the same badge.
+Clicking checks the listener again and creates a linked browser node beside that terminal, on its
+own canvas. A standalone terminal opens a browser view. Scan failures read as unknown; closed
+sessions stop polling and late replies cannot open a browser. Hidden windows pause discovery.
+Remote and web clients show why these ports cannot be opened through their local browser.
+This route does not forward ports or infer HTTPS; it opens HTTP on verified loopback listeners.
+Verification has a five-second deadline measured from the click; a later reply is ignored and a
+new click checks that port again. An older daemon that does not know the request is unavailable
+and stops polling. Session browsers save their machine owner with the URL, including when moved
+between a canvas node and a standalone view. Reopening, navigation and creation require that
+owner to be the proven local daemon. Another desktop shows an unavailable message instead of
+opening its own localhost, even when the project was copied to that desktop.
+
 ## Model comparison
 
 The models dialog (`src/shell/models`) shares model, provider, legacy and reasoning filters

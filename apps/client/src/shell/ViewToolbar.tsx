@@ -9,6 +9,8 @@ import { PlanPill } from '@/plan/PlanPill';
 import { SubagentBreadcrumb } from '@adecore/agents-react/chat/ui/SubagentControls';
 import { BrowserToolbar } from '@/nodes/BrowserBody';
 import { DeviceToolbar } from '@/devices/DeviceBody';
+import { SessionPorts } from '@/terminal/SessionPorts';
+import { useSessionPortControl } from '@/terminal/session-port-controls';
 import { useNodeHost } from '@/nodes/node-host';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useEndpointId } from '@/state/keys';
@@ -24,6 +26,7 @@ export function ViewToolbar({ view, focused }: { view: CellView | null; focused:
     const forked = useIsFork(view);
     const planned = useHasPlans(view?.kind === 'chat' ? view.id : '');
     const endpointId = useEndpointId();
+    const ports = useSessionPortControl(view?.kind === 'terminal' ? view.id : '');
     const operating = useNodeComputerSession(endpointId, view?.kind === 'chat' || view?.kind === 'terminal' ? view.id : '') !== null;
 
     // The file's own controls portal up into this slot, the way they do for a file view.
@@ -65,11 +68,12 @@ export function ViewToolbar({ view, focused }: { view: CellView | null; focused:
         );
     }
     const mode = modeOf(host);
-    if (!mode && !dictationEnabled && !operating) {
+    if (!mode && !dictationEnabled && !operating && !ports) {
         return null;
     }
     return (
         <div className="flex min-w-0 grow items-center gap-1.5">
+            <SessionPorts id={view.id} />
             {mode && (
                 <Tooltip label={runtimeModeHint(mode)}>
                     <Pill>{runtimeModeLabel(mode)}</Pill>

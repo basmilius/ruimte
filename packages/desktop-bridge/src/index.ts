@@ -16,3 +16,4 @@ export * from './menu.ts';
 export * from './power.ts';
 export * from './window.ts';
 export * from './database.ts';
+export * from './browser.ts';

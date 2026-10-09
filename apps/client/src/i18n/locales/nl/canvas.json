@@ -217,6 +217,8 @@
     },
     "terminal": {
         "links": {
+            "previewFile": "Bestand in preview openen",
+            "openFile": "{{modifier}}+klik om bestand in preview te openen",
             "open": "{{modifier}}+klik om in je browser te openen",
             "openInRuimte": "{{modifier}}+klik om in Ruimte te openen",
             "remoteLoopback": "Dit adres hoort bij {{machine}}. Ruimte stuurt de lokale poorten van die machine niet door naar deze computer.",
@@ -229,7 +231,17 @@
         "resume": "Hervatten",
         "restart": "Opnieuw starten",
         "held": "{{command}} uitvoeren?",
-        "run": "Uitvoeren"
+        "run": "Uitvoeren",
+        "ports": {
+            "label": "Sessiepoorten",
+            "open": "Open :{{port}}",
+            "openHint": "Controleer deze listener en open een gekoppelde browser",
+            "remote": "Open deze poort in Ruimte op de machine waarop de sessie draait.",
+            "unknown": "Sessiepoorten onbekend",
+            "unavailable": "Sessiepoortdetectie is niet beschikbaar. Hiervoor zijn macOS en een actuele Ruimte-daemon nodig.",
+            "openFailed": "Deze sessiepoort kon niet worden geopend",
+            "retry": "De listener kon niet worden gecontroleerd. Probeer het na de volgende scan opnieuw."
+        }
     },
     "chat": {
         "openFailed": "De chat kon niet worden geopend",
@@ -238,6 +250,8 @@
         "conversationFailed": "Dit gesprek kon niet worden getekend"
     },
     "browser": {
+        "routeUnavailable": "Dit adres hoort bij de machine van het project. Deze desktopbrowser heeft geen route naar die machine.",
+        "ownerUnavailable": "Eigenaar van de browser niet beschikbaar",
         "back": "Terug",
         "forward": "Vooruit",
         "stop": "Laden stoppen",

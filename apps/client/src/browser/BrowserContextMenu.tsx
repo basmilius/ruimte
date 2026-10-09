@@ -70,7 +70,7 @@ export function BrowserContextMenu() {
 
     const run = (action: BrowserMenuAction): void => {
         const current = target.current;
-        if (current === null) {
+        if (current === null || (current.key !== null && !browserRegistry.has(current.key))) {
             return;
         }
         const ask = (name: BrowserContextAction['action'], payload?: BrowserContextAction['payload']): void => {

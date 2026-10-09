@@ -1,6 +1,14 @@
+import {
+    TerminalPreparePreviewPayloadSchema,
+    TerminalPreparePreviewResultSchema,
+    TerminalPreparePayloadSchema,
+    TerminalPrepareResultSchema
+} from './terminal-prepare.ts';
+export * from './terminal-prepare.ts';
 import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS, EmptySchema } from '@adecore/agent-contracts/protocol';
 import { ProjectSidebarResultSchema } from './project-sidebar.ts';
 import { z } from 'zod';
+import { SessionPortsResultSchema, SessionPortVerifyPayloadSchema, SessionPortVerifyResultSchema } from './session-ports.ts';
 import {
     BrowserCommandPayloadSchema,
     BrowserDevServersPayloadSchema,
@@ -340,6 +348,7 @@ export * from './provider-accounts.ts';
 export * from './project-views.ts';
 export * from './server.ts';
 export * from './session.ts';
+export * from './session-ports.ts';
 export * from './render.ts';
 export * from './push.ts';
 export * from './snooze.ts';
@@ -369,11 +378,15 @@ export const REQUEST_SCHEMAS = {
     'snooze.clear': { payload: SnoozeClearPayloadSchema, result: EmptySchema },
     'session.attach': { payload: SessionAttachPayloadSchema, result: SessionAttachResultSchema },
     'session.detach': { payload: SessionTargetPayloadSchema, result: EmptySchema },
+    'session.preparePreview': { payload: TerminalPreparePreviewPayloadSchema, result: TerminalPreparePreviewResultSchema },
+    'session.prepare': { payload: TerminalPreparePayloadSchema, result: TerminalPrepareResultSchema },
     'session.write': { payload: SessionWritePayloadSchema, result: EmptySchema },
     'session.resize': { payload: SessionResizePayloadSchema, result: EmptySchema },
     'session.kill': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     'session.clear': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     'session.list': { payload: EmptySchema, result: SessionListResultSchema },
+    'session.ports': { payload: SessionTargetPayloadSchema, result: SessionPortsResultSchema },
+    'session.verifyPort': { payload: SessionPortVerifyPayloadSchema, result: SessionPortVerifyResultSchema },
     // A person approving the command the session holds: it is written down and typed. Nothing held is no error.
     'session.runHeld': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     // Ends once the client that asked leaves; `login-unavailable` for a CLI without a login of its own.
@@ -684,3 +697,7 @@ export function isEventType(event: string): event is EventType {
     return Object.hasOwn(EVENT_SCHEMAS, event);
 }
 export * from './apple-foundation.ts';
+
+export { FileLocationSchema, type FileLocation } from './file-location.ts';
+
+export { TerminalCwdSnapshotSchema, TERMINAL_CWD_OSC, trackTerminalCwd, terminalCwdScreenSize, type CwdTerminal, type TerminalCwd } from './terminal-cwd.ts';

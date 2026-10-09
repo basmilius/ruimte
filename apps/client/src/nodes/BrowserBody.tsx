@@ -23,12 +23,14 @@ import {
 import { BrowserSplash } from '@/browser/BrowserSplash';
 import { classifyLoadError, type LoadErrorKind } from '@/browser/load-error';
 import { drivePage, openPage } from '@/browser/open-page';
+import { browserRouteAvailable } from '@/browser/owner-route';
 import { prettyUrl } from '@/browser/pretty-url';
 import { browserRegistry, useBrowserRow } from '@/browser/registry';
 import { BrowserStream } from '@/browser/BrowserStream';
 import { browserStreamScaleLimit, browserStreamScaleOptions, clampBrowserStreamScale, useBrowserStreamQuality } from '@/browser/stream-quality';
 import { useSwipeOverlay } from '@/browser/swipe-overlay';
 import { endpointKey, useEndpointId } from '@/state/keys';
+import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { useNodeHost } from '@/nodes/node-host';
 import { usePage } from '@/nodes/use-page';
@@ -48,10 +50,12 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
     // The field reads short until someone puts the keyboard in it, and whole while they edit.
     const [editing, setEditing] = useState(false);
     const field = useRef<HTMLInputElement>(null);
-    const saved = useNodeHost(id)?.url;
+    const host = useNodeHost(id);
+    const saved = host?.url;
+    useEndpoints((store) => store.endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID)?.daemonId);
     const url = draft ?? state?.url ?? saved ?? '';
     // A node showing its splash has no page behind the bar, so nothing there is worth pressing.
-    const hasPage = (state?.url ?? saved ?? '') !== '';
+    const hasPage = (state?.url ?? saved ?? '') !== '' && browserRouteAvailable(endpointId, state?.url ?? saved ?? '', host?.browserOwner);
     const secure = url.startsWith('https://');
     const scaleLimit = browserStreamScaleLimit();
     const scale = clampBrowserStreamScale(preferredScale, scaleLimit);
@@ -141,6 +145,9 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                     disabled={!hasPage}
                     onClick={() => {
                         const target = state?.url ?? url;
+                        if (!browserRouteAvailable(endpointId, target, host?.browserOwner)) {
+                            return;
+                        }
                         if (native) {
                             void desktop()?.openExternal(target);
                         } else {
@@ -183,6 +190,17 @@ function BrowserErrorPlate({ id }: { id: string }) {
     const host = failure === null ? null : (browserRegistry.get(key)?.parentElement ?? null);
     if (!failure || !host) {
         return null;
+    }
+    if (failure.ownerRoute) {
+        return createPortal(
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg" role="alert">
+                <EmptyState icon={Unplug} title={t('browser.ownerUnavailable')}>
+                    <span className="block break-all text-text-muted">{prettyUrl(failure.url)}</span>
+                    <span className="mt-2 block">{t('browser.routeUnavailable')}</span>
+                </EmptyState>
+            </div>,
+            host
+        );
     }
     const error = classifyLoadError(failure.code, failure.description);
     return createPortal(
@@ -252,7 +270,21 @@ function SwipeArrow({ id }: { id: string }) {
 /* What a browser draws under its own page: the splash while it has no address, a streamed copy where
    there is no native <webview>, or an empty placeholder where the desktop app's <webview> lands. */
 export function BrowserFallback({ id, className }: { id: string; className?: string }) {
-    const saved = useNodeHost(id)?.url ?? '';
+    const { t } = useTranslation('canvas');
+    const host = useNodeHost(id);
+    const saved = host?.url ?? '';
+    const routeFailed = useBrowserRow(id, (row) => row?.error?.ownerRoute === true);
+    const endpointId = useEndpointId();
+    useEndpoints((store) => store.endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID)?.daemonId);
+    if (!browserRouteAvailable(endpointId, saved, host?.browserOwner) || (routeFailed && !browserRegistry.has(endpointKey(endpointId, id)))) {
+        return (
+            <div className={clsx('flex h-full items-center justify-center bg-surface-sunken', className)}>
+                <EmptyState icon={Unplug} title={t('browser.ownerUnavailable')}>
+                    {t('browser.routeUnavailable')}
+                </EmptyState>
+            </div>
+        );
+    }
     if (saved === '') {
         return <BrowserSplash id={id} className={className} />;
     }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ActionResult } from '@ruimte/actions';
-import type { FsEntry, RequestMap, RequestType } from '@ruimte/contracts';
+import type { FileLocation, FsEntry, RequestMap, RequestType } from '@ruimte/contracts';
 import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import type { FilesMachine } from './files-actions';
 import { useDocument } from '@/state/document';
@@ -15,7 +15,7 @@ function entry(name: string): FsEntry {
 /* A machine with a project in /repo: what it was asked, what the preview has open and what was copied. */
 function fakes(answers: Answers = {}, overrides: Partial<FilesMachine> = {}) {
     const asked: { type: string; payload: unknown }[] = [];
-    const open = new Map<string, number | null>();
+    const open = new Map<string, FileLocation>();
     const copied: string[] = [];
     const revealed: string[] = [];
     const forgotten: string[] = [];
@@ -35,7 +35,8 @@ function fakes(answers: Answers = {}, overrides: Partial<FilesMachine> = {}) {
         folder: () => '/repo',
         writeText: async (text) => void copied.push(text),
         isOpen: (path) => open.has(path),
-        open: (path, line) => void open.set(path, line),
+        open: (location) => void open.set(location.path, location),
+        endpointId: () => 'local',
         close: (path) => void open.delete(path),
         forget: (path) => void forgotten.push(path),
         move: async (from, to) => void moved.push([from, to]),
@@ -117,11 +118,34 @@ describe('file actions', () => {
         const { registry, open } = fakes();
         const opened = completed(await registry.execute('file.preview', { path: 'src/a.ts', line: 12 }, VOICE_ACTION_CALL));
         expect(opened.output).toEqual({ path: '/repo/src/a.ts', file: 'a.ts', opened: true });
-        expect(open.get('/repo/src/a.ts')).toBe(12);
+        expect(open.get('/repo/src/a.ts')).toMatchObject({ path: '/repo/src/a.ts', line: 12 });
         const again = completed(await registry.execute('file.preview', { path: 'src/a.ts', line: null }, VOICE_ACTION_CALL));
         expect(again.undoToken).toBeUndefined();
         await registry.undo(opened.undoToken!, VOICE_ACTION_CALL);
         expect(open.size).toBe(0);
+    });
+
+    test('preview validates ranges and refuses another machine before opening the same path', async () => {
+        const { registry, open } = fakes();
+        const input = { path: '/repo/a file.ts', line: 12, column: 4, endLine: 16, endpointId: 'local' };
+        completed(await registry.execute('file.preview', input, PERSON_ACTION_CALL));
+        expect(open.get(input.path)).toEqual({ path: input.path, line: 12, column: 4, endLine: 16 });
+        open.clear();
+        expect(await registry.execute('file.preview', { ...input, endpointId: 'remote' }, PERSON_ACTION_CALL)).toMatchObject({
+            error: { code: 'wrong-machine' }
+        });
+        expect((await registry.execute('file.preview', { ...input, endLine: 3 }, PERSON_ACTION_CALL)).status).toBe('failed');
+        expect((await registry.execute('file.preview', { ...input, line: null }, PERSON_ACTION_CALL)).status).toBe('failed');
+        expect(open.size).toBe(0);
+    });
+
+    test('preview undo cannot close the same path on a different machine', async () => {
+        let owner = 'local';
+        const { registry, open } = fakes({}, { endpointId: () => owner });
+        const result = completed(await registry.execute('file.preview', { path: '/repo/a.ts', line: 1, endpointId: owner }, PERSON_ACTION_CALL));
+        owner = 'remote';
+        await registry.undo(result.undoToken!, PERSON_ACTION_CALL);
+        expect(open.has('/repo/a.ts')).toBe(true);
     });
 
     test('the files panel only reveals what it lists; a path is copied whole or relative', async () => {

@@ -67,3 +67,68 @@ For SQL development, the same holds for `basmilius/language-server-sql`: place i
 Fix shared behavior in the ADE CORE folder and application behavior in Ruimte. Edit a shared repository only through its real filesystem path, never through `node_modules`, and only when the task authorizes changes there. A link changes package resolution; it grants neither task authorization nor filesystem permissions.
 
 Validate the shared change in ADE CORE and then in linked Ruimte. Linked checks do not prove that Ruimte CI can use the registry versions. Publish ADE CORE first. Push Ruimte code that uses a new ADE CORE API only together with the dependency bump to that published version in its manifests and `bun.lock`, after `adecore:npm`, `adecore:status --npm` and the relevant npm consumer checks are green. This workflow does not require a pre-push hook. Each repository keeps its own commits and release history.
+
+## File location links and shell cwd
+
+Ruimte's `FileLocation` contract carries a path, optional one-based line and column, and
+an optional inclusive end line. A range requires a start line and cannot run backward.
+The `file.preview` action also accepts the owning `endpointId`, checked before opening
+a tab. Its legacy nullable line remains accepted.
+
+The chat adapter uses ADE CORE's complete `FileRef` and the rendering `ChatScope.id`
+passed to `fileLinks.target` and `open`. Markdown links and timeline menus retain the
+source cwd and scope, including mentions and subagent threads. A missing scope is
+refused; neither rendering nor activation guesses the active machine or project.
+These hooks are published in
+[ADE CORE 0.20.1](https://github.com/basmilius/adecore/releases/tag/v0.20.1), pinned
+in Ruimte's package manifests and lockfile.
+
+Terminal file links resolve relative paths only with cwd metadata attached to their
+output. The daemon and browser share `trackTerminalCwd` from the contracts package;
+the client imports it through `output-cwd.ts`. It consumes OSC 7 file URIs and retains
+at most 128 context transitions using xterm markers. Scrollback and reflow preserve
+those transitions; evicted context, malformed metadata, alternate output and ambiguous
+rewrites remain unknown. A cwd change within a wrapped logical line invalidates that
+line. Without a known cwd, relative paths are not links; absolute paths remain usable.
+This metadata does not authorize terminal input or bypass the file preview sandbox.
+
+The integrated zsh emits cwd on `preexec`, `precmd` and `chpwd`. It writes markers
+synchronously to `/dev/tty`, preserving their order even when a command redirects
+stdout and stderr. Without a reachable controlling terminal, it emits no metadata
+and leaves redirected streams and shell status intact. Subshell hooks emit unknown
+context and ignore TTOU only for that metadata write, so fully redirected background
+jobs can finish under `tostop`. The caller's signal handling, shell options and tty
+flags remain intact; ordinary background tty output still stops. Relative links
+after a subshell cwd change remain unavailable until a trusted foreground hook runs.
+Concurrent process output has no per-process cwd provenance.
+
+An OSC 777 footer preserves
+bounded context metadata inside the existing snapshot string and its byte budget.
+Restored screens replay on their saved grid before reflow. Old snapshots and
+shells without integration have no historical cwd fallback. The producer cannot
+observe cwd changes inside external processes or shell code that suppresses, replaces
+or bypasses its hooks, including `cd -q` and output from an earlier custom `chpwd` hook.
+
+Real zsh/browser tests cover `cd`, late prompt-hook changes, escaped directory names,
+reconnect, snapshot restore at another grid and clear/resync. Click and menu use the
+real preview, editor and transport to read different existing `same.ts` files and
+select the requested range. Redirected commands, blocks and functions also require
+fresh transport reads and correct full contents; their output files contain no
+metadata. Separate regressions cover rewrites, wrapping and output
+through full scrollback. Combined shell-editor validation also covers directory
+changes and clear/resync with strict options in `.zshenv` and `.zshrc`. Independent
+review approved the consumer, shell and snapshot routes. File nodes retaining
+locations remain separate follow-up work.
+
+Run the independent cwd performance gate separately from browser tests and typechecks:
+
+```sh
+bun --conditions=source apps/server/scripts/benchmark-output-cwd.ts \
+    --warmup=1 --repetitions=3 --metadata=none,fixed,changing --enforce
+```
+
+Each case writes 50,000 rows after filling scrollback, in one burst or 128-row chunks.
+It compares paired medians with absent, fixed and changing cwd metadata. The budget
+is twice the plain parser time plus 150 ms; the fixed allowance prevents small
+baselines from amplifying timer noise. The script also checks retained output and
+usable cwd context. This manual gate runs outside the default unit suite.

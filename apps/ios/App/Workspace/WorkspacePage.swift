@@ -716,7 +716,16 @@ struct ProjectItemPage: View {
                         Task { await workspace.runHeldCommand(current.stableID) }
                     }
                 })
-        case "browser": BrowserPage(url: current.text("url"))
+        case "browser":
+            if current["browserOwner"] != nil {
+                ContentUnavailableView {
+                    Label("Browser owner unavailable", systemImage: "network.slash")
+                } description: {
+                    Text("Open this browser in Ruimte on the machine running the session.")
+                }
+            } else {
+                BrowserPage(url: current.text("url"))
+            }
         case "device": DeviceViewPage(client: workspace.client, reference: current["device"])
         case "file":
             FileContentPage(

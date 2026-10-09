@@ -42,5 +42,20 @@
         "ask": "Ask {{provider}}",
         "problem": "Problem: {{message}}",
         "noChat": "No chat could be started"
+    },
+    "prepare": {
+        "action": "Prepare in terminal",
+        "explanation": "Review the full command below. Ruimte pastes it without Enter. You run it yourself.",
+        "machine": "Machine",
+        "cwd": "Working folder",
+        "terminal": "Terminal",
+        "paste": "Paste without Enter",
+        "noShell": "No verified empty shell is available in this folder. Open a zsh terminal here, or clear its input. Other shells do not yet support preparing commands.",
+        "offline": "The machine of this chat is not connected.",
+        "failed": "The command could not be prepared.",
+        "ready": "Command prepared",
+        "readyIn": "The command is ready in {{terminal}}. Press Enter there to run it.",
+        "unconfirmed": "Preparation was not confirmed. The command may already be in the terminal. Check its input before preparing again.",
+        "refused": "The shell editor refused the command. Nothing was inserted. Open the preview again."
     }
 }

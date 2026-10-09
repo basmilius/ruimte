@@ -1,5 +1,5 @@
 import type { TableKind } from '@adecore/database/protocol';
-import type { GitDiffScope, ProjectConsoleBinding, ProjectFileTabView } from '@ruimte/contracts';
+import type { FileLocation, GitDiffScope, ProjectConsoleBinding, ProjectFileTabView } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { canDropAsTab, canSplit, cellAt, cellViewIds, locateView, viewIdsIn, type CellAt, type SplitZone } from '@/shell/split';
@@ -171,7 +171,7 @@ export function moveTabs(state: TabPool, from: string, to: string): TabPool & { 
     return { tabs, renamed };
 }
 
-export interface RevealLineRequest {
+export interface RevealLineRequest extends Omit<FileLocation, 'path'> {
     /* The tab this is about; a file that is not the one up ignores it. */
     key: string;
     /* One-based, the number the viewer puts in its gutter. */
@@ -288,9 +288,9 @@ interface FilesStore extends TabPool {
     /* The pool of a project that opens; a tab the layout does not stand anywhere has no view to be and is left out. */
     load(projectId: string | null, state: { tabs: Tab[]; expandedDirs: string[] }): void;
     /* A tab in the host the last focused one leads to, brought to the front with the keyboard in it. The limit is that host's. */
-    open(path: string, limit: number, view?: FileTabView, line?: number, options?: OpenOptions): void;
+    open(path: string, limit: number, view?: FileTabView, line?: number | Omit<FileLocation, 'path'>, options?: OpenOptions): void;
     /* The tab without moving the focus, for a caller that wants the file on the grid and the keyboard where it is. */
-    openHidden(path: string, limit: number, view?: FileTabView, line?: number, options?: OpenOptions): void;
+    openHidden(path: string, limit: number, view?: FileTabView, line?: number | Omit<FileLocation, 'path'>, options?: OpenOptions): void;
     /* Tabs a caller worked out itself, such as for a database view (`database/open.ts`), put on screen the way an open file is. */
     show(next: TabState, limit: number, options?: OpenOptions): void;
     /* The center joins the cell's tabs; an edge splits it. */
@@ -378,15 +378,22 @@ export const useFiles = create<FilesStore>((set, get) => {
     const focusRequestAfter = (key: string, options: OpenOptions | undefined): FocusRequest | null =>
         options?.focus === false ? get().focusRequest : { key, nonce: (get().focusRequest?.nonce ?? 0) + 1 };
     /* The pool as an open left it, and the cell that followed a diff tab taking over another's key. */
-    const take = (opened: OpenedTab, line: number | undefined, options: OpenOptions | undefined): void => {
+    const take = (opened: OpenedTab, line: number | Omit<FileLocation, 'path'> | undefined, options: OpenOptions | undefined): void => {
         const key = opened.active!;
-        const reveal = line === undefined ? get().revealLine : { key, line, nonce: (get().revealLine?.nonce ?? 0) + 1 };
+        const position = typeof line === 'number' ? { line } : line;
+        const reveal = position?.line === undefined ? get().revealLine : { ...position, key, line: position.line, nonce: (get().revealLine?.nonce ?? 0) + 1 };
         set({ tabs: opened.tabs, focusRequest: focusRequestAfter(key, options), revealLine: reveal });
         if (opened.replaced !== undefined) {
             useDocument.getState().replaceViewKey(opened.replaced, key);
         }
     };
-    const openIn = (opened: OpenedTab, limit: number, line: number | undefined, options: OpenOptions | undefined, quietly: boolean): void => {
+    const openIn = (
+        opened: OpenedTab,
+        limit: number,
+        line: number | Omit<FileLocation, 'path'> | undefined,
+        options: OpenOptions | undefined,
+        quietly: boolean
+    ): void => {
         const key = opened.active!;
         take(opened, line, options);
         useDocument.getState().showLoose(key, { focus: !quietly });

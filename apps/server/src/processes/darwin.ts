@@ -153,8 +153,8 @@ export class DarwinSampler implements ProcessSampler {
     private listPids(): Int32Array {
         for (;;) {
             const count = this.proc.symbols.proc_listallpids(ptr(this.pids), this.pids.byteLength);
-            if (count < 0) {
-                return new Int32Array(0);
+            if (count <= 0) {
+                throw new Error('Could not read the process table');
             }
             // A full buffer may have cut the list short; the table grew since the last reading.
             if (count < this.pids.length) {

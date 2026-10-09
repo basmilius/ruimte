@@ -1,3 +1,4 @@
+import { isLoopbackBrowserUrl } from '@ruimte/contracts';
 import { desktop, type DesktopBridge } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 
@@ -14,16 +15,7 @@ export function terminalLinkTarget(uri: string, endpointId: string, localDesktop
     if (!url || !['http:', 'https:'].includes(url.protocol)) {
         return 'invalid';
     }
-    const hostname = url.hostname.toLowerCase().replace(/\.$/, '');
-    const loopback =
-        hostname === 'localhost' ||
-        hostname.endsWith('.localhost') ||
-        /^127\./.test(hostname) ||
-        hostname === '[::1]' ||
-        hostname === '0.0.0.0' ||
-        hostname === '[::]' ||
-        /^\[::ffff:7f[0-9a-f]{2}:/.test(hostname);
-    return loopback && !(localDesktop && endpointId === LOCAL_ENDPOINT_ID) ? 'remote-loopback' : 'web';
+    return isLoopbackBrowserUrl(uri) && !(localDesktop && endpointId === LOCAL_ENDPOINT_ID) ? 'remote-loopback' : 'web';
 }
 
 export function openTerminalLink(

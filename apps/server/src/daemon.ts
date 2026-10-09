@@ -1,3 +1,6 @@
+import { projectTerminalPrepareHost, registerTerminalPrepareHandlers } from './handlers/terminal-prepare.ts';
+import { PrepareTerminal, shellSyntax } from './sessions/prepare-terminal.ts';
+import { prepareShellIntegration } from './sessions/shell-integration.ts';
 import { PushService } from './push/service.ts';
 import { registerPushHandlers } from './handlers/push.ts';
 import { SnoozeStore } from './push/snoozes.ts';
@@ -152,6 +155,9 @@ import { Worktrees } from './git/worktrees.ts';
 import { foregroundGroup, holdsForeground } from './processes/foreground.ts';
 import { ProcessMonitor } from './processes/monitor.ts';
 import { createSampler } from './processes/sampler.ts';
+import { DarwinListenerProbe } from './processes/listeners.ts';
+import { SessionPorts } from './sessions/ports.ts';
+import { registerSessionPortHandlers } from './handlers/session-ports.ts';
 import { handleProjectRequest, PROJECTS_PATH } from './projects/icon-route.ts';
 import { DiagramStore } from './projects/diagram-store.ts';
 import { DrawingStore } from './projects/drawing-store.ts';
@@ -314,6 +320,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     const claudeTitles = new ClaudeTitleReader();
     const manager = new SessionManager({
         adapter: new BunPtyAdapter(),
+        shellEnvironment: await prepareShellIntegration(config.home),
         snapshots,
         agents: new AgentStore(config.home),
         contextUrl,
@@ -592,6 +599,21 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     const limits = new UsageMonitor({ providers, accounts: limitAccountsOf(providerAccounts, nameOfCli, process.env), client: RUIMTE_CODEX_CLIENT });
     providerAccounts.listen(() => limits.accountsChanged());
     const sampler = await createSampler(process.platform, config.home);
+    const sessionPorts = new SessionPorts({
+        machineId: identity.id,
+        sampler,
+        probe: process.platform === 'darwin' ? new DarwinListenerProbe() : null,
+        sessions: () => manager.list().flatMap(({ sessionId }) => manager.live(sessionId) ?? []),
+        current: (id) => manager.live(id),
+        uid: process.getuid?.() ?? -1
+    });
+    manager.observeLifecycle((session, phase) => {
+        if (phase === 'created') {
+            sessionPorts.track(session);
+        } else {
+            sessionPorts.forget(session);
+        }
+    });
     const processes = new ProcessMonitor({
         sampler,
         sessions: () =>
@@ -843,6 +865,16 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     registerSnoozeHandlers(dispatcher, snoozes, (nodeId) => projects.index.locate(nodeId));
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager, endChildren.owe, { commandOf: (kind) => providers.get(kind).home?.loginCommand, nameOf: nameOfCli });
+    registerTerminalPrepareHandlers(
+        dispatcher,
+        new PrepareTerminal({
+            machineId: identity.id,
+            machine: identity.label,
+            sessions: manager,
+            syntax: shellSyntax,
+            ...projectTerminalPrepareHost(projects.index, chats)
+        })
+    );
     registerBrowserHandlers(dispatcher, browsers, browserPages, () => identity.streamingAllowed);
     registerDeviceHandlers(dispatcher, devices, () => identity.streamingAllowed);
     registerDeviceControlHandlers(dispatcher, deviceControl);
@@ -979,6 +1011,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     registerUsageHandlers(dispatcher, usage, limits);
     registerProviderAccountHandlers(dispatcher, providerAccounts);
     registerProcessHandlers(dispatcher, processes);
+    registerSessionPortHandlers(dispatcher, sessionPorts);
     registerComputerHandlers(dispatcher, computer);
     registerGitHandlers(dispatcher, worktrees, merges, statuses, providers);
 
@@ -1380,6 +1413,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         limits.stop();
         providerAccounts.stop();
         processes.stop();
+        sessionPorts.stop();
         // Before anything is awaited: a `bun --watch` reload restarts the module during the first
         // await, so a turn in flight would otherwise never reach its file.
         chats.persistAllSync();

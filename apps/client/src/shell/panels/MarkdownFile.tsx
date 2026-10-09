@@ -1,3 +1,5 @@
+import { useFileActions } from '@/shell/panels/file-actions';
+import { useFiles } from '@/state/files';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Code, Eye } from 'lucide-react';
@@ -24,10 +26,13 @@ type MarkdownView = 'preview' | 'source';
  */
 export function MarkdownFile({ path, read }: { path: string; read: FsReadText }) {
     const { t } = useTranslation('panels');
+    const tabKey = useFileActions()?.tabKey ?? null;
+    const reveal = useFiles((state) => (state.revealLine?.key === tabKey ? state.revealLine : null));
+    const [dismissedReveal, setDismissedReveal] = useState<number | null>(null);
     const [chosen, setView] = useState<MarkdownView>('preview');
     // The preview draws what is on disk, so a file with unsaved changes stays in the editor until they are saved.
     const unsaved = useUnsaved(useEndpointId(), path);
-    const view = unsaved ? 'source' : chosen;
+    const view = unsaved || (reveal != null && reveal.nonce !== dismissedReveal) ? 'source' : chosen;
     const surface = useRef<HTMLDivElement>(null);
     const content = useRef<HTMLDivElement>(null);
     // The source is the editor's to search; this one is the text the preview draws.
@@ -40,7 +45,10 @@ export function MarkdownFile({ path, read }: { path: string; read: FsReadText })
                 label={unsaved ? t('file.view.previewAfterSave') : t('file.view.preview')}
                 active={view === 'preview'}
                 disabled={unsaved}
-                onClick={() => setView('preview')}
+                onClick={() => {
+                    setDismissedReveal(reveal?.nonce ?? null);
+                    setView('preview');
+                }}
             />
             <FileToolbarToggle icon={Code} label={t('file.view.source')} active={view === 'source'} onClick={() => setView('source')} />
         </ButtonGroup>

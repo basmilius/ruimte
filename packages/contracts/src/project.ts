@@ -110,6 +110,8 @@ export const ProjectNodeSchema = z.object({
     runtimeMode: RuntimeModeSchema.optional(),
     // Browser only: the page it shows.
     url: z.string().optional(),
+    // Travels with the URL, including shared projects: another machine must not reinterpret its localhost.
+    browserOwner: z.string().min(1).optional(),
     // Device only: a portable identity resolved to a local simulator when it is shown.
     device: DeviceReferenceSchema.optional(),
     // Group only: folded to its header, with the nodes it held out of sight until it opens again.
@@ -545,7 +547,7 @@ export type ProjectChatView = z.infer<typeof ProjectChatViewSchema>;
 export const ProjectTerminalViewSchema = ViewBaseSchema.extend({ kind: z.literal('terminal'), node: StandaloneNodeSchema });
 export type ProjectTerminalView = z.infer<typeof ProjectTerminalViewSchema>;
 
-export const ProjectBrowserViewSchema = ViewBaseSchema.extend({ kind: z.literal('browser'), url: z.string() });
+export const ProjectBrowserViewSchema = ViewBaseSchema.extend({ kind: z.literal('browser'), url: z.string(), browserOwner: z.string().min(1).optional() });
 export type ProjectBrowserView = z.infer<typeof ProjectBrowserViewSchema>;
 
 export const ProjectDeviceViewSchema = ViewBaseSchema.extend({ kind: z.literal('device'), device: DeviceReferenceSchema });

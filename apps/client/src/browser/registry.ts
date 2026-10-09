@@ -5,6 +5,8 @@ import { useSwipeOverlay } from '@/browser/swipe-overlay';
 import { canSwipeBetweenPages, desktop } from '@/desktop/bridge';
 import { useSettings } from '@/state/settings';
 import { dropEndpoint, endpointKey, isOfEndpoint, splitKey, useEndpointId } from '@/state/keys';
+import { localBrowserRouteAvailable } from './owner-route';
+import { endpointById, LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 
 /* A main-frame load that did not arrive, in Chromium's own terms. What to say about it is
    `classifyLoadError`; the registry only reports what happened. */
@@ -12,6 +14,7 @@ export interface LoadFailure {
     url: string;
     code: number;
     description: string;
+    ownerRoute?: boolean;
 }
 
 export interface BrowserState {
@@ -188,16 +191,35 @@ export function setInitialWebviewUrl(element: Pick<HTMLElement, 'setAttribute'>,
 class BrowserRegistry {
     /* Keyed with `endpointKey`, the way the store above is, since a page belongs to a node of one machine. */
     private readonly elements = new Map<string, WebviewElement>();
+    private readonly owners = new Map<string, string>();
     private readonly swipes = new Map<string, SwipeState>();
     private readonly settleTimers = new Map<string, ReturnType<typeof setTimeout>>();
     private watchingSwipeSetting = false;
+    private readonly pendingRoutes = new Map<string, { url: string; started: boolean; cancel: () => void }>();
+    private watchingRouteBlocks = false;
 
     has(key: string): boolean {
         return this.elements.has(key);
     }
 
+    ownerOf(key: string): string | undefined {
+        return this.owners.get(key);
+    }
+
     /* The element for a node, made on first use with the given page. */
-    ensure(key: string, initialUrl: string): WebviewElement | null {
+    ensure(key: string, initialUrl: string, owner?: string): WebviewElement | null {
+        const boundOwner = owner ?? this.owners.get(key);
+        if (this.owners.has(key) && boundOwner !== this.owners.get(key)) {
+            this.suspend(key);
+            return null;
+        }
+        if (boundOwner !== undefined) {
+            this.owners.set(key, boundOwner);
+        }
+        if (!localBrowserRouteAvailable(splitKey(key).endpointId, normalizeUrl(initialUrl), boundOwner)) {
+            this.suspend(key);
+            return null;
+        }
         const existing = this.elements.get(key);
         if (existing) {
             return existing;
@@ -213,7 +235,49 @@ class BrowserRegistry {
         element.style.height = '100%';
         // What shows until the page paints. A page with a background of its own covers it at once.
         element.style.backgroundColor = 'var(--bg)';
-        const url = setInitialWebviewUrl(element, initialUrl);
+        const shell = desktop()!;
+        const guarded = !!shell.bindBrowserRoute && !!shell.onBrowserRouteBlocked;
+        const url = normalizeUrl(initialUrl);
+        setInitialWebviewUrl(element, guarded ? 'about:blank' : url);
+        if (guarded) {
+            const endpointId = splitKey(key).endpointId;
+            const localMachineId = endpointById(LOCAL_ENDPOINT_ID)?.daemonId ?? undefined;
+            const pending = { url, started: false, cancel: () => {} };
+            this.pendingRoutes.set(key, pending);
+            element.addEventListener('dom-ready', () => {
+                if (pending.started || this.pendingRoutes.get(key) !== pending || this.elements.get(key) !== element) {
+                    return;
+                }
+                pending.started = true;
+                const failed = (): void => {
+                    if (this.pendingRoutes.get(key) === pending) {
+                        this.suspend(key);
+                        useBrowser.getState().patch(key, { url: pending.url, loading: false, error: routeFailure(pending.url) });
+                    }
+                };
+                const deadline = setTimeout(failed, 5_000);
+                pending.cancel = () => clearTimeout(deadline);
+                void shell.bindBrowserRoute!({ webContentsId: element.getWebContentsId(), endpointId, owner: boundOwner, localMachineId })
+                    .then((accepted) => {
+                        pending.cancel();
+                        if (this.pendingRoutes.get(key) !== pending || this.elements.get(key) !== element) {
+                            return;
+                        }
+                        if (!accepted) {
+                            failed();
+                            return;
+                        }
+                        this.pendingRoutes.delete(key);
+                        if (pending.url === 'about:blank') {
+                            useBrowser.getState().patch(key, { loading: false });
+                        } else {
+                            this.navigate(key, pending.url);
+                        }
+                    })
+                    .catch(failed);
+            });
+            this.watchRouteBlocks();
+        }
         this.watchSwipeSetting();
         this.listen(key, element);
         this.elements.set(key, element);
@@ -240,20 +304,34 @@ class BrowserRegistry {
     }
 
     navigate(key: string, input: string): void {
+        if (!this.permits(key, input)) {
+            return;
+        }
         const element = this.elements.get(key);
         if (!element) {
             return;
         }
         const url = normalizeUrl(input);
         useBrowser.getState().patch(key, { url, error: null });
+        const pending = this.pendingRoutes.get(key);
+        if (pending) {
+            pending.url = url;
+            return;
+        }
         element.loadURL(url).catch(() => undefined);
     }
 
     back(key: string): void {
+        if (this.pendingRoutes.has(key) || !this.permits(key)) {
+            return;
+        }
         this.elements.get(key)?.goBack();
     }
 
     forward(key: string): void {
+        if (this.pendingRoutes.has(key) || !this.permits(key)) {
+            return;
+        }
         this.elements.get(key)?.goForward();
     }
 
@@ -264,6 +342,9 @@ class BrowserRegistry {
     }
 
     reload(key: string, ignoreCache: boolean): void {
+        if (this.pendingRoutes.has(key) || !this.permits(key)) {
+            return;
+        }
         const element = this.elements.get(key);
         if (!element) {
             return;
@@ -319,10 +400,18 @@ class BrowserRegistry {
 
     /* Ends the page for good; used when the node is deleted, never when a project switches. */
     destroy(key: string): void {
+        this.owners.delete(key);
+        this.suspend(key);
+    }
+
+    // An unavailable route closes the guest but cannot erase its machine binding.
+    suspend(key: string): void {
         const element = this.elements.get(key);
         if (!element) {
             return;
         }
+        this.pendingRoutes.get(key)?.cancel();
+        this.pendingRoutes.delete(key);
         this.elements.delete(key);
         element.remove();
         useBrowser.getState().forget(key);
@@ -330,9 +419,33 @@ class BrowserRegistry {
         useSwipeOverlay.getState().forget(key);
     }
 
+    private watchRouteBlocks(): void {
+        if (this.watchingRouteBlocks) {
+            return;
+        }
+        const subscribe = desktop()?.onBrowserRouteBlocked;
+        if (!subscribe) {
+            return;
+        }
+        this.watchingRouteBlocks = true;
+        subscribe(({ webContentsId, url }) => {
+            const key = this.keyOfContents(webContentsId);
+            if (key) {
+                useBrowser.getState().patch(key, { loading: false, error: routeFailure(url) });
+            }
+        });
+    }
+
     private listen(key: string, element: WebviewElement): void {
-        const patch = (value: Partial<BrowserState>): void => useBrowser.getState().patch(key, value);
+        const patch = (value: Partial<BrowserState>): void => {
+            if (this.elements.get(key) === element) {
+                useBrowser.getState().patch(key, value);
+            }
+        };
         const sync = (): void => {
+            if (this.pendingRoutes.has(key) || this.elements.get(key) !== element) {
+                return;
+            }
             const url = element.getURL();
             const previous = useBrowser.getState().byKey[key]?.url ?? '';
             patch({
@@ -347,8 +460,10 @@ class BrowserRegistry {
         // Clear the error at load start; `did-navigate` also fires for Chromium's failure page.
         element.addEventListener('did-start-loading', () => patch({ loading: true, error: null }));
         element.addEventListener('did-stop-loading', () => {
-            patch({ loading: false });
-            sync();
+            if (!this.pendingRoutes.has(key)) {
+                patch({ loading: false });
+                sync();
+            }
         });
         element.addEventListener('did-navigate', sync);
         element.addEventListener('did-navigate-in-page', sync);
@@ -364,6 +479,11 @@ class BrowserRegistry {
         element.addEventListener('did-fail-load', (event) => {
             const detail = event as unknown as { errorCode: number; errorDescription: string; validatedURL: string; isMainFrame: boolean };
             if (detail.errorCode === ABORTED || !detail.isMainFrame) {
+                return;
+            }
+            const previous = useBrowser.getState().byKey[key]?.error;
+            if (previous?.ownerRoute && previous.url === detail.validatedURL) {
+                patch({ loading: false });
                 return;
             }
             patch({ loading: false, error: { url: detail.validatedURL, code: detail.errorCode, description: detail.errorDescription } });
@@ -403,6 +523,11 @@ class BrowserRegistry {
             return;
         }
         this.watchingSwipeSetting = true;
+        useEndpoints.subscribe(() => {
+            for (const key of this.elements.keys()) {
+                this.permits(key);
+            }
+        });
         useSettings.subscribe((state, before) => {
             if (state.browserSwipe === before.browserSwipe) {
                 return;
@@ -469,6 +594,18 @@ class BrowserRegistry {
         this.settleTimers.delete(key);
         this.swipes.delete(key);
     }
+
+    private permits(key: string, input = 'about:blank'): boolean {
+        if (localBrowserRouteAvailable(splitKey(key).endpointId, normalizeUrl(input), this.owners.get(key))) {
+            return true;
+        }
+        this.suspend(key);
+        return false;
+    }
+}
+
+function routeFailure(url: string): LoadFailure {
+    return { url, code: -20, description: 'Browser destination has no route to its project machine', ownerRoute: true };
 }
 
 export const browserRegistry = new BrowserRegistry();

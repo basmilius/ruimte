@@ -1,3 +1,4 @@
+import type { FileLocation } from '@ruimte/contracts';
 import { ActionRefusal, FILE_READ_MAX_LINES, type ActionActorKind, type ActionHandlers } from '@ruimte/actions';
 import type { Transport } from '@/transport/transport';
 import { asRefusal } from '@/actions/developer-actions';
@@ -19,12 +20,13 @@ export interface FilesMachine {
     transport(): Requester | null;
     /* The project folder on the machine it runs on, or null for a project without one. */
     folder(): string | null;
+    endpointId(): string;
     writeText(text: string): Promise<void>;
     /* Puts files and folders on the clipboard as themselves, for the file manager to paste. */
     copyFiles(paths: string[]): Promise<void>;
     /* Whether the preview has this file open as itself, not as a diff. */
     isOpen(path: string): boolean;
-    open(path: string, line: number | null): void;
+    open(location: FileLocation): void;
     close(path: string): void;
     /* Closes the tabs of a path that is gone, folder contents included, dropping drafts nobody can save any more. */
     forget(path: string): void;
@@ -34,6 +36,7 @@ export interface FilesMachine {
 }
 
 const LIVE_MACHINE: FilesMachine = {
+    endpointId: currentEndpointId,
     transport: () => machineFor(currentEndpointId())?.transport ?? null,
     folder: () => useProject.getState().current?.folder ?? null,
     writeText: async (text) => {
@@ -53,7 +56,7 @@ const LIVE_MACHINE: FilesMachine = {
     },
     // A file tab is named by its path, so that is also what says whether it is open.
     isOpen: (path) => useFiles.getState().tabs.some((tab) => tab.key === path),
-    open: (path, line) => useFiles.getState().open(path, useSettings.getState().filesTabLimit, undefined, line ?? undefined),
+    open: ({ path, ...position }) => useFiles.getState().open(path, useSettings.getState().filesTabLimit, undefined, position),
     close: (path) => useFiles.getState().close(path),
     forget: (path) => {
         const endpointId = currentEndpointId();
@@ -192,16 +195,20 @@ export function filesActions(overrides: Partial<FilesMachine> = {}): ActionHandl
                 }
             };
         },
-        'file.preview': ({ path, line }, { actor }) => {
+        'file.preview': ({ path, line, column, endLine, endpointId }, { actor }) => {
+            const owner = machine.endpointId();
+            if (endpointId !== undefined && endpointId !== owner) {
+                throw new ActionRefusal('wrong-machine', 'Open this file in the workspace of the machine that owns it.');
+            }
             const absolute = resolvedPath(machine, path, actor.kind);
             const opened = !machine.isOpen(absolute);
-            machine.open(absolute, line);
+            machine.open({ path: absolute, line: line ?? undefined, column, endLine });
             return {
                 output: { path: absolute, file: basenameOf(absolute), opened },
                 ...(opened
                     ? {
                           undo: () => {
-                              if (machine.isOpen(absolute)) {
+                              if (machine.endpointId() === owner && machine.isOpen(absolute)) {
                                   machine.close(absolute);
                               }
                           }

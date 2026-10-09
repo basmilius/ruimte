@@ -77,6 +77,8 @@
         "generic": "That did not work."
     },
     "file": {
+        "locationUnavailable": "The source machine for this file is unknown.",
+        "wrongMachine": "Open this file in the workspace of the machine that owns it.",
         "cannotShow": "{{name}} ({{mime}}, {{size}}) cannot be shown here.",
         "empty": {
             "findInFiles": "Find in files"

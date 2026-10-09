@@ -1,6 +1,14 @@
-import type { FileRef } from '@adecore/agents-react/host';
+import i18next from 'i18next';
+import { useToasts } from '@/state/toasts';
+import { FileLocationSchema, type FileLocation } from '@ruimte/contracts';
+import { currentEndpointId } from '@/state/keys';
 import { runAsPerson } from '@/actions/client-actions';
 import { absoluteOf, basenameOf, isAbsolutePath } from '@/shell/panels/files-tree';
+
+export interface FileRef extends FileLocation {
+    directory: boolean;
+    endpointId?: string;
+}
 
 /*
  * The extensions a bare file name has to carry to read as a file, so `useFiles.getState` and `v1.2`
@@ -83,28 +91,30 @@ const FILE_EXTENSIONS = new Set([
 
 const EXTENSIONLESS_FILES = new Set(['changelog', 'dockerfile', 'gemfile', 'justfile', 'license', 'makefile', 'procfile', 'readme']);
 
-/* Characters no path a person means carries; a glob or a sentence fragment ends here. */
+/* Bare prose is stricter than a delimited link target. */
 const NOT_IN_A_PATH = /[\s*?<>|"`]/;
 
 /* A scheme belongs to a URL, so `https://x` and `mailto:me` are nobody's file. A drive letter is one
    character, which is why the pattern asks for two before the colon. */
 const URL_SCHEME = /^[A-Za-z][A-Za-z\d+.-]+:/;
 
-/* Punctuation a sentence leaves on the end of a path. A line number is taken off before this runs. */
+/* Sentence punctuation is outside a delimited path. */
 const TRAILING_PUNCTUATION = /[.,;:!?]+$/;
 
-/* `path:42`, `path:42:7` and `path#L42` all name a line; the column is read and dropped, since the
-   viewer scrolls to lines. */
-function parseLineSuffix(text: string): { path: string; line?: number } {
-    const hash = /^(.+?)#L(\d+)$/.exec(text);
-    if (hash) {
-        return { path: hash[1]!, line: Number(hash[2]) };
+function parseLineSuffix(text: string): FileLocation {
+    const match = /^(.+?)(?::(\d+)(?::(\d+))?(?:-(\d+))?|#L(\d+)(?:C(\d+))?(?:-L?(\d+))?)$/.exec(text);
+    if (!match) {
+        return { path: text };
     }
-    const colon = /^(.+?):(\d+)(?::\d+)?$/.exec(text);
-    if (colon) {
-        return { path: colon[1]!, line: Number(colon[2]) };
-    }
-    return { path: text };
+    const line = Number(match[2] ?? match[5]);
+    const column = match[3] ?? match[6];
+    const endLine = match[4] ?? match[7];
+    return {
+        path: match[1]!,
+        line,
+        ...(column === undefined ? {} : { column: Number(column) }),
+        ...(endLine === undefined ? {} : { endLine: Number(endLine) })
+    };
 }
 
 /* A name that is nothing but a dot and one word is a dotfile (`.env`, `.gitignore`), not an extension. */
@@ -117,16 +127,29 @@ function isDotfile(name: string): boolean {
  * shape alone: nothing here asks the daemon whether the file is there, since a read costs a whole
  * file and the viewer already says so when it cannot open one.
  */
-export function parseFileRef(text: string): FileRef | null {
-    const token = text.trim().replace(TRAILING_PUNCTUATION, '');
+export function parseFileRef(text: string, allowSpaces = false): FileRef | null {
+    let token = text.trim().replace(TRAILING_PUNCTUATION, '');
+    const quoted = /^(?:"([^"\r\n]+)"|'([^'\r\n]+)'|`([^`\r\n]+)`|<([^<>\r\n]+)>)(.*)$/.exec(token);
+    if (quoted) {
+        token = (quoted[1] ?? quoted[2] ?? quoted[3] ?? quoted[4])! + quoted[5]!;
+        allowSpaces = true;
+    }
+    const hasControl = Array.from(token).some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127);
     // A home-relative path resolves on the daemon's machine and against a home this side cannot name.
-    if (token === '' || token.startsWith('~') || NOT_IN_A_PATH.test(token) || URL_SCHEME.test(token)) {
+    if (token === '' || token.startsWith('~') || hasControl || (allowSpaces ? /[*?<>|"`]/.test(token) : NOT_IN_A_PATH.test(token))) {
         return null;
     }
-    if (/[\\/]$/.test(token)) {
-        return { path: token, directory: true };
+    const location = FileLocationSchema.safeParse(parseLineSuffix(token));
+    if (!location.success) {
+        return null;
     }
-    const { path, line } = parseLineSuffix(token);
+    const { path, ...position } = location.data;
+    if (URL_SCHEME.test(path)) {
+        return null;
+    }
+    if (/[\\/]$/.test(path)) {
+        return position.line === undefined ? { path, directory: true } : null;
+    }
     // `./` says the same thing as nothing at all, and a bare `.` or `..` names no file.
     const normalized = path.replace(/^\.[\\/]/, '');
     const name = basenameOf(normalized);
@@ -135,8 +158,8 @@ export function parseFileRef(text: string): FileRef | null {
     }
     const extension = /\.([A-Za-z\d]+)$/.exec(name)?.[1]?.toLowerCase();
     const separated = /[\\/]/.test(normalized);
-    const known = isDotfile(name) || EXTENSIONLESS_FILES.has(name.toLowerCase()) || (extension !== undefined && (separated || FILE_EXTENSIONS.has(extension)));
-    return known ? { path: normalized, ...(line === undefined ? {} : { line }), directory: false } : null;
+    const known = separated || isDotfile(name) || EXTENSIONLESS_FILES.has(name.toLowerCase()) || (extension !== undefined && FILE_EXTENSIONS.has(extension));
+    return known ? { path: normalized, ...position, directory: false } : null;
 }
 
 /* Where the file sits on the daemon's machine, or null when only a folder would say and none is known. */
@@ -151,7 +174,11 @@ export function resolveFileRef(cwd: string | null, ref: FileRef): string | null 
  * A reference followed: a file opens as a tab in the preview, a folder is brought into view in the
  * files panel, which is the only one of the two that can draw a directory.
  */
-export async function openFileLink(cwd: string | null, ref: FileRef): Promise<void> {
+export async function openFileLink(cwd: string | null, ref: FileRef, endpointId = ref.endpointId ?? currentEndpointId()): Promise<void> {
+    if (endpointId !== currentEndpointId()) {
+        useToasts.getState().show({ kind: 'error', title: i18next.t('panels:file.wrongMachine') });
+        return;
+    }
     const path = resolveFileRef(cwd, ref);
     if (path === null) {
         return;
@@ -160,5 +187,5 @@ export async function openFileLink(cwd: string | null, ref: FileRef): Promise<vo
         await runAsPerson('file.reveal', { path });
         return;
     }
-    await runAsPerson('file.preview', { path, line: ref.line ?? null });
+    await runAsPerson('file.preview', { path, line: ref.line, column: ref.column, endLine: ref.endLine, endpointId });
 }

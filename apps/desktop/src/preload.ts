@@ -1,4 +1,4 @@
-import type { KeepAwakeRequest, MenuSpec, OpenPathRequest, SavePathRequest } from '@ruimte/desktop-bridge';
+import type { BrowserRouteBinding, BrowserRouteBlocked, KeepAwakeRequest, MenuSpec, OpenPathRequest, SavePathRequest } from '@ruimte/desktop-bridge';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
 const { contextBridge, ipcRenderer, webUtils } = require('electron') as typeof import('electron');
@@ -15,6 +15,12 @@ function argument(prefix: string): string | undefined {
 /* What the client may ask the shell for. The shape is mirrored in `apps/client/src/desktop/bridge.ts`. */
 contextBridge.exposeInMainWorld('ruimteDesktop', {
     platform: process.platform,
+    bindBrowserRoute: (binding: BrowserRouteBinding): Promise<boolean> => ipcRenderer.invoke('browser:bind-route', binding),
+    onBrowserRouteBlocked: (listener: (event: BrowserRouteBlocked) => void): (() => void) => {
+        const handler = (_event: unknown, blocked: BrowserRouteBlocked): void => listener(blocked);
+        ipcRenderer.on('browser:route-blocked', handler);
+        return () => ipcRenderer.removeListener('browser:route-blocked', handler);
+    },
     versions: { electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node },
     /* Handed down as an argument rather than fetched, because `app` is the main process alone and
        the client needs both before it draws its first word or its first number. */

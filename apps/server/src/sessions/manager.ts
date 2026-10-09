@@ -12,6 +12,7 @@ import { launchEnv, storedAccount, type AccountLaunches } from '@adecore/agents/
 import { contextHint, verbsNote } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
+import type { ShellEnvironment } from './shell-integration.ts';
 import type { SessionSnapshot, SnapshotStore } from './snapshot-store.ts';
 import { errorText } from '../error-text.ts';
 import { CodedError } from '@adecore/agents/coded-error';
@@ -80,6 +81,7 @@ export interface ClientSession {
 
 export interface SessionManagerOptions {
     adapter: PtyAdapter;
+    shellEnvironment?: ShellEnvironment;
     snapshots?: SnapshotStore;
     agents?: AgentStore;
     env?: Record<string, string | undefined>;
@@ -143,10 +145,12 @@ export type ProcessChangePhase = 'before-kill' | 'changed';
 
 export class SessionManager {
     private readonly adapter: PtyAdapter;
+    private readonly shellEnvironment: ShellEnvironment | undefined;
     private readonly snapshots: SnapshotStore | null;
     private readonly agents: AgentStore | null;
     private readonly env: Record<string, string | undefined>;
     private readonly sessions = new Map<string, Session>();
+    private readonly lifecycleListeners = new Set<(session: Session, phase: 'created' | 'closed') => void>();
     private readonly creating = new Map<string, Promise<SessionInfo>>();
     private readonly sinks = new ClientSinks();
     private readonly tokens = new Map<string, string>();
@@ -190,6 +194,7 @@ export class SessionManager {
     holdsForeground: (pid: number) => Promise<boolean | null> = () => Promise.resolve(null);
 
     constructor(options: SessionManagerOptions) {
+        this.shellEnvironment = options.shellEnvironment;
         this.adapter = options.adapter;
         this.snapshots = options.snapshots ?? null;
         this.agents = options.agents ?? null;
@@ -306,6 +311,9 @@ export class SessionManager {
         });
         session.heldCommand = held;
         this.sessions.set(session.id, session);
+        for (const listener of this.lifecycleListeners) {
+            listener(session, 'created');
+        }
         this.tokens.set(session.hookToken, session.id);
         if (options.forClient) {
             this.clientSessions.set(session.id, options.forClient);
@@ -481,6 +489,16 @@ export class SessionManager {
         return this.sessions.get(sessionId);
     }
 
+    live(sessionId: string): Session | undefined {
+        const session = this.sessions.get(sessionId);
+        return session && !session.exited && !this.deleted.has(session) ? session : undefined;
+    }
+
+    observeLifecycle(listener: (session: Session, phase: 'created' | 'closed') => void): () => void {
+        this.lifecycleListeners.add(listener);
+        return () => this.lifecycleListeners.delete(listener);
+    }
+
     list(): SessionInfo[] {
         return [...this.sessions.values()].map((session) => this.info(session));
     }
@@ -577,6 +595,9 @@ export class SessionManager {
         await this.creating.get(sessionId)?.catch(() => undefined);
         const session = this.require(sessionId);
         this.deleted.add(session);
+        for (const listener of this.lifecycleListeners) {
+            listener(session, 'closed');
+        }
         await this.snapshots?.delete(sessionId);
         await this.agents?.delete(sessionId);
         if (session.exited) {
@@ -714,6 +735,9 @@ export class SessionManager {
         if (this.binDir) {
             env.PATH = env.PATH ? `${this.binDir}:${env.PATH}` : this.binDir;
         }
+        if (!options.command && !options.launch && options.args.every((arg) => ['-l', '-i'].includes(arg))) {
+            this.shellEnvironment?.(options.shell, env);
+        }
 
         let session: Session;
         try {
@@ -736,6 +760,9 @@ export class SessionManager {
         const session = this.sessions.get(sessionId);
         if (!session) {
             return;
+        }
+        for (const listener of this.lifecycleListeners) {
+            listener(session, 'closed');
         }
         for (const clientId of session.attachedClients()) {
             this.emit(clientId, { event: 'session.exit', payload: { sessionId, exitCode } });

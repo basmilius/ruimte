@@ -1,0 +1,297 @@
+Final npm consumer validation, 2026-10-09
+
+ADE CORE 0.20.1 is published from 341883797bf898ffad12711eb820974cc1f1a3ca.
+Release: https://github.com/basmilius/adecore/releases/tag/v0.20.1
+Release CI: https://github.com/basmilius/adecore/actions/runs/37912035550
+Ruimte pins all 30 declared ADE CORE dependencies in eight manifests to 0.20.1.
+The lockfile contains only ADE CORE version/integrity changes. All consumers
+resolve to installed npm packages; no local ADE CORE links remain.
+
+Independent review approved points 1, 2 and 3 and the later tooltip, focus,
+attachment lifecycle and code block icon changes. The checks below use the
+published packages after those approvals.
+
+bun install --no-cache
+bun run adecore:npm
+bun run adecore:status --npm
+All exit 0. The registry initially returned temporary 404s while processing
+new packages; the final install and frozen reinstall both succeeded.
+
+bun run check
+Exit 0. Workspace typechecks, generated Swift/renderer parity and lint.
+
+bun run format:check
+bun run format
+Both exit 0; 2,090 source files. Separate manifest and documentation checks pass.
+
+bun run build
+Exit 0. Client plus desktop main, preload and guest bundles.
+
+bun run test
+Exit 0. 7,023 passed, 0 failed, 34,578 assertions, 672 files.
+
+bun --config=integration.bunfig.toml test --conditions=source <files below>
+Exit 0. 117 passed, 0 failed, 1,326 assertions, 14 files.
+apps/client/src/chat/code-actions.integration.test.ts
+apps/client/src/chat/file-links.integration.test.ts
+apps/client/src/terminal/file-links.integration.test.ts
+apps/client/src/terminal/links.integration.test.ts
+apps/server/src/sessions/prepare-flow.integration.test.ts
+apps/server/src/sessions/prepare-destination.integration.test.ts
+apps/server/src/sessions/prepare-terminal.integration.test.ts
+apps/server/src/sessions/file-locations.integration.test.ts
+apps/server/src/sessions/shell-editor.integration.test.ts
+apps/server/src/sessions/shell-editor-review.integration.test.ts
+apps/server/src/sessions/shell-integration.integration.test.ts
+apps/server/src/sessions/background-cwd.integration.test.ts
+apps/server/src/sessions/ports.integration.test.ts
+apps/desktop/src/browser-routes.integration.test.ts
+
+These runs cover real zsh, canvas/view focus, copy/prepare controls, file links,
+historical cwd and snapshots, listener ownership and Electron guest routes.
+The Electron test keeps all 15 forbidden destinations at zero wrong requests.
+Known optional .editorconfig lookups in the escaped-path fixture log ENOENT;
+its actual file reads and selections pass.
+
+Logs: /tmp/ruimte-release-2026-10-09/ruimte-{install,npm,npm-status,check,format,
+format-write,build,unit,integration}.log
+
+Limits: macOS validation. No new Linux/Windows, physical remote-machine,
+physical touchscreen, OS-clipboard or packaged-app acceptance in this run.
+Ruimte's deliberate source export condition consumes the published package
+sources. ADE CORE CI separately validates packed default and source exports.
+
+Historical linked-source validation follows. Pending work and dependency
+limitations in the earlier handoffs describe those earlier source versions;
+they are superseded by the final approvals and npm validation above.
+
+Local integration validation (points 1, 2 and 3 combined)
+
+Root: /Users/bas/Development/Projects/ruimte
+ADE CORE: linked local checkout with PR #44 applied on 3ea0d45.
+Point-2 changes were merged against the current root, preserving the integrated
+point-1 and point-3 code. Generated artifacts were regenerated from that root.
+Independent rereview is pending. These are linked-source checks, not npm checks.
+
+bun run --cwd packages/contracts generate:swift
+Exit 0. 601 Swift wire models plus renderer and visual artifacts.
+
+bun run check
+Exit 0. All workspace typechecks, generation checks and lint.
+
+bun run format:check
+Exit 0.
+
+git diff --check
+Exit 0.
+
+bun test --conditions=source --only-failures apps/server/src/sessions apps/client/src/actions/terminal-prepare-actions.test.ts apps/client/src/chat/PrepareCodeBlockAction.test.ts apps/client/src/i18n/locales.test.ts packages/contracts/src/terminal-prepare.test.ts packages/actions/src/registry.test.ts
+Exit 0. 157 passed, 0 failed, 4329 assertions, 22 files.
+
+bun test --conditions=source packages/contracts/src/wire-enums.test.ts
+Exit 0. 4 passed, 0 failed, 7 assertions; snapshot passed.
+
+bun --config=integration.bunfig.toml test --conditions=source apps/server/src/sessions/shell-editor.integration.test.ts apps/server/src/sessions/shell-integration.integration.test.ts apps/server/src/sessions/prepare-flow.integration.test.ts apps/server/src/sessions/prepare-terminal.integration.test.ts
+Exit 0. 16 passed, 0 failed, 129 assertions, 4 files.
+
+bun --config=integration.bunfig.toml test --conditions=source apps/client/src/terminal/links.integration.test.ts apps/client/src/terminal/file-links.integration.test.ts apps/client/src/chat/file-links.integration.test.ts
+Exit 0. 18 passed, 0 failed, 265 assertions, 3 files.
+
+CLANG_MODULE_CACHE_PATH=/tmp/ruimte-integrated-swift/modules SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ruimte-integrated-swift/modules swift test --package-path apps/ios/Packages/RuimtePulsar --scratch-path /tmp/ruimte-integrated-swift --cache-path /tmp/ruimte-integrated-swift/cache --config-path /tmp/ruimte-integrated-swift/config --security-path /tmp/ruimte-integrated-swift/security --disable-sandbox
+Exit 0. Build passed; 78 tests passed.
+
+Logs: /tmp/ruimte-point2-local-{generate,check,format,tests,wire,integration}.log
+Combined browser and Swift logs: /tmp/ruimte-points1-2-3-{browser,swift}.log
+
+The remaining live-output/snapshot cwd work belongs to point 1. The editor cwd
+API below observes the current editor and must not be applied to older output.
+
+Historical agent handoff follows; its paths and validation describe the isolated
+worktree before local integration, not the current root checkout.
+
+Prepare in terminal: independent-review repair handoff
+
+Status: implementation and targeted validation are ready for independent review.
+The parent owns integration and report status; no acceptance status was changed.
+The actual workspace host now registers ADE CORE renderShellCodeBlock.
+
+Worktree: /Users/bas/.ruimte/worktrees/ruimte-cd672b31/punt-2-shellvoorbeeld-klaarzetten
+Branch: punt-2-shellvoorbeeld-klaarzetten
+Base HEAD: 4e17639618eb339a6aac3795eca27ac3a35f307a
+No commit, push, release or external message. Existing point-2 work was retained.
+No root checkout, private report, other worktree, actual ADE CORE source or
+installed node_modules was modified.
+
+Validation directory: /var/folders/gm/0svlr9f92cd8ngf6njz_b76r0000gn/T/ruimte-prepare-verify-gnuno5my
+Isolated ADE CORE copies: /var/folders/gm/0svlr9f92cd8ngf6njz_b76r0000gn/T/ruimte-prepare-dependencies-05wls8hg
+Bun: 1.4.2
+Shell: zsh 5.9 (arm64-apple-darwin26.0)
+
+Setup scripts retained for reproducibility:
+  /tmp/ruimte-prepare-verify.py
+  /tmp/ruimte-prepare-isolate-deps.py
+  /tmp/ruimte-prepare-sync.py
+Run these with python3 from this worktree, in that order. They create disposable
+source/dependency copies and record their directories in /tmp/ruimte-prepare-verify-path
+and /tmp/ruimte-prepare-dependencies-path. Existing third-party packages are read-only
+references. TypeScript build metadata stays inside the validation directory.
+Only agents-react is taken from the upstream proposal; its peers are copies of the
+currently installed shared dependencies. The real shared repositories are not edited.
+
+Proposal: /tmp/ruimte-adecore-upstream-proposal/HANDOFF.md
+Source revision: 3b583082d645af2f2ac65131a8ee11c9751ed68e
+Patch SHA-256: 43b4b7a40bc59a06a06c8d733c008e2c27a6758f339297a9a7fc63cd86a6168f
+The shared API still needs its separate PR/publication and Ruimte dependency pins
+for a registry release. These are source-consumer checks, not npm-release acceptance.
+
+Final commands, run from the validation directory unless noted:
+
+bun run check
+Exit 0. Root script typecheck, every workspace typecheck, Swift/renderer/visual
+parity checks and oxlint --deny-warnings passed. 597 generated wire models checked.
+
+bun run format:check
+Exit 0. All 2049 matched files correctly formatted.
+
+bun test --conditions=source --only-failures apps/server/src/sessions apps/client/src/actions/terminal-prepare-actions.test.ts apps/client/src/chat/PrepareCodeBlockAction.test.ts apps/client/src/i18n/locales.test.ts packages/contracts/src/terminal-prepare.test.ts packages/actions/src/registry.test.ts
+Exit 0. 138 passed, 0 failed, 4252 assertions, 21 files.
+
+bun --config=integration.bunfig.toml test --conditions=source apps/server/src/sessions/shell-editor.integration.test.ts apps/server/src/sessions/shell-integration.integration.test.ts apps/server/src/sessions/prepare-flow.integration.test.ts apps/server/src/sessions/prepare-terminal.integration.test.ts
+Exit 0. 16 passed, 0 failed, 129 assertions, 4 files.
+Command-specific sandbox approval allowed isolated real shells, private Unix sockets,
+a temporary loopback test server and a headless browser. No person-owned app was used.
+
+bun run --cwd packages/contracts generate:swift
+Exit 0. Generated 597 models plus native renderer/visual parity artifacts. Changed
+wire artifacts were copied back without reformatting generator output. Besides the
+two prepare requests, generation includes existing shared ChatDelivery/request fields.
+An earlier check found stale generated output; regeneration resolved it.
+
+/Users/bas/Development/Projects/ruimte/node_modules/.bin/oxlint --fix apps/server/src/sessions/prepare-flow.integration.test.ts apps/server/src/sessions/prepare-terminal.test.ts apps/server/src/sessions/shell-editor.integration.test.ts apps/server/src/sessions/shell-prompt.test.ts apps/server/src/sessions/shell-editor-test-helpers.ts
+Exit 0, from the worktree. Added required braces in test fixtures. The final root
+check subsequently verified the entire source tree with warnings denied.
+Changed source/docs were formatted with the read-only installed oxfmt --write binary;
+generated files retained their generator formatting.
+
+git diff --check
+Exit 0, from the worktree.
+
+Review findings addressed:
+- OSC/PTY bytes cannot establish an editor or cwd. Startup read receives no bytes
+  until explicit user input; the test verifies its first consumed byte is X, not ESC.
+- A prefilled zle-line-init buffer remains occupied after background forged OSC.
+- A late precmd cd is observed at the actual ZLE query, not at an earlier prompt hook.
+- At insertion the ZLE widget rechecks editor context, live cwd, empty BUFFER and
+  pending/queued input on a session-specific authenticated non-PTY channel.
+- Each editor cycle closes its descriptor. A test caught and corrected the initial
+  zsocket -d misuse: only explicit exec {descriptor}>&- closes that descriptor.
+- Late buffer/cwd changes, builtin read, continuation/vared, timeout behind a blocked
+  widget, invalid credentials, repeated confirmations and cleared used input are tested.
+- The browser tests use the actual AssistantRow/Markdown, workspace-host callback,
+  person action registry, dispatcher and real zsh. Streaming and incomplete fences
+  show no action and send no request. Previewing does not change the editor.
+- The simulated remote owner receives the action while the active endpoint is local;
+  there is no fallback. Busy/input changes after preview refuse preparation.
+- Prepared text remains editable and creates no sentinel file until explicit Enter.
+
+Cwd API for point 1:
+  await session.shellPrompt.workingDirectory()
+  => { state: 'known', cwd: string, revision: number } | { state: 'unknown' }
+This is a fresh observation from primary ZLE, not a persistent current-directory claim.
+Known also works with occupied input. Unsupported/busy/secondary editors, timeouts,
+exit, disconnect and an input/editor race during observation return unknown.
+No launch-cwd or OSC fallback. Call at use time; snapshot() is not a file-link cwd API.
+The full protocol/ownership contract is in TERMINAL-PREPARE.md.
+
+Remaining bounds:
+- Destinations require newly integrated zsh. sh/bash/zsh source lines are accepted
+  only when the line also parses for zsh. Other shell editors fail closed.
+- Existing sessions need reopening; profiles that replace hooks may disable integration.
+- Same-UID shell configuration/processes are trusted; the socket is not an OS-account
+  sandbox. A lost acknowledgement is unconfirmed, never automatically retried.
+- Linux and two physical machines were not exercised. Remote ownership was simulated
+  through the real transport/action boundary in the browser fixture.
+- Single visible line, 1000 UTF-8 bytes, conservative syntax checks, exact path spelling.
+- Shared API publication and consumer pinning remain a separate integration dependency.
+
+Complete changed/new file list (relative to the worktree, M=modified, ??=new):
+ M apps/client/src/actions/client-actions.ts
+ M apps/client/src/chat/workspace-host.ts
+ M apps/client/src/i18n/locales/en/chat.json
+ M apps/client/src/i18n/locales/nl/chat.json
+ M apps/ios/Packages/RuimtePulsar/Sources/RuimtePulsar/Generated/DaemonAPI.swift
+ M apps/ios/Packages/RuimtePulsar/Sources/RuimtePulsar/Generated/Models.swift
+ M apps/ios/Packages/RuimtePulsar/Sources/RuimtePulsar/Generated/schemas.json
+ M apps/ios/Packages/RuimtePulsar/Tests/RuimtePulsarTests/Fixtures/wire.json
+ M apps/ios/Packages/RuimteTransport/Tests/RuimteTransportTests/Fixtures/wire.json
+ M apps/server/src/daemon.ts
+ M apps/server/src/sessions/manager.ts
+ M apps/server/src/sessions/session.ts
+ M packages/actions/src/catalog.ts
+ M packages/contracts/src/index.ts
+?? apps/client/src/actions/terminal-prepare-actions.test.ts
+?? apps/client/src/actions/terminal-prepare-actions.ts
+?? apps/client/src/chat/PrepareCodeBlockAction.test.ts
+?? apps/client/src/chat/PrepareCodeBlockAction.tsx
+?? apps/client/src/chat/PrepareTerminalDialog.tsx
+?? apps/client/src/chat/prepare-code-block.ts
+?? apps/server/src/handlers/terminal-prepare.ts
+?? apps/server/src/sessions/prepare-flow.integration.test.ts
+?? apps/server/src/sessions/prepare-source.test.ts
+?? apps/server/src/sessions/prepare-source.ts
+?? apps/server/src/sessions/prepare-terminal.integration.test.ts
+?? apps/server/src/sessions/prepare-terminal.test.ts
+?? apps/server/src/sessions/prepare-terminal.ts
+?? apps/server/src/sessions/shell-editor-test-helpers.ts
+?? apps/server/src/sessions/shell-editor.integration.test.ts
+?? apps/server/src/sessions/shell-editor.ts
+?? apps/server/src/sessions/shell-integration.integration.test.ts
+?? apps/server/src/sessions/shell-integration.test.ts
+?? apps/server/src/sessions/shell-integration.ts
+?? apps/server/src/sessions/shell-prompt.test.ts
+?? apps/server/src/sessions/shell-prompt.ts
+?? docs/TERMINAL-PREPARE-CHECKS.txt
+?? docs/TERMINAL-PREPARE.md
+?? packages/contracts/src/terminal-prepare.test.ts
+?? packages/contracts/src/terminal-prepare.ts
+
+
+Combined local integration after the second review repair (2026-10-09)
+Cwd: /Users/bas/Development/Projects/ruimte
+Source: HEAD 830d963bd28f556f0815de3b3c9f4b8ea129a80e plus all integrated changes.
+ADE CORE is linked; this is not npm-consumer acceptance.
+
+Applied point-2 patch /tmp/ruimte-point2-second-5gj5fpg6/point2-second-repair.patch
+and point-3 patch /private/tmp/ruimte-point3-navigation-dhj0ur12/navigation-repair.patch.
+Only shell-integration.ts required reconciliation with point 1. Output-cwd hooks
+remain inside the isolated bootstrap; the helper also isolates strict shell options.
+Added strict-zshenv and strict-zshrc real FileBody/transport cases for cd, historical
+links, reflow and clear/resync. Clarified live vs historical cwd in documentation.
+
+bun run check
+Exit 0: all workspace typechecks, lint, 601 Swift wire models and parity checks.
+
+bun run format:check
+Exit 0: 2085 matched files. Extra browser-route fixtures, benchmark and changed
+JSON/Markdown files also pass targeted oxfmt --check. git diff --check passes.
+
+bun test --conditions=source --only-failures apps/server/src/sessions apps/server/src/processes/listeners.test.ts apps/server/src/handlers/session-ports.test.ts apps/server/src/handlers/session.test.ts apps/client/src/terminal/session-ports.test.ts apps/client/src/terminal/open-session-port.test.ts apps/client/src/terminal/links.test.ts apps/client/src/terminal/session-client.test.ts apps/client/src/browser/owner-route.test.ts apps/client/src/browser/registry.test.ts apps/client/src/browser/browser-client.test.ts apps/client/src/actions/page-actions.test.ts apps/client/src/actions/client-actions.test.ts apps/client/src/actions/terminal-prepare-actions.test.ts apps/client/src/actions/files-actions.test.ts apps/client/src/chat/PrepareCodeBlockAction.test.ts apps/client/src/state/document.test.ts apps/client/src/state/canvas.test.ts apps/client/src/i18n/locales.test.ts apps/client/src/shell/panels/file-links.test.ts packages/contracts/src/session-ports.test.ts packages/contracts/src/project-views.test.ts packages/contracts/src/wire-enums.test.ts packages/contracts/src/terminal-prepare.test.ts packages/contracts/src/file-location.test.ts packages/actions/src/registry.test.ts apps/desktop/src/browser-route-policy.test.ts apps/desktop/src/web-guards.test.ts
+Exit 0: 497 pass, 0 fail, 5665 assertions, one snapshot, 45 files.
+
+bun --config=integration.bunfig.toml test --conditions=source apps/server/src/sessions/file-locations.integration.test.ts apps/server/src/sessions/shell-editor-review.integration.test.ts apps/server/src/sessions/shell-editor.integration.test.ts apps/server/src/sessions/shell-integration.integration.test.ts apps/server/src/sessions/prepare-flow.integration.test.ts apps/server/src/sessions/prepare-terminal.integration.test.ts apps/server/src/sessions/ports.integration.test.ts apps/client/src/chat/file-links.integration.test.ts apps/client/src/terminal/links.integration.test.ts apps/client/src/terminal/file-links.integration.test.ts apps/desktop/src/browser-routes.integration.test.ts
+Exit 0: 74 pass, 0 fail, 958 assertions, 11 files. Includes seven real cwd cases,
+33 editor/Markdown integrations, four macOS listener cases, 29 file/web browser
+cases and one production Electron route test. Electron: all 15 forbidden routes
+received zero requests; public control 11 requests, local control six requests.
+The known optional .editorconfig parent lookup issue for a literal backslash cwd
+still logs ENOENT; actual file reads, correct contents and selections pass.
+
+bun run --cwd apps/desktop build:main
+Exit 0: main, preload and guest bundles. No new wire shape or Swift changes.
+
+Logs and before/after source hashes: /tmp/ruimte-repairs-local-integration
+check.log, format.log, additional-format.log, unit.log, acceptance.log,
+desktop-build.log, before.json, after.json. The isolated implementer evidence
+remains in both patch bundles. Independent rereviews are pending; points are not
+marked complete. Linux, physical two-machine tests and registry acceptance remain
+outside this local validation.

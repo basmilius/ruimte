@@ -1,4 +1,6 @@
 import type {
+    BrowserRouteBinding,
+    BrowserRouteBlocked,
     AgentActivity,
     BackgroundServiceState,
     DatabaseSecretsBridge,
@@ -17,6 +19,8 @@ import { isApplePlatform as isApplePlatformFromNavigator } from '@adecore/ui';
 
 /* The shapes the preload and the page both hold, passed on so the client reads the whole bridge here. */
 export type {
+    BrowserRouteBinding,
+    BrowserRouteBlocked,
     AgentActivity,
     BackgroundServiceState,
     DaemonCrash,
@@ -116,6 +120,9 @@ export interface OpenAiBridge {
 
 /* The shell's API, present only inside the desktop app. Mirrors `apps/desktop/src/preload.ts`. */
 export interface DesktopBridge {
+    // Remote projects and persisted owners require a host that guards guest-initiated navigation.
+    bindBrowserRoute?(binding: BrowserRouteBinding): Promise<boolean>;
+    onBrowserRouteBlocked?(listener: (event: BrowserRouteBlocked) => void): () => void;
     platform: string;
     /* What the shell is built on, for About and a bug report. Optional for the same reason
        `onBrowserContextMenu` is. */

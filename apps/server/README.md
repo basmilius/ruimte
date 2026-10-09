@@ -242,6 +242,31 @@ The servers read a database through a schema snapshot the daemon takes (`src/dat
 - `session.create` takes either `command` (a line typed into the fresh shell) or `agent` (`{ kind, runtimeMode?, model?, resume? }`), never both: with `agent` the daemon builds the line itself (`src/providers/launch.ts`) and types that. So every client starts a CLI the same way, and a flag never travels over the wire. `runtimeMode` becomes `--permission-mode` for Claude Code, `--ask-for-approval` plus `--sandbox` for Codex, `--approval-mode` for Gemini and nothing for Copilot; a `resume` fills the provider's resume template instead, with the fresh launch behind a `||` so a node whose session the CLI no longer has still ends with that CLI running. A CLI that is not installed ends as `command not found` in the shell, which is why the menus disable a row the daemon did not find. A session the daemon still has an agent record for gets no launch line at all: that agent is resumed after the attach (below), and starting the CLI here too would type a second command into the one already coming up. A line longer than 1000 bytes is not typed whole: the tty holds what comes before the shell reads in a queue macOS cuts at 1024 bytes, newline included, so the line goes into the shell's environment as `RUIMTE_START_LINE` and `eval "$RUIMTE_START_LINE"` is typed instead (`src/sessions/session.ts`).
 - `session.login` (`{ sessionId, kind, account?, cols, rows }`) is a terminal no node stands for: a shell in the home folder, under the environment of that account (the CLI's default account when none is named), that types the CLI's own login command (`home.loginCommand` of its provider). It is never held, since the daemon chose the command and a person asked for it, and a CLI without a login answers `login-unavailable`. The session lives for the client that asked: it ends when that client's socket closes, it never writes a snapshot, and Processes names it `<CLI> login`. A client watches the account with `accounts.watchLogin` and kills the session itself once the login landed.
 
+## Session listener discovery
+
+`session.ports` returns `ready` with the session's listeners, `unknown` when a scan cannot be
+completed, `unavailable` on unsupported platforms, or `closed`. macOS uses the existing libproc
+sampler for PID/start-time/UID ownership and `/usr/sbin/lsof` for TCP listeners. The root identity
+is pinned at session creation. Children and grandchildren must still belong to that root after
+the scan; another session's root is a boundary. Loopback and wildcard bindings are offered;
+LAN-only bindings are excluded.
+The scan retains each bind address and reads competing owners outside the session tree too.
+A wildcard listener is not enough to own a loopback destination: a different process listening
+on that destination (including `SO_REUSEPORT`) makes the session's result unknown. IPv6 wildcard
+ambiguity is refused because `lsof` cannot establish `IPV6_V6ONLY`.
+
+Visible attached terminals request a reading five seconds after the previous response. The daemon
+shares one scan, caches it for five seconds, caps it at 128 sessions and 2,048 processes, and limits
+`lsof` to 2.5 seconds and 1 MiB of output. A session exposes at most 128 listeners. Hitting a limit
+is unknown. Session closure invalidates its results; closing the last session aborts the probe.
+
+`session.verifyPort` bypasses the cache and checks the PID, start time, binding and port again.
+Only the local-secret client may use that route. Verification shares the single scan slot and
+accepts at most one click per second, refusing concurrent attempts. No remote forwarding is built.
+This scan targets the requested port, including every competing owner, and returns the daemon's
+machine identity with a validity of five seconds. These wire fields and the listener's bind address
+are additive and optional for decoding older replies; the client refuses to open without them.
+
 ## Snapshots
 
 Every 30 seconds, and on `SIGINT`/`SIGTERM`, the daemon writes each session's screen to `sessions/<sessionId>.txt` (temp file, then rename). When the daemon starts again and a client creates a session with an id that has a snapshot, the first attach shows the snapshot, the restored marker and then the fresh shell. `session.kill` deletes the snapshot on purpose: a killed session should not come back. The chats go down first and synchronously (`ChatManager.persistAllSync`), before the handler awaits anything, because a `bun --watch` reload restarts the module during that first await.

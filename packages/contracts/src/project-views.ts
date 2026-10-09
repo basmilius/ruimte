@@ -164,7 +164,7 @@ export function withNodeAsView(views: readonly ProjectView[], nodeId: string): {
     }
     let view: ProjectView;
     if (node.kind === 'browser') {
-        view = { kind: 'browser', id: node.id, name: node.title, url: node.url ?? '' };
+        view = { kind: 'browser', id: node.id, name: node.title, url: node.url ?? '', ...(node.browserOwner ? { browserOwner: node.browserOwner } : {}) };
     } else if (node.kind === 'device') {
         if (!node.device) {
             return null;
@@ -219,7 +219,11 @@ export function withViewAsNode(
         title: source.name,
         ...at,
         ...NODE_SIZE[source.kind],
-        ...(source.kind === 'browser' ? { url: source.url } : source.kind === 'device' ? { device: source.device } : source.node)
+        ...(source.kind === 'browser'
+            ? { url: source.url, ...(source.browserOwner ? { browserOwner: source.browserOwner } : {}) }
+            : source.kind === 'device'
+              ? { device: source.device }
+              : source.node)
     };
     const next = views
         .filter((view) => view.id !== viewId)

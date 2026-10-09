@@ -213,7 +213,9 @@ enum CanvasEditing {
             "name": .string(node.text("title", fallback: node.text("kind").capitalized)),
         ])
         switch node.text("kind") {
-        case "browser": view = view.setting("url", node["url"] ?? .string(""))
+        case "browser":
+            view = view.setting("url", node["url"] ?? .string(""))
+                .setting("browserOwner", node["browserOwner"])
         case "device": view = view.setting("device", node["device"])
         default:
             var metadata: [String: JSONValue] = [:]

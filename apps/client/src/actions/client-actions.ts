@@ -1,5 +1,7 @@
+import { terminalPrepareActions } from '@/actions/terminal-prepare-actions';
 import i18next from 'i18next';
 import { contentActions, type ContentMachine } from '@/actions/content-actions';
+import { browserRouteAvailable } from '@/browser/owner-route';
 import { databaseActions, type DatabaseMachine } from '@/actions/database-actions';
 import { asksFirst, asRefusal, developerActions, GIT_OPERATION, type DeveloperMachine } from '@/actions/developer-actions';
 import { filesActions, projectPathOf, type FilesMachine } from '@/actions/files-actions';
@@ -354,6 +356,7 @@ function addViewOf(
     title: string,
     {
         url,
+        browserOwner,
         command,
         path,
         device,
@@ -361,6 +364,7 @@ function addViewOf(
         table
     }: {
         url: string | null;
+        browserOwner?: string | null;
         command: string | null;
         path: string | null;
         device: DeviceReference | null;
@@ -391,7 +395,7 @@ function addViewOf(
             }
             return state.addDatabaseView(title, table);
         case 'browser':
-            return state.addStandaloneView({ kind, name: title, url: url ?? 'https://www.google.com' });
+            return state.addStandaloneView({ kind, name: title, url: url ?? 'https://www.google.com', ...(browserOwner ? { browserOwner } : {}) });
         case 'chat':
             return state.addStandaloneView({ kind, name: title, node: folder });
         case 'terminal':
@@ -460,6 +464,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         ...machine
     };
     const handlers: ActionHandlers<void> = {
+        ...terminalPrepareActions(),
         ...inspectionActions(document),
         ...developerActions(document, developer),
         ...sessionActions(document, sessions),
@@ -573,7 +578,10 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
                     : {})
             };
         },
-        'view.create': ({ kind, name, url, command, path, provider, account, device, resume, cwd, connection, schema, table, mode, where }) => {
+        'view.create': ({ kind, name, url, browserOwner, command, path, provider, account, device, resume, cwd, connection, schema, table, mode, where }) => {
+            if (kind === 'browser' && !browserRouteAvailable(currentEndpointId(), url ?? '', browserOwner ?? undefined)) {
+                throw new ActionRefusal('browser-owner-unavailable', 'Open this browser in Ruimte on the machine running the session.');
+            }
             refuseResumeWithout(resume, provider);
             const agent = agentFor(providers(), kind, provider, command);
             if (account != null && agent === null) {
@@ -590,7 +598,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
                     : (name ?? agent?.info.name ?? derivedViewName(state, kind, { url, path, device, table: shown }));
             const viewId =
                 agent === null
-                    ? addViewOf(state, kind, title, { url, command, path, device: device ?? null, cwd: cwd ?? null, table: shown })
+                    ? addViewOf(state, kind, title, { url, browserOwner, command, path, device: device ?? null, cwd: cwd ?? null, table: shown })
                     : addAgentView(agent.target, agent.info, title, { ...sessionOf(resume, cwd), ...(account == null ? {} : { account }) });
             if (!viewId) {
                 throw new ActionRefusal('view-create-failed', `Ruimte could not create the ${kind} view.`);
@@ -705,7 +713,10 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
                     : {})
             };
         },
-        'node.create': ({ viewId, kind, title, content, url, command, path, provider, account, at, cwd, resume }) => {
+        'node.create': ({ viewId, kind, title, content, url, browserOwner, command, path, provider, account, at, cwd, resume }) => {
+            if (kind === 'browser' && !browserRouteAvailable(currentEndpointId(), url ?? '', browserOwner ?? undefined)) {
+                throw new ActionRefusal('browser-owner-unavailable', 'Open this browser in Ruimte on the machine running the session.');
+            }
             const { view, canvas } = canvasOnScreen(document, viewId);
             refuseResumeWithout(resume, provider);
             const agent = agentFor(providers(), kind, provider, command, account ?? null);
@@ -724,7 +735,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
                       : kind === 'file' && path
                         ? { title: basenameOf(path) }
                         : {}),
-                ...(url && kind === 'browser' ? { url } : {}),
+                ...(kind === 'browser' ? { ...(url ? { url } : {}), ...(browserOwner ? { browserOwner } : {}) } : {}),
                 ...(command && kind === 'terminal' ? { command } : {}),
                 ...(path && kind === 'file' ? { path: storedFilePath(path) } : {})
             };
@@ -1566,6 +1577,7 @@ function carriedName(name: string | undefined): string | null {
 export interface CreateViewOptions extends AgentSession {
     name?: string;
     url?: string;
+    browserOwner?: string;
     path?: string;
     provider?: AgentKind;
     device?: DeviceReference;
@@ -1577,6 +1589,7 @@ export async function createViewAction(kind: CreatableViewKind, options: CreateV
         kind,
         name: carriedName(options.name),
         url: options.url ?? null,
+        browserOwner: options.browserOwner ?? null,
         command: null,
         path: options.path ?? null,
         provider: options.provider ?? null,
@@ -1691,6 +1704,7 @@ export interface CreateNodeOptions extends AgentSession {
     viewId?: string | null;
     title?: string;
     url?: string;
+    browserOwner?: string;
     provider?: AgentKind;
     /* The account of that CLI; absent is the one the person picked for new agents, else its default. */
     account?: string;
@@ -1713,6 +1727,7 @@ export async function createNodeAction(kind: CreatableNodeKind, options: CreateN
         title: carriedName(options.title),
         content: null,
         url: options.url ?? null,
+        browserOwner: options.browserOwner ?? null,
         command: options.command ?? null,
         path: options.path ?? null,
         provider: options.provider ?? null,

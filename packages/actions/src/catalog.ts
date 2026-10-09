@@ -1,4 +1,7 @@
 import {
+    TerminalPrepareSourceSchema,
+    TerminalPreparePreviewResultSchema,
+    TerminalPrepareResultSchema,
     AgentKindSchema,
     AgentStatusSchema,
     ChatAttachmentUploadsSchema,
@@ -26,6 +29,7 @@ import {
     DRAWING_TEXT_SIZE_MIN,
     FS_GREP_MAX_RESULTS,
     FS_SEARCH_MAX_RESULTS,
+    FileLocationSchema,
     FsGrepResultSchema,
     FsListResultSchema,
     FsSearchResultSchema,
@@ -664,6 +668,7 @@ export const ACTION_DEFINITIONS = {
             kind: z.union([ActionCreatableViewKindSchema, z.enum(PERSON_VIEW_KINDS).meta({ actors: [...PERSON] })]),
             name: givenName.nullable(),
             url: z.string().trim().min(1).nullable().describe('An http or https address'),
+            browserOwner: forActors(PERSON, z.string().min(1)).describe('The machine that owns a session browser'),
             command: z.string().trim().min(1).nullable(),
             path: z.string().trim().min(1).nullable().describe('The file the view shows, relative to the project folder or absolute'),
             provider: AgentKindSchema.nullable(),
@@ -747,6 +752,7 @@ export const ACTION_DEFINITIONS = {
             title: givenName.nullable(),
             content: z.string().nullable().describe('The body of a note'),
             url: z.string().trim().min(1).nullable().describe('An http or https address'),
+            browserOwner: forActors(PERSON, z.string().min(1)).describe('The machine that owns a session browser'),
             command: z.string().trim().min(1).nullable(),
             path: z.string().trim().min(1).nullable().describe('The file the node shows, relative to the project folder or absolute'),
             provider: AgentKindSchema.nullable(),
@@ -1037,6 +1043,24 @@ export const ACTION_DEFINITIONS = {
                 .describe('For a center drop, join the tabs at this gap instead of replacing the cell; null inserts after the active tab')
         }),
         output: z.object({ viewId, view: z.string(), cellViewId: viewId, zone: z.string(), created: z.array(viewId) })
+    },
+    'terminal.preparePreview': {
+        title: 'Preview terminal input',
+        description: 'Shows one completed chat code block and suitable empty shells on the chat machine. Writes no input.',
+        actors: PERSON,
+        domain: 'sessions',
+        effect: 'read',
+        input: TerminalPrepareSourceSchema.extend({ endpointId: z.string().min(1), machineId: z.string().min(1) }),
+        output: TerminalPreparePreviewResultSchema
+    },
+    'terminal.prepare': {
+        title: 'Prepare in terminal',
+        description: 'Pastes the exact command a person previewed into that unchanged empty shell, without Enter.',
+        actors: PERSON,
+        domain: 'sessions',
+        effect: 'local',
+        input: z.object({ endpointId: z.string().min(1), machineId: z.string().min(1), token: z.string().min(1) }),
+        output: TerminalPrepareResultSchema
     },
     'terminal.clear': {
         title: 'Clear terminal',
@@ -3034,7 +3058,14 @@ export const ACTION_DEFINITIONS = {
         effect: 'local',
         domain: 'files',
         actors: PERSON_AND_VOICE,
-        input: z.object({ path: filePath, line: fileLine.nullable().describe('The line to show, counting from 1') }),
+        input: z
+            .object({
+                ...FileLocationSchema.shape,
+                path: filePath,
+                line: fileLine.nullish().describe('The line to show, counting from 1'),
+                endpointId: z.string().min(1).optional().describe('The machine that owns this location')
+            })
+            .refine((location) => FileLocationSchema.safeParse({ ...location, line: location.line ?? undefined }).success, 'Invalid file location'),
         output: z.object({ path: z.string(), file: z.string(), opened: z.boolean() })
     },
     'file.reveal': {

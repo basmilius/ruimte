@@ -33,7 +33,7 @@ async function fixture(platform: 'darwin' | 'linux' | 'browser', shared: boolean
         window.opened = []; window.popups = []; window.handled = []; window.instances = {}; window.toasts = useToasts;
         Object.defineProperty(navigator, 'userAgentData', { value: {platform: ${JSON.stringify(apple ? 'macOS' : 'Linux')}}, configurable: true });
         Object.defineProperty(navigator, 'platform', { value: ${JSON.stringify(apple ? 'MacIntel' : 'Linux x86_64')}, configurable: true });
-        ${platform === 'browser' ? '' : `window.ruimteDesktop = { platform: '${platform}', openExternal: async uri => window.opened.push(uri) };`}
+        ${platform === 'browser' ? '' : `window.ruimteDesktop = { platform: '${platform}', openExternal: async uri => window.opened.push(uri), bindBrowserRoute: async () => true, onBrowserRouteBlocked: () => () => {} };`}
         // The shell denies popups and forwards only requests that already carry a web URL.
         window.open = (uri = 'about:blank', ...options) => {
             window.popups.push([uri, ...options]);
@@ -313,10 +313,13 @@ test('TerminalBody links work through canvas focus, zoom, selection and dragging
         import { ConnectionContext } from ${JSON.stringify(join(import.meta.dir, '../transport/context.ts'))};
         import { machineFor } from ${JSON.stringify(join(import.meta.dir, '../transport/connections.ts'))};
         import { transport } from ${JSON.stringify(join(import.meta.dir, '../transport/index.ts'))};
+        import { useFiles } from ${JSON.stringify(join(import.meta.dir, '../state/files.ts'))};
+        import { useProject } from ${JSON.stringify(join(import.meta.dir, '../state/project.ts'))};
         import { useEndpoints } from ${JSON.stringify(join(import.meta.dir, '../state/endpoints.ts'))};
         import words from ${JSON.stringify(join(import.meta.dir, '../i18n/locales/en/canvas.json'))};
         i18next.addResourceBundle('en', 'canvas', words, true, true);
-        window.opened=[]; window.input=[]; window.instances={};
+        window.opened=[]; window.input=[]; window.instances={}; window.files=useFiles;
+        useProject.setState({current:{folder:'/repo'}});
         window.ruimteDesktop={platform:${JSON.stringify(process.platform)},openExternal:async uri=>window.opened.push(uri)};
         useEndpoints.setState({activeId:'local',endpoints:[{id:'local',label:'This computer'}]});
         const machine=machineFor('local');
@@ -360,6 +363,30 @@ test('TerminalBody links work through canvas focus, zoom, selection and dragging
             await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', ...end, button: 'left', buttons: 0, clickCount: 1 });
             expect(await view.evaluate<string>('window.instances.canvas.terminal.getSelection()')).not.toBe('');
             expect(await view.evaluate<string[]>('window.opened')).toEqual([github, wrapped]);
+            await view.evaluate('window.instances.canvas.terminal.clearSelection()');
+            await click(view, await hover(view, 'canvas', 3 + rows), modifier);
+            expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toMatchObject({ key: '/tmp/example.ts', line: 12, nonce: 1 });
+            const filePoint = await hover(view, 'canvas', 3 + rows);
+            expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toContain('click to open file in preview');
+            await view.evaluate(
+                `Promise.all([...document.querySelectorAll('.tooltip-positioner,.tooltip-popup')].flatMap(element=>element.getAnimations()).map(animation=>animation.finished.catch(()=>undefined)))`
+            );
+            const fileAnchor = await view.evaluate<{ actual: number; expected: number }>(`(()=>{
+                const term=window.instances.canvas.terminal,screen=term.element.querySelector('.xterm-screen').getBoundingClientRect();
+                const tooltip=document.querySelector('.tooltip-positioner').getBoundingClientRect();
+                return {actual:tooltip.x+tooltip.width/2,expected:screen.x+${'/tmp/example.ts:12'.length}*screen.width/term.cols/2};
+            })()`);
+            expect(fileAnchor.actual).toBeCloseTo(fileAnchor.expected, 0);
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', ...filePoint, button: 'right', buttons: 2, clickCount: 1 });
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', ...filePoint, button: 'right', buttons: 0, clickCount: 1 });
+            await view.evaluate(frame);
+            const menuPoint = await view.evaluate<{ x: number; y: number }>(`(() => {
+                const item=[...document.querySelectorAll('[role=menuitem]')].find(element=>element.textContent.includes('Open file in preview'));
+                const rect=item.getBoundingClientRect();return {x:rect.x+rect.width/2,y:rect.y+rect.height/2};
+            })()`);
+            await click(view, menuPoint, 0);
+            await view.evaluate(frame);
+            expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toMatchObject({ key: '/tmp/example.ts', line: 12, nonce: 2 });
             const header = await view.evaluate<{ x: number; y: number }>(
                 `(()=>{const rect=document.querySelector('[data-node-id=a]>header').getBoundingClientRect();return {x:rect.x+150,y:rect.y+20}})()`
             );

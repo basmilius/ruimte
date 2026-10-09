@@ -25,10 +25,21 @@ describe('parseFileRef', () => {
         expect(parseFileRef('..')).toBeNull();
     });
 
-    test('reads the line a reference names and drops the column', () => {
+    test('retains the line and column a reference names', () => {
         expect(parseFileRef('src/state/files.ts:42')).toEqual({ path: 'src/state/files.ts', line: 42, directory: false });
-        expect(parseFileRef('src/state/files.ts:42:7')).toEqual({ path: 'src/state/files.ts', line: 42, directory: false });
+        expect(parseFileRef('src/state/files.ts:42:7')).toEqual({ path: 'src/state/files.ts', line: 42, column: 7, directory: false });
         expect(parseFileRef('src/state/files.ts#L42')).toEqual({ path: 'src/state/files.ts', line: 42, directory: false });
+    });
+
+    test('spaces, quoted paths, columns and inclusive ranges share one location', () => {
+        for (const text of ['"src/a file.ts:12:4-16"', '"src/a file.ts":12:4-16', '`src/a file.ts#L12C4-L16`']) {
+            expect(parseFileRef(text)).toEqual({ path: 'src/a file.ts', line: 12, column: 4, endLine: 16, directory: false });
+        }
+        expect(parseFileRef('a file.ts:12-16', true)).toEqual({ path: 'a file.ts', line: 12, endLine: 16, directory: false });
+        expect(parseFileRef('missing.ts:3')).toEqual({ path: 'missing.ts', line: 3, directory: false });
+        for (const text of ['file.ts:0', 'file.ts:2:0', 'src/a.ts:12-4', 'file.ts#L0-L2']) {
+            expect(parseFileRef(text)).toBeNull();
+        }
     });
 
     test('an absolute path keeps its root, on either kind of machine', () => {
@@ -105,6 +116,11 @@ describe('openFileLink', () => {
         await openFileLink('/repo', { path: 'src/main.ts', line: 42, directory: false });
         await openFileLink('/repo', { path: 'src/other.ts', directory: false });
         expect(useFiles.getState().revealLine?.line).toBe(42);
+    });
+
+    test('the complete range reaches the existing preview action', async () => {
+        await openFileLink('/repo', { path: 'src/a file.ts', line: 12, column: 4, endLine: 16, directory: false });
+        expect(useFiles.getState().revealLine).toEqual({ key: '/repo/src/a file.ts', line: 12, column: 4, endLine: 16, nonce: 1 });
     });
 
     test('a folder is brought into view in the files panel instead of opened as a tab', async () => {

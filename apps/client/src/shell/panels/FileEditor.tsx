@@ -1,3 +1,4 @@
+import { revealLocation } from '@/shell/panels/reveal-location';
 import i18next from 'i18next';
 import { type RefObject, useEffect, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -119,6 +120,9 @@ export function FileEditor({
         );
         revealed.current = first.reveal?.nonce ?? null;
         editorRef.current = editor;
+        if (first.reveal !== null) {
+            revealLocation(editor, first.reveal);
+        }
         onEditor?.(editor);
         return () => {
             const caret = editor.getCaret();
@@ -184,7 +188,9 @@ export function FileEditor({
             return;
         }
         revealed.current = reveal.nonce;
-        editorRef.current?.revealLine(reveal.line);
+        if (editorRef.current) {
+            revealLocation(editorRef.current, reveal);
+        }
     }, [reveal]);
 
     /* A node's editor has the keyboard exactly while the node does, the way a terminal's does. */

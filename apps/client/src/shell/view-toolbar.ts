@@ -6,6 +6,7 @@ import { useNodeHost, type NodeHost } from '@/nodes/node-host';
 import { isLooseView, type CellView } from '@/shell/cell-view';
 import { useChatRow } from '@adecore/agents-react/state/chats';
 import { useHasPlans } from '@/state/plans';
+import { useSessionPortControl } from '@/terminal/session-port-controls';
 
 /* The kinds that put something in the toolbar; the bar draws its separators around that part. */
 export const KINDS_WITH_TOOLBAR = new Set<ProjectViewKind>(['browser', 'device', 'terminal', 'file', 'diagram', 'chat']);
@@ -31,6 +32,7 @@ export function useHasViewToolbar(view: CellView | null): boolean {
     const subagents = useShowsSubagents(view);
     const forked = useIsFork(view);
     const planned = useHasPlans(view?.kind === 'chat' ? view.id : '');
+    const ports = useSessionPortControl(view?.kind === 'terminal' ? view.id : '');
     // The file's controls are portaled into the bar, which is where its renderer puts them.
     if (isLooseView(view)) {
         return true;
@@ -42,7 +44,7 @@ export function useHasViewToolbar(view: CellView | null): boolean {
         return subagents || forked || planned;
     }
     return (
-        (view.kind === 'terminal' && dictationEnabled) ||
+        (view.kind === 'terminal' && (dictationEnabled || ports !== null)) ||
         view.kind === 'browser' ||
         view.kind === 'device' ||
         view.kind === 'file' ||

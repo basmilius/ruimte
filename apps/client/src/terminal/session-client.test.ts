@@ -487,3 +487,59 @@ describe('SessionClient', () => {
         await expect(client.open('a', {}, 80, 24)).rejects.toMatchObject({ code: 'spawn-failed' });
     });
 });
+
+describe('temporary preview follows', () => {
+    test('follows without create, resize or input and releases only the last holder', async () => {
+        const { client, transport, sink } = setup();
+        transport.calls.length = 0;
+        const first = await client.retain('node');
+        const second = await client.retain('node');
+        expect(transport.calls).toEqual([{ type: 'session.attach', payload: { sessionId: 'node', follow: true } }]);
+        first();
+        first();
+        expect(sink.attached.get('node')).toBe(true);
+        second();
+        expect(transport.calls.at(-1)).toEqual({ type: 'session.detach', payload: { sessionId: 'node' } });
+        expect(sink.attached.get('node')).toBe(false);
+    });
+    test('a view leaving keeps a retained session attached, and remount owns its attachment after release', async () => {
+        const { client, transport, sink } = setup();
+        await client.open('node', {}, 80, 24);
+        const release = await client.retain('node');
+        transport.calls.length = 0;
+        await client.detach('node');
+        expect(transport.calls).toEqual([]);
+        expect(sink.attached.get('node')).toBe(true);
+        await client.open('node', {}, 80, 24);
+        transport.calls.length = 0;
+        release();
+        expect(transport.calls).toEqual([]);
+        await client.detach('node');
+        expect(transport.calls).toEqual([{ type: 'session.detach', payload: { sessionId: 'node' } }]);
+    });
+    test('late attach answers and disposal cannot leave a retained attachment behind', async () => {
+        const { client, transport, sink } = setup();
+        transport.gated.add('session.attach');
+        const pending = client.retain('node');
+        client.dispose();
+        transport.answer('session.attach');
+        await expect(pending).rejects.toMatchObject({ code: 'disconnected' });
+        expect(sink.attached.get('node')).toBe(false);
+        expect(transport.calls.filter((call) => call.type === 'session.detach')).toEqual([{ type: 'session.detach', payload: { sessionId: 'node' } }]);
+    });
+    test('an unmount while its ordinary attach is pending does not detach a new preview hold', async () => {
+        const { client, transport } = setup();
+        transport.gated.add('session.attach');
+        const opened = client.open('node', {}, 80, 24);
+        await flush();
+        await client.detach('node');
+        const retained = client.retain('node');
+        transport.answer('session.attach');
+        await opened;
+        transport.answer('session.attach');
+        const release = await retained;
+        expect(transport.calls.filter((call) => call.type === 'session.detach')).toEqual([]);
+        release();
+        expect(transport.calls.filter((call) => call.type === 'session.detach')).toHaveLength(1);
+    });
+});

@@ -1,11 +1,14 @@
+import { openFileLink } from '@/shell/panels/file-links';
+import type { TerminalFileLink } from '@/terminal/file-links';
 import { TerminalDictation } from '@/dictation/TerminalDictation';
 import { clearTerminalAction, restartTerminalAction, resumeTerminalAgentAction } from '@/actions/client-actions';
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import i18next from 'i18next';
 import clsx from 'clsx';
 import type { TerminalViewHandle } from '@adecore/terminal';
 import { MachineTerminal } from '@/terminal/MachineTerminal';
-import { ClipboardPaste, Copy, Play, RotateCw, Scan } from 'lucide-react';
+import { SessionPortMonitor } from '@/terminal/SessionPorts';
+import { ClipboardPaste, Copy, Eye, Play, RotateCw, Scan } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useEndpointId } from '@/state/keys';
 import { useSessionRestarts, useSessionRow } from '@/state/sessions';
@@ -18,7 +21,7 @@ import { sessionClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { closeHost, readNodeHost, useSuggestedTitle } from '@/nodes/node-host';
-import { Button, copyText, readClipboardText, Icon, ContextMenu, prefetcher } from '@adecore/ui';
+import { Button, copyText, readClipboardText, Icon, ContextMenu, ErrorBoundary, prefetcher } from '@adecore/ui';
 
 // A terminal loads the WebGL addon on its first context; prefetched, it is there by then.
 prefetcher.register(() => import('@xterm/addon-webgl'));
@@ -55,9 +58,15 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const [failure, setFailure] = useState<string | null>(null);
     // Whether the terminal had a selection when its menu opened, which is what Copy goes on.
     const [selected, setSelected] = useState(false);
+    const fileHover = useRef<TerminalFileLink | null>(null);
+    const [menuLink, setMenuLink] = useState<TerminalFileLink | null>(null);
+    const onFileLinkHover = useCallback((link: TerminalFileLink | null) => {
+        fileHover.current = link;
+    }, []);
     const status = useTransportStatus();
     const endpointId = useEndpointId();
     const exited = useSessionRow(id, (row) => row?.exited);
+    const attached = useSessionRow(id, (row) => row?.attached);
     const agentRecord = useSessionRow(id, (row) => row?.agent);
     const heldCommand = useSessionRow(id, (row) => row?.heldCommand);
     // Claude Code and Codex write a name down; the daemon sends none for Gemini or Copilot.
@@ -89,11 +98,25 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     };
 
     return (
-        <ContextMenu.Root onOpenChange={(open) => setSelected(open && (viewRef.current?.selection() ?? '') !== '')}>
+        <ContextMenu.Root
+            onOpenChange={(open) => {
+                setSelected(open && (viewRef.current?.selection() ?? '') !== '');
+                if (open) {
+                    setMenuLink(fileHover.current);
+                }
+            }}
+        >
             <ContextMenu.Trigger className="absolute inset-0 bg-term-bg">
                 <div ref={dictationRoot} className="absolute inset-0 flex min-h-0 flex-col">
                     <div className="relative min-h-0 flex-1">
-                        <TerminalSession key={`${endpointId}:${id}:${builds}`} id={id} endpointId={endpointId} viewRef={viewRef} onFailure={setFailure} />
+                        <TerminalSession
+                            key={`${endpointId}:${id}:${builds}`}
+                            id={id}
+                            endpointId={endpointId}
+                            viewRef={viewRef}
+                            onFileLinkHover={onFileLinkHover}
+                            onFailure={setFailure}
+                        />
                         {status !== 'open' && <NodeNotice>{status === 'closed' ? t('notice.reconnecting') : t('notice.connecting')}</NodeNotice>}
                         {failure && (
                             <NodeNotice tone="error" onRetry={rebuild}>
@@ -137,6 +160,11 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                             </div>
                         )}
                     </div>
+                    {attached && exited === undefined && status === 'open' && (
+                        <ErrorBoundary label={t('terminal.ports.label')} resetKeys={[endpointId, id, builds]} compact>
+                            <SessionPortMonitor key={`${endpointId}:${id}:${builds}`} id={id} endpointId={endpointId} />
+                        </ErrorBoundary>
+                    )}
                     <TerminalDictation
                         terminalId={id}
                         key={builds}
@@ -150,6 +178,14 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                 </div>
             </ContextMenu.Trigger>
             <ContextMenu.Popup>
+                {menuLink !== null && (
+                    <>
+                        <ContextMenu.Item onClick={() => void openFileLink(null, menuLink.ref)}>
+                            <Icon icon={Eye} size={14} /> {t('terminal.links.previewFile')}
+                        </ContextMenu.Item>
+                        <ContextMenu.Separator />
+                    </>
+                )}
                 {/* xterm keeps its selection to itself, so this asks the terminal instead of the document. */}
                 <ContextMenu.Item disabled={!selected} onClick={() => copyText(viewRef.current?.selection() ?? '')}>
                     <Icon icon={Copy} size={14} /> {t('common:action.copy')}
@@ -170,13 +206,16 @@ interface TerminalSessionProps {
     id: string;
     endpointId: string;
     viewRef: RefObject<TerminalViewHandle | null>;
+    onFileLinkHover(link: TerminalFileLink | null): void;
     onFailure(message: string): void;
 }
 
 /* The terminal and its session, keyed as one: React cleans a removed tree up from the top, so the screen is read before the terminal is disposed. */
-function TerminalSession({ id, endpointId, viewRef, onFailure }: TerminalSessionProps) {
+function TerminalSession({ id, endpointId, viewRef, onFileLinkHover, onFailure }: TerminalSessionProps) {
     // Taken once, so a node that leaves after the window moved to another machine still detaches from its own.
     const [sessions] = useState(() => sessionClientFor(endpointId));
+    const [spec] = useState(() => readNodeHost(id));
+    const [cwd] = useState(() => spec?.cwd ?? useProject.getState().current?.folder ?? undefined);
     const fontSize = useSettings((s) => s.fontSize);
     const lineHeight = useSettings((s) => s.terminalLineHeight);
 
@@ -207,9 +246,6 @@ function TerminalSession({ id, endpointId, viewRef, onFailure }: TerminalSession
             view.write(screen);
         });
 
-        const spec = readNodeHost(id);
-        // A terminal without its own directory starts in the project folder, like one opened from the repo.
-        const cwd = spec?.cwd ?? useProject.getState().current?.folder ?? undefined;
         // An agent says which CLI and how; the daemon turns that into the line the shell gets.
         const agent = spec?.provider ? { kind: spec.provider, runtimeMode: spec.runtimeMode, resume: spec.resume, account: spec.account } : undefined;
         const { cols, rows } = view.size();
@@ -245,7 +281,7 @@ function TerminalSession({ id, endpointId, viewRef, onFailure }: TerminalSession
             unregister();
             void sessions.detach(id);
         };
-    }, [sessions, endpointId, id, viewRef, onFailure]);
+    }, [sessions, endpointId, id, viewRef, onFailure, spec, cwd]);
 
     if (!sessions) {
         return null;
@@ -256,6 +292,7 @@ function TerminalSession({ id, endpointId, viewRef, onFailure }: TerminalSession
             ref={viewRef}
             endpointId={endpointId}
             sourceId={id}
+            onFileLinkHover={onFileLinkHover}
             className="absolute inset-0"
             fontSize={fontSize}
             lineHeight={lineHeight}

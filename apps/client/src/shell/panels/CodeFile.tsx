@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FS_READ_MAX_TEXT_BYTES, type FsReadText } from '@ruimte/contracts';
+import { FS_READ_MAX_TEXT_BYTES, type FsReadText, type FileLocation } from '@ruimte/contracts';
 import type { Editor } from '@adecore/editor';
 import { FindBar } from '@/find/FindBar';
 import { registerFocusedLanguage } from '@/language/focused-language';
@@ -70,7 +70,7 @@ interface ChunkProps {
     /* A Shiki theme id. */
     theme: string;
     /* The line this chunk was asked to bring into view, one-based, when the ask landed in it. */
-    reveal?: number;
+    reveal?: Omit<FileLocation, 'path'>;
     /* Which ask that was, so the same line twice jumps twice. */
     revealNonce?: number;
 }
@@ -86,6 +86,8 @@ function CodeChunk({ code, lines, start, language, theme, reveal, revealNonce }:
     const [html, setHtml] = useState<string | null>(null);
     // A chunk the viewport never reached still draws itself when a link points into it.
     const near = seen || reveal !== undefined;
+    const revealLine = reveal?.line;
+    const revealEndLine = reveal?.endLine ?? revealLine;
 
     /*
      * The line is a DOM node either way: plain text draws it as a React child, shiki hands back
@@ -94,21 +96,23 @@ function CodeChunk({ code, lines, start, language, theme, reveal, revealNonce }:
      */
     useEffect(() => {
         const element = ref.current;
-        if (reveal === undefined || !near || !element) {
+        if (revealLine === undefined || !near || !element) {
             return;
         }
-        const line = element.querySelectorAll('.line')[reveal - start];
-        if (!line) {
-            return;
+        const marked = Array.from(element.querySelectorAll('.line')).filter(
+            (_, index) => start + index >= revealLine && start + index <= (revealEndLine ?? revealLine)
+        );
+        if (revealLine >= start) {
+            marked[0]?.scrollIntoView({ block: 'center' });
         }
-        line.scrollIntoView({ block: 'center' });
-        line.classList.add('is-revealed');
-        const timer = setTimeout(() => line.classList.remove('is-revealed'), FLASH_MS);
+        marked.forEach((line) => line.classList.add('is-revealed'));
+        const clear = (): void => marked.forEach((line) => line.classList.remove('is-revealed'));
+        const timer = setTimeout(clear, FLASH_MS);
         return () => {
             clearTimeout(timer);
-            line.classList.remove('is-revealed');
+            clear();
         };
-    }, [reveal, revealNonce, near, html, start]);
+    }, [revealLine, revealEndLine, revealNonce, near, html, start]);
 
     useEffect(() => {
         const element = ref.current;
@@ -295,7 +299,15 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
             ) : (
                 <FileScroll className="file-code" data-wrap={wrap} onScroll={(event) => (viewerScroll.current = event.currentTarget.scrollTop)}>
                     {chunks.map((chunk) => {
-                        const inChunk = reveal !== null && reveal.line >= chunk.start && reveal.line < chunk.start + chunk.lines;
+                        const location =
+                            reveal === null
+                                ? null
+                                : {
+                                      ...reveal,
+                                      line: Math.min(reveal.line, lineCount),
+                                      endLine: Math.min(reveal.endLine ?? reveal.line, lineCount)
+                                  };
+                        const inChunk = location !== null && location.endLine >= chunk.start && location.line < chunk.start + chunk.lines;
                         return (
                             <CodeChunk
                                 key={chunk.start}
@@ -304,8 +316,8 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                                 start={chunk.start}
                                 language={language}
                                 theme={theme}
-                                reveal={inChunk ? reveal.line : undefined}
-                                revealNonce={inChunk ? reveal.nonce : undefined}
+                                reveal={inChunk ? location! : undefined}
+                                revealNonce={inChunk ? reveal?.nonce : undefined}
                             />
                         );
                     })}

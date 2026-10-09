@@ -1,3 +1,5 @@
+import { useFileActions } from '@/shell/panels/file-actions';
+import { useFiles } from '@/state/files';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Code, Eye, FileWarning } from 'lucide-react';
@@ -78,10 +80,13 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
     const { t } = useTranslation('panels');
     const onThisMachine = useEndpoints((state) => state.endpoints.find((endpoint) => endpoint.id === state.activeId)?.reachability === 'loopback');
     const nativePreview = isDesktop() && onThisMachine;
+    const tabKey = useFileActions()?.tabKey ?? null;
+    const reveal = useFiles((state) => (state.revealLine?.key === tabKey ? state.revealLine : null));
+    const [dismissedReveal, setDismissedReveal] = useState<number | null>(null);
     const [chosen, setView] = useState<HtmlView>('preview');
     // The preview draws what is on disk, so a file with unsaved changes stays in the editor until they are saved.
     const unsaved = useUnsaved(useEndpointId(), path);
-    const view = unsaved ? 'source' : chosen;
+    const view = unsaved || (reveal != null && reveal.nonce !== dismissedReveal) ? 'source' : chosen;
     const [loading, setLoading] = useState(nativePreview);
     const [error, setError] = useState<string | null>(null);
     const transport = useTransport();
@@ -176,7 +181,10 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
                 label={unsaved ? t('file.view.previewAfterSave') : t('file.view.preview')}
                 active={view === 'preview'}
                 disabled={unsaved}
-                onClick={() => setView('preview')}
+                onClick={() => {
+                    setDismissedReveal(reveal?.nonce ?? null);
+                    setView('preview');
+                }}
             />
             <FileToolbarToggle icon={Code} label={t('file.view.source')} active={view === 'source'} onClick={() => setView('source')} />
         </ButtonGroup>

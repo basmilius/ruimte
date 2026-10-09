@@ -6224,6 +6224,131 @@
     "type": "object",
     "properties": {}
   },
+  "request.session.preparePreview.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "itemId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "language": {
+        "type": "string",
+        "enum": [
+          "sh",
+          "bash",
+          "zsh"
+        ]
+      },
+      "code": {
+        "type": "string",
+        "maxLength": 1001
+      },
+      "machineId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "chatId",
+      "itemId",
+      "language",
+      "code",
+      "machineId"
+    ]
+  },
+  "request.session.preparePreview.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "machineId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "machine": {
+        "type": "string",
+        "minLength": 1
+      },
+      "command": {
+        "type": "string"
+      },
+      "cwd": {
+        "type": "string",
+        "minLength": 1
+      },
+      "targets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "token": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string"
+            },
+            "cwd": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "token",
+            "sessionId",
+            "title",
+            "cwd"
+          ]
+        }
+      }
+    },
+    "required": [
+      "machineId",
+      "machine",
+      "command",
+      "cwd",
+      "targets"
+    ]
+  },
+  "request.session.prepare.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "machineId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "token": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "machineId",
+      "token"
+    ]
+  },
+  "request.session.prepare.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "sessionId"
+    ]
+  },
   "request.session.write.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -6562,6 +6687,187 @@
     },
     "required": [
       "sessions"
+    ]
+  },
+  "request.session.ports.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "sessionId"
+    ]
+  },
+  "request.session.ports.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ready"
+          },
+          "ports": {
+            "maxItems": 128,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pid": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "startTime": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "port": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                "host": {
+                  "type": "string",
+                  "enum": [
+                    "127.0.0.1",
+                    "[::1]"
+                  ]
+                },
+                "bindAddress": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "pid",
+                "startTime",
+                "port",
+                "host"
+              ]
+            }
+          }
+        },
+        "required": [
+          "status",
+          "ports"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "unknown"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "unavailable"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "closed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      }
+    ]
+  },
+  "request.session.verifyPort.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "listener": {
+        "type": "object",
+        "properties": {
+          "pid": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "startTime": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "port": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "host": {
+            "type": "string",
+            "enum": [
+              "127.0.0.1",
+              "[::1]"
+            ]
+          },
+          "bindAddress": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "pid",
+          "startTime",
+          "port",
+          "host"
+        ]
+      }
+    },
+    "required": [
+      "sessionId",
+      "listener"
+    ]
+  },
+  "request.session.verifyPort.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "format": "uri"
+      },
+      "machineId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "validForMs": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 5000
+      }
+    },
+    "required": [
+      "url"
     ]
   },
   "request.session.runHeld.payload": {
@@ -23999,6 +24305,10 @@
                           "url": {
                             "type": "string"
                           },
+                          "browserOwner": {
+                            "type": "string",
+                            "minLength": 1
+                          },
                           "device": {
                             "type": "object",
                             "properties": {
@@ -25075,6 +25385,10 @@
                     },
                     "url": {
                       "type": "string"
+                    },
+                    "browserOwner": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
@@ -27429,6 +27743,10 @@
                           "url": {
                             "type": "string"
                           },
+                          "browserOwner": {
+                            "type": "string",
+                            "minLength": 1
+                          },
                           "device": {
                             "type": "object",
                             "properties": {
@@ -28505,6 +28823,10 @@
                     },
                     "url": {
                       "type": "string"
+                    },
+                    "browserOwner": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
@@ -51942,6 +52264,10 @@
                           "url": {
                             "type": "string"
                           },
+                          "browserOwner": {
+                            "type": "string",
+                            "minLength": 1
+                          },
                           "device": {
                             "type": "object",
                             "properties": {
@@ -53018,6 +53344,10 @@
                     },
                     "url": {
                       "type": "string"
+                    },
+                    "browserOwner": {
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [

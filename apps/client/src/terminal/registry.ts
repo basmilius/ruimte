@@ -36,6 +36,10 @@ export function registerTerminal(endpointId: string, nodeId: string, term: Termi
     };
 }
 
+export function focusTerminal(endpointId: string, nodeId: string): void {
+    live.get(endpointKey(endpointId, nodeId))?.focus();
+}
+
 export function lastScreenOf(endpointId: string, nodeId: string): string[] {
     return lastScreens.get(endpointKey(endpointId, nodeId)) ?? [];
 }

@@ -77,6 +77,8 @@
         "generic": "Dat werkte niet."
     },
     "file": {
+        "locationUnavailable": "De bronmachine van dit bestand is onbekend.",
+        "wrongMachine": "Open dit bestand in de werkruimte van de machine waarop het staat.",
         "cannotShow": "{{name}} ({{mime}}, {{size}}) kan hier niet getoond worden.",
         "empty": {
             "findInFiles": "Zoeken in bestanden"

@@ -7,6 +7,7 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
 import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
+import { installBrowserRoutes } from './browser-routes';
 import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
 import { moveLegacyStorage } from './legacy-storage';
 import {
@@ -43,17 +44,7 @@ import { fileSecretStore, type SecretStore } from './secret-store';
 import { createOpenAiLiveSession, parseOpenAiLivePreferences } from './openai-live';
 import { SpeechService, speechHelperPath } from './speech';
 import { SpeechModel } from './speech-model';
-import {
-    allowGuestPermission,
-    appSubframeNavigation,
-    BROWSER_PARTITION,
-    createGestureGate,
-    hardenGuestPreferences,
-    isExternalLink,
-    isWebLink,
-    isSystemSettingsPane,
-    PREVIEW_PARTITION
-} from './web-guards';
+import { appSubframeNavigation, BROWSER_PARTITION, createGestureGate, isExternalLink, isWebLink, isSystemSettingsPane, PREVIEW_PARTITION } from './web-guards';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
 const {
@@ -393,14 +384,7 @@ const theme = createTheme({
     overlay: { height: TITLEBAR_HEIGHT, colors: OVERLAY_COLORS }
 });
 
-/*
- * The preload of every browser page (`guest.ts`): the wheel samples a swipe is read from, the side
- * buttons of a mouse and Cmd+[ inside a page, all sent to the webview element. Registered on the
- * session so the client names no path; a main frame runs it and a subframe does not.
- */
-function registerGuestPreload(): void {
-    session.fromPartition(BROWSER_PARTITION).registerPreloadScript({ type: 'frame', id: 'ruimte-guest', filePath: join(here, 'guest.cjs') });
-}
+let browserRoutes: ReturnType<typeof installBrowserRoutes>;
 
 function isBrowserGuest(contents: Electron.WebContents): boolean {
     return contents.getType() === 'webview' && contents.session === session.fromPartition(BROWSER_PARTITION);
@@ -413,13 +397,6 @@ function sealPreviewSession(): void {
     const preview = session.fromPartition(PREVIEW_PARTITION);
     preview.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !LOCAL_SCHEMES.some((scheme) => details.url.startsWith(scheme)) }));
     preview.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-}
-
-function sealBrowserSession(): void {
-    const browser = session.fromPartition(BROWSER_PARTITION);
-    browser.setPermissionRequestHandler((_contents, permission, callback) => callback(allowGuestPermission(permission)));
-    browser.setPermissionCheckHandler((_contents, permission) => allowGuestPermission(permission));
-    browser.setDevicePermissionHandler(() => false);
 }
 
 function isPreviewGuest(contents: Electron.WebContents): boolean {
@@ -679,11 +656,7 @@ function createWindow(
         return { action: 'deny' };
     });
     guardAppNavigation(contents);
-    contents.on('will-attach-webview', (event, preferences) => {
-        if (!hardenGuestPreferences(preferences)) {
-            event.preventDefault();
-        }
-    });
+    browserRoutes.attachApp(contents);
     // The smoke run opens its one window the way a start without a session does.
     void window.loadURL(windowUrl(scheme.url, key, origin === 'first' || smoke, view)).catch(() => undefined);
     return window;
@@ -1507,8 +1480,7 @@ if (!app.requestSingleInstanceLock()) {
         protocol.handle(scheme.scheme, (request) => answerAppRequest(scheme, request));
         sealAppSession();
         sealPreviewSession();
-        sealBrowserSession();
-        registerGuestPreload();
+        browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'));
         powerMonitor.on('on-battery', applyKeepAwake);
         powerMonitor.on('on-ac', applyKeepAwake);
         try {

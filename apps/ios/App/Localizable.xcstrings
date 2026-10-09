@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Browser owner unavailable" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigenaar van de browser niet beschikbaar"
+          }
+        }
+      }
+    },
+    "Open this browser in Ruimte on the machine running the session." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open deze browser in Ruimte op de machine waarop de sessie draait."
+          }
+        }
+      }
+    },
     "File search failed" : {
       "localizations" : {
         "nl" : {

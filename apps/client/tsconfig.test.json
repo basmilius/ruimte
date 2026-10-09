@@ -1,13 +1,15 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "customConditions": ["source"],
-    "resolveJsonModule": true,
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
-    "lib": ["ES2023", "DOM"],
-    "types": ["bun"],
-    "jsx": "react-jsx",
-    "paths": { "@/*": ["./src/*"] }
-  },
-  "include": ["src/**/*.test.ts", "test-preload.ts", "testing/**/*.ts"]
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "customConditions": ["bun", "source"],
+        "resolveJsonModule": true,
+        "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+        "lib": ["ES2023", "DOM"],
+        "types": ["bun"],
+        "jsx": "react-jsx",
+        "paths": {
+            "@/*": ["./src/*"]
+        }
+    },
+    "include": ["src/**/*.test.ts", "test-preload.ts", "testing/**/*.ts"]
 }

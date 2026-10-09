@@ -525,6 +525,7 @@ exports[`every reply and event field keeps its vocabulary 1`] = `
   "reply session.login #/properties/agent/anyOf/0/properties/requests/items/properties/kind = ["approval", "question"]",
   "reply session.login #/properties/agent/anyOf/0/properties/status = ["error", "exited", "idle", "needs-you", "running"]",
   "reply session.login #/properties/approvals/items/properties/choices/items/properties/kind = ["allow", "deny", "remember"]",
+  "reply session.ports #/oneOf/0/properties/ports/items/properties/host = ["127.0.0.1", "[::1]"]",
   "reply skills.list #/properties/skills/items/properties/source = ["plugin", "project", "user"]",
   "reply task.list #/properties/tasks/items/properties/paused/properties/kind = ["overload", "usage"]",
   "reply task.list #/properties/tasks/items/properties/result/anyOf/0/properties/source = ["done", "exit", "turn"]",

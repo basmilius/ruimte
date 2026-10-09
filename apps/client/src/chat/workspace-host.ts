@@ -1,7 +1,9 @@
+import i18next from 'i18next';
 import { createElement, useMemo } from 'react';
 import { setChatHost } from '@adecore/agents-react/host';
 import { answerComputerAsPerson } from '@/actions/client-actions';
 import { ComposerDictation } from '@/chat/ComposerDictation';
+import { prepareCodeBlockAction } from '@/chat/prepare-code-block';
 import { useProjectChats } from '@/chat/project-chats';
 import { ReadImage } from '@/chat/ReadImage';
 import { useTimelineFind } from '@/chat/use-chat-find';
@@ -12,9 +14,9 @@ import { DictationTextarea } from '@/dictation/DictationTextarea';
 import { dictationPreview, dictationRange } from '@/dictation/editor';
 import { answerRuimtePrompt, computerPrompt, isRuimtePrompt } from '@/prompts/ruimte-prompts';
 import { RuimtePromptView } from '@/prompts/RuimtePromptView';
-import { openFileLink, parseFileRef, resolveFileRef } from '@/shell/panels/file-links';
+import { openFileLink, parseFileRef, resolveFileRef, type FileRef } from '@/shell/panels/file-links';
 import { useNodeComputerApprovals } from '@/state/computer';
-import { useProject } from '@/state/project';
+import { useToasts } from '@/state/toasts';
 import { isShellShortcut } from '@/terminal/keymap';
 
 /*
@@ -26,13 +28,19 @@ export function connectWorkspaceChatHost(): void {
     setChatHost({
         isAppShortcut: (event) => isShellShortcut(event, isApplePlatform()),
         ReadImage,
+        renderShellCodeBlock: prepareCodeBlockAction,
         fileLinks: {
-            target: (text, cwd) => {
-                const ref = parseFileRef(text);
-                return ref === null || resolveFileRef(cwd, ref) === null ? null : ref;
+            target: (text, cwd, scopeId) => {
+                const ref = parseFileRef(text, true);
+                return !scopeId || ref === null || resolveFileRef(cwd, ref) === null ? null : ref;
             },
-            // A thread with no cwd of its own (a sub-agent's) counts from the project.
-            open: (cwd, ref) => void openFileLink(cwd ?? useProject.getState().current?.folder ?? null, ref)
+            open: (cwd, ref: FileRef, scopeId) => {
+                if (!scopeId) {
+                    useToasts.getState().show({ kind: 'error', title: i18next.t('panels:file.locationUnavailable') });
+                    return;
+                }
+                void openFileLink(cwd, ref, scopeId);
+            }
         },
         useTimelineFind,
         dictation: { Textarea: DictationTextarea, composer: { extensions: [dictationRange, dictationPreview], Control: ComposerDictation } },

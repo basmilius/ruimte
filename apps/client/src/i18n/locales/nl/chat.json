@@ -42,5 +42,20 @@
         "ask": "Vraag aan {{provider}}",
         "problem": "Probleem: {{message}}",
         "noChat": "Er kon geen chat worden gestart"
+    },
+    "prepare": {
+        "action": "Klaarzetten in terminal",
+        "explanation": "Controleer het volledige commando hieronder. Ruimte plakt het zonder Enter. Je voert het zelf uit.",
+        "machine": "Machine",
+        "cwd": "Werkmap",
+        "terminal": "Terminal",
+        "paste": "Plakken zonder Enter",
+        "noShell": "Er is geen gecontroleerde lege shell beschikbaar in deze map. Open hier een zsh-terminal of maak de invoer leeg. Andere shells ondersteunen het klaarzetten van opdrachten nog niet.",
+        "offline": "De machine van deze chat is niet verbonden.",
+        "failed": "Het commando kon niet worden klaargezet.",
+        "ready": "Commando klaargezet",
+        "readyIn": "Het commando staat klaar in {{terminal}}. Druk daar op Enter om het uit te voeren.",
+        "unconfirmed": "Het klaarzetten is niet bevestigd. De opdracht staat mogelijk al in de terminal. Controleer de invoer voordat je opnieuw iets klaarzet.",
+        "refused": "De shelleditor heeft de opdracht geweigerd. Er is niets ingevoegd. Open het voorbeeld opnieuw."
     }
 }

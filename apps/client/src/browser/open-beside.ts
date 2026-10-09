@@ -1,7 +1,7 @@
 import { createNodeAction, createViewAction } from '@/actions/client-actions';
 import { browserRegistry } from '@/browser/registry';
-import { focusedCanvas, NODE_SIZE } from '@/state/canvas';
-import { splitKey } from '@/state/keys';
+import { canvasOfNode, NODE_SIZE } from '@/state/canvas';
+import { currentEndpointId, splitKey } from '@/state/keys';
 
 // The room between a page and the one a link opened beside it, the same step a duplicate takes.
 const BESIDE_PX = 32;
@@ -14,11 +14,22 @@ const BESIDE_PX = 32;
  */
 export function openLinkBeside(url: string, webContentsId: number): void {
     const sourceKey = browserRegistry.keyOfContents(webContentsId);
-    const source = sourceKey === null ? undefined : focusedCanvas().getState().nodes[splitKey(sourceKey).id];
+    const reference = sourceKey === null ? null : splitKey(sourceKey);
+    if (reference !== null && reference.endpointId !== currentEndpointId()) {
+        return;
+    }
+    const browserOwner = sourceKey === null ? undefined : browserRegistry.ownerOf(sourceKey);
+    const canvas = reference === null ? undefined : canvasOfNode(reference.id)?.getState();
+    const source = reference === null ? undefined : canvas?.nodes[reference.id];
     if (!source) {
-        void createViewAction('browser', { url });
+        void createViewAction('browser', { url, browserOwner });
         return;
     }
     const size = NODE_SIZE.browser;
-    void createNodeAction('browser', { url, at: { x: source.x + source.w + BESIDE_PX + size.w / 2, y: source.y + size.h / 2 } });
+    void createNodeAction('browser', {
+        viewId: canvas!.viewId!,
+        url,
+        browserOwner,
+        at: { x: source.x + source.w + BESIDE_PX + size.w / 2, y: source.y + size.h / 2 }
+    });
 }

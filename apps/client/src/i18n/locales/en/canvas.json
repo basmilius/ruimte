@@ -217,6 +217,8 @@
     },
     "terminal": {
         "links": {
+            "previewFile": "Open file in preview",
+            "openFile": "{{modifier}}+click to open file in preview",
             "open": "{{modifier}}+click to open in your browser",
             "openInRuimte": "{{modifier}}+click to open in Ruimte",
             "remoteLoopback": "This address belongs to {{machine}}. Ruimte does not forward its local ports to this computer.",
@@ -229,7 +231,17 @@
         "resume": "Resume",
         "restart": "Restart",
         "held": "Run {{command}}?",
-        "run": "Run"
+        "run": "Run",
+        "ports": {
+            "label": "Session ports",
+            "open": "Open :{{port}}",
+            "openHint": "Verify this listener and open a linked browser",
+            "remote": "Open this port in Ruimte on the machine running the session.",
+            "unknown": "Session ports unknown",
+            "unavailable": "Session port discovery is unavailable. This needs macOS and a current Ruimte daemon.",
+            "openFailed": "Could not open this session port",
+            "retry": "The listener could not be verified. Try again after the next scan."
+        }
     },
     "chat": {
         "openFailed": "The chat could not be opened",
@@ -238,6 +250,8 @@
         "conversationFailed": "This conversation failed to render"
     },
     "browser": {
+        "routeUnavailable": "This address belongs to the project’s machine. No route to that machine is available in this desktop browser.",
+        "ownerUnavailable": "Browser owner unavailable",
         "back": "Back",
         "forward": "Forward",
         "stop": "Stop loading",

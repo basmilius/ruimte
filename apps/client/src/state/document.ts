@@ -286,7 +286,7 @@ function splitTrash(views: ProjectView[], trashed: TrashedView[]): { views: Proj
 /* What a new standalone view needs: a chat and a terminal carry a node, a browser carries a page. */
 export type StandaloneRequest =
     | { kind: 'chat' | 'terminal'; name: string; id?: string; node: StandaloneNode }
-    | { kind: 'browser'; name: string; id?: string; url: string }
+    | { kind: 'browser'; name: string; id?: string; url: string; browserOwner?: string }
     | { kind: 'device'; name: string; id?: string; device: DeviceReference };
 
 /* Null when the name and its source are already there, so a blur that keeps the name claims no edit. */
@@ -923,7 +923,13 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
                 return addView(
                     request.kind === 'browser' || request.kind === 'device'
                         ? request.kind === 'browser'
-                            ? { kind: 'browser', id, name: request.name, url: request.url }
+                            ? {
+                                  kind: 'browser',
+                                  id,
+                                  name: request.name,
+                                  url: request.url,
+                                  ...(request.browserOwner ? { browserOwner: request.browserOwner } : {})
+                              }
                             : { kind: 'device', id, name: request.name, device: request.device }
                         : { kind: request.kind, id, name: request.name, node: request.node },
                     true

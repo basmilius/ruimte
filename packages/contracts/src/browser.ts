@@ -175,3 +175,22 @@ export type BrowserDriveAction = z.infer<typeof BrowserDriveActionSchema>;
 export type BrowserPageState = z.infer<typeof BrowserPageStateSchema>;
 export type BrowserDriveEvent = z.infer<typeof BrowserDriveEventSchema>;
 export type BrowserDriveResult = z.infer<typeof BrowserDriveResultPayloadSchema>;
+
+// Shared by terminal links and the desktop request guard, after WHATWG URL normalization.
+export function isLoopbackBrowserUrl(value: string): boolean {
+    const url = URL.parse(value);
+    if (!url) {
+        return false;
+    }
+    const hostname = url.hostname.toLowerCase().replace(/\.$/, '');
+    return (
+        hostname === 'localhost' ||
+        hostname.endsWith('.localhost') ||
+        /^127\./.test(hostname) ||
+        hostname === '[::1]' ||
+        hostname === '0.0.0.0' ||
+        hostname === '[::]' ||
+        hostname === '[::ffff:0:0]' ||
+        /^\[::ffff:7f[0-9a-f]{2}:/.test(hostname)
+    );
+}
