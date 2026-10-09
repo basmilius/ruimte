@@ -25035,6 +25035,204 @@
           "cursor"
         ]
       },
+      "pending": {
+        "type": "array",
+        "items": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "turnId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": "string",
+                  "const": "approval"
+                },
+                "requestId": {
+                  "type": "string"
+                },
+                "toolUseId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "toolName": {
+                  "type": "string"
+                },
+                "input": {},
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "canAllowAlways": {
+                  "type": "boolean"
+                },
+                "allowAlways": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "description"
+                  ]
+                },
+                "decision": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "allow",
+                    "allow-always",
+                    "deny",
+                    "cancelled"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "createdAt",
+                "turnId",
+                "kind",
+                "requestId",
+                "toolUseId",
+                "toolName",
+                "input",
+                "description",
+                "canAllowAlways",
+                "decision"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "turnId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": "string",
+                  "const": "question"
+                },
+                "requestId": {
+                  "type": "string"
+                },
+                "questions": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "header": {
+                        "type": "string"
+                      },
+                      "question": {
+                        "type": "string"
+                      },
+                      "choices": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "label": {
+                              "type": "string"
+                            },
+                            "description": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "label",
+                            "description"
+                          ]
+                        }
+                      },
+                      "multiSelect": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "header",
+                      "question",
+                      "choices",
+                      "multiSelect"
+                    ]
+                  }
+                },
+                "async": {
+                  "type": "boolean"
+                },
+                "answers": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "answered",
+                    "cancelled",
+                    "dismissed"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "createdAt",
+                "turnId",
+                "kind",
+                "requestId",
+                "questions",
+                "answers",
+                "state"
+              ]
+            }
+          ]
+        }
+      },
       "source": {
         "type": "string",
         "enum": [

@@ -985,6 +985,15 @@ describe('a child that waits on input', () => {
         expect(daemon.tasks.get(child.taskId)?.status).toBe('open');
         expect(wakeTurns(daemon)).toEqual([]);
 
+        const session = daemon.chats.get(child.childId)!;
+        for (let i = 0; i < 70; i++) {
+            session.thread.upsert({ id: `later-${i}`, kind: 'note', createdAt: i + 1, turnId: null, level: 'info', text: 'Later background work' });
+        }
+        const page = await daemon.chats.subagent('client-1', { chatId: 'chat-lead', toolUseId: `task-${child.taskId}`, limit: 1 });
+        expect(page.items.some((item) => item.kind === 'approval')).toBe(false);
+        expect(page.pending?.map((item) => item.id)).toEqual(['approval-req-bg']);
+        expect(page.context?.chatId).toBe(child.childId);
+
         daemon.chats.approve(child.childId, 'req-bg', 'allow');
         await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
         await daemon.worker.settled();

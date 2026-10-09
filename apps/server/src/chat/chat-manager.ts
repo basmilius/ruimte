@@ -701,6 +701,7 @@ export class ChatManager extends ChatCore {
         return {
             items: page.items,
             history: page.history,
+            pending: child.thread.pending(),
             // The closed set a result carries; the child's thread is that CLI's conversation.
             source: child.info.provider === 'codex' ? 'codex-thread' : 'claude-transcript',
             context: { provider: child.info.provider, cwd: child.info.cwd, chatId: childId },
