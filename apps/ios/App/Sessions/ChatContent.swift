@@ -86,6 +86,7 @@ struct ChatLinkRouting: ViewModifier {
     let context: ChatContentContext
     @State private var target: ChatFileReference?
     @State private var uiTarget: UiLinkDestination?
+    @State private var conflictSession: GitConflictSession?
     func body(content: Content) -> some View {
         content
             .environment(\.chatContent, context)
@@ -127,7 +128,14 @@ struct ChatLinkRouting: ViewModifier {
     private var host: UiHost {
         var host = UiHost(projectID: context.workspace?.projectID, connected: context.connected)
         if context.workspace != nil {
-            host.open = { uiTarget = $0 }
+            host.open = { destination in
+                if case .diff(let cwd, _, _, true) = destination {
+                    conflictSession = GitConflictSession(cwd: cwd)
+                } else {
+                    conflictSession = nil
+                }
+                uiTarget = destination
+            }
         }
         return host
     }
@@ -137,8 +145,8 @@ struct ChatLinkRouting: ViewModifier {
         case .file(let path, let line):
             FileContentPage(client: context.client, path: path, initialLine: line)
         case .diff(let cwd, let path, let staged, let conflicted):
-            if conflicted {
-                GitConflictFilePage(client: context.client, session: GitConflictSession(cwd: cwd), path: path)
+            if conflicted, let conflictSession {
+                GitConflictFilePage(client: context.client, session: conflictSession, path: path)
             } else {
                 GitDiffPage(
                     client: context.client, target: GitDiffTarget(cwd: cwd, path: path, staged: staged, commit: nil))
