@@ -165,10 +165,8 @@ export class BrowserClient {
     private apply(info: BrowserInfo): void {
         const mounted = this.mounted.get(info.browserId);
         const blankMismatch = mounted !== undefined && info.url === 'about:blank' && mounted.url !== 'about:blank';
-        if (mounted) {
-            if (!blankMismatch) {
-                mounted.url = info.url;
-            }
+        if (mounted && !blankMismatch) {
+            mounted.url = info.url;
         }
         useBrowser.getState().patch(endpointKey(this.endpointId, info.browserId), {
             url: blankMismatch ? mounted.url : info.url,
@@ -214,7 +212,7 @@ export class BrowserClient {
         }
     }
 
-    /* The daemon opened a page whose node left while that was on the wire, and the detach then had nothing to say. A node mounted again since keeps it. */
+    /* The page opened after its node left, when the detach had nothing to detach yet. A node mounted again since keeps it. */
     private detachIfGone(browserId: string): void {
         if (!this.mounted.has(browserId)) {
             void this.transport.request('browser.detach', { browserId }).catch(() => undefined);

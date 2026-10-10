@@ -1,10 +1,9 @@
 const HTTPS = 'https://';
 
 /*
- * The address as a person reads it. `https://` carries no information, since that is what the web
- * defaults to, and a bare origin has no path to end in a slash. Everything else stays whole.
- * `http://` is a warning and keeps its scheme, and so do `file:` and every other scheme; a path
- * that really ends in a slash keeps it, because there the slash is part of the address.
+ * The address as a person reads it: `https://` is what the web defaults to, and a bare origin has no
+ * path to end in a slash, so both go. `http://` is a warning and stays, like every other scheme and
+ * the slash at the end of a real path.
  */
 export function prettyUrl(url: string): string {
     if (!url.startsWith(HTTPS)) {

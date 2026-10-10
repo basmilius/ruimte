@@ -17,10 +17,9 @@ import { useDocument } from '@/state/document';
 const TOOLBAR_PX = 37;
 
 /*
- * The open view a page belongs to, and whether it stands on its canvas. A node that was just added
- * is on its canvas before it is in the project's views, which are only rewritten when a view opens
- * or the project saves, so the living canvases are asked first: without that a new browser node
- * stays empty until the next view switch.
+ * The open view a page belongs to, and whether it stands on its canvas. The live canvases are asked
+ * first: a new node is on its canvas before the project's views, which only change when a view opens
+ * or the project saves.
  */
 function pageViewOf(nodeId: string, open: readonly string[]): { viewId: string; onCanvas: boolean } | null {
     for (const viewId of open) {
@@ -30,6 +29,12 @@ function pageViewOf(nodeId: string, open: readonly string[]): { viewId: string; 
     }
     // A browser of its own is one page over a whole cell, and the node is the view.
     return open.includes(nodeId) ? { viewId: nodeId, onCanvas: false } : null;
+}
+
+/* Only the view in front of each cell has a place; a page in a background tab stays parked, hidden, with its session. */
+function shownViewIds(): readonly string[] {
+    const { layout } = useDocument.getState();
+    return layout === null ? [] : shownViewIdsIn(layout);
 }
 
 interface Covering {
@@ -99,10 +104,8 @@ function DesktopWebviewParking() {
          * than drawn over the cell beside it.
          */
         const place = (): void => {
-            const { layout } = useDocument.getState();
             const box = root.current?.getBoundingClientRect();
-            // Only the view in front of each cell has a place; a page in a background tab stays parked, hidden, with its session.
-            const open = layout === null ? [] : shownViewIdsIn(layout);
+            const open = shownViewIds();
             for (const [key, host] of hosts.current) {
                 const nodeId = splitKey(key).id;
                 const clip = clips.current.get(key);
@@ -201,14 +204,12 @@ function DesktopWebviewParking() {
             const input = createGuestCanvasInput(
                 nodeId,
                 () => {
-                    const { layout } = useDocument.getState();
-                    const view = pageViewOf(nodeId, layout === null ? [] : shownViewIdsIn(layout));
+                    const view = pageViewOf(nodeId, shownViewIds());
                     return view?.onCanvas ? (defaultCanvases.peek(view.viewId) ?? null) : null;
                 },
                 () => {
                     element.blur();
-                    const { layout } = useDocument.getState();
-                    const view = pageViewOf(nodeId, layout === null ? [] : shownViewIdsIn(layout));
+                    const view = pageViewOf(nodeId, shownViewIds());
                     if (view !== null) {
                         cellElement(view.viewId)?.querySelector<HTMLElement>('[data-canvas-surface]')?.focus({ preventScroll: true });
                     }
@@ -261,8 +262,7 @@ function DesktopWebviewParking() {
             }
             offs.push(
                 watchGuestFocus(element, () => {
-                    const { layout } = useDocument.getState();
-                    const view = pageViewOf(splitKey(key).id, layout === null ? [] : shownViewIdsIn(layout));
+                    const view = pageViewOf(splitKey(key).id, shownViewIds());
                     if (view !== null) {
                         focusCellOfView(view.viewId);
                     }

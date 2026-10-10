@@ -38,11 +38,8 @@ export interface SwipeState {
 export type SwipeOutcome = { kind: 'none' } | { kind: 'progress'; side: SwipeSide; progress: number } | { kind: 'navigate'; side: SwipeSide };
 
 /*
- * Net horizontal travel that navigates, in the page's CSS pixels. The host is scaled by the camera
- * zoom on a canvas, and whether Chromium also scales a guest's wheel deltas with that transform has
- * not been measured. Reading the source suggests it moves the point and leaves the deltas alone, so
- * the travel is the finger's whatever the zoom. If that turns out wrong, this is the one number to
- * divide by the zoom.
+ * Net horizontal travel that navigates, in the page's CSS pixels. Whether Chromium scales a guest's
+ * wheel deltas with the canvas zoom has not been measured; if it does, divide this by the zoom.
  */
 export const SWIPE_THRESHOLD_PX = 150;
 /* Horizontal has to outweigh vertical this many times over the gesture. */

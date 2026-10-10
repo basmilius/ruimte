@@ -1,8 +1,17 @@
 import { PAGE_TEXT_EXPRESSION } from '@ruimte/contracts';
 import { create } from 'zustand';
-import { feedWheel, IDLE_SWIPE, settleSwipe, SWIPE_GESTURE_GAP_MS, type SwipeOutcome, type SwipeState, type WheelSample } from '@/browser/swipe';
+import {
+    feedWheel,
+    IDLE_SWIPE,
+    settleSwipe,
+    SWIPE_GESTURE_GAP_MS,
+    type SwipeHistory,
+    type SwipeOutcome,
+    type SwipeState,
+    type WheelSample
+} from '@/browser/swipe';
 import { useSwipeOverlay } from '@/browser/swipe-overlay';
-import { canSwipeBetweenPages, desktop } from '@/desktop/bridge';
+import { canSwipeBetweenPages, desktop, type DesktopBridge } from '@/desktop/bridge';
 import { useSettings } from '@/state/settings';
 import { dropEndpoint, endpointKey, isOfEndpoint, splitKey, useEndpointId } from '@/state/keys';
 import { localBrowserRouteAvailable } from './owner-route';
@@ -138,6 +147,10 @@ function isWheelSample(value: unknown): value is WheelSample {
     );
 }
 
+function historyOf(element: WebviewElement): SwipeHistory {
+    return { canGoBack: element.canGoBack(), canGoForward: element.canGoForward() };
+}
+
 /* Whether pages report their wheel at all, the setting on the one platform the gesture belongs to. */
 function swipesOn(): boolean {
     return canSwipeBetweenPages() && useSettings.getState().browserSwipe;
@@ -183,9 +196,8 @@ export function setInitialWebviewUrl(element: Pick<HTMLElement, 'setAttribute'>,
 }
 
 /*
- * The webview elements, one per browser node, created once and never re-parented. Chromium
- * throws the page away when a <webview> leaves the DOM, so a project switch, a view switch and a
- * page that scrolls off the canvas all hide it instead. `WebviewParking` holds and places the
+ * The webview elements, one per browser node, created once and never re-parented, since Chromium
+ * throws the page away when a <webview> leaves the DOM. `WebviewParking` holds and places the
  * hosts they sit in; this registry owns the elements.
  */
 class BrowserRegistry {
@@ -194,7 +206,7 @@ class BrowserRegistry {
     private readonly owners = new Map<string, string>();
     private readonly swipes = new Map<string, SwipeState>();
     private readonly settleTimers = new Map<string, ReturnType<typeof setTimeout>>();
-    private watchingSwipeSetting = false;
+    private watchingChanges = false;
     private readonly pendingRoutes = new Map<string, { url: string; started: boolean; cancel: () => void }>();
     private watchingRouteBlocks = false;
 
@@ -240,49 +252,54 @@ class BrowserRegistry {
         const url = normalizeUrl(initialUrl);
         setInitialWebviewUrl(element, guarded ? 'about:blank' : url);
         if (guarded) {
-            const endpointId = splitKey(key).endpointId;
-            const localMachineId = endpointById(LOCAL_ENDPOINT_ID)?.daemonId ?? undefined;
-            const pending = { url, started: false, cancel: () => {} };
-            this.pendingRoutes.set(key, pending);
-            element.addEventListener('dom-ready', () => {
-                if (pending.started || this.pendingRoutes.get(key) !== pending || this.elements.get(key) !== element) {
-                    return;
-                }
-                pending.started = true;
-                const failed = (): void => {
-                    if (this.pendingRoutes.get(key) === pending) {
-                        this.suspend(key);
-                        useBrowser.getState().patch(key, { url: pending.url, loading: false, error: routeFailure(pending.url) });
-                    }
-                };
-                const deadline = setTimeout(failed, 5_000);
-                pending.cancel = () => clearTimeout(deadline);
-                void shell.bindBrowserRoute!({ webContentsId: element.getWebContentsId(), endpointId, owner: boundOwner, localMachineId })
-                    .then((accepted) => {
-                        pending.cancel();
-                        if (this.pendingRoutes.get(key) !== pending || this.elements.get(key) !== element) {
-                            return;
-                        }
-                        if (!accepted) {
-                            failed();
-                            return;
-                        }
-                        this.pendingRoutes.delete(key);
-                        if (pending.url === 'about:blank') {
-                            useBrowser.getState().patch(key, { loading: false });
-                        } else {
-                            this.navigate(key, pending.url);
-                        }
-                    })
-                    .catch(failed);
-            });
+            this.bindRouteOnReady(key, element, url, boundOwner, shell);
             this.watchRouteBlocks();
         }
-        this.watchSwipeSetting();
+        this.watchChanges();
         this.listen(key, element);
         this.elements.set(key, element);
         useBrowser.getState().patch(key, { url, loading: true });
         return element;
+    }
+
+    /* Holds the page on `about:blank` until the shell bound its route to the project's machine, then loads `url`. */
+    private bindRouteOnReady(key: string, element: WebviewElement, url: string, owner: string | undefined, shell: DesktopBridge): void {
+        const endpointId = splitKey(key).endpointId;
+        const localMachineId = endpointById(LOCAL_ENDPOINT_ID)?.daemonId ?? undefined;
+        const pending = { url, started: false, cancel: () => {} };
+        this.pendingRoutes.set(key, pending);
+        element.addEventListener('dom-ready', () => {
+            if (pending.started || this.pendingRoutes.get(key) !== pending || this.elements.get(key) !== element) {
+                return;
+            }
+            pending.started = true;
+            const failed = (): void => {
+                if (this.pendingRoutes.get(key) === pending) {
+                    this.suspend(key);
+                    useBrowser.getState().patch(key, { url: pending.url, loading: false, error: routeFailure(pending.url) });
+                }
+            };
+            const deadline = setTimeout(failed, 5_000);
+            pending.cancel = () => clearTimeout(deadline);
+            void shell.bindBrowserRoute!({ webContentsId: element.getWebContentsId(), endpointId, owner, localMachineId })
+                .then((accepted) => {
+                    pending.cancel();
+                    if (this.pendingRoutes.get(key) !== pending || this.elements.get(key) !== element) {
+                        return;
+                    }
+                    if (!accepted) {
+                        failed();
+                        return;
+                    }
+                    this.pendingRoutes.delete(key);
+                    if (pending.url === 'about:blank') {
+                        useBrowser.getState().patch(key, { loading: false });
+                    } else {
+                        this.navigate(key, pending.url);
+                    }
+                })
+                .catch(failed);
+        });
     }
 
     get(key: string): WebviewElement | undefined {
@@ -517,12 +534,15 @@ class BrowserRegistry {
         }
     }
 
-    /* The setting reaches every page the moment it changes, so off stops the samples at the source. */
-    private watchSwipeSetting(): void {
-        if (this.watchingSwipeSetting) {
+    /*
+     * A change to the machines checks every page's route again. The swipe setting reaches every page
+     * the moment it changes, so off stops the samples at the source.
+     */
+    private watchChanges(): void {
+        if (this.watchingChanges) {
             return;
         }
-        this.watchingSwipeSetting = true;
+        this.watchingChanges = true;
         useEndpoints.subscribe(() => {
             for (const key of this.elements.keys()) {
                 this.permits(key);
@@ -545,8 +565,7 @@ class BrowserRegistry {
         if (!swipesOn()) {
             return;
         }
-        const history = { canGoBack: element.canGoBack(), canGoForward: element.canGoForward() };
-        const result = feedWheel(this.swipes.get(key) ?? IDLE_SWIPE, sample, history, performance.now());
+        const result = feedWheel(this.swipes.get(key) ?? IDLE_SWIPE, sample, historyOf(element), performance.now());
         this.applySwipe(key, result.state, result.outcome);
         clearTimeout(this.settleTimers.get(key));
         this.settleTimers.delete(key);
@@ -558,11 +577,7 @@ class BrowserRegistry {
             key,
             setTimeout(() => {
                 this.settleTimers.delete(key);
-                const settled = settleSwipe(
-                    this.swipes.get(key) ?? IDLE_SWIPE,
-                    { canGoBack: element.canGoBack(), canGoForward: element.canGoForward() },
-                    performance.now()
-                );
+                const settled = settleSwipe(this.swipes.get(key) ?? IDLE_SWIPE, historyOf(element), performance.now());
                 this.applySwipe(key, settled.state, settled.outcome);
             }, SWIPE_GESTURE_GAP_MS)
         );

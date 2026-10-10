@@ -16,9 +16,6 @@ interface MenuTarget {
     guest: { x: number; y: number };
 }
 
-/* Flip while working on the mapping itself; a build logs nothing. */
-const DEBUG: boolean = false;
-
 // A browser page or an HTML preview lives outside React, so the shell reports the click and this component owns the menu.
 export function BrowserContextMenu() {
     const [groups, setGroups] = useState<BrowserMenuItem[][] | null>(null);
@@ -40,11 +37,6 @@ export function BrowserContextMenu() {
                 // The camera's zoom, read back from what the host was drawn at.
                 const zoom = element.offsetWidth > 0 ? rect.width / element.offsetWidth : 1;
                 const point = menuPointFor(params, rect, zoom);
-                if (DEBUG) {
-                    console.debug(
-                        `[browser-menu] click ${params.x},${params.y} host ${rect.left},${rect.top} zoom ${zoom} page ${point.guest.x},${point.guest.y}`
-                    );
-                }
                 const built = preview
                     ? buildPreviewMenu(params)
                     : buildBrowserMenu({ ...params, canGoBack: state?.canGoBack ?? false, canGoForward: state?.canGoForward ?? false });

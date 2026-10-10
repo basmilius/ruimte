@@ -13,10 +13,6 @@ interface Corners {
     bl: number;
 }
 
-function round(value: number): number {
-    return Math.round(value);
-}
-
 function overlaps(a: Rect, b: Rect): boolean {
     return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
@@ -26,10 +22,10 @@ function overlaps(a: Rect, b: Rect): boolean {
  * Null for a node that fell off the page entirely.
  */
 function shapeOf(hole: PageHole, width: number, height: number): { rect: Rect; corners: Corners } | null {
-    const left = Math.max(0, round(hole.x));
-    const top = Math.max(0, round(hole.y));
-    const right = Math.min(width, round(hole.x + hole.w));
-    const bottom = Math.min(height, round(hole.y + hole.h));
+    const left = Math.max(0, Math.round(hole.x));
+    const top = Math.max(0, Math.round(hole.y));
+    const right = Math.min(width, Math.round(hole.x + hole.w));
+    const bottom = Math.min(height, Math.round(hole.y + hole.h));
     if (right <= left || bottom <= top) {
         return null;
     }
@@ -80,10 +76,8 @@ function groupsOf(holes: readonly Rect[]): Rect[][] {
 }
 
 /*
- * The same area as the rectangles given, as rectangles that never overlap. A path is filled with the
- * even-odd rule, which fills the place where two holes cross, so the holes are cut along each
- * other's edges first. Neighbours in a row are put back together, which is the whole hole again
- * wherever nothing crossed it.
+ * The same area as the rectangles given, as rectangles that never overlap, since the even-odd rule
+ * fills the place where two holes cross. Neighbors in a row join up again.
  */
 export function disjointRects(rects: readonly Rect[]): Rect[] {
     const xs = [...new Set(rects.flatMap((rect) => [rect.x, rect.x + rect.w]))].sort((a, b) => a - b);
@@ -113,10 +107,8 @@ export function disjointRects(rects: readonly Rect[]): Rect[] {
 }
 
 /*
- * The page with a hole for everything standing on top of it, in the page's own pixels. Null where
- * nothing covers it, which is the page as it is. A hole keeps the corner of its node, unless it
- * crosses another hole: the two are cut along each other's edges there, since even-odd would
- * otherwise fill the piece they share.
+ * The page with a hole for everything standing on top of it, in the page's own pixels; null where
+ * nothing covers it. A hole keeps the corner of its node unless it crosses another hole.
  */
 export function pageClipPath(width: number, height: number, holes: readonly PageHole[]): string | null {
     const shapes = holes.map((hole) => shapeOf(hole, width, height)).filter((shape): shape is { rect: Rect; corners: Corners } => shape !== null);

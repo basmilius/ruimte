@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { LiveStreamDecoder, LIVE_STREAM_CONTENT_TYPE, type BrowserInput } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { CircleAlert } from 'lucide-react';
@@ -178,6 +178,15 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
         };
     };
 
+    const pointer = (event: PointerEvent, phase: 'down' | 'up', buttons = buttonsOf(event.buttons)): BrowserInput => ({
+        kind: 'pointer',
+        phase,
+        ...position(event),
+        button: buttonOf(event.button),
+        buttons,
+        modifiers: modifiersOf(event)
+    });
+
     const visibleError = row?.streamError ?? streamError;
     return (
         <div ref={host} className={`relative h-full overflow-hidden bg-surface-sunken ${className ?? ''}`}>
@@ -190,14 +199,7 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
                 onPointerDown={(event) => {
                     event.currentTarget.focus();
                     event.currentTarget.setPointerCapture(event.pointerId);
-                    send({
-                        kind: 'pointer',
-                        phase: 'down',
-                        ...position(event),
-                        button: buttonOf(event.button),
-                        buttons: buttonsOf(event.buttons),
-                        modifiers: modifiersOf(event)
-                    });
+                    send(pointer(event, 'down'));
                 }}
                 onPointerMove={(event) => {
                     pendingMove.current = {
@@ -218,26 +220,10 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
                     }
                 }}
                 onPointerUp={(event) => {
-                    send({
-                        kind: 'pointer',
-                        phase: 'up',
-                        ...position(event),
-                        button: buttonOf(event.button),
-                        buttons: buttonsOf(event.buttons),
-                        modifiers: modifiersOf(event)
-                    });
+                    send(pointer(event, 'up'));
                     event.currentTarget.releasePointerCapture(event.pointerId);
                 }}
-                onPointerCancel={(event) => {
-                    send({
-                        kind: 'pointer',
-                        phase: 'up',
-                        ...position(event),
-                        button: buttonOf(event.button),
-                        buttons: 0,
-                        modifiers: modifiersOf(event)
-                    });
-                }}
+                onPointerCancel={(event) => send(pointer(event, 'up', 0))}
                 onWheel={(event) => {
                     event.preventDefault();
                     send({ kind: 'wheel', ...position(event), deltaX: event.deltaX, deltaY: event.deltaY, modifiers: modifiersOf(event) });

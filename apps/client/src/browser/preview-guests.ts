@@ -7,7 +7,6 @@ interface GuestElement extends HTMLElement {
    shell names a right-click in one by its web contents id all the same. */
 const previews = new Set<GuestElement>();
 
-/* Answers the way to forget the preview again. */
 export function registerPreviewGuest(element: HTMLElement): () => void {
     const guest = element as GuestElement;
     previews.add(guest);

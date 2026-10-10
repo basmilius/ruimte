@@ -40,7 +40,6 @@ function install(): void {
     });
 }
 
-/* Calls `onFocus` whenever this page takes the focus. Answers the way to stop. */
 export function watchGuestFocus(element: HTMLElement, onFocus: () => void): () => void {
     install();
     watched.set(element, onFocus);
