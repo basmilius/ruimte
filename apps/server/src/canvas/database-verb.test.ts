@@ -447,6 +447,14 @@ describe('UI database access', () => {
         connections.push({ id: 'new', name: 'New', shared: true, config: { engine: 'sqlite', path: join(folder, 'data', 'local.sqlite') } });
         await expect(agents.authorizeUiRead(place(), 'new', grants)).rejects.toThrow('not readable');
     });
+    test('a captured target must be the fingerprint, never the connection target itself', async () => {
+        const grants = await agents.captureUiAccess(place());
+        const raw = grants.map((grant) =>
+            grant.id === 'local' ? { ...grant, target: connectionTarget(connections.find((entry) => entry.id === 'local')!.config) } : grant
+        );
+        await expect(agents.authorizeUiRead(place(), 'local', raw)).rejects.toThrow('not readable');
+        await agents.authorizeUiRead(place(), 'local', grants);
+    });
     test('a live read requires the in-memory password even when a stored file contains one', async () => {
         const grants = await agents.captureUiAccess(place());
         await expect(agents.authorizeUiRead(place(), 'shop', grants)).rejects.toThrow('password');
@@ -460,7 +468,7 @@ describe('UI database access', () => {
         await access.set('p1', 'local', 'off');
         await expect(agents.query(place(), 'chat-1', 'local', 'SELECT 1', { schema: null, limit: 1, uiAccess: grants })).rejects.toThrow('off');
         await access.set('p1', 'local', 'read');
-        await expect(agents.query(place(), 'chat-1', 'local', 'SELECT 1', { schema: null, limit: 1, uiAccess: [] })).rejects.toThrow('original access');
+        await expect(agents.query(place(), 'chat-1', 'local', 'SELECT 1', { schema: null, limit: 1, uiAccess: [] })).rejects.toThrow('not readable');
     });
     test('an aborted UI read never opens a helper session', async () => {
         const controller = new AbortController();

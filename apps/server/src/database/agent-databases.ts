@@ -28,6 +28,13 @@ export interface DatabasePlace {
     folder: string;
 }
 
+/* What the agent that wrote a reply could read of one connection; `target` is a fingerprint, since UI access is kept with the chat. */
+export interface UiDatabaseGrant {
+    id: string;
+    target: string;
+    access: DatabaseAgentAccess;
+}
+
 /* A connection as an agent sees it: never with a password. */
 export interface AgentConnection {
     id: string;
@@ -208,7 +215,7 @@ export class AgentDatabases {
         return { connectionId: connection.id, schema: resolved };
     }
 
-    async captureUiAccess(place: DatabasePlace): Promise<{ id: string; target: string; access: DatabaseAgentAccess }[]> {
+    async captureUiAccess(place: DatabasePlace): Promise<UiDatabaseGrant[]> {
         if (place.folder === this.options.scratchFolder) {
             return [];
         }
@@ -220,22 +227,8 @@ export class AgentDatabases {
         }));
     }
 
-    async authorizeUiRead(place: DatabasePlace, wanted: string, grants: readonly { id: string; target: string; access: DatabaseAgentAccess }[]): Promise<void> {
-        const connection = await this.named(place, wanted);
-        const original = grants.find((grant) => grant.id === connection.id);
-        const target = this.uiTarget(connection);
-        if (
-            !original ||
-            original.access === 'off' ||
-            this.capturedUiTarget(original.target) !== target ||
-            this.options.access.levelOf(place.projectId, connection.id) === 'off'
-        ) {
-            refuse('database-access-off', 'This database was not readable by the writer or is no longer readable.');
-        }
-        const { password } = await this.configFor(place, connection, 'read');
-        if (connection.config.engine === 'mysql' && !password) {
-            refuse('database-locked', 'This machine no longer holds the password for this database.');
-        }
+    async authorizeUiRead(place: DatabasePlace, wanted: string, grants: readonly UiDatabaseGrant[]): Promise<void> {
+        await this.checkUiGrant(place, await this.named(place, wanted), grants);
     }
 
     async tables(place: DatabasePlace, caller: string, wanted: string, schema: string | null): Promise<AgentTables> {
@@ -269,7 +262,7 @@ export class AgentDatabases {
             schema: string | null;
             limit: number;
             signal?: AbortSignal;
-            uiAccess?: readonly { id: string; target: string; access: DatabaseAgentAccess }[];
+            uiAccess?: readonly UiDatabaseGrant[];
         }
     ): Promise<AgentQuery> {
         return this.withSession(
@@ -373,8 +366,21 @@ export class AgentDatabases {
             .digest('hex');
     }
 
-    private capturedUiTarget(target: string): string {
-        return /^[a-f\d]{64}$/.test(target) ? target : createHash('sha256').update(target).digest('hex');
+    /* A UI read holds only while the connection is still the one captured and still readable, with its password in memory. */
+    private async checkUiGrant(place: DatabasePlace, connection: DatabaseConnection, grants: readonly UiDatabaseGrant[]): Promise<void> {
+        const original = grants.find((grant) => grant.id === connection.id);
+        if (
+            !original ||
+            original.access === 'off' ||
+            original.target !== this.uiTarget(connection) ||
+            this.options.access.levelOf(place.projectId, connection.id) === 'off'
+        ) {
+            refuse('database-access-off', 'This database was not readable for the agent that wrote this, or is no longer readable.');
+        }
+        const { password } = await this.configFor(place, connection, 'read');
+        if (connection.config.engine === 'mysql' && !password) {
+            refuse('database-locked', 'This machine no longer holds the password for this database.');
+        }
     }
 
     private defaultSchema(connection: DatabaseConnection): string | null {
@@ -427,7 +433,7 @@ export class AgentDatabases {
         mode: 'read' | 'write',
         work: (session: { connection: DatabaseConnection; call: <R>(method: string, params: Record<string, unknown>) => Promise<R> }) => Promise<T>,
         signal?: AbortSignal,
-        uiAccess?: readonly { id: string; target: string; access: DatabaseAgentAccess }[]
+        uiAccess?: readonly UiDatabaseGrant[]
     ): Promise<T> {
         const connection = await this.named(place, wanted);
         const access = this.options.access.levelOf(place.projectId, connection.id);
@@ -444,16 +450,9 @@ export class AgentDatabases {
             );
         }
         if (uiAccess) {
-            const original = uiAccess.find((grant) => grant.id === connection.id);
-            const target = this.uiTarget(connection);
-            if (!original || original.access === 'off' || this.capturedUiTarget(original.target) !== target) {
-                refuse('database-access-off', 'The database target is outside the writer’s original access.');
-            }
+            await this.checkUiGrant(place, connection, uiAccess);
         }
         const { config, password } = await this.configFor(place, connection, mode);
-        if (uiAccess && connection.config.engine === 'mysql' && !password) {
-            refuse('database-locked', 'This machine no longer holds the password for this database.');
-        }
         const owner = `agent:${caller}:${randomUUID()}`;
         const abort = () => {
             void this.options.service.release(owner);
