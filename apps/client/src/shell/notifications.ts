@@ -16,8 +16,7 @@ function mayNotify(): boolean {
 }
 
 /*
- * Nothing is announced about a node somebody is already looking at: it says it there itself. A
- * window has held several views since the grid, so the question is about the node and not about the
+ * Nothing is announced about a node somebody is already looking at. The question is per node, not per
  * window: a chat on a view behind the one you are reading is as unseen as one in a window behind it.
  */
 function canNotify(nodeId: string, seen: ReadonlySet<string>): boolean {

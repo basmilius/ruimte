@@ -14,7 +14,19 @@ import { canStandInCell, useDocument } from '@/state/document';
 import { tabKey, useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
 import { CellViewContext } from '@/state/workspace-stores';
-import { canDropAsTab, canMoveCell, canSplit, cellAt, cellCount, cellViewIds, isSameCell, locateView, type CellAt, type SplitZone } from '@/shell/split';
+import {
+    canDropAsTab,
+    canMoveCell,
+    canSplit,
+    cellAt,
+    cellCount,
+    cellViewIds,
+    isSameCell,
+    locateView,
+    MIN_SHARE,
+    type CellAt,
+    type SplitZone
+} from '@/shell/split';
 import {
     clampTabLeft,
     DEFAULT_TAB_WIDTH,
@@ -67,11 +79,9 @@ function boxInGrid(element: Element, grid: DOMRect): PreviewRect {
 }
 
 /*
- * The preview of a split or a trade, which reaches over the column rather than over the cell the
- * pointer is on: a side drop on a cell in a column of three gives a whole new column. You aim at a
- * cell and get a column, so that has to be visible before the pointer is let go. The boxes are
- * measured rather than derived from a share, because a cell carries a bar the share knows nothing
- * about. A maximized cell stands over the whole grid, so the grid is its column.
+ * The preview of a split or a trade reaches over the column, since a side drop makes a whole new
+ * column. The boxes are measured, because a cell carries a bar its share knows nothing about. A
+ * maximized cell stands over the whole grid, so the grid is its column.
  */
 function previewZone(cell: HTMLElement, zone: SplitZone, filling: boolean): void {
     const grid = cell.closest('[data-split-grid]')!.getBoundingClientRect();
@@ -242,6 +252,74 @@ function Cell({
         }
     };
 
+    const dropOnBar = (event: ReactDragEvent<HTMLElement>): void => {
+        const tab = tabDropFor(event);
+        hideDropPreview();
+        setGridTakesPath(false);
+        if (tab === null) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        const database = droppedDatabase(event.dataTransfer);
+        if (database !== null) {
+            dropDatabaseTab(database, at, 'center', tabIndexFor(tab.gap, dragging() ?? ''));
+            return;
+        }
+        if (usesPaths(event)) {
+            placeFilesAction(droppedPaths(event.dataTransfer), viewId, 'center', tabs === undefined ? null : tab.gap);
+            return;
+        }
+        const diff = droppedDiff(event.dataTransfer);
+        if (diff !== null) {
+            const key = tabKey(diff.path, diff.view);
+            useFiles.getState().dropDiff(diff.path, diff.view, useSettings.getState().filesTabLimit, at, 'center', tabIndexFor(tab.gap, key));
+            return;
+        }
+        const dragged = draggedViewId(event.dataTransfer);
+        if (dragged !== null) {
+            useDocument.getState().dropViewAsTab(dragged, at, tabIndexFor(tab.gap, dragged));
+        }
+    };
+
+    const dropInZone = (event: ReactDragEvent<HTMLElement>): void => {
+        const paths = usesPaths(event) ? droppedPaths(event.dataTransfer) : [];
+        const here = paths.length > 0 ? pathZoneFor(event) : zoneFor(event);
+        hideDropPreview();
+        setGridTakesPath(false);
+        if (here === null) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        const database = droppedDatabase(event.dataTransfer);
+        if (database !== null) {
+            dropDatabaseTab(database, at, here);
+            return;
+        }
+        if (paths.length > 0) {
+            // A dropped file stays out of the sidebar.
+            placeFilesAction(paths, viewId, here);
+            return;
+        }
+        const diff = droppedDiff(event.dataTransfer);
+        if (diff !== null) {
+            useFiles.getState().dropDiff(diff.path, diff.view, useSettings.getState().filesTabLimit, at, here);
+            return;
+        }
+        const dragged = draggedViewId(event.dataTransfer);
+        const layout = useDocument.getState().layout;
+        const from = dragged === null || layout === null ? null : locateView(layout, dragged);
+        if (draggingWholeCell() && from !== null) {
+            useDocument.getState().moveCellTo(from, at, here);
+        } else if (dragged === viewId && (layout === null || cellViewIds(cellAt(layout, at)!).length === 1)) {
+            // Only a view that fills its cell alone is back where it was; the active tab of a host leaves it.
+            useDocument.getState().focusCellAt(at);
+        } else if (dragged !== null) {
+            placeViewAction(dragged, viewId, here);
+        }
+    };
+
     if (view === null) {
         return null;
     }
@@ -294,19 +372,15 @@ function Cell({
                     }
                     const paths = usesPaths(event);
                     const next = paths ? pathZoneFor(event) : zoneFor(event);
-                    if (next !== null) {
-                        // Only a prevented dragover accepts the drop; without it the browser refuses it.
-                        event.preventDefault();
-                        /* And the effect has to be one the source allows: the file tree drags with
-                           `effectAllowed: 'move'`, and a 'copy' against that makes the operation
-                           none, which the browser answers by dropping nothing and saying nothing. */
-                        event.dataTransfer.dropEffect = paths ? dropEffectFor(event.dataTransfer.effectAllowed) : 'move';
-                    }
                     if (next === null) {
                         hideDropPreview();
-                    } else {
-                        previewZone(event.currentTarget, next, filling);
+                        return;
                     }
+                    /* Only a prevented dragover accepts the drop, and only with an effect the source
+                       allows: a 'copy' against the file tree's `move` silently drops nothing. */
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = paths ? dropEffectFor(event.dataTransfer.effectAllowed) : 'move';
+                    previewZone(event.currentTarget, next, filling);
                 }}
                 onDragLeave={(event) => {
                     // A drag crossing into a child fires leave on the parent; only leaving the cell counts.
@@ -316,73 +390,7 @@ function Cell({
                         hideDropPreview(true);
                     }
                 }}
-                onDrop={(event) => {
-                    if (overBar(event)) {
-                        const tab = tabDropFor(event);
-                        hideDropPreview();
-                        setGridTakesPath(false);
-                        if (tab === null) {
-                            return;
-                        }
-                        event.preventDefault();
-                        event.stopPropagation();
-                        const database = droppedDatabase(event.dataTransfer);
-                        if (database !== null) {
-                            dropDatabaseTab(database, at, 'center', tabIndexFor(tab.gap, dragging() ?? ''));
-                            return;
-                        }
-                        if (usesPaths(event)) {
-                            placeFilesAction(droppedPaths(event.dataTransfer), viewId, 'center', tabs === undefined ? null : tab.gap);
-                            return;
-                        }
-                        const diff = droppedDiff(event.dataTransfer);
-                        if (diff !== null) {
-                            const key = tabKey(diff.path, diff.view);
-                            useFiles.getState().dropDiff(diff.path, diff.view, useSettings.getState().filesTabLimit, at, 'center', tabIndexFor(tab.gap, key));
-                            return;
-                        }
-                        const dragged = draggedViewId(event.dataTransfer);
-                        if (dragged !== null) {
-                            useDocument.getState().dropViewAsTab(dragged, at, tabIndexFor(tab.gap, dragged));
-                        }
-                        return;
-                    }
-                    const paths = usesPaths(event) ? droppedPaths(event.dataTransfer) : [];
-                    const here = paths.length > 0 ? pathZoneFor(event) : zoneFor(event);
-                    hideDropPreview();
-                    setGridTakesPath(false);
-                    if (here === null) {
-                        return;
-                    }
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const database = droppedDatabase(event.dataTransfer);
-                    if (database !== null) {
-                        dropDatabaseTab(database, at, here);
-                        return;
-                    }
-                    if (paths.length === 0) {
-                        const dragged = draggedViewId(event.dataTransfer);
-                        const diff = droppedDiff(event.dataTransfer);
-                        if (diff !== null) {
-                            useFiles.getState().dropDiff(diff.path, diff.view, useSettings.getState().filesTabLimit, at, here);
-                            return;
-                        }
-                        const layout = useDocument.getState().layout;
-                        const from = dragged === null || layout === null ? null : locateView(layout, dragged);
-                        if (draggingWholeCell() && from !== null) {
-                            useDocument.getState().moveCellTo(from, at, here);
-                        } else if (dragged === viewId && (layout === null || cellViewIds(cellAt(layout, at)!).length === 1)) {
-                            // Only a view that fills its cell alone is back where it was; the active tab of a host leaves it.
-                            useDocument.getState().focusCellAt(at);
-                        } else if (dragged !== null) {
-                            placeViewAction(dragged, viewId, here);
-                        }
-                        return;
-                    }
-                    // A dropped file stays out of the sidebar.
-                    placeFilesAction(paths, viewId, here);
-                }}
+                onDrop={(event) => (overBar(event) ? dropOnBar(event) : dropInZone(event))}
             >
                 <CellToolbar at={at} view={view} focused={focused}>
                     {body}
@@ -495,7 +503,7 @@ export function SplitGrid(): ReactElement | null {
             onValueChange={(_, command) => applyCommand(command)}
             showTabs={false}
             minimumSize={{ width: 0, height: 0 }}
-            minimumResizeShare={0.15}
+            minimumResizeShare={MIN_SHARE}
             onViewBoundsChange={() => cellsMoved()}
             renderView={(viewId, info) => {
                 const at = cellForPane(info.paneId)!;

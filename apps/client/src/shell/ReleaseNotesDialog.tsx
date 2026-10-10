@@ -45,9 +45,8 @@ function ReleaseEntry({ entry }: { entry: NoteEntry }) {
 }
 
 /*
- * The notes of the last releases, newest first, opened from About or from the toast after an update.
- * Mounted once beside the toasts rather than inside the settings, so the toast can open it on its
- * own; `nested` still puts it over the settings when those are open.
+ * The notes of the last releases, newest first. Mounted beside the toasts rather than inside the
+ * settings, so the update toast can open it; `nested` puts it over the settings when those are open.
  */
 export function ReleaseNotesDialog() {
     const { t } = useTranslation('shell');

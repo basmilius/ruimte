@@ -1,7 +1,6 @@
 const STORAGE_KEY = 'ruimte.palette.recents';
 
-/* How many run commands the palette offers back on an empty query. Five fills the first screen
-   without pushing "Jump to" out of sight. */
+/* Five fills the first screen of an empty palette without pushing "Jump to" out of sight. */
 export const RECENT_LIMIT = 5;
 
 /* Ids only: a command's label and what it does are rebuilt from `appCommands()` every time, so a

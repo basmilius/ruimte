@@ -21,9 +21,8 @@ function withoutTrailing(path: string, sep: string): string {
 }
 
 /*
- * One level up, ready to browse; null at a root, which is where going up stops. A root is whatever
- * the path starts from: the leading separator, a drive letter or the home tilde, which is why a cut
- * at the very front answers the separator itself rather than an empty string.
+ * One level up, ready to browse; null at a root (a drive letter or the home tilde). A cut at the very
+ * front answers the separator itself rather than an empty string.
  */
 export function parentOf(path: string, sep: string): string | null {
     const trimmed = withoutTrailing(path, sep);
@@ -55,10 +54,9 @@ export interface BrowseAnswer {
 export type FolderPresence = 'there' | 'missing' | 'unknown';
 
 /*
- * Whether the folder the field names is on that machine. A path ending in a separator was listed
- * itself, so the answer's own `exists` decides; a path without one had its parent listed, so the
- * last segment has to be among the names. That compare is case-sensitive even on a file system
- * that is not, because the folder that gets created should be the one that was typed.
+ * A path ending in a separator was listed itself, so its `exists` decides; otherwise its parent was
+ * listed and the last segment has to be among the names. Case-sensitive even on a file system that is
+ * not, because the folder that gets created should be the one that was typed.
  */
 export function folderPresence(path: string, result: BrowseAnswer | null, sep: string): FolderPresence {
     if (result === null || result.exists === undefined) {
@@ -175,11 +173,7 @@ export interface MachineRow {
     active: boolean;
 }
 
-/*
- * The machines the browser can be pointed at, in the order of the Machines pane: this machine first
- * where there is one, then the rows of this client, then what only the account has. Which machine is
- * active is carried on the row, as the one the step opens highlighted.
- */
+/* The machines the browser can be pointed at, in the order of the Machines pane. */
 export function browseMachines(entries: readonly MachineEntry[], activeId: string): MachineRow[] {
     return entries.map((entry) => {
         const endpointId = entry.endpoint?.id ?? entry.id;
@@ -188,10 +182,9 @@ export function browseMachines(entries: readonly MachineEntry[], activeId: strin
 }
 
 /*
- * Where browsing is: which machine, whether the machines themselves are up instead of folders, and
- * the path the folders step was on. The machines step holds that path so stepping back returns to
- * it, and holds an empty one when browsing began on the machines and has no folders behind it.
- * `link` is set while the folders of a machine wait for its link, or after that wait failed.
+ * Where browsing is. The machines step holds the path the folders step was on, so stepping back
+ * returns to it, and an empty one when browsing began on the machines. `link` is set while the
+ * folders of a machine wait for its link, or after that wait failed.
  */
 export interface BrowseStep {
     endpointId: string;
@@ -205,12 +198,7 @@ export function pickMachine(endpointId: string, open: boolean): BrowseStep {
     return open ? { endpointId, machines: false, path: '' } : { endpointId, machines: false, path: '', link: { state: 'connecting' } };
 }
 
-/*
- * The step browsing opens on. One machine is nothing to choose between, so it goes straight to that
- * machine's folders, connecting first when it has to; more than one asks first. Either way the field
- * opens empty: the machines step narrows its rows with what is typed, and the folders step is waiting
- * for its start folder, which arrives with the listing rather than a frame before it.
- */
+/* One machine is nothing to choose between, so browsing opens on its folders; more than one asks first. */
 export function openBrowse(activeId: string, machines: readonly { endpointId: string; open: boolean }[]): BrowseStep {
     const only = machines.length === 1 ? machines[0]! : null;
     return only ? pickMachine(only.endpointId, only.open) : { endpointId: activeId, machines: true, path: '' };
@@ -245,9 +233,8 @@ export function machinesStep(step: BrowseStep, query: string): BrowseStep {
 export type BrowseBack = { to: 'palette' } | { to: 'machines' } | { to: 'folders'; path: string };
 
 /*
- * One step back. The machines step returns to the folders it was opened from, and leaves browsing
- * altogether when there are none behind it, which is where browsing began. A folders step goes to
- * the machines when there is more than one to choose from, and otherwise leaves as well.
+ * The machines step returns to the folders it was opened from, or leaves browsing when there are
+ * none. A folders step goes to the machines when there is more than one, and otherwise leaves.
  */
 export function browseBack(step: BrowseStep, machineCount: number): BrowseBack {
     if (step.machines) {
@@ -256,8 +243,6 @@ export function browseBack(step: BrowseStep, machineCount: number): BrowseBack {
     return machineCount > 1 ? { to: 'machines' } : { to: 'palette' };
 }
 
-/* What the palette reads off its store: whether it is up, which mode it opens in, and how often the
-   folder browser has been asked for. */
 export interface PaletteSignal {
     open: boolean;
     mode: string;
@@ -265,12 +250,7 @@ export interface PaletteSignal {
     browseAt: number;
 }
 
-/*
- * What a render has to do about the store. The palette opening, its mode changing under it and the
- * browse command being chosen all start it over, and the last of those is the reason the signal
- * counts: choosing the command while the palette is already open changes nothing else about the
- * store, and choosing it twice in a row has to start browsing twice.
- */
+/* Opening, a mode change and the browse command each start the palette over. */
 export function paletteStart(now: PaletteSignal, seen: PaletteSignal): { changed: boolean; restart: boolean; browse: boolean } {
     const changed = now.open !== seen.open || now.mode !== seen.mode || now.browseAt !== seen.browseAt;
     const restart = changed && now.open;

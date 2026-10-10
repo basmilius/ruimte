@@ -5,9 +5,8 @@ import { editorShortcut } from '@/shell/editor-keymap';
 import { focusedEditor } from '@/shell/panels/focused-editor';
 
 /*
- * The editing commands of a file editor that have a place in the menu and the palette: the id both
- * share, the key of its words (`shell:menu.<key>` and `shell:palette.commands.<key>`), what it runs on
- * the editor and the key the editor binds it to. They sit in a table of their own so a menu can list
+ * The editing commands of a file editor that have a place in the menu and the palette, with their words
+ * at `shell:menu.<key>` and `shell:palette.commands.<key>`. A table of their own, so a menu can list
  * them without loading an editor.
  */
 interface EditorCommandSpec {

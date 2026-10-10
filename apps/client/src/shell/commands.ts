@@ -69,6 +69,13 @@ export interface Command {
     run(): void;
 }
 
+/* A frame later: the palette hands the focus back as it closes, and that focus says which surface or editor is meant. */
+function afterPaletteCloses(run: () => void): () => void {
+    return () => {
+        requestAnimationFrame(() => run());
+    };
+}
+
 /* Whichever surface is on screen owns the zoom rows in the palette. */
 function zoomTarget(): Pick<CanvasState, 'zoomToSelection' | 'zoomTo'> {
     const view = activeViewOf(useDocument.getState());
@@ -220,11 +227,7 @@ function tabCommands(layout: SplitLayout | null): Command[] {
     ];
 }
 
-/*
- * What an empty palette offers: the handful of rows worth a place before anything is typed. The
- * rest of the list is one keystroke away, and a palette that opens on forty rows is a list to read
- * rather than a place to start typing.
- */
+/* The handful of rows an empty palette offers; a palette that opens on forty rows is a list to read rather than a place to type. */
 export const OPENING_COMMAND_IDS: readonly string[] = ['add-chat', 'add-terminal', 'view-new', 'find-in-files', 'open-folder', 'usage', 'settings'];
 
 /* Everything the palette can do besides jumping to a node. One list, so the dock and the keys agree. */
@@ -273,12 +276,7 @@ export function appCommands(): Command[] {
                       id: 'find',
                       label: i18next.t('shell:palette.commands.find'),
                       shortcut: CANVAS_SHORTCUTS.find,
-                      // A frame later: the palette hands the focus back as it closes, and that focus says which surface is meant.
-                      run: () => {
-                          requestAnimationFrame(() => {
-                              openFocusedFind();
-                          });
-                      }
+                      run: afterPaletteCloses(() => openFocusedFind())
                   }
               ]
             : []),
@@ -290,11 +288,7 @@ export function appCommands(): Command[] {
                       id: 'find-replace',
                       label: i18next.t('shell:palette.commands.findReplace'),
                       shortcut: CANVAS_SHORTCUTS.findReplace,
-                      run: () => {
-                          requestAnimationFrame(() => {
-                              openFocusedFind({ replace: true });
-                          });
-                      }
+                      run: afterPaletteCloses(() => openFocusedFind({ replace: true }))
                   }
               ]
             : []),
@@ -304,22 +298,13 @@ export function appCommands(): Command[] {
                       id: 'find-next',
                       label: i18next.t('shell:palette.commands.findNext'),
                       shortcut: editorShortcut('findNext'),
-                      // A frame later: the palette hands the focus back as it closes, and that focus says which editor is meant.
-                      run: () => {
-                          requestAnimationFrame(() => {
-                              stepFocusedEditorFind(1);
-                          });
-                      }
+                      run: afterPaletteCloses(() => stepFocusedEditorFind(1))
                   },
                   {
                       id: 'find-previous',
                       label: i18next.t('shell:palette.commands.findPrevious'),
                       shortcut: editorShortcut('findPrevious'),
-                      run: () => {
-                          requestAnimationFrame(() => {
-                              stepFocusedEditorFind(-1);
-                          });
-                      }
+                      run: afterPaletteCloses(() => stepFocusedEditorFind(-1))
                   }
               ]
             : []),
@@ -329,42 +314,25 @@ export function appCommands(): Command[] {
                       id: 'next-problem',
                       label: i18next.t('shell:palette.commands.nextProblem'),
                       shortcut: CANVAS_SHORTCUTS.nextProblem,
-                      // After the palette has handed the focus back, which is what says which editor is meant.
-                      run: () => {
-                          requestAnimationFrame(() => {
-                              focusedLanguage()?.diagnostics.step(1);
-                          });
-                      }
+                      run: afterPaletteCloses(() => focusedLanguage()?.diagnostics.step(1))
                   },
                   {
                       id: 'next-highlight',
                       label: i18next.t('shell:palette.commands.nextHighlight'),
                       shortcut: CANVAS_SHORTCUTS.nextHighlight,
-                      run: () => {
-                          requestAnimationFrame(() => {
-                              focusedLanguage()?.highlights.step(1);
-                          });
-                      }
+                      run: afterPaletteCloses(() => focusedLanguage()?.highlights.step(1))
                   },
                   {
                       id: 'previous-highlight',
                       label: i18next.t('shell:palette.commands.previousHighlight'),
                       shortcut: CANVAS_SHORTCUTS.previousHighlight,
-                      run: () => {
-                          requestAnimationFrame(() => {
-                              focusedLanguage()?.highlights.step(-1);
-                          });
-                      }
+                      run: afterPaletteCloses(() => focusedLanguage()?.highlights.step(-1))
                   },
                   {
                       id: 'previous-problem',
                       label: i18next.t('shell:palette.commands.previousProblem'),
                       shortcut: CANVAS_SHORTCUTS.previousProblem,
-                      run: () => {
-                          requestAnimationFrame(() => {
-                              focusedLanguage()?.diagnostics.step(-1);
-                          });
-                      }
+                      run: afterPaletteCloses(() => focusedLanguage()?.diagnostics.step(-1))
                   }
               ]
             : []),
@@ -373,17 +341,12 @@ export function appCommands(): Command[] {
                   {
                       id: 'file-new',
                       label: i18next.t('shell:palette.commands.newFile'),
-                      // A frame later: the palette hands the focus back as it closes, and the field that names the file would lose it.
-                      run: () => {
-                          requestAnimationFrame(() => useFiles.getState().requestCreate('file'));
-                      }
+                      run: afterPaletteCloses(() => useFiles.getState().requestCreate('file'))
                   },
                   {
                       id: 'folder-new',
                       label: i18next.t('shell:palette.commands.newFolder'),
-                      run: () => {
-                          requestAnimationFrame(() => useFiles.getState().requestCreate('directory'));
-                      }
+                      run: afterPaletteCloses(() => useFiles.getState().requestCreate('directory'))
                   }
               ]
             : []),

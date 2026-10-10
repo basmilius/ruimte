@@ -1,10 +1,6 @@
 import { isOpenableView, type ProjectLocal, type ProjectView, type SplitCell, type SplitColumn, type SplitLayout } from '@ruimte/contracts';
 
-/*
- * The whole limit of the model. Columns of cells instead of a free tree means "at most three by
- * three" is these two numbers, not a counter laid over a shape that could hold more, so every
- * layout the model can express is a layout that is allowed.
- */
+/* Columns of cells instead of a free tree, so "at most three by three" is these two numbers and every layout the model can express is allowed. */
 export const MAX_COLUMNS = 3;
 export const MAX_CELLS = 3;
 
@@ -26,11 +22,12 @@ function normalize<T extends { size: number }>(items: readonly T[]): T[] {
     if (items.length === 0) {
         return [];
     }
-    const total = items.reduce((sum, item) => sum + (Number.isFinite(item.size) && item.size > 0 ? item.size : 0), 0);
+    const validSize = (size: number): number => (Number.isFinite(size) && size > 0 ? size : 0);
+    const total = items.reduce((sum, item) => sum + validSize(item.size), 0);
     if (total <= 0) {
         return items.map((item) => ({ ...item, size: 1 / items.length }));
     }
-    return items.map((item) => ({ ...item, size: (Number.isFinite(item.size) && item.size > 0 ? item.size : 0) / total }));
+    return items.map((item) => ({ ...item, size: validSize(item.size) / total }));
 }
 
 function clampFocus(columns: readonly SplitColumn[], focus: CellAt): CellAt {
@@ -70,7 +67,6 @@ export function viewIdsIn(layout: SplitLayout): string[] {
     return layout.columns.flatMap((column) => column.cells.flatMap(cellViewIds));
 }
 
-/* Only the active view of each cell: what is actually drawn. */
 export function shownViewIdsIn(layout: SplitLayout): string[] {
     return layout.columns.flatMap((column) => column.cells.map((cell) => cell.viewId));
 }
@@ -163,10 +159,8 @@ function fillsCellAlone(layout: SplitLayout, source: CellAt): boolean {
 }
 
 /*
- * Whether a drop on this zone would land. `moving` is the view being dragged when it already stands
- * in a cell: when it fills that cell alone the cell leaves, so a column or a cell comes free and a
- * layout that looks full is not. Dropping a view on the cell it already sits in is nothing, which
- * is why it answers false.
+ * Whether a drop on this zone would land. A `moving` view that fills its cell alone takes the cell
+ * along, so a layout that looks full may have room; a drop on the cell it already sits in is nothing.
  */
 export function canSplit(layout: SplitLayout, at: CellAt, zone: SplitZone, moving: string | null = null): boolean {
     const source = moving === null ? null : locateView(layout, moving);
@@ -463,10 +457,7 @@ export function showViewIn(layout: SplitLayout, viewId: string, options: ShowOpt
     }
     const at = layout.focus;
     const focused = cellAt(layout, at);
-    if (focused !== null && isTabHost(focused)) {
-        return shownAsTab(layout, viewId, at);
-    }
-    if (focused !== null && options.newTab) {
+    if (focused !== null && (isTabHost(focused) || options.newTab)) {
         return shownAsTab(layout, viewId, at);
     }
     if (options.loose) {
@@ -506,10 +497,8 @@ function withReplacedBack(layout: SplitLayout, shown: Omit<ShownView, 'layout'>)
 }
 
 /*
- * The way back the toast offers. It runs against the layout as it stands when the button is
- * pressed rather than against a copy from the moment of the toast: between the two a person may
- * have split a cell or closed one, and handing them back a grid from before that would take away
- * work they did themselves. A cell that is gone leaves everything where it is.
+ * The way back the toast offers. It runs against the layout as it stands when the button is pressed,
+ * so a cell a person split or closed since stays that way. A cell that is gone leaves everything where it is.
  */
 export function undoShowView(layout: SplitLayout, shown: Omit<ShownView, 'layout'>): SplitLayout {
     const back = shown.tab === undefined ? withReplacedBack(layout, shown) : withoutShownTab(layout, shown, shown.tab);
@@ -682,10 +671,8 @@ export function layoutOf(
 export const EVEN_SNAP_PX = 8;
 
 /*
- * Where a dragged splitter lands. Two neighbors of the same size is the one split people aim for,
- * and nobody hits it by hand to the pixel, so the middle pulls the line in when it comes close. The
- * distance is measured in pixels rather than in shares: a share of a wide window is a long way, and
- * the pull should feel the same in a cell of any size.
+ * Nobody hits an even split to the pixel, so the middle pulls a dragged splitter in when it comes close.
+ * Measured in pixels rather than shares, so the pull feels the same in a cell of any size.
  */
 export function snapToEven(before: number, total: number, span: number, threshold = EVEN_SNAP_PX): number {
     const middle = total / 2;

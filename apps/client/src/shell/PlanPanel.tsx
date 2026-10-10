@@ -51,9 +51,8 @@ function hasLockedStep(plan: Plan): boolean {
 }
 
 /*
- * The plan of one chat, between the grid and the panels. A column of width 0 and inert while
- * closed, its contents mounted until the slide ends, its width dragged from the left edge. Whether it is open is not its own business: `plan/panel-rules.ts` decides that from
- * what is on screen.
+ * The plan of one chat, between the grid and the panels: a column of width 0 and inert while closed,
+ * its contents mounted until the slide ends. `plan/panel-rules.ts` decides whether it is open.
  */
 export function PlanPanel() {
     const gap = usePanelGap();

@@ -1,8 +1,7 @@
 import i18next from 'i18next';
 import type { SidebarTarget } from './sidebar-target';
 import type { AgentWork } from '@/state/agent-work';
-import type { ProjectSummary } from '@ruimte/contracts';
-import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIconChoice, ProjectViewKind, Task } from '@ruimte/contracts';
+import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIconChoice, ProjectSummary, ProjectViewKind, Task } from '@ruimte/contracts';
 
 export interface SidebarNode {
     id: string;
@@ -58,8 +57,7 @@ export interface SidebarViewRow {
     /* Where the view sits in the project's list, which is what a drop between two rows writes back. */
     index: number;
     active: boolean;
-    /* Standing in a cell beside the focused one. Not active, but not closed either, and a row that
-       said nothing would read as closed the moment you put a view next to the one you were on. */
+    /* Standing in a cell beside the focused one: not active, but not closed either. */
     beside: boolean;
     expandable: boolean;
     expanded: boolean;
@@ -67,9 +65,7 @@ export interface SidebarViewRow {
     status: AgentStatus | null;
     /* A standalone chat with an unsent prompt; a canvas keeps that dot on the node's own row. */
     draft: boolean;
-    /* A heading stands right under this row. Only ever true on a separator, which then gives up the
-       room under its line: a rule that closes a group and the heading that opens the next are one
-       thing, and the space between them should say so. */
+    /* A separator with a heading right under it, which gives up the room under its line. */
     headingBelow: boolean;
 }
 
@@ -88,7 +84,7 @@ export type SidebarRow = SidebarViewRow | SidebarNodeRow;
 /* One project's share of "Needs you", under a heading with its name. */
 export interface SidebarWaitingGroup {
     key: string;
-    /* Null while the project on screen is the only one waiting, which is how the block read before it spanned projects. */
+    /* Null while the project on screen is the only one waiting. */
     label: string | null;
     rows: SidebarRow[];
 }
@@ -149,12 +145,7 @@ export function waitsOnYou(node: SidebarNode): boolean {
     return node.status === 'needs-you' && !node.snoozedUntil;
 }
 
-/*
- * The sidebar as one list of rows: what waits for you first, then the views in the order the
- * project file names them, with the nodes of an open canvas under it. The
- * status grouping of the old flat list is gone: the order is the project's, the dock keeps the
- * counters.
- */
+/* What waits for you first, then the views in project order, with the nodes of an open canvas under it. */
 export function buildSidebar({ project, expandedIds }: SidebarInput): SidebarSection[] {
     const sections: SidebarSection[] = [];
     const waiting: SidebarRow[] = [];

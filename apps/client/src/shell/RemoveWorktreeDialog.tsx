@@ -14,11 +14,9 @@ import { useTransport } from '@/transport/context';
 type Reading = { key: string; worktrees: Worktree[]; error: { message: string | null } | null };
 
 /*
- * The question before worktrees go, one from the git panel or a node's menu, or a group's all. It
- * counts the work again when it opens rather than trusting a list that may be minutes old, and it only
- * sends `force` when the numbers it showed said something would be lost: the daemon refuses anything
- * else with work in it, so a count that grew in between comes back here as a new question. With work
- * in one, merging first is offered next to removing.
+ * The question before worktrees go. It counts the work again when it opens, and sends `force` only when
+ * the numbers it showed said something would be lost: the daemon refuses anything else with work in it,
+ * so a count that grew in between comes back as a new question.
  */
 export function RemoveWorktreeDialog() {
     const { t } = useTranslation(['shell', 'common']);

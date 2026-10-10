@@ -57,8 +57,7 @@ function useFolded(bar: React.RefObject<HTMLElement | null>, actions: React.RefO
         }
         measure();
         return () => observer.disconnect();
-        // Again on every fold: the actions are a new element each time they come back, and the
-        // observer has to be on that one.
+        // Again on every fold: the actions are a new element each time they come back.
     }, [bar, actions, enabled, foldedAt]);
 
     // A view that brings no actions has nothing to fold, whatever the bar measured before it changed.
@@ -162,8 +161,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                         }}
                         onDragEnd={() => setDragging(null)}
                     >
-                        {/* The title is what gives way: it truncates down to its glyph before anything else
-                    in the bar has to move. A host has its tabs in its place. */}
+                        {/* The title gives way first, down to its glyph. A host has its tabs in its place. */}
                         <span
                             data-cell-title=""
                             className={clsx(

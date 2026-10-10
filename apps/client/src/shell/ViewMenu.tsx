@@ -29,11 +29,7 @@ interface NewViewEntry {
     node: ReactNode;
 }
 
-/*
- * The rows of one list in the order the language reads their labels. Sorting is by what a person
- * sees, so the Dutch interface reads Kopje before Scheiding where the English one reads Separator
- * before Subheader, and a row nobody is offered takes its place with it.
- */
+/* The rows of one list sorted by their labels in the interface language; a row nobody is offered drops out. */
 function inOrder(entries: (NewViewEntry | false)[]): ReactNode[] {
     const order = labelCollator();
     return entries
@@ -78,11 +74,9 @@ export function NewViewTiles({ size = 'sm' }: { size?: 'sm' | 'md' }) {
 }
 
 /*
- * What the plus in the sidebar offers: a canvas, or one session with no canvas around it, and under
- * a line the two rows that divide the list rather than standing in it. The agent submenus are the
- * ones the dock uses, so the CLI list can never drift apart between the two. Each of the two groups
- * is alphabetical on its own: the line says what a group is for, and sorting across it would lose
- * that.
+ * What the plus in the sidebar offers: a canvas or one session, and under a line the two rows that
+ * divide the list. The agent submenus are the dock's, so the CLI list never drifts apart. Each group
+ * is sorted on its own, since sorting across the line would lose what it separates.
  */
 export function NewViewItems() {
     const { t } = useTranslation('shell');

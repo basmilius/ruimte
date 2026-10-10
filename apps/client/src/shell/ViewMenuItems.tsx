@@ -55,25 +55,17 @@ interface ViewMenuItemsProps {
 }
 
 /*
- * Everything a view can be asked, as menu items. The sidebar's right click, the view menu in the
- * toolbar and the right click on a cell's bar offer the same list in the same order, so the three
- * never drift apart; `ContextMenu` draws a `Menu.Item` as its own.
- *
- * Four groups, each a line apart: what the view is, how to get another one, where it stands, and
- * who else sees it, with the delete on its own at the bottom. A group nobody is offered takes its
- * line with it, so the menu never opens on a line against a line.
+ * Everything a view can be asked, as menu items. The sidebar, the toolbar's view menu and a cell's bar
+ * offer this one list, so they never drift apart; `ContextMenu` draws a `Menu.Item` as its own. A group
+ * nobody is offered takes its separator with it.
  */
 export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItemsProps) {
     const { t } = useTranslation(['shell', 'common']);
     const shared = useDocument((state) => state.shared).includes(viewId);
-    /* Offered whether or not the folder is a repository: finding that out means starting a git watch,
-       which opening a menu has no business doing, and sharing without one only writes a file nobody
-       pulls yet. Left out for a view that cannot travel, and for a divider, which goes where the
-       group under it goes and is nobody's to share. */
     const saved = useDocument((state) => state.views.some((candidate) => candidate.id === viewId));
     const view = useDocument((state) => cellViewOf(state, viewId) ?? undefined);
-    /* A canvas to land on. Without one the rows that put a view on a canvas would do nothing at all,
-       so they are left out rather than greyed, which a menu has no room to explain. */
+    /* Sharing is offered whether or not the folder is a repository: finding that out would start a
+       git watch, which opening a menu has no business doing. */
     const shareRefusal = useDatabaseViewShareRefusal(view);
     const hasCanvas = useDocument((state) => state.views.some(isCanvasView));
     const onCanvas = useDocument(hasActiveCanvas);
@@ -193,12 +185,10 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
 }
 
 /*
- * Putting a view beside the one on screen, and closing the one it sits in. Which view lands there is
- * the same question the shortcut answers (`freeViewFor`): the first one that is not standing
- * anywhere yet, since a view is in at most one cell. With every view already up, or with the grid
- * full, the row is not offered. Without an `at` the rows act on the focused cell, which is what the
- * toolbar's menu wants; a cell's own bar names itself and takes the focus first, because a split
- * always lands beside the focus.
+ * Putting a view beside the one on screen, and closing the cell. The view that lands there is the one
+ * the shortcut picks (`freeViewFor`); with none free or the grid full, the row is not offered. Without
+ * an `at` the rows act on the focused cell; a cell's own bar names itself and takes the focus first,
+ * because a split always lands beside the focus.
  */
 export function SplitItems({ at, separated = false }: { at?: CellAt; separated?: boolean }) {
     const { t } = useTranslation('shell');

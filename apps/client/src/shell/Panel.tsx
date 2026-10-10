@@ -62,8 +62,8 @@ export function Panel() {
 
     return (
         <SlidingColumn open={open} gap={gap} width={width} bounds={bounds} instant={instant} onWidthChange={(next) => useUi.getState().setPanelWidth(next)}>
-            {/* An open panel is the rightmost column, so on Windows and Linux the close button
-                        would land under the native window controls; the inset keeps their width free. */}
+            {/* An open panel is the rightmost column, so on Windows and Linux the close button would
+                land under the native window controls; the inset keeps their width free. */}
             <PanelHeader className={clsx('app-drag', open && hasOverlayControls() && 'toolbar-overlay-inset')}>
                 <div ref={setLeadingHeaderSlot} className="contents" />
                 <div ref={setTitleSignal} className="panel-title-signal hidden" />

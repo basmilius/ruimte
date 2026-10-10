@@ -80,9 +80,8 @@ export function Toolbar() {
                     <Separator />
                 </>
             )}
-            {/* The palette keeps the toolbar's right end, so with no panel beside it the search icon
-                is what sits under the window controls on Windows and Linux and the inset lands here.
-                An open panel reaches the window's edge instead and its header takes the inset over. */}
+            {/* With no panel open the palette's icon sits under the window controls on Windows and
+                Linux, so the inset lands here; an open panel's header takes it over. */}
             <ButtonGroup className={clsx(!panel.open && !voiceOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
                 <UpdateButton />
                 <VoiceButton />

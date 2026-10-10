@@ -149,6 +149,34 @@ function browseKey(endpointId: string, path: string): string {
     return `${endpointId}\u0000${path}`;
 }
 
+/* The row that goes up is the first item inside the folders group, not a row of its own above it. */
+function folderEntries(up: string | null, result: FsBrowseResult | null): Entry[] {
+    const list: Entry[] = [];
+    if (up !== null) {
+        list.push({
+            id: 'browse-up',
+            label: '..',
+            icon: <Icon icon={CornerLeftUp} size={14} />,
+            section: 'folders',
+            browsePath: up,
+            run: () => undefined
+        });
+    }
+    /* The check on a folder that already holds a canvas says what Enter does: open that project
+       again rather than make a second one beside it. */
+    for (const entry of result?.entries ?? []) {
+        list.push({
+            id: `dir-${entry.fullPath}`,
+            label: entry.name,
+            icon: entry.hasCanvas ? <Icon icon={FolderCheck} size={14} /> : <Icon icon={Folder} size={14} />,
+            section: 'folders',
+            browsePath: entry.fullPath,
+            run: () => undefined
+        });
+    }
+    return list;
+}
+
 const LIST_ID = 'palette-list';
 function optionId(index: number): string {
     return `palette-option-${index}`;
@@ -161,8 +189,10 @@ function matches(query: string, text: string): boolean {
     return words.every((word) => haystack.includes(word));
 }
 
-/* One of the three switches that narrow a search in files, drawn as the pressed gray key every
-   other toggle in the app uses. */
+function PaletteNote({ children }: { children: React.ReactNode }) {
+    return <div className="px-3 py-6 text-center text-xs text-text-faint">{children}</div>;
+}
+
 function SearchToggle({ icon, label, active, onClick }: { icon: LucideIcon; label: string; active: boolean; onClick: () => void }) {
     return (
         <IconButton
@@ -292,10 +322,9 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
         setFailure(null);
     };
 
-    /* A palette that opens, a mode that changes and the browse command being chosen all start it
-       over: the machine the app is pointed at, nothing of the last browse on screen, and the step
-       that was asked for. A browsing step opens with an empty field, and the effect below asks for
-       its start folder, so the path and the first listing land together. */
+    /* Opening, a mode change and the browse command start over on the machine the app is pointed at.
+       A browsing step opens with an empty field and the effect below asks for its start folder, so
+       the path and the first listing land together. */
     const restart = (next: string, browseNow: boolean): void => {
         setListing(null);
         setFailure(null);
@@ -386,11 +415,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
         [transport, commitBrowse, cwdFor]
     );
 
-    /*
-     * Opening the folders of a machine, which is the one navigation with no path behind it. The
-     * start folder is one setting for every machine, so it may well not be on this one; home is, so
-     * that is where a start folder the daemon says is not there falls back to.
-     */
+    /* The start folder is one setting for every machine, so it may not exist on this one; home always does. */
     const startBrowsing = useCallback(
         async (endpointId: string): Promise<void> => {
             const info = serverInfoOf(endpointId);
@@ -470,10 +495,8 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
     }, [open, machineStep, accountStatus]);
 
     /*
-     * Picking a machine that is open lists its folders straight away. Any other machine waits for its
-     * link on its own step first, a row that only the account has included. The path resets to that
-     * machine's start folder: a path from one machine rarely exists on the next, and landing on
-     * "create this folder" by accident helps nobody.
+     * An open machine lists its folders at once; any other waits for its link on a step of its own.
+     * The path resets to that machine's start folder, since a path from one machine rarely exists on the next.
      */
     const chooseMachine = useCallback(
         (endpointId: string): void => {
@@ -568,8 +591,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                     return {
                         id: `machine-${row.endpointId}`,
                         label: row.label,
-                        /* The icon a machine was given, the same one the settings page and every menu
-                           show; the daemon's own hostname behind the name said nothing the name did not. */
+                        // The icon a machine was given, the same one the settings page and every menu show.
                         icon: <MachineGlyph icon={iconOfEntry(row.entry, servers[row.endpointId]?.icon ?? null)} size={14} />,
                         trailing: (
                             <>
@@ -587,33 +609,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
             if (linkWait !== null) {
                 return [];
             }
-            const up = parentOf(query, sep);
-            const list: Entry[] = [];
-            // The row that goes up is the first item inside the group, not a row of its own above it.
-            if (up !== null) {
-                list.push({
-                    id: 'browse-up',
-                    label: '..',
-                    icon: <Icon icon={CornerLeftUp} size={14} />,
-                    section: 'folders',
-                    browsePath: up,
-                    run: () => undefined
-                });
-            }
-            /* A folder row is an icon and a name. The check on a folder that already holds a canvas
-               is the one thing that stays, because it says what Enter will do: open that project
-               again rather than make a second one beside it. */
-            for (const entry of listing?.result?.entries ?? []) {
-                list.push({
-                    id: `dir-${entry.fullPath}`,
-                    label: entry.name,
-                    icon: entry.hasCanvas ? <Icon icon={FolderCheck} size={14} /> : <Icon icon={Folder} size={14} />,
-                    section: 'folders',
-                    browsePath: entry.fullPath,
-                    run: () => undefined
-                });
-            }
-            return list;
+            return folderEntries(parentOf(query, sep), listing?.result ?? null);
         }
         // Every view, not only the canvas on screen; a node elsewhere says where it lives.
         const jumps: Entry[] = views.flatMap((view) => {
@@ -699,9 +695,8 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
             section
         });
         if (query === '') {
-            /* Nothing typed is not the moment for the whole catalog: what was reached for last, the
-               nodes of the canvas in front of you, the views of this project, and the few actions
-               that earn a place. Everything else answers to a query. */
+            /* Nothing typed shows what was reached for last, the nodes of the canvas on screen, the
+               views and a few featured actions; the rest of the catalog answers to a query. */
             const split = sortByRecency(commands, recents);
             const featured = split.rest.filter((command) => OPENING_COMMAND_IDS.includes(command.id));
             return [
@@ -711,10 +706,9 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                 ...featured.map((command) => asEntry(command, 'actions'))
             ];
         }
-        /* Every section is filtered on its own, so the file results can keep their place in the
-           middle. They answer to the query already, in the daemon's own ranking, and are not
-           filtered a second time here. Views go first: every node's hint names its view, so the
-           nodes of a view would otherwise bury the view itself under its own name. */
+        /* The file results already answer to the query in the daemon's ranking, so only the other
+           sections are filtered. Views go first: every node's hint names its view, so its nodes
+           would otherwise bury the view under its own name. */
         const keep = (entry: Entry): boolean => matches(query, `${entry.label} ${entry.hint ?? ''}`);
         return [
             ...viewSwitches.filter(keep),
@@ -839,16 +833,13 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
     return (
         <Dialog.Root open={open && entered} onOpenChange={setOpen} onOpenChangeComplete={(isOpen) => !isOpen && onClosed()}>
             <Dialog.Popup
-                /* Wider while searching in files, since a hit is read in the lines around it and those
-                       lines are source, which does not fold. Never centered either: the popup grows and
-                       shrinks with every keystroke, and a centered list would walk up the screen as you type. */
+                /* Wider while searching in files, since source lines do not fold. Never centered: the
+                   popup changes height with every keystroke, and a centered list would walk up the screen. */
                 className={clsx('top-[18vh] [translate:-50%_0]', grepping ? 'w-[760px]' : 'w-[576px]')}
                 initialFocus={inputRef}
             >
                 <div className="flex items-center gap-2 border-b border-border px-3">
-                    {/* The leading slot is the way one step back, and on the folders of a machine
-                            it says which machine that is. With one machine there is nothing to name,
-                            so it is the plain arrow that leaves browsing. */}
+                    {/* One step back; on the folders of a machine it names that machine. */}
                     {browsing && (
                         <Tooltip label={backLabel} kbd={KEY_SHORTCUTS.backspace}>
                             <Button
@@ -862,9 +853,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                                     <Icon icon={ArrowLeft} size={14} />
                                 ) : (
                                     <>
-                                        {/* The icon, not a dot: it is the machine's own mark, the rows
-                                                behind this button carry the same one, and a machine whose
-                                                folders are on screen is answering by definition. */}
+                                        {/* The machine's icon rather than a status dot: a machine whose folders are on screen is answering. */}
                                         <MachineGlyph icon={browseIcon} size={14} />
                                         <span className="max-w-32 truncate">{browseLabel}</span>
                                     </>
@@ -885,8 +874,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                             grepping ? (activeHit >= 0 ? optionId(activeHit) : undefined) : active ? optionId(entries.indexOf(active)) : undefined
                         }
                         aria-label={grepping ? t('palette.searchFiles') : picking ? t('palette.pickFile') : t('palette.inputLabel')}
-                        /* A path stays in the same sans font as everything else: monospace makes
-                               it read as something to be read rather than something to be typed. */
+                        /* A path stays in the sans font: monospace makes it read as something to read rather than to type. */
                         className={clsx(
                             'h-11 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint',
                             grepping && 'font-mono text-code'
@@ -925,7 +913,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                                     !machineStep &&
                                     (active === undefined || matchesShortcut(KEY_SHORTCUTS.modEnter, e, isApplePlatform()))
                                 ) {
-                                    void submitPath(query);
+                                    submitPath(query);
                                 } else {
                                     run(active, wantsNewWindow(e));
                                 }
@@ -968,8 +956,6 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                             />
                         </ButtonGroup>
                     )}
-                    {/* The button that opens what was typed sits in the field, at its right end,
-                            carrying the one shortcut that does the same thing. */}
                     {browsing && !machineStep && linkWait === null && (
                         <Tooltip label={submitLabel} kbd={submitShortcut}>
                             <Button size="sm" variant="secondary" disabled={query.trim() === ''} onClick={() => submitPath(query)}>
@@ -982,22 +968,16 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                 </div>
                 <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label={t('palette.results')}>
                     <div aria-live="polite">
-                        {entries.length === 0 && !browsing && !grepping && !picking && (
-                            <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.noMatch')}</div>
-                        )}
+                        {entries.length === 0 && !browsing && !grepping && !picking && <PaletteNote>{t('palette.noMatch')}</PaletteNote>}
                         {picking && entries.length === 0 && (
-                            <div className="px-3 py-6 text-center text-xs text-text-faint">
-                                {folder === null ? t('palette.noProjectFolder') : t('palette.noFileMatch')}
-                            </div>
+                            <PaletteNote>{folder === null ? t('palette.noProjectFolder') : t('palette.noFileMatch')}</PaletteNote>
                         )}
                         {grepping && query.trim() !== '' && !grep.busy && grep.failure === null && grep.matches.length === 0 && (
-                            <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.noLineMatch')}</div>
+                            <PaletteNote>{t('palette.noLineMatch')}</PaletteNote>
                         )}
-                        {grepping && query.trim() === '' && <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.typeToSearch')}</div>}
+                        {grepping && query.trim() === '' && <PaletteNote>{t('palette.typeToSearch')}</PaletteNote>}
                         {machineStep && entries.length === 0 && (
-                            <div className="px-3 py-6 text-center text-xs text-text-faint">
-                                {machines.length === 0 ? t('palette.noMachineYet') : t('palette.noMachineMatch')}
-                            </div>
+                            <PaletteNote>{machines.length === 0 ? t('palette.noMachineYet') : t('palette.noMachineMatch')}</PaletteNote>
                         )}
                         {/* The machine whose folders were asked for, while its link comes up or after it did not. */}
                         {linkWait !== null && (
@@ -1033,8 +1013,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                             onRun={(at) => runHit(at)}
                         />
                     )}
-                    {/* An empty folder is the label with nothing under it: no spinner, no message,
-                            and the previous listing stays up until the next one lands. */}
+                    {/* An empty folder is the label with nothing under it; the previous listing stays up until the next one lands. */}
                     {browsing && !machineStep && linkWait === null && entries.length === 0 && (
                         <SectionLabel render={<div />} className="px-2.5 pt-1.5 pb-1">
                             {t('palette.sections.folders')}
@@ -1069,7 +1048,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                         );
                     })}
                     {/* fs.browse says whether the typed folder exists, so a missing one can be offered for creation. */}
-                    {presence === 'missing' && <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.createHint')}</div>}
+                    {presence === 'missing' && <PaletteNote>{t('palette.createHint')}</PaletteNote>}
                 </div>
                 {grepping && (
                     <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
@@ -1097,8 +1076,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                             <Kbd variant="inline">↑</Kbd>
                             <Kbd variant="inline">↓</Kbd> {t('palette.navigate')}
                         </span>
-                        {/* The Enter hint is left out once the typed path can be opened, because
-                                the button in the field is already saying so. */}
+                        {/* Once the typed path can be opened, the button in the field already shows Enter. */}
                         {linkWait === null && (active !== undefined || query.trim() === '') && (
                             <span className="flex shrink-0 items-center gap-1.5">
                                 <Kbd shortcut={KEY_SHORTCUTS.enter} variant="inline" /> {t('common:action.select')}

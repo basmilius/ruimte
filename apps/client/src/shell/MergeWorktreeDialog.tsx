@@ -37,10 +37,8 @@ import { useTransport } from '@/transport/context';
 type Reading = { request: WorktreeMergeRequest; worktrees: Worktree[]; error: { message: string | null } | null };
 
 /*
- * The one question before worktrees are merged, for a single one from the git panel or a node's menu
- * and for all of a group's at once. It counts the work again when it opens, offers to commit what is
- * not committed under a message naming the node, remembers the strategy on this client, and says so
- * when an agent is still working in one: the button then stops it first.
+ * The one question before worktrees are merged, one or a group's at once. It counts the work again when
+ * it opens, remembers the strategy on this client, and stops an agent still working in one first.
  */
 export function MergeWorktreeDialog() {
     const { t } = useTranslation(['shell', 'common']);

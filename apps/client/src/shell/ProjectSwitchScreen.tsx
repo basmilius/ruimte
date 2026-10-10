@@ -126,9 +126,9 @@ function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }
 }
 
 /*
- * Stands over the main column while the window moves to another project, and over the whole start screen when it moves from there, so a machine that takes
- * seconds to answer reads as waiting rather than frozen. Nothing for the first moments of a switch
- * (`REVEAL_DELAY_MS`), and a failure stays until a person picks what to do about it.
+ * Stands over the main column (or the whole start screen) while the window moves to another project, so
+ * a machine that takes seconds to answer reads as waiting rather than frozen. Nothing for the first
+ * moments (`REVEAL_DELAY_MS`); a failure stays until a person picks what to do about it.
  */
 export function ProjectSwitchScreen() {
     const state = useProjectSwitch((s) => s);

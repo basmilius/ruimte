@@ -1,9 +1,7 @@
 /*
- * Where every cell of the grid stands on screen, by the view it holds. A browser page is not drawn
- * by React at all: it is an element parked outside the tree and moved into place by hand, so the one
- * layer that does that has to be able to ask where a cell is. The alternative, a parking layer per
- * cell, would move a <webview> between parents whenever a view changes cells, and a page that leaves
- * the document reloads.
+ * Where every cell of the grid stands on screen, by the view it holds. A browser page is parked outside
+ * the React tree and moved into place by hand, since a <webview> that changes parent reloads, so the one
+ * layer that parks pages asks here where a cell is.
  */
 const cells = new Map<string, HTMLElement>();
 const listeners = new Set<() => void>();

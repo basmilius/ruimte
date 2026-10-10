@@ -1,10 +1,9 @@
-import { MAX_COLUMNS, type CellAt, type SplitZone } from '@/shell/split';
+import type { CellAt, SplitZone } from '@/shell/split';
 import type { PreviewRect } from '@/shell/tab-drop';
 
 /*
- * What a dragged view carries. A row in the sidebar and a cell of the grid are the same gesture with
- * two different targets, and neither has to know where it lands: both write this type, and the
- * sidebar's own reorder and the grid's drop layer both listen for it.
+ * What a dragged view carries. A sidebar row and a grid cell are the same gesture with two targets and
+ * neither knows where it lands, so both write this type and both drop targets listen for it.
  */
 export const VIEW_DRAG_TYPE = 'application/x-ruimte-view';
 
@@ -27,10 +26,9 @@ let heldWhole = false;
 let heldTabWidth: number | null = null;
 
 /*
- * Which view is being dragged right now. The payload itself is kept from the page until the drop,
- * so a target that has to decide whether it can take the drag, and draw that decision, cannot read
- * it. There is one pointer, so one drag: this is that drag, set where it starts and cleared where it
- * ends. Null for a drag that started outside this window, which the grid then simply refuses.
+ * Which view is being dragged right now. The page cannot read the payload before the drop, so a target
+ * deciding whether it can take the drag reads this. Null for a drag from outside this window, which the
+ * grid refuses.
  */
 export function dragging(): string | null {
     return held;
@@ -57,12 +55,9 @@ export function draggingWholeCell(): boolean {
 }
 
 /*
- * Embedded pages absorb drag events before the cell sees them. Browser views, HTML previews and
- * chat visuals step out of the pointer's way for the whole drag (`body[data-dragging]` in
- * `styles.css`). An attribute rather than state, because the pages are not all in one tree.
- *
- * Watched on the window and not set by each source, since a source that forgets it leaves a drag
- * that works everywhere except over a page, which is the hardest kind of gap to find.
+ * Embedded pages absorb drag events before the cell sees them, so browser views, HTML previews and chat
+ * visuals step out of the pointer's way for the whole drag (`body[data-dragging]` in `styles.css`). An
+ * attribute because the pages are not all in one tree; watched on the window so no source can forget it.
  */
 export function watchDrags(): () => void {
     const mark = (dragging: boolean) => (): void => {
@@ -93,12 +88,9 @@ export function watchDrags(): () => void {
 let gridTakes = false;
 
 /*
- * What stands in the cell reads this claim and leaves the drop alone, so one file never becomes
- * both a canvas node and a view. Like `dragging()`, there is only one claim for the one pointer.
- *
- * The cell sets it while the drag passes over it, before what is inside the cell has seen the event,
- * and clears it on the way out. Nothing here stops the event: a drop on a page mid-drag is decided
- * by the browser, and a handler that cuts the propagation short takes that decision away from it.
+ * The cell claims a dragged path while the drag passes over it, before what is inside has seen the
+ * event, and what stands in the cell leaves the drop alone, so one file never becomes both a canvas
+ * node and a view. Nothing stops the event: a drop on a page mid-drag is the browser's decision.
  */
 export function gridTakesPath(): boolean {
     return gridTakes;
@@ -126,11 +118,7 @@ export interface Spot {
     y: number;
 }
 
-/*
- * Which of the five drop points the pointer is over. The edges split, the middle takes the place of
- * the view standing there, which is the point most apps leave out: opening a view where you want it
- * without making a cell for it.
- */
+/* Which of the five drop points the pointer is over. */
 export function zoneAt(box: Box, spot: Spot): SplitZone {
     const edgeX = Math.min(box.width * EDGE_SHARE, EDGE_MAX);
     const edgeY = Math.min(box.height * EDGE_SHARE, EDGE_MAX);
@@ -161,17 +149,14 @@ export function pathZoneAt(box: Box, spot: Spot, taken: string | null = null): S
 }
 
 /*
- * The rectangle the view would take, as shares of the cell it is dropped on, with `column` saying
- * the shape reaches past the cell. Dropping on the side of a cell in a column of three gives a whole
- * new column rather than a neighbor for that one cell, and that is what has to be drawn: you aim at
- * a cell and get a column, so you have to see it before you let go.
+ * The rectangle the view would take, as shares of the cell it is dropped on. A side drop makes a whole
+ * new column, so `column` says the shape reaches past the cell and is drawn that way before the drop.
  */
 export interface DropShape {
     x: number;
     y: number;
     width: number;
     height: number;
-    /* True when the shape is the height of the whole column instead of the cell's own. */
     column: boolean;
 }
 
@@ -203,10 +188,7 @@ export function shapeRect(shape: DropShape, column: PreviewRect, cell: PreviewRe
     return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
-/* A drop that lands on the cell the view already stands in, alone in the grid, changes nothing. */
+/* A drop on the middle of the cell the view already stands in changes nothing. */
 export function isNowhereDrop(from: CellAt | null, at: CellAt, zone: SplitZone): boolean {
     return from !== null && from.column === at.column && from.cell === at.cell && zone === 'center';
 }
-
-/* The most columns there can be, for a caller that draws a hint about the limit. */
-export { MAX_COLUMNS };
