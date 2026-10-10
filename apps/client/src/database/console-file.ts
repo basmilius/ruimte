@@ -160,10 +160,13 @@ function schemaStorageKey(path: string): string | null {
 /* The schema of a console is this client's, kept by its path, so a console opened again from the tree runs where it ran. */
 export function rememberConsoleSchema(path: string, schema: string | undefined): void {
     const key = schemaStorageKey(path);
+    if (key === null) {
+        return;
+    }
     try {
-        if (key !== null && schema === undefined) {
+        if (schema === undefined) {
             localStorage.removeItem(key);
-        } else if (key !== null && schema !== undefined) {
+        } else {
             localStorage.setItem(key, schema);
         }
     } catch {

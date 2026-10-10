@@ -19,13 +19,10 @@ export function databaseTabId(key: string): string {
 const focus = (state: TabPool, key: string): TabState => ({ tabs: state.tabs, active: key });
 
 /*
- * What a database view asked for, as loose tabs, with the one to bring to the front. How many a host holds
- * is the limit's to say once they are placed (`tabsOverLimit`).
- * A table opens once per table and view, and opening it again brings that tab up, except a filtered one:
- * the filter is what the person asked to see, so it gets a tab of its own. A table is designed in one tab,
- * and the designer that just created or renamed a table (`source`) becomes the designer of that table
- * rather than leaving it to a second one. `preview: false` is a double click in the explorer, which pins
- * the tab the way a double click on the tab does.
+ * What a database view asked for, as loose tabs, with the one to bring to the front; the tab limit applies
+ * once they are placed (`tabsOverLimit`). A table opens once per table and view, except a filtered one,
+ * which gets a tab of its own. The designer that just created or renamed a table (`source`) becomes that
+ * table's designer. `preview: false` is a double click in the explorer, which pins the tab.
  */
 export function applyDatabaseAction(state: TabPool, action: DatabaseTabAction, createId: () => string, source: string | null = null): TabState {
     const place = (tab: DatabaseTab): TabState => placeTab(state, tab);
@@ -86,17 +83,12 @@ export function reopenAction(tab: DatabaseTab): DatabaseTabAction | null {
         return null;
     }
     const ref = { connectionId: tab.connectionId, schema: tab.schema, table: tab.table };
+    const tableKind = tab.kind !== 'designer' && tab.tableKind !== undefined ? { tableKind: tab.tableKind } : {};
     switch (tab.kind) {
         case 'table':
-            return {
-                kind: 'open-table',
-                ref,
-                view: 'data',
-                ...(tab.where === undefined ? {} : { where: tab.where }),
-                ...(tab.tableKind === undefined ? {} : { tableKind: tab.tableKind })
-            };
+            return { kind: 'open-table', ref, view: 'data', ...(tab.where === undefined ? {} : { where: tab.where }), ...tableKind };
         case 'structure':
-            return { kind: 'open-table', ref, view: 'structure', ...(tab.tableKind === undefined ? {} : { tableKind: tab.tableKind }) };
+            return { kind: 'open-table', ref, view: 'structure', ...tableKind };
         case 'designer':
             return { kind: 'edit-table', ref };
     }

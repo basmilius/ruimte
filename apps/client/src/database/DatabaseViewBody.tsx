@@ -6,10 +6,9 @@ import { DatabaseBody } from '@/database/DatabaseTabBody';
 import { useDatabasePanel } from '@/database/state';
 
 /*
- * A database view of the project: the table of a connection as its rows or its structure, drawn the way
- * the same table is in a loose tab. A connection that this machine does not have, or whose password has to
- * be entered again, leaves the cell with a way to the connections instead of an error, since the view came
- * from a colleague's file and nothing here is broken.
+ * A database view of the project, drawn the way the same table is in a loose tab. A connection this machine
+ * lacks, or whose password has to be entered again, offers the connections instead of an error, since the
+ * view may come from a colleague's file.
  */
 export function DatabaseViewBody({ view }: { view: ProjectDatabaseView }) {
     const { t } = useTranslation('databases');

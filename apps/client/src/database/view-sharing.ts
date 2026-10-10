@@ -3,11 +3,9 @@ import { isDatabaseView, type DatabaseConnection, type ProjectView } from '@ruim
 import { databaseConnections, ensureDatabaseConnections, useDatabaseConnectionList } from '@/database/connections';
 
 /*
- * Why a database view cannot go in the shared file, or null when it can. A view names its connection by id
- * and the connection travels only when a person shared it (`databases.json`), so a view on a private
- * connection would arrive at a colleague as a table of a connection nobody has. The daemon cannot tell,
- * since it never reads which connections a project has when a view is saved; sharing is a person's own
- * `project.save`, so this is the place that holds it back.
+ * Why a database view cannot go in the shared file, or null when it can. A view on a private connection
+ * would reach a colleague as a table of a connection nobody has. The daemon never reads the connections
+ * when a view is saved, so this is the place that holds it back.
  */
 export function databaseViewShareRefusal(view: ProjectView, connections: readonly DatabaseConnection[] = currentConnections()): 'private-connection' | null {
     if (!isDatabaseView(view)) {

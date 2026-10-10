@@ -15,11 +15,9 @@ export type DatabaseSurface =
     | { kind: 'designer'; connectionId: string; schema: string; table?: string | undefined };
 
 /*
- * A table, its structure or its designer on the connection it names, with where the table is at the start
- * of the view's own bar. A loose tab and a database view of the project draw the same body, so the toolbar
- * and the guards are one thing; `stateKey` is what a body with edits nobody submitted is remembered under,
- * and `unavailable` is what stands in the cell when the connection is not there. Each body answers its
- * views' actions itself, so a designer that saved a table turns its own tab into that table's designer.
+ * A table, its structure or its designer, drawn the same in a loose tab and in a database view of the
+ * project. `stateKey` is what unsubmitted edits are remembered under, and `unavailable` stands in the
+ * cell when the connection is not there.
  */
 export function DatabaseBody({
     stateKey,

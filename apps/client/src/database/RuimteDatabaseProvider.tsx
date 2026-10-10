@@ -28,11 +28,8 @@ function localStorageArea(): Storage | null {
 }
 
 /*
- * The client of the workspace and what Ruimte hands every database view: where a table or a console
- * opens, where their news goes (the toasts), where the views keep their settings, the file dialogs, and
- * numbers in the person's region.
- * `keepTableFocus` leaves the keyboard where it is when a table opens, for a tree whose next arrow key
- * is its own; a console or a designer takes it either way.
+ * The workspace's client and what Ruimte hands every database view. `keepTableFocus` leaves the keyboard
+ * where it is when a table opens, for a tree whose next arrow key is its own.
  */
 export function RuimteDatabaseProvider({ keepTableFocus = false, children }: { keepTableFocus?: boolean; children: ReactNode }) {
     const { endpointId } = useConnection();

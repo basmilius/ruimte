@@ -38,11 +38,9 @@ interface SqlConsoleProps {
 }
 
 /*
- * A `.sql` file in its tab, as a console: the console's bar, history and results around the file's own editor,
- * which keeps its keymap, find, saving and language features. The text is the file's, so a run runs what the
- * file holds and a run from the history is an edit of the file. The connection and the schema are picked in the
- * console's own bar and kept on the tab. A file that runs nowhere yet, or whose connection left the project, has
- * the bar with only Run on a connection; the editor stays where it is when it gets one.
+ * A `.sql` file in its tab, as a console around the file's own editor, which keeps its keymap, find, saving
+ * and language features. The text is the file's, so a run from the history is an edit of the file. The
+ * connection and schema are kept on the tab.
  */
 export function SqlConsole({ tabKey, binding, editor, text, readOnly, children }: SqlConsoleProps) {
     const connections = useDatabaseConnectionList();
@@ -116,6 +114,13 @@ function RunOnConnection({ path }: { path: string }) {
     );
 }
 
+function runScopeOf(event: KeyboardEvent, apple: boolean): QueryConsoleRunScope | null {
+    if (matchesShortcut(RUN_ALL_SHORTCUT, event, apple)) {
+        return 'all';
+    }
+    return matchesShortcut(RUN_SHORTCUT, event, apple) ? 'selection-or-statement' : null;
+}
+
 /* Hands the console the selection of the file's editor and runs on its two keys, which only a tab in console mode binds. */
 function ConsoleEditor({ ref, run, value, editor, children }: QueryConsoleEditorProps & { editor: Editor | null; children: ReactNode }) {
     const runRef = useRef(run);
@@ -146,11 +151,7 @@ function ConsoleEditor({ ref, run, value, editor, children }: QueryConsoleEditor
         }
         const apple = isApplePlatform();
         return editor.onKeyDown((event) => {
-            const scope: QueryConsoleRunScope | null = matchesShortcut(RUN_ALL_SHORTCUT, event, apple)
-                ? 'all'
-                : matchesShortcut(RUN_SHORTCUT, event, apple)
-                  ? 'selection-or-statement'
-                  : null;
+            const scope = runScopeOf(event, apple);
             if (scope === null) {
                 return false;
             }

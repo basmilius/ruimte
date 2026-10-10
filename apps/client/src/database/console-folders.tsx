@@ -13,7 +13,7 @@ import { useServer } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 
 /* What a console's menu asked for, which waits for the person in a dialog. */
-type ConsoleQuestion = { kind: 'rename'; path: string } | { kind: 'delete'; path: string };
+type ConsoleQuestion = { kind: 'rename' | 'delete'; path: string };
 
 /* A name typed for a console keeps it a console: `.sql` is added where the person left it out. */
 export function consoleNameOf(typed: string): string {

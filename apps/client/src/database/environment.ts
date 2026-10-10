@@ -12,10 +12,11 @@ export function databaseStorageKey(endpointId: string, projectId: string, key: s
 
 /* Where the views keep what a person set. Storage that refuses keeps it for this session only, the way the panels do. */
 export function databaseStorage(area: DatabaseStorageArea | null, endpointId: string, projectId: string): DatabaseStorage {
+    const keyOf = (key: string): string => databaseStorageKey(endpointId, projectId, key);
     return {
         get: (key) => {
             try {
-                return area?.getItem(databaseStorageKey(endpointId, projectId, key)) ?? null;
+                return area?.getItem(keyOf(key)) ?? null;
             } catch {
                 return null;
             }
@@ -23,9 +24,9 @@ export function databaseStorage(area: DatabaseStorageArea | null, endpointId: st
         set: (key, value) => {
             try {
                 if (value === null) {
-                    area?.removeItem(databaseStorageKey(endpointId, projectId, key));
+                    area?.removeItem(keyOf(key));
                 } else {
-                    area?.setItem(databaseStorageKey(endpointId, projectId, key), value);
+                    area?.setItem(keyOf(key), value);
                 }
             } catch {
                 // Full or refused: the view starts the same next time.

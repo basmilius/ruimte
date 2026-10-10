@@ -12,7 +12,8 @@ import {
     fromViewConnections,
     useDatabaseConnectionList,
     useDatabaseConnections,
-    useWithheldPasswords
+    useWithheldPasswords,
+    type ConnectionsStatus
 } from '@/database/connections';
 import { containersFor } from '@/database/docker';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
@@ -46,8 +47,6 @@ function DatabasesPanelBody() {
     const status = useDatabaseConnections((state) => state.status);
     const error = useDatabaseConnections((state) => state.error);
     const connections = useDatabaseConnectionList();
-    const selection = useDatabasePanel((state) => state.selection);
-    const consoles = useConsoleFolders();
 
     const header = (
         <PanelHeaderSlot>
@@ -59,42 +58,41 @@ function DatabasesPanelBody() {
         </PanelHeaderSlot>
     );
 
-    if (status === 'failed') {
-        return (
-            <>
-                {header}
-                <PanelEmpty
-                    icon={CircleAlert}
-                    action={
-                        <Button size="sm" variant="secondary" onClick={() => void databaseConnections.reload()}>
-                            {t('common:action.retry')}
-                        </Button>
-                    }
-                >
-                    {t('panel.failed', { reason: error ?? '' })}
-                </PanelEmpty>
-            </>
-        );
-    }
-    if (status !== 'ready') {
-        return (
-            <>
-                {header}
-                <PanelEmpty busy>{t('panel.reading')}</PanelEmpty>
-            </>
-        );
-    }
-    if (connections.length === 0) {
-        return (
-            <>
-                {header}
-                <NoConnections />
-            </>
-        );
-    }
     return (
         <>
             {header}
+            <PanelBodyFor status={status} error={error} connections={connections} />
+        </>
+    );
+}
+
+function PanelBodyFor({ status, error, connections }: { status: ConnectionsStatus; error: string | null; connections: readonly DatabaseConnection[] }) {
+    const { t } = useTranslation(['databases', 'common']);
+    const selection = useDatabasePanel((state) => state.selection);
+    const consoles = useConsoleFolders();
+
+    if (status === 'failed') {
+        return (
+            <PanelEmpty
+                icon={CircleAlert}
+                action={
+                    <Button size="sm" variant="secondary" onClick={() => void databaseConnections.reload()}>
+                        {t('common:action.retry')}
+                    </Button>
+                }
+            >
+                {t('panel.failed', { reason: error ?? '' })}
+            </PanelEmpty>
+        );
+    }
+    if (status !== 'ready') {
+        return <PanelEmpty busy>{t('panel.reading')}</PanelEmpty>;
+    }
+    if (connections.length === 0) {
+        return <NoConnections />;
+    }
+    return (
+        <>
             <WithheldPasswords connections={connections} />
             <DatabaseExplorer
                 connections={asViewConnections(connections)}

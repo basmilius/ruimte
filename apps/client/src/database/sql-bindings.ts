@@ -3,10 +3,9 @@ import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import type { DatabaseConnection, LanguageSqlChangedEvent, LanguageSqlState, ProjectSql, SqlBinding, SqlSnapshotInfo } from '@ruimte/contracts';
 import { messageOf } from '@adecore/ui';
 import { consoleConnectionOf } from '@/database/console-file';
+import { windowProjectFollower } from '@/database/window-project';
 import { endpointKey } from '@/state/keys';
-import { defaultProjectStore } from '@/state/project';
 import { useToasts } from '@/state/toasts';
-import { useWindow, windowWorkspace } from '@/state/window';
 import type { Transport } from '@/transport/transport';
 
 export interface SqlBindingsState {
@@ -178,34 +177,8 @@ export const sqlBindings = createSqlBindings({
 
 export const useSqlBindings = sqlBindings.store;
 
-/* The project the window has open; null on the start screen and in the Chats project, which has no databases. */
-function windowTarget(): SqlBindingsTarget | null {
-    const workspace = windowWorkspace();
-    const project = defaultProjectStore.getState().current;
-    if (workspace === null || project === null || project.scratch === true) {
-        return null;
-    }
-    return {
-        endpointId: workspace.connection.endpointId,
-        projectId: project.projectId,
-        folder: project.folder ?? null,
-        transport: workspace.connection.transport
-    };
-}
-
-let following = false;
-
 /* Reads the choices of the project on screen, and from then on follows the window to the next project. */
-export function ensureSqlBindings(): void {
-    sqlBindings.attach(windowTarget());
-    if (following) {
-        return;
-    }
-    following = true;
-    const follow = (): void => sqlBindings.attach(windowTarget());
-    useWindow.subscribe(follow);
-    defaultProjectStore.subscribe(follow);
-}
+export const ensureSqlBindings = windowProjectFollower((target) => sqlBindings.attach(target));
 
 /* Takes the snapshots again, and says why when none could be taken. */
 export async function refreshSqlSchemas(connectionId?: string): Promise<void> {

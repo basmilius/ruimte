@@ -26,10 +26,9 @@ import {
     type DatabaseSecretStore,
     type WithheldPassword
 } from '@/database/secrets';
+import { windowProjectFollower } from '@/database/window-project';
 import { endpointKey } from '@/state/keys';
-import { defaultProjectStore } from '@/state/project';
 import { useToasts } from '@/state/toasts';
-import { useWindow, windowWorkspace } from '@/state/window';
 import { isConnectionError, TransportError, type Transport } from '@/transport/transport';
 
 export type ConnectionsStatus = 'idle' | 'loading' | 'ready' | 'failed';
@@ -138,6 +137,8 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
     };
 
     const keyOf = (of: ConnectionsTarget): string => endpointKey(of.endpointId, of.projectId);
+    const superseded = (of: ConnectionsTarget, ticket: number): boolean => target !== of || ticket !== reads;
+    const sayConflict = (): void => deps.notify(i18next.t('databases:connections.conflict.title'), i18next.t('databases:connections.conflict.description'));
 
     let listed: { from: readonly unknown[]; list: DatabaseConnection[] } = { from: [], list: [] };
     const list = (state: DatabaseConnectionsState): DatabaseConnection[] => {
@@ -240,12 +241,12 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         }
         try {
             const answer = await of.transport.request('database.connections', { projectId: of.projectId });
-            if (target !== of || ticket !== reads) {
+            if (superseded(of, ticket)) {
                 return;
             }
             // A view or a test opened before its password is read would go without it.
             await readSecrets(of, answer.connections);
-            if (target !== of || ticket !== reads) {
+            if (superseded(of, ticket)) {
                 return;
             }
             store.setState({ status: 'ready', error: null, rev: answer.rev, saved: answer.connections });
@@ -253,7 +254,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
             handed = null;
             await Promise.all([handPasswords(of), readAgentAccess(of)]);
         } catch (error: unknown) {
-            if (target !== of || ticket !== reads) {
+            if (superseded(of, ticket)) {
                 return;
             }
             // A socket that comes back reads the list again (`subscribeStatus`), so a lost link is no failure.
@@ -322,7 +323,7 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
             }
             if (error instanceof TransportError && error.code === 'rev-conflict') {
                 store.setState({ local: null, saveError: null });
-                deps.notify(i18next.t('databases:connections.conflict.title'), i18next.t('databases:connections.conflict.description'));
+                sayConflict();
                 await load();
                 return;
             }
@@ -347,11 +348,11 @@ export function createDatabaseConnections(deps: ConnectionsDeps): DatabaseConnec
         }
         const ticket = ++reads;
         const apply = (): void => {
-            if (target !== of || ticket !== reads || saving) {
+            if (superseded(of, ticket) || saving) {
                 return;
             }
             if (store.getState().local !== null) {
-                deps.notify(i18next.t('databases:connections.conflict.title'), i18next.t('databases:connections.conflict.description'));
+                sayConflict();
             }
             store.setState({ status: 'ready', error: null, rev: event.rev, saved: event.connections, local: null, saveError: null });
             settle();
@@ -452,32 +453,8 @@ export const databaseConnections = createDatabaseConnections({
 
 export const useDatabaseConnections = databaseConnections.store;
 
-/* The project the window has open, as the connections are kept for it; null on the start screen and in the Chats project. */
-function windowTarget(): ConnectionsTarget | null {
-    const workspace = windowWorkspace();
-    const project = defaultProjectStore.getState().current;
-    if (workspace === null || project === null || project.scratch === true) {
-        return null;
-    }
-    return { endpointId: workspace.connection.endpointId, projectId: project.projectId, transport: workspace.connection.transport };
-}
-
-let following = false;
-
-/*
- * Reads the connections of the project on screen, and from then on follows the window to the next
- * project, so a surface that asks for them once never shows those of the project before.
- */
-export function ensureDatabaseConnections(): void {
-    databaseConnections.attach(windowTarget());
-    if (following) {
-        return;
-    }
-    following = true;
-    const follow = (): void => databaseConnections.attach(windowTarget());
-    useWindow.subscribe(follow);
-    defaultProjectStore.subscribe(follow);
-}
+/* Reads the connections of the project on screen, and from then on follows the window to the next project. */
+export const ensureDatabaseConnections = windowProjectFollower((target) => databaseConnections.attach(target));
 
 /*
  * The next list with the objects of the previous one wherever a connection did not change, so an edit

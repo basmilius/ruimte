@@ -27,10 +27,9 @@ function follow(): void {
 }
 
 /*
- * One client per workspace, which every surface that draws a database shares, so a table opened in
- * the cell and the explorer in the panel use one session on the machine. Every request goes as a
- * person's action, through the machine of the window's project. Reading a connection's tree and a
- * statement that changes a schema both have the machine take its schema snapshots again.
+ * One client per workspace, shared by every database surface so they use one session on the machine. Every
+ * request goes as a person's action. Reading a connection's tree and a statement that changes a schema both
+ * have the machine take its schema snapshots again.
  */
 export function databaseClientFor(key: string): DatabaseClient {
     if (current?.key === key) {
