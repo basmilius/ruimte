@@ -1,6 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, openSync, readFileSync } from 'node:fs';
 import { readFile, rm, writeFile } from 'node:fs/promises';
 import { Socket } from 'node:net';
 import { homedir } from 'node:os';
@@ -31,6 +31,7 @@ import { copyablePaths, fileClipboard, osClipboardFormat } from './file-clipboar
 import { openImageCopy } from './open-image';
 import { allFilesLabel, databaseSecretFile, openDialogPlan, parseOpenPathRequest, parseSavePathRequest, parseSecret, parseSecretKey } from './database-bridge';
 import { editFrameOf, runGuestEdit } from './guest-edit';
+import { contextMenuPayload, editableMenuTemplate, PREVIEW_ACTIONS, type BrowserContextAction, type GuestKind } from './guest-menu';
 import { askDaemonWork, proveDaemon, type DaemonPort } from './daemon-proof';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from './keep-awake';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
@@ -45,6 +46,7 @@ import { fileSecretStore, type SecretStore } from './secret-store';
 import { createOpenAiLiveSession, parseOpenAiLivePreferences } from './openai-live';
 import { SpeechService, speechHelperPath } from './speech';
 import { SpeechModel } from './speech-model';
+import { runSmoke } from './smoke';
 import { appSubframeNavigation, BROWSER_PARTITION, createGestureGate, isExternalLink, isWebLink, isSystemSettingsPane, PREVIEW_PARTITION } from './web-guards';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
@@ -69,10 +71,7 @@ const {
     webContents
 } = require('electron') as typeof import('electron');
 
-/*
- * The desktop shell: a window per project, the client inside each, the daemon next to them. Nothing
- * crosses IPC that the WebSocket already carries; only window chrome, native dialogs and guest devtools.
- */
+// Nothing crosses IPC that the WebSocket already carries.
 
 // A checkout keeps its own port, name and profile, so it runs beside an installed Ruimte instead of
 // quitting on that app's single instance lock or talking to its daemon.
@@ -96,7 +95,6 @@ const ruimteHome = app.isPackaged ? (process.env.RUIMTE_HOME ?? join(homedir(), 
 
 // The page is the shell's own, from the build in its resources; only `bun dev` serves it from Vite.
 const scheme = createDesktopAppScheme(clientRoot(), devUrl ?? undefined);
-// What the page reaches its own machine at, now that it is not served from there.
 const daemonUrl = `http://127.0.0.1:${port}`;
 
 protocol.registerSchemesAsPrivileged([scheme.privileged]);
@@ -112,7 +110,6 @@ function fromAppWindow(event: Electron.IpcMainEvent | Electron.IpcMainInvokeEven
     return scheme.isAppSender(windows.fromPage(event.sender) !== null, event.senderFrame);
 }
 
-/* The window whose page a message came from, which is where its dialog, its sheet and its answer belong. */
 function senderWindow(event: { sender: Electron.WebContents }): Electron.BrowserWindow | null {
     return windows.fromPage(event.sender);
 }
@@ -134,17 +131,13 @@ function onFromApp<Args extends unknown[]>(channel: string, listener: (event: El
 }
 
 /*
- * An app opened from the Dock or a launcher inherits a bare PATH, not the one the person's shell
- * builds in its rc files, and the daemon finds `claude` and friends through PATH. Asking the login
- * shell once is what every packaged Electron app does.
+ * An app opened from the Dock inherits a bare PATH, not the one the person's rc files build, and the
+ * daemon finds `claude` and friends through PATH. So the login shell is asked once.
  */
 let loginPath: string | null | undefined;
 
 function loginShellPath(): string | null {
-    if (loginPath !== undefined) {
-        return loginPath;
-    }
-    loginPath = askLoginShellPath();
+    loginPath ??= askLoginShellPath();
     return loginPath;
 }
 
@@ -162,7 +155,6 @@ function askLoginShellPath(): string | null {
     return match?.[1] || null;
 }
 
-/* Where the daemon is: compiled into the app's resources, or the repo when run from a checkout. */
 function daemonCommand(): { command: string; args: string[] } | null {
     if (app.isPackaged) {
         const bin = join(process.resourcesPath, 'bin');
@@ -175,7 +167,6 @@ function daemonCommand(): { command: string; args: string[] } | null {
     return { command: 'bun', args: [entry, '--port', String(port)] };
 }
 
-/* The built client the shell serves on its scheme: in the app's resources, or the repo's build when run from a checkout. */
 function clientRoot(): string {
     return app.isPackaged ? join(process.resourcesPath, 'client') : join(repoRoot, 'apps', 'client', 'dist');
 }
@@ -229,11 +220,7 @@ async function probeDaemon(): Promise<BuildIdentity | null> {
     }
 }
 
-/*
- * The daemon's local secret, which is how the app proves it runs on this machine now that a loopback
- * address proves nothing. Read on every ask rather than once: the daemon mints it on its first start,
- * which in `bun dev` may come after this window.
- */
+// Read on every ask: the daemon mints it on its first start, which under `bun dev` may come after this window.
 async function readLocalSecret(): Promise<string | null> {
     try {
         return (await readFile(join(ruimteHome, 'local.key'), 'utf8')).trim() || null;
@@ -289,7 +276,7 @@ function bundledBuild(): string | null {
 
 const support = serviceSupport({ packaged: app.isPackaged, platform: process.platform, appImage: process.env.APPIMAGE });
 
-/* Only a packaged app on macOS or Linux gets one; the dev app has none to touch, whatever it is asked. */
+// The dev app never touches launchd or systemd, whatever it is asked.
 function createServiceManager(): ServiceManager | null {
     return support === 'supported' ? platformServiceManager(process.platform) : null;
 }
@@ -372,11 +359,9 @@ const TITLEBAR_HEIGHT = 48;
 const OVERLAY_COLORS = { dark: { color: '#1b1b1f', symbolColor: '#ececf1' }, light: { color: '#ffffff', symbolColor: '#18181b' } };
 
 /*
- * The theme the client is in. The client owns it (it may follow the system or not) and reports it,
- * and the shell paints it on the native window controls, the window's own ground and the
- * `prefers-color-scheme` every page inside a webview asks for. The color travels with the message, so
- * `styles.css` stays the one place the token is written down. macOS keeps the traffic lights, inset
- * into the sidebar and lined up with the sidebar toggle; elsewhere the controls overlay the toolbar's right end.
+ * The client owns the theme and reports it with its color, so `styles.css` stays the one place the
+ * token is written; the shell paints it on the window controls, the window and every webview's
+ * `prefers-color-scheme`.
  */
 const theme = createTheme({
     nativeTheme,
@@ -451,8 +436,7 @@ function guardAppNavigation(contents: Electron.WebContents): void {
     });
 }
 
-/* What each window last asked for, by window id. Kept rather than applied once, since the power
-   source it depends on changes while the request stands. */
+// By window id. Kept rather than applied once, since the power source changes while a request stands.
 const keepAwakeRequests = new Map<number, KeepAwakeRequest>();
 
 const holdKeepAwake = createKeepAwakeHold(powerSaveBlocker);
@@ -486,11 +470,7 @@ onFromApp('power:keep-awake-request', (event, request: unknown) => {
     }
 });
 
-/*
- * What each window last said about its agents, by window id. The shell counts nothing itself: which
- * node holds an agent and which holds a shell somebody left attached is the client's own question,
- * and asking it twice is how the badge and the quit dialog would end up disagreeing with the toolbar.
- */
+// By window id. The shell counts nothing itself, so the badge and the quit dialog agree with the toolbar.
 const agentActivities = new Map<number, AgentActivity>();
 let agentActivity: AgentActivity = { working: 0, attention: 0 };
 
@@ -532,10 +512,8 @@ onFromApp('app:language', (_event, language: unknown) => {
 let quitAsked = false;
 
 /*
- * Under `bun dev` the launcher hands down a pipe (`scripts/launch.ts`). When it closes, because the terminal
- * stopped `bun dev` or the launcher died, the app goes with it and skips the question nobody is there to
- * answer. A signal is no way to tell: Chromium takes SIGINT itself and turns the first one into a quit
- * that the question holds up.
+ * Under `bun dev` the launcher hands down a pipe (`scripts/launch.ts`); when it closes the app quits
+ * without asking. A signal cannot tell: Chromium turns the first SIGINT into a quit the question holds up.
  */
 const launcherPipe = process.env[LAUNCHER_PIPE_VARIABLE];
 delete process.env[LAUNCHER_PIPE_VARIABLE];
@@ -550,10 +528,7 @@ if (launcherPipe !== undefined) {
     pipe.unref();
 }
 
-/*
- * Whether to go ahead with a quit. The machine is asked what runs on it only when the quit ends it,
- * since a window that closed took its own count with it and the last one may be gone already.
- */
+// The machine is asked what runs on it only when the quit ends it; the last window may be gone already.
 async function askBeforeQuit(): Promise<boolean> {
     const survives = serviceController.survivesQuit(stopMachineOnQuit);
     const question = quitQuestion({
@@ -572,17 +547,16 @@ async function askBeforeQuit(): Promise<boolean> {
 
 const pageKeys = createPageKeys();
 
-/* Every window opens where a person left it, maximized or in full screen included, under what it shows. */
 const windowState = createWindowState({
     storage: fileStorage(join(app.getPath('userData'), 'window-state.json')),
     displays: () => screen.getAllDisplays(),
     defaults: { width: 1440, height: 900 }
 });
 
-/* The application menu each window's page last sent, by window id. The one in front is the one drawn. */
+// By window id; the one in front is drawn.
 const menuTemplates = new Map<number, Electron.MenuItemConstructorOptions[]>();
 
-/* The view the window `window:open` is about to make shows first. `windows.open` calls `createWindow` in the same tick, which takes it. */
+// `windows.open` calls `createWindow` in the same tick, which takes this.
 let openingView: string | null = null;
 
 function createWindow(
@@ -605,9 +579,8 @@ function createWindow(
             // The bridge, the local secret included, stays in the top frame: a visual's page runs in a frame of this page.
             nodeIntegrationInSubFrames: false,
             webviewTag: true,
-            // On macOS the first is `NSLocale.currentLocale`, so it follows the Region setting, and
-            // the second is the language order from System Settings; `app.getLocale()` would hand
-            // back the language of the bundle, which is `en-US` even on a Dutch Mac.
+            // `app.getLocale()` is the bundle's language, `en-US` even on a Dutch Mac; these follow the
+            // Region setting and the language order of System Settings.
             additionalArguments: [
                 `--ruimte-system-locale=${app.getSystemLocale()}`,
                 `--ruimte-system-languages=${app.getPreferredSystemLanguages().join(',')}`,
@@ -663,7 +636,6 @@ function createWindow(
     return window;
 }
 
-/* A window per project, and the windows of the last session again at the next start. */
 const windows = createWindows({
     state: windowState,
     // Where the one window stood before there were several.
@@ -673,10 +645,7 @@ const windows = createWindows({
     onFront: (window) => applyMenuOf(window)
 });
 
-/*
- * The microphone is for the app's own pages, and only for audio. Set once on the session every
- * window shares; a handler per window would leave only the last window able to ask.
- */
+// Audio for the app's own pages only. Set once on the shared session: a handler per window would leave only the last one able to ask.
 function sealAppSession(): void {
     const own = session.defaultSession;
     own.setPermissionCheckHandler((requester, permission, _origin, details) => {
@@ -734,72 +703,16 @@ function guestDevTools(id: number, at?: { x: number; y: number }): void {
     devtoolsWindows.set(id, window);
 }
 
-/* Which guest a right-click came from, so the client draws a preview's menu without a page's history. */
-type GuestKind = 'browser' | 'preview';
-
-/* What the client may ask the shell to do on a guest page. Mirrors `apps/client/src/desktop/bridge.ts`. */
-interface BrowserContextAction {
-    webContentsId: number;
-    action: string;
-    payload?: { url?: string; x?: number; y?: number };
-}
-
-/* At most this many of the spellchecker's guesses get a row, so the menu cannot run off the screen. */
-const SPELLING_SUGGESTIONS = 5;
-
-/* Where a selection goes when someone asks the system browser to look it up, as in the client's menu. */
-const SEARCH_URL = 'https://www.google.com/search?q=';
-
-function menuLabel(text: string): string {
-    const line = text.trim().replace(/\s+/g, ' ');
-    return line.length > 24 ? `${line.slice(0, 24)}…` : line;
-}
-
-/*
- * The menu over an editable field, native on purpose. A text field is the one place where the
- * platform brings more than we can draw: macOS hangs AutoFill, Writing Tools and Services off an
- * AppKit menu, and none of that survives a menu the renderer paints. Standard roles are what the
- * platform recognizes, so every row that has one uses it, and the rows macOS appends itself are
- * not in the template.
- */
 function editableGuestMenu(contents: Electron.WebContents, params: Electron.ContextMenuParams, inspectable: boolean): void {
-    const template: Electron.MenuItemConstructorOptions[] = [];
-    for (const word of params.dictionarySuggestions.slice(0, SPELLING_SUGGESTIONS)) {
-        template.push({ label: word, click: () => contents.replaceMisspelling(word) });
-    }
-    if (template.length > 0) {
-        template.push({ type: 'separator' });
-    }
-    template.push(
-        { role: 'undo', enabled: params.editFlags.canUndo },
-        { role: 'redo', enabled: params.editFlags.canRedo },
-        { type: 'separator' },
-        { role: 'cut', enabled: params.editFlags.canCut },
-        { role: 'copy', enabled: params.editFlags.canCopy },
-        { role: 'paste', enabled: params.editFlags.canPaste }
-    );
-    // Only a rich field has a style to drop, which is the whole point of the row.
-    if (params.editFlags.canEditRichly) {
-        template.push({ role: 'pasteAndMatchStyle', enabled: params.editFlags.canPaste });
-    }
-    template.push({ role: 'delete', enabled: params.editFlags.canDelete }, { role: 'selectAll', enabled: params.editFlags.canSelectAll });
-    if (process.platform === 'darwin' && params.selectionText !== '') {
-        // Electron has no dictionary or search roles; macOS adds Share and Services through the frame.
-        template.push(
-            { type: 'separator' },
-            { label: `Look Up "${menuLabel(params.selectionText)}"`, click: () => contents.showDefinitionForSelection() },
-            { label: 'Search with Google', click: () => void shell.openExternal(`${SEARCH_URL}${encodeURIComponent(params.selectionText)}`) }
-        );
-    }
-    if (inspectable) {
-        template.push({ type: 'separator' }, { label: 'Inspect element', click: () => guestDevTools(contents.id, { x: params.x, y: params.y }) });
-    }
+    const template = editableMenuTemplate(params, process.platform, {
+        replaceMisspelling: (word) => contents.replaceMisspelling(word),
+        lookUp: () => contents.showDefinitionForSelection(),
+        openExternal: (url) => void shell.openExternal(url),
+        ...(inspectable ? { inspect: () => guestDevTools(contents.id, { x: params.x, y: params.y }) } : {})
+    });
     /*
-     * The frame is the one thing that makes AutoFill appear: without it Electron pops a plain menu
-     * and macOS appends none of its own rows (AutoFill, Writing Tools, Services). It is null once
-     * the frame navigated away or died, and then the menu still opens, just without those rows.
-     * AutoFill here routes to Apple's Passwords app only; Chrome's password manager is not in
-     * Electron. No position: the menu belongs at the cursor, which is where Electron puts it.
+     * The frame is what makes macOS append AutoFill, Writing Tools and Services; without it (navigated
+     * away or dead) the menu still opens, without those rows. AutoFill reaches Apple's Passwords app only.
      */
     Menu.buildFromTemplate(template).popup({ window: windows.fromContents(contents) ?? undefined, ...(params.frame ? { frame: params.frame } : {}) });
 }
@@ -808,11 +721,8 @@ function editableGuestMenu(contents: Electron.WebContents, params: Electron.Cont
 const menuFrames = new WeakMap<Electron.WebContents, Electron.WebFrameMain>();
 
 /*
- * A right-click inside a browser node's page or an HTML preview. Electron ships no menu for web
- * content (Chromium's own belongs to the Chrome browser) and a native one reads as another
- * program's, so the client draws it: the shell says what the click landed on and nothing more. An
- * editable field is the exception and never leaves the shell, because what the platform adds to a
- * native menu there is worth more than a menu in the app's own style.
+ * Electron ships no menu for web content and a native one reads as another program's, so the client
+ * draws it. An editable field stays native, since what the platform adds there is worth more.
  */
 function guestContextMenu(contents: Electron.WebContents, params: Electron.ContextMenuParams, guest: GuestKind): void {
     if (params.isEditable) {
@@ -824,36 +734,11 @@ function guestContextMenu(contents: Electron.WebContents, params: Electron.Conte
     } else {
         menuFrames.delete(contents);
     }
-    // The window the guest's page sits in draws the menu; a guest of no window of ours gets none.
-    windows.fromContents(contents)?.webContents.send('browser:context-menu', {
-        webContentsId: contents.id,
-        guest,
-        x: params.x,
-        y: params.y,
-        linkURL: params.linkURL,
-        linkText: params.linkText,
-        srcURL: params.srcURL,
-        mediaType: params.mediaType,
-        isEditable: params.isEditable,
-        selectionText: params.selectionText,
-        editFlags: {
-            canCut: params.editFlags.canCut,
-            canCopy: params.editFlags.canCopy,
-            canPaste: params.editFlags.canPaste,
-            canSelectAll: params.editFlags.canSelectAll
-        },
-        pageURL: params.pageURL
-    });
+    // A guest of no window of ours gets none.
+    windows.fromContents(contents)?.webContents.send('browser:context-menu', contextMenuPayload(contents.id, guest, params));
 }
 
-/* A sealed preview only reads: nothing it is asked to do may download, inspect or leave for the system browser. */
-const PREVIEW_ACTIONS = new Set(['copy', 'select-all', 'copy-image']);
-
-/*
- * The row the person picked, for the part of it the renderer cannot reach: the guest's own copy, a
- * download, the inspector and the system browser. The editing rows are not here, because an
- * editable field never reaches the client. Only a guest the menu came from takes one.
- */
+// What the renderer cannot reach itself. Editing rows never get here: an editable field's menu stays native.
 onFromApp('browser:context-action', (_event, request: BrowserContextAction) => {
     const contents = webContents.fromId(request.webContentsId);
     if (!contents || contents.isDestroyed()) {
@@ -900,7 +785,6 @@ handleFromApp('dialog:pick-folder', async (event, initialPath?: string) => {
     return result.canceled ? null : (result.filePaths[0] ?? null);
 });
 
-/* Bytes the client made (an exported drawing) go where a native dialog says they go. */
 handleFromApp('dialog:save-file', async (event, suggestedName: string, bytes: Uint8Array, mime: string) => {
     const window = senderWindow(event);
     if (!window) {
@@ -968,7 +852,7 @@ handleFromApp('shell:open-system-settings', async (_event, url: string) => {
     }
 });
 
-/* Files a person copied from a menu, for the file manager to paste. One path that is relative or gone refuses the whole copy. */
+// One path that is relative or gone refuses the whole copy.
 handleFromApp('clipboard:copy-files', async (_event, requested: unknown) => {
     const paths = copyablePaths(requested);
     const contents = paths === null ? null : fileClipboard(process.platform, paths);
@@ -982,11 +866,7 @@ handleFromApp('clipboard:copy-files', async (_event, requested: unknown) => {
 
 onFromApp('devtools:guest', (_event, id: number) => guestDevTools(id));
 
-/*
- * A png of a guest page, for an agent that asked what the page it drives looks like. Only the app's
- * own page may ask: a guest carries its own preload, which has none of this, and a picture of
- * another guest is not something a page gets to take.
- */
+// For an agent that asked what the page it drives looks like. A guest's own preload has none of this.
 handleFromApp('browser:capture', async (_event, id: number) => {
     const guest = webContents.fromId(id);
     if (!guest) {
@@ -1000,10 +880,8 @@ handleFromApp('browser:capture', async (_event, id: number) => {
 handleFromApp('daemon:local-secret', () => readLocalSecret());
 
 /*
- * Signing in to the Pulsar address book. The page runs the login (PKCE, the state, the start URL) and
- * this side does what a page should not: it listens on loopback for the redirect, and it holds the
- * refresh token and the key the session is bound to, both encrypted with the OS keychain in `userData`. The page only ever gets access tokens,
- * which live a quarter of an hour. Every handler answers the app's own window and nothing else.
+ * The page runs the login (PKCE, state, start URL); this side listens on loopback for the redirect and
+ * holds the refresh token and the session key, encrypted with the OS keychain. The page only gets access tokens.
  */
 const addressBookUrl = process.env.RUIMTE_PULSAR_URL ?? ADDRESS_BOOK_URL;
 let pulsarVault: SessionVault | null = null;
@@ -1040,7 +918,7 @@ async function openAiCredentialStatus(): Promise<OpenAiCredentialStatus> {
 
 handleFromApp('openai:credential-status', () => openAiCredentialStatus());
 
-/* The passwords of database connections, one file per key. Kept so a store without encryption still holds its secrets in memory until the app quits. */
+// One file per key. Kept so a store without encryption still holds its secrets in memory until the app quits.
 const databaseSecretStores = new Map<string, SecretStore>();
 
 function databaseSecrets(key: string): SecretStore {
@@ -1151,24 +1029,16 @@ handleFromApp('speech:start', async (event, id: unknown, language: unknown) => {
     }
     return speechService.start(id, language, event.sender);
 });
-handleFromApp('speech:samples', async (_event, id: unknown, samples: unknown) => {
+function dictationId(id: unknown): string {
     if (typeof id !== 'string') {
         throw new Error('Invalid dictation request');
     }
-    return speechService.samples(id, samples);
-});
-handleFromApp('speech:stop', async (_event, id: unknown) => {
-    if (typeof id !== 'string') {
-        throw new Error('Invalid dictation request');
-    }
-    return speechService.stop(id);
-});
-handleFromApp('speech:cancel', (_event, id: unknown) => {
-    if (typeof id !== 'string') {
-        throw new Error('Invalid dictation request');
-    }
-    speechService.cancel(id);
-});
+    return id;
+}
+
+handleFromApp('speech:samples', async (_event, id: unknown, samples: unknown) => speechService.samples(dictationId(id), samples));
+handleFromApp('speech:stop', async (_event, id: unknown) => speechService.stop(dictationId(id)));
+handleFromApp('speech:cancel', (_event, id: unknown) => speechService.cancel(dictationId(id)));
 
 // The window that takes the microphone ends what listens in every other one, its dictation run included.
 onFromApp('microphone:claim', (event) => {
@@ -1242,20 +1112,15 @@ handleFromApp('pulsar:sign-out', () => pulsarSessions().signOut());
 handleFromApp('window:is-fullscreen', (event) => senderWindow(event)?.isFullScreen() ?? false);
 
 /*
- * What a window shows. A page asks before it shows a project, and a project is in one window at a
- * time: when another window has it, that one comes to the front and the page stays where it was.
- * Null lets the window's project go, as when it goes back to the start screen.
+ * A project is in one window at a time: when another window has it, that one comes to the front and
+ * the page stays where it was. Null lets the window's project go.
  */
 handleFromApp('window:claim', (event, key: unknown) => {
     const window = senderWindow(event);
     return window !== null && (key === null || isWindowKey(key)) && windows.claim(window, key);
 });
 
-/*
- * A new window on the start screen (null), or the window of a project, raised when one already has it.
- * A view goes along to the window that shows the project: in the address of a new one, as a message
- * to one that is already there.
- */
+// Null opens the start screen. A view goes in a new window's address, or as a message to one that already shows the project.
 onFromApp('window:open', (_event, key: unknown, view: unknown) => {
     if (key !== null && !isWindowKey(key)) {
         return;
@@ -1277,10 +1142,7 @@ onFromApp('window:open', (_event, key: unknown, view: unknown) => {
     }
 });
 
-/*
- * The project of the asking window, into a window of its own. Handed over in one tick, so there is
- * no moment nobody holds it; the page that asked goes to the start screen once this answers true.
- */
+// Handed over in one tick, so nobody ever holds the project; the asking page goes to the start screen on true.
 handleFromApp('window:move-to-new', (event) => {
     const window = senderWindow(event);
     return window !== null && windows.move(window) !== null;
@@ -1288,10 +1150,7 @@ handleFromApp('window:move-to-new', (event) => {
 
 onFromApp('window:theme', (_event, state: ThemeState) => theme.apply(state));
 
-/*
- * The updater is a state machine the client watches, not a dialog that interrupts. Every change is
- * pushed to the window, which draws the green button in the toolbar and About in the settings.
- */
+// A state machine the client watches, not a dialog that interrupts.
 const updater = createUpdater({
     currentVersion: app.getVersion(),
     packaged: app.isPackaged,
@@ -1327,8 +1186,8 @@ async function installUpdate(confirmed: boolean): Promise<void> {
 
 onFromApp('update:install', (_event, confirmed: unknown) => void installUpdate(confirmed === true));
 
-/* From the REST API rather than the updater's atom feed: the feed carries GitHub's rendered HTML,
-   only the versions between this one and the next, and a tag whose release is still a draft. */
+/* From the REST API: the updater's atom feed carries rendered HTML, only the versions up to the next one,
+   and tags whose release is still a draft. */
 const releaseNotes = createReleaseNotes({
     fetch: (url, init) => net.fetch(url, init),
     cacheFile: join(app.getPath('userData'), 'release-notes.json')
@@ -1378,7 +1237,6 @@ function shellMenuItem(action: MenuShellAction, label: string): Electron.MenuIte
     return action === 'stop-machine-and-quit' && support === 'supported' ? { label, click: () => stopMachine() } : null;
 }
 
-/* The menu of the window that came to the front, or the fixed one until its page sent one. */
 function applyMenuOf(window: Electron.BrowserWindow): void {
     const template = menuTemplates.get(window.id);
     if (!template) {
@@ -1404,61 +1262,6 @@ onFromApp('menu:set', (event, spec: MenuSpec) => {
         applyMenuOf(window);
     }
 });
-
-/*
- * Writes the left end of the title bar band to a PNG in device pixels, which is how its geometry
- * gets measured instead of guessed. The traffic lights are native and never show up in a page
- * capture; only what the client draws next to them does.
- */
-async function captureTitleBar(window: Electron.BrowserWindow, target: string): Promise<void> {
-    const image = await window.webContents.capturePage({ x: 0, y: 0, width: 200, height: TITLEBAR_HEIGHT });
-    const { scaleFactor } = screen.getDisplayMatching(window.getBounds());
-    writeFileSync(target, image.toPNG({ scaleFactor }));
-    console.log(`smoke: wrote ${target} at ${scaleFactor}x`);
-}
-
-/* Adds a browser node through the client's own keyboard path, points it at the dev server and waits for the page. */
-async function runSmoke(window: Electron.BrowserWindow): Promise<void> {
-    console.log('smoke: window loaded');
-    window.webContents.on('preload-error', (_event, path, error) => console.log(`smoke: preload error in ${path}: ${error.message}`));
-    console.log(`smoke: bridge is ${await window.webContents.executeJavaScript('typeof window.ruimteDesktop')}`);
-    if ((await window.webContents.executeJavaScript('typeof window.ruimte')) === 'undefined') {
-        // A production client has no test hooks; that the daemon served it and the bridge is there is the whole test.
-        console.log('smoke: production client, no test hooks to drive a browser node');
-        return;
-    }
-    window.webContents.on('console-message', (event) => {
-        if (event.level === 'error') {
-            console.log(`smoke: renderer error: ${event.message.slice(0, 200)}`);
-        }
-    });
-    const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-    await wait(1500);
-    if (capturePath) {
-        await captureTitleBar(window, capturePath);
-        return;
-    }
-    await window.webContents.executeJavaScript(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', altKey: true, bubbles: true }))`);
-    await wait(500);
-    const target = scheme.url;
-    await window.webContents.executeJavaScript(
-        `(() => { const ids = window.ruimte?.nodeIds() ?? []; const id = ids[ids.length - 1]; if (id) { window.ruimte.browserNavigate(id, ${JSON.stringify(target)}); } })()`
-    );
-    for (let attempt = 0; attempt < 40; attempt++) {
-        await wait(250);
-        const state = (await window.webContents.executeJavaScript(
-            `(() => { const ids = window.ruimte?.nodeIds() ?? []; const id = ids[ids.length - 1]; return id ? window.ruimte.browserState(id) : null; })()`
-        )) as { url: string; loading: boolean; title: string; error: string | null } | null;
-        if (state && !state.loading && state.url.startsWith(target)) {
-            console.log(`smoke: browser node loaded ${state.url} (${state.error ?? state.title})`);
-            return;
-        }
-    }
-    const detail = await window.webContents.executeJavaScript(
-        `(() => { const ids = window.ruimte?.nodeIds() ?? []; const id = ids[ids.length - 1]; const views = [...document.querySelectorAll('webview')]; return JSON.stringify({ ids, state: id ? window.ruimte.browserState(id) : null, views: views.map((v) => ({ src: v.getAttribute('src'), attached: v.isConnected, parent: v.parentElement?.style.visibility })) }); })()`
-    );
-    console.log(`smoke: the browser node did not finish loading: ${detail}`);
-}
 
 if (!app.requestSingleInstanceLock()) {
     app.quit();
@@ -1505,7 +1308,12 @@ if (!app.requestSingleInstanceLock()) {
             // One window on what the page remembers, whatever the last session left open.
             const window = windows.open(null);
             await new Promise<void>((resolve) => window.webContents.once('did-finish-load', () => resolve()));
-            await runSmoke(window);
+            await runSmoke(window, {
+                appUrl: scheme.url,
+                capturePath,
+                titleBarHeight: TITLEBAR_HEIGHT,
+                scaleFactorOf: (shown) => screen.getDisplayMatching(shown.getBounds()).scaleFactor
+            });
             app.quit();
             return;
         }

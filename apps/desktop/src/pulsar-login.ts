@@ -25,11 +25,9 @@ function page(response: ServerResponse, status: number, text: string): void {
 }
 
 /*
- * A listener on a random loopback port for the one redirect a login ends in. A loopback listener
- * rather than the `ruimte://` scheme, because Electron only claims a scheme for a packaged app and an
- * unpackaged "Ruimte Dev" beside an installed Ruimte would hand the code to the wrong one. Bound to
- * 127.0.0.1 only, it takes the first request on the callback path and closes, so the code is read
- * once and the port is gone before anything else could ask.
+ * Loopback rather than `ruimte://`: Electron only claims a scheme for a packaged app, so "Ruimte Dev"
+ * beside an installed Ruimte would hand the code to the wrong one. Bound to 127.0.0.1, it takes the
+ * first callback request and closes, so the code is read once.
  */
 export function listenForLogin(options: { timeoutMs?: number } = {}): Promise<LoopbackLogin> {
     return new Promise((resolveListening, rejectListening) => {

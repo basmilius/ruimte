@@ -4,12 +4,9 @@ import { BrowserWindow, net, session } from 'electron';
 import { STORAGE_MOVE_PATH } from './app-scheme';
 
 /*
- * Once per profile: the page kept its `localStorage` under `http://127.0.0.1:<port>` while the daemon
- * served it, and storage belongs to an origin. A hidden window on the old origin, served here for that
- * one address, reads it out, and one on the app's scheme writes it in, unless the new origin already
- * holds something. The client's key stays behind (non-extractable, in IndexedDB), so a remote machine
- * meets a new one and the client asks it a statement again. The flag is written whatever happened, so a
- * failure costs the old settings once and never a start.
+ * Once per profile, moves the page's `localStorage` from `http://127.0.0.1:<port>`, where the daemon used
+ * to serve it, onto the app's scheme unless that already holds something. The client's non-extractable
+ * key stays behind. The flag is written whatever happened, so a failure never costs a start.
  */
 export async function moveLegacyStorage(port: number, flagPath: string): Promise<() => void> {
     if (existsSync(flagPath)) {

@@ -228,10 +228,8 @@ window.addEventListener('keydown', (event) => {
 });
 
 /*
- * What Chromium would paint under this page if it drew no ground of its own: the CSS system color,
- * which already follows the page's own `color-scheme` and the app's theme. The element the page sits
- * in is what shows through a transparent page, so without this a page that leaves its background to
- * the browser stands on the app's ground instead of the white every browser gives it.
+ * The CSS system color Chromium would paint under a page without a ground of its own. Without it such a
+ * page shows the app's ground through, instead of the white every browser gives it.
  */
 function reportGround(): void {
     // The system color can only be read off an element in the document, so one is put there for a tick.
