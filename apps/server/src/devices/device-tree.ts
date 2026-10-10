@@ -8,7 +8,7 @@ export interface ElementFrame {
 }
 
 /* One element on a device's screen; the frame in pixels of the screen, which a shot has too. */
-export interface DeviceTreeNode {
+interface ElementFields {
     role: string;
     subrole: string | null;
     label: string | null;
@@ -16,6 +16,9 @@ export interface DeviceTreeNode {
     identifier: string | null;
     frame: ElementFrame;
     enabled: boolean;
+}
+
+export interface DeviceTreeNode extends ElementFields {
     children: DeviceTreeNode[];
 }
 
@@ -27,17 +30,10 @@ export interface DeviceTree {
 }
 
 /* An element as a state lists it: its handle is its place in the tree, counted depth first from the root. */
-export interface DeviceElement {
+export interface DeviceElement extends ElementFields {
     handle: number;
     depth: number;
     parent: number | null;
-    role: string;
-    subrole: string | null;
-    label: string | null;
-    value: string | null;
-    identifier: string | null;
-    frame: ElementFrame;
-    enabled: boolean;
     offscreen: boolean;
 }
 
