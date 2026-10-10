@@ -30,7 +30,6 @@ export const useUpdates = create<UpdatesStore>(() => ({
     }
 }));
 
-/* The green button in the toolbar. There is something to do, and one click leads to it. */
 export function hasUpdate(state: UpdateState): boolean {
     return state.status === 'available' || state.status === 'downloading' || state.status === 'ready';
 }
