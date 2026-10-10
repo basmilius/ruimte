@@ -8,7 +8,7 @@ import type { IndexedPlace } from '../projects/project-index.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import type { ChatManager } from './chat-manager.ts';
 import { ChatError } from './errors.ts';
-import { readableAssistantText } from './readable-text.ts';
+import { readableAssistantText } from '@adecore/agents/chat/readable-text';
 
 /* What the original reads of a summary; the fork itself is one read away for the rest. */
 export const SUMMARY_MAX_BYTES = 8 * 1024;

@@ -22,7 +22,7 @@ import { renderPage } from './context-browser.ts';
 import { renderDevice } from './context-device.ts';
 import { renderDiagram } from './context-diagram.ts';
 import { renderDrawing } from './context-drawing.ts';
-import { readableAssistantText } from '../chat/readable-text.ts';
+import { readableAssistantText } from '@adecore/agents/chat/readable-text';
 
 export const CONTEXT_PATH = '/context';
 
