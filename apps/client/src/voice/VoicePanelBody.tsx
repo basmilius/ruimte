@@ -50,6 +50,46 @@ function VoiceStatus({ elapsedMs, phase }: { elapsedMs: number; phase: VoicePhas
     );
 }
 
+/* A check, which turns into the undo button under the pointer while the action can be taken back. */
+function ActionOutcome({
+    completed,
+    undoable,
+    undoLabel,
+    onUndo,
+    pending
+}: {
+    completed: boolean;
+    undoable: boolean;
+    undoLabel: string;
+    onUndo(): void;
+    pending: string;
+}) {
+    return (
+        <div className="grid h-8 w-8 shrink-0 place-items-center">
+            {completed && undoable ? (
+                <>
+                    <Icon
+                        icon={Check}
+                        size={14}
+                        className="col-start-1 row-start-1 text-positive transition-opacity group-hover/action:opacity-0 group-focus-within/action:opacity-0"
+                    />
+                    <IconButton
+                        icon={RotateCcw}
+                        size="sm"
+                        label={undoLabel}
+                        className="col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action:pointer-events-auto group-hover/action:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                        onClick={onUndo}
+                    />
+                </>
+            ) : completed ? (
+                <Icon icon={Check} size={14} className="text-positive" />
+            ) : (
+                <span className="text-xs text-text-faint">{pending}</span>
+            )}
+        </div>
+    );
+}
+
 function ActionEvent({ action }: { action: VoiceAction }) {
     const { t } = useTranslation('voice');
     const completed = action.status === 'completed';
@@ -61,28 +101,13 @@ function ActionEvent({ action }: { action: VoiceAction }) {
                 <span className="font-medium">{action.label}</span>
                 <span className="text-text-muted"> · {action.detail}</span>
             </p>
-            <div className="grid h-8 w-8 shrink-0 place-items-center">
-                {completed && action.undoable ? (
-                    <>
-                        <Icon
-                            icon={Check}
-                            size={14}
-                            className="col-start-1 row-start-1 text-positive transition-opacity group-hover/action:opacity-0 group-focus-within/action:opacity-0"
-                        />
-                        <IconButton
-                            icon={RotateCcw}
-                            size="sm"
-                            label={t('actions.undo')}
-                            className="col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action:pointer-events-auto group-hover/action:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
-                            onClick={() => undoVoiceAction(action.id)}
-                        />
-                    </>
-                ) : completed ? (
-                    <Icon icon={Check} size={14} className="text-positive" />
-                ) : (
-                    <span className="text-xs text-text-faint">{t(`actions.status.${action.status}`)}</span>
-                )}
-            </div>
+            <ActionOutcome
+                completed={completed}
+                undoable={action.undoable}
+                undoLabel={t('actions.undo')}
+                onUndo={() => undoVoiceAction(action.id)}
+                pending={t(`actions.status.${action.status}`)}
+            />
         </div>
     );
 }
@@ -98,11 +123,10 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
     const details = actions.map((action) => actionDetail(action.detail));
     const context = details[0]?.context && details.every((detail) => detail.context === details[0]?.context) ? details[0].context : null;
     const completed = actions.every((action) => action.status === 'completed');
-    const undoable = actions.some((action) => action.status === 'completed' && action.undoable);
     const undoableIds = actions.filter((action) => action.status === 'completed' && action.undoable).map((action) => action.id);
 
     return (
-        <div className="group/action-group rounded-lg border border-border bg-surface-raised px-3 py-1.5">
+        <div className="group/action rounded-lg border border-border bg-surface-raised px-3 py-1.5">
             <div className="flex min-h-8 items-center gap-2.5">
                 <IconButton
                     size="sm"
@@ -115,13 +139,13 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
                     <Icon
                         icon={StickyNote}
                         size={14}
-                        className="col-start-1 row-start-1 text-text-muted group-hover/action-group:hidden group-focus-within/action-group:hidden"
+                        className="col-start-1 row-start-1 text-text-muted group-hover/action:hidden group-focus-within/action:hidden"
                     />
                     <Icon
                         icon={ChevronRight}
                         size={14}
                         className={clsx(
-                            'col-start-1 row-start-1 hidden text-text-muted transition-transform group-hover/action-group:block group-focus-within/action-group:block',
+                            'col-start-1 row-start-1 hidden text-text-muted transition-transform group-hover/action:block group-focus-within/action:block',
                             open && 'rotate-90'
                         )}
                     />
@@ -132,28 +156,13 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
                         {context && <span className="text-text-muted"> · {context}</span>}
                     </span>
                 </button>
-                <div className="grid h-8 w-8 shrink-0 place-items-center">
-                    {completed && undoable ? (
-                        <>
-                            <Icon
-                                icon={Check}
-                                size={14}
-                                className="col-start-1 row-start-1 text-positive transition-opacity group-hover/action-group:opacity-0 group-focus-within/action-group:opacity-0"
-                            />
-                            <IconButton
-                                icon={RotateCcw}
-                                size="sm"
-                                label={t('actions.undoGroup', { count: actions.length })}
-                                className="col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action-group:pointer-events-auto group-hover/action-group:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
-                                onClick={() => undoVoiceActions(undoableIds)}
-                            />
-                        </>
-                    ) : completed ? (
-                        <Icon icon={Check} size={14} className="text-positive" />
-                    ) : (
-                        <span className="text-xs text-text-faint">{t('actions.status.undone')}</span>
-                    )}
-                </div>
+                <ActionOutcome
+                    completed={completed}
+                    undoable={undoableIds.length > 0}
+                    undoLabel={t('actions.undoGroup', { count: actions.length })}
+                    onUndo={() => undoVoiceActions(undoableIds)}
+                    pending={t('actions.status.undone')}
+                />
             </div>
             {open && (
                 <div className="space-y-1.5 pt-1 pb-2 pl-6 text-xs text-text-muted">

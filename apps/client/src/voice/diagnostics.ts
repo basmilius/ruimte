@@ -1,4 +1,5 @@
 import { VOICE_CONTROL_TOOL, VOICE_TOOL_ACTIONS, voiceToolsFor, type ActionDomain } from '@ruimte/actions';
+import { objectArguments } from '@/voice/tool-arguments';
 
 /*
  * How Voice fared, measured on this machine and never sent anywhere. A record holds names, codes,
@@ -61,18 +62,9 @@ const END_STATUSES: Readonly<Record<string, VoiceResponseStatus>> = {
 /* A code is kept only when it looks like one, so a message can never pass for it. */
 const CODE = /^[a-z][a-z0-9_-]{0,47}$/;
 
-function parsedArguments(raw: string): Record<string, unknown> | null {
-    try {
-        const parsed: unknown = JSON.parse(raw);
-        return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
-    } catch {
-        return null;
-    }
-}
-
 /* Only a name from the catalog is kept; whatever else the model put in `action` is dropped. */
 export function voiceActionOf(tool: string, rawArguments: string): string | null {
-    const action = parsedArguments(rawArguments)?.action;
+    const action = objectArguments(rawArguments)?.action;
     if (typeof action !== 'string') {
         return null;
     }

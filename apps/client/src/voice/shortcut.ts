@@ -1,3 +1,6 @@
+/* A press held this long is push-to-talk: letting go ends the session it started. */
+const HOLD_MS = 400;
+
 interface VoiceShortcutActions {
     available(): boolean;
     active(): boolean;
@@ -29,7 +32,7 @@ export function createVoiceShortcut(actions: VoiceShortcutActions) {
             if (pressedAt === null || (event.code !== 'KeyM' && !['Meta', 'Control', 'Shift'].includes(event.key))) {
                 return;
             }
-            const held = event.timeStamp - pressedAt >= 400;
+            const held = event.timeStamp - pressedAt >= HOLD_MS;
             pressedAt = null;
             if (held && actions.active()) {
                 actions.stop();

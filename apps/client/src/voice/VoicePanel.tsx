@@ -8,22 +8,17 @@ const VoicePanelBody = lazyNamed(() => import('@/voice/VoicePanelBody'), 'VoiceP
 const DEFAULT_WIDTH = 380;
 const MIN_WIDTH = 320;
 const MIN_WORKSPACE_WIDTH = 480;
+const BOUNDS = { min: MIN_WIDTH, max: () => window.innerWidth - MIN_WORKSPACE_WIDTH };
 
 /* The column is here and its contents load on the first opening, so the column slides in while they arrive. */
 export function VoicePanel() {
     const gap = usePanelGap();
     const open = useVoice((state) => state.open);
     const storedWidth = useVoice((state) => state.width);
-    const width = clampColumnSize({ min: MIN_WIDTH, max: () => window.innerWidth - MIN_WORKSPACE_WIDTH }, storedWidth ?? DEFAULT_WIDTH);
+    const width = clampColumnSize(BOUNDS, storedWidth ?? DEFAULT_WIDTH);
 
     return (
-        <SlidingColumn
-            gap={gap}
-            open={open}
-            width={width}
-            bounds={{ min: MIN_WIDTH, max: () => window.innerWidth - MIN_WORKSPACE_WIDTH }}
-            onWidthChange={(next) => useVoice.getState().setWidth(next)}
-        >
+        <SlidingColumn gap={gap} open={open} width={width} bounds={BOUNDS} onWidthChange={(next) => useVoice.getState().setWidth(next)}>
             <Suspense fallback={null}>
                 <VoicePanelBody />
             </Suspense>

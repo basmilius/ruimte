@@ -80,6 +80,7 @@ function workspaceContext(): string {
 function appendContext(): void {
     session?.send({ type: 'session.thinking.append', delegation_id: null, content: workspaceContext() });
 }
+
 function appendTime(): void {
     session?.send({ type: 'session.thinking.append', delegation_id: null, content: temporalContext() });
 }
@@ -314,38 +315,22 @@ export async function startVoice(): Promise<void> {
             next.close();
             return;
         }
-        releaseMicrophone?.();
-        releaseMicrophone = null;
+        releaseMicrophoneClaim();
         next.close();
         session = null;
-        completionDelivery?.clear();
-        completionDelivery = null;
-        toolQueue?.cancel();
-        toolQueue = null;
-        toolLoop?.reset();
-        toolLoop = null;
-        finishVoiceDiagnostics();
-        if (clockTimer !== null) {
-            window.clearInterval(clockTimer);
-            clockTimer = null;
-        }
-        stopMicrophone();
-        stopOutputWaveform();
+        stopClock();
+        endSessionParts();
         useVoice.setState({ phase: 'error', error: failureText(error) });
     }
 }
 
 export function stopVoice(): void {
-    releaseMicrophone?.();
-    releaseMicrophone = null;
+    releaseMicrophoneClaim();
     if (contextTimer !== null) {
         window.clearTimeout(contextTimer);
         contextTimer = null;
     }
-    if (clockTimer !== null) {
-        window.clearInterval(clockTimer);
-        clockTimer = null;
-    }
+    stopClock();
     unsubscribeDocument?.();
     unsubscribeDocument = null;
     unsubscribeChats?.();
@@ -365,6 +350,24 @@ export function stopVoice(): void {
     useVoice.setState({ phase: session ? 'closing' : 'idle' });
     session?.close();
     session = null;
+    endSessionParts();
+    useVoice.setState({ phase: 'idle', sessionStartedAt: null });
+}
+
+function releaseMicrophoneClaim(): void {
+    releaseMicrophone?.();
+    releaseMicrophone = null;
+}
+
+function stopClock(): void {
+    if (clockTimer !== null) {
+        window.clearInterval(clockTimer);
+        clockTimer = null;
+    }
+}
+
+/* What a session owns besides its connection, ended the same way whether it stopped or never started. */
+function endSessionParts(): void {
     completionDelivery?.clear();
     completionDelivery = null;
     toolQueue?.cancel();
@@ -374,7 +377,6 @@ export function stopVoice(): void {
     finishVoiceDiagnostics();
     stopMicrophone();
     stopOutputWaveform();
-    useVoice.setState({ phase: 'idle', sessionStartedAt: null });
 }
 
 async function startMicrophone(): Promise<MediaStream> {
@@ -386,8 +388,7 @@ async function startMicrophone(): Promise<MediaStream> {
     try {
         return await next.start();
     } catch (error) {
-        const current = microphone === next;
-        if (current) {
+        if (microphone === next) {
             microphone = null;
         }
         next.stop();

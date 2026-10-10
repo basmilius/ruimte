@@ -7,6 +7,15 @@ function waveformHeight(value: number): string {
     return `${Math.max(2, value * 26).toFixed(2)}px`;
 }
 
+/* Moves each band a `response` share of the way from where it is drawn toward where it should be. */
+function eased(current: readonly number[], target: readonly number[], count: number, response: number): number[] {
+    return Array.from({ length: count }, (_, index) => {
+        const value = target[index] ?? 0;
+        const from = current[index] ?? value;
+        return from + (value - from) * response;
+    });
+}
+
 function useDisplayedWaveform(phase: VoicePhase, inputBands: number[], outputBands: number[]): IdleVoiceBands {
     const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const count = inputBands.length;
@@ -38,16 +47,7 @@ function useDisplayedWaveform(phase: VoicePhase, inputBands: number[], outputBan
             const response = 1 - Math.exp(-(now - previous) / 110);
             previous = now;
             const current = displayedRef.current;
-            const next = {
-                input: Array.from({ length: count }, (_, index) => {
-                    const value = target.input[index] ?? 0;
-                    return (current.input[index] ?? value) + (value - (current.input[index] ?? value)) * response;
-                }),
-                output: Array.from({ length: count }, (_, index) => {
-                    const value = target.output[index] ?? 0;
-                    return (current.output[index] ?? value) + (value - (current.output[index] ?? value)) * response;
-                })
-            };
+            const next = { input: eased(current.input, target.input, count, response), output: eased(current.output, target.output, count, response) };
             displayedRef.current = next;
             setBands(next);
             frame = window.requestAnimationFrame(animate);

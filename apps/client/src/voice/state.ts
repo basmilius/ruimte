@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { WAVEFORM_BAND_COUNT } from '@/audio/waveform';
 import { desktop, type OpenAiCredentialStatus } from '@/desktop/bridge';
 
 export type VoicePhase = 'idle' | 'connecting' | 'listening' | 'closing' | 'error';
@@ -72,8 +73,8 @@ export const useVoice = create<VoiceState>((set) => ({
     error: null,
     transcript: [],
     actions: [],
-    inputBands: Array(40).fill(0),
-    outputBands: Array(40).fill(0),
+    inputBands: Array(WAVEFORM_BAND_COUNT).fill(0),
+    outputBands: Array(WAVEFORM_BAND_COUNT).fill(0),
     sessionStartedAt: null,
     width: readVoiceWidth(),
     setCredential: (credential) => set((state) => ({ credential, open: credential.configured ? state.open : false })),

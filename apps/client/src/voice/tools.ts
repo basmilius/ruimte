@@ -15,6 +15,7 @@ import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import type { VoiceChatFollowUp } from '@/voice/chat-follow-up';
 import type { VoiceActionKind } from '@/voice/state';
+import { objectArguments } from '@/voice/tool-arguments';
 import { voiceWorkspaceRevision } from '@/voice/workspace-context';
 
 /* What the activity log shows a person; the message beside it is for the model and stays English. */
@@ -155,7 +156,7 @@ const REPLIES: Replies = {
     'node.create': (output) => ({
         message: `Created ${NODE_LABELS[output.kind]} “${output.node}” on “${output.view}”.`,
         entry: {
-            kind: output.kind === 'terminal' ? 'terminal' : output.kind === 'chat' ? 'chat' : output.kind === 'note' ? 'note' : 'node',
+            kind: output.kind === 'terminal' || output.kind === 'chat' || output.kind === 'note' ? output.kind : 'node',
             label: activity(`addedNode.${output.kind}`),
             detail: `${output.node} · ${output.view}`
         }
@@ -336,33 +337,19 @@ function failureOf(result: ActionResult): VoiceToolExecution {
 
 function completed(name: ActionName, output: Record<string, unknown>, undoToken: string | undefined, endpointId: string): VoiceToolExecution {
     const reply = replyOf(name, output);
-    return {
-        output: { ok: true, message: reply.message, ...output },
-        ...(reply.entry
-            ? {
-                  action: {
-                      ...reply.entry,
-                      ...(undoToken
-                          ? {
-                                undo: () => {
-                                    void clientActions.undo(undoToken, VOICE_ACTION_CALL);
-                                }
-                            }
-                          : {})
-                  }
-              }
-            : {}),
-        ...(name === 'chat.clear' ? { clearedChatKey: endpointKey(endpointId, (output as ActionOutput<'chat.clear'>).chatId) } : {})
-    };
-}
-
-function objectArguments(raw: string): Record<string, unknown> | null {
-    try {
-        const parsed: unknown = JSON.parse(raw);
-        return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
-    } catch {
-        return null;
+    const execution: VoiceToolExecution = { output: { ok: true, message: reply.message, ...output } };
+    if (reply.entry) {
+        execution.action = { ...reply.entry };
+        if (undoToken) {
+            execution.action.undo = () => {
+                void clientActions.undo(undoToken, VOICE_ACTION_CALL);
+            };
+        }
     }
+    if (name === 'chat.clear') {
+        execution.clearedChatKey = endpointKey(endpointId, (output as ActionOutput<'chat.clear'>).chatId);
+    }
+    return execution;
 }
 
 /* A strict tool carries every field of its domain; the action gets only its own, and the registry validates those. */
@@ -479,9 +466,10 @@ export async function executeVoiceTool(tool: string, rawArguments: string): Prom
             confirmationRevisions.delete(confirmationRevisions.keys().next().value!);
         }
     }
-    const undo = result.action?.undo;
-    if (undo && result.action) {
-        result.action.undo = () => {
+    const action = result.action;
+    const undo = action?.undo;
+    if (action && undo) {
+        action.undo = () => {
             if (voiceWorkspaceRevision() !== revision) {
                 throw new Error('This action belongs to a previous workspace.');
             }

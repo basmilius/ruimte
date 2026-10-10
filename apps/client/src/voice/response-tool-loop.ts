@@ -16,6 +16,7 @@ export interface ToolLoopObserver {
     callStarted(delegationId: string, callId: string, tool: string, rawArguments: string): void;
     callFinished(callId: string, output: Record<string, unknown>): void;
 }
+
 type Execute = (name: string, args: string) => Promise<Record<string, unknown>>;
 
 const toolNames = new Set<string>(VOICE_TOOL_DEFINITIONS.map((tool) => tool.name));
@@ -49,13 +50,6 @@ function responseEventOf(event: LiveEvent): { delegationId: string; type: string
     return typeof type === 'string' ? { delegationId: event.delegation_id, type } : null;
 }
 
-function completedDelegationOf(event: LiveEvent): string | null {
-    if (event.type !== 'response.event' || typeof event.delegation_id !== 'string' || typeof event.event !== 'object' || event.event === null) {
-        return null;
-    }
-    return (event.event as { type?: unknown }).type === 'response.completed' ? event.delegation_id : null;
-}
-
 export class ResponseToolLoop {
     readonly #send: Send;
     readonly #execute: Execute;
@@ -84,7 +78,7 @@ export class ResponseToolLoop {
             this.#pending.set(event.delegation_id, pending);
             return;
         }
-        const delegationId = completedDelegationOf(event);
+        const delegationId = observed?.type === 'response.completed' ? observed.delegationId : null;
         if (delegationId) {
             const pending = this.#pending.get(delegationId);
             if (pending?.length) {
