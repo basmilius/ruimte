@@ -14,88 +14,97 @@ export async function runContext(args: string[], env: Environment = process.env,
     const headers = { authorization: `Bearer ${token}` };
 
     if (command === 'list') {
-        let sources: ContextRow[];
-        try {
-            sources = await fetchSources(url, headers, env);
-        } catch (e) {
-            console.error(e instanceof Error ? e.message : 'The daemon failed');
-            return e instanceof StaleToken ? 2 : 1;
-        }
-        if (sources.length === 0) {
-            console.log('Nothing is linked to this session.');
-        }
-        for (const source of sources) {
-            console.log(`${source.id}\t${source.kind}\t${source.title}\t${source.flag ?? '-'}`);
-        }
-        return 0;
+        return runList(url, headers, env);
     }
-
     if (command === 'read') {
-        if (!id) {
-            return refuse('bad-arguments', 'read takes the id of a linked source', [
-                READ_USAGE,
-                'detail\truimte-context help read',
-                ...(await linkedLines(url, headers, env))
-            ]);
-        }
-        const tail = tailOf(args.slice(2));
-        if (tail === 'bad') {
-            return refuse('bad-arguments', '--tail needs a positive whole number of lines', [READ_USAGE, 'detail\truimte-context help read']);
-        }
-        const subagent = flagValue(args.slice(2), 'subagent');
-        if (subagent === '') {
-            return refuse('bad-arguments', '--subagent needs the id from a > Subagent line of the chat', [READ_USAGE, 'detail\truimte-context help read']);
-        }
-        const query = new URLSearchParams();
-        if (tail !== null) {
-            query.set('tail', String(tail));
-        }
-        if (subagent !== null) {
-            query.set('subagent', subagent);
-        }
-        let response: Response;
-        try {
-            response = await fetch(`${url}/${encodeURIComponent(id)}${query.size === 0 ? '' : `?${query}`}`, { headers });
-        } catch (e) {
-            console.error(unreachable(e, env));
-            return 1;
-        }
-        if (response.status === 401) {
-            console.error(staleToken(await response.text()));
-            return 2;
-        }
-        if (response.status === 404) {
-            /* The daemon says which no this is, since only it has the canvas the id may be a node on:
-               a line running the other way is a different answer from an id nobody has drawn. */
-            const { code, message, lines } = readRefusal(await response.text(), id);
-            return refuse(code, message, [...(await linkedLines(url, headers, env)), ...lines]);
-        }
-        if (response.status === 422) {
-            return refuse('unknown-subagent', await response.text(), [READ_USAGE, 'detail\truimte-context help read']);
-        }
-        if (!response.ok) {
-            console.error(`The daemon answered ${response.status}`);
-            return 1;
-        }
-        process.stdout.write(`${await response.text()}\n`);
-        return 0;
+        return runRead(url, id, args.slice(2), headers, env);
     }
-
     const canvasUrl = url.replace(/\/context\/?$/, '/canvas');
     if (command === 'visual' && (args[1] === 'show' || args[1] === 'preview')) {
         return runVisualPage(canvasUrl, args[1], await withStdinFlag(args.slice(2), 'html', stdin), headers, env);
     }
-    const argv =
-        command === 'visual' && args[1] === 'write'
-            ? ['write', ...(await withStdinFlag(args.slice(2), 'html', stdin))]
-            : command === 'view' && args[1] === 'diagram'
-              ? ['diagram', ...(await withStdinFlag(args.slice(2), 'document', stdin))]
-              : command === 'database' && (args[1] === 'query' || args[1] === 'execute')
-                ? [args[1], ...(await withStdinFlag(args.slice(2), 'sql', stdin))]
-                : command === 'plan' && args[1] === 'new'
-                  ? ['new', ...(await withStdinPlan(args.slice(2), stdin))]
-                  : await withStdinText(args.slice(1), stdin);
-    return runVerb(canvasUrl, command, argv, headers, env);
+    return runVerb(canvasUrl, command, await verbArgv(command, args, stdin), headers, env);
+}
+
+/* The words a verb takes, with whatever it reads from stdin put in its flag. */
+async function verbArgv(command: string, args: string[], stdin: () => Promise<string>): Promise<string[]> {
+    const rest = args.slice(2);
+    if (command === 'visual' && args[1] === 'write') {
+        return ['write', ...(await withStdinFlag(rest, 'html', stdin))];
+    }
+    if (command === 'view' && args[1] === 'diagram') {
+        return ['diagram', ...(await withStdinFlag(rest, 'document', stdin))];
+    }
+    if (command === 'database' && (args[1] === 'query' || args[1] === 'execute')) {
+        return [args[1], ...(await withStdinFlag(rest, 'sql', stdin))];
+    }
+    if (command === 'plan' && args[1] === 'new') {
+        return ['new', ...(await withStdinPlan(rest, stdin))];
+    }
+    return withStdinText(args.slice(1), stdin);
+}
+
+async function runList(url: string, headers: Record<string, string>, env: Environment): Promise<number> {
+    let sources: ContextRow[];
+    try {
+        sources = await fetchSources(url, headers, env);
+    } catch (e) {
+        console.error(e instanceof Error ? e.message : 'The daemon failed');
+        return e instanceof StaleToken ? 2 : 1;
+    }
+    if (sources.length === 0) {
+        console.log('Nothing is linked to this session.');
+    }
+    for (const source of sources) {
+        console.log(`${source.id}\t${source.kind}\t${source.title}\t${source.flag ?? '-'}`);
+    }
+    return 0;
+}
+
+async function runRead(url: string, id: string | undefined, flags: string[], headers: Record<string, string>, env: Environment): Promise<number> {
+    if (!id) {
+        return refuse('bad-arguments', 'read takes the id of a linked source', [READ_USAGE, READ_HELP, ...(await linkedLines(url, headers, env))]);
+    }
+    const tail = tailOf(flags);
+    if (tail === 'bad') {
+        return refuse('bad-arguments', '--tail needs a positive whole number of lines', [READ_USAGE, READ_HELP]);
+    }
+    const subagent = flagValue(flags, 'subagent');
+    if (subagent === '') {
+        return refuse('bad-arguments', '--subagent needs the id from a > Subagent line of the chat', [READ_USAGE, READ_HELP]);
+    }
+    const query = new URLSearchParams();
+    if (tail !== null) {
+        query.set('tail', String(tail));
+    }
+    if (subagent !== null) {
+        query.set('subagent', subagent);
+    }
+    let response: Response;
+    try {
+        response = await fetch(`${url}/${encodeURIComponent(id)}${query.size === 0 ? '' : `?${query}`}`, { headers });
+    } catch (e) {
+        console.error(unreachable(e, env));
+        return 1;
+    }
+    if (response.status === 401) {
+        console.error(staleToken(await response.text()));
+        return 2;
+    }
+    if (response.status === 404) {
+        // Only the daemon has the canvas the id may be a node on, so it says which no this is.
+        const { code, message, lines } = readRefusal(await response.text(), id);
+        return refuse(code, message, [...(await linkedLines(url, headers, env)), ...lines]);
+    }
+    if (response.status === 422) {
+        return refuse('unknown-subagent', await response.text(), [READ_USAGE, READ_HELP]);
+    }
+    if (!response.ok) {
+        console.error(`The daemon answered ${response.status}`);
+        return 1;
+    }
+    process.stdout.write(`${await response.text()}\n`);
+    return 0;
 }
 
 /*
@@ -159,6 +168,7 @@ interface ContextRow {
 }
 
 const READ_USAGE = 'usage\tread\t<id> [--tail N] [--subagent T]';
+const READ_HELP = 'detail\truimte-context help read';
 
 /* What follows `--name` or `--name=`: null when the flag is not there, empty when it has no value. */
 function flagValue(argv: readonly string[], name: string): string | null {
@@ -171,9 +181,8 @@ function flagValue(argv: readonly string[], name: string): string | null {
 }
 
 /*
- * The `--tail N` of a read: the number, null when it was not asked for, and 'bad' for anything that
- * is not a positive whole number. The daemon does the counting, so this only has to be sure it is
- * sending a number at all rather than letting `--tail two` arrive as a query nobody can read.
+ * The `--tail N` of a read: the number, null when it was not asked for, and 'bad' for anything that is
+ * not a positive whole number, so `--tail two` never arrives as a query nobody can read.
  */
 function tailOf(argv: readonly string[]): number | null | 'bad' {
     const value = flagValue(argv, 'tail');

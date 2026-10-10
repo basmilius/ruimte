@@ -1,11 +1,11 @@
 import { CLOSED_LID_BATTERY_FLOOR, MACHINE_STATUS_PATH, MachineStatusSchema, type MachineStatus } from '@ruimte/contracts';
-import { DEFAULT_PORT } from '../config.ts';
+import { portFlag } from '../config.ts';
 
 type Fetch = (input: string, init: RequestInit) => Promise<Response>;
 
-/* What a command tells a person whose daemon is not running, with the port flag when it is not the default one. */
+/* What a command tells a person whose daemon is not running. */
 export function startFirst(port: number): string {
-    const flag = port === DEFAULT_PORT ? '' : ` --port ${port}`;
+    const flag = portFlag(port);
     return `Start it with \`ruimte service install${flag}\`, or with \`ruimte${flag}\` in another terminal.`;
 }
 
@@ -85,7 +85,7 @@ export function statusLines(status: MachineStatus, port: number): string[] {
     const lines = [
         `Ruimte ${status.version} on port ${port}, ${status.service ? 'as the background service' : 'started by hand'}`,
         `Name      ${status.label}`,
-        `Account   ${status.onAccount ? 'on an account' : `none yet, \`ruimte login${port === DEFAULT_PORT ? '' : ` --port ${port}`}\` puts it on yours`}`,
+        `Account   ${status.onAccount ? 'on an account' : `none yet, \`ruimte login${portFlag(port)}\` puts it on yours`}`,
         `Broker    ${broker.url === null ? 'off' : `${broker.url}, ${broker.connected ? 'connected' : 'not connected yet'}`}`,
         `Network   ${
             lan === null

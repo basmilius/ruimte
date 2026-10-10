@@ -56,6 +56,11 @@ export function forgetInheritedSession(env: Record<string, string | undefined>):
 export const DEFAULT_HOST = '127.0.0.1';
 export const DEFAULT_PORT = 4210;
 
+/* The ` --port N` a command a person copies needs, empty on the default port. */
+export function portFlag(port: number): string {
+    return port === DEFAULT_PORT ? '' : ` --port ${port}`;
+}
+
 // The door on the local network listens this far above the daemon's port: 4220 beside 4210, 4221 beside a dev daemon on 4211.
 const LAN_PORT_OFFSET = 10;
 

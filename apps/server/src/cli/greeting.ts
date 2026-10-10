@@ -1,4 +1,4 @@
-import { DEFAULT_PORT } from '../config.ts';
+import { portFlag } from '../config.ts';
 
 export interface GreetingFacts {
     version: string;
@@ -18,9 +18,9 @@ export function greetingLines(facts: GreetingFacts): string[] {
     if (!facts.interactive) {
         return [`ruimte server ${facts.version} listening on ${address} (home: ${facts.home})`];
     }
-    const portFlag = facts.port === DEFAULT_PORT ? '' : ` --port ${facts.port}`;
+    const flag = portFlag(facts.port);
     return [
         `This machine runs Ruimte ${facts.version} on ${address} (home: ${facts.home}). Ctrl+C stops it.`,
-        `Next: \`ruimte login${portFlag}\` puts it on your account, \`ruimte service install${portFlag}\` keeps it running in the background, and \`ruimte status${portFlag}\` says how clients reach it.`
+        `Next: \`ruimte login${flag}\` puts it on your account, \`ruimte service install${flag}\` keeps it running in the background, and \`ruimte status${flag}\` says how clients reach it.`
     ];
 }
