@@ -86,14 +86,17 @@ test("a worktree added later cannot expand the agent's original roots", async ()
     const host = ruimteUiSources(hosts);
     const access = await host.capture(info());
     hosts.worktreePaths = async () => [join(root, 'outside')];
-    await expect(host.sources['git.status']!.authorize(info(), access, { repo: join(root, 'outside') })).rejects.toThrow('outside the project');
+    await expect(host.sources['git.status']!.authorize(info(), access, { repo: join(root, 'outside') })).rejects.toMatchObject({ reason: 'outside-project' });
 });
 
 test("a moved chat does not read the old project's queries or links", async () => {
     const host = ruimteUiSources(hosts);
     const access = await host.capture(info());
     hosts.place = () => ({ projectId: 'other', folder });
-    await expect(host.sources['chat.tasks']!.authorize(info(), access, {})).rejects.toThrow('another project');
+    await expect(host.sources['chat.tasks']!.authorize(info(), access, {})).rejects.toMatchObject({
+        reason: 'access-unavailable',
+        message: expect.stringContaining('another project')
+    });
     expect(await host.link!(info(), access, { type: 'Node', id: 'local' })).toMatchObject({ state: 'plain', code: 'access-unavailable' });
 });
 
@@ -107,6 +110,9 @@ test('tasks can read only their writing chat and launches only their project', a
         launchId: 'api-id',
         state: 'unstarted'
     });
+    await expect(host.sources['launch.status']!.read(info(), { name: 'web' }, new AbortController().signal, access)).rejects.toMatchObject({
+        reason: 'no-unique-match'
+    });
 });
 
 test('file links resolve to a canonical project file, and refuse symlinks outside it', async () => {
@@ -119,8 +125,11 @@ test('file links resolve to a canonical project file, and refuse symlinks outsid
         state: 'chip',
         target: { type: 'File', path: join(folder, 'readme.md'), line: 4 }
     });
-    await expect(host.link!(info(), access, { type: 'File', path: 'escaped/secret.md' })).rejects.toThrow('outside');
-    await expect(host.link!(info(), access, { type: 'File', path: '.' })).rejects.toThrow('not a file');
+    await expect(host.link!(info(), access, { type: 'File', path: 'escaped/secret.md' })).rejects.toMatchObject({ reason: 'outside-project' });
+    await expect(host.link!(info(), access, { type: 'File', path: '.' })).rejects.toMatchObject({
+        reason: 'link-unsupported',
+        message: 'This target is not a file.'
+    });
 });
 
 test('node links never cross a project and are checked again after removal', async () => {
@@ -131,7 +140,7 @@ test('node links never cross a project and are checked again after removal', asy
     expect(await host.link!(info(), access, { type: 'Node', id: 'child' })).toMatchObject({ state: 'plain', label: 'Child' });
     await expect(host.link!(info(), access, { type: 'Node', id: 'other' })).rejects.toThrow('outside');
     hosts.node = () => null;
-    await expect(host.link!(info(), access, { type: 'Node', id: 'local' })).rejects.toThrow('no longer available');
+    await expect(host.link!(info(), access, { type: 'Node', id: 'local' })).rejects.toMatchObject({ reason: 'target-unavailable' });
 });
 
 test('a file removed after its initial validation is refused at open time', async () => {
@@ -210,7 +219,10 @@ test('diff links retain a deleted file and select the staged side', async () => 
         staged: true,
         relativePath: 'a.md'
     });
-    await expect(host.link!(info(), access, { type: 'Diff', path: 'other.md' })).rejects.toThrow('no current diff');
+    await expect(host.link!(info(), access, { type: 'Diff', path: 'other.md' })).rejects.toMatchObject({
+        reason: 'target-unavailable',
+        message: 'This file has no current diff.'
+    });
 });
 
 test("commit and diff links resolve in a repository beside the agent's own", async () => {

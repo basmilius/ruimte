@@ -2,10 +2,10 @@ import { realpath, stat } from 'node:fs/promises';
 import { basename, dirname, relative, resolve } from 'node:path';
 import type { ChatInfo } from '@ruimte/contracts';
 import type { UiLinkResolution, UiLinkTarget } from '@adecore/intelligent-ui/links';
+import { ChatUiRefusal } from '@adecore/agents/chat/ui-queries';
 import { checkCwd, isInside } from '../canvas/project-paths.ts';
 import { listRepos } from '../git/repos.ts';
 import { git, toplevel } from '../git/run.ts';
-import { ChatError } from './errors.ts';
 import { UiSourceAccessSchema } from './ui-access.ts';
 import type { UiSourceHosts } from './ui-sources.ts';
 
@@ -27,7 +27,7 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
     if (target.type === 'Node') {
         const node = host.node(target.id);
         if (!node || node.projectId !== place.projectId) {
-            throw new ChatError('refused-query', 'This node is outside the project or no longer available.');
+            throw new ChatUiRefusal('target-unavailable', 'This node is outside the project or no longer available.');
         }
         if (node.hidden) {
             return { state: 'plain', label: node.title, reason: 'This agent works out of sight and has no node or view to open.' };
@@ -63,7 +63,7 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
                 label: subject?.trim().slice(0, 256) || sha.slice(0, 7)
             };
         }
-        throw new ChatError('refused-query', 'This commit is no longer available.');
+        throw new ChatUiRefusal('target-unavailable', 'This commit is no longer available.');
     }
     let path = resolve(access.cwd, target.path);
     let parent = path;
@@ -75,7 +75,7 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
             break;
         } catch (error) {
             if (target.type !== 'Diff' || (error as NodeJS.ErrnoException).code !== 'ENOENT' || dirname(parent) === parent) {
-                throw new ChatError('refused-query', 'This file is no longer available.');
+                throw new ChatUiRefusal('target-unavailable', 'This file is no longer available.');
             }
             missing.unshift(basename(parent));
             parent = dirname(parent);
@@ -83,10 +83,10 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
     }
     path = resolve(real, ...missing);
     if (!access.roots.some((root) => isInside(root, path))) {
-        throw new ChatError('refused-query', 'This file is outside the project the agent wrote this in.');
+        throw new ChatUiRefusal('outside-project', 'This file is outside the project the agent wrote this in.');
     }
     if (target.type === 'File' && !(await stat(real)).isFile()) {
-        throw new ChatError('refused-query', 'This target is not a file.');
+        throw new ChatUiRefusal('link-unsupported', 'This target is not a file.');
     }
     await checkCwd(place.folder, missing.length ? real : dirname(real), host.worktreePaths);
     if (target.type === 'File') {
@@ -94,13 +94,13 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
     }
     const root = await repositoryOf(missing.length ? real : dirname(path));
     if (!root || !access.roots.some((allowed) => isInside(allowed, root)) || !isInside(root, path)) {
-        throw new ChatError('refused-query', "This diff is outside the repositories of the agent's project.");
+        throw new ChatUiRefusal('outside-project', "This diff is outside the repositories of the agent's project.");
     }
     await checkCwd(place.folder, root, host.worktreePaths);
     const status = await host.gitStatus(root);
     const changed = status.files.filter((file) => resolve(root, file.path) === path);
     if (!changed.length) {
-        throw new ChatError('refused-query', 'This file has no current diff.');
+        throw new ChatUiRefusal('target-unavailable', 'This file has no current diff.');
     }
     return {
         state: 'chip',

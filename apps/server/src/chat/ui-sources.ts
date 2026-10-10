@@ -3,11 +3,10 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 import type { ChatInfo, GitFileState, GitLogResult, GitStatus, Task } from '@ruimte/contracts';
 import { GitFileSchema, GitFileStateSchema, GitLogResultSchema, GitOperationSchema, TaskSchema } from '@ruimte/contracts';
-import type { ChatUiHost, ChatUiSource } from '@adecore/agents/chat/ui-queries';
+import { ChatUiRefusal, type ChatUiHost, type ChatUiSource } from '@adecore/agents/chat/ui-queries';
 import { checkCwd, isInside } from '../canvas/project-paths.ts';
 import type { LaunchReading } from '../canvas/verb.ts';
 import type { AgentDatabases, DatabasePlace } from '../database/agent-databases.ts';
-import { ChatError } from './errors.ts';
 import { UiSourceAccessSchema } from './ui-access.ts';
 import { UI_SOURCE_ARGS } from './ui-source-args.ts';
 import { resolveUiProjectLink } from './ui-links.ts';
@@ -61,7 +60,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
     const place = (info: ChatInfo): DatabasePlace => {
         const current = host.place(info.chatId);
         if (!current) {
-            throw new ChatError('refused-query', 'This chat is no longer in a project.');
+            throw new ChatUiRefusal('access-unavailable', 'This chat is no longer in a project.');
         }
         return current;
     };
@@ -69,7 +68,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
         const access = UiSourceAccessSchema.parse(input);
         const current = place(info);
         if (current.projectId !== access.projectId || (await realpath(current.folder)) !== access.folder) {
-            throw new ChatError('refused-query', 'This chat moved to another project since the agent wrote this.');
+            throw new ChatUiRefusal('access-unavailable', 'This chat moved to another project since the agent wrote this.');
         }
         return access;
     };
@@ -78,7 +77,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
         const cwd = await checkCwd(place(info).folder, resolve(access.cwd, String(args.repo ?? '.')), host.worktreePaths);
         const real = await realpath(cwd);
         if (!access.roots.some((root) => isInside(root, real))) {
-            throw new ChatError('refused-query', 'This repository is outside the project the agent wrote this in.');
+            throw new ChatUiRefusal('outside-project', 'This repository is outside the project the agent wrote this in.');
         }
         return cwd;
     };
@@ -122,7 +121,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
                 const named = launches.filter((launch) => launch.name.toLowerCase() === String(args.name).toLowerCase());
                 const launch = exact ?? (named.length === 1 ? named[0] : undefined);
                 if (!launch) {
-                    throw new ChatError('refused-query', 'This project has no unique launch with that name.');
+                    throw new ChatUiRefusal('no-unique-match', 'This project has no unique launch with that name.');
                 }
                 return {
                     name: launch.name,
@@ -192,7 +191,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
         const [folder, cwd, trees] = await Promise.all([realpath(current.folder), realpath(info.cwd), host.worktreePaths(current.folder)]);
         const roots = [folder, ...(await Promise.all(trees.map((tree) => realpath(tree).catch(() => null)))).filter((tree): tree is string => tree !== null)];
         if (!roots.some((root) => isInside(root, cwd))) {
-            throw new ChatError('refused-query', "The agent's chat is outside its project.");
+            throw new ChatUiRefusal('outside-project', "The agent's chat is outside its project.");
         }
         return { projectId: current.projectId, folder, cwd, roots };
     };

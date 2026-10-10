@@ -22280,6 +22280,36 @@
           }
         }
       }
+    },
+    "This is outside the project the agent wrote this in." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit valt buiten het project waarin de agent dit schreef."
+          }
+        }
+      }
+    },
+    "What this points to is no longer available." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waar dit naar verwijst is niet meer beschikbaar."
+          }
+        }
+      }
+    },
+    "The source found no single match for that name." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De bron vond voor die naam niet precies één overeenkomst."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
