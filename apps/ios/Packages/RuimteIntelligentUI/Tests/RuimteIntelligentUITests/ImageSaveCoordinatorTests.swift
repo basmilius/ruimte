@@ -25,6 +25,22 @@ private actor SaveCoordinatorGate<Value: Sendable> {
 }
 
 @MainActor struct ImageSaveCoordinatorTests {
+    @Test func aCanceledCallerOrAStoppedChatIsAnsweredWithNil() async throws {
+        let coordinator = ImageSaveCoordinator(chatID: "chat") { _, _ in coordinatorRoot }
+        let appeared = observingPresentation(coordinator)
+        let opened = Task { try await coordinator.open(attachmentID: "image") }
+        _ = await appeared.wait()
+        opened.cancel()
+        #expect(try await opened.value == nil)
+        #expect(coordinator.current == nil)
+        let again = observingPresentation(coordinator)
+        let another = Task { try await coordinator.open(attachmentID: "image") }
+        _ = await again.wait()
+        coordinator.stop()
+        #expect(try await another.value == nil)
+        #expect(coordinator.current == nil)
+    }
+
     @Test func cancellingTheSheetCompletesItsCallerOnceAndAllowsAnotherImage() async throws {
         var calls: [JSONValue] = []
         let coordinator = ImageSaveCoordinator(chatID: "original-chat") { _, payload in

@@ -35,11 +35,33 @@ public final class ImageSaveCoordinator {
         let model = try ImageSaveModel(chatID: chatID, attachmentID: attachmentID, root: root, request: request) {
             [weak self] path in self?.finish(id: id, path: path)
         }
-        return await withCheckedContinuation { continuation in
-            self.continuation = continuation
-            current = model
-            opening = false
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                guard !Task.isCancelled else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                self.continuation = continuation
+                current = model
+                opening = false
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in self?.finish(id: id, path: nil) }
         }
+    }
+
+    /// Answers a caller still waiting with nil and lets the sheet go, for a chat that leaves before the sheet closes.
+    public func stop() {
+        generation += 1
+        current = nil
+        opening = false
+        let continuation = continuation
+        self.continuation = nil
+        continuation?.resume(returning: nil)
+    }
+
+    isolated deinit {
+        continuation?.resume(returning: nil)
     }
 
     public func close() {

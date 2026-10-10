@@ -66,7 +66,7 @@ struct GeneratedImageSaveDialog: View {
                     if model.pending || model.checking {
                         ProgressView()
                             .accessibilityLabel(
-                                model.pending ? String(localized: "Save") : String(localized: "Checking"))
+                                model.pending ? String(localized: "Saving") : String(localized: "Checking"))
                     } else {
                         Button("Save", action: save).disabled(!model.canSave)
                     }
@@ -76,7 +76,11 @@ struct GeneratedImageSaveDialog: View {
         .presentationDetents([.large])
         .interactiveDismissDisabled(model.pending)
         .task { await model.loadFolders() }
-        .task(id: model.destinationPath) { await model.check() }
+        .task(id: model.destinationPath) {
+            // Typing a name asks the machine once the name rests, not at every keystroke.
+            do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
+            await model.check()
+        }
         // A swipe that dismisses the sheet answers the host the way Cancel does; after a save this does nothing.
         .onDisappear { model.close() }
     }
@@ -91,13 +95,14 @@ struct GeneratedImageSaveDialog: View {
                 } label: {
                     Image(lucide: expanded.contains(directory) ? "chevron-down" : "chevron-right", size: 14)
                         .foregroundStyle(MobileStyle.faint)
-                        .frame(width: 28, height: 32)
+                        .frame(width: 32, height: 44)
                 }
                 .buttonStyle(.plain)
                 .opacity(expandable ? 1 : 0)
                 .disabled(!expandable)
                 .accessibilityLabel(
-                    expanded.contains(directory) ? String(localized: "Collapse") : String(localized: "Expand")
+                    expanded.contains(directory)
+                        ? String(localized: "Collapse \(name)") : String(localized: "Expand \(name)")
                 )
                 .accessibilityHidden(!expandable)
                 Button {
@@ -112,7 +117,7 @@ struct GeneratedImageSaveDialog: View {
                             Image(lucide: "check", size: 14).foregroundStyle(MobileStyle.accent)
                         }
                     }
-                    .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

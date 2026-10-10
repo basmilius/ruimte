@@ -190,6 +190,7 @@ final class ChatModel {
         Task { await composition.flush() }
         generation += 1
         attachTask?.cancel()
+        uiModels.imageSave.stop()
         for cancel in unsubscribe { cancel() }
         unsubscribe.removeAll()
         loading = false

@@ -13,7 +13,7 @@ import UniformTypeIdentifiers
 struct GeneratedImageRow: View {
     let item: JSONValue
     /// Saves the attachment into the project through the host's own picker and returns the path it chose, or nil
-    /// when the person cancelled. Left out, Save to project is not offered.
+    /// when the person canceled. Left out, Save to project is not offered.
     var saveToProject: (@MainActor (_ attachment: JSONValue) async throws -> String?)?
 
     var body: some View {
@@ -95,12 +95,13 @@ private struct GeneratedImageReady: View {
     let transparent: Bool
     let saveToProject: (@MainActor (JSONValue) async throws -> String?)?
     @Environment(\.chatContent) private var chat
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var bytes: Data?
+    /// Only the picture the row draws; the bytes are read again for Open large, Share and Save, so a long thread
+    /// does not hold every image whole.
     @State private var thumbnail: UIImage?
     @State private var missing: String?
     @State private var preview: URL?
     @State private var previewFolder: URL?
+    @State private var opening = false
     @State private var saving = false
     @State private var savedFlash = false
     @State private var savedPath: String?
@@ -138,10 +139,11 @@ private struct GeneratedImageReady: View {
         }
         .quickLookPreview($preview)
         .onChange(of: preview) { _, url in
-            if url == nil, let previewFolder {
-                try? FileManager.default.removeItem(at: previewFolder)
-                self.previewFolder = nil
-            }
+            if url == nil { removePreviewFolder() }
+        }
+        .onDisappear {
+            preview = nil
+            removePreviewFolder()
         }
         .task(id: attachment["id"]) { await load() }
     }
@@ -165,12 +167,11 @@ private struct GeneratedImageReady: View {
             .frame(maxWidth: 360, alignment: .leading)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .overlay {
-                RoundedRectangle(cornerRadius: 14).strokeBorder(
-                    (colorScheme == .dark ? Color.white : Color.black).opacity(0.1))
+                RoundedRectangle(cornerRadius: 14).strokeBorder(MobileStyle.border)
             }
         }
         .buttonStyle(.plain)
-        .disabled(bytes == nil)
+        .disabled(thumbnail == nil)
         .accessibilityLabel(prompt ?? String(localized: "Generated image"))
         .accessibilityHint(missing ?? String(localized: "Open large"))
         .accessibilityAddTraits(.isImage)
@@ -183,14 +184,14 @@ private struct GeneratedImageReady: View {
                 Button {
                     Task { await openLarge() }
                 } label: {
-                    Image(lucide: "maximize-2", size: 14).frame(width: 36, height: 36)
+                    Image(lucide: "maximize-2", size: 14).frame(width: 44, height: 44)
                 }
                 .glassEffect(.regular.interactive(), in: .circle)
                 .accessibilityLabel(String(localized: "Open large"))
                 Menu {
                     actions
                 } label: {
-                    Image(lucide: "ellipsis", size: 14).frame(width: 36, height: 36)
+                    Image(lucide: "ellipsis", size: 14).frame(width: 44, height: 44)
                 }
                 .glassEffect(.regular.interactive(), in: .circle)
                 .accessibilityLabel(String(localized: "Image actions"))
@@ -199,48 +200,55 @@ private struct GeneratedImageReady: View {
         .buttonStyle(.plain)
         .foregroundStyle(MobileStyle.text)
         .padding(6)
-        .disabled(bytes == nil)
-        .opacity(bytes == nil ? 0 : 1)
+        .disabled(thumbnail == nil)
+        .opacity(thumbnail == nil ? 0 : 1)
     }
 
     @ViewBuilder private var actions: some View {
         Button(String(localized: "Open large"), lucideIcon: "maximize-2") { Task { await openLarge() } }
-            .disabled(bytes == nil)
-        if let bytes {
+            .disabled(thumbnail == nil)
+        if let thumbnail, let read = reader {
             ShareLink(
                 item: GeneratedImageFile(
-                    data: bytes, name: name, type: UTType(mimeType: attachment["mime"]?.stringValue ?? "")),
-                preview: SharePreview(name, image: Image(uiImage: thumbnail ?? UIImage()))
+                    name: name, type: UTType(mimeType: attachment["mime"]?.stringValue ?? ""), data: read),
+                preview: SharePreview(name, image: Image(uiImage: thumbnail))
             ) {
                 Label(String(localized: "Share"), lucideIcon: "share")
             }
         }
         if saveToProject != nil {
             Button(String(localized: "Save to project…"), lucideIcon: "folder-down") { save() }
-                .disabled(bytes == nil || saving)
+                .disabled(thumbnail == nil || saving)
         }
         if let prompt {
             Button(String(localized: "Copy prompt"), lucideIcon: "copy") { UIPasteboard.general.string = prompt }
         }
     }
 
+    /// Reads the attachment's bytes from the machine; nil without a chat to read it from.
+    private var reader: (@Sendable @MainActor () async throws -> Data)? {
+        guard let chat, let id = attachment["id"]?.stringValue else { return nil }
+        let client = chat.client
+        let resource: JSONValue = .object([
+            "kind": .string("attachment"), "chatId": .string(chat.chatID), "attachmentId": .string(id),
+        ])
+        return { try await client.readResource(resource).data }
+    }
+
     private func load() async {
-        guard bytes == nil, let chat, let id = attachment["id"]?.stringValue else {
+        guard thumbnail == nil, let read = reader else {
             if chat == nil { missing = String(localized: "The image is not available") }
             return
         }
         do {
-            let resource = try await chat.client.readResource(
-                .object(["kind": .string("attachment"), "chatId": .string(chat.chatID), "attachmentId": .string(id)]))
+            let data = try await read()
             try Task.checkCancellation()
-            let data = resource.data
             let image = await Task.detached(priority: .utility) { Self.downsample(data) }.value
             try Task.checkCancellation()
             guard let image else {
                 missing = String(localized: "The image is not available")
                 return
             }
-            bytes = data
             thumbnail = image
             missing = nil
         } catch is CancellationError {
@@ -263,18 +271,28 @@ private struct GeneratedImageReady: View {
 
     /// Full screen with zoom and the system's share and save, from a copy that goes when the preview closes.
     private func openLarge() async {
-        guard let bytes, preview == nil else { return }
+        guard thumbnail != nil, preview == nil, !opening, let read = reader else { return }
+        opening = true
+        defer { opening = false }
         do {
+            let bytes = try await read()
             let folder = FileManager.default.temporaryDirectory.appending(
                 path: "ruimte-image-\(UUID().uuidString)", directoryHint: .isDirectory)
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            previewFolder = folder
             let url = folder.appendingPathComponent(name)
             try bytes.write(to: url, options: [.atomic, .completeFileProtection])
-            previewFolder = folder
             preview = url
         } catch {
-            problem = error.localizedDescription
+            removePreviewFolder()
+            if !(error is CancellationError) { problem = error.localizedDescription }
         }
+    }
+
+    private func removePreviewFolder() {
+        guard let previewFolder else { return }
+        try? FileManager.default.removeItem(at: previewFolder)
+        self.previewFolder = nil
     }
 
     private func save() {
@@ -299,21 +317,22 @@ private struct GeneratedImageReady: View {
 /// The image as a file for the share sheet, in the type the attachment says it is, so Save Image and other apps
 /// take it as that image.
 private struct GeneratedImageFile: Transferable {
-    let data: Data
     let name: String
     let type: UTType?
+    /// Read only once the person picks where the image goes.
+    let data: @Sendable @MainActor () async throws -> Data
 
     static var transferRepresentation: some TransferRepresentation {
-        DataRepresentation(exportedContentType: .png) { $0.data }
+        DataRepresentation(exportedContentType: .png) { try await $0.data() }
             .exportingCondition { $0.type == .png || $0.type == nil }
             .suggestedFileName { $0.name }
-        DataRepresentation(exportedContentType: .jpeg) { $0.data }
+        DataRepresentation(exportedContentType: .jpeg) { try await $0.data() }
             .exportingCondition { $0.type == .jpeg }
             .suggestedFileName { $0.name }
-        DataRepresentation(exportedContentType: .webP) { $0.data }
+        DataRepresentation(exportedContentType: .webP) { try await $0.data() }
             .exportingCondition { $0.type == .webP }
             .suggestedFileName { $0.name }
-        DataRepresentation(exportedContentType: .image) { $0.data }
+        DataRepresentation(exportedContentType: .image) { try await $0.data() }
             .exportingCondition { ![UTType.png, .jpeg, .webP].contains($0.type ?? .png) }
             .suggestedFileName { $0.name }
     }
