@@ -159,11 +159,11 @@ function isEmptyOverlay(overlay: LaunchConfigOverlay | undefined): boolean {
     );
 }
 
-/* The approval key: the launch and everything that decides what runs, so a change to any of them asks again. */
 function approvalKeyOf(launchId: string): string {
     return `launch:${launchId}`;
 }
 
+/* Everything that decides what runs, approved as one, so a change to any of it asks again. */
 function digestOf(resolved: Pick<ResolvedLaunch, 'command' | 'cwd' | 'env'>): string {
     return JSON.stringify([resolved.command, resolved.cwd, Object.entries(resolved.env).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))]);
 }
@@ -338,7 +338,6 @@ export class LaunchStore {
     private documentOf(projectId: string, state: LoadedLaunches): LaunchesDocument {
         const resolved = this.resolvedAll(projectId, state);
         const approvedIds = new Set(resolved.filter((entry) => entry.approved).map((entry) => entry.launch.id));
-        const sharedIds = new Set(launchesOf(state.shared).map((launch) => launch.id));
         for (const entry of resolved) {
             const members = entry.launch.launches ?? [];
             if (entry.launch.kind === 'group' && members.length > 0 && members.every((id) => approvedIds.has(id))) {
@@ -347,8 +346,7 @@ export class LaunchStore {
         }
         return {
             rev: state.rev,
-            launches: resolved.map(({ launch }) => {
-                const shared = sharedIds.has(launch.id);
+            launches: resolved.map(({ launch, shared }) => {
                 const overlay = shared ? state.overlays[launch.id] : undefined;
                 return { ...launch, shared, ...(overlay ? { overlay } : {}) };
             }),
@@ -447,10 +445,8 @@ export class LaunchStore {
     }
 }
 
-type LaunchFileRead<T> = JsonDocumentRead<T>;
-
 /* A file from a newer Ruimte is refused, never set aside: a later release reads it. */
-async function readLaunchFile<T>(path: string, parse: (text: string) => JsonDocumentParse<T>, setAside = true): Promise<LaunchFileRead<T>> {
+async function readLaunchFile<T>(path: string, parse: (text: string) => JsonDocumentParse<T>, setAside = true): Promise<JsonDocumentRead<T>> {
     const read = await readJsonDocument(path, parse, { setAside });
     if (read.kind === 'too-new') {
         throw new LaunchError('launches-invalid', tooNewMessage('launch file', read.version, LAUNCHES_VERSION));
@@ -461,14 +457,16 @@ async function readLaunchFile<T>(path: string, parse: (text: string) => JsonDocu
     return read;
 }
 
-function textOf<T>(read: LaunchFileRead<T>): string | null {
+function textOf<T>(read: JsonDocumentRead<T>): string | null {
     return read.kind === 'ok' ? read.text : read.kind === 'missing' ? '' : null;
 }
 
-function takeShared(state: LoadedLaunches, read: LaunchFileRead<LaunchesSharedFile>): void {
+function takeShared(state: LoadedLaunches, read: JsonDocumentRead<LaunchesSharedFile>): void {
     if (read.kind !== 'ok') {
-        state.sharedText = read.kind === 'missing' ? '' : state.sharedText;
-        state.shared = read.kind === 'missing' ? [] : state.shared;
+        if (read.kind === 'missing') {
+            state.sharedText = '';
+            state.shared = [];
+        }
         return;
     }
     state.sharedText = read.text;
@@ -476,7 +474,7 @@ function takeShared(state: LoadedLaunches, read: LaunchFileRead<LaunchesSharedFi
     state.sharedRest = restOf(read.document, SHARED_KEYS);
 }
 
-function takePrivate(state: LoadedLaunches, read: LaunchFileRead<LaunchesPrivateFile>): void {
+function takePrivate(state: LoadedLaunches, read: JsonDocumentRead<LaunchesPrivateFile>): void {
     if (read.kind !== 'ok') {
         if (read.kind === 'missing') {
             state.privateText = '';

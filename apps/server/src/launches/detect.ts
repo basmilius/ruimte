@@ -118,6 +118,14 @@ export function slugOf(name: string): string {
     );
 }
 
+function filled(value: string | undefined): value is string {
+    return value !== undefined && value !== '';
+}
+
+function titleOf(name: string): string {
+    return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 function kindOfScript(name: string): LaunchConfigKind {
     return SERVICE_NAME.test(name) ? 'service' : 'task';
 }
@@ -170,7 +178,11 @@ interface RunFileContext {
 type Built = { launch: LaunchConfig; detail: string; outside: boolean; unsupported?: string };
 
 function envOf(configuration: XmlElement, scope: PathScope): LaunchConfigEnv | undefined {
-    const entries = childrenOf(childOf(configuration, 'envs') ?? { name: '', attributes: {}, children: [] }, 'env').flatMap((env) =>
+    const envs = childOf(configuration, 'envs');
+    if (envs === undefined) {
+        return undefined;
+    }
+    const entries = childrenOf(envs, 'env').flatMap((env) =>
         env.attributes.name === undefined ? [] : [[env.attributes.name, scope.expand(env.attributes.value ?? '')] as const]
     );
     return entries.length === 0 ? undefined : Object.fromEntries(entries);
@@ -179,15 +191,15 @@ function envOf(configuration: XmlElement, scope: PathScope): LaunchConfigEnv | u
 function phpServer(configuration: XmlElement, context: RunFileContext): Built {
     const attributes = configuration.attributes;
     const scope = new PathScope(context.folder, context.projectDir, context.projectDir);
-    const host = attributes.host === undefined || attributes.host === '' ? 'localhost' : attributes.host;
-    const port = attributes.port === undefined || attributes.port === '' ? '80' : attributes.port;
+    const host = filled(attributes.host) ? attributes.host : 'localhost';
+    const port = filled(attributes.port) ? attributes.port : '80';
     const parameters = scope.line(childOf(configuration, 'CommandLine')?.attributes.parameters ?? '');
     // PHP reads its -d flags only before -S; after it they are arguments to the router.
     const parts = ['php', ...(parameters === '' ? [] : [parameters]), '-S', `${host}:${port}`];
-    if (attributes.document_root !== undefined && attributes.document_root !== '') {
+    if (filled(attributes.document_root)) {
         parts.push('-t', shellQuote(scope.path(attributes.document_root)));
     }
-    if (attributes.use_router_script === 'true' && attributes.router_script !== undefined && attributes.router_script !== '') {
+    if (attributes.use_router_script === 'true' && filled(attributes.router_script)) {
         parts.push(shellQuote(scope.path(attributes.router_script)));
     }
     const address = host === '0.0.0.0' || host === '::' ? 'localhost' : host;
@@ -212,11 +224,11 @@ function pestTests(configuration: XmlElement, context: RunFileContext): Built {
     if (runner.parallel_testing_enabled === 'true') {
         parts.push('--parallel');
     }
-    const target = runner.file !== undefined && runner.file !== '' ? runner.file : runner.directory;
-    if (target !== undefined && target !== '') {
+    const target = filled(runner.file) ? runner.file : runner.directory;
+    if (filled(target)) {
         parts.push(shellQuote(scope.path(target)));
     }
-    if (runner.method !== undefined && runner.method !== '') {
+    if (filled(runner.method)) {
         parts.push('--filter', shellQuote(runner.method));
     }
     return {
@@ -254,7 +266,7 @@ function shellScript(configuration: XmlElement, context: RunFileContext): Built 
     const workingDirectory = optionOf(configuration, 'SCRIPT_WORKING_DIRECTORY');
     const scriptPath = optionOf(configuration, 'SCRIPT_PATH') ?? '';
     const cwd =
-        optionOf(configuration, 'INDEPENDENT_SCRIPT_WORKING_DIRECTORY') === 'true' && workingDirectory !== undefined && workingDirectory !== ''
+        optionOf(configuration, 'INDEPENDENT_SCRIPT_WORKING_DIRECTORY') === 'true' && filled(workingDirectory)
             ? resolve(context.projectDir, scope.expand(workingDirectory))
             : scriptPath === ''
               ? context.projectDir
@@ -379,7 +391,7 @@ async function packageScripts(folder: string, directory: string): Promise<Built[
             return {
                 launch: {
                     id: '',
-                    name: name.charAt(0).toUpperCase() + name.slice(1),
+                    name: titleOf(name),
                     kind,
                     cwd: directory,
                     command: `${runner} ${shellQuote(name)}`,
@@ -399,7 +411,7 @@ async function composerScripts(directory: string): Promise<Built[]> {
             .map(([name]) => ({
                 launch: {
                     id: '',
-                    name: name.charAt(0).toUpperCase() + name.slice(1),
+                    name: titleOf(name),
                     kind: kindOfScript(name),
                     cwd: directory,
                     command: `composer run ${shellQuote(name)}`
