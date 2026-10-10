@@ -61,6 +61,33 @@ async function destination(folder: string, path: string): Promise<string> {
     return actual;
 }
 
+/* The bytes of an attached image, refused when they changed while read or are no image of its type. */
+async function imageBytes(attachment: ChatAttachment): Promise<Uint8Array> {
+    const source = await open(attachment.path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+        const file = await source.stat();
+        if (!file.isFile() || file.size === 0 || file.size > CHAT_ATTACHMENT_MAX_BYTES) {
+            throw new ImageFileError('invalid-image', 'The attached image is empty or too large');
+        }
+        const buffer = new Uint8Array(Math.min(file.size + 1, CHAT_ATTACHMENT_MAX_BYTES + 1));
+        let offset = 0;
+        while (offset < buffer.length) {
+            const read = await source.read(buffer, offset, buffer.length - offset, offset);
+            if (read.bytesRead === 0) {
+                break;
+            }
+            offset += read.bytesRead;
+        }
+        const bytes = buffer.subarray(0, offset);
+        if (bytes.length !== file.size || sniffImageMime(bytes) !== attachment.mime) {
+            throw new ImageFileError('invalid-image', 'The attached image changed or is not an image');
+        }
+        return bytes;
+    } finally {
+        await source.close();
+    }
+}
+
 export class ChatImageFiles {
     private readonly sources: ImageFileSources;
     private readonly writes = new Set<string>();
@@ -115,29 +142,7 @@ export class ChatImageFiles {
             if (payload.replace !== undefined && (before === null || revision(before) !== payload.replace)) {
                 throw new ImageFileError('stale', 'The destination changed since it was checked');
             }
-            const source = await open(attachment.path, constants.O_RDONLY | constants.O_NOFOLLOW);
-            let bytes: Uint8Array;
-            try {
-                const file = await source.stat();
-                if (!file.isFile() || file.size === 0 || file.size > CHAT_ATTACHMENT_MAX_BYTES) {
-                    throw new ImageFileError('invalid-image', 'The attached image is empty or too large');
-                }
-                bytes = new Uint8Array(Math.min(file.size + 1, CHAT_ATTACHMENT_MAX_BYTES + 1));
-                let offset = 0;
-                while (offset < bytes.length) {
-                    const read = await source.read(bytes, offset, bytes.length - offset, offset);
-                    if (read.bytesRead === 0) {
-                        break;
-                    }
-                    offset += read.bytesRead;
-                }
-                bytes = bytes.subarray(0, offset);
-                if (bytes.length !== file.size || sniffImageMime(bytes) !== attachment.mime) {
-                    throw new ImageFileError('invalid-image', 'The attached image changed or is not an image');
-                }
-            } finally {
-                await source.close();
-            }
+            const bytes = await imageBytes(attachment);
             const output = await open(
                 temporary,
                 constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,

@@ -56,6 +56,19 @@ export function uiGitStatus(status: GitStatus): z.infer<typeof UiGitStatusSchema
     };
 }
 
+/* Column names as row keys: a repeated name gets `_2`, `_3` and so on, so no column overwrites another. */
+function uniqueNames(names: readonly string[]): string[] {
+    const used = new Set<string>();
+    return names.map((original) => {
+        let name = original;
+        for (let suffix = 2; used.has(name); suffix++) {
+            name = `${original}_${suffix}`;
+        }
+        used.add(name);
+        return name;
+    });
+}
+
 export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
     const place = (info: ChatInfo): DatabasePlace => {
         const current = host.place(info.chatId);
@@ -167,15 +180,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
                     signal,
                     uiAccess: access.databases
                 });
-                const used = new Set<string>();
-                const columns = answer.result.columns.map((column) => {
-                    let name = column.name;
-                    for (let suffix = 2; used.has(name); suffix++) {
-                        name = `${column.name}_${suffix}`;
-                    }
-                    used.add(name);
-                    return name;
-                });
+                const columns = uniqueNames(answer.result.columns.map((column) => column.name));
                 return {
                     connection: answer.connection,
                     schema: answer.schema,

@@ -50,12 +50,13 @@ export class AppleStdioTransport implements Transport {
             this.onerror?.(error);
             void this.close();
         });
-        child.stdin?.on('error', (error) => {
+        const streamFailed = (error: Error): void => {
             if (!this.closed) {
                 this.onerror?.(error);
                 void this.close();
             }
-        });
+        };
+        child.stdin?.on('error', streamFailed);
         child.stdout?.on('data', (chunk: Buffer) => {
             if (this.closed) {
                 return;
@@ -74,12 +75,7 @@ export class AppleStdioTransport implements Transport {
                 void this.close();
             }
         });
-        child.stdout?.on('error', (error) => {
-            if (!this.closed) {
-                this.onerror?.(error);
-                void this.close();
-            }
-        });
+        child.stdout?.on('error', streamFailed);
         await new Promise<void>((resolve, reject) => {
             child.once('spawn', resolve);
             child.once('error', reject);

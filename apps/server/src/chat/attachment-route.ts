@@ -11,10 +11,8 @@ export const ATTACHMENTS_PATH = '/attachments';
 const INLINE_MIME = /^(image\/(png|jpeg|gif|webp|svg\+xml)|application\/pdf|text\/plain)$/;
 
 /*
- * `GET /attachments/<chatId>/<id>`: a file someone attached to a message in that chat. Behind the
- * same access rules as the socket and the project icon, so a client sends the ticket its channel
- * handed out. The chat's own thread is what says which id belongs to which file, so nothing but
- * an attachment of a chat this daemon knows can be reached through here.
+ * `GET /attachments/<chatId>/<id>`, behind the same access rules as the socket. The chat's own thread
+ * maps an id to its file, so nothing but an attachment of a chat this daemon knows is reachable here.
  */
 export async function handleAttachmentRequest(
     request: Request,

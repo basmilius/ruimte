@@ -33,6 +33,7 @@ import { git } from '../git/run.ts';
 import { freeBranch, type Worktrees } from '../git/worktrees.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
+import type { ProjectMutation } from '../projects/project-store.ts';
 import type { AgentLineageStore } from '@adecore/agents/lineage';
 import { AccountError, storedAccount } from '@adecore/agents/providers/accounts/launch';
 import { codexServiceTier, codexThreadOptions } from '@adecore/agents/providers/codex';
@@ -116,7 +117,7 @@ export function itemsThrough(items: readonly ChatItem[], turnId: string): ChatIt
  * Whether a visual belongs to what a fork copied: one a copied turn published, or one published
  * between turns no later than the end of the turn the fork was cut at.
  */
-export function visualKept(copied: readonly ChatItem[], turn: ChatTurnItem): (visual: ChatVisual) => boolean {
+function visualKept(copied: readonly ChatItem[], turn: ChatTurnItem): (visual: ChatVisual) => boolean {
     const turnIds = new Set(copied.flatMap((item) => (item.kind === 'turn' ? [item.id] : [])));
     const end = turn.endedAt ?? copied.reduce((latest, item) => Math.max(latest, item.createdAt), turn.createdAt);
     return (visual) => (visual.turnId === undefined ? visual.at <= end : turnIds.has(visual.turnId));
@@ -132,32 +133,42 @@ interface Cut {
 }
 
 /* Where the fork's files come from (the original's folder, or a worktree of its own that starts after the turn or from HEAD). */
-export type ForkFiles = { kind: 'shared'; repository: boolean } | { kind: 'worktree'; path: string; branch: string; afterTurn: boolean };
+type ForkFiles = { kind: 'shared'; repository: boolean } | { kind: 'worktree'; path: string; branch: string; afterTurn: boolean };
 
-/* What the person reads under the copied history, and what the agent is told in front of its first prompt. */
-export function forkNotes(cut: Cut, original: { id: string; title: string; view: boolean }, files: ForkFiles): { note: string; preamble: string } {
-    const where = cut.last ? `its last turn (turn ${cut.number})` : `turn ${cut.number} of ${cut.total}`;
-    const counted = cut.exact || cut.last ? '' : ' The cut was made by counting turns, since this turn is older than the names the CLI gives them.';
-    const outside = files.kind === 'shared' && !files.repository ? ' The folder is in no git repository, so the fork has no worktree of its own.' : '';
-    let personFiles: string;
-    let folder: string;
+function cutPlace(cut: Cut): string {
+    return cut.last ? `its last turn (turn ${cut.number})` : `turn ${cut.number} of ${cut.total}`;
+}
+
+/* Where the files of a fork stand, as the person reads it under the copied history. */
+function filesLine(cut: Cut, files: ForkFiles): string {
     if (files.kind === 'worktree') {
-        personFiles = files.afterTurn
+        return files.afterTurn
             ? `The files start from the state after that turn, in worktree ${files.branch}.`
             : `The files start from HEAD, in worktree ${files.branch}.`;
-        folder = files.afterTurn
+    }
+    return cut.last ? 'Both work in the same folder from here.' : 'The files stay as they are now, which may be newer than that turn.';
+}
+
+/* Where the agent of a fork works, as it hears it in front of its first prompt. */
+function folderLine(cut: Cut, files: ForkFiles): string {
+    if (files.kind === 'worktree') {
+        return files.afterTurn
             ? `You work in a git worktree at ${files.path} on branch ${files.branch}, with the files as they were after that turn.`
             : `You work in a git worktree at ${files.path} on branch ${files.branch}, from the current HEAD, so work the original left uncommitted is not there; check before you assume.`;
-    } else {
-        personFiles = cut.last ? 'Both work in the same folder from here.' : 'The files stay as they are now, which may be newer than that turn.';
-        folder = cut.last
-            ? 'You work in the same folder as the original, which may go on working there, so check the files before you assume.'
-            : 'You work in the same folder as the original; its files may be newer than that turn, so check before you assume.';
     }
-    const note = `Forked from ${original.title} after ${where}. ${personFiles}${outside}${counted}`;
+    return cut.last
+        ? 'You work in the same folder as the original, which may go on working there, so check the files before you assume.'
+        : 'You work in the same folder as the original; its files may be newer than that turn, so check before you assume.';
+}
+
+/* What the person reads under the copied history, and what the agent is told in front of its first prompt. */
+function forkNotes(cut: Cut, original: { id: string; title: string; view: boolean }, files: ForkFiles): { note: string; preamble: string } {
+    const counted = cut.exact || cut.last ? '' : ' The cut was made by counting turns, since this turn is older than the names the CLI gives them.';
+    const outside = files.kind === 'shared' && !files.repository ? ' The folder is in no git repository, so the fork has no worktree of its own.' : '';
+    const note = `Forked from ${original.title} after ${cutPlace(cut)}. ${filesLine(cut, files)}${outside}${counted}`;
     const preamble = [
-        `Ruimte: this conversation was forked from ${original.view ? 'view' : 'node'} ${original.id} ("${original.title}") after ${where}; what follows that turn there did not happen here.`,
-        folder,
+        `Ruimte: this conversation was forked from ${original.view ? 'view' : 'node'} ${original.id} ("${original.title}") after ${cutPlace(cut)}; what follows that turn there did not happen here.`,
+        folderLine(cut, files),
         ...(cut.exact || cut.last ? [] : ['The cut was made by counting turns; if the last message you remember does not match, say so.'])
     ].join(' ');
     return { note, preamble };
@@ -167,18 +178,9 @@ export function forkNotes(cut: Cut, original: { id: string; title: string; view:
 const CHAT_CLIS: ReadonlySet<AgentKind> = new Set(['claude', 'codex']);
 
 /* What the person reads under the copied history of a fork that goes on with another CLI. */
-export function switchNote(cut: Cut, original: { title: string }, files: ForkFiles, handoff: { to: string; turns: number; all: boolean }): string {
-    const where = cut.last ? `its last turn (turn ${cut.number})` : `turn ${cut.number} of ${cut.total}`;
-    const place =
-        files.kind === 'worktree'
-            ? files.afterTurn
-                ? ` The files start from the state after that turn, in worktree ${files.branch}.`
-                : ` The files start from HEAD, in worktree ${files.branch}.`
-            : cut.last
-              ? ' Both work in the same folder from here.'
-              : ' The files stay as they are now, which may be newer than that turn.';
+function switchNote(cut: Cut, original: { title: string }, files: ForkFiles, handoff: { to: string; turns: number; all: boolean }): string {
     const read = handoff.all ? 'the whole conversation' : `the last ${handoff.turns === 1 ? 'turn' : `${handoff.turns} turns`}`;
-    return `Forked from ${original.title} after ${where} and continued with ${handoff.to}.${place} The agent got ${read} as text and can read the rest of ${original.title} through ruimte-context.`;
+    return `Forked from ${original.title} after ${cutPlace(cut)} and continued with ${handoff.to}. ${filesLine(cut, files)} The agent got ${read} as text and can read the rest of ${original.title} through ruimte-context.`;
 }
 
 // What the CLI's own thread code refuses with is a chat error of the package's, whose code carries over as it is.
@@ -190,29 +192,122 @@ function cliRefusal(error: unknown): ChatError {
  * The tree of the files after a turn, the one taken when it settled, else the one the next turn
  * started from (the same folder, unless a person changed it in between). Null when neither was taken.
  */
-export function treeAfterTurn(turns: readonly ChatTurnItem[], index: number): string | null {
+function treeAfterTurn(turns: readonly ChatTurnItem[], index: number): string | null {
     return turns[index]?.checkpointAfter ?? turns[index + 1]?.checkpoint ?? null;
+}
+
+interface ForkSource {
+    info: ChatInfo;
+    items: ChatItem[];
+    turns: ChatTurnItem[];
+    index: number;
+    turn: ChatTurnItem;
+}
+
+async function forkSource(deps: ChatForkDeps, chatId: string, turnId: string): Promise<ForkSource> {
+    const source = await deps.source(chatId);
+    if (source === null) {
+        throw new ChatError('chat-not-found', `No chat ${chatId}`);
+    }
+    const turns = source.items.filter((item): item is ChatTurnItem => item.kind === 'turn');
+    const index = turns.findIndex((turn) => turn.id === turnId);
+    const turn = turns[index];
+    if (turn === undefined) {
+        throw new ChatError('turn-not-found', `${chatId} has no turn ${turnId}`);
+    }
+    return { ...source, turns, index, turn };
 }
 
 /* What the fork dialog needs to know before it offers a worktree and the files of a turn. */
 export async function readForkInfo(deps: ChatForkDeps, payload: ChatForkInfoPayload): Promise<ChatForkInfoResult> {
-    const source = await deps.source(payload.chatId);
-    if (source === null) {
-        throw new ChatError('chat-not-found', `No chat ${payload.chatId}`);
-    }
-    const turns = source.items.filter((item): item is ChatTurnItem => item.kind === 'turn');
-    const index = turns.findIndex((turn) => turn.id === payload.turnId);
-    if (index === -1) {
-        throw new ChatError('turn-not-found', `${payload.chatId} has no turn ${payload.turnId}`);
-    }
-    const branches = await deps.branchesOf(source.info.cwd);
+    const { info, turns, index } = await forkSource(deps, payload.chatId, payload.turnId);
+    const branches = await deps.branchesOf(info.cwd);
     if (branches === null) {
         return { repository: false, branches: [], branch: null, filesAfterTurn: false };
     }
     const tree = treeAfterTurn(turns, index);
-    const filesAfterTurn = tree === null ? index === turns.length - 1 : await deps.treeExists(source.info.cwd, tree);
-    const title = `${deps.titleFor(payload.chatId) ?? nameOf(source.info.provider)} (fork)`;
+    const filesAfterTurn = tree === null ? index === turns.length - 1 : await deps.treeExists(info.cwd, tree);
+    const title = `${deps.titleFor(payload.chatId) ?? nameOf(info.provider)} (fork)`;
     return { repository: true, branches, branch: freeBranch(branchSlug(title), new Set(branches)), filesAfterTurn };
+}
+
+/* Steps taken back in reverse when a later one is refused. */
+class UndoSteps {
+    private readonly steps: Array<() => Promise<void>> = [];
+
+    push(step: () => Promise<void>): void {
+        this.steps.push(step);
+    }
+
+    async run(): Promise<void> {
+        for (const step of this.steps.toReversed()) {
+            await step().catch(() => undefined);
+        }
+    }
+
+    /* Runs `work`, and takes every step back before its error goes on. */
+    async guard<T>(work: () => Promise<T>, refusal: (error: unknown) => unknown = (error) => error): Promise<T> {
+        try {
+            return await work();
+        } catch (error) {
+            await this.run();
+            throw refusal(error);
+        }
+    }
+}
+
+interface ForkFolder {
+    files: ForkFiles;
+    cwd: string;
+    worktree?: Worktree;
+}
+
+/* The folder the fork works in: the original's, or a worktree of its own with the files of the turn put to it when asked. */
+async function forkFolder(
+    deps: ChatForkDeps,
+    payload: ChatForkPayload,
+    source: ForkSource,
+    fork: { id: string; title: string; projectId: string },
+    undo: UndoSteps
+): Promise<ForkFolder> {
+    const { cwd } = source.info;
+    const branches = await deps.branchesOf(cwd);
+    if (payload.worktree === undefined) {
+        return { files: { kind: 'shared', repository: branches !== null }, cwd };
+    }
+    if (branches === null) {
+        throw new ChatError('not-a-repository', `${cwd} is not in a git repository, so the fork cannot have a worktree`);
+    }
+    const tree = payload.filesAfterTurn === true ? await filesTree(deps, cwd, source.turns, source.index) : null;
+    const named = payload.worktree.branch;
+    if (named !== undefined && branches.includes(named)) {
+        throw new ChatError('branch-exists', `The branch ${named} exists already; name another one`);
+    }
+    const want = named === undefined ? { fresh: branchSlug(fork.title) } : { branch: named };
+    const made = await deps.addWorktree({ cwd, want, projectId: fork.projectId, nodeId: fork.id }).catch((error: unknown) => {
+        throw new ChatError('worktree-failed', `The worktree for ${named ?? branchSlug(fork.title)} could not be made: ${errorText(error)}`);
+    });
+    undo.push(() => made.undo());
+    if (tree !== null) {
+        await undo.guard(() => deps.restoreTree(made.worktree.path, tree), cliRefusal);
+    }
+    return { files: { kind: 'worktree', path: made.cwd, branch: made.worktree.branch, afterTurn: tree !== null }, cwd: made.cwd, worktree: made.worktree };
+}
+
+/* The CLI's own copy of the conversation up to the cut, and the session id the fork resumes it under. */
+async function copyConversation(deps: ChatForkDeps, info: ChatInfo, cut: Cut, native: string | undefined, cwd: string, undo: UndoSteps): Promise<string> {
+    if (info.provider === 'codex') {
+        return deps.forkCodex({ source: info, at: native !== undefined ? { turnId: native } : cut.last ? null : { turns: cut.number }, cwd });
+    }
+    const agentSessionId = deps.newSessionId();
+    const written = await deps.forkClaude({
+        source: info,
+        at: native !== undefined ? { lastUuid: native } : cut.last ? 'whole' : { turns: cut.number },
+        newSessionId: agentSessionId,
+        cwd
+    });
+    undo.push(() => written.undo());
+    return agentSessionId;
 }
 
 /*
@@ -220,17 +315,8 @@ export async function readForkInfo(deps: ChatForkDeps, payload: ChatForkInfoPayl
  * thread. Failed setup rolls back everything except Codex threads, which its API cannot delete.
  */
 export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload): Promise<ChatForkResult> {
-    const source = await deps.source(payload.chatId);
-    if (source === null) {
-        throw new ChatError('chat-not-found', `No chat ${payload.chatId}`);
-    }
-    const { info } = source;
-    const turns = source.items.filter((item): item is ChatTurnItem => item.kind === 'turn');
-    const index = turns.findIndex((turn) => turn.id === payload.turnId);
-    const turn = turns[index];
-    if (turn === undefined) {
-        throw new ChatError('turn-not-found', `${payload.chatId} has no turn ${payload.turnId}`);
-    }
+    const source = await forkSource(deps, payload.chatId, payload.turnId);
+    const { info, turns, index, turn } = source;
     if (turn.state === 'running') {
         throw new ChatError('turn-running', 'That turn is still running; fork it once it ends');
     }
@@ -246,8 +332,7 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload): Pr
     if (!sameAccount) {
         requireAccount(deps, provider, account);
     }
-    /* Another CLI, or an account that cannot read the original's transcripts, has no copy of the
-       conversation to make; it reads it as text instead. */
+    // Another CLI, or an account that cannot read the original's transcripts, reads the conversation as text instead.
     const handoff = switching || (!sameAccount && deps.accounts?.canContinue(provider, info.account, account) !== true);
     if (!CHAT_CLIS.has(info.provider) || !CHAT_CLIS.has(provider)) {
         throw new ChatError('chat-unsupported', `${nameOf(CHAT_CLIS.has(provider) ? info.provider : provider)} has no chat that can be forked`);
@@ -262,97 +347,22 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload): Pr
     if (place === null) {
         throw new ChatError('chat-not-found', `${payload.chatId} is in no project this machine knows`);
     }
-    // A view forks into a view unless a canvas is named; a node forks into a node unless a view is asked for.
-    const intoView = payload.asView === true || (place.canvasId === null && payload.viewId === undefined);
 
-    const last = index === turns.length - 1;
     const native = info.provider === 'codex' ? turn.native?.turnId : turn.native?.lastUuid;
-    const cut: Cut = { turn, number: index + 1, total: turns.length, last, exact: native !== undefined };
+    const cut: Cut = { turn, number: index + 1, total: turns.length, last: index === turns.length - 1, exact: native !== undefined };
     const originalTitle = deps.titleFor(payload.chatId) ?? nameOf(info.provider);
     const title = clipText(payload.title ?? `${originalTitle} (fork)`, MAX_TITLE);
     const forkId = newId('chat', await deps.read(place.projectId));
 
-    // Steps taken back in reverse when a later one is refused.
-    const undoers: Array<() => Promise<void>> = [];
-    const undo = async (): Promise<void> => {
-        for (const step of undoers.toReversed()) {
-            await step().catch(() => undefined);
-        }
-    };
-
-    let files: ForkFiles;
-    let worktree: Worktree | undefined;
-    let cwd = info.cwd;
-    const branches = await deps.branchesOf(info.cwd);
-    if (payload.worktree === undefined) {
-        files = { kind: 'shared', repository: branches !== null };
-    } else {
-        if (branches === null) {
-            throw new ChatError('not-a-repository', `${info.cwd} is not in a git repository, so the fork cannot have a worktree`);
-        }
-        const tree = payload.filesAfterTurn === true ? await filesTree(deps, info.cwd, turns, index) : null;
-        const named = payload.worktree.branch;
-        if (named !== undefined && branches.includes(named)) {
-            throw new ChatError('branch-exists', `The branch ${named} exists already; name another one`);
-        }
-        const want = named === undefined ? { fresh: branchSlug(title) } : { branch: named };
-        const made = await deps.addWorktree({ cwd: info.cwd, want, projectId: place.projectId, nodeId: forkId }).catch((error: unknown) => {
-            throw new ChatError('worktree-failed', `The worktree for ${named ?? branchSlug(title)} could not be made: ${errorText(error)}`);
-        });
-        const branch = made.worktree.branch;
-        undoers.push(() => made.undo());
-        if (tree !== null) {
-            try {
-                await deps.restoreTree(made.worktree.path, tree);
-            } catch (error) {
-                await undo();
-                throw cliRefusal(error);
-            }
-        }
-        worktree = made.worktree;
-        cwd = made.cwd;
-        files = { kind: 'worktree', path: made.cwd, branch, afterTurn: tree !== null };
-    }
-
-    let agentSessionId: string | null = null;
-    try {
-        if (handoff) {
-            agentSessionId = null;
-        } else if (info.provider === 'codex') {
-            agentSessionId = await deps.forkCodex({
-                source: info,
-                at: native !== undefined ? { turnId: native } : last ? null : { turns: cut.number },
-                cwd
-            });
-        } else {
-            agentSessionId = deps.newSessionId();
-            const written = await deps.forkClaude({
-                source: info,
-                at: native !== undefined ? { lastUuid: native } : last ? 'whole' : { turns: cut.number },
-                newSessionId: agentSessionId,
-                cwd
-            });
-            undoers.push(() => written.undo());
-        }
-    } catch (error) {
-        await undo();
-        throw cliRefusal(error);
-    }
+    const undo = new UndoSteps();
+    const folder = await forkFolder(deps, payload, source, { id: forkId, title, projectId: place.projectId }, undo);
+    const { files, cwd } = folder;
+    const agentSessionId = handoff ? null : await undo.guard(() => copyConversation(deps, info, cut, native, cwd, undo), cliRefusal);
 
     const now = deps.now();
     const original = { id: payload.chatId, title: originalTitle, view: place.canvasId === null };
     const copied = itemsThrough(source.items, turn.id);
     let notes = forkNotes(cut, original, files);
-    let start: { selection: ModelSelection; runtimeMode: RuntimeMode; contextWindow: number | null } = {
-        selection: payload.selection === undefined ? info.selection : deps.startingPoint(provider, payload.selection).selection,
-        runtimeMode: info.runtimeMode,
-        contextWindow: info.usage.contextWindow
-    };
-    if (switching) {
-        const point = deps.startingPoint(provider, payload.selection);
-        // Going on with another CLI is no way to be allowed more than the original was.
-        start = { ...point, runtimeMode: narrowerMode(point.runtimeMode ?? info.runtimeMode, info.runtimeMode) };
-    }
     if (handoff) {
         const text = handoffText(copied, {
             fromName: nameOf(info.provider),
@@ -368,6 +378,64 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload): Pr
         const to = switching ? nameOf(provider) : `${nameOf(provider)} under the account '${deps.accounts?.label(provider, account) ?? account}'`;
         notes = { note: switchNote(cut, original, files, { to, turns: text.turns, all: text.all }), preamble: text.text };
     }
+    const forkInfo = forkInfoOf(info, {
+        originalId: payload.chatId,
+        forkId,
+        provider,
+        account,
+        cwd,
+        agentSessionId,
+        switching,
+        start: forkStart(deps, info, provider, switching, payload.selection),
+        cut,
+        now
+    });
+    const items: ChatItem[] = [...copied, { id: `note-fork-${now}`, kind: 'note', createdAt: now, turnId: null, level: 'info', text: notes.note }];
+    undo.push(() => deps.deleteRecord(forkId));
+    await undo.guard(async () => {
+        await deps.writeRecord(forkId, forkInfo, items, [notes.preamble]);
+        await deps.copyPlans(payload.chatId, forkId);
+        await deps.copyBookmarks(payload.chatId, forkId, new Set(copied.map((item) => item.id)));
+        await deps.copyVisuals(payload.chatId, forkId, visualKept(copied, turn));
+    });
+    return undo.guard(() =>
+        deps.mutate(place.projectId, (content) =>
+            landFork(content, { deps, payload, place, forkId, forkInfo, title, provider, account, cwd, worktree: folder.worktree })
+        )
+    );
+}
+
+type ForkStart = { selection: ModelSelection; runtimeMode: RuntimeMode; contextWindow: number | null };
+
+/* The model and mode the fork starts with: the original's, or the new CLI's starting point no wider than the original. */
+function forkStart(deps: ChatForkDeps, info: ChatInfo, provider: AgentKind, switching: boolean, selection: ModelSelection | undefined): ForkStart {
+    if (switching) {
+        const point = deps.startingPoint(provider, selection);
+        // Going on with another CLI is no way to be allowed more than the original was.
+        return { ...point, runtimeMode: narrowerMode(point.runtimeMode ?? info.runtimeMode, info.runtimeMode) };
+    }
+    return {
+        selection: selection === undefined ? info.selection : deps.startingPoint(provider, selection).selection,
+        runtimeMode: info.runtimeMode,
+        contextWindow: info.usage.contextWindow
+    };
+}
+
+function forkInfoOf(
+    info: ChatInfo,
+    fork: {
+        originalId: string;
+        forkId: string;
+        provider: AgentKind;
+        account: string | undefined;
+        cwd: string;
+        agentSessionId: string | null;
+        switching: boolean;
+        start: ForkStart;
+        cut: Cut;
+        now: number;
+    }
+): ChatInfo {
     const {
         queue: _queue,
         suggestedTitle: _suggestedTitle,
@@ -378,81 +446,82 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload): Pr
         requests: _requests,
         ...kept
     } = info;
-    const forkInfo: ChatInfo = {
+    return {
         ...kept,
-        chatId: forkId,
-        provider,
-        ...(account === undefined ? {} : { account }),
-        cwd,
-        agentSessionId,
-        ...(switching ? { model: null, slashCommands: [] } : {}),
-        selection: start.selection,
-        runtimeMode: start.runtimeMode,
+        chatId: fork.forkId,
+        provider: fork.provider,
+        ...(fork.account === undefined ? {} : { account: fork.account }),
+        cwd: fork.cwd,
+        agentSessionId: fork.agentSessionId,
+        ...(fork.switching ? { model: null, slashCommands: [] } : {}),
+        selection: fork.start.selection,
+        runtimeMode: fork.start.runtimeMode,
         status: 'idle',
         running: false,
         activeTurnId: null,
         // The turns before the cut are what fixes a chat to its CLI; what they cost stays the original's.
-        usage: { ...info.usage, contextWindow: start.contextWindow, contextTokens: 0, breakdown: undefined, costUsd: 0, turns: cut.number },
-        forkOf: { chatId: payload.chatId, turnId: turn.id, at: now },
-        createdAt: now
+        usage: { ...info.usage, contextWindow: fork.start.contextWindow, contextTokens: 0, breakdown: undefined, costUsd: 0, turns: fork.cut.number },
+        forkOf: { chatId: fork.originalId, turnId: fork.cut.turn.id, at: fork.now },
+        createdAt: fork.now
     };
-    const items: ChatItem[] = [...copied, { id: `note-fork-${now}`, kind: 'note', createdAt: now, turnId: null, level: 'info', text: notes.note }];
-    undoers.push(() => deps.deleteRecord(forkId));
-    try {
-        await deps.writeRecord(forkId, forkInfo, items, [notes.preamble]);
-        await deps.copyPlans(payload.chatId, forkId);
-        await deps.copyBookmarks(payload.chatId, forkId, new Set(copied.map((item) => item.id)));
-        await deps.copyVisuals(payload.chatId, forkId, visualKept(copied, turn));
-    } catch (error) {
-        await undo();
-        throw error;
-    }
-    const answer = worktree === undefined ? {} : { worktree };
+}
 
-    return deps
-        .mutate(place.projectId, (content) => {
-            if (content.views.some((view) => view.id === forkId || (isCanvasView(view) && view.nodes.some((node) => node.id === forkId)))) {
-                throw new ChatError('fork-failed', `The id ${forkId} was taken while the fork was made; try again`);
-            }
-            const nodeCwd = cwd === place.folder ? undefined : cwd;
-            const landed = () => deps.recordFork({ projectId: place.projectId, nodeId: forkId, openedBy: payload.chatId, depth: deps.depthOf(payload.chatId) });
-            if (intoView) {
-                const view: ProjectChatView = {
-                    kind: 'chat',
-                    id: forkId,
-                    name: title,
-                    titleSource: 'user',
-                    node: { provider, providerFixed: true, ...(account === undefined ? {} : { account }), ...(nodeCwd === undefined ? {} : { cwd: nodeCwd }) }
-                };
-                return {
-                    content: { ...content, views: withView(content.views, view, originViewOf(content, place, payload.chatId)) },
-                    result: { info: forkInfo, nodeId: forkId, viewId: forkId, edgeId: null, ...answer },
-                    landed
-                };
-            }
-            const canvas = forkCanvas(content, place, payload);
-            if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
-                throw new ChatError('canvas-full', `${canvas.name} already holds the ${MAX_CANVAS_NODES} nodes a canvas may hold`);
-            }
-            const anchor = place.canvasId === null ? null : (canvas.nodes.find((node) => node.id === payload.chatId) ?? null);
-            const rect = placeFree(canvas.nodes, NODE_SIZE.chat, anchor);
-            const node = agentNode({ id: forkId, chat: true, kind: provider, title, rect, cwd: nodeCwd, account });
-            const edge: ProjectEdge | null = anchor ? { id: newId('edge', content, [forkId]), from: anchor.id, to: forkId, label: 'context' } : null;
-            return {
-                content: {
-                    ...content,
-                    views: content.views.map((view) =>
-                        view.id === canvas.id ? { ...canvas, nodes: [...canvas.nodes, node], edges: edge ? [...canvas.edges, edge] : canvas.edges } : view
-                    )
-                },
-                result: { info: forkInfo, nodeId: forkId, viewId: canvas.id, edgeId: edge?.id ?? null, ...answer },
-                landed
-            };
-        })
-        .catch(async (error: unknown) => {
-            await undo();
-            throw error;
-        });
+/* The project as it is with the fork in it: a chat view after its origin, or a node beside the original on its canvas. */
+function landFork(
+    content: ProjectContent,
+    fork: {
+        deps: ChatForkDeps;
+        payload: ChatForkPayload;
+        place: IndexedPlace;
+        forkId: string;
+        forkInfo: ChatInfo;
+        title: string;
+        provider: AgentKind;
+        account: string | undefined;
+        cwd: string;
+        worktree: Worktree | undefined;
+    }
+): ProjectMutation<ChatForkResult> {
+    const { deps, payload, place, forkId, forkInfo, title, provider, account } = fork;
+    if (content.views.some((view) => view.id === forkId || (isCanvasView(view) && view.nodes.some((node) => node.id === forkId)))) {
+        throw new ChatError('fork-failed', `The id ${forkId} was taken while the fork was made; try again`);
+    }
+    const nodeCwd = fork.cwd === place.folder ? undefined : fork.cwd;
+    const answer = fork.worktree === undefined ? {} : { worktree: fork.worktree };
+    const landed = () => deps.recordFork({ projectId: place.projectId, nodeId: forkId, openedBy: payload.chatId, depth: deps.depthOf(payload.chatId) });
+    // A view forks into a view unless a canvas is named; a node forks into a node unless a view is asked for.
+    if (payload.asView === true || (place.canvasId === null && payload.viewId === undefined)) {
+        const view: ProjectChatView = {
+            kind: 'chat',
+            id: forkId,
+            name: title,
+            titleSource: 'user',
+            node: { provider, providerFixed: true, ...(account === undefined ? {} : { account }), ...(nodeCwd === undefined ? {} : { cwd: nodeCwd }) }
+        };
+        return {
+            content: { ...content, views: withView(content.views, view, originViewOf(content, place, payload.chatId)) },
+            result: { info: forkInfo, nodeId: forkId, viewId: forkId, edgeId: null, ...answer },
+            landed
+        };
+    }
+    const canvas = forkCanvas(content, place, payload);
+    if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
+        throw new ChatError('canvas-full', `${canvas.name} already holds the ${MAX_CANVAS_NODES} nodes a canvas may hold`);
+    }
+    const anchor = place.canvasId === null ? null : (canvas.nodes.find((node) => node.id === payload.chatId) ?? null);
+    const rect = placeFree(canvas.nodes, NODE_SIZE.chat, anchor);
+    const node = agentNode({ id: forkId, chat: true, kind: provider, title, rect, cwd: nodeCwd, account });
+    const edge: ProjectEdge | null = anchor ? { id: newId('edge', content, [forkId]), from: anchor.id, to: forkId, label: 'context' } : null;
+    return {
+        content: {
+            ...content,
+            views: content.views.map((view) =>
+                view.id === canvas.id ? { ...canvas, nodes: [...canvas.nodes, node], edges: edge ? [...canvas.edges, edge] : canvas.edges } : view
+            )
+        },
+        result: { info: forkInfo, nodeId: forkId, viewId: canvas.id, edgeId: edge?.id ?? null, ...answer },
+        landed
+    };
 }
 
 function requireAccount(deps: ChatForkDeps, kind: AgentKind, account: string | undefined): void {

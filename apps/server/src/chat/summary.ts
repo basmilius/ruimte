@@ -1,10 +1,19 @@
-import { isCanvasView, type ChatInfo, type ChatItem, type ChatSummarizeResult, type ChatTurnItem, type ProjectEdge } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    type ChatInfo,
+    type ChatItem,
+    type ChatSummarizeResult,
+    type ChatTurnItem,
+    type ProjectContent,
+    type ProjectEdge
+} from '@ruimte/contracts';
 import { newId } from '../canvas/nodes.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import { errorText } from '../error-text.ts';
 import type { DeliverSummaryEntry, OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
 import type { OutboxOutcome } from '@adecore/agents/outbox/outbox-worker';
 import type { IndexedPlace } from '../projects/project-index.ts';
+import type { ProjectMutation } from '../projects/project-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import type { ChatManager } from './chat-manager.ts';
 import { ChatError } from './errors.ts';
@@ -51,6 +60,8 @@ export function summaryPrompt(original: { id: string; kind: 'node' | 'view' }, a
     ].join(' ');
 }
 
+const FORK_BUSY = 'The fork is working on a turn; ask for the summary once it ends';
+
 export interface SummarizeDeps {
     source(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] } | null>;
     locate(id: string): IndexedPlace | null;
@@ -77,7 +88,7 @@ export async function summarizeFork(deps: SummarizeDeps, chatId: string): Promis
         throw new ChatError('original-gone', 'The chat this one was forked from is no longer in the project');
     }
     if (fork.info.activeTurnId !== null) {
-        throw new ChatError('chat-busy', 'The fork is working on a turn; ask for the summary once it ends');
+        throw new ChatError('chat-busy', FORK_BUSY);
     }
     const title = deps.titleFor(forkOf.chatId) ?? forkOf.chatId;
     const turnId = await deps.openTurn(chatId, {
@@ -87,7 +98,7 @@ export async function summarizeFork(deps: SummarizeDeps, chatId: string): Promis
         summaryFor: forkOf.chatId
     });
     if (turnId === null) {
-        throw new ChatError('chat-busy', 'The fork is working on a turn; ask for the summary once it ends');
+        throw new ChatError('chat-busy', FORK_BUSY);
     }
     return { turnId };
 }
@@ -188,6 +199,23 @@ export function summaryNoteId(turnId: string): string {
     return `summary-${turnId}`;
 }
 
+/* The line from a fork into its original on their canvas, unless one runs there already. */
+function withLineBack(content: ProjectContent, canvasId: string, forkId: string, originalId: string): ProjectMutation<null> {
+    const canvas = content.views.find((view) => view.id === canvasId);
+    if (!canvas || !isCanvasView(canvas)) {
+        return { content: null, result: null };
+    }
+    const present = new Set(canvas.nodes.map((node) => node.id));
+    if (!present.has(forkId) || !present.has(originalId) || canvas.edges.some((edge) => edge.from === forkId && edge.to === originalId)) {
+        return { content: null, result: null };
+    }
+    const edge: ProjectEdge = { id: newId('edge', content), from: forkId, to: originalId, label: 'context' };
+    return {
+        content: { ...content, views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, edges: [...canvas.edges, edge] } : view)) },
+        result: null
+    };
+}
+
 /*
  * Brings a summary to the chat it is for: a line from the fork back into the original when both are
  * nodes of one canvas, so the read the preamble points at works, then the note and the preamble.
@@ -205,22 +233,9 @@ export function deliverSummaryHandler(deps: DeliverSummaryDeps) {
             return;
         }
         const forkPlace = deps.locate(forkId);
-        if (forkPlace !== null && forkPlace.projectId === place.projectId && forkPlace.canvasId !== null && forkPlace.canvasId === place.canvasId) {
-            await deps.mutate(place.projectId, (content) => {
-                const canvas = content.views.find((view) => view.id === place.canvasId);
-                if (!canvas || !isCanvasView(canvas)) {
-                    return { content: null, result: null };
-                }
-                const present = new Set(canvas.nodes.map((node) => node.id));
-                if (!present.has(forkId) || !present.has(originalId) || canvas.edges.some((edge) => edge.from === forkId && edge.to === originalId)) {
-                    return { content: null, result: null };
-                }
-                const edge: ProjectEdge = { id: newId('edge', content), from: forkId, to: originalId, label: 'context' };
-                return {
-                    content: { ...content, views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, edges: [...canvas.edges, edge] } : view)) },
-                    result: null
-                };
-            });
+        const canvasId = place.canvasId;
+        if (forkPlace !== null && forkPlace.projectId === place.projectId && canvasId !== null && forkPlace.canvasId === canvasId) {
+            await deps.mutate(place.projectId, (content) => withLineBack(content, canvasId, forkId, originalId));
         }
         const fork = await deps.source(forkId);
         const after = fork?.info.forkOf === undefined ? null : turnNumber(original.items, fork.info.forkOf.turnId);

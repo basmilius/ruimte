@@ -18,6 +18,13 @@ async function repositoryOf(directory: string): Promise<string | null> {
     }
 }
 
+type UiAccess = ReturnType<typeof UiSourceAccessSchema.parse>;
+
+interface LinkPlace {
+    projectId: string;
+    folder: string;
+}
+
 export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, input: unknown, target: UiLinkTarget): Promise<UiLinkResolution> {
     const access = UiSourceAccessSchema.parse(input);
     const place = host.place(info.chatId);
@@ -39,32 +46,46 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
         return { state: 'plain', code: 'access-unavailable', reason: "The agent's working folder is outside the project it wrote this in." };
     }
     if (target.type === 'Commit') {
-        // The agent's own repository first, then every other checkout of the project folder (submodules, repositories beside it).
-        const candidates = new Set<string>();
-        for (const directory of [cwd, ...(await listRepos(place.folder)).repos.map((repo) => repo.path)]) {
-            const root = await repositoryOf(directory);
-            if (root !== null && access.roots.some((allowed) => isInside(allowed, root))) {
-                candidates.add(root);
-            }
-        }
-        for (const root of candidates) {
-            const resolved = await git(['rev-parse', '--verify', '--quiet', `${target.sha}^{commit}`], root);
-            if (!resolved) {
-                continue;
-            }
-            await checkCwd(place.folder, root, host.worktreePaths);
-            const sha = resolved.trim();
-            const subject = await git(['show', '-s', '--format=%s', sha], root);
-            return {
-                state: 'chip',
-                projectId: place.projectId,
-                target: { type: 'Commit', sha },
-                cwd: root,
-                label: subject?.trim().slice(0, 256) || sha.slice(0, 7)
-            };
-        }
-        throw new ChatUiRefusal('target-unavailable', 'This commit is no longer available.');
+        return resolveCommit(host, place, access, cwd, target.sha);
     }
+    return resolvePath(host, place, access, cwd, target);
+}
+
+async function resolveCommit(host: UiSourceHosts, place: LinkPlace, access: UiAccess, cwd: string, wanted: string): Promise<UiLinkResolution> {
+    // The agent's own repository first, then every other checkout of the project folder (submodules, repositories beside it).
+    const candidates = new Set<string>();
+    for (const directory of [cwd, ...(await listRepos(place.folder)).repos.map((repo) => repo.path)]) {
+        const root = await repositoryOf(directory);
+        if (root !== null && access.roots.some((allowed) => isInside(allowed, root))) {
+            candidates.add(root);
+        }
+    }
+    for (const root of candidates) {
+        const resolved = await git(['rev-parse', '--verify', '--quiet', `${wanted}^{commit}`], root);
+        if (!resolved) {
+            continue;
+        }
+        await checkCwd(place.folder, root, host.worktreePaths);
+        const sha = resolved.trim();
+        const subject = await git(['show', '-s', '--format=%s', sha], root);
+        return {
+            state: 'chip',
+            projectId: place.projectId,
+            target: { type: 'Commit', sha },
+            cwd: root,
+            label: subject?.trim().slice(0, 256) || sha.slice(0, 7)
+        };
+    }
+    throw new ChatUiRefusal('target-unavailable', 'This commit is no longer available.');
+}
+
+async function resolvePath(
+    host: UiSourceHosts,
+    place: LinkPlace,
+    access: UiAccess,
+    cwd: string,
+    target: Extract<UiLinkTarget, { type: 'File' | 'Diff' }>
+): Promise<UiLinkResolution> {
     let path = resolve(access.cwd, target.path);
     let parent = path;
     const missing: string[] = [];

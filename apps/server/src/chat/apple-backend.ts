@@ -13,6 +13,10 @@ export interface AppleBackendOptions {
     onMetrics?: (metrics: Extract<AppleFoundationEvent, { type: 'metrics' }>) => void;
 }
 
+const DISABLED = 'Apple Foundation Models is disabled on this machine.';
+
+const CANCELLED = 'Cancelled.';
+
 export class AppleBackend implements ChatBackend {
     private child: ChatChild | null = null;
     private ready: Promise<void> | null = null;
@@ -96,10 +100,7 @@ export class AppleBackend implements ChatBackend {
     }
 
     sendTurn(input: TurnInput): void {
-        this.requireEnabled();
-        if (this.closed) {
-            throw new Error('The Apple Foundation Models helper has stopped.');
-        }
+        this.requireOpen();
         if (this.turn !== null) {
             throw new Error('Apple Foundation Models already has a running turn.');
         }
@@ -113,10 +114,7 @@ export class AppleBackend implements ChatBackend {
             });
             return;
         }
-        this.turn = `${this.launch.generation}-${++this.ordinal}`;
-        this.text = '';
-        this.interrupted = false;
-        this.terminalError = null;
+        const turn = this.beginTurn();
         this.seenTools.clear();
         if (this.ordinal === 1) {
             this.host.onEvent({
@@ -125,23 +123,16 @@ export class AppleBackend implements ChatBackend {
                 text: 'Apple runs locally and saves conversation memory on this machine. Older context may be summarized; the original history stays saved. Tools ask for approval. Commands and MCP tools can access more than the project; review each request. Web and remote MCP calls send their approved inputs to those services.'
             });
         }
-        this.write({ type: 'turn', id: this.turn, prompt });
+        this.write({ type: 'turn', id: turn, prompt });
         this.armModelDeadline();
     }
 
     compact(): void {
-        this.requireEnabled();
-        if (this.closed) {
-            throw new Error('The Apple Foundation Models helper has stopped.');
-        }
+        this.requireOpen();
         if (this.turn) {
             throw new Error('Wait for the active Apple turn to finish before compacting context.');
         }
-        this.turn = `${this.launch.generation}-${++this.ordinal}`;
-        this.interrupted = false;
-        this.terminalError = null;
-        this.text = '';
-        this.write({ type: 'compact', id: this.turn });
+        this.write({ type: 'compact', id: this.beginTurn() });
         this.armModelDeadline();
     }
 
@@ -153,7 +144,7 @@ export class AppleBackend implements ChatBackend {
         this.clearDeadline();
         this.write({ type: 'cancel', id: this.turn });
         this.withdraw();
-        this.timer = setTimeout(() => this.fail('Apple Foundation Models did not stop within 5 seconds.'), 5000);
+        this.failUnlessStopped('Apple Foundation Models did not stop within 5 seconds.');
     }
 
     respondApproval(id: string, decision: ApprovalDecision, message?: string): boolean {
@@ -162,8 +153,7 @@ export class AppleBackend implements ChatBackend {
             return false;
         }
         this.pending.delete(id);
-        if (this.options.enabled?.() === false) {
-            this.fail('Apple Foundation Models is disabled on this machine.');
+        if (this.failIfDisabled()) {
             return false;
         }
         if (decision !== 'allow') {
@@ -203,8 +193,7 @@ export class AppleBackend implements ChatBackend {
             return;
         }
         this.executing.delete(call.id);
-        if (this.options.enabled?.() === false) {
-            this.fail('Apple Foundation Models is disabled on this machine.');
+        if (this.failIfDisabled()) {
             return;
         }
         this.finishTool(call.id, result);
@@ -238,7 +227,7 @@ export class AppleBackend implements ChatBackend {
                 this.interrupted = true;
                 this.clearDeadline();
                 this.withdraw();
-                this.timer = setTimeout(() => this.fail('Apple Foundation Models did not stop after the tool was refused or failed.'), 5000);
+                this.failUnlessStopped('Apple Foundation Models did not stop after the tool was refused or failed.');
             } else {
                 this.armModelDeadline();
             }
@@ -249,8 +238,7 @@ export class AppleBackend implements ChatBackend {
         if (!this.questions.has(id)) {
             return false;
         }
-        if (this.options.enabled?.() === false) {
-            this.fail('Apple Foundation Models is disabled on this machine.');
+        if (this.failIfDisabled()) {
             return false;
         }
         const answer = answers[id];
@@ -261,6 +249,7 @@ export class AppleBackend implements ChatBackend {
         this.finishTool(id, { output: answer, failed: false });
         return true;
     }
+
     declineRequest(id: string, message: string): boolean {
         if (this.questions.delete(id)) {
             this.finishTool(id, { output: `Question declined: ${clipText(message, 500)}`, failed: true }, 'denied');
@@ -327,7 +316,6 @@ export class AppleBackend implements ChatBackend {
         if (event.type === 'availability') {
             if (!event.available) {
                 this.fail(`Apple Foundation Models unavailable: ${event.reason ?? 'unknown reason'}.`);
-                return;
             }
             return;
         }
@@ -336,23 +324,7 @@ export class AppleBackend implements ChatBackend {
             return;
         }
         if (event.type === 'session') {
-            if (event.protocolVersion !== 3) {
-                this.fail('This Apple helper is outdated. Rebuild the helper and restart the development server.');
-                return;
-            }
-            if (event.id !== this.sessionId) {
-                this.fail('Apple helper returned a different conversation id.');
-                return;
-            }
-            this.clearTimer();
-            this.contextWindow = event.contextSize;
-            this.host.onEvent({ type: 'session', agentSessionId: event.id, model: 'apple-system' });
-            if (event.note) {
-                this.host.onEvent({ type: 'note', level: 'info', text: event.note });
-            }
-            this.resolveReady?.();
-            this.resolveReady = null;
-            this.rejectReady = null;
+            this.receiveSession(event);
             return;
         }
         if (!this.turn) {
@@ -384,49 +356,7 @@ export class AppleBackend implements ChatBackend {
             return;
         }
         if (event.type === 'tool.call') {
-            if (!event.id.startsWith(`${this.turn}-tool-`) || this.seenTools.has(event.id)) {
-                return;
-            }
-            if (this.seenTools.size >= 12) {
-                this.fail('Apple helper exceeded the twelve tool-call limit.');
-                return;
-            }
-            this.seenTools.add(event.id);
-            this.clearDeadline();
-            if (this.options.enabled?.() === false) {
-                this.fail('Apple Foundation Models is disabled on this machine.');
-                return;
-            }
-            const input = appleToolInput(event);
-            const toolName = APPLE_TOOL_NAMES[event.name];
-            this.host.onEvent({ type: 'tool.started', ref: event.id, name: toolName, input, parentRef: null });
-            if (event.name === 'ask_user') {
-                this.questions.add(event.id);
-                this.host.onEvent({
-                    type: 'question.requested',
-                    requestId: event.id,
-                    questions: [
-                        {
-                            id: event.id,
-                            header: 'Question',
-                            question: event.question,
-                            choices: (event.options ?? []).map((label) => ({ label, description: '' })),
-                            multiSelect: false
-                        }
-                    ]
-                });
-                return;
-            }
-            this.pending.set(event.id, event);
-            this.host.onEvent({
-                type: 'approval.requested',
-                requestId: event.id,
-                ref: event.id,
-                toolName,
-                input,
-                description: approvalDescription(event),
-                canAllowAlways: false
-            });
+            this.receiveToolCall(event, this.turn);
         } else if (event.id === this.turn && event.type === 'text.snapshot') {
             // Apple streams cumulative snapshots; only an appended suffix is a delta.
             if (event.text.startsWith(this.text)) {
@@ -455,32 +385,122 @@ export class AppleBackend implements ChatBackend {
         }
     }
 
+    private receiveSession(event: Extract<AppleFoundationEvent, { type: 'session' }>): void {
+        if (event.protocolVersion !== 3) {
+            this.fail('This Apple helper is outdated. Rebuild the helper and restart the development server.');
+            return;
+        }
+        if (event.id !== this.sessionId) {
+            this.fail('Apple helper returned a different conversation id.');
+            return;
+        }
+        this.clearTimer();
+        this.contextWindow = event.contextSize;
+        this.host.onEvent({ type: 'session', agentSessionId: event.id, model: 'apple-system' });
+        if (event.note) {
+            this.host.onEvent({ type: 'note', level: 'info', text: event.note });
+        }
+        this.resolveReady?.();
+        this.resolveReady = null;
+        this.rejectReady = null;
+    }
+
+    private receiveToolCall(event: AppleToolCall, turn: string): void {
+        if (!event.id.startsWith(`${turn}-tool-`) || this.seenTools.has(event.id)) {
+            return;
+        }
+        if (this.seenTools.size >= 12) {
+            this.fail('Apple helper exceeded the twelve tool-call limit.');
+            return;
+        }
+        this.seenTools.add(event.id);
+        this.clearDeadline();
+        if (this.failIfDisabled()) {
+            return;
+        }
+        const input = appleToolInput(event);
+        const toolName = APPLE_TOOL_NAMES[event.name];
+        this.host.onEvent({ type: 'tool.started', ref: event.id, name: toolName, input, parentRef: null });
+        if (event.name === 'ask_user') {
+            this.questions.add(event.id);
+            this.host.onEvent({
+                type: 'question.requested',
+                requestId: event.id,
+                questions: [
+                    {
+                        id: event.id,
+                        header: 'Question',
+                        question: event.question,
+                        choices: (event.options ?? []).map((label) => ({ label, description: '' })),
+                        multiSelect: false
+                    }
+                ]
+            });
+            return;
+        }
+        this.pending.set(event.id, event);
+        this.host.onEvent({
+            type: 'approval.requested',
+            requestId: event.id,
+            ref: event.id,
+            toolName,
+            input,
+            description: approvalDescription(event),
+            canAllowAlways: false
+        });
+    }
+
     private withdraw(): void {
         for (const cancel of this.toolDeadlines.values()) {
             cancel();
         }
         this.toolDeadlines.clear();
-        for (const id of this.questions) {
+        for (const id of [...this.questions, ...this.pending.keys()]) {
             this.host.onEvent({ type: 'request.withdrawn', requestId: id });
-            this.host.onEvent({ type: 'tool.done', ref: id, output: 'Cancelled.', state: 'error' });
+            this.host.onEvent({ type: 'tool.done', ref: id, output: CANCELLED, state: 'error' });
         }
         this.questions.clear();
-        for (const id of this.pending.keys()) {
-            this.host.onEvent({ type: 'request.withdrawn', requestId: id });
-            this.host.onEvent({ type: 'tool.done', ref: id, output: 'Cancelled.', state: 'error' });
-        }
         this.pending.clear();
         for (const [id, controller] of this.executing) {
             controller.abort();
-            this.host.onEvent({ type: 'tool.done', ref: id, output: 'Cancelled.', state: 'error' });
+            this.host.onEvent({ type: 'tool.done', ref: id, output: CANCELLED, state: 'error' });
         }
         this.executing.clear();
     }
 
+    private beginTurn(): string {
+        const turn = `${this.launch.generation}-${++this.ordinal}`;
+        this.turn = turn;
+        this.text = '';
+        this.interrupted = false;
+        this.terminalError = null;
+        return turn;
+    }
+
     private requireEnabled(): void {
         if (this.options.enabled?.() === false) {
-            throw new Error('Apple Foundation Models is disabled on this machine.');
+            throw new Error(DISABLED);
         }
+    }
+
+    private requireOpen(): void {
+        this.requireEnabled();
+        if (this.closed) {
+            throw new Error('The Apple Foundation Models helper has stopped.');
+        }
+    }
+
+    /* Fails the helper when the machine turned Apple off since the call began; true when it did. */
+    private failIfDisabled(): boolean {
+        if (this.options.enabled?.() === false) {
+            this.fail(DISABLED);
+            return true;
+        }
+        return false;
+    }
+
+    private failUnlessStopped(message: string): void {
+        this.timer = setTimeout(() => this.fail(message), 5000);
     }
 
     private schedule(callback: () => void, milliseconds: number): () => void {

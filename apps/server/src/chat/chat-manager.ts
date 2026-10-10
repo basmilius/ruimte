@@ -256,12 +256,10 @@ export class ChatManager extends ChatCore {
         this.plans = options.plans ?? null;
     }
 
-    /* The chat a context token belongs to. */
     chatIdForToken(token: string): string | null {
         return this.tokens.get(token) ?? null;
     }
 
-    /* A chat as it stands, for a fork of it. */
     forkSource(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] } | null> {
         return this.readChat(chatId);
     }
@@ -301,14 +299,19 @@ export class ChatManager extends ChatCore {
     /* Takes back a record `writeRecord` wrote, as long as nobody loaded the chat since. */
     async deleteRecord(chatId: string): Promise<void> {
         if (!this.chats.has(chatId) && !this.creating.has(chatId)) {
-            await Promise.all([
-                this.store?.delete(chatId),
-                this.attachments.removeAll(chatId),
-                this.plans?.removeChat(chatId),
-                this.bookmarks?.removeChat(chatId),
-                this.visuals?.removeChat(chatId)
-            ]);
+            await this.removeStored(chatId);
         }
+    }
+
+    /* What a chat nobody loaded keeps on disk beside its record, and the record itself. */
+    private async removeStored(chatId: string): Promise<void> {
+        await Promise.all([
+            this.store?.delete(chatId),
+            this.attachments.removeAll(chatId),
+            this.plans?.removeChat(chatId),
+            this.bookmarks?.removeChat(chatId),
+            this.visuals?.removeChat(chatId)
+        ]);
     }
 
     /* Gives a fork the plans of the chat it was forked from. */
@@ -415,14 +418,7 @@ export class ChatManager extends ChatCore {
         if (stored === null || !unspokenFork(stored.items, stored.info)) {
             return;
         }
-        await Promise.all([
-            this.store.delete(chatId),
-            this.attachments.removeAll(chatId),
-            this.plans?.removeChat(chatId),
-            this.bookmarks?.removeChat(chatId),
-            this.visuals?.removeChat(chatId),
-            this.dropForkCopy(stored)
-        ]);
+        await Promise.all([this.removeStored(chatId), this.dropForkCopy(stored)]);
     }
 
     /*
@@ -577,14 +573,13 @@ export class ChatManager extends ChatCore {
         for (const task of this.taskRows(chatId)) {
             this.upsertTaskRow(session, task);
         }
-        /* A message that landed while nobody held this chat is in the thread before its first prompt,
-           so a person reads it here; the model still hears it from the queue, in front of that prompt. */
+        // A message that landed while nobody held this chat shows here; the model hears it from the queue.
         try {
             for (const text of await this.unshownMessages(chatId)) {
                 session.addNote('info', text);
             }
         } catch (e) {
-            // The messages themselves wait in the queue either way, and a chat must open regardless.
+            // The messages wait in the queue either way, and a chat must open regardless.
             console.error(`Showing the messages left for chat ${chatId} failed:`, errorText(e));
         }
         // Send before returning info so attach includes the initial prompt as the thread's first message.
