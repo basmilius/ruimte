@@ -260,3 +260,24 @@ test('a capture refused for its place leaves no database capture unhandled', asy
     reject(new Error('connections unreadable'));
     await Promise.resolve();
 });
+
+test('git.status reads the branch, the counts and the first files of a busy checkout', async () => {
+    const files = Array.from({ length: 2000 }, (_, index) => ({
+        path: `src/generated/module-${index}/a-rather-long-file-name-${index}.ts`,
+        state: index % 3 === 0 ? ('staged' as const) : ('unstaged' as const),
+        status: 'M',
+        added: 1,
+        deleted: 1,
+        binary: false
+    }));
+    const base = await hosts.gitStatus(folder);
+    reads = [];
+    hosts.gitStatus = async () => ({ ...base, repo: true, branch: 'main', ahead: 2, files });
+    const host = ruimteUiSources(hosts);
+    const access = await host.capture(info());
+    const source = host.sources['git.status']!;
+    const status = source.result.parse(await source.read(info(), { repo: '.' }, new AbortController().signal, access));
+    expect(status).toMatchObject({ branch: 'main', ahead: 2, counts: { staged: 667, unstaged: 1333, untracked: 0, conflicted: 0 }, truncated: true });
+    expect((status as { files: unknown[] }).files).toHaveLength(50);
+    expect(JSON.stringify(status).length).toBeLessThan(64 * 1024);
+});

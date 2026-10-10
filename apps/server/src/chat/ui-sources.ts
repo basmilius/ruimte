@@ -3,7 +3,7 @@ import { realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import type { ChatInfo, Task } from '@ruimte/contracts';
-import { GitLogResultSchema, GitStatusSchema, TaskSchema } from '@ruimte/contracts';
+import { GitFileSchema, GitFileStateSchema, GitLogResultSchema, GitOperationSchema, TaskSchema, type GitFileState, type GitStatus } from '@ruimte/contracts';
 import type { ChatUiHost, ChatUiSource } from '@adecore/agents/chat/ui-queries';
 import { ChatError } from './errors.ts';
 import { checkCwd, isInside } from '../canvas/project-paths.ts';
@@ -16,11 +16,44 @@ export interface UiSourceHosts {
     // `hidden` for an agent that works out of sight, with no node or view to open.
     node(id: string): { projectId: string; title: string; canvasId: string | null; hidden: boolean } | null;
     worktreePaths(folder: string): Promise<string[]>;
-    gitStatus(cwd: string): Promise<z.infer<typeof GitStatusSchema>>;
+    gitStatus(cwd: string): Promise<GitStatus>;
     gitLog(cwd: string, limit: number): Promise<z.infer<typeof GitLogResultSchema>>;
     launches(projectId: string): Promise<LaunchReading[]>;
     tasks(chatId: string): Task[];
     databases(): Pick<AgentDatabases, 'captureUiAccess' | 'authorizeUiRead' | 'query'>;
+}
+
+// A busy checkout lists thousands of files, and a reading stops at 64 KB.
+const UI_STATUS_FILES = 50;
+
+const UiGitStatusSchema = z.object({
+    repo: z.boolean(),
+    operation: GitOperationSchema.optional(),
+    branch: z.string().nullable(),
+    detached: z.boolean(),
+    upstream: z.string().nullable(),
+    ahead: z.number().int().nonnegative(),
+    behind: z.number().int().nonnegative(),
+    counts: z.record(GitFileStateSchema, z.number().int().nonnegative()),
+    files: z.array(GitFileSchema.pick({ path: true, state: true, status: true })).max(UI_STATUS_FILES),
+    truncated: z.boolean()
+});
+
+/* The status a UI block reads: the branch, the counts per state and the first files, with `truncated` once any are left out. */
+export function uiGitStatus(status: GitStatus): z.infer<typeof UiGitStatusSchema> {
+    const count = (state: GitFileState) => status.files.filter((file) => file.state === state).length;
+    return {
+        repo: status.repo,
+        ...(status.operation === undefined ? {} : { operation: status.operation }),
+        branch: status.branch,
+        detached: status.detached,
+        upstream: status.upstream,
+        ahead: status.ahead,
+        behind: status.behind,
+        counts: { staged: count('staged'), unstaged: count('unstaged'), untracked: count('untracked'), conflicted: count('conflicted') },
+        files: status.files.slice(0, UI_STATUS_FILES).map(({ path, state, status: letter }) => ({ path, state, status: letter })),
+        truncated: status.truncated || status.files.length > UI_STATUS_FILES
+    };
 }
 
 export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
@@ -53,12 +86,12 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
     const sources: Record<string, ChatUiSource> = {
         'git.status': source({
             args: repositoryArgs,
-            result: GitStatusSchema,
+            result: UiGitStatusSchema,
             authorize: async (info, access, args) => {
                 await repository(info, access, args);
             },
             read: async (info, args, _signal, access) => {
-                return host.gitStatus(await repository(info, access, args));
+                return uiGitStatus(await host.gitStatus(await repository(info, access, args)));
             }
         }),
         'git.log': source({
