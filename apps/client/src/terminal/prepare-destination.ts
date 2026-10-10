@@ -46,7 +46,7 @@ export function prepareDestination(endpointId: string, machineId: string) {
     let disposed = false;
     let stale = false;
 
-    function sameWorkspace(): boolean {
+    const sameWorkspace = (): boolean => {
         return (
             windowWorkspace() === workspace &&
             useProject.getState().current?.projectId === projectId &&
@@ -55,16 +55,16 @@ export function prepareDestination(endpointId: string, machineId: string) {
             endpointById(endpointId)?.daemonId === machineId &&
             transport.status === 'open'
         );
-    }
-    function current(): boolean {
+    };
+    const current = (): boolean => {
         return !disposed && sameWorkspace();
-    }
-    function dispose(): void {
+    };
+    const dispose = (): void => {
         disposed = true;
         subscriptions.splice(0).forEach((off) => off());
         releases.splice(0).forEach((release) => release());
-    }
-    function validate(): void {
+    };
+    const validate = (): void => {
         if (!current()) {
             stale ||= !sameWorkspace();
             dispose();
@@ -81,7 +81,7 @@ export function prepareDestination(endpointId: string, machineId: string) {
                 invalid.add(id);
             }
         }
-    }
+    };
     subscriptions.push(
         useWindow.subscribe(validate),
         useProject.subscribe(validate),

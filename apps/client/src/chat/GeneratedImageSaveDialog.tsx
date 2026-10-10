@@ -41,12 +41,12 @@ export function GeneratedImageSaveDialog({
     const nameRef = useRef<HTMLInputElement>(null);
     const saveDisabled = pending || exists || !canSave;
 
-    function submit(event: FormEvent<HTMLFormElement>): void {
+    const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
         if (!saveDisabled) {
             onSave();
         }
-    }
+    };
 
     return (
         <Dialog.Root
