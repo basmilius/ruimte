@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import { toBase64Url } from '@ruimte/pulsar';
+import { objectStoreRunner } from './indexed-db';
 
 const DB_NAME = 'ruimte-auth';
 const STORE_NAME = 'keys';
@@ -12,7 +12,6 @@ export interface ClientKey {
     sign(message: string): Promise<string>;
 }
 
-/* Where the key pair is kept between reloads; a test hands in its own instead of an IndexedDB. */
 export interface KeyStore {
     read(): Promise<CryptoKeyPair | null>;
     write(pair: CryptoKeyPair): Promise<void>;
@@ -20,28 +19,10 @@ export interface KeyStore {
 
 /*
  * IndexedDB, because a `CryptoKey` survives a structured clone and `localStorage` only holds
- * strings. The pair is generated non-extractable, so the private half exists only as a handle
- * the browser signs with, never a byte a script can read, unlike a session token in `localStorage`.
+ * strings. The pair is non-extractable, so no script can ever read the private half.
  */
 export function indexedDbKeyStore(): KeyStore {
-    const open = (): Promise<IDBDatabase> =>
-        new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, 1);
-            request.onupgradeneeded = () => request.result.createObjectStore(STORE_NAME);
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error ?? new Error(i18next.t('machines:storage.indexedDbClosed')));
-        });
-
-    const run = <T>(mode: IDBTransactionMode, act: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> =>
-        open().then(
-            (db) =>
-                new Promise<T>((resolve, reject) => {
-                    const request = act(db.transaction(STORE_NAME, mode).objectStore(STORE_NAME));
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error ?? new Error(i18next.t('machines:storage.indexedDbRefused')));
-                })
-        );
-
+    const run = objectStoreRunner(DB_NAME, STORE_NAME);
     return {
         read: () => run<CryptoKeyPair | undefined>('readonly', (store) => store.get(RECORD_ID)).then((value) => value ?? null),
         write: (pair) => run('readwrite', (store) => store.put(pair, RECORD_ID)).then(() => undefined)
@@ -56,9 +37,8 @@ async function toClientKey(pair: CryptoKeyPair): Promise<ClientKey> {
 }
 
 /*
- * One key pair for this client, not one per daemon. Every daemon it pairs with is a machine of the
- * same person, so a key each would buy nothing but bookkeeping. Answers null where ed25519 or
- * IndexedDB is missing, and the caller falls back to the session token it already has.
+ * One key pair for this client, not one per daemon: every daemon is a machine of the same person.
+ * Answers null where ed25519 or IndexedDB is missing, and the caller falls back to its session token.
  */
 export function createClientKeyLoader(store: KeyStore = indexedDbKeyStore()): () => Promise<ClientKey | null> {
     let pending: Promise<ClientKey | null> | null = null;

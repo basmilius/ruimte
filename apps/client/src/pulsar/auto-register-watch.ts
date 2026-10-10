@@ -13,11 +13,10 @@ import { refreshAccountMachines, usePulsarMachines } from './machines';
 export const useRegistrationFailures = create<{ byMachine: Record<string, string> }>(() => ({ byMachine: {} }));
 
 /*
- * Wires `AutoRegistrar` to what this client knows: the account it is signed in to, the list the address
- * book last answered, and the machines whose connection is open. The daemon signs, this client posts
- * with its own session, as the button did. A sweep runs when any of those or what a machine says about
- * itself change, and once more when
- * the earliest machine that failed may be asked again.
+ * Wires `AutoRegistrar` to the account this client is signed in to, the list the address book last
+ * answered and the machines whose connection is open. The daemon signs, this client posts with its own
+ * session. A sweep runs when any of those or what a machine says about itself change, and once more
+ * when the earliest machine that failed may be asked again.
  */
 export function startAutoRegistration(): () => void {
     const registrar = new AutoRegistrar({

@@ -71,6 +71,12 @@ function signedOut(error: string | null, notice: string | null = null): void {
     usePulsarAccount.setState({ status: 'signed-out', account: null, error, notice, identities: null, linking: null });
 }
 
+/* A failed attempt leaves whoever was signed in before. */
+function signInFailed(e: unknown): void {
+    const { account } = usePulsarAccount.getState();
+    usePulsarAccount.setState({ status: account ? 'signed-in' : 'signed-out', error: messageOf(e) });
+}
+
 function applyAccountResult(result: AccountResult): void {
     usePulsarAccount.setState({ account: result.account, identities: result.identities, linking: null, error: null });
 }
@@ -191,8 +197,7 @@ export async function signInToPulsar(provider: ProviderId = 'github', options: {
                 await beginWebLogin(web.storage, { addressBookUrl: await platform.addressBook(), redirectUri: web.redirectUri, provider, confirm })
             );
         } catch (e) {
-            const { account } = usePulsarAccount.getState();
-            usePulsarAccount.setState({ status: account ? 'signed-in' : 'signed-out', error: messageOf(e) });
+            signInFailed(e);
         }
         return;
     }
@@ -214,8 +219,7 @@ export async function signInToPulsar(provider: ProviderId = 'github', options: {
             openAccountSection();
         }
     } catch (e) {
-        const { account } = usePulsarAccount.getState();
-        usePulsarAccount.setState({ status: account ? 'signed-in' : 'signed-out', error: messageOf(e) });
+        signInFailed(e);
         if (confirm) {
             openAccountSection();
         }

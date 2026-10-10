@@ -36,7 +36,7 @@ export function rememberedLink(storage: LoginStorage, now = Date.now()): Pending
     if (raw === null) {
         return null;
     }
-    let parsed: unknown = null;
+    let parsed: unknown;
     try {
         parsed = JSON.parse(raw);
     } catch {

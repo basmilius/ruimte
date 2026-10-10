@@ -17,7 +17,6 @@ import type {
 import type { SessionLoginCode } from '@ruimte/pulsar';
 import { isApplePlatform as isApplePlatformFromNavigator } from '@adecore/ui';
 
-/* The shapes the preload and the page both hold, passed on so the client reads the whole bridge here. */
 export type {
     BrowserRouteBinding,
     BrowserRouteBlocked,
@@ -39,10 +38,8 @@ export type {
 } from '@ruimte/desktop-bridge';
 
 /*
- * What the shell forwards when a page asks for a context menu. Electron's own params, trimmed to
- * what a row needs, plus the guest that asked. The menu itself is drawn by the client, except over
- * an editable field, where that click stays in the shell and pops a native menu, so `isEditable`
- * is false in everything that arrives here.
+ * Electron's context-menu params, trimmed to what a row needs, plus the guest that asked. A click on
+ * an editable field stays in the shell for a native menu, so `isEditable` is false in all of these.
  */
 export interface BrowserContextParams {
     webContentsId: number;
@@ -72,16 +69,13 @@ export interface BrowserContextAction {
 }
 
 /*
- * Signing in to the Pulsar address book, the part only the shell can do. Mirrors `pulsar` in
- * `apps/desktop/src/preload.ts`. The answers are unknown on purpose. They crossed a process boundary,
- * and `pulsar/desktop.ts` parses each one.
+ * Signing in to the Pulsar address book. Mirrors `pulsar` in `apps/desktop/src/preload.ts`. The
+ * answers are unknown because they crossed a process boundary; `pulsar/desktop.ts` parses each one.
  */
 export interface PulsarBridge {
-    /* The address book the shell signs in to, which the page uses for the machine list and statements. */
     addressBook(): Promise<string>;
     /* Opens a loopback listener for the login redirect; a second call gives up on the first. */
     listen(): Promise<{ redirectUri: string }>;
-    /* The redirect, once the browser comes back with it. */
     callback(): Promise<unknown>;
     cancel(): Promise<void>;
     /* Trades a login code for a session bound to the shell's own key; the shell keeps the refresh token and answers with the rest. */
@@ -98,7 +92,7 @@ export interface BackgroundServiceBridge {
     setKeepRunning(keepRunning: boolean): Promise<BackgroundServiceState>;
     /* Runs `loginctl enable-linger`, which is a person's decision and never taken on their behalf. */
     enableLinger(): Promise<BackgroundServiceState>;
-    /* Restarts the machine onto the updated build, ending what runs on it. Optional: an older shell has neither. */
+    /* Restarts the machine onto the updated build, ending what runs on it. */
     restartNow?(): Promise<BackgroundServiceState>;
     /* Leaves the older build running until nothing runs on it. */
     restartWhenIdle?(): Promise<BackgroundServiceState>;
@@ -118,21 +112,22 @@ export interface OpenAiBridge {
     createLiveSession(sdp: string, preferences: OpenAiLivePreferences): Promise<{ session: { id: string }; transport: { type: 'webrtc'; sdp: string } }>;
 }
 
-/* The shell's API, present only inside the desktop app. Mirrors `apps/desktop/src/preload.ts`. */
+/*
+ * The shell's API, present only inside the desktop app. Mirrors `apps/desktop/src/preload.ts`. A
+ * method added after the first release is optional: a running shell carries the preload it started
+ * with, so a newer method is missing until it restarts.
+ */
 export interface DesktopBridge {
     // Remote projects and persisted owners require a host that guards guest-initiated navigation.
     bindBrowserRoute?(binding: BrowserRouteBinding): Promise<boolean>;
     onBrowserRouteBlocked?(listener: (event: BrowserRouteBlocked) => void): () => void;
     platform: string;
-    /* What the shell is built on, for About and a bug report. Optional for the same reason
-       `onBrowserContextMenu` is. */
+    /* For About and a bug report. */
     versions?: { electron: string; chrome: string; node: string };
-    /* The region the operating system writes numbers and dates in, which Chromium's own locale is
-       not. That one is the language of the app bundle, and the bundle names one language.
-       Read once, when the window opened, so a region changed since then lands on the next start. */
+    /* The region the operating system writes numbers and dates in; Chromium's own locale is the
+       language of the app bundle. Read when the window opened, so a change lands on the next start. */
     systemLocale?: string;
-    /* The languages the operating system asks for, best first, read the same way and at the same
-       moment as the region. */
+    /* The languages the operating system asks for, best first, read at the same moment as the region. */
     systemLanguages?: string[];
     /* Where the machine this app started listens, since the shell serves the page on a scheme of its
        own. Absent under `bun dev`, where Vite's proxy makes the page's own origin the machine, and
@@ -140,123 +135,95 @@ export interface DesktopBridge {
     daemonUrl?: string;
     pickFolder(initialPath?: string): Promise<string | null>;
     openExternal(url: string): Promise<void>;
-    /* Opens a pane of System Settings on macOS, only the ones the shell allows (`isSystemSettingsPane`).
-       Optional for the same reason `onBrowserContextMenu` is. */
+    /* Opens a pane of System Settings on macOS, only the ones the shell allows (`isSystemSettingsPane`). */
     openSystemSettings?(url: string): Promise<void>;
     openGuestDevTools(webContentsId: number): void;
-    /* A png of a guest page, which is how an agent gets a picture of the page it drives. Optional
-       for the same reason `onBrowserContextMenu` is. */
+    /* A png of a guest page, which is how an agent gets a picture of the page it drives. */
     capturePage?(webContentsId: number): Promise<Uint8Array | null>;
-    /* A right-click inside a page. The shell says what the click landed on, the client draws the
-       menu. Optional, because a shell that is already running carries the preload it started with,
-       so a method added since then is missing until it restarts. */
+    /* A right-click inside a page. The shell says what the click landed on, the client draws the menu. */
     onBrowserContextMenu?(listener: (params: BrowserContextParams) => void): () => void;
-    /* The row that was picked, for the part of it the client cannot do itself. */
     browserContextAction?(action: BrowserContextAction): void;
-    /* A guest page took the focus, which a press inside it never tells the page around it. Optional
-       for the same reason `onBrowserContextMenu` is. */
+    /* A guest page took the focus, which a press inside it never tells the page around it. */
     onGuestFocus?(listener: (webContentsId: number) => void): () => void;
     /* Where a file dragged in from the file manager lives, which a browser never tells a page.
-       Optional for the same reason `onBrowserContextMenu` is; without it such a drag is refused. */
+       Without it such a drag is refused. */
     pathForFile?(file: File): string | null;
     /* About and Settings in the macOS application menu. About names its pane; Settings names none
-       (null), and neither does a section this client does not know, which open the settings where
-       they were. Optional for the same reason `onBrowserContextMenu` is. */
+       (null), and neither does a section this client does not know. */
     onOpenSettings?(listener: (section: string | null) => void): () => void;
     /* The application menu, built from what has the focus (`shell/menu`). A click comes back as the
-       command's id. Optional for the same reason `onBrowserContextMenu` is; without them the shell
-       keeps its own fixed menu. */
+       command's id. Without them the shell keeps its own fixed menu. */
     setMenu?(spec: MenuSpec): void;
     /* Retained by the shell after its last window closes, for the native quit question. */
     setLanguage?(language: string): void;
     onMenuCommand?(listener: (id: string) => void): () => void;
     isFullscreen(): Promise<boolean>;
     onFullscreen(listener: (fullscreen: boolean) => void): () => void;
-    /* The app's theme, which the shell needs for the native window controls, for the
-       `prefers-color-scheme` every page it hosts asks for, and for the ground a page paints on
-       before it has one. Optional for the same reason `onBrowserContextMenu` is. */
+    /* For the native window controls, the `prefers-color-scheme` of every hosted page, and the ground
+       a page paints on before it has one. */
     setTheme?(theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void;
-    /* Tells the shell which project this window shows (`endpointKey`), or none (null). A project is in
-       one window at a time: false when another window has it, which the shell brings to the front, and
-       then this page stays where it was. Optional for the same reason `onBrowserContextMenu` is. */
+    /* Tells the shell which project this window shows (`endpointKey`), or none (null). False when
+       another window has it, which the shell brings to the front; this page then stays where it was. */
     claimWindow?(key: string | null): Promise<boolean>;
-    /* Opens a window on a project, or raises the window that has it; null opens one on the start screen.
-       The view is what that window shows of the project, which a shell from before views ignores. */
+    /* Opens a window on a project, or raises the window that has it; null opens the start screen.
+       A shell from before views ignores the view. */
     openWindow?(key: string | null, view?: string): void;
-    /* Another window asked this one to show a view of its project (`openWindow` with a view). Optional
-       for the same reason `onBrowserContextMenu` is. */
+    /* Another window asked this one to show a view of its project (`openWindow` with a view). */
     onShowView?(listener: (view: string) => void): () => void;
     /* Hands this window's project to a new window, which has it before this one lets go. True once it
        did, and then this page goes to the start screen. */
     moveToNewWindow?(): Promise<boolean>;
-    /* Keeps the machine from sleeping while an agent works. The client decides when that is and says
-       so; the shell holds the block and drops it on a reload or when the window goes. Optional for
-       the same reason `onBrowserContextMenu` is. Superseded by `requestKeepAwake`, and still what a
-       shell from before that one understands. */
+    /* Superseded by `requestKeepAwake`, and still what a shell from before that one understands. The
+       shell drops the block on a reload or when the window goes. */
     setKeepAwake?(keep: boolean): void;
     /* What the client wants held, or null for nothing. The shell weighs it against the power source
-       it sees, live, and ignores it off macOS. Optional for the same reason `onBrowserContextMenu` is. */
+       it sees, live, and ignores it off macOS. */
     requestKeepAwake?(request: KeepAwakeRequest | null): void;
-    /* How much of the work still wants a person. The client counts it (`state/attention.ts`). Only
-       it knows which node holds an agent and which holds a shell somebody left attached. The shell
-       badges the dock with `attention` and asks before quitting on `working`. Optional for the same
-       reason `onBrowserContextMenu` is; without it there is no badge and no question at quit. */
+    /* Counted by the client (`state/attention.ts`), since only it knows which node holds an agent. The
+       shell badges the dock with `attention` and asks before quitting on `working`. */
     setAgentActivity?(activity: AgentActivity): void;
-    /* A native save dialog for bytes the client made (an exported drawing). Optional for the same
-       reason `onBrowserContextMenu` is; without it the client falls back to a browser download. */
+    /* A native save dialog for bytes the client made. Without it the client falls back to a download. */
     saveFile?(suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null>;
     /* Opens a temporary image copy in the system viewer; older shells fall back to a download. */
     openImage?(suggestedName: string, bytes: Uint8Array, mime: string): Promise<void>;
-    /* Where a person wants a file written, chosen in a native save dialog that writes nothing itself.
-       Optional for the same reason `onBrowserContextMenu` is; without it a database offers no export. */
+    /* A native save dialog that writes nothing itself. Without it a database offers no export. */
     chooseSavePath?(request: SavePathRequest): Promise<string | null>;
-    /* A file a person picked in a native open dialog, as its path; nothing is read. Optional for the
-       same reason `onBrowserContextMenu` is; without it a database offers no import and no browse button. */
+    /* A native open dialog that reads nothing. Without it a database offers no import and no browse button. */
     chooseOpenPath?(request: OpenPathRequest): Promise<string | null>;
-    /* Puts files of this machine on the clipboard the way its file manager pastes them, with the paths
-       as text beside them. False when a path is not absolute or no longer exists. Optional for the same
-       reason `onBrowserContextMenu` is, and absent on a platform the shell has no format for. */
+    /* Puts files on the clipboard the way the file manager pastes them, with the paths as text beside
+       them. False when a path is not absolute or no longer exists. Absent on a platform the shell has
+       no format for. */
     copyFiles?(paths: string[]): Promise<boolean>;
-    /* Updating, which only the shell can do. Optional for the same reason `onBrowserContextMenu`
-       is. A shell that is already running carries the preload it started with. Without them the
-       client shows no update button and About says where updates come from instead. */
+    /* Without the update methods the client shows no update button and About says where updates come from. */
     updateState?(): Promise<UpdateState>;
     onUpdateState?(listener: (state: UpdateState) => void): () => void;
-    /* Whether the shell downloads an update as soon as it sees one. The client owns the setting and
-       sends it before the first check, so nothing downloads behind the back of someone who said no. */
+    /* Sent before the first check, so nothing downloads behind the back of someone who said no. */
     configureUpdates?(autoDownload: boolean): Promise<void>;
     checkForUpdate?(): Promise<void>;
     downloadUpdate?(): Promise<void>;
     /* `confirmed` skips the shell's question about what a quit ends, for a person who already answered
        it on another client. A shell from before ignores it and asks on this computer. */
     installUpdate?(confirmed?: boolean): void;
-    /* The notes of the last releases, from the shell's copy on disk. `refresh` asks GitHub first.
-       Optional for the same reason `onBrowserContextMenu` is; without it About offers no notes. */
+    /* From the shell's copy on disk; `refresh` asks GitHub first. */
     releaseNotes?(refresh?: boolean): Promise<ReleaseNotesState>;
-    /* The secret in the home of the daemon this app started, which the local row presents to get in.
-       A loopback address is no proof of anything. Null while the daemon has not written it. Optional
-       for the same reason `onBrowserContextMenu` is; without it the local row does not get in. */
+    /* The secret in the home of the daemon this app started, which the local row presents to get in,
+       since a loopback address proves nothing. Null while the daemon has not written it. */
     localSecret?(): Promise<string | null>;
     /* macOS owns the application-level microphone grant; the shell asks while the renderer only
        receives the result. Other platforms let Chromium handle the same request. */
     requestMicrophoneAccess?(): Promise<boolean>;
     /* The API key stays in the shell; the page can replace it and learn whether one exists, but it
-       can never read the value back. Optional until the running shell has restarted onto this API. */
+       can never read the value back. */
     openAi?: OpenAiBridge;
-    /* The passwords of database connections, kept by the shell and never in a project's files. Optional
-       for the same reason `onBrowserContextMenu` is; without it a password lasts as long as the page. */
+    /* Kept by the shell and never in a project's files. Without it a password lasts as long as the page. */
     databaseSecrets?: DatabaseSecretsBridge;
-    /* Speech to text in a helper beside the app, on this machine. Optional for the same reason
-       `onBrowserContextMenu` is; without it dictation is not offered. */
+    /* Without it dictation is not offered. */
     speech?: SpeechBridge;
-    /* Who listens to the microphone, across windows. Optional for the same reason `onBrowserContextMenu`
-       is; without it each window only keeps its own listeners apart. */
+    /* Who listens to the microphone, across windows. Without it each window only keeps its own listeners apart. */
     microphone?: MicrophoneBridge;
-    /* The background service. Optional for the same reason `onBrowserContextMenu` is; without it
-       This machine offers no switch, which is also what a browser and the web client get. */
+    /* Without it This machine offers no switch, which is also what a browser gets. */
     backgroundService?: BackgroundServiceBridge;
-    /* Signing in to an account. Optional for the same reason `onBrowserContextMenu` is; without it
-       the account section says signing in works in the desktop app, which is also what a browser gets. */
+    /* Without it the account section says signing in works in the desktop app. */
     pulsar?: PulsarBridge;
 }
 
@@ -274,21 +241,17 @@ export function isDesktop(): boolean {
     return desktop() !== null;
 }
 
-/* True where the shell can hold the machine awake, which is the desktop app on macOS for now. A
-   browser cannot, so the setting is not offered there rather than shown as a switch that promises
-   something the page has no way to do. */
+/* The desktop app on macOS for now; a browser is not offered the setting at all. */
 export function canKeepAwake(): boolean {
     const bridge = desktop();
     return bridge?.platform === 'darwin' && (typeof bridge.requestKeepAwake === 'function' || typeof bridge.setKeepAwake === 'function');
 }
 
-/* True only in the desktop app on macOS, where a two-finger swipe goes back and forward in a page.
-   Elsewhere a mouse's side buttons do the same thing, and they work on every platform. */
+/* A two-finger swipe goes back and forward in a page; elsewhere a mouse's side buttons do that. */
 export function canSwipeBetweenPages(): boolean {
     return desktop()?.platform === 'darwin';
 }
 
-/* True when the window chrome leaves room for the traffic lights, which only macOS does. */
 export function hasTrafficLights(): boolean {
     return desktop()?.platform === 'darwin';
 }
@@ -297,8 +260,8 @@ export function hasTrafficLights(): boolean {
    shell), and the first control starts 20px after that, so the lights read as their own group. */
 export const TRAFFIC_LIGHTS_INSET_PX = 84;
 
-/* True on macOS, in the desktop app and in a browser tab alike. Shortcuts differ there. Ctrl+B is
-   readline's backward-char and tmux's prefix, while Cmd+B is free. */
+/* In the desktop app and in a browser tab alike. Shortcuts differ there: Ctrl+B is readline's
+   backward-char and tmux's prefix, while Cmd+B is free. */
 export function isApplePlatform(): boolean {
     const bridge = desktop();
     if (bridge) {
@@ -307,7 +270,7 @@ export function isApplePlatform(): boolean {
     return isApplePlatformFromNavigator();
 }
 
-/* True when the window controls sit over the top right of the window, which Windows and Linux do. */
+/* Windows and Linux draw the window controls over the top right of the window. */
 export function hasOverlayControls(): boolean {
     const bridge = desktop();
     return bridge !== null && bridge.platform !== 'darwin';

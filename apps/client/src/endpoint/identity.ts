@@ -15,19 +15,14 @@ import { rekeyTicket } from './credentials';
  * another machine; that mismatch is reported rather than adopted.
  */
 export function noteDaemonIdentity(endpointId: string, info: EndpointInfo): string {
-    return settleId(endpointId, info.id);
-}
-
-function settleId(endpointId: string, daemonId: string): string {
+    const daemonId = info.id;
     const endpoint = endpointById(endpointId);
     if (!endpoint) {
         return endpointId;
     }
     /*
-     * One row per daemon. Two rows for one machine would fill with the same sessions, chats and
-     * projects under two keys, and forgetting one of them would look like forgetting the machine.
-     * Only a row that is free to take this id looks for a twin. A row that answers as another
-     * daemon is the mismatch handled below; adopting anything there is what pinning exists to prevent.
+     * One row per daemon, or two rows fill with the same sessions under two keys. Only a row free to
+     * take this id looks for a twin; a row that answers as another daemon is the mismatch below.
      */
     const twin = endpoint.daemonId === null || endpoint.daemonId === daemonId ? endpointForDaemon(daemonId, endpoint.id) : null;
     if (twin?.id === LOCAL_ENDPOINT_ID) {

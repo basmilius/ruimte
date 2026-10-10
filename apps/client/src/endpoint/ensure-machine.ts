@@ -38,11 +38,9 @@ interface Attempt {
 }
 
 /*
- * Brings a machine's link up on demand, whichever way in asked: the palette, a project in the
- * switcher, a folder, the welcome screen of the web client. A machine this client has no row for
- * yet gets one here, the way the account list makes one. The wait ends on the first attempt that
- * fails, with its reason, rather than sitting through the reconnect loop behind it; that loop keeps
- * running, so the machine may still come up later without anyone asking again.
+ * Brings a machine's link up on demand, making a row for a machine only the account knows. The wait
+ * ends on the first attempt that fails, with its reason; the reconnect loop behind it keeps running,
+ * so the machine may still come up later.
  */
 export class MachineLinks {
     private readonly deps: MachineLinkDeps;
@@ -133,16 +131,7 @@ export class MachineLinks {
         return new Promise((resolve, reject) => {
             let settled = false;
             let off: () => void = () => undefined;
-            const onAbort = (): void => {
-                if (settled) {
-                    return;
-                }
-                settled = true;
-                clearTimeout(timer);
-                off();
-                reject(new MachineWaitCancelled());
-            };
-            const finish = (failure: string | null): void => {
+            const settle = (error: Error | null): void => {
                 if (settled) {
                     return;
                 }
@@ -150,21 +139,23 @@ export class MachineLinks {
                 clearTimeout(timer);
                 off();
                 signal.removeEventListener('abort', onAbort);
-                if (failure === null) {
+                if (error === null) {
                     resolve();
                 } else {
-                    reject(new Error(failure));
+                    reject(error);
                 }
             };
+            const onAbort = (): void => settle(new MachineWaitCancelled());
+            const fail = (failure: string): void => settle(new Error(failure));
             const check = (): void => {
                 const state = deps.connection(endpointId);
                 if (state.status === 'open') {
-                    finish(null);
+                    settle(null);
                 } else if (state.status === 'closed') {
-                    finish(state.failure ?? i18next.t('machines:link.silent'));
+                    fail(state.failure ?? i18next.t('machines:link.silent'));
                 }
             };
-            const timer = setTimeout(() => finish(i18next.t('machines:link.silent')), deps.timeoutMs ?? ENSURE_TIMEOUT_MS);
+            const timer = setTimeout(() => fail(i18next.t('machines:link.silent')), deps.timeoutMs ?? ENSURE_TIMEOUT_MS);
             signal.addEventListener('abort', onAbort, { once: true });
             off = deps.subscribe(endpointId, check);
             // A link waiting out its backoff is tried now, because a person just asked for this machine.

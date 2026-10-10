@@ -14,6 +14,7 @@ import {
 } from '@ruimte/pulsar';
 import { clientKey } from '@/endpoint/client-key';
 import { desktop } from '@/desktop/bridge';
+import { objectStoreRunner } from '@/endpoint/indexed-db';
 import type { PulsarPlatform } from './desktop';
 import { LoginError, codeFromCallback, createLoginState, createPkce, loginStartUrl } from './pkce';
 
@@ -81,6 +82,18 @@ export async function beginWebLogin(
     });
 }
 
+function parsePendingLogin(raw: string | null): PendingLogin | null {
+    if (raw === null) {
+        return null;
+    }
+    try {
+        const parsed = PendingLoginSchema.safeParse(JSON.parse(raw));
+        return parsed.success ? parsed.data : null;
+    } catch {
+        return null;
+    }
+}
+
 /*
  * The code and the verifier, when the query this page came back with belongs to the login it started.
  * The pending login is spent whatever the answer, so a reload of the callback address tries nothing twice.
@@ -92,13 +105,7 @@ export function completeWebLogin(
 ): { code: string; verifier: string; redirectUri: string; link: boolean; confirm: boolean; provider: ProviderId } {
     const raw = storage.getItem(PENDING_LOGIN_KEY);
     storage.removeItem(PENDING_LOGIN_KEY);
-    let pending: PendingLogin | null = null;
-    try {
-        const parsed = PendingLoginSchema.safeParse(raw === null ? null : JSON.parse(raw));
-        pending = parsed.success ? parsed.data : null;
-    } catch {
-        pending = null;
-    }
+    const pending = parsePendingLogin(raw);
     if (!pending) {
         throw new LoginError(i18next.t('machines:signIn.notStarted'));
     }
@@ -124,24 +131,7 @@ const RECORD_ID = 'current';
 
 /* The session in IndexedDB, beside the key it is bound to rather than in `localStorage` with everything else. */
 export function indexedDbSessionStore(): SessionStore {
-    const open = (): Promise<IDBDatabase> =>
-        new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, 1);
-            request.onupgradeneeded = () => request.result.createObjectStore(STORE_NAME);
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error ?? new Error(i18next.t('machines:storage.indexedDbClosed')));
-        });
-
-    const run = <T>(mode: IDBTransactionMode, act: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> =>
-        open().then(
-            (db) =>
-                new Promise<T>((resolve, reject) => {
-                    const request = act(db.transaction(STORE_NAME, mode).objectStore(STORE_NAME));
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error ?? new Error(i18next.t('machines:storage.indexedDbRefused')));
-                })
-        );
-
+    const run = objectStoreRunner(DB_NAME, STORE_NAME);
     return {
         read: async () => {
             const parsed = StoredSessionSchema.safeParse(await run<unknown>('readonly', (store) => store.get(RECORD_ID)));
