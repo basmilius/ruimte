@@ -131,14 +131,14 @@ export function CommitLog({ sources, reading, onOpen }: CommitLogProps) {
                                 <span className="truncate text-text">{commit.subject}</span>
                                 {commit.refs.slice(0, REFS_SHOWN).map((ref) => (
                                     <Tooltip key={ref} label={ref}>
-                                        <Pill mono className="max-w-32 shrink-0 py-0">
+                                        <Pill mono size="sm" className="max-w-32 shrink-0 py-0">
                                             <span className="min-w-0 truncate">{ref}</span>
                                         </Pill>
                                     </Tooltip>
                                 ))}
                                 {commit.refs.length > REFS_SHOWN && (
                                     <Tooltip label={commit.refs.slice(REFS_SHOWN).join(', ')}>
-                                        <Pill className="shrink-0 py-0 tabular-nums">{t('git.log.moreRefs', { count: commit.refs.length - REFS_SHOWN })}</Pill>
+                                        <Pill size="sm" className="shrink-0 py-0 tabular-nums">{t('git.log.moreRefs', { count: commit.refs.length - REFS_SHOWN })}</Pill>
                                     </Tooltip>
                                 )}
                                 <span className="grow" />
