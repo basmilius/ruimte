@@ -95,6 +95,8 @@ interface ProcessPoint {
     memory: number | null;
 }
 
+type Raise = (alert: Omit<ProcessAlert, 'id'>, identity: string | null, stamp: number | null) => void;
+
 const LAUNCHD_PID = 1;
 const IDLE_BASELINE_POINTS = 30;
 const AGENT_KINDS = new Set(['claude', 'codex', 'gemini', 'copilot']);
@@ -152,7 +154,7 @@ export class StuckJudge {
 
     observe(observation: Observation): ProcessAlert[] {
         const alerts: { alert: ProcessAlert; stamp: number | null }[] = [];
-        const raise = (alert: Omit<ProcessAlert, 'id'>, identity: string | null, stamp: number | null): void => {
+        const raise: Raise = (alert, identity, stamp) => {
             alerts.push({ alert: { id: alertId(alert.kind, alert.nodeId, identity), ...alert }, stamp });
         };
 
@@ -237,82 +239,25 @@ export class StuckJudge {
         this.processSeries.set(process.identity, series);
     }
 
-    private judgeGroup(
-        observation: Observation,
-        group: ObservedGroup,
-        raise: (alert: Omit<ProcessAlert, 'id'>, identity: string | null, stamp: number | null) => void
-    ): void {
-        const limits = this.thresholds;
-        const { at } = observation;
+    private judgeGroup(observation: Observation, group: ObservedGroup, raise: Raise): void {
         const agent = group.agent;
         const stamp = agent?.updatedAt ?? null;
         const agentProcess = agent === null ? undefined : group.processes.find((process) => process.ownFamily === agent.kind);
-
-        if (agent?.status === 'running' && at - agent.updatedAt >= limits.silentAfterMs) {
-            const points = covering(this.nodeSeries.get(group.nodeId) ?? [], at, limits.silentAfterMs, limits.coverageSlackMs);
-            const complete = points !== null && points.every((point) => point.cpu !== null && point.disk !== null && !point.spawned);
-            if (points !== null && complete) {
-                const cpu = weighted(points.map((point) => ({ durationMs: point.durationMs, value: point.cpu! })));
-                const diskBytes = points.reduce((sum, point) => sum + (point.disk! * point.durationMs) / 1000, 0);
-                const idle = this.idleSeries.get(group.nodeId);
-                const ceiling = idle && idle.length > 0 ? Math.max(weighted(idle) * limits.silentBaselineMargin, 1) : limits.silentCpuFloor;
-                if (cpu <= ceiling && diskBytes <= limits.silentDiskBytes) {
-                    const target = agentProcess ?? group.processes[0];
-                    raise(
-                        {
-                            kind: 'silent',
-                            nodeId: group.nodeId,
-                            pid: target?.pid ?? null,
-                            startTime: target?.startTime ?? null,
-                            name: target?.name ?? null,
-                            since: agent.updatedAt,
-                            value: cpu
-                        },
-                        null,
-                        stamp
-                    );
-                }
-            }
+        if (agent?.status === 'running') {
+            this.judgeSilent(observation, group, agent, agentProcess, raise);
         }
-
         if (agent !== null && (agent.status === 'idle' || agent.status === 'needs-you')) {
-            for (const process of group.processes) {
-                const points = covering(this.processSeries.get(process.identity) ?? [], at, limits.busyForMs, limits.coverageSlackMs);
-                if (points === null || !points.every((point) => point.cpu !== null && point.cpu >= limits.busyCpu)) {
-                    continue;
-                }
-                const start = points[0]!.at - points[0]!.durationMs;
-                // The stretch has to lie after the turn ended, or the work of the turn itself counts.
-                if (start < agent.updatedAt - limits.coverageSlackMs) {
-                    continue;
-                }
-                const cpu = weighted(points.map((point) => ({ durationMs: point.durationMs, value: point.cpu! })));
-                raise(
-                    {
-                        kind: 'busy-after-turn',
-                        nodeId: group.nodeId,
-                        pid: process.pid,
-                        startTime: process.startTime,
-                        name: process.name,
-                        since: Math.max(start, agent.updatedAt),
-                        value: cpu
-                    },
-                    process.identity,
-                    stamp
-                );
-            }
+            this.judgeBusyAfterTurn(observation, group, agent, raise);
         }
-
         for (const process of group.processes) {
             this.judgeMemory(observation, process, group.nodeId, raise, stamp);
         }
-
         if (
             group.kind === 'terminal' &&
             agent !== null &&
             agent.reportsEnd &&
             (agent.status === 'running' || agent.status === 'needs-you') &&
-            at - agent.updatedAt >= limits.agentGoneGraceMs &&
+            observation.at - agent.updatedAt >= this.thresholds.agentGoneGraceMs &&
             group.processes.length > 0 &&
             group.processes.every((process) => process.readable) &&
             agentProcess === undefined
@@ -321,13 +266,69 @@ export class StuckJudge {
         }
     }
 
-    private judgeMemory(
-        observation: Observation,
-        process: ObservedProcess,
-        nodeId: string | null,
-        raise: (alert: Omit<ProcessAlert, 'id'>, identity: string | null, stamp: number | null) => void,
-        stamp: number | null = null
-    ): void {
+    private judgeSilent(observation: Observation, group: ObservedGroup, agent: AgentState, agentProcess: ObservedProcess | undefined, raise: Raise): void {
+        const limits = this.thresholds;
+        const { at } = observation;
+        if (at - agent.updatedAt < limits.silentAfterMs) {
+            return;
+        }
+        const points = covering(this.nodeSeries.get(group.nodeId) ?? [], at, limits.silentAfterMs, limits.coverageSlackMs);
+        if (points === null || !points.every((point) => point.cpu !== null && point.disk !== null && !point.spawned)) {
+            return;
+        }
+        const cpu = weighted(points.map((point) => ({ durationMs: point.durationMs, value: point.cpu! })));
+        const diskBytes = points.reduce((sum, point) => sum + (point.disk! * point.durationMs) / 1000, 0);
+        const idle = this.idleSeries.get(group.nodeId);
+        const ceiling = idle && idle.length > 0 ? Math.max(weighted(idle) * limits.silentBaselineMargin, 1) : limits.silentCpuFloor;
+        if (cpu > ceiling || diskBytes > limits.silentDiskBytes) {
+            return;
+        }
+        const target = agentProcess ?? group.processes[0];
+        raise(
+            {
+                kind: 'silent',
+                nodeId: group.nodeId,
+                pid: target?.pid ?? null,
+                startTime: target?.startTime ?? null,
+                name: target?.name ?? null,
+                since: agent.updatedAt,
+                value: cpu
+            },
+            null,
+            agent.updatedAt
+        );
+    }
+
+    private judgeBusyAfterTurn(observation: Observation, group: ObservedGroup, agent: AgentState, raise: Raise): void {
+        const limits = this.thresholds;
+        for (const process of group.processes) {
+            const points = covering(this.processSeries.get(process.identity) ?? [], observation.at, limits.busyForMs, limits.coverageSlackMs);
+            if (points === null || !points.every((point) => point.cpu !== null && point.cpu >= limits.busyCpu)) {
+                continue;
+            }
+            const start = points[0]!.at - points[0]!.durationMs;
+            // The stretch has to lie after the turn ended, or the work of the turn itself counts.
+            if (start < agent.updatedAt - limits.coverageSlackMs) {
+                continue;
+            }
+            const cpu = weighted(points.map((point) => ({ durationMs: point.durationMs, value: point.cpu! })));
+            raise(
+                {
+                    kind: 'busy-after-turn',
+                    nodeId: group.nodeId,
+                    pid: process.pid,
+                    startTime: process.startTime,
+                    name: process.name,
+                    since: Math.max(start, agent.updatedAt),
+                    value: cpu
+                },
+                process.identity,
+                agent.updatedAt
+            );
+        }
+    }
+
+    private judgeMemory(observation: Observation, process: ObservedProcess, nodeId: string | null, raise: Raise, stamp: number | null = null): void {
         const limits = this.thresholds;
         if (process.memory === null) {
             return;
@@ -348,11 +349,7 @@ export class StuckJudge {
         }
     }
 
-    private judgeHung(
-        observation: Observation,
-        process: ObservedProcess,
-        raise: (alert: Omit<ProcessAlert, 'id'>, identity: string | null, stamp: number | null) => void
-    ): void {
+    private judgeHung(observation: Observation, process: ObservedProcess, raise: Raise): void {
         if (process.pid === observation.daemonPid || process.startTime === 0) {
             return;
         }
@@ -376,7 +373,7 @@ export class StuckJudge {
         }
     }
 
-    private judgeOrphans(observation: Observation, raise: (alert: Omit<ProcessAlert, 'id'>, identity: string | null, stamp: number | null) => void): void {
+    private judgeOrphans(observation: Observation, raise: Raise): void {
         for (const [identity, entry] of this.leftBehind) {
             const parent = observation.alive.get(identity);
             if (parent === undefined) {

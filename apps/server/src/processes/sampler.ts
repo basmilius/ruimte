@@ -1,4 +1,6 @@
+import { statfsSync } from 'node:fs';
 import { errorText } from '../error-text.ts';
+
 /*
  * One reading of the process table. Every counter is cumulative, so a rate is always the difference
  * between two readings over the time between them; that is what keeps a five minute gap honest.
@@ -176,6 +178,16 @@ export function parseEnvironment(entries: readonly string[]): Record<string, str
         }
     }
     return env;
+}
+
+/* Free and total bytes of the volume `home` is on; both null when it went away, and the rest of a reading still stands. */
+export function diskSpace(home: string): Pick<MachineCounters, 'diskFree' | 'diskTotal'> {
+    try {
+        const volume = statfsSync(home);
+        return { diskFree: volume.bavail * volume.bsize, diskTotal: volume.blocks * volume.bsize };
+    } catch {
+        return { diskFree: null, diskTotal: null };
+    }
 }
 
 /* The sampler of this platform, or null where there is none (Windows); the panel explains that instead. */

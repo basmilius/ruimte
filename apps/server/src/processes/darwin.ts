@@ -1,7 +1,6 @@
 import { dlopen, FFIType, ptr } from 'bun:ffi';
-import { statfsSync } from 'node:fs';
 import { availableParallelism, totalmem } from 'node:os';
-import { identityOf, parseProcArgs, ticksToNs, type CommandLine, type ProcessSampler, type RawProcess, type RawSample } from './sampler.ts';
+import { diskSpace, identityOf, parseProcArgs, ticksToNs, type CommandLine, type ProcessSampler, type RawProcess, type RawSample } from './sampler.ts';
 
 /*
  * libproc and the Mach host calls through `bun:ffi` read the whole process table in a couple of
@@ -245,15 +244,6 @@ export class DarwinSampler implements ProcessSampler {
                 view.getUint32(VM.internal, true) - view.getUint32(VM.purgeable, true) + view.getUint32(VM.wire, true) + view.getUint32(VM.compressor, true);
             memoryUsed = pages * this.pageSize;
         }
-        let diskFree: number | null = null;
-        let diskTotal: number | null = null;
-        try {
-            const volume = statfsSync(this.home);
-            diskFree = volume.bavail * volume.bsize;
-            diskTotal = volume.blocks * volume.bsize;
-        } catch {
-            // A home on a volume that went away; the rest of the reading still stands.
-        }
-        return { cores, cpuBusy, cpuTotal, memoryUsed, memoryTotal: totalmem(), diskFree, diskTotal };
+        return { cores, cpuBusy, cpuTotal, memoryUsed, memoryTotal: totalmem(), ...diskSpace(this.home) };
     }
 }

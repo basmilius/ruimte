@@ -1,6 +1,6 @@
-import { readdirSync, readFileSync, readlinkSync, statfsSync } from 'node:fs';
+import { readdirSync, readFileSync, readlinkSync } from 'node:fs';
 import { availableParallelism, totalmem } from 'node:os';
-import { parseEnvironment, type CommandLine, type ProcessSampler, type RawProcess, type RawSample } from './sampler.ts';
+import { diskSpace, parseEnvironment, type CommandLine, type ProcessSampler, type RawProcess, type RawSample } from './sampler.ts';
 
 /* USER_HZ: the unit of every tick in `/proc`, fixed at 100 for userspace whatever the kernel runs at. */
 const CLOCK_TICKS = 100;
@@ -167,23 +167,13 @@ export class LinuxSampler implements ProcessSampler {
         const memory = parseKeyValues(read('/proc/meminfo') ?? '');
         const total = memory.get('MemTotal');
         const available = memory.get('MemAvailable');
-        let diskFree: number | null = null;
-        let diskTotal: number | null = null;
-        try {
-            const volume = statfsSync(this.home);
-            diskFree = volume.bavail * volume.bsize;
-            diskTotal = volume.blocks * volume.bsize;
-        } catch {
-            // The rest of the reading still stands.
-        }
         return {
             cores: availableParallelism(),
             cpuBusy: cpu?.busy ?? null,
             cpuTotal: cpu?.total ?? null,
             memoryUsed: total !== undefined && available !== undefined ? (total - available) * 1024 : null,
             memoryTotal: total !== undefined ? total * 1024 : totalmem(),
-            diskFree,
-            diskTotal
+            ...diskSpace(this.home)
         };
     }
 }

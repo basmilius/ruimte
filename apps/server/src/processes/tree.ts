@@ -45,7 +45,6 @@ export interface TreeIndex {
     byPid: Map<number, RawProcess>;
     /* Every group of Ruimte's own tree, in a stable order. */
     groups: IndexedGroup[];
-    /* The identities inside Ruimte's tree. */
     ruimte: Set<string>;
     /* Inherited: a shell under `claude` is `claude` too. */
     family: Map<string, string | null>;
@@ -175,6 +174,11 @@ export function indexTree(sample: RawSample, roots: TreeRoots, argsOf: (process:
     return { sample, byPid, groups, ruimte, family, ownFamily };
 }
 
+/* Read and write together, or null when neither could be read. */
+export function diskOf(rate: Pick<ProcessRate, 'diskRead' | 'diskWrite'>): number | null {
+    return rate.diskRead === null && rate.diskWrite === null ? null : (rate.diskRead ?? 0) + (rate.diskWrite ?? 0);
+}
+
 function sortValue(rate: Pick<ProcessRate, 'cpu' | 'memory' | 'diskRead' | 'diskWrite'> | undefined, sort: ProcessSort): number {
     if (rate === undefined) {
         return -1;
@@ -185,7 +189,7 @@ function sortValue(rate: Pick<ProcessRate, 'cpu' | 'memory' | 'diskRead' | 'disk
     if (sort === 'memory') {
         return rate.memory ?? -1;
     }
-    return rate.diskRead === null && rate.diskWrite === null ? -1 : (rate.diskRead ?? 0) + (rate.diskWrite ?? 0);
+    return diskOf(rate) ?? -1;
 }
 
 function sum(values: readonly (number | null)[]): number | null {
@@ -217,7 +221,7 @@ function rowOf(index: TreeIndex, rates: Map<string, ProcessRate>, entry: TreeEnt
     };
 }
 
-function groupOf(id: string, kind: ProcessGroupKind, nodeId: string | null, rows: ProcessRow[], hidden = 0, label?: string): ProcessGroup {
+function groupOf({ id, kind, nodeId, label }: Pick<IndexedGroup, 'id' | 'kind' | 'nodeId' | 'label'>, rows: ProcessRow[], hidden = 0): ProcessGroup {
     return {
         id,
         kind,
@@ -241,12 +245,8 @@ const GROUP_ORDER: Record<ProcessGroupKind, number> = { terminal: 0, chat: 0, ap
 export function groupsFor(index: TreeIndex, rates: Map<string, ProcessRate>, scope: ProcessScope, sort: ProcessSort, limit: number): ProcessGroup[] {
     const groups = index.groups.map((group) =>
         groupOf(
-            group.id,
-            group.kind,
-            group.nodeId,
-            group.entries.map((entry) => rowOf(index, rates, entry)),
-            0,
-            group.label
+            group,
+            group.entries.map((entry) => rowOf(index, rates, entry))
         )
     );
     groups.sort((a, b) => GROUP_ORDER[a.kind] - GROUP_ORDER[b.kind] || (GROUP_ORDER[a.kind] === 0 ? sortValue(b, sort) - sortValue(a, sort) : 0));
@@ -258,9 +258,7 @@ export function groupsFor(index: TreeIndex, rates: Map<string, ProcessRate>, sco
         const shown = rest.filter((entry, position) => (position < limit && entry.process.readable) || (index.ownFamily.get(entry.identity) ?? null) !== null);
         groups.push(
             groupOf(
-                'other',
-                'other',
-                null,
+                { id: 'other', kind: 'other', nodeId: null },
                 shown.map((entry) => rowOf(index, rates, entry)),
                 rest.length - shown.length
             )
@@ -275,7 +273,7 @@ export function ruimteTotals(index: TreeIndex, rates: Map<string, ProcessRate>):
     return {
         cpu: sum(members.map((rate) => rate.cpu)),
         memory: sum(members.map((rate) => rate.memory)),
-        disk: sum(members.map((rate) => (rate.diskRead === null && rate.diskWrite === null ? null : (rate.diskRead ?? 0) + (rate.diskWrite ?? 0))))
+        disk: sum(members.map(diskOf))
     };
 }
 

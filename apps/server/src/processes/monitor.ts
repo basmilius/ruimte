@@ -26,7 +26,7 @@ import {
     type RawSample
 } from './sampler.ts';
 import { StuckJudge, type ObservedGroup, type ObservedProcess, type Observation, type StuckThresholds } from './stuck.ts';
-import { groupsFor, indexTree, machineDisk, ruimteTotals, type TreeEntry, type TreeIndex } from './tree.ts';
+import { diskOf, groupsFor, indexTree, machineDisk, ruimteTotals, type TreeEntry, type TreeIndex } from './tree.ts';
 import { errorText } from '../error-text.ts';
 import { CodedError } from '@adecore/agents/coded-error';
 import { ClientSinks } from '../client-sinks.ts';
@@ -222,29 +222,14 @@ export class ProcessMonitor {
 
     /* One reading. `onRhythm` is a tick of the timer; a nudge reads out of rhythm and adds no fine point. */
     sampleNow(onRhythm: boolean): void {
-        if (this.sampler === null) {
+        const raw = this.readTable();
+        if (raw === null) {
             return;
         }
-        let raw: RawSample;
-        try {
-            raw = this.sampler.sample();
-        } catch (e) {
-            if (!this.failureLogged) {
-                this.failureLogged = true;
-                console.error('Reading the process table failed:', errorText(e));
-            }
-            return;
-        }
-        let reset = false;
-        if (this.live !== null && sleptBetween(this.live, raw)) {
+        const reset = this.live !== null && sleptBetween(this.live, raw);
+        if (reset) {
             // Rates across a sleep are fiction, and the series would draw a line through the night.
-            reset = true;
-            this.fine.length = 0;
-            this.coarse.length = 0;
-            this.live = null;
-            this.finePrevious = null;
-            this.coarsePrevious = null;
-            this.judge.reset();
+            this.forgetHistory();
         }
 
         const sessions = this.options.sessions().filter((session) => !session.exited);
@@ -261,8 +246,48 @@ export class ProcessMonitor {
         };
         const rates = processRates(this.live, raw);
         const index = indexTree(raw, { daemonPid: this.daemonPid, sessions, chats }, (process) => commandLineOf(process)?.args ?? null);
+        const machine = this.machineOf(raw, rates);
+        const { finePoint, coarsePoint } = this.extendSeries(raw, index, rates, onRhythm);
+
+        const durationMs = this.live === null ? null : raw.awakeMs - this.live.awakeMs;
+        this.live = raw;
+        const latest: Latest = { index, rates, machine, at: raw.at };
+        this.latest = latest;
+
+        const strays = this.straysOf(raw, latest, sessions, commandLineOf);
+        this.commandLines = lines;
+
+        this.publish(this.judge.observe(this.observationOf(raw, latest, durationMs, sessions, chats, strays)));
+        this.sendSamples(latest, finePoint, coarsePoint, reset);
+    }
+
+    private readTable(): RawSample | null {
+        if (this.sampler === null) {
+            return null;
+        }
+        try {
+            return this.sampler.sample();
+        } catch (e) {
+            if (!this.failureLogged) {
+                this.failureLogged = true;
+                console.error('Reading the process table failed:', errorText(e));
+            }
+            return null;
+        }
+    }
+
+    private forgetHistory(): void {
+        this.fine.length = 0;
+        this.coarse.length = 0;
+        this.live = null;
+        this.finePrevious = null;
+        this.coarsePrevious = null;
+        this.judge.reset();
+    }
+
+    private machineOf(raw: RawSample, rates: Map<string, ProcessRate>): ProcessMachine {
         const disk = machineDisk(rates);
-        const machine: ProcessMachine = {
+        return {
             cores: raw.machine.cores,
             cpu: machineRate(this.live, raw).cpu,
             memoryUsed: raw.machine.memoryUsed,
@@ -272,7 +297,15 @@ export class ProcessMonitor {
             diskFree: raw.machine.diskFree,
             diskTotal: raw.machine.diskTotal
         };
+    }
 
+    /* Adds a fine point on a tick while a panel is open, and a coarse point once its interval passed. Runs before `live` moves on. */
+    private extendSeries(
+        raw: RawSample,
+        index: TreeIndex,
+        rates: Map<string, ProcessRate>,
+        onRhythm: boolean
+    ): { finePoint: ProcessPoint | null; coarsePoint: ProcessPoint | null } {
         let finePoint: ProcessPoint | null = null;
         if (onRhythm && this.followers.size > 0) {
             if (this.finePrevious !== null && raw.awakeMs - this.finePrevious.awakeMs <= FINE_INTERVAL_MS * 3) {
@@ -291,17 +324,24 @@ export class ProcessMonitor {
             this.coarse.splice(0, Math.max(0, this.coarse.length - COARSE_POINTS));
             this.coarsePrevious = raw;
         }
+        return { finePoint, coarsePoint };
+    }
 
-        const durationMs = this.live === null ? null : raw.awakeMs - this.live.awakeMs;
-        this.live = raw;
-        const latest: Latest = { index, rates, machine, at: raw.at };
-        this.latest = latest;
-
-        const live = new Set(sessions.map((session) => session.id));
+    /* Orphans of this user that carry a session of this daemon that no longer runs. */
+    private straysOf(
+        raw: RawSample,
+        latest: Latest,
+        sessions: readonly { id: string }[],
+        commandLineOf: (process: RawProcess) => CommandLine | null
+    ): Observation['strays'] {
         const contextUrl = this.options.contextUrl();
+        if (contextUrl === null) {
+            return [];
+        }
+        const live = new Set(sessions.map((session) => session.id));
         const strays: Observation['strays'] = [];
         for (const process of raw.processes) {
-            if (process.ppid !== 1 || process.uid !== this.uid || contextUrl === null) {
+            if (process.ppid !== 1 || process.uid !== this.uid) {
                 continue;
             }
             const env = commandLineOf(process)?.env;
@@ -310,15 +350,24 @@ export class ProcessMonitor {
                 strays.push({ process: this.observed(latest, { process, identity: identityOf(process.pid, process.startTime), depth: 0 }), nodeId: sessionId });
             }
         }
-        this.commandLines = lines;
+        return strays;
+    }
 
+    private observationOf(
+        raw: RawSample,
+        latest: Latest,
+        durationMs: number | null,
+        sessions: ReturnType<ProcessMonitorOptions['sessions']>,
+        chats: ReturnType<ProcessMonitorOptions['chats']>,
+        strays: Observation['strays']
+    ): Observation {
         const sessionsById = new Map(sessions.map((session) => [session.id, session]));
         const chatsById = new Map(chats.map((chat) => [chat.id, chat]));
-        const observation: Observation = {
+        return {
             at: raw.at,
             durationMs,
             daemonPid: this.daemonPid,
-            groups: index.groups.flatMap((group): ObservedGroup[] => {
+            groups: latest.index.groups.flatMap((group): ObservedGroup[] => {
                 if ((group.kind !== 'terminal' && group.kind !== 'chat') || group.nodeId === null) {
                     return [];
                 }
@@ -335,12 +384,14 @@ export class ProcessMonitor {
                 const state = chat ? { kind: chat.provider, status: chat.status, updatedAt: chat.updatedAt, reportsEnd: false } : null;
                 return [{ nodeId: group.nodeId, kind: 'chat', agent: state, processes }];
             }),
-            daemon: (index.groups.find((group) => group.kind === 'daemon')?.entries ?? []).map((entry) => this.observed(latest, entry)),
+            daemon: (latest.index.groups.find((group) => group.kind === 'daemon')?.entries ?? []).map((entry) => this.observed(latest, entry)),
             alive: new Map(raw.processes.map((process) => [identityOf(process.pid, process.startTime), process.ppid])),
             strays
         };
-        this.publish(this.judge.observe(observation));
+    }
 
+    /* One event per scope and sort, shared by every panel that asked for the same. */
+    private sendSamples(latest: Latest, finePoint: ProcessPoint | null, coarsePoint: ProcessPoint | null, reset: boolean): void {
         const built = new Map<string, ProcessesSampleEvent>();
         for (const [clientId, follower] of this.followers) {
             const key = `${follower.scope}:${follower.sort}`;
@@ -366,7 +417,7 @@ export class ProcessMonitor {
             readable: process.readable,
             cpu: rate?.cpu ?? null,
             memory: rate?.memory ?? null,
-            disk: rate === undefined || (rate.diskRead === null && rate.diskWrite === null) ? null : (rate.diskRead ?? 0) + (rate.diskWrite ?? 0)
+            disk: rate === undefined ? null : diskOf(rate)
         };
     }
 
