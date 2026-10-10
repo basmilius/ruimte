@@ -4,10 +4,8 @@ import { blankLineEdits } from '@/shell/panels/blank-lines';
 import { type DiskText, type TextDrafts, useTextDrafts } from '@/state/text-drafts';
 
 /*
- * One editor on the shared draft of its file: what is typed goes into the draft, Mod+S and leaving
- * the editor save it, and whatever changes the draft from elsewhere (another editor on the same
- * file, a reload) comes back into this one. The editor's own edit is already its text, so it never
- * echoes.
+ * One editor on the shared draft of its file: typing writes the draft, Mod+S and leaving save it, and a
+ * change from elsewhere (another editor, a reload) comes back in. Its own edit never echoes.
  */
 export function bindDraftEditor(editor: Editor, drafts: TextDrafts, endpointId: string, path: string): () => void {
     const key = endpointKey(endpointId, path);

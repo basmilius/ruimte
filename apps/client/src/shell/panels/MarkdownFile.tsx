@@ -60,9 +60,8 @@ export function MarkdownFile({ path, read }: { path: string; read: FsReadText })
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar>{toggle}</FileToolbar>
-            {/* Prose is read in the same column the standalone chat view gives a thread, at the
-                app's own type. The scroller keeps the panel's full width, so its scrollbar stays at
-                the panel's edge; only the text inside it is centered. */}
+            {/* Prose gets the column a chat view gives a thread. The scroller keeps the full width, so its
+                scrollbar stays at the edge; only the text is centered. */}
             <div ref={surface} className="relative flex min-h-0 min-w-0 grow flex-col">
                 {find.open && <FindBar find={find} total={domFind.total} current={domFind.current} invalid={domFind.invalid} onStep={domFind.step} />}
                 <FileScroll className="px-4 py-3">

@@ -17,11 +17,7 @@ export interface FileActions {
     refresh(): void;
 }
 
-/*
- * What the toolbar's overflow menu can do to the file under it. `FileBody` owns the read, the
- * renderers draw whatever it found, and the toolbar sits inside them: a context is what gets the
- * read back down to the menu without every renderer passing it along.
- */
+/* What the toolbar's menu can do to the file under it; a context, so no renderer has to pass `FileBody`'s read along. */
 export const FileActionsContext = createContext<FileActions | null>(null);
 
 /* Null where a toolbar has no file under it to act on. */

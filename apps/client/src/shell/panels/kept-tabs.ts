@@ -7,10 +7,9 @@ export function shownAfter(previous: readonly string[], active: string, limit = 
 }
 
 /*
- * The tabs to keep drawn: the one up (none while a view that is no loose tab is in front) and those shown before it that are still open, at most `limit`, and
- * every tab `holds` says would lose something unmounted, such as a table with edits nobody submitted. They
- * come in an order of their keys, which no switch changes: an element moved in the page loses where it was
- * scrolled to.
+ * The tabs to keep drawn: the one up and those shown before it that are still open, at most `limit`, plus
+ * every tab `holds` says would lose something unmounted. Ordered by key, which no switch changes, since an
+ * element moved in the page loses its scroll position.
  */
 export function keptTabs<T extends { key: string }>(
     active: string | null,

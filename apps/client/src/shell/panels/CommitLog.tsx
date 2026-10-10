@@ -35,16 +35,13 @@ interface CommitLogProps {
 }
 
 /*
- * The history under the commit box: every repository of the folder at once, newest first, each row
- * saying where it came from. It reloads from the top whenever a status moves, because a commit, a
- * pull and a rebase all move a log and all move the status with it; the pages loaded past the first
- * are read again on the way down. A right click on a row offers the commit and the two things a
- * person copies out of one.
+ * The history under the commit box: every repository of the folder at once, newest first. It reloads
+ * from the top whenever a status moves, since everything that moves a log moves the status with it.
  */
 export function CommitLog({ sources, reading, onOpen }: CommitLogProps) {
-    /* What was asked for, so the answer to the question before this one is not drawn and a status
-       that moved reads as loading without an effect that has to empty the state first. */
     const { t } = useTranslation('panels');
+    /* What was asked for, so an answer to an older question is not drawn and a status that moved
+       reads as loading without an effect that has to empty the state first. */
     const asked = sources.map((source) => `${source.cwd}\u0000${source.revision}`).join('\u0001');
     const [held, setHeld] = useState<{ asked: string; logs: LoadedLog[]; failed: boolean } | null>(null);
     const [paging, setPaging] = useState(false);

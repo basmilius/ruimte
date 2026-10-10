@@ -11,11 +11,7 @@ import { useMachineUrl } from '@/transport/machine-url';
 import { Button, EmptyState, Icon } from '@adecore/ui';
 import { formatBytes } from '@adecore/ui/format';
 
-/*
- * Whether there is any point in drawing a player. The mime names the container, and a container the
- * runtime knows is not a promise about the codecs inside it, so `canPlayType` answers "maybe" more
- * often than "probably"; an empty answer is the only certain no, and the one this asks about.
- */
+/* `canPlayType` knows the container, not its codecs, so it says "maybe" often; an empty answer is the only certain no. */
 function canPlay(mime: string): boolean {
     return typeof document !== 'undefined' && document.createElement('video').canPlayType(mime) !== '';
 }

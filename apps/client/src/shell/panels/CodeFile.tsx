@@ -53,11 +53,7 @@ const LOOK_AHEAD = '600px';
 // How long the line a link asked for stays marked. Long enough to find it, short enough to forget.
 const FLASH_MS = 1600;
 
-/*
- * Past this a file is plain text and read only, in the viewer and the editor alike. A generated file
- * of a hundred thousand lines is one nobody reads for its colors, and the editor would color all of it
- * in the background.
- */
+/* Past this a file is plain text and read only: nobody reads a generated file for its colors, and the editor would color all of it. */
 const HIGHLIGHT_MAX_LINES = 20000;
 
 interface ChunkProps {
@@ -190,9 +186,8 @@ export interface CodeFileProps {
 
 /*
  * Any text file, as an editor. The viewer's chunks draw the same place while the editor loads, so nothing
- * moves when it takes over, and stay for a finger, which the editor has no touch handling for, and for an editor that
- * did not load. Where the file cannot be written from here the editor is read only and the toolbar
- * says why.
+ * moves when it takes over, and stay for touch (which the editor does not handle) and for an editor that
+ * did not load. Where the file cannot be written from here the toolbar says why.
  */
 export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const { t } = useTranslation('panels');

@@ -115,8 +115,7 @@ export function BranchMenu({
                     >
                         <Menu.Trigger className="inline-flex h-6 min-w-0 shrink items-center gap-1 rounded-full bg-surface-hover px-2 text-xs text-text-muted hover:text-text">
                             <Icon icon={GitBranch} size={12} className="shrink-0" />
-                            {/* Over several repositories no single branch is the one the panel is on, so the chip
-                        says none rather than one that happens to be first. */}
+                            {/* Over several repositories no single branch is the panel's, so the chip names none. */}
                             {!nested && (
                                 <>
                                     {prefix !== null && <span className="max-w-24 truncate text-text-faint">{prefix}</span>}
@@ -159,8 +158,7 @@ export function BranchMenu({
                             <>
                                 <Menu.Separator />
                                 <Menu.Label>{t('git.branchMenu.worktrees')}</Menu.Label>
-                                {/* A worktree takes the panel over whole, the way it always did: its repositories
-                            step aside until the canvas or this menu points somewhere else. */}
+                                {/* A worktree takes the panel over whole until the canvas or this menu points elsewhere. */}
                                 <CheckoutChoice targets={worktrees} target={target} onPickTarget={onPickTarget} />
                             </>
                         )}

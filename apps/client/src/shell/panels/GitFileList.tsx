@@ -94,12 +94,8 @@ interface ListProps {
 }
 
 /*
- * The changed files, grouped the way a person acts on them: conflicts first, then every change git
- * tracks, then what it has never seen. It is one tree: a group is a row, under it a row per
- * repository while the folder holds more than one, and under that the folders its files sit in,
- * read the way the Files panel reads them. Every row has a box that says whether it is in the index,
- * and ticking it stages or unstages all of it; the commit is still what is staged. A row opens its
- * diff in the preview panel; a right click offers the things a row has no room for.
+ * The changed files as one tree (`buildGitTree`): conflicts, then tracked changes, then what git has
+ * never seen. Every row has a box that stages or unstages all of it, and opens its diff in the preview.
  */
 export function GitFileList({ checkouts, reposTruncated, ...props }: ListProps) {
     const { t } = useTranslation('panels');

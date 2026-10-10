@@ -10,12 +10,9 @@ import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { cameThroughPortal, IconButton, Separator, Menu, TextMenu, ContextMenu } from '@adecore/ui';
 
 /*
- * The bar above every file renderer: the controls that change how the file is drawn, at its right.
- * One component for all the renderers, so a control keeps its place when the open file changes
- * type, and the menu at its end is the same everywhere for the same reason. Where the surface
- * carries a bar already (`file-toolbar-slot.ts`) the controls go up into that one instead, since a
- * second row under it would say the same thing twice. `leading` sits at the other end of that bar,
- * and goes nowhere where the controls go up, since the surface above says where the file is already.
+ * The bar above every file renderer, one for all of them so a control keeps its place when the file
+ * changes type. Where the surface carries a bar already (`file-toolbar-slot.ts`) the controls go up into
+ * that one, and `leading` is dropped, since that surface already says where the file is.
  */
 export function FileToolbar({ children, menu, leading }: { children?: ReactNode; menu?: ReactNode; leading?: ReactNode }) {
     const { host } = useFileToolbarSlot();
@@ -69,11 +66,8 @@ export function FileToolbarToggle({ icon, label, active, disabled = false, onCli
 }
 
 /*
- * Everything the file can be asked, in one menu at the end of the bar. On a tab the items are the
- * ones a right click on it offers as well; a node and a view of its own have no tab to pin or
- * close, so they get the half that is about the file. The file comes from `FileBody` through
- * `useFileActions`, so no renderer has to hand it over. `extra` is how the renderer draws the file,
- * above those items, for settings that change too rarely to earn a button in the bar.
+ * Everything the file can be asked, at the end of the bar; a node or a view has no tab to pin or close,
+ * so it gets only the items about the file. `extra` holds the renderer's rarer settings above them.
  */
 function FileMenu({ extra }: { extra?: ReactNode }) {
     const { t } = useTranslation('common');

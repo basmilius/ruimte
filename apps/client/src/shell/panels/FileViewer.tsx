@@ -27,11 +27,9 @@ function KeptTab({ up, children }: { up: boolean; children: ReactNode }) {
 }
 
 /*
- * The body of a host's loose views: whichever tab is up. The tabs shown last keep their editor underneath,
- * hidden and inert, as the platform keeps an editor per tab: going back to one finds its colors, folds and
- * usages as they were, instead of the editor building them up again in front of you. A table with edits
- * nobody submitted stays drawn however long ago it was up, or the edits would go with it. `ids` are the
- * views of the cell in order, of which the loose ones are tabs.
+ * The body of a host's loose views: whichever tab is up. The tabs shown last keep their editor hidden
+ * underneath, so going back to one finds its colors and folds as they were. A table with unsubmitted
+ * edits stays drawn however long ago it was up, or the edits would go with it.
  */
 export function FileViewer({ active, ids }: { active: string | null; ids: readonly string[] }) {
     const { t } = useTranslation('databases');

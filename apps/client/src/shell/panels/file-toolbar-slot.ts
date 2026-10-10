@@ -10,11 +10,9 @@ export interface FileToolbarSlot {
 const EMPTY: FileToolbarSlot = { host: null, mount: null };
 
 /*
- * Where the controls of the file on screen belong. A renderer draws its own bar inside the preview
- * panel, where the file is one tab among several; a view of its own and a node already carry a bar
- * above the body (the window's toolbar, the node's header), and a second one under it would be two
- * rows saying the same thing. The state lives in the renderer either way, so the markup is portaled
- * up rather than the state pushed down.
+ * Where the controls of the file on screen belong. A view and a node already carry a bar above the body
+ * (the window's toolbar, the node's header), so the renderer portals its controls up into that one
+ * rather than drawing a second row; the state stays in the renderer.
  */
 const FileToolbarSlotContext = createContext<FileToolbarSlot>(EMPTY);
 

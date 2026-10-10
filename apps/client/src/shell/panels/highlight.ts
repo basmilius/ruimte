@@ -3,11 +3,7 @@ import { shikiThemeOf } from '@/shell/panels/code-themes';
 
 type Highlight = (code: string, language: string, theme: string, document: boolean) => Promise<string>;
 
-/*
- * Shiki separates its line spans with a newline of its own. The viewer needs every line to be a
- * block, so a line number can hang off it, and a newline between blocks would draw the whole file
- * double spaced.
- */
+/* Every line is a block so a line number can hang off it, and Shiki's newline between them would double the spacing. */
 const DROP_LINE_BREAKS: ShikiTransformer = {
     code(node) {
         node.children = node.children.filter((child) => child.type !== 'text' || child.value !== '\n');

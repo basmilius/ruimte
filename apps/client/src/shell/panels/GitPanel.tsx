@@ -447,6 +447,20 @@ export function GitPanel() {
     const ahead = checkouts.reduce((count, checkout) => count + (checkout.status?.ahead ?? 0), 0);
     const behind = checkouts.reduce((count, checkout) => count + (checkout.status?.behind ?? 0), 0);
 
+    /* The words of a dialog over files: the name of one, the count of several. */
+    const filesDialogText = (kind: 'discard' | 'delete-file', key: 'discard' | 'deleteFile'): { title: string; description: string } => {
+        const files = dialog?.kind === kind ? filesOf(dialog.work) : null;
+        return {
+            title:
+                files === null
+                    ? t(`git.dialog.${key}.fallback`)
+                    : files.length > 1
+                      ? t(`git.dialog.${key}.titleMany`, { count: files.length })
+                      : t(`git.dialog.${key}.title`, { name: basenameOf(files[0]!.path) }),
+            description: files !== null && files.length > 1 ? t(`git.dialog.${key}.descriptionMany`) : t(`git.dialog.${key}.description`)
+        };
+    };
+
     /* What acts on one repository: the whole actions menu of a folder with a single one, and the head
        of every repository's own level while it holds more. */
     const repoActions = (path: string): ReactNode => (
@@ -711,18 +725,7 @@ export function GitPanel() {
             />
             <PromptDialog
                 open={dialog?.kind === 'discard'}
-                title={
-                    dialog?.kind !== 'discard'
-                        ? t('git.dialog.discard.fallback')
-                        : filesOf(dialog.work).length > 1
-                          ? t('git.dialog.discard.titleMany', { count: filesOf(dialog.work).length })
-                          : t('git.dialog.discard.title', { name: basenameOf(filesOf(dialog.work)[0]!.path) })
-                }
-                description={
-                    dialog?.kind === 'discard' && filesOf(dialog.work).length > 1
-                        ? t('git.dialog.discard.descriptionMany')
-                        : t('git.dialog.discard.description')
-                }
+                {...filesDialogText('discard', 'discard')}
                 confirmLabel={t('git.dialog.discard.confirm')}
                 danger
                 busy={busy}
@@ -735,18 +738,7 @@ export function GitPanel() {
             />
             <PromptDialog
                 open={dialog?.kind === 'delete-file'}
-                title={
-                    dialog?.kind !== 'delete-file'
-                        ? t('git.dialog.deleteFile.fallback')
-                        : filesOf(dialog.work).length > 1
-                          ? t('git.dialog.deleteFile.titleMany', { count: filesOf(dialog.work).length })
-                          : t('git.dialog.deleteFile.title', { name: basenameOf(filesOf(dialog.work)[0]!.path) })
-                }
-                description={
-                    dialog?.kind === 'delete-file' && filesOf(dialog.work).length > 1
-                        ? t('git.dialog.deleteFile.descriptionMany')
-                        : t('git.dialog.deleteFile.description')
-                }
+                {...filesDialogText('delete-file', 'deleteFile')}
                 confirmLabel={t('git.dialog.deleteFile.confirm')}
                 danger
                 busy={busy}

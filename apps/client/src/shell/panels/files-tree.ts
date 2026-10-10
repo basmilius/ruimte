@@ -3,8 +3,8 @@ import { FileTree } from '@adecore/ui';
 import { absoluteOf, isAbsolutePath, relativeTo, resolveStoredPath, storedPathOf, type FsEntry, type GitFile } from '@ruimte/contracts';
 import { chipText } from '@adecore/agents-react/chat/mentions';
 
-/* A directory whose children have not arrived yet gets one child nobody sees, so the row keeps the
-   chevron that lets a person expand it. The rule that hides the row lives in `TREE_CSS`. */
+/* A directory whose children have not arrived yet gets one child nobody sees, so the row keeps its
+   chevron. The rule that hides it is in `FilesPanel`. */
 export const LOADING_NAME = '.ruimte-loading';
 
 /* What the daemon answered per directory, keyed by the directory's absolute path. */
@@ -59,11 +59,9 @@ export function treePathOf(root: string, entry: FsEntry): string {
 }
 
 /*
- * The whole model in one pass over the cache. A directory that has been listed contributes its
- * children, an empty one contributes itself with a trailing slash (which is how the tree hears
- * about a directory with nothing in it), and one that has not been listed contributes the
- * placeholder that keeps its chevron. Hidden entries are filtered here, so the eye button rebuilds
- * from what is already loaded instead of asking the daemon again.
+ * The whole model in one pass over the cache. An empty directory contributes itself with a trailing
+ * slash, and one not listed yet the placeholder that keeps its chevron. Hidden entries are filtered
+ * here, so the eye button rebuilds from the cache instead of asking the daemon again.
  */
 export function buildTreeInput(root: string, cache: EntryCache, showHidden: boolean): TreeInput {
     const paths: string[] = [];
@@ -118,10 +116,8 @@ export function treeGitStatus(status: string): GitStatus {
 }
 
 /*
- * What git says about the checkout, in the rows the tree marks. Paths come from the repository
- * root and the tree counts from the open folder, so a change above the folder (a repository the
- * project is a subdirectory of) has no row here and is left out. The tree marks the directories
- * on the way itself, from these entries.
+ * What git says about the checkout, in the rows the tree marks. Paths come from the repository root and
+ * the tree counts from the open folder, so a change above the folder has no row and is left out.
  */
 export function gitStatusEntries(folder: string, root: string | null, files: readonly GitFile[]): GitStatusEntry[] {
     if (root === null) {

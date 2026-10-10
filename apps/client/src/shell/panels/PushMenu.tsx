@@ -17,10 +17,8 @@ interface PushMenuProps {
 }
 
 /*
- * The primary button of the header. A folder with one repository has exactly the button it always
- * had. With more than one it grows a second half: the left one pushes every repository that has
- * something to push, and the chevron opens the flyout that pushes or publishes one of them on its
- * own. The flyout stays open to a branch that only publishing would move.
+ * The primary button of the header. Over more than one repository the left half pushes all of them,
+ * and the chevron opens the flyout that pushes or publishes one on its own.
  */
 export function PushMenu({ button, active, entries, busy, onPush, onPushAll }: PushMenuProps) {
     const { t } = useTranslation('panels');

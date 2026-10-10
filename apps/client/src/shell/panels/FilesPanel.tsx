@@ -60,7 +60,6 @@ import {
     withoutClosedBranches,
     type EntryCache
 } from '@/shell/panels/files-tree';
-const { directoryHandle, menuTargetsOf, resetExpandedPaths, rowPathOf } = FileTree;
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { folderWatches } from '@/state/fs-watch';
@@ -76,15 +75,15 @@ import { useTransport } from '@/transport/context';
 import { Button, ButtonGroup, EmptyState, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu, PromptDialog } from '@adecore/ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
+const { directoryHandle, menuTargetsOf, resetExpandedPaths, rowPathOf } = FileTree;
+
 const SEARCH_DEBOUNCE_MS = 150;
 const SEARCH_LIMIT = 200;
 
 /*
- * Two rules of this panel's own, over the shared ones. The first hides the row that keeps an
- * unloaded directory's chevron. The second turns the letter the git lane draws into a dot, in the
- * color the lane already carries: a directory with changes under it gets a dot of the tree's own,
- * so one shape says "this differs from HEAD" everywhere in the panel. An ignored file leaves that
- * lane empty, which is why it is left out.
+ * The first rule hides the row that keeps an unloaded directory's chevron. The second turns the git
+ * lane's letter into a dot, the shape the tree already gives a directory with changes, so one mark
+ * says "differs from HEAD" everywhere. An ignored file leaves that lane empty.
  */
 const FILES_TREE_CSS = `
     [data-item-path$="/${LOADING_NAME}"] { display: none !important; }
@@ -142,7 +141,6 @@ export function FilesPanel() {
     const [menuTargets, setMenuTargets] = useState<string[]>([]);
     const [deleting, setDeleting] = useState<{ absolutes: string[]; directory: boolean } | null>(null);
     const [deleteBusy, setDeleteBusy] = useState(false);
-    /* The entry whose name is being changed. */
     const [renaming, setRenaming] = useState<{ absolute: string; directory: boolean } | null>(null);
     /* The tree takes its options once, so a drop reaches the panel's current state through this. */
     const dropRef = useRef<(event: FileTreeDropResult) => void>(() => undefined);
@@ -152,9 +150,9 @@ export function FilesPanel() {
     const [entryBusy, setEntryBusy] = useState(false);
     /* What the machine refused with, until the name changes. */
     const [entryFailure, setEntryFailure] = useState<string | null>(null);
-    /* The entry that was made, until the listing that holds it has been drawn and the row is in view. */
     /* Set the moment the request goes out, since disabling the field blurs it before the state says so. */
     const submittingRef = useRef(false);
+    /* The entry that was made, until the listing that holds it has been drawn and the row is in view. */
     const madeRef = useRef<{ treePath: string; kind: NewEntryKind } | null>(null);
     /* Set when a menu item started the entry, so the menu does not give the keyboard back to the tree as it closes. */
     const menuStartedRef = useRef(false);
@@ -483,11 +481,18 @@ export function FilesPanel() {
         useFiles.getState().setExpandedDirs([]);
     };
 
-    const refresh = (): void => {
-        for (const dir of cache.keys()) {
+    const reloadListed = (): void => {
+        for (const dir of cacheRef.current.keys()) {
             void load(dir);
         }
     };
+
+    const failureOf = (error: unknown, action: 'create' | 'rename'): string =>
+        error instanceof ActionRefusal
+            ? t(`files.${action}.refused.${error.code}`, { defaultValue: error.message })
+            : error instanceof Error
+              ? error.message
+              : t('error.generic');
 
     const cancelEntry = (): void => {
         setCreation(null);
@@ -507,13 +512,7 @@ export function FilesPanel() {
         try {
             await performAsPerson('file.create', { path, kind, text: null });
         } catch (error: unknown) {
-            setEntryFailure(
-                error instanceof ActionRefusal
-                    ? t(`files.create.refused.${error.code}`, { defaultValue: error.message })
-                    : error instanceof Error
-                      ? error.message
-                      : t('error.generic')
-            );
+            setEntryFailure(failureOf(error, 'create'));
             submittingRef.current = false;
             setEntryBusy(false);
             return;
@@ -563,13 +562,6 @@ export function FilesPanel() {
         }
     };
 
-    const failureOf = (error: unknown): string =>
-        error instanceof ActionRefusal
-            ? t(`files.rename.refused.${error.code}`, { defaultValue: error.message })
-            : error instanceof Error
-              ? error.message
-              : t('error.generic');
-
     /* What the name or the machine says against a try is thrown, which the dialog shows under its field and stays open for another. */
     const confirmRename = async (typed: string): Promise<void> => {
         if (!folder || renaming === null) {
@@ -594,13 +586,11 @@ export function FilesPanel() {
         try {
             await performAsPerson('file.rename', { path: renaming.absolute, to: newEntryPathOf(parent, name, kind) });
         } catch (error: unknown) {
-            throw new Error(failureOf(error));
+            throw new Error(failureOf(error, 'rename'));
         }
         setRenaming(null);
         // The machine's change report settles for a moment; asking now keeps the old name from lingering.
-        for (const directory of cacheRef.current.keys()) {
-            void load(directory);
-        }
+        reloadListed();
     };
 
     /* A drop moves the rows one after the other and stops at the first the machine refuses; the listing after it says where everything is. */
@@ -615,12 +605,10 @@ export function FilesPanel() {
                     await performAsPerson('file.rename', { path: move.from, to: move.to });
                 }
             } catch (error: unknown) {
-                const message = failureOf(error);
+                const message = failureOf(error, 'rename');
                 useToasts.getState().show({ title: t('files.rename.failed'), description: message, kind: 'error', output: message });
             }
-            for (const directory of cacheRef.current.keys()) {
-                void load(directory);
-            }
+            reloadListed();
         })();
     };
     useEffect(() => {
@@ -745,7 +733,7 @@ export function FilesPanel() {
                             <Icon icon={ChevronsDownUp} size={14} /> {t('git.panel.collapseAll')}
                         </Menu.Item>
                         <Menu.Separator />
-                        <Menu.Item onClick={refresh}>
+                        <Menu.Item onClick={reloadListed}>
                             <Icon icon={RefreshCw} size={14} /> {t('file.menu.refresh')}
                         </Menu.Item>
                     </Menu.Popup>
@@ -758,8 +746,7 @@ export function FilesPanel() {
                     <ContextMenu.Root>
                         <ContextMenu.Trigger
                             render={<div />}
-                            /* The padding is on the frame, not the scroller, so the first row keeps its
-                           distance from the toolbar instead of sliding under it. */
+                            /* The padding is on the frame, not the scroller, so the first row never slides under the toolbar. */
                             className="min-h-0 grow overflow-hidden pt-2"
                             onContextMenu={(event) => {
                                 const path = rowPathOf(event);

@@ -121,10 +121,8 @@ export interface ManyOptions {
 
 export interface GitActions {
     /*
-     * One toast per run: it goes up the moment the request leaves, follows the phases the daemon
-     * streams back, and ends as the summary or as the failure with the output of the command behind a
-     * copy button. The caller gets the outcome, because some of them have a second question to ask
-     * (deleting a branch git has not merged, for one).
+     * One toast per run, following the phases the daemon streams back and ending as the summary or the
+     * failure. The caller gets the outcome, since some have a second question (an unmerged branch).
      */
     run(payload: Omit<GitActionPayload, 'actionId'>, options?: RunOptions): Promise<ActionOutcome>;
     /* Every job in order under one toast, which is what pushing a folder of repositories is. */
@@ -132,10 +130,8 @@ export interface GitActions {
 }
 
 /*
- * One repository after another, never two at once: a folder of nine pushes over one link, and nine
- * toasts would say less than one that counts. A commit over several of them is the same run with the
- * same message. A repository that fails does not stop it, so the summary at the end is where the
- * whole outcome is read; cancel breaks off the turn that is running and leaves the rest alone.
+ * One repository after another under one toast that counts. A repository that fails does not stop the
+ * run, so the summary is where the outcome is read; cancel breaks off the running turn only.
  */
 export async function runManyJobs(
     jobs: readonly ManyJob[],

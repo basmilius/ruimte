@@ -106,7 +106,7 @@ export function statusColor(status: string): string {
 const ADDED_COLOR = 'var(--color-term-green)';
 const DELETED_COLOR = 'var(--color-term-red)';
 
-/* A run of a row's decoration, which the tree sets in the color it is given. */
+/* A run of a row's decoration. */
 export interface DecorationPart {
     text: string;
     color?: string;
@@ -408,17 +408,12 @@ export function toggleItems(items: readonly GitItem[]): { staged: boolean; work:
     return { staged, work };
 }
 
-/*
- * Every folder the paths hold as the list draws them, by the key the collapse set names it with. It
- * is what "collapse all" writes and what "expand all" clears, over every group at once: the folders
- * of the list are one set, so folding it up is one act and not one per group.
- */
+/* The collapse key of every folder the list draws, over every group at once: what "collapse all" writes and "expand all" clears. */
 export function allCollapseKeys(files: readonly GitFile[], checkout: string): string[] {
+    const entries = entriesOf(files);
     const keys: string[] = [];
     for (const group of GIT_GROUPS) {
-        const paths = entriesOf(files)
-            .filter((entry) => entry.group === group)
-            .map((entry) => entry.path);
+        const paths = entries.filter((entry) => entry.group === group).map((entry) => entry.path);
         const scope = gitTreeScope(checkout, group);
         keys.push(...flattenPaths(paths).flatMap((node) => (node.kind === 'folder' ? [collapseKey(scope, node.path)] : [])));
     }
@@ -510,10 +505,7 @@ export function expansionChanges(
     return changes;
 }
 
-/*
- * Which changed file the preview is showing and which checkout it belongs to, so the list of that
- * repository can mark the row a person is reading. A tab that is not a diff marks nothing.
- */
+/* The changed file a diff tab shows and its checkout, so the list can mark the row a person is reading. */
 export function activeDiff(tab: FileTab | undefined): { cwd: string; path: string } | null {
     const root = tab?.view?.cwd;
     if (tab === undefined || root === undefined) {

@@ -20,8 +20,7 @@ export function UnsupportedFile({ path, name, read }: { path: string; name: stri
         revealFile(transport, path);
     };
     return (
-        // The bar as well: there is nothing to draw, but everything that can be asked of the file
-        // still can be, and its surface keeps a row where every other file has one.
+        // The bar as well: everything that can be asked of the file still can be.
         <FileTextMenu className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar />
             <EmptyState

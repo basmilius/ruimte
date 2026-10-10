@@ -23,11 +23,8 @@ interface CommitBoxProps {
 }
 
 /*
- * What is committed and what it is called. The staged files say where it lands, so a message typed
- * here commits every repository that has something staged, and two repositories staged at once are
- * two commits with the same message. Nothing staged is not a dead end while a single repository has
- * changes: the button then says it stages everything first, which is the commit a person means when
- * they typed a message with only unstaged work in front of them.
+ * The message, committed to every repository with something staged (one commit each, same words). With
+ * nothing staged and a single repository changed, the button says it stages everything first.
  */
 export function CommitBox({ messageKey, checkouts, named, capabilities, busy, onCommit }: CommitBoxProps) {
     const { t } = useTranslation('panels');

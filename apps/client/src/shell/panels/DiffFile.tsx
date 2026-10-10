@@ -63,10 +63,9 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
     /* Goes up whenever the checkout moved, which is the tab reading itself again. */
     const signal = useGitSignal(view.cwd);
     const relative = useMemo(() => relativeTo(view.cwd, path), [view.cwd, path]);
-    /* Which diff was asked for, so an answer to the question before this one is not drawn and a
-       switch of scope reads as loading without an effect that has to empty the state first. A
-       reread of the same question is not part of it: the diff on screen stays up until the new
-       one lands, or every write would blink the tab back to its spinner. */
+    /* Which diff was asked for, so an answer to an older question is not drawn and a switch of scope
+       reads as loading. A reread of the same question keeps the diff on screen until the new one
+       lands, or every write would blink the tab back to its spinner. */
     const asked = `${view.cwd}\u0000${relative}\u0000${view.scope}\u0000${String(view.staged)}\u0000${String(whitespace)}\u0000${view.base ?? ''}`;
     const [held, setHeld] = useState<{ asked: string; state: DiffState } | null>(null);
     // The same path on another machine is another diff, so a switch reads it again.
@@ -184,10 +183,9 @@ function DiffBody({ state, wrap, layout, relative }: { state: DiffState; wrap: b
 type CommitState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; diff: GitDiffResult };
 
 /*
- * A whole commit in one tab: what it says and who wrote it over a tree of the files it touched, and
- * beside that the diff of the one file picked in the tree. One request answers all of it, so moving
- * through the tree reads nothing and the caps that keep a diff readable are the same ones. Without a
- * commit the tab is a whole checkout against `base`, which is how a worktree shows what it holds.
+ * A whole commit in one tab: its message over a tree of the files it touched, beside the diff of the
+ * file picked in the tree. One request answers all of it, so moving through the tree reads nothing.
+ * Without a commit the tab is a whole checkout against `base`, which is how a worktree shows what it holds.
  */
 function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string; commit?: string; base?: string | null }) {
     const { t } = useTranslation('panels');

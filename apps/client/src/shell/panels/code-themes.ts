@@ -204,12 +204,9 @@ function inScripts(...selectors: readonly string[]): string[] {
 }
 
 /*
- * Which scopes each role covers, for the grammars of TypeScript, JavaScript, Python, Rust, Go, PHP,
- * Swift, JSON, YAML, Markdown, CSS, SCSS, HTML, Vue, shell and diff. The order carries no weight: a
- * TextMate theme lets the longest matching scope win, and a selector with a parent beats the same
- * scope without one. The narrower entries lean on that, such as a property name in JSON leaving the
- * types it is filed under, or a PHP variable leaving the plain ones. Where the platform colors a
- * language apart from the rest, the rule leads with the root scope of that grammar.
+ * Which scopes each role covers. The order carries no weight: a TextMate theme lets the longest matching
+ * scope win, and a selector with a parent beats the same scope without one. Where the platform colors a
+ * language apart, the rule leads with the root scope of that grammar.
  */
 const SCOPES: Readonly<Record<CodeRole, readonly string[]>> = {
     foreground: ['string.unquoted.plain.out.yaml', 'string.unquoted.plain.in.yaml', 'source.yaml constant.numeric', 'source.yaml constant.language'],

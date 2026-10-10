@@ -36,11 +36,10 @@ function messageOf(e: unknown): string {
 }
 
 /*
- * Where pdf.js reads the file. It fetches, and `connect-src` lets a fetch reach this page's origin
- * and http(s) but never a blob URL. So the ranges come from the daemon's route over a socket, or
- * from the bytes worker over a direct connection. A machine on another origin (the route sends no
- * CORS headers) and a direct connection the worker does not serve yet read the file whole over the
- * connection instead, as a blob would have been.
+ * Where pdf.js reads the file. `connect-src` never lets it fetch a blob URL, so the ranges come from the
+ * daemon's route over a socket, or from the bytes worker over a direct connection. A machine on another
+ * origin (the route sends no CORS headers) and a direct connection the worker does not serve yet read
+ * the file whole instead.
  */
 function usePdfSource(path: string, read: FsReadBinary): Source | null {
     const transport = useTransport();

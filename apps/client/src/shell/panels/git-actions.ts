@@ -108,11 +108,8 @@ export interface CommitCandidate {
 }
 
 /*
- * Where a commit would land. Every repository with something staged takes it, which is how a person
- * says with the files themselves what belongs in one commit. Nothing staged anywhere and exactly one
- * repository with changes is the commit that stages that repository first, the way it always was;
- * with more than one, staging is what has to say which of them is meant, so there is nothing to
- * commit yet.
+ * Where a commit would land: every repository with something staged. With nothing staged, a single
+ * repository with changes is staged first; with more than one, there is nothing to commit yet.
  */
 export function commitTargets(checkouts: readonly CommitCandidate[]): { targets: CommitCandidate[]; stageAll: boolean } {
     const staged = checkouts.filter((checkout) => checkout.status?.files.some((file) => file.state === 'staged') === true);

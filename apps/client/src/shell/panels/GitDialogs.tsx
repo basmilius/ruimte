@@ -73,8 +73,7 @@ export function GitChoice({ open, title, description, choices, filterFrom = 10, 
                     {shown.map((choice) => (
                         <button
                             key={choice.value}
-                            /* A dialog is no menu, so nothing hands these rows Base UI's
-                                   highlight: the hover and the focus ring are their own. */
+                            /* A dialog is no menu, so these rows draw their own hover and focus ring. */
                             className={clsx('menu-item w-full text-left hover:bg-surface-hover', choice.disabled && 'opacity-50 hover:bg-transparent')}
                             disabled={choice.disabled}
                             onClick={() => onPick(choice.value)}

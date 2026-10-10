@@ -12,10 +12,8 @@ import { copyText, Icon, Kbd, Menu } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 /*
- * Everything an open tab can be asked, as menu items. The toolbar's overflow menu and the right
- * click on a tab offer the same things in the same order, so one list serves both; `ContextMenu`
- * draws `Menu.Item` as its own. What is about the file rather than the tab comes from
- * `FileActionItems`, which a node and a view of its own show the same way.
+ * Everything an open tab can be asked, for the toolbar's overflow menu and the right click on a tab
+ * alike; `ContextMenu` draws `Menu.Item` as its own. What is about the file comes from `FileActionItems`.
  */
 export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh?: () => void }) {
     const { t } = useTranslation('panels');

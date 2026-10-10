@@ -23,9 +23,8 @@ const SYSTEM_PACE: PaceSeams = {
 };
 
 /*
- * Hands values on at most once per window, the first one straight away. An agent writing files
- * moves the status many times a second; a panel that followed every one of them would be unreadable,
- * and one that only drew after the writing stopped would sit still through a long turn.
+ * Hands values on at most once per window, the first one straight away. An agent writing files moves
+ * the status many times a second, and a debounce would sit still through a long turn.
  */
 export function paced<T>(window: number, apply: (value: T) => void, seams: PaceSeams = SYSTEM_PACE): Pace<T> {
     let opened = -Infinity;

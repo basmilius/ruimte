@@ -36,10 +36,8 @@ interface NewEntryRowProps {
 }
 
 /*
- * The row a name is typed in. The tree draws rows inside a shadow root and has no row of this kind,
- * so it holds an empty one open at the place the entry will appear and this is drawn over it, in
- * the same frame: `FileIcon` follows the name as it is typed, which the tree's own rename input
- * cannot do. It must sit inside an element that clips and is positioned.
+ * The row a name is typed in, drawn over the empty row the tree holds open where the entry will appear,
+ * so `FileIcon` can follow the name as it is typed. It must sit inside a positioned element that clips.
  */
 export function NewEntryRow({ model, placeholder, kind, value, message, busy, label, onChange, onSubmit, onCancel, onBlur }: NewEntryRowProps) {
     const box = useRef<HTMLDivElement>(null);

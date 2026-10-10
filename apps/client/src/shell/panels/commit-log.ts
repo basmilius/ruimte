@@ -46,10 +46,8 @@ function committedAt(commit: GitCommit): number {
 }
 
 /*
- * The logs of several checkouts as one history, newest first, each in the order git gave it. Every
- * page covers a different stretch of time, so the merge stops where a page that has more to give
- * runs out: below that a repository could still hold a commit newer than the rows still waiting, and
- * putting those rows in now would mean moving them later. They come with the next page instead.
+ * The logs of several checkouts as one history, newest first. The merge stops where a page that has
+ * more to give runs out, since below that its next page could still hold a newer commit.
  */
 export function mergeLogs(logs: readonly LoadedLog[]): { rows: LogRow[]; more: boolean } {
     const queues = logs.map((log) => ({ log, next: 0 }));
@@ -76,11 +74,7 @@ function startOfDay(seconds: number): number {
     return Math.floor(date.getTime() / 1000);
 }
 
-/*
- * The log as the days it was written on, in the order the commits came in. The days are counted
- * from midnight and not from the elapsed hours, so a commit from last night is under Yesterday the
- * way a person remembers it, not under Today because it was eleven hours ago.
- */
+/* The log grouped by day, counted from midnight, so a commit from last night is under Yesterday. */
 export function groupCommits(commits: readonly LogRow[], now: number): LogSection[] {
     const today = startOfDay(now);
     const sections: LogSection[] = [];

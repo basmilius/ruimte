@@ -170,9 +170,8 @@ function AlertLine({ alert, now, onAction, onDismiss }: { alert: ProcessAlert; n
 }
 
 /*
- * What runs on the machine of this workspace: three charts of the machine against the share of
- * Ruimte, then a row per node with the processes under it. A warning sits on the row it is about,
- * with the button that fits; every signal goes through the daemon, which checks that the pid still
+ * What runs on the machine of this workspace: charts of the machine against Ruimte's share, then a row
+ * per node with its processes. Every signal goes through the daemon, which checks that the pid still
  * names the process this row showed.
  */
 export function ProcessesPanel() {
