@@ -87,6 +87,14 @@ export interface MenuContext {
 
 type CommandId = MenuActionId | PaletteId;
 
+type MenuCommand = (id: CommandId | string, label: string, options?: CommandOptions) => MenuNode;
+
+interface MenuSection {
+    id: string;
+    label: string;
+    items: MenuNode[];
+}
+
 interface CommandOptions {
     shortcut?: Shortcut;
     enabled?: boolean;
@@ -197,7 +205,7 @@ export function menuModel(context: MenuContext): MenuSpec {
         }
         return BROWSER_KEEPS.some((kept) => sameShortcut(kept, shortcut)) ? {} : { keys: formatShortcut(shortcut, apple) };
     };
-    const command = (id: CommandId | string, label: string, options: CommandOptions = {}): MenuNode => {
+    const command: MenuCommand = (id, label, options = {}) => {
         return {
             kind: 'command',
             id,
@@ -209,10 +217,31 @@ export function menuModel(context: MenuContext): MenuSpec {
         };
     };
 
+    const kindMenu = workspace && context.view !== null ? viewKindMenu(context, command) : null;
+    const menus = [
+        ...(apple && desktop ? [appMenu(context, command)] : []),
+        fileMenu(context, command),
+        editMenu(context, command),
+        ...(workspace && !context.settingsOpen ? [codeMenu(context, command)] : []),
+        viewMenu(context, command),
+        ...(kindMenu ? [kindMenu] : []),
+        goMenu(context, command),
+        ...(workspace && !context.scratch ? [runMenu(context, command)] : []),
+        windowMenu(context, command),
+        helpMenu(context, command)
+    ];
+    return { menus: menus.map((menu) => ({ id: menu.id, label: menu.label, items: tidy(menu.items) })) };
+}
+
+function isZoomable(context: MenuContext): boolean {
+    return context.view !== null && ZOOMABLE.includes(context.view);
+}
+
+function appMenu(context: MenuContext, command: MenuCommand): MenuSection {
     const keepAwakeItems = (Object.keys(KEEP_AWAKE_LABELS) as KeepAwakeMode[]).map((mode) =>
         command(`keep-awake-${mode}`, t(KEEP_AWAKE_LABELS[mode]), { checked: context.keepAwake === mode, radio: true })
     );
-    const appMenu = {
+    return {
         id: 'app',
         label: 'Ruimte',
         items: [
@@ -231,7 +260,11 @@ export function menuModel(context: MenuContext): MenuSpec {
             role('quit', t('quit'))
         ]
     };
+}
 
+function fileMenu(context: MenuContext, command: MenuCommand): MenuSection {
+    const { apple, workspace } = context;
+    const desktop = context.host === 'desktop';
     const agentViews = context.agents.flatMap((agent) => [
         ...only(agent.chat, command(`agent-view-chat-${agent.kind}`, t('agentChat', { name: agent.name }))),
         ...only(agent.terminal, command(`agent-view-terminal-${agent.kind}`, t('agentTerminal', { name: agent.name })))
@@ -244,7 +277,7 @@ export function menuModel(context: MenuContext): MenuSpec {
             : desktop
               ? role('close', t('closeWindow'))
               : command('close-cell', t('closeCell'), { enabled: false });
-    const fileMenu = {
+    return {
         id: 'file',
         label: t('file'),
         items: [
@@ -287,9 +320,13 @@ export function menuModel(context: MenuContext): MenuSpec {
             ...only(!apple && desktop, separator, shell('stop-machine-and-quit', t('stopAndQuit')), role('quit', t('quit')))
         ]
     };
+}
 
-    const zoomable = context.view !== null && ZOOMABLE.includes(context.view);
-    const editMenu = {
+function editMenu(context: MenuContext, command: MenuCommand): MenuSection {
+    const { workspace } = context;
+    const desktop = context.host === 'desktop';
+    const zoomable = isZoomable(context);
+    return {
         id: 'edit',
         label: t('edit'),
         items: [
@@ -327,8 +364,11 @@ export function menuModel(context: MenuContext): MenuSpec {
             ...only(workspace && context.folder, command('find-in-files', t('findInFiles'), { shortcut: APP_SHORTCUTS.findInFiles }))
         ]
     };
+}
 
-    const codeMenu = {
+function codeMenu(context: MenuContext, command: MenuCommand): MenuSection {
+    const { workspace } = context;
+    return {
         id: 'code',
         label: t('code'),
         items: [
@@ -345,8 +385,14 @@ export function menuModel(context: MenuContext): MenuSpec {
             )
         ]
     };
+}
 
-    const viewMenu = {
+function viewMenu(context: MenuContext, command: MenuCommand): MenuSection {
+    const { workspace } = context;
+    const desktop = context.host === 'desktop';
+    const hosted = context.tabs.hosted;
+    const zoomable = isZoomable(context);
+    return {
         id: 'view',
         label: t('view'),
         items: [
@@ -402,8 +448,12 @@ export function menuModel(context: MenuContext): MenuSpec {
             ...only(!desktop, command('fullscreen', t('fullScreen'), { checked: context.fullscreen }))
         ]
     };
+}
 
-    const goMenu = {
+function goMenu(context: MenuContext, command: MenuCommand): MenuSection {
+    const { workspace } = context;
+    const hosted = context.tabs.hosted;
+    return {
         id: 'go',
         label: t('go'),
         items: [
@@ -445,8 +495,12 @@ export function menuModel(context: MenuContext): MenuSpec {
             )
         ]
     };
+}
 
-    const windowMenu = {
+function windowMenu(context: MenuContext, command: MenuCommand): MenuSection {
+    const { apple, workspace } = context;
+    const desktop = context.host === 'desktop';
+    return {
         id: 'window',
         label: t('window'),
         items: [
@@ -463,10 +517,12 @@ export function menuModel(context: MenuContext): MenuSpec {
             ...only(desktop && apple, separator, role('front', t('front')))
         ]
     };
+}
 
+function runMenu(context: MenuContext, command: MenuCommand): MenuSection {
     const chosen = context.launches.find((launch) => launch.id === context.chosenLaunch) ?? null;
     const runLabel = chosen === null ? t('launch') : t(chosen.live ? 'launchRestart' : 'launchStart', { name: chosen.name });
-    const runMenu = {
+    return {
         id: 'run',
         label: t('run'),
         items: [
@@ -485,8 +541,12 @@ export function menuModel(context: MenuContext): MenuSpec {
             command('launches-edit', t('launchesEdit'))
         ]
     };
+}
 
-    const helpMenu = {
+function helpMenu(context: MenuContext, command: MenuCommand): MenuSection {
+    const { apple } = context;
+    const desktop = context.host === 'desktop';
+    return {
         id: 'help',
         label: t('help'),
         items: [
@@ -496,28 +556,10 @@ export function menuModel(context: MenuContext): MenuSpec {
             ...only(!apple || !desktop, separator, command('about', t('about')))
         ]
     };
-
-    const kindMenu = workspace && context.view !== null ? viewKindMenu(context, command) : null;
-    const menus = [
-        ...(apple && desktop ? [appMenu] : []),
-        fileMenu,
-        editMenu,
-        ...(workspace && !context.settingsOpen ? [codeMenu] : []),
-        viewMenu,
-        ...(kindMenu ? [kindMenu] : []),
-        goMenu,
-        ...(workspace && !context.scratch ? [runMenu] : []),
-        windowMenu,
-        helpMenu
-    ];
-    return { menus: menus.map((menu) => ({ id: menu.id, label: menu.label, items: tidy(menu.items) })) };
 }
 
 /* The menu of the view with the focus, named after its kind, so everything a drawing offers sits in one place. */
-function viewKindMenu(
-    context: MenuContext,
-    command: (id: CommandId | string, label: string, options?: CommandOptions) => MenuNode
-): { id: string; label: string; items: MenuNode[] } | null {
+function viewKindMenu(context: MenuContext, command: MenuCommand): MenuSection | null {
     const kind = context.view;
     if (kind === null || !KIND_MENUS.includes(kind)) {
         return null;
