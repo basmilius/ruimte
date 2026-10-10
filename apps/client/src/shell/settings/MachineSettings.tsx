@@ -73,10 +73,9 @@ async function saveMachineSetting(
 }
 
 /*
- * Running the wire to this machine over a WebRTC DataChannel instead of its socket, an experiment;
- * every other machine is reached that way already. Switching reconnects immediately, and a direct
- * connection that fails stays failed, with the reason shown on the row, rather than silently falling
- * back to the socket.
+ * Running the wire to this machine over a WebRTC DataChannel instead of its socket, an experiment; every
+ * other machine is reached that way already. A direct connection that fails stays failed and says why,
+ * never falling back to the socket.
  */
 export function DirectRow({ endpoint }: { endpoint: Endpoint }) {
     const { t } = useTranslation('settings');
@@ -355,9 +354,8 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
     };
 
     /*
-     * On this machine your own client gets in with the local secret, so a row for it adds nothing to a
-     * list of what else has access. On another machine it stays, since revoking it there is the one
-     * way to hand your own access back to that daemon.
+     * On this machine your own client gets in with the local secret, so its row is left out. On another
+     * machine it stays, since revoking it is the way to hand your own access back.
      */
     const listed = reachability === 'loopback' ? (sessions?.filter((session) => !session.current) ?? null) : sessions;
 

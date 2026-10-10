@@ -19,10 +19,9 @@ interface MachineIdentityFormProps {
 }
 
 /*
- * Name and icon travel together on every call, since a null is a choice of its own (back to the name
- * the machine starts with, or no icon at all). That is why this is one form with one Save, not two
- * steps. Sending half would mean deciding the other half, and another client may have changed it
- * meanwhile. The form is keyed on what the machine says, so a change from elsewhere starts it over.
+ * Name and icon travel together on every call, since a null is a choice of its own (the default name, or
+ * no icon), so this is one form with one Save. It is keyed on what the machine says, so a change from
+ * elsewhere starts it over.
  */
 export function MachineIdentityForm({ endpointId, label, disabledReason }: MachineIdentityFormProps) {
     const { t } = useTranslation('settings');

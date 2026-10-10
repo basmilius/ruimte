@@ -84,9 +84,8 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
         },
         {
             /*
-             * The one place a bare letter is a shortcut: a drawing has the keyboard the way a terminal has
-             * it, and the tools are the letters every sketching app uses. They never fire while a text
-             * is being edited or a dialog is up.
+             * The one place a bare letter is a shortcut: the tools of a drawing, which never fire while a
+             * text is being edited or a dialog is up.
              */
             id: 'drawing',
             title: say('drawing.title'),
@@ -167,10 +166,9 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
         },
         {
             /*
-             * A focused terminal keeps every shortcut that is not in this file's Views, Split, Panels or Launches group,
-             * so a program sees the keyboard the way it would in a native terminal. That is why the clear
-             * shortcut here is the palette's everywhere else on macOS. The line motions are what macOS gives
-             * every native terminal, so only macOS lists them.
+             * A focused terminal keeps every shortcut outside the Views, Split, Panels and Launches groups, so a
+             * program sees the keyboard as in a native terminal; that is why clear is the palette's key elsewhere
+             * on macOS. The line motions are what macOS gives every native terminal, so only macOS lists them.
              */
             id: 'terminal',
             title: say('terminal.title'),
