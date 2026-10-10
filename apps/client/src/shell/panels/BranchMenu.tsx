@@ -113,7 +113,7 @@ export function BranchMenu({
                         }
                         name={nested}
                     >
-                        <Menu.Trigger className="inline-flex h-6 min-w-0 shrink items-center gap-1 rounded-full bg-surface-sunken px-2 text-xs text-text-muted hover:text-text">
+                        <Menu.Trigger className="inline-flex h-6 min-w-0 shrink items-center gap-1 rounded-full bg-surface-hover px-2 text-xs text-text-muted hover:text-text">
                             <Icon icon={GitBranch} size={12} className="shrink-0" />
                             {/* Over several repositories no single branch is the one the panel is on, so the chip
                         says none rather than one that happens to be first. */}
