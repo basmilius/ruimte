@@ -1,4 +1,5 @@
-import { RequestError, sendEvent, translate, type Dispatcher } from '../dispatcher.ts';
+import type { AgentKind, GitActionPhase } from '@ruimte/contracts';
+import { RequestError, sendEvent, translate, type ClientConnection, type Dispatcher } from '../dispatcher.ts';
 import { GitActions } from '../git/actions.ts';
 import { blameFile } from '../git/blame.ts';
 import { readCapabilities } from '../git/capabilities.ts';
@@ -15,6 +16,18 @@ import { mergeBaseWith } from '../git/status.ts';
 import type { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
+
+interface AgentRunOptions {
+    provider?: AgentKind;
+    onSpawn(kill: () => void): void;
+}
+
+/* Streams an action's progress to the client that asked, under the action id it chose. */
+function progressTo(client: ClientConnection, cwd: string, actionId: string) {
+    return (phase: GitActionPhase, line: string): void => {
+        sendEvent(client, 'git.progress', { cwd, actionId, phase, line });
+    };
+}
 
 export function registerGitHandlers(
     dispatcher: Dispatcher,
@@ -44,14 +57,7 @@ export function registerGitHandlers(
         )
     );
 
-    /* Progress goes to the client that asked, under the action id it chose, the way `git.action` streams. */
-    dispatcher.register('git.worktree-merge', (payload, client) =>
-        translate(() =>
-            merges.merge(payload, (phase, line) => {
-                sendEvent(client, 'git.progress', { cwd: payload.path, actionId: payload.actionId, phase, line });
-            })
-        )
-    );
+    dispatcher.register('git.worktree-merge', (payload, client) => translate(() => merges.merge(payload, progressTo(client, payload.path, payload.actionId))));
 
     dispatcher.register('git.worktree-abort', (payload) =>
         translate(async () => {
@@ -117,14 +123,8 @@ export function registerGitHandlers(
 
     dispatcher.register('git.capabilities', () => translate(() => readCapabilities(providers)));
 
-    /* Progress goes to the client that asked, while the git it asked for runs; the reply lands after. */
-    dispatcher.register('git.action', (payload, client) =>
-        translate(() =>
-            actions.run(payload, (phase, line) => {
-                sendEvent(client, 'git.progress', { cwd: payload.cwd, actionId: payload.actionId, phase, line });
-            })
-        )
-    );
+    /* Progress streams while the git runs; the reply lands after. */
+    dispatcher.register('git.action', (payload, client) => translate(() => actions.run(payload, progressTo(client, payload.cwd, payload.actionId))));
 
     dispatcher.register('git.cancel', (payload) => {
         actions.cancel(payload.actionId);
@@ -138,41 +138,29 @@ export function registerGitHandlers(
 
     dispatcher.register('git.resolve', (payload) => translate(async () => ({ remaining: await resolveConflict(payload) })));
 
-    /* Finishing or taking back a merge streams its progress the way every other action does. */
     dispatcher.register('git.operation', (payload, client) =>
+        translate(() => runOperation(payload.cwd, payload.action, payload.actionId, progressTo(client, payload.cwd, payload.actionId)))
+    );
+
+    /* An agent CLI behind a cancellable action: `git.cancel` with its id kills what it spawned. */
+    const runAgent = async <T>(actionId: string, provider: AgentKind | undefined, run: (options: AgentRunOptions) => Promise<T>): Promise<T> => {
+        const job = actions.claim(actionId);
+        try {
+            return await run({ ...(provider ? { provider } : {}), onSpawn: (kill) => job.hold(kill) });
+        } finally {
+            job.release();
+        }
+    };
+
+    dispatcher.register('git.resolveAi', (payload) =>
         translate(() =>
-            runOperation(payload.cwd, payload.action, payload.actionId, (phase, line) => {
-                sendEvent(client, 'git.progress', { cwd: payload.cwd, actionId: payload.actionId, phase, line });
-            })
+            runAgent(payload.actionId, payload.provider, async (options) =>
+                resolveWithAgent(payload.cwd, payload.path, await readConflicts(payload.cwd), providers, options)
+            )
         )
     );
 
-    dispatcher.register('git.resolveAi', (payload) =>
-        translate(async () => {
-            const job = actions.claim(payload.actionId);
-            try {
-                const sides = await readConflicts(payload.cwd);
-                return await resolveWithAgent(payload.cwd, payload.path, sides, providers, {
-                    ...(payload.provider ? { provider: payload.provider } : {}),
-                    onSpawn: (kill) => job.hold(kill)
-                });
-            } finally {
-                job.release();
-            }
-        })
-    );
-
     dispatcher.register('git.suggestMessage', (payload) =>
-        translate(async () => {
-            const job = actions.claim(payload.actionId);
-            try {
-                return await suggestMessage(payload.cwd, providers, {
-                    ...(payload.provider ? { provider: payload.provider } : {}),
-                    onSpawn: (kill) => job.hold(kill)
-                });
-            } finally {
-                job.release();
-            }
-        })
+        translate(() => runAgent(payload.actionId, payload.provider, (options) => suggestMessage(payload.cwd, providers, options)))
     );
 }
