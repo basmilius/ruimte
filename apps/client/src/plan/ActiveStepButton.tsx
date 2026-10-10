@@ -13,16 +13,14 @@ import { IconButton } from '@adecore/ui';
 // Long enough to bridge an agent closing one step before it opens the next, short enough that a stop still shows soon.
 export const ACTIVE_HOLD_MS = 1500;
 
-function sameFlag(a: true, b: true): boolean {
-    return a === b;
+function sameFlag(left: true, right: true): boolean {
+    return left === right;
 }
 
 /**
  * The step the agent is on, as one icon button in the plan panel's toolbar. It keeps its slot while
  * nothing is active, so the buttons beside it never move, and a click walks through the active steps.
  *
- * @param chatId The chat the plan belongs to.
- * @param plan The plan the panel shows.
  * @param planKey The key of the plan's view state, from `planViewKey`.
  */
 export function ActiveStepButton({ chatId, plan, planKey }: { chatId: string; plan: Plan; planKey: string }) {

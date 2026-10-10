@@ -13,8 +13,8 @@ interface Corners {
     bl: number;
 }
 
-function overlaps(a: Rect, b: Rect): boolean {
-    return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+function overlaps(first: Rect, second: Rect): boolean {
+    return first.x < second.x + second.w && second.x < first.x + first.w && first.y < second.y + second.h && second.y < first.y + first.h;
 }
 
 /*

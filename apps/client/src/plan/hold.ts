@@ -19,7 +19,7 @@ export class Hold<T> {
     private readonly listeners = new Set<() => void>();
 
     private readonly holdMs: number;
-    private readonly equals: (a: T, b: T) => boolean;
+    private readonly equals: (left: T, right: T) => boolean;
     private readonly schedule: Schedule;
 
     /**
@@ -27,7 +27,7 @@ export class Hold<T> {
      * @param equals Whether two values draw the same, so an equal one notifies nobody.
      * @param schedule The timer, injected so a test runs it by hand.
      */
-    constructor(holdMs: number, equals: (a: T, b: T) => boolean, schedule: Schedule) {
+    constructor(holdMs: number, equals: (left: T, right: T) => boolean, schedule: Schedule) {
         this.holdMs = holdMs;
         this.equals = equals;
         this.schedule = schedule;
@@ -54,7 +54,6 @@ export class Hold<T> {
         }, this.holdMs);
     }
 
-    /** Listens for a change of what to draw, and returns what stops listening. */
     subscribe(listener: () => void): () => void {
         this.listeners.add(listener);
         return () => {
@@ -76,21 +75,14 @@ export class Hold<T> {
         }
     }
 
-    /** Cancels the release timer, if one runs. */
     private stopTimer(): void {
         this.cancel?.();
         this.cancel = null;
     }
 }
 
-/**
- * `value`, or the last value that was not `null` until it has been `null` for `holdMs`.
- *
- * @param value The live value; `null` when absent.
- * @param equals Whether two values draw the same.
- * @param holdMs How long an absent value keeps showing the last one.
- */
-export function useHeld<T>(value: T | null, equals: (a: T, b: T) => boolean, holdMs: number): T | null {
+/* `value`, or the last value that was not `null` until it has been `null` for `holdMs`. */
+export function useHeld<T>(value: T | null, equals: (left: T, right: T) => boolean, holdMs: number): T | null {
     const [hold] = useState(() => new Hold<T>(holdMs, equals, browserSchedule));
     const held = useSyncExternalStore(
         (listener) => hold.subscribe(listener),

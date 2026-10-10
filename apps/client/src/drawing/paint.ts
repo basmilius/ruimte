@@ -113,9 +113,9 @@ export function measureText(ctx: CanvasRenderingContext2D, element: WrittenEleme
     ctx.save();
     ctx.font = fontOfElement(element, fonts);
     const lines = linesOn(ctx, element);
-    const w = Math.max(1, ...lines.map((line) => ctx.measureText(line).width));
+    const width = Math.max(1, ...lines.map((line) => ctx.measureText(line).width));
     ctx.restore();
-    return { w: Math.ceil(w), h: Math.ceil(lines.length * element.size * LINE_HEIGHT) };
+    return { w: Math.ceil(width), h: Math.ceil(lines.length * element.size * LINE_HEIGHT) };
 }
 
 /*

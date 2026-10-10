@@ -124,8 +124,8 @@ export function activeSteps(plan: Pick<Plan, 'items'>): ActiveStep[] {
         .map((step) => ({ id: step.id, title: step.title }));
 }
 
-export function sameActiveSteps(a: readonly ActiveStep[], b: readonly ActiveStep[]): boolean {
-    return a.length === b.length && a.every((step, i) => step.id === b[i].id && step.title === b[i].title);
+export function sameActiveSteps(left: readonly ActiveStep[], right: readonly ActiveStep[]): boolean {
+    return left.length === right.length && left.every((step, i) => step.id === right[i].id && step.title === right[i].title);
 }
 
 /* "Fix focus", or "Fix focus and 2 more". */

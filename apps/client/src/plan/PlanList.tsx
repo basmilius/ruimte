@@ -120,7 +120,7 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
     const rows = useMemo(() => planRows(plan, { filter, collapseDone, collapsed: new Set(collapsedIds) }), [plan, filter, collapseDone, collapsedIds]);
     const progress = planProgress(plan.items);
 
-    // Rows as well. The folds and filter the reveal opened only draw in the render after it.
+    // Runs on rows as well, since the folds and filter the reveal opened only draw in the render after it.
     useEffect(() => {
         if (target === null || handled.current === target.nonce) {
             return;
