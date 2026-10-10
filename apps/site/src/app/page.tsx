@@ -131,8 +131,8 @@ export default function Home() {
                         is where you left it, scrollback included.
                     </Feature>
                     <Feature title="Every machine, and your phone" eyebrow="Connected machines" picture={<MachinesVignette />} flip>
-                        Pair another computer once and its projects open as if they were local. Answer an agent from your iPhone, or open any of your machines
-                        at{' '}
+                        Sign in to Ruimte on another computer and its projects open as if they were local. Answer an agent from your iPhone, or open any of your
+                        machines at{' '}
                         <a href={STATION_URL} className="text-text underline decoration-border-strong underline-offset-4 hover:decoration-text">
                             station.ruimte.app
                         </a>

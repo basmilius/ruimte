@@ -13,8 +13,8 @@ const STEPS = [1800, 2000, 800, 3000] as const;
 
 const MACHINES = [
     { name: 'MacBook Pro', detail: 'This Mac', icon: Laptop, y: 0 },
-    { name: 'build-box', detail: 'Linux, paired', icon: Server, y: 1 },
-    { name: 'studio', detail: 'Mac mini, paired', icon: Monitor, y: 2 }
+    { name: 'build-box', detail: 'Linux', icon: Server, y: 1 },
+    { name: 'studio', detail: 'Mac mini', icon: Monitor, y: 2 }
 ] as const;
 
 const PHONE: Rect = { x: 424, y: 20, w: 200, h: 420 };
@@ -24,7 +24,7 @@ export function MachinesVignette() {
         <Stage
             width={640}
             height={460}
-            label="Three paired machines and an iPhone. An agent on the Linux build machine asks to deploy, and the person allows it from the phone."
+            label="Three machines on one account and an iPhone. An agent on the Linux build machine asks to deploy, and the person allows it from the phone."
         >
             <Machines />
         </Stage>
