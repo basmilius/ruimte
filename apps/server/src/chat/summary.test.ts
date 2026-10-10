@@ -7,7 +7,9 @@ import { ManualClock } from '@adecore/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
 import { claudeProjectSlug } from '@adecore/agents/chat/claude-transcript';
-import { SUMMARY_MAX_BYTES, summaryNoteId, summaryPrompt, summaryTexts } from './summary.ts';
+import { compileUi } from '@adecore/intelligent-ui';
+import { answerOf, SUMMARY_MAX_BYTES, summaryNoteId, summaryPrompt, summaryTexts } from './summary.ts';
+import { RUIMTE_UI_FENCE } from './ui-fence.ts';
 
 function content(): ProjectContent {
     return {
@@ -202,4 +204,23 @@ describe('summaryTexts', () => {
         expect(preamble).toStartWith('Ruimte: a fork of this conversation, view chat-fork ("Lexer (fork)"), forked, reports what it found:');
         expect(preamble).toEndWith('(The whole fork is readable with ruimte-context read chat-fork.)');
     });
+});
+
+test('a summary reads a UI block of the answer as its readable fallback, never its source', () => {
+    const text = 'Found it.\n```ruimte-ui\n<Summary>Two files changed</Summary>\n```';
+    const items: ChatItem[] = [
+        {
+            id: 'answer',
+            kind: 'assistant',
+            createdAt: 1,
+            turnId: 'turn',
+            text,
+            streaming: false,
+            ui: compileUi(text, { id: 'answer', final: true, fenceLanguage: RUIMTE_UI_FENCE })
+        }
+    ];
+    const answer = answerOf(items, 'turn');
+    expect(answer).toContain('Two files changed');
+    expect(answer).not.toContain('<Summary>');
+    expect(answer).not.toContain(RUIMTE_UI_FENCE);
 });

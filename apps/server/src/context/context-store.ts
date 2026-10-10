@@ -1,4 +1,3 @@
-import { uiFallbackText } from '@adecore/intelligent-ui/text';
 import type {
     ChatApprovalDecision,
     ChatItem,
@@ -23,6 +22,7 @@ import { renderPage } from './context-browser.ts';
 import { renderDevice } from './context-device.ts';
 import { renderDiagram } from './context-diagram.ts';
 import { renderDrawing } from './context-drawing.ts';
+import { readableAssistantText } from '../chat/readable-text.ts';
 
 export const CONTEXT_PATH = '/context';
 
@@ -156,18 +156,7 @@ export function renderTranscript(items: ChatItem[]): string {
                 break;
             case 'assistant':
                 if (item.text.trim() !== '') {
-                    lines.push(
-                        '## Assistant',
-                        '',
-                        uiFallbackText(
-                            item.text,
-                            (item.ui ?? []).map((block) => {
-                                const frozen = item.uiQueries?.blocks[block.id];
-                                return frozen && frozen.revision === block.revision ? { ...block, fallback: frozen.fallback } : block;
-                            })
-                        ),
-                        ''
-                    );
+                    lines.push('## Assistant', '', readableAssistantText(item), '');
                 }
                 break;
             case 'tool': {
