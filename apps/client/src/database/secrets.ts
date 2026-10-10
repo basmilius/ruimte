@@ -97,7 +97,6 @@ export function passwordTarget(config: DatabaseConnection['config']): string {
     return JSON.stringify(canonical(fields));
 }
 
-/* What the secret store keeps for a connection. */
 export function storedSecretOf(password: string, target: string): string {
     return JSON.stringify({ version: SECRET_VERSION, password, target });
 }

@@ -3,10 +3,9 @@ import type { FixedSides } from '@/canvas/edge-route';
 import type { Rect } from '@/canvas/math';
 
 /*
- * One line on the canvas. Two agents that read each other are two edges, one each way, because the
- * direction is real information the daemon reads. On screen they are one line with a head at both
- * ends: two beziers between the same pair of nodes take the same path and lie on top of each other,
- * which reads as one line drawn badly rather than as two directions.
+ * Two agents that read each other are two edges, one each way, since the daemon reads the direction.
+ * On screen they are one line with a head at both ends: two beziers on the same path read as one line
+ * drawn badly.
  */
 export interface EdgeLine {
     /* The edge the line is drawn from; its `from` is the tail and its `to` the head. */

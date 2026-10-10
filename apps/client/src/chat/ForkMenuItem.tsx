@@ -9,9 +9,8 @@ import { useUi } from '@/state/ui';
 import { DisabledReason, Icon, ContextMenu } from '@adecore/ui';
 
 /*
- * "Fork conversation…" in the menu of a chat node or a chat view, offered as a fork after the last
- * turn that ended. A chat that is a fork adds the way back: asking it for a summary for its original, and the
- * original itself.
+ * Forks after the last turn that ended. A chat that is a fork adds the way back: a summary for its
+ * original, and the original itself.
  */
 export function ForkMenuItem({ chatId }: { chatId: string }) {
     const { t } = useTranslation('chat');
