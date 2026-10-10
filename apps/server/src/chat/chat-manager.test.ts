@@ -84,6 +84,21 @@ function subagentWork(): Array<Extract<ChatItem, { kind: 'tool' | 'assistant' }>
 }
 
 describe('ChatManager', () => {
+    test('a UI block reads and links only for a client that holds the chat project', async () => {
+        const holders = new Set<string>();
+        await retire(manager);
+        manager = makeManager({ holdsProject: async (_chatId, clientId) => holders.has(clientId) });
+        await manager.create({ chatId: 'ui-gate', cwd: home });
+        manager.attach('ui-gate', 'c1');
+        const query = { chatId: 'ui-gate', itemId: 'reply', blockId: 'block', revision: 1, query: 'status' } as Parameters<ChatManager['queryUi']>[0];
+        const link = { chatId: 'ui-gate', itemId: 'reply', blockId: 'block', revision: 1, nodeId: 'node' } as Parameters<ChatManager['linkUi']>[0];
+        await expect(manager.queryUi(query, 'c1')).rejects.toThrow("Open this chat's project");
+        await expect(manager.linkUi(link, 'c1')).rejects.toThrow("Open this chat's project");
+        holders.add('c1');
+        // Past the gate, the chat core answers: this manager has no UI sources at all.
+        await expect(manager.queryUi(query, 'c1')).rejects.toThrow('does not provide UI query sources');
+    });
+
     test('a reply compiles UI blocks under the ruimte-ui fence that stored chats and agents use', async () => {
         await manager.create({ chatId: 'ui-chat', cwd: home });
         manager.attach('ui-chat', 'c1');

@@ -431,6 +431,10 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         },
         modeCeiling: (chatId) => lineage.ceilingOf(chatId),
         checkCwd: startCwd,
+        holdsProject: async (chatId, clientId) => {
+            const place = projects.index.locate(chatId);
+            return place !== null && (await projects.heldFolders(clientId)).includes(place.folder);
+        },
         contextSources: (chatId) => context.list(chatId),
         chatTitle: (chatId, id) => projects.index.chatTitleBeside(chatId, id),
         standalone: (chatId) => projects.index.locate(chatId)?.canvasId === null,

@@ -12,6 +12,10 @@ import type {
     ChatSubagentResult,
     ChatSubagentItem,
     ChatTurnLimit,
+    ChatUiLinkPayload,
+    ChatUiLinkReading,
+    ChatUiQueryPayload,
+    ChatUiQueryReading,
     ChatVisual,
     ContextSource,
     ModelSelection,
@@ -93,6 +97,8 @@ interface ChatManagerOptions extends ChatCoreOptions {
     modeCeiling?: (chatId: string) => RuntimeMode | null;
     // Refuses a directory this chat may not start in, asked every time a chat is loaded.
     checkCwd?: (chatId: string, cwd: string) => Promise<void>;
+    // Whether the client holds the project the chat is in; a UI block reads and links only for one that does.
+    holdsProject?: (chatId: string, clientId: string) => Promise<boolean>;
 }
 
 /* The environment every CLI of a chat starts in: the daemon's own, without a terminal's hook variables, with `ruimte-context` on the PATH. */
@@ -213,6 +219,7 @@ export class ChatManager extends ChatCore {
     private readonly inlineChat: (chatId: string) => boolean;
     private readonly modeCeiling: (chatId: string) => RuntimeMode | null;
     private readonly checkCwd: (chatId: string, cwd: string) => Promise<void>;
+    private readonly holdsProject: (chatId: string, clientId: string) => Promise<boolean>;
     private readonly ended: (chatId: string) => number | null;
     private readonly taskRows: (chatId: string) => Task[];
     private readonly dropWakes: (chatId: string) => Promise<void>;
@@ -241,6 +248,7 @@ export class ChatManager extends ChatCore {
         this.inlineChat = options.inlineChat ?? (() => false);
         this.modeCeiling = options.modeCeiling ?? (() => null);
         this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
+        this.holdsProject = options.holdsProject ?? (() => Promise.resolve(true));
         this.ended = options.endedAt ?? (() => null);
         this.taskRows = options.taskRows ?? (() => []);
         this.dropWakes = options.dropWakes ?? (() => Promise.resolve());
@@ -442,6 +450,23 @@ export class ChatManager extends ChatCore {
             throw new ChatError('not-limited', 'The last turn of this chat did not stop on a limit');
         }
         return { turnId: turn.id, limit: turn.limit.kind, inPlace: this.canContinue(kind, from, to) };
+    }
+
+    // Attached to a chat is not enough: a UI block reads the project's git, launches and databases.
+    override async linkUi(payload: ChatUiLinkPayload, clientId: string): Promise<ChatUiLinkReading> {
+        await this.requireHeldProject(payload.chatId, clientId);
+        return super.linkUi(payload, clientId);
+    }
+
+    override async queryUi(payload: ChatUiQueryPayload, clientId: string): Promise<ChatUiQueryReading> {
+        await this.requireHeldProject(payload.chatId, clientId);
+        return super.queryUi(payload, clientId);
+    }
+
+    private async requireHeldProject(chatId: string, clientId: string): Promise<void> {
+        if (!(await this.holdsProject(chatId, clientId))) {
+            throw new ChatError('refused-query', "Open this chat's project before reading its UI.");
+        }
     }
 
     /*
