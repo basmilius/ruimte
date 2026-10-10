@@ -163,8 +163,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
             }
         })
     };
-    async function capturePlace(info: ChatInfo) {
-        const current = place(info);
+    async function capturePlace(info: ChatInfo, current: DatabasePlace) {
         const [folder, cwd, trees] = await Promise.all([realpath(current.folder), realpath(info.cwd), host.worktreePaths(current.folder)]);
         const roots = [folder, ...(await Promise.all(trees.map((tree) => realpath(tree).catch(() => null)))).filter((tree): tree is string => tree !== null)];
         if (!roots.some((root) => isInside(root, cwd))) {
@@ -176,9 +175,9 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
         sources,
         link: (info, access, target) => resolveUiProjectLink(host, info, access, target),
         capture: async (info) => {
-            const databaseAccess = host.databases().captureUiAccess(place(info));
-            const access = await capturePlace(info);
-            return { ...access, databases: await databaseAccess };
+            const current = place(info);
+            const [access, databases] = await Promise.all([capturePlace(info, current), host.databases().captureUiAccess(current)]);
+            return { ...access, databases };
         }
     };
 }

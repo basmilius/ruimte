@@ -243,3 +243,20 @@ test('commit and diff links resolve in a repository beside the agent’s own', a
     expect(await host.link!(info(), access, { type: 'Commit', sha })).toMatchObject({ state: 'chip', cwd: nested, label: 'Nested commit' });
     expect(await host.link!(info(), access, { type: 'Diff', path: 'lib/b.md' })).toMatchObject({ state: 'chip', cwd: nested, relativePath: 'b.md' });
 });
+
+test('a capture refused for its place leaves no database capture unhandled', async () => {
+    const { promise: databases, reject } = Promise.withResolvers<never>();
+    hosts.databases = () => ({
+        captureUiAccess: () => databases,
+        authorizeUiRead: async () => {},
+        query: async () => {
+            throw new Error('unused');
+        }
+    });
+    const host = ruimteUiSources(hosts);
+    const captured = host.capture({ ...info(), cwd: join(root, 'outside') });
+    await expect(captured).rejects.toThrow('outside its project');
+    // Rejected after the capture gave up on its place, which nothing would have handled.
+    reject(new Error('connections unreadable'));
+    await Promise.resolve();
+});
