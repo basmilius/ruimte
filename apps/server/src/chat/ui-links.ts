@@ -5,8 +5,9 @@ import type { UiLinkResolution, UiLinkTarget } from '@adecore/intelligent-ui/lin
 import { checkCwd, isInside } from '../canvas/project-paths.ts';
 import { listRepos } from '../git/repos.ts';
 import { git, toplevel } from '../git/run.ts';
-import type { UiSourceHosts } from './ui-sources.ts';
+import { ChatError } from './errors.ts';
 import { UiSourceAccessSchema } from './ui-access.ts';
+import type { UiSourceHosts } from './ui-sources.ts';
 
 /* The real path of the repository a directory is in; null outside one. */
 async function repositoryOf(directory: string): Promise<string | null> {
@@ -21,12 +22,12 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
     const access = UiSourceAccessSchema.parse(input);
     const place = host.place(info.chatId);
     if (!place || place.projectId !== access.projectId || (await realpath(place.folder)) !== access.folder) {
-        throw new Error('The link belongs to another project.');
+        return { state: 'plain', code: 'access-unavailable', reason: 'This chat moved to another project since the agent wrote this.' };
     }
     if (target.type === 'Node') {
         const node = host.node(target.id);
         if (!node || node.projectId !== place.projectId) {
-            throw new Error('This node is outside the project or no longer available.');
+            throw new ChatError('refused-query', 'This node is outside the project or no longer available.');
         }
         if (node.hidden) {
             return { state: 'plain', label: node.title, reason: 'This agent works out of sight and has no node or view to open.' };
@@ -35,7 +36,7 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
     }
     const cwd = await checkCwd(place.folder, access.cwd, host.worktreePaths);
     if (!access.roots.some((root) => isInside(root, cwd))) {
-        throw new Error('The writer’s working directory is outside its original project.');
+        return { state: 'plain', code: 'access-unavailable', reason: "The agent's working folder is outside the project it wrote this in." };
     }
     if (target.type === 'Commit') {
         // The agent's own repository first, then every other checkout of the project folder (submodules, repositories beside it).
@@ -62,7 +63,7 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
                 label: subject?.trim().slice(0, 256) || sha.slice(0, 7)
             };
         }
-        throw new Error('This commit is no longer available.');
+        throw new ChatError('refused-query', 'This commit is no longer available.');
     }
     let path = resolve(access.cwd, target.path);
     let parent = path;
@@ -74,7 +75,7 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
             break;
         } catch (error) {
             if (target.type !== 'Diff' || (error as NodeJS.ErrnoException).code !== 'ENOENT' || dirname(parent) === parent) {
-                throw new Error('This file is no longer available.');
+                throw new ChatError('refused-query', 'This file is no longer available.');
             }
             missing.unshift(basename(parent));
             parent = dirname(parent);
@@ -82,10 +83,10 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
     }
     path = resolve(real, ...missing);
     if (!access.roots.some((root) => isInside(root, path))) {
-        throw new Error('This file is outside the writer’s original project.');
+        throw new ChatError('refused-query', 'This file is outside the project the agent wrote this in.');
     }
     if (target.type === 'File' && !(await stat(real)).isFile()) {
-        throw new Error('This target is not a file.');
+        throw new ChatError('refused-query', 'This target is not a file.');
     }
     await checkCwd(place.folder, missing.length ? real : dirname(real), host.worktreePaths);
     if (target.type === 'File') {
@@ -93,13 +94,13 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
     }
     const root = await repositoryOf(missing.length ? real : dirname(path));
     if (!root || !access.roots.some((allowed) => isInside(allowed, root)) || !isInside(root, path)) {
-        throw new Error('This diff is outside the writer’s repository.');
+        throw new ChatError('refused-query', "This diff is outside the repositories of the agent's project.");
     }
     await checkCwd(place.folder, root, host.worktreePaths);
     const status = await host.gitStatus(root);
     const changed = status.files.filter((file) => resolve(root, file.path) === path);
     if (!changed.length) {
-        throw new Error('This file has no current diff.');
+        throw new ChatError('refused-query', 'This file has no current diff.');
     }
     return {
         state: 'chip',

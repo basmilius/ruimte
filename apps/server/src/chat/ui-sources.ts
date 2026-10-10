@@ -1,15 +1,15 @@
-import { UiSourceAccessSchema } from './ui-access.ts';
 import { realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { z } from 'zod';
-import type { ChatInfo, Task } from '@ruimte/contracts';
-import { GitFileSchema, GitFileStateSchema, GitLogResultSchema, GitOperationSchema, TaskSchema, type GitFileState, type GitStatus } from '@ruimte/contracts';
+import type { ChatInfo, GitFileState, GitLogResult, GitStatus, Task } from '@ruimte/contracts';
+import { GitFileSchema, GitFileStateSchema, GitLogResultSchema, GitOperationSchema, TaskSchema } from '@ruimte/contracts';
 import type { ChatUiHost, ChatUiSource } from '@adecore/agents/chat/ui-queries';
-import { ChatError } from './errors.ts';
 import { checkCwd, isInside } from '../canvas/project-paths.ts';
-import type { AgentDatabases, DatabasePlace } from '../database/agent-databases.ts';
-import { resolveUiProjectLink } from './ui-links.ts';
 import type { LaunchReading } from '../canvas/verb.ts';
+import type { AgentDatabases, DatabasePlace } from '../database/agent-databases.ts';
+import { ChatError } from './errors.ts';
+import { UiSourceAccessSchema } from './ui-access.ts';
+import { resolveUiProjectLink } from './ui-links.ts';
 
 export interface UiSourceHosts {
     place(chatId: string): DatabasePlace | null;
@@ -17,7 +17,7 @@ export interface UiSourceHosts {
     node(id: string): { projectId: string; title: string; canvasId: string | null; hidden: boolean } | null;
     worktreePaths(folder: string): Promise<string[]>;
     gitStatus(cwd: string): Promise<GitStatus>;
-    gitLog(cwd: string, limit: number): Promise<z.infer<typeof GitLogResultSchema>>;
+    gitLog(cwd: string, limit: number): Promise<GitLogResult>;
     launches(projectId: string): Promise<LaunchReading[]>;
     tasks(chatId: string): Task[];
     databases(): Pick<AgentDatabases, 'captureUiAccess' | 'authorizeUiRead' | 'query'>;
@@ -68,7 +68,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
         const access = UiSourceAccessSchema.parse(input);
         const current = place(info);
         if (current.projectId !== access.projectId || (await realpath(current.folder)) !== access.folder) {
-            throw new ChatError('refused-query', 'The query belongs to another project.');
+            throw new ChatError('refused-query', 'This chat moved to another project since the agent wrote this.');
         }
         return access;
     };
@@ -77,14 +77,13 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
         const cwd = await checkCwd(place(info).folder, resolve(access.cwd, String(args.repo ?? '.')), host.worktreePaths);
         const real = await realpath(cwd);
         if (!access.roots.some((root) => isInside(root, real))) {
-            throw new ChatError('refused-query', 'This repository was outside the writer’s project.');
+            throw new ChatError('refused-query', 'This repository is outside the project the agent wrote this in.');
         }
         return cwd;
     };
     const repositoryArgs = z.object({ repo: z.string().min(1).max(4096).default('.') }).strict();
-    const source = (definition: ChatUiSource): ChatUiSource => definition;
-    const sources: Record<string, ChatUiSource> = {
-        'git.status': source({
+    const sources = {
+        'git.status': {
             args: repositoryArgs,
             result: UiGitStatusSchema,
             authorize: async (info, access, args) => {
@@ -93,8 +92,8 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
             read: async (info, args, _signal, access) => {
                 return uiGitStatus(await host.gitStatus(await repository(info, access, args)));
             }
-        }),
-        'git.log': source({
+        },
+        'git.log': {
             args: repositoryArgs.extend({ limit: z.number().int().min(1).max(60).default(30) }),
             result: GitLogResultSchema,
             authorize: async (info, access, args) => {
@@ -103,8 +102,8 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
             read: async (info, args, _signal, access) => {
                 return host.gitLog(await repository(info, access, args), Number(args.limit));
             }
-        }),
-        'launch.status': source({
+        },
+        'launch.status': {
             args: z.object({ name: z.string().min(1).max(256) }).strict(),
             result: z.object({
                 name: z.string(),
@@ -123,7 +122,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
                 const named = launches.filter((launch) => launch.name.toLowerCase() === String(args.name).toLowerCase());
                 const launch = exact ?? (named.length === 1 ? named[0] : undefined);
                 if (!launch) {
-                    throw new Error('This project has no unique launch with that name.');
+                    throw new ChatError('refused-query', 'This project has no unique launch with that name.');
                 }
                 return {
                     name: launch.name,
@@ -134,8 +133,8 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
                     exitCode: launch.status?.exitCode ?? null
                 };
             }
-        }),
-        'chat.tasks': source({
+        },
+        'chat.tasks': {
             args: z.object({}).strict(),
             result: z.array(TaskSchema.pick({ id: true, childId: true, title: true, status: true, createdAt: true, settledAt: true })).max(100),
             authorize: async (info, access) => {
@@ -146,8 +145,8 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
                     .tasks(info.chatId)
                     .slice(-100)
                     .map(({ id, childId, title, status, createdAt, settledAt }) => ({ id, childId, title, status, createdAt, settledAt }))
-        }),
-        'database.query': source({
+        },
+        'database.query': {
             args: z
                 .object({
                     connection: z.string().min(1).max(256),
@@ -194,16 +193,16 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
                     elapsedMs: answer.result.elapsedMs
                 };
             }
-        })
-    };
-    async function capturePlace(info: ChatInfo, current: DatabasePlace) {
+        }
+    } satisfies Record<string, ChatUiSource>;
+    const capturePlace = async (info: ChatInfo, current: DatabasePlace) => {
         const [folder, cwd, trees] = await Promise.all([realpath(current.folder), realpath(info.cwd), host.worktreePaths(current.folder)]);
         const roots = [folder, ...(await Promise.all(trees.map((tree) => realpath(tree).catch(() => null)))).filter((tree): tree is string => tree !== null)];
         if (!roots.some((root) => isInside(root, cwd))) {
-            throw new ChatError('refused-query', 'The writing chat is outside its project.');
+            throw new ChatError('refused-query', "The agent's chat is outside its project.");
         }
-        return { projectId: current.projectId, folder, cwd, roots, databases: [] };
-    }
+        return { projectId: current.projectId, folder, cwd, roots };
+    };
     return {
         sources,
         link: (info, access, target) => resolveUiProjectLink(host, info, access, target),

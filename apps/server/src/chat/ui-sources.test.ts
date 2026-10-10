@@ -65,7 +65,7 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-test('git reads stay in the writer’s original cwd and project', async () => {
+test("git reads stay in the agent's original cwd and project", async () => {
     const host = ruimteUiSources(hosts);
     const access = await host.capture(info());
     const current = { ...info(), cwd: join(root, 'outside') };
@@ -82,18 +82,19 @@ test('a symlink and an absolute path cannot escape the project', async () => {
     expect(reads).toEqual([]);
 });
 
-test('a worktree added later cannot expand the writer’s original roots', async () => {
+test("a worktree added later cannot expand the agent's original roots", async () => {
     const host = ruimteUiSources(hosts);
     const access = await host.capture(info());
     hosts.worktreePaths = async () => [join(root, 'outside')];
-    await expect(host.sources['git.status']!.authorize(info(), access, { repo: join(root, 'outside') })).rejects.toThrow('writer');
+    await expect(host.sources['git.status']!.authorize(info(), access, { repo: join(root, 'outside') })).rejects.toThrow('outside the project');
 });
 
-test('a moved chat does not read the old project’s queries', async () => {
+test("a moved chat does not read the old project's queries or links", async () => {
     const host = ruimteUiSources(hosts);
     const access = await host.capture(info());
     hosts.place = () => ({ projectId: 'other', folder });
     await expect(host.sources['chat.tasks']!.authorize(info(), access, {})).rejects.toThrow('another project');
+    expect(await host.link!(info(), access, { type: 'Node', id: 'local' })).toMatchObject({ state: 'plain', code: 'access-unavailable' });
 });
 
 test('tasks can read only their writing chat and launches only their project', async () => {
@@ -161,7 +162,7 @@ async function fixtureGitIn(cwd: string, ...args: string[]): Promise<string> {
     return output.trim();
 }
 
-test('commit links resolve only a real commit of the writer’s repository', async () => {
+test("commit links resolve only a real commit of the agent's repository", async () => {
     const { writeFile } = await import('node:fs/promises');
     await fixtureGit('init', '-q');
     await writeFile(join(folder, 'a.md'), 'initial');
@@ -212,7 +213,7 @@ test('diff links retain a deleted file and select the staged side', async () => 
     await expect(host.link!(info(), access, { type: 'Diff', path: 'other.md' })).rejects.toThrow('no current diff');
 });
 
-test('commit and diff links resolve in a repository beside the agent’s own', async () => {
+test("commit and diff links resolve in a repository beside the agent's own", async () => {
     const { writeFile } = await import('node:fs/promises');
     await fixtureGit('init', '-q');
     const nested = join(folder, 'lib');
