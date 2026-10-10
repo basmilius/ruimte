@@ -28,26 +28,23 @@ function shown(host: FindHost): boolean {
     return host.element.isConnected && host.element.getClientRects().length > 0;
 }
 
-/* The host inside an element, the deepest when one surface holds another. */
-function hostWithin(scope: Element): FindHost | null {
+/* The deepest shown host that passes `test`, since one surface may hold another. */
+function deepestHost(test: (host: FindHost) => boolean): FindHost | null {
     let found: FindHost | null = null;
     for (const host of hosts) {
-        if (scope.contains(host.element) && shown(host) && (found === null || found.element.contains(host.element))) {
+        if (test(host) && shown(host) && (found === null || found.element.contains(host.element))) {
             found = host;
         }
     }
     return found;
 }
 
-/* The host the keyboard is in, the deepest one around it. */
+function hostWithin(scope: Element): FindHost | null {
+    return deepestHost((host) => scope.contains(host.element));
+}
+
 function hostAround(element: Element): FindHost | null {
-    let found: FindHost | null = null;
-    for (const host of hosts) {
-        if (host.element.contains(element) && shown(host) && (found === null || found.element.contains(host.element))) {
-            found = host;
-        }
-    }
-    return found;
+    return deepestHost((host) => host.element.contains(element));
 }
 
 /*

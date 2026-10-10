@@ -85,11 +85,6 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         setGeneration((g) => g + 1);
     };
 
-    // The shell is gone but the CLI's session is not: the daemon kept the id its own resume takes.
-    const resumable = exited !== undefined && agentRecord?.status === 'exited';
-
-    const close = (): void => closeHost(id);
-
     const paste = async (): Promise<void> => {
         const text = await readClipboardText();
         if (text !== '') {
@@ -123,42 +118,8 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                                 {failure}
                             </NodeNotice>
                         )}
-                        {heldCommand !== undefined && exited === undefined && (
-                            <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-text">
-                                <span className="grow truncate">{t('terminal.held', { command: heldCommand })}</span>
-                                <Button
-                                    size="sm"
-                                    onClick={() =>
-                                        void sessionClientFor(endpointId)
-                                            ?.runHeld(id)
-                                            .catch(() => undefined)
-                                    }
-                                >
-                                    <Icon icon={Play} size={12} /> {t('terminal.run')}
-                                </Button>
-                            </div>
-                        )}
-                        {exited !== undefined && (
-                            <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-term-dim">
-                                {/* A shell that ended on its own reads as a footnote; a non-zero code is news. */}
-                                {resumable ? (
-                                    <span className="grow">{t('terminal.sessionEnded')}</span>
-                                ) : (
-                                    <span className={clsx('grow', exited !== 0 && 'text-status-error')}>{t('terminal.exited', { code: exited })}</span>
-                                )}
-                                {resumable && (
-                                    <Button size="sm" onClick={() => resumeTerminalAgentAction(id)}>
-                                        <Icon icon={Play} size={12} /> {t('terminal.resume')}
-                                    </Button>
-                                )}
-                                <Button size="sm" variant="secondary" onClick={() => restartTerminalAction(id)}>
-                                    <Icon icon={RotateCw} size={12} /> {t('terminal.restart')}
-                                </Button>
-                                <Button size="sm" onClick={close}>
-                                    {t('common:action.close')}
-                                </Button>
-                            </div>
-                        )}
+                        {heldCommand !== undefined && exited === undefined && <HeldCommandBar id={id} endpointId={endpointId} command={heldCommand} />}
+                        {exited !== undefined && <ExitBar id={id} code={exited} resumable={agentRecord?.status === 'exited'} />}
                     </div>
                     {attached && exited === undefined && status === 'open' && (
                         <ErrorBoundary label={t('terminal.ports.label')} resetKeys={[endpointId, id, builds]} compact>
@@ -199,6 +160,53 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                 </ContextMenu.Item>
             </ContextMenu.Popup>
         </ContextMenu.Root>
+    );
+}
+
+const BAR = 'absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs';
+
+function HeldCommandBar({ id, endpointId, command }: { id: string; endpointId: string; command: string }) {
+    const { t } = useTranslation('canvas');
+    return (
+        <div className={clsx(BAR, 'text-text')}>
+            <span className="grow truncate">{t('terminal.held', { command })}</span>
+            <Button
+                size="sm"
+                onClick={() =>
+                    void sessionClientFor(endpointId)
+                        ?.runHeld(id)
+                        .catch(() => undefined)
+                }
+            >
+                <Icon icon={Play} size={12} /> {t('terminal.run')}
+            </Button>
+        </div>
+    );
+}
+
+/* `resumable`: the shell is gone but the CLI's session is not, since the daemon kept the id its own resume takes. */
+function ExitBar({ id, code, resumable }: { id: string; code: number; resumable: boolean }) {
+    const { t } = useTranslation(['canvas', 'common']);
+    return (
+        <div className={clsx(BAR, 'text-term-dim')}>
+            {/* A shell that ended on its own reads as a footnote; a non-zero code is news. */}
+            {resumable ? (
+                <span className="grow">{t('terminal.sessionEnded')}</span>
+            ) : (
+                <span className={clsx('grow', code !== 0 && 'text-status-error')}>{t('terminal.exited', { code })}</span>
+            )}
+            {resumable && (
+                <Button size="sm" onClick={() => resumeTerminalAgentAction(id)}>
+                    <Icon icon={Play} size={12} /> {t('terminal.resume')}
+                </Button>
+            )}
+            <Button size="sm" variant="secondary" onClick={() => restartTerminalAction(id)}>
+                <Icon icon={RotateCw} size={12} /> {t('terminal.restart')}
+            </Button>
+            <Button size="sm" onClick={() => closeHost(id)}>
+                {t('common:action.close')}
+            </Button>
+        </div>
     );
 }
 

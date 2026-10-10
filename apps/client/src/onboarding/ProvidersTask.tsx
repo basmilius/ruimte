@@ -124,7 +124,6 @@ function CliLoginRow({ row }: { row: CliRow }) {
     } else if (canLogIn && loginAccount !== null) {
         const { text, tone } = accountStatusLine(status, true);
         line = <span className={ACCOUNT_TONE_CLASSES[tone]}>{status?.state === 'signed-out' ? t('providers.notLoggedIn') : text}</span>;
-        const account = loginAccount;
         control = (
             <Button
                 variant="secondary"
@@ -132,8 +131,8 @@ function CliLoginRow({ row }: { row: CliRow }) {
                     useUi.getState().setLogin({
                         endpointId: LOCAL_ENDPOINT_ID,
                         kind: provider.kind,
-                        accountId: account.id,
-                        name: account.account.label ?? provider.name
+                        accountId: loginAccount.id,
+                        name: loginAccount.account.label ?? provider.name
                     })
                 }
             >

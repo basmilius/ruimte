@@ -31,9 +31,14 @@ export interface OnboardingFacts {
     computer: ComputerSetupPhase;
 }
 
+/* Apple's on-device model is a provider with no CLI to install or log in to. */
+function isCli(provider: ProviderInfo): boolean {
+    return provider.kind !== 'apple';
+}
+
 export function cliRowsOf(providers: readonly ProviderInfo[], accounts: ProviderAccounts | null): CliRow[] {
     return providers
-        .filter((provider) => provider.installed && provider.kind !== 'apple')
+        .filter((provider) => provider.installed && isCli(provider))
         .map((provider) => {
             const entries = accountsOfKind(accounts, provider.kind);
             const canLogIn = accounts?.loginCommands?.[provider.kind] !== undefined;
@@ -48,7 +53,7 @@ export function cliRowsOf(providers: readonly ProviderInfo[], accounts: Provider
 
 /* The CLIs the machine knows of and did not find, which the providers task names in one row. */
 export function missingClisOf(providers: readonly ProviderInfo[]): string[] {
-    return providers.filter((provider) => !provider.installed && provider.kind !== 'apple').map((provider) => provider.name);
+    return providers.filter((provider) => !provider.installed && isCli(provider)).map((provider) => provider.name);
 }
 
 export function factsOf(introSeen: boolean, rows: readonly CliRow[], computer: ComputerSetupPhase): OnboardingFacts {

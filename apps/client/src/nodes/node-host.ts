@@ -19,8 +19,7 @@ import { providersOf } from '@adecore/agents-react/state/providers';
 
 /*
  * What a body needs to run, wherever it is drawn. A node on a canvas and a view of its own are the
- * same thing under one id: the frame reads this and so does the view host, and neither body has to
- * know which of the two it is inside. Only what a body actually uses is here.
+ * same thing under one id, so neither body has to know which of the two it is inside.
  */
 export interface NodeHost {
     id: string;
@@ -146,9 +145,8 @@ export function automaticTitleOf(host: NodeHost): string {
 }
 
 /*
- * Clearing a title takes the name away instead of keeping the old one: the node falls back to what
- * its kind starts with and nothing has named it again, so its own source takes over once more, which
- * is the page's title for a browser and the next prompt for a chat.
+ * Clearing a title hands the node back to its kind's name with no source, so its own source names it
+ * again: the page's title for a browser, the next prompt for a chat.
  */
 export function resetTitle(id: string, viewId?: string): void {
     const host = readNodeHost(id);

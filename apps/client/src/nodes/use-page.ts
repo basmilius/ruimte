@@ -6,6 +6,11 @@ import { endpointKey, useEndpointId } from '@/state/keys';
 import { localBrowserRouteAvailable } from '@/browser/owner-route';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 
+/* The local machine's daemon id, which decides whether a page's route is open; a caller may only need the redraw. */
+export function useLocalDaemonId(): string | null | undefined {
+    return useEndpoints((store) => store.endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID)?.daemonId);
+}
+
 /*
  * Keeps one page alive for this client, started at the node's saved address. The page itself is a
  * <webview> in the parking layer. A node without an address has no page and shows the splash until
@@ -17,7 +22,7 @@ export function usePage(id: string): { url: string; available: boolean } {
     const state = useBrowserRow(id, (row) => row);
     const endpointId = useEndpointId();
     const key = endpointKey(endpointId, id);
-    const localIdentity = useEndpoints((store) => store.endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID)?.daemonId);
+    const localIdentity = useLocalDaemonId();
     const available = isDesktop() && localBrowserRouteAvailable(endpointId, savedUrl, host?.browserOwner);
 
     useEffect(() => {

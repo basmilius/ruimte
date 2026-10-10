@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import {
@@ -153,20 +153,26 @@ export function FindBar({
         }
     };
 
-    const count =
-        query.text === '' || disabled ? null : query.inSelection === true && selectionScope?.noSelection === true ? (
-            t('find.noSelection')
-        ) : invalid ? (
-            <span className="text-status-error" role="alert">
-                {t('find.invalid')}
-            </span>
-        ) : total === 0 ? (
-            t('find.none')
-        ) : current === null ? (
-            formatNumber(total)
-        ) : (
-            t('find.count', { current: formatNumber(current + 1), total: formatNumber(total) })
-        );
+    const countOf = (): ReactNode => {
+        if (query.text === '' || disabled) {
+            return null;
+        }
+        if (query.inSelection === true && selectionScope?.noSelection === true) {
+            return t('find.noSelection');
+        }
+        if (invalid) {
+            return (
+                <span className="text-status-error" role="alert">
+                    {t('find.invalid')}
+                </span>
+            );
+        }
+        if (total === 0) {
+            return t('find.none');
+        }
+        return current === null ? formatNumber(total) : t('find.count', { current: formatNumber(current + 1), total: formatNumber(total) });
+    };
+    const count = countOf();
 
     const field = (
         <input

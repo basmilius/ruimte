@@ -6,7 +6,6 @@ import { CloseButton, Icon } from '@adecore/ui';
 interface TaskPaneProps {
     icon: LucideIcon;
     title: string;
-    /* The line under the title. */
     subtitle: string;
     /* A control on the header line, before the close button. */
     action?: ReactNode;

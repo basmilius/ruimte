@@ -30,10 +30,9 @@ import { BrowserStream } from '@/browser/BrowserStream';
 import { browserStreamScaleLimit, browserStreamScaleOptions, clampBrowserStreamScale, useBrowserStreamQuality } from '@/browser/stream-quality';
 import { useSwipeOverlay } from '@/browser/swipe-overlay';
 import { endpointKey, useEndpointId } from '@/state/keys';
-import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { useNodeHost } from '@/nodes/node-host';
-import { usePage } from '@/nodes/use-page';
+import { useLocalDaemonId, usePage } from '@/nodes/use-page';
 import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, formatShortcut, KEY_SHORTCUTS } from '@adecore/ui';
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
@@ -52,10 +51,11 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
     const field = useRef<HTMLInputElement>(null);
     const host = useNodeHost(id);
     const saved = host?.url;
-    useEndpoints((store) => store.endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID)?.daemonId);
-    const url = draft ?? state?.url ?? saved ?? '';
+    useLocalDaemonId();
+    const current = state?.url ?? saved ?? '';
+    const url = draft ?? current;
     // A node showing its splash has no page behind the bar, so nothing there is worth pressing.
-    const hasPage = (state?.url ?? saved ?? '') !== '' && browserRouteAvailable(endpointId, state?.url ?? saved ?? '', host?.browserOwner);
+    const hasPage = current !== '' && browserRouteAvailable(endpointId, current, host?.browserOwner);
     const secure = url.startsWith('https://');
     const scaleLimit = browserStreamScaleLimit();
     const scale = clampBrowserStreamScale(preferredScale, scaleLimit);
@@ -177,10 +177,8 @@ const ERROR_ICON: Record<LoadErrorKind, LucideIcon> = {
 };
 
 /*
- * What a page that did not load says, over the page it replaces. Chromium paints an error page of
- * its own inside the guest, in another product's chrome and with no way back to this app, so the
- * plate covers it. It goes in the parked host rather than in the node's body, because that host is
- * what the layer puts over the node and over a browser view's whole column alike.
+ * What a page that did not load says, over Chromium's own error page, which has no way back to this
+ * app. It goes in the parked host, which the layer puts over a node and a browser view's column alike.
  */
 function BrowserErrorPlate({ id }: { id: string }) {
     const { t } = useTranslation('canvas');
@@ -275,7 +273,7 @@ export function BrowserFallback({ id, className }: { id: string; className?: str
     const saved = host?.url ?? '';
     const routeFailed = useBrowserRow(id, (row) => row?.error?.ownerRoute === true);
     const endpointId = useEndpointId();
-    useEndpoints((store) => store.endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID)?.daemonId);
+    useLocalDaemonId();
     if (!browserRouteAvailable(endpointId, saved, host?.browserOwner) || (routeFailed && !browserRegistry.has(endpointKey(endpointId, id)))) {
         return (
             <div className={clsx('flex h-full items-center justify-center bg-surface-sunken', className)}>

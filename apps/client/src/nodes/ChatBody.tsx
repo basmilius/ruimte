@@ -25,6 +25,10 @@ import { PROMPTS_IN_NODES } from '@/prompts/placement';
 // The worker pool and its highlighter load with the first chat node, not with the app.
 const DiffPool = lazyNamed(() => import('@/chat/ChatDiffPool'), 'default');
 
+function messageOf(error: unknown, fallback: string): string {
+    return error instanceof Error ? error.message : fallback;
+}
+
 /* The body of a chat, the same on a canvas inside a frame and filling a view of its own. */
 export function ChatBody({ id, focused, onCanvas = false }: { id: string; focused: boolean; onCanvas?: boolean }) {
     const { t } = useTranslation('canvas');
@@ -63,7 +67,7 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
             .catch((e: unknown) => {
                 if (!cancelled) {
                     // Not the hook's `t`: the effect would then depend on it and reopen the chat on a language change.
-                    setFailure(e instanceof Error ? e.message : i18next.t('canvas:chat.openFailed'));
+                    setFailure(messageOf(e, i18next.t('canvas:chat.openFailed')));
                 }
             });
         return () => {
@@ -77,7 +81,7 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
         const changed = switched.current
             .then(() => performAsPerson('chat.setProvider', { chatId: id, provider, model: null, selection }))
             .then(() => undefined);
-        switched.current = changed.catch((e: unknown) => setFailure(e instanceof Error ? e.message : t('chat.retargetFailed')));
+        switched.current = changed.catch((e: unknown) => setFailure(messageOf(e, t('chat.retargetFailed'))));
         return changed;
     };
 
@@ -98,7 +102,7 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
                     rememberChatSelection(info.provider, info.selection);
                 }
             })
-            .catch((e: unknown) => setFailure(e instanceof Error ? e.message : t('chat.sendFailed')));
+            .catch((e: unknown) => setFailure(messageOf(e, t('chat.sendFailed'))));
     };
 
     return (
