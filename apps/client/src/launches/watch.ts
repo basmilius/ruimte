@@ -1,9 +1,10 @@
 import i18next from 'i18next';
 import { formatDuration } from '@adecore/ui/format';
 import type { LaunchStatus } from '@ruimte/contracts';
-import { showLaunchOutput, startLaunch } from '@/launches/actions';
+import { projectOnScreen, showLaunchOutput, startLaunch } from '@/launches/actions';
 import { useLaunches } from '@/launches/state';
 import { defaultProjectStore } from '@/state/project';
+import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
 import { watchPool } from '@/transport/pool-watch';
@@ -15,28 +16,21 @@ function readDocument(endpointId: string, projectId: string): void {
         .catch(() => undefined);
 }
 
-function openProject(): { endpointId: string; projectId: string } | null {
-    const { current, currentEndpointId } = defaultProjectStore.getState();
-    return current === null || currentEndpointId === null ? null : { endpointId: currentEndpointId, projectId: current.projectId };
-}
-
 const FAILED_TOAST = 'launch-failed:';
 
 function launchName(endpointId: string, status: LaunchStatus): string {
-    const document = useLaunches.getState().documents[`${endpointId}:${status.projectId}`];
+    const document = useLaunches.getState().documents[endpointKey(endpointId, status.projectId)];
     return document?.launches.find((launch) => launch.id === status.launchId)?.name ?? status.launchId;
 }
 
 /* Only a launch that went down by itself says so; one a person or an agent stopped is expected to end. */
 function announceFailure(endpointId: string, previous: LaunchStatus | undefined, status: LaunchStatus): void {
     const failed = status.state === 'exited' && previous?.state !== 'exited' && !status.stopped && status.exitCode !== 0;
-    const open = openProject();
+    const open = projectOnScreen();
     if (!failed || open === null || open.endpointId !== endpointId || open.projectId !== status.projectId) {
         return;
     }
-    const title = i18next.t('launches:failed.title', {
-        name: launchName(endpointId, status)
-    });
+    const title = i18next.t('launches:failed.title', { name: launchName(endpointId, status) });
     const description = i18next.t('launches:failed.description', {
         code: status.exitCode ?? '?',
         duration: formatDuration((status.endedAt ?? Date.now()) - status.startedAt)
@@ -84,14 +78,14 @@ export function startLaunchWatch(): () => void {
             link.request('launch.list', {})
                 .then((result) => useLaunches.getState().setList(endpointId, result.launches))
                 .catch(() => undefined);
-            const open = openProject();
+            const open = projectOnScreen();
             if (open !== null && open.endpointId === endpointId) {
                 readDocument(endpointId, open.projectId);
             }
         },
         subscriptions: [
             link.on('launch.status', (status) => {
-                const previous = useLaunches.getState().statuses[`${endpointId}:${status.projectId}`]?.[status.launchId];
+                const previous = useLaunches.getState().statuses[endpointKey(endpointId, status.projectId)]?.[status.launchId];
                 useLaunches.getState().setStatus(endpointId, status);
                 announceFailure(endpointId, previous, status);
             }),
@@ -100,8 +94,8 @@ export function startLaunchWatch(): () => void {
     }));
     let last: string | null = null;
     const follow = (): void => {
-        const open = openProject();
-        const key = open === null ? null : `${open.endpointId}:${open.projectId}`;
+        const open = projectOnScreen();
+        const key = open === null ? null : endpointKey(open.endpointId, open.projectId);
         if (key === last) {
             return;
         }

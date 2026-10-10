@@ -195,19 +195,15 @@ export function foundText(suggestions: readonly LaunchSuggestion[]): string | nu
     const usable = suggestions.filter((suggestion) => suggestion.unsupported === undefined);
     const runFiles = usable.filter((suggestion) => suggestion.source === 'run-xml');
     const scripts = usable.filter((suggestion) => suggestion.source !== 'run-xml');
-    const parts = [
-        ...(runFiles.length === 0
-            ? []
-            : [
-                  i18next.t('launches:found.runFiles', {
-                      count: runFiles.length,
-                      place: placeOf(new Set(runFiles.map((suggestion) => dirnameOf(suggestion.path))), 'folders')
-                  })
-              ]),
-        ...(scripts.length === 0
-            ? []
-            : [i18next.t('launches:found.scripts', { count: scripts.length, place: placeOf(new Set(scripts.map((suggestion) => suggestion.path)), 'files') })])
-    ];
+    const parts: string[] = [];
+    if (runFiles.length > 0) {
+        const place = placeOf(new Set(runFiles.map((suggestion) => dirnameOf(suggestion.path))), 'folders');
+        parts.push(i18next.t('launches:found.runFiles', { count: runFiles.length, place }));
+    }
+    if (scripts.length > 0) {
+        const place = placeOf(new Set(scripts.map((suggestion) => suggestion.path)), 'files');
+        parts.push(i18next.t('launches:found.scripts', { count: scripts.length, place }));
+    }
     if (parts.length === 0) {
         return null;
     }

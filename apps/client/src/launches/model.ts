@@ -68,6 +68,10 @@ function groupView(launch: LaunchConfigEntry, members: readonly LaunchView[], ap
     return { launch, phase: 'idle', live: false, status: null, exitCode: null, port: null };
 }
 
+function memberViews(views: ReadonlyMap<string, LaunchView>, group: LaunchConfigEntry): LaunchView[] {
+    return (group.launches ?? []).flatMap((id) => views.get(id) ?? []);
+}
+
 /* Every launch of a project with its state, by id. */
 export function launchViews(document: LaunchesDocument, statuses: Readonly<Record<string, LaunchStatus>>): Map<string, LaunchView> {
     const approved = new Set(document.approved);
@@ -79,8 +83,7 @@ export function launchViews(document: LaunchesDocument, statuses: Readonly<Recor
     }
     for (const launch of document.launches) {
         if (launch.kind === 'group') {
-            const members = (launch.launches ?? []).flatMap((id) => views.get(id) ?? []);
-            views.set(launch.id, groupView(launch, members, approved.has(launch.id)));
+            views.set(launch.id, groupView(launch, memberViews(views, launch), approved.has(launch.id)));
         }
     }
     return views;
@@ -206,7 +209,7 @@ export function outputOf(views: ReadonlyMap<string, LaunchView>, launch: LaunchC
     if (launch.kind !== 'group') {
         return views.get(launch.id) ?? null;
     }
-    const members = (launch.launches ?? []).flatMap((id) => views.get(id) ?? []);
+    const members = memberViews(views, launch);
     return (
         members.find((member) => member.live) ??
         members.find((member) => member.phase === 'failed') ??

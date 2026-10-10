@@ -29,9 +29,13 @@ export function launchTarget(onScreen: LaunchOwner | null, owner?: LaunchOwner):
     return { ...onScreen, key: endpointKey(onScreen.endpointId, onScreen.projectId) };
 }
 
-function target(owner?: LaunchOwner): Target | null {
+export function projectOnScreen(): LaunchOwner | null {
     const { current, currentEndpointId } = defaultProjectStore.getState();
-    return launchTarget(current === null || currentEndpointId === null ? null : { endpointId: currentEndpointId, projectId: current.projectId }, owner);
+    return current === null || currentEndpointId === null ? null : { endpointId: currentEndpointId, projectId: current.projectId };
+}
+
+function target(owner?: LaunchOwner): Target | null {
+    return launchTarget(projectOnScreen(), owner);
 }
 
 function failed(title: string, e: unknown): void {

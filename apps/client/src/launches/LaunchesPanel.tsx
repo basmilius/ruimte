@@ -43,12 +43,7 @@ function pickerDetail(view: LaunchView, now: number, t: Translate): string {
     if (phase === 'passed' || phase === 'failed') {
         return [phase === 'passed' ? t('phase.passed') : t('exit', { code: status.exitCode ?? '?' }), formatDuration(ran)].join(' · ');
     }
-    return status.endedAt === null
-        ? ''
-        : t('ended', {
-              outcome: t('panel.stopped'),
-              ago: formatAgo(now - status.endedAt)
-          });
+    return status.endedAt === null ? '' : t('ended', { outcome: t('panel.stopped'), ago: formatAgo(now - status.endedAt) });
 }
 
 /*

@@ -33,7 +33,6 @@ function dotClass(view: LaunchView): string {
     }
 }
 
-/* The phase as a dot, small enough to sit on a button's icon. */
 /* One launch waiting on approval, with every variable the approval covers, since a change to those alone asks again. */
 export function HeldCommand({ held }: { held: LaunchHeld }) {
     return (
@@ -50,6 +49,7 @@ export function HeldCommand({ held }: { held: LaunchHeld }) {
     );
 }
 
+/* The phase as a dot, small enough to sit on a button's icon. */
 export function LaunchDot({ view, className }: { view: LaunchView; className?: string }) {
     const { t } = useTranslation('launches');
     return <span role="img" aria-label={t(`phase.${view.phase}`)} className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', dotClass(view), className)} />;

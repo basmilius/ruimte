@@ -36,6 +36,7 @@ import {
     suggestionSource,
     withImported,
     withoutDraft,
+    type DraftProblem,
     type EnvRow,
     type LaunchDraft
 } from '@/launches/editing';
@@ -49,7 +50,7 @@ import { TransportError } from '@/transport/transport';
 const PROJECT_FOLDER = '.';
 
 function close(): void {
-    return useLaunches.getState().setDialog(null);
+    useLaunches.getState().setDialog(null);
 }
 
 let draftCount = 0;
@@ -97,12 +98,10 @@ export function LaunchDialogs() {
 type Failure = { conflict: true } | { conflict: false; message: string };
 
 function failureOf(e: unknown, fallback: string): Failure {
-    return e instanceof TransportError && e.code === 'rev-conflict'
-        ? { conflict: true }
-        : {
-              conflict: false,
-              message: e instanceof Error ? e.message : fallback
-          };
+    if (e instanceof TransportError && e.code === 'rev-conflict') {
+        return { conflict: true };
+    }
+    return { conflict: false, message: e instanceof Error ? e.message : fallback };
 }
 
 /*
@@ -167,11 +166,7 @@ function EditForm({ projectId, document, launchId }: { projectId: string; docume
         setBusy(true);
         setFailure(null);
         try {
-            await transport.request('launches.save', {
-                projectId,
-                baseRev,
-                launches: savedLaunches(drafts)
-            });
+            await transport.request('launches.save', { projectId, baseRev, launches: savedLaunches(drafts) });
             close();
         } catch (e) {
             setFailure(failureOf(e, t('edit.failed')));
@@ -253,22 +248,10 @@ function EditForm({ projectId, document, launchId }: { projectId: string; docume
 function DraftList({ drafts, selectedId, onSelect }: { drafts: readonly LaunchDraft[]; selectedId: string | null; onSelect(id: string): void }) {
     const { folder } = useProjectLaunches();
     const { repos } = useProjectRepos(folder);
-    const sections = useMemo(
-        () =>
-            folder === null
-                ? [
-                      {
-                          label: null,
-                          launches: drafts.map((draft) => draft.entry)
-                      }
-                  ]
-                : launchSections(
-                      drafts.map((draft) => draft.entry),
-                      folder,
-                      repos
-                  ),
-        [drafts, folder, repos]
-    );
+    const sections = useMemo(() => {
+        const entries = drafts.map((draft) => draft.entry);
+        return folder === null ? [{ label: null, launches: entries }] : launchSections(entries, folder, repos);
+    }, [drafts, folder, repos]);
 
     return sections.map((section) => (
         <div key={section.label ?? ''} className="flex flex-col not-first:mt-2">
@@ -316,7 +299,7 @@ function LaunchForm({
 }: {
     draft: LaunchDraft;
     drafts: readonly LaunchDraft[];
-    problem: 'name' | 'command' | 'members' | null;
+    problem: DraftProblem | null;
     onChange(change: (draft: LaunchDraft) => LaunchDraft): void;
 }) {
     const { t } = useTranslation('launches');
@@ -325,11 +308,7 @@ function LaunchForm({
     const roots = useMemo(() => folderRoots(repos), [repos]);
     const [place, setPlace] = useState(() => splitFolder(draft.entry.cwd, roots));
     const { entry } = draft;
-    const set = (fields: Partial<LaunchConfigEntry>): void =>
-        onChange((current) => ({
-            ...current,
-            entry: { ...current.entry, ...fields }
-        }));
+    const set = (fields: Partial<LaunchConfigEntry>): void => onChange((current) => ({ ...current, entry: { ...current.entry, ...fields } }));
     const setEnv = (env: EnvRow[]): void => onChange((current) => ({ ...current, env }));
     const moveTo = (root: string, sub: string): void => {
         setPlace({ root, sub });
@@ -353,10 +332,7 @@ function LaunchForm({
                     label={t('edit.kind')}
                     value={entry.kind}
                     onValueChange={(kind) => set({ kind })}
-                    options={(['service', 'task', 'group'] as const).map((kind) => ({
-                        id: kind,
-                        label: t(`edit.kinds.${kind}`)
-                    }))}
+                    options={(['service', 'task', 'group'] as const).map((kind) => ({ id: kind, label: t(`edit.kinds.${kind}`) }))}
                 />
             </Field>
             {entry.kind === 'group' ? (
@@ -370,13 +346,10 @@ function LaunchForm({
                                 <Checkbox
                                     label={name}
                                     checked={checked}
-                                    onCheckedChange={(on) =>
-                                        set({
-                                            launches: on
-                                                ? [...(entry.launches ?? []), member.entry.id]
-                                                : (entry.launches ?? []).filter((id) => id !== member.entry.id)
-                                        })
-                                    }
+                                    onCheckedChange={(on) => {
+                                        const others = (entry.launches ?? []).filter((id) => id !== member.entry.id);
+                                        set({ launches: on ? [...others, member.entry.id] : others });
+                                    }}
                                 />
                                 <Icon icon={LAUNCH_KIND_ICON[member.entry.kind]} size={14} className="text-text-muted" />
                                 <span className="min-w-0 truncate text-text">{name}</span>
@@ -423,65 +396,7 @@ function LaunchForm({
                             <Input mono placeholder="http://localhost:8000" value={entry.url ?? ''} onChange={(e) => set({ url: e.target.value })} />
                         </Field>
                     )}
-                    <Field orientation="horizontal" group label={t('edit.environment')}>
-                        <div className="flex flex-col gap-2">
-                            {draft.env.map((row) => (
-                                <div key={row.id} className="flex items-center gap-2">
-                                    <Input
-                                        mono
-                                        className="w-44 shrink-0"
-                                        aria-label={t('edit.envKey')}
-                                        placeholder={t('edit.envKey')}
-                                        value={row.key}
-                                        onChange={(e) =>
-                                            setEnv(
-                                                draft.env.map((other) =>
-                                                    other.id === row.id
-                                                        ? {
-                                                              ...other,
-                                                              key: e.target.value
-                                                          }
-                                                        : other
-                                                )
-                                            )
-                                        }
-                                    />
-                                    <Input
-                                        mono
-                                        className="grow"
-                                        aria-label={t('edit.envValue')}
-                                        placeholder={t('edit.envValue')}
-                                        value={row.value}
-                                        onChange={(e) =>
-                                            setEnv(
-                                                draft.env.map((other) =>
-                                                    other.id === row.id
-                                                        ? {
-                                                              ...other,
-                                                              value: e.target.value
-                                                          }
-                                                        : other
-                                                )
-                                            )
-                                        }
-                                    />
-                                    <IconButton
-                                        icon={X}
-                                        size="sm"
-                                        label={t('edit.removeVariable', {
-                                            key: row.key
-                                        })}
-                                        onClick={() => setEnv(draft.env.filter((other) => other.id !== row.id))}
-                                    />
-                                </div>
-                            ))}
-                            <div className="flex h-8 items-center">
-                                <Button variant="ghost" size="sm" className="-ml-2" onClick={() => setEnv([...draft.env, emptyRow(draft.env)])}>
-                                    <Icon icon={Plus} size={14} /> {t('edit.addVariable')}
-                                </Button>
-                            </div>
-                        </div>
-                    </Field>
+                    <EnvironmentField rows={draft.env} onChange={setEnv} />
                 </>
             )}
             <Field orientation="horizontal" group>
@@ -497,6 +412,49 @@ function LaunchForm({
                 </div>
             </Field>
         </div>
+    );
+}
+
+function EnvironmentField({ rows, onChange }: { rows: readonly EnvRow[]; onChange(rows: EnvRow[]): void }) {
+    const { t } = useTranslation('launches');
+    const edit = (id: number, fields: Partial<EnvRow>): void => onChange(rows.map((row) => (row.id === id ? { ...row, ...fields } : row)));
+
+    return (
+        <Field orientation="horizontal" group label={t('edit.environment')}>
+            <div className="flex flex-col gap-2">
+                {rows.map((row) => (
+                    <div key={row.id} className="flex items-center gap-2">
+                        <Input
+                            mono
+                            className="w-44 shrink-0"
+                            aria-label={t('edit.envKey')}
+                            placeholder={t('edit.envKey')}
+                            value={row.key}
+                            onChange={(e) => edit(row.id, { key: e.target.value })}
+                        />
+                        <Input
+                            mono
+                            className="grow"
+                            aria-label={t('edit.envValue')}
+                            placeholder={t('edit.envValue')}
+                            value={row.value}
+                            onChange={(e) => edit(row.id, { value: e.target.value })}
+                        />
+                        <IconButton
+                            icon={X}
+                            size="sm"
+                            label={t('edit.removeVariable', { key: row.key })}
+                            onClick={() => onChange(rows.filter((other) => other.id !== row.id))}
+                        />
+                    </div>
+                ))}
+                <div className="flex h-8 items-center">
+                    <Button variant="ghost" size="sm" className="-ml-2" onClick={() => onChange([...rows, emptyRow(rows)])}>
+                        <Icon icon={Plus} size={14} /> {t('edit.addVariable')}
+                    </Button>
+                </div>
+            </div>
+        </Field>
     );
 }
 
@@ -545,11 +503,7 @@ function ImportForm({ projectId, document, into }: { projectId: string; document
         setFailure(null);
         try {
             const launches = [...document.launches, ...importedLaunches(picked, share, document)];
-            await transport.request('launches.save', {
-                projectId,
-                baseRev: document.rev,
-                launches
-            });
+            await transport.request('launches.save', { projectId, baseRev: document.rev, launches });
             close();
         } catch (e) {
             setFailure(failureOf(e, t('edit.failed')));
@@ -641,13 +595,7 @@ function SuggestionRow({ suggestion, checked, onCheckedChange }: { suggestion: L
                         {launch.command}
                     </code>
                 )}
-                {unsupported && (
-                    <span className="text-xs text-text-faint">
-                        {t('import.unsupported', {
-                            reason: suggestion.unsupported
-                        })}
-                    </span>
-                )}
+                {unsupported && <span className="text-xs text-text-faint">{t('import.unsupported', { reason: suggestion.unsupported })}</span>}
                 {!unsupported && suggestion.private && <span className="text-xs text-text-faint">{t('import.private')}</span>}
             </span>
         </label>

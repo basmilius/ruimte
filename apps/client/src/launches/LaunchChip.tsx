@@ -28,6 +28,7 @@ export function LaunchChip() {
 
     const askedName = ask === null ? '' : (document?.launches.find((launch) => launch.id === ask.launchId)?.name ?? '');
     const busyName = ask?.kind === 'busy' ? (document?.launches.find((launch) => launch.id === ask.busy.launchId)?.name ?? '') : '';
+    const busyPort = ask?.kind === 'busy' ? ask.busy.port : '';
 
     return (
         <div ref={anchor} className="flex shrink-0">
@@ -71,12 +72,7 @@ export function LaunchChip() {
                             onClick={() => {
                                 if (ask?.kind === 'held') {
                                     useLaunches.getState().setAsk(null);
-                                    void startLaunch(ask.launchId, {
-                                        restart: ask.restart,
-                                        approve: true,
-                                        replace: ask.replace,
-                                        owner: ask.owner
-                                    });
+                                    void startLaunch(ask.launchId, { restart: ask.restart, approve: true, replace: ask.replace, owner: ask.owner });
                                 }
                             }}
                         >
@@ -88,25 +84,14 @@ export function LaunchChip() {
 
             <PromptDialog
                 open={ask?.kind === 'busy'}
-                title={t('busy.title', {
-                    port: ask?.kind === 'busy' ? ask.busy.port : ''
-                })}
-                description={t('busy.description', {
-                    other: busyName,
-                    port: ask?.kind === 'busy' ? ask.busy.port : '',
-                    name: askedName
-                })}
+                title={t('busy.title', { port: busyPort })}
+                description={t('busy.description', { other: busyName, port: busyPort, name: askedName })}
                 confirmLabel={t('busy.confirm')}
                 confirmIcon={Play}
                 onConfirm={() => {
                     if (ask?.kind === 'busy') {
                         useLaunches.getState().setAsk(null);
-                        void startLaunch(ask.launchId, {
-                            restart: ask.restart,
-                            approve: ask.approve,
-                            replace: true,
-                            owner: ask.owner
-                        });
+                        void startLaunch(ask.launchId, { restart: ask.restart, approve: ask.approve, replace: true, owner: ask.owner });
                     }
                 }}
                 onOpenChange={() => useLaunches.getState().setAsk(null)}
