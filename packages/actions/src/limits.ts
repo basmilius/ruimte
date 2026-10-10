@@ -1,40 +1,24 @@
-/*
- * What a name on the canvas fits in: a node title, the label of a group, the word on a line. Past
- * this it is not a name any more but a paragraph in a header, in every list that prints it and in
- * the sidebar. Nothing about it is unique: two nodes may carry the same title, since an id is what
- * names a node and a title is what a person reads.
- */
+// A node title, a group label, the word on a line. Past this it is a paragraph in every header that prints it.
 export const MAX_TITLE_LENGTH = 120;
 
-/*
- * A message is a line or two an agent reads in front of its next turn, not a document. Anything
- * longer belongs in a note on the canvas, which the agent can be linked to and read whole.
- */
+// A line or two an agent reads before its next turn; anything longer belongs in a note it is linked to.
 export const MAX_NOTICE_LENGTH = 500;
 
 /*
- * The longest first prompt an agent is started with. A terminal agent is started by a line the daemon
- * types into a shell that has not read a byte yet, so that line waits in the tty's canonical buffer
- * (four kilobytes on Linux, eight on macOS) until the shell gets to it, and a line past that is
- * silently cut off. A kickoff prompt of a page fits well under it; anything longer belongs in a
- * file the agent is told to read.
+ * A terminal agent starts from a line typed into a shell that has not read a byte yet, so it waits in
+ * the tty's canonical buffer (4 KiB on Linux, 8 KiB on macOS), which silently cuts off anything longer.
  */
 export const MAX_PROMPT_LENGTH = 2000;
 
 /*
- * The agent nodes one caller may have open at a time. The canvas cap of 500 nodes is the ceiling of
- * the drawing, far past the point where a person would notice a loop; this is the narrow one, and it
- * is per caller rather than per project because a person opening agents of their own should never be
- * the one who runs out. It counts nodes that still exist, so removing them frees the count. A team
- * takes as many roles, so one team can fill that allowance and no more.
+ * Agent nodes one caller may have open at once, counting nodes that still exist. Per caller rather than
+ * per project, so a person opening agents of their own never runs out because of a loop elsewhere.
  */
 export const MAX_OPENED_PER_CALLER = 16;
 
 /*
- * The longest text and the most key combinations one computer use call types. The helper sends them
- * a key at a time, 40 ms apart behind the person's work, while every other call for an app waits
- * behind it; past this an agent types the rest in another call, or sets the value of a field. The
- * helper refuses more as well (`TypingLimit` in `apps/computer-use`).
+ * Per computer use call: the helper types a key every 40 ms while every other call for the app waits.
+ * The helper enforces the same limit (`TypingLimit` in `apps/computer-use`).
  */
 export const MAX_TYPED_LENGTH = 500;
 export const MAX_KEY_COMBOS = 50;

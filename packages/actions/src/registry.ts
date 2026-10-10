@@ -253,6 +253,33 @@ export class ActionRegistry<Context> {
     }
 
     async #execute<Name extends ActionName>(name: Name, input: unknown, call: ActionCall<Context>, confirmed: boolean): Promise<ActionResult<Name>> {
+        const checked = this.#checkCall(name, input, call);
+        if ('status' in checked) {
+            return checked;
+        }
+        try {
+            const expectedRevision = call.expectedRevision;
+            if (expectedRevision !== undefined && WRITES.has(ACTION_DEFINITIONS[name].effect)) {
+                if (!this.#checkRevision) {
+                    return failure(name, 'no-revision', `“${name}” cannot check a revision here, so it refuses one rather than write past it.`);
+                }
+                await this.#checkRevision(name, checked.input, { ...call, expectedRevision });
+            }
+            const handled = await checked.handler(checked.input, { ...call, confirmed });
+            if ('confirmation' in handled) {
+                return this.#askConfirmation(name, checked.input, call, confirmed, handled.confirmation);
+            }
+            return this.#completed(name, call, handled);
+        } catch (error) {
+            return this.#failed(name, error);
+        }
+    }
+
+    #checkCall<Name extends ActionName>(
+        name: Name,
+        input: unknown,
+        call: ActionCall<Context>
+    ): ActionFailed | { handler: ActionHandler<Context, Name>; input: ActionInput<Name> } {
         const definition = ACTION_DEFINITIONS[name];
         const handler = this.#handlers[name] as ActionHandler<Context, Name> | undefined;
         if (!handler) {
@@ -275,66 +302,50 @@ export class ActionRegistry<Context> {
         if (forbidden) {
             return failure(name, 'forbidden-field', `The ${call.actor.kind} actor may not give “${forbidden[0]}” to “${name}”.`);
         }
-        try {
-            const expectedRevision = call.expectedRevision;
-            if (expectedRevision !== undefined && WRITES.has(definition.effect)) {
-                if (!this.#checkRevision) {
-                    return failure(name, 'no-revision', `“${name}” cannot check a revision here, so it refuses one rather than write past it.`);
-                }
-                await this.#checkRevision(name, parsed.data, { ...call, expectedRevision });
-            }
-            const handled = await handler(parsed.data as ActionInput<Name>, {
-                ...call,
-                confirmed
-            });
-            if ('confirmation' in handled) {
-                if (call.dryRun === true) {
-                    return failure(name, 'confirmation-required', `A dry run of “${name}” cannot ask for confirmation.`);
-                }
-                if (confirmed) {
-                    return failure(name, 'confirmation-loop', `The confirmed action “${name}” asked for confirmation again.`);
-                }
-                const confirmationToken = crypto.randomUUID();
-                remember(this.#pending, confirmationToken, {
-                    name,
-                    input: parsed.data,
-                    actor: call.actor,
-                    expectedRevision: call.expectedRevision
-                });
-                return {
-                    status: 'needs_confirmation',
-                    action: name,
-                    confirmationToken,
-                    confirmation: handled.confirmation
-                };
-            }
-            const output = definition.output.safeParse(handled.output);
-            if (!output.success) {
-                return failure(name, 'invalid-output', `The “${name}” executor returned an invalid result.`, output.error.issues);
-            }
-            if (call.dryRun === true) {
-                return { status: 'completed', action: name, output: output.data as ActionOutput<Name>, dryRun: true };
-            }
-            if (handled.operation) {
-                return { status: handled.operation.status, action: name, output: output.data as ActionOutput<Name>, operationId: handled.operation.id };
-            }
-            const undoToken = handled.undo ? crypto.randomUUID() : undefined;
-            if (undoToken && handled.undo) {
-                remember(this.#undo, undoToken, {
-                    name,
-                    actor: call.actor,
-                    run: handled.undo
-                });
-            }
-            return {
-                status: 'completed',
-                action: name,
-                output: output.data as ActionOutput<Name>,
-                ...(undoToken ? { undoToken } : {})
-            };
-        } catch (error) {
-            return this.#failed(name, error);
+        return { handler, input: parsed.data as ActionInput<Name> };
+    }
+
+    #askConfirmation<Name extends ActionName>(
+        name: Name,
+        input: ActionInput<Name>,
+        call: ActionCall<Context>,
+        confirmed: boolean,
+        confirmation: ActionConfirmation
+    ): ActionResult<Name> {
+        if (call.dryRun === true) {
+            return failure(name, 'confirmation-required', `A dry run of “${name}” cannot ask for confirmation.`);
         }
+        if (confirmed) {
+            return failure(name, 'confirmation-loop', `The confirmed action “${name}” asked for confirmation again.`);
+        }
+        const confirmationToken = crypto.randomUUID();
+        remember(this.#pending, confirmationToken, {
+            name,
+            input,
+            actor: call.actor,
+            expectedRevision: call.expectedRevision
+        });
+        return { status: 'needs_confirmation', action: name, confirmationToken, confirmation };
+    }
+
+    #completed<Name extends ActionName>(name: Name, call: ActionCall<Context>, handled: HandledAction<Name, Context>): ActionResult<Name> {
+        const output = ACTION_DEFINITIONS[name].output.safeParse(handled.output);
+        if (!output.success) {
+            return failure(name, 'invalid-output', `The “${name}” executor returned an invalid result.`, output.error.issues);
+        }
+        const data = output.data as ActionOutput<Name>;
+        if (call.dryRun === true) {
+            return { status: 'completed', action: name, output: data, dryRun: true };
+        }
+        if (handled.operation) {
+            return { status: handled.operation.status, action: name, output: data, operationId: handled.operation.id };
+        }
+        if (!handled.undo) {
+            return { status: 'completed', action: name, output: data };
+        }
+        const undoToken = crypto.randomUUID();
+        remember(this.#undo, undoToken, { name, actor: call.actor, run: handled.undo });
+        return { status: 'completed', action: name, output: data, undoToken };
     }
 
     #failed(action: ActionName, error: unknown): ActionFailed {
