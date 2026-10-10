@@ -74,6 +74,7 @@ struct UiTableColumn: Equatable {
             }
         }
         var keys: [String] = []
+        // A row's keys reach the app without the order the agent wrote them in, so a derived table sorts them.
         for row in rows {
             for key in row.keys.sorted() where !keys.contains(key) && keys.count < derived { keys.append(key) }
         }
@@ -188,7 +189,7 @@ struct UiChartData: Equatable {
         }
         labels = rows.map { row in
             if let string = row["label"]?.stringValue { return string }
-            if let number = row["label"]?.numberValue { return UiFormat.number(number) }
+            if let number = row["label"]?.numberValue { return UiTableCell.textOf(.number(number)) }
             return ""
         }
         let kind = chart.string("kind")
@@ -231,11 +232,11 @@ struct UiLiveStatus: Equatable {
     let source: String?
     let reason: String?
 
-    /// Nil for a block without queries.
-    static func of(block: JSONValue, readings: [String: JSONValue], reading: Bool) -> Self? {
+    /// Nil for a block without queries. `order` names them as the block declares them.
+    static func of(block: JSONValue, order: [String], readings: [String: JSONValue], reading: Bool) -> Self? {
         let queries = block["queries"]?.objectValue ?? [:]
         guard !queries.isEmpty else { return nil }
-        let names = queries.keys.sorted()
+        let names = order.filter { queries[$0] != nil }
         let failed = names.first { name in
             readings[name].map { $0["state"] != .string("fresh") } ?? false
         }
@@ -252,6 +253,34 @@ struct UiLiveStatus: Equatable {
             sources: names.map { queries[$0]?["source"]?.stringValue ?? $0 },
             readAt: freshTimes.min().map(UiFormat.moment(milliseconds:)),
             source: failed.map { queries[$0]?["source"]?.stringValue ?? $0 },
-            reason: failed.flatMap { readings[$0]?["reason"]?.stringValue })
+            reason: failed.flatMap { UiReason.text(readings[$0]) })
+    }
+}
+
+/// Why a reading failed or a link stayed plain, in the person's language where this version knows the daemon's code,
+/// and as the daemon wrote it for any other code.
+enum UiReason {
+    static func text(_ reading: JSONValue?) -> String? {
+        text(code: reading?["code"]?.stringValue, reason: reading?["reason"]?.stringValue)
+    }
+
+    static func text(code: String?, reason: String?) -> String? {
+        switch code {
+        case "access-unavailable": String(localized: "The access of the chat that wrote this is no longer available.")
+        case "block-stale": String(localized: "This block changed since it was drawn.")
+        case "busy": String(localized: "Too many live blocks are reading right now.")
+        case "link-unchecked": String(localized: "This link has to be checked again.")
+        case "link-unsupported": String(localized: "This is not a link the machine can open.")
+        case "links-unsupported": String(localized: "The machine does not open links from blocks.")
+        case "query-undeclared": String(localized: "This block does not read that source.")
+        case "refresh-limit": String(localized: "This source reads at most once every ten seconds.")
+        case "result-too-large": String(localized: "What the source returned is too large.")
+        case "snapshot-too-large": String(localized: "The first readings were too large to keep.")
+        case "source-unregistered": String(localized: "The machine does not know this source.")
+        case "stale-read": String(localized: "Read the source again before you choose.")
+        case "timed-out": String(localized: "The source took too long to answer.")
+        case "unreadable": String(localized: "The source could not be read.")
+        default: reason
+        }
     }
 }

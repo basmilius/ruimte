@@ -7,6 +7,16 @@ public enum UiReplyPart: Equatable, Sendable {
 }
 
 public enum UiReplyParts {
+    /// The text a block was compiled from, by the daemon's UTF-16 offsets; nil when they do not fit the text.
+    public static func source(text: String, block: JSONValue) -> String? {
+        guard let start = block["start"]?.numberValue, let end = block["end"]?.numberValue,
+            start.isFinite, end.isFinite, start.rounded() == start, end.rounded() == end, start >= 0, end >= start,
+            end <= Double(text.utf16.count),
+            let range = Range(NSRange(location: Int(start), length: Int(end - start)), in: text)
+        else { return nil }
+        return String(text[range])
+    }
+
     public static func split(text: String, blocks: [JSONValue], streaming: Bool = false) -> [UiReplyPart] {
         var parts: [UiReplyPart] = []
         var position = 0

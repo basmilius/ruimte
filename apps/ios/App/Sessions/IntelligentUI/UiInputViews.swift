@@ -24,10 +24,7 @@ struct UiChecklistView: View {
                     let value = child.props["value"] ?? .null
                     UiItemView(
                         node: child, selected: values.contains(value), enabled: enabled,
-                        toggle: {
-                            let next = values.contains(value) ? values.filter { $0 != value } : values + [value]
-                            context.change(node, to: .array(next))
-                        }, context: context)
+                        toggle: { context.toggle(node, item: value) }, context: context)
                 } else {
                     UiNodeView(node: child, parent: node.type, context: context)
                 }
@@ -90,12 +87,16 @@ struct UiSwitchView: View {
     }
 }
 
-/// The label on the left and the value on the right, the track under them. The value follows the finger at once
-/// and the block evaluates again on every step it lands on.
+/// The label on the left and the value on the right, the track under them. The value follows the finger at once;
+/// while it drags the block evaluates at most every tenth of a second, and once more where it lets go.
 struct UiSliderView: View {
     let node: UiNode
     let context: UiRenderContext
     @State private var draft: Double?
+    @State private var dragging = false
+    @State private var lastSent: ContinuousClock.Instant?
+
+    private static let dragInterval: Duration = .milliseconds(100)
 
     var body: some View {
         let bound = (node.boundValue ?? node.props["value"])?.numberValue ?? 0
@@ -104,12 +105,7 @@ struct UiSliderView: View {
         let step = node.number("step").flatMap { $0 > 0 ? $0 : nil }
         let value = min(high, max(low, draft ?? bound))
         let reading = UiFormat.withUnit(UiFormat.number(value), node.string("unit"))
-        let binding = Binding(
-            get: { value },
-            set: { next in
-                draft = next
-                if next != bound { context.change(node, to: .number(next)) }
-            })
+        let binding = Binding(get: { value }, set: { move(to: $0, bound: bound) })
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 Text(node.label).font(.subheadline).foregroundStyle(MobileStyle.text)
@@ -119,9 +115,9 @@ struct UiSliderView: View {
             .accessibilityHidden(true)
             Group {
                 if let step {
-                    Slider(value: binding, in: low...high, step: step)
+                    Slider(value: binding, in: low...high, step: step, onEditingChanged: editing)
                 } else {
-                    Slider(value: binding, in: low...high)
+                    Slider(value: binding, in: low...high, onEditingChanged: editing)
                 }
             }
             .tint(MobileStyle.accent)
@@ -131,10 +127,36 @@ struct UiSliderView: View {
         }
         .padding(.horizontal, 8).frame(minHeight: 44)
         .modifier(UiPending(complete: node.complete))
-        .onChange(of: bound) { _, next in
-            if next == draft { draft = nil }
-        }
         .sensoryFeedback(.selection, trigger: value)
+    }
+
+    private func move(to next: Double, bound: Double) {
+        draft = next
+        guard dragging else {
+            settle()
+            return
+        }
+        let now = ContinuousClock.now
+        if next != bound, lastSent.map({ $0.duration(to: now) >= Self.dragInterval }) ?? true {
+            lastSent = now
+            context.change(node, to: .number(next))
+        }
+    }
+
+    private func editing(_ started: Bool) {
+        dragging = started
+        if !started { settle() }
+    }
+
+    /// Sends where the slider came to rest and then shows what the block made of it, even a value it refused or
+    /// rounded, so the slider never sticks on a draft.
+    private func settle() {
+        lastSent = nil
+        guard let value = draft else { return }
+        Task {
+            await context.apply(node, .number(value))
+            if !dragging && draft == value { draft = nil }
+        }
     }
 }
 
@@ -172,5 +194,34 @@ struct UiSegmentedView: View {
         .padding(.horizontal, 8)
         .modifier(UiPending(complete: node.complete))
         .sensoryFeedback(.selection, trigger: picked)
+    }
+}
+
+/// A local action as a bordered button with its children as the label. It sets local values only; like an input it
+/// closes once the block is answered.
+struct UiButtonView: View {
+    let node: UiNode
+    let context: UiRenderContext
+
+    var body: some View {
+        let enabled = context.runnable(node)
+        Button {
+            context.run(node)
+        } label: {
+            UiNodesView(nodes: node.children, parent: node.type, context: context)
+                .font(.subheadline.weight(.medium)).foregroundStyle(MobileStyle.text)
+                .padding(.horizontal, 14).frame(minHeight: 36)
+                .background(MobileStyle.hover, in: Capsule())
+                .overlay { Capsule().strokeBorder(MobileStyle.border) }
+                .frame(minHeight: 44).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .opacity(enabled || !node.complete ? 1 : 0.5)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(node.label)
+        .accessibilityAddTraits(.isButton)
+        .padding(.horizontal, 8)
+        .modifier(UiPending(complete: node.complete))
     }
 }

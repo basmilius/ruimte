@@ -22098,6 +22098,188 @@
           }
         }
       }
+    },
+    "Collapse %@" : {
+      "comment" : "%@ is the name of a folder",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klap %@ in"
+          }
+        }
+      }
+    },
+    "Expand %@" : {
+      "comment" : "%@ is the name of a folder",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klap %@ uit"
+          }
+        }
+      }
+    },
+    "Reading live data" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live gegevens lezen"
+          }
+        }
+      }
+    },
+    "Not available right now" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nu niet beschikbaar"
+          }
+        }
+      }
+    },
+    "The access of the chat that wrote this is no longer available." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De toegang van de chat die dit schreef is niet meer beschikbaar."
+          }
+        }
+      }
+    },
+    "This block changed since it was drawn." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit blok is veranderd sinds het getekend werd."
+          }
+        }
+      }
+    },
+    "Too many live blocks are reading right now." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Er lezen nu te veel live blokken tegelijk."
+          }
+        }
+      }
+    },
+    "This link has to be checked again." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze link moet opnieuw gecontroleerd worden."
+          }
+        }
+      }
+    },
+    "This is not a link the machine can open." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit is geen link die de machine kan openen."
+          }
+        }
+      }
+    },
+    "The machine does not open links from blocks." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine opent geen links uit blokken."
+          }
+        }
+      }
+    },
+    "This block does not read that source." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit blok leest die bron niet."
+          }
+        }
+      }
+    },
+    "This source reads at most once every ten seconds." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze bron leest hooguit eens per tien seconden."
+          }
+        }
+      }
+    },
+    "What the source returned is too large." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wat de bron teruggaf is te groot."
+          }
+        }
+      }
+    },
+    "The first readings were too large to keep." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De eerste metingen waren te groot om te bewaren."
+          }
+        }
+      }
+    },
+    "The machine does not know this source." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine kent deze bron niet."
+          }
+        }
+      }
+    },
+    "Read the source again before you choose." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lees de bron opnieuw voordat je kiest."
+          }
+        }
+      }
+    },
+    "The source took too long to answer." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De bron deed er te lang over om te antwoorden."
+          }
+        }
+      }
+    },
+    "The source could not be read." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De bron kon niet gelezen worden."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

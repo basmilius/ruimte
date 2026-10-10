@@ -12,7 +12,8 @@ struct UiBlockFooter: View {
 
     var body: some View {
         let model = context.model
-        let live = UiLiveStatus.of(block: model.block, readings: model.readings, reading: model.reading)
+        let live = UiLiveStatus.of(
+            block: model.block, order: model.queryNames, readings: model.readings, reading: model.reading)
         let fixes = UiBlockFix.list((model.block["diagnostics"]?.arrayValue ?? []) + model.diagnostics)
         let answered = answeredLabel
         if live != nil || answered != nil || !fixes.isEmpty || shownAsText != nil {
@@ -34,7 +35,7 @@ struct UiBlockFooter: View {
                             fixesOpen.toggle()
                         } label: {
                             Label(String(localized: "\(fixes.count) fixes"), lucideIcon: "wrench", iconSize: 12)
-                                .frame(minHeight: 32).contentShape(Rectangle())
+                                .frame(minHeight: 44).contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityValue(fixesOpen ? String(localized: "Expanded") : String(localized: "Collapsed"))
@@ -125,7 +126,7 @@ private struct UiLivePart: View {
                     Text("Not read")
                 }
             }
-            .frame(minHeight: 32).contentShape(Rectangle())
+            .frame(minHeight: 44).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(detail == nil)

@@ -88,8 +88,10 @@ extension EnvironmentValues {
     /// While the block streams or reads live data, a running step spins; in a still block it is a dot.
     var live: Bool {
         streaming
-            || UiLiveStatus.of(block: model.block, readings: model.readings, reading: model.reading)
-                .map { $0.state != .refused } == true
+            || UiLiveStatus.of(
+                block: model.block, order: model.queryNames, readings: model.readings, reading: model.reading
+            )
+            .map { $0.state != .refused } == true
     }
 
     /// An input changes only through its binding, once its own node closed and nothing was chosen yet.
@@ -97,8 +99,36 @@ extension EnvironmentValues {
         node.bindings["value"] != nil && node.complete && model.complete && model.answer == nil && !model.sending
     }
 
+    /// A Button runs its action under the same rules as an input, unless the agent disabled it.
+    func runnable(_ node: UiNode) -> Bool {
+        node.type == "Button" && node.bool("disabled") != true && node.complete && model.complete
+            && model.answer == nil && !model.sending
+    }
+
     func change(_ node: UiNode, to value: JSONValue) {
         guard editable(node) else { return }
         Task { await model.change(nodeID: node.id, prop: "value", value: value) }
+    }
+
+    /// Waits until the change is applied, so a control can let go of what it showed meanwhile.
+    func apply(_ node: UiNode, _ value: JSONValue) async {
+        guard editable(node) else { return }
+        await model.change(nodeID: node.id, prop: "value", value: value)
+    }
+
+    /// Adds `item` to a Checklist's values or takes it out, against the values the changes before it left.
+    func toggle(_ node: UiNode, item: JSONValue) {
+        guard editable(node) else { return }
+        Task {
+            await model.change(nodeID: node.id, prop: "value") { current in
+                let values = current?.arrayValue ?? []
+                return .array(values.contains(item) ? values.filter { $0 != item } : values + [item])
+            }
+        }
+    }
+
+    func run(_ node: UiNode) {
+        guard runnable(node) else { return }
+        Task { await model.act(nodeID: node.id) }
     }
 }

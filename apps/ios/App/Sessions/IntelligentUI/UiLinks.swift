@@ -15,7 +15,7 @@ enum UiLinkState: Equatable {
             return .plain(reason: nil)
         }
         if reading["state"] == .string("chip") { return .chip(label: reading["label"]?.stringValue) }
-        return .plain(reason: reading["reason"]?.stringValue ?? String(localized: "Outside the project, shown as text"))
+        return .plain(reason: UiReason.text(reading) ?? String(localized: "Outside the project, shown as text"))
     }
 }
 
@@ -76,9 +76,11 @@ struct UiLinkFace {
                 context.host.open?(destination)
                 return nil
             }
-            return reading["reason"]?.stringValue ?? String(localized: "Outside the project, shown as text")
-        } catch {
+            return UiReason.text(reading) ?? String(localized: "Outside the project, shown as text")
+        } catch is CancellationError {
             return nil
+        } catch {
+            return String(localized: "Not available right now")
         }
     }
 

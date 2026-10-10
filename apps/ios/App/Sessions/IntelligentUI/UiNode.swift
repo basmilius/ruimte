@@ -78,13 +78,13 @@ enum UiCatalog {
         "Summary", "Callout", "Tag", "Progress", "Steps", "Step", "Stats", "Stat", "EntityList", "Entry", "Table",
         "Column", "Chart", "Tabs", "Tab", "Sections", "Section", "CodeBlock", "Image", "Sources", "Source", "File",
         "Diff", "Commit", "Node", "Checklist", "Item", "Switch", "Slider", "Segmented", "Option", "Show", "Each",
-        "Choices", "Choice",
+        "Button", "Choices", "Choice",
     ]
     static let links: Set<String> = ["File", "Diff", "Commit", "Node"]
     /// Parents whose text is read as written: code, a short tag and the labels of controls, whose accessible name
     /// and sent text are that same string.
     static let literalParents: Set<String> = [
-        "CodeBlock", "Tag", "Choice", "Item", "Switch", "Slider", "Segmented", "Option", "Column",
+        "CodeBlock", "Tag", "Choice", "Item", "Switch", "Slider", "Segmented", "Option", "Column", "Button",
     ]
 
     /// Which `$text` nodes of a block the agent wrote out; the value of an expression is data and stays as it is.

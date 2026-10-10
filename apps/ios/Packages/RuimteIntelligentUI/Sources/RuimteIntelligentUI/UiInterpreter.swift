@@ -14,10 +14,15 @@ public actor UiInterpreter {
 
     public init() {}
 
-    public func evaluate(block: JSONValue, values: JSONValue = .object([:]), queries: JSONValue = .object([:]), change: JSONValue? = nil) throws -> JSONValue {
+    /// `change` sets one binding (`nodeId`, `prop`, `value`); `action` runs the action of a Button by its `nodeId`.
+    public func evaluate(
+        block: JSONValue, values: JSONValue = .object([:]), queries: JSONValue = .object([:]), change: JSONValue? = nil,
+        action: String? = nil
+    ) throws -> JSONValue {
         try Task.checkCancellation()
         var request: [String: JSONValue] = ["block": block, "values": values, "queries": queries]
         if let change { request["change"] = change }
+        if let action { request["action"] = .object(["nodeId": .string(action)]) }
         let data = try JSONValue.object(request).encoded()
         guard data.count <= 1024 * 1024 else { throw UiInterpreterError.tooLarge }
         let engine = try engine()

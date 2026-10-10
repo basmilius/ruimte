@@ -94,10 +94,74 @@ final class IntelligentUIPresentationTests: XCTestCase {
             "$a": .object(["state": .string("fresh"), "readAt": .number(2_000)]),
             "$b": .object(["state": .string("failed"), "readAt": .number(3_000), "reason": .string("gone")]),
         ]
-        let live = UiLiveStatus.of(block: block, readings: readings, reading: false)
+        let live = UiLiveStatus.of(block: block, order: ["$b", "$a"], readings: readings, reading: false)
         XCTAssertEqual(live?.state, .failed)
         XCTAssertEqual(live?.source, "launch.status")
+        XCTAssertEqual(live?.sources, ["launch.status", "git.status"])
         XCTAssertEqual(live?.readAt, Date(timeIntervalSince1970: 2))
+        XCTAssertEqual(live?.reason, "gone")
+    }
+
+    func testAKnownReasonCodeReadsInTheAppsWordsAndAnUnknownOneAsWritten() {
+        XCTAssertEqual(
+            UiReason.text(code: "timed-out", reason: "late"), String(localized: "The source took too long to answer."))
+        XCTAssertEqual(UiReason.text(code: "from-a-newer-machine", reason: "As written"), "As written")
+        XCTAssertNil(UiReason.text(code: nil, reason: nil))
+    }
+
+    /// Labels, table columns and chart data against the desktop's own functions, from fixtures the generator writes.
+    func testTablesChartsAndLabelsMatchTheDesktop() throws {
+        let url = try XCTUnwrap(
+            Bundle(for: Self.self).url(forResource: "intelligent-ui-presentation", withExtension: "json"))
+        let cases = try XCTUnwrap(JSONValue.decode(Data(contentsOf: url)).arrayValue)
+        XCTAssertFalse(cases.isEmpty)
+        for fixture in cases {
+            let name = fixture["name"]?.stringValue ?? ""
+            var nodes: [String: UiNode] = [:]
+            func visit(_ list: [UiNode]) {
+                for node in list {
+                    nodes[node.id] = node
+                    visit(node.children)
+                }
+            }
+            visit(UiNode.list(fixture["nodes"]?.arrayValue ?? []))
+            for (id, expected) in fixture["expected"]?.objectValue ?? [:] {
+                let node = try XCTUnwrap(nodes[id], name)
+                XCTAssertEqual(node.label, expected["label"]?.stringValue, "\(name) \(id)")
+                if let columns = expected["columns"]?.arrayValue {
+                    let actual = UiTableColumn.of(node)
+                    let wanted = columns.map {
+                        UiTableColumn(
+                            key: $0["key"]?.stringValue ?? "", title: $0["title"]?.stringValue ?? "",
+                            unit: $0["unit"]?.stringValue,
+                            kind: UiTableColumn.Kind(rawValue: $0["as"]?.stringValue ?? "") ?? .text)
+                    }
+                    if node.children(of: "Column").isEmpty {
+                        // Derived columns follow the rows' key order on the desktop; that order does not reach the app.
+                        XCTAssertEqual(actual.sorted { $0.key < $1.key }, wanted.sorted { $0.key < $1.key }, name)
+                    } else {
+                        XCTAssertEqual(actual, wanted, name)
+                    }
+                }
+                if let chart = expected["chart"] {
+                    let actual = UiChartData(node)
+                    guard let actual, chart != .null else {
+                        XCTAssertEqual(actual == nil, chart == .null, name)
+                        continue
+                    }
+                    XCTAssertEqual(actual.labels, chart["labels"]?.arrayValue?.compactMap(\.stringValue), name)
+                    XCTAssertEqual(actual.min, chart["min"]?.numberValue, name)
+                    XCTAssertEqual(actual.max, chart["max"]?.numberValue, name)
+                    XCTAssertEqual(actual.truncated, chart["truncated"]?.boolValue, name)
+                    var series: [String: [Double?]] = [:]
+                    for entry in chart["series"]?.arrayValue ?? [] {
+                        series[entry["key"]?.stringValue ?? ""] = (entry["values"]?.arrayValue ?? []).map(\.numberValue)
+                    }
+                    XCTAssertEqual(
+                        Dictionary(uniqueKeysWithValues: actual.series.map { ($0.key, $0.values) }), series, name)
+                }
+            }
+        }
     }
 
     @MainActor private func saveModel(

@@ -18,9 +18,9 @@ struct UiReplyView: View {
 
     var body: some View {
         let streaming = item["streaming"]?.boolValue == true
+        let text = item["text"]?.stringValue ?? ""
         let parts = Self.identified(
-            UiReplyParts.split(
-                text: item["text"]?.stringValue ?? "", blocks: item["ui"]?.arrayValue ?? [], streaming: streaming))
+            UiReplyParts.split(text: text, blocks: item["ui"]?.arrayValue ?? [], streaming: streaming))
         VStack(alignment: .leading, spacing: 14) {
             ForEach(Array(parts.enumerated()), id: \.element.id) { index, part in
                 switch part.part {
@@ -34,6 +34,7 @@ struct UiReplyView: View {
                         block: block, model: model(block), flash: highlight(block),
                         frozen: item["uiQueries"]?["blocks"]?[id],
                         answered: item["uiAnswers"]?[id],
+                        source: UiReplyParts.source(text: text, block: block),
                         localKey:
                             "\(chat?.scopeID ?? "")\n\(chat?.chatID ?? "")\n\(item["id"]?.stringValue ?? "")\n\(id)")
                 }
@@ -75,18 +76,20 @@ private struct UiReplyBlock: View {
     let flash: UUID?
     let frozen: JSONValue?
     let answered: JSONValue?
+    let source: String?
     let localKey: String
 
     private struct Update: Equatable {
         let block: JSONValue
         let frozen: JSONValue?
         let answered: JSONValue?
+        let source: String?
     }
 
     var body: some View {
         UiBlockView(model: model, localKey: localKey, flash: flash)
-            .task(id: Update(block: block, frozen: frozen, answered: answered)) {
-                await model.update(block: block, frozen: frozen, answered: answered)
+            .task(id: Update(block: block, frozen: frozen, answered: answered, source: source)) {
+                await model.update(block: block, frozen: frozen, answered: answered, source: source)
             }
     }
 }
