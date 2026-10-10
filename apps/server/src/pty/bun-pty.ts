@@ -1,4 +1,3 @@
-import { constants } from 'node:os';
 import { signalExitCode, type PtyAdapter, type PtyProcess, type PtySpawnOptions } from './pty.ts';
 
 // A backgrounded grandchild may keep the PTY open forever, so only wait briefly for trailing output.
@@ -31,7 +30,7 @@ class BunPtyProcess implements PtyProcess {
                 }
             },
             onExit: (_subprocess, exitCode, signalCode) => {
-                this.processExitCode = exitCode ?? signalExitCode(String(signalCode), constants.signals as Record<string, number>);
+                this.processExitCode = exitCode ?? signalExitCode(String(signalCode));
                 this.reportExitIfDone();
             }
         });

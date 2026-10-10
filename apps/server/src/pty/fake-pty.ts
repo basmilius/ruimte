@@ -1,4 +1,3 @@
-import { constants } from 'node:os';
 import { signalExitCode, type PtyAdapter, type PtyProcess, type PtySpawnOptions } from './pty.ts';
 
 const encoder = new TextEncoder();
@@ -29,7 +28,6 @@ export class FakePty implements PtyProcess {
         });
     }
 
-    /* Everything written into the PTY so far, as one string. */
     get typed(): string {
         return this.input.join('');
     }
@@ -49,7 +47,7 @@ export class FakePty implements PtyProcess {
      */
     kill(signal: NodeJS.Signals = 'SIGHUP'): void {
         this.signals.push(signal);
-        queueMicrotask(() => this.exit(signalExitCode(signal, constants.signals as Record<string, number>)));
+        queueMicrotask(() => this.exit(signalExitCode(signal)));
     }
 
     onData(callback: (data: Uint8Array) => void): void {

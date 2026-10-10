@@ -1,3 +1,4 @@
+import { constants } from 'node:os';
 import { basename } from 'node:path';
 
 export interface PtySpawnOptions {
@@ -40,6 +41,6 @@ export function defaultShellArgs(shell: string): string[] {
     return LOGIN_CAPABLE.has(basename(shell)) ? ['-l'] : [];
 }
 
-export function signalExitCode(signal: string, signals: Record<string, number>): number {
+export function signalExitCode(signal: string, signals: Record<string, number> = constants.signals as Record<string, number>): number {
     return 128 + (signals[signal] ?? 0);
 }
