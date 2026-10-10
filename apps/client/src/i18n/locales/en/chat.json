@@ -12,7 +12,7 @@
             "summarize": "Summarize for the original",
             "summarizeFor": "Summarize for {{title}}",
             "showOriginal": "Show original",
-            "summaryFailed": "The summary could not be asked for"
+            "summaryFailed": "Could not ask for the summary"
         },
         "refusal": {
             "originalGone": "The original is no longer in this project"
@@ -60,7 +60,7 @@
         "cwd": "Working folder",
         "terminal": "Terminal",
         "paste": "Paste without Enter",
-        "noShell": "No verified empty shell is available in this folder. Open a zsh terminal here, or clear its input. Other shells do not yet support preparing commands.",
+        "noShell": "This folder has no verified empty shell. Open a zsh terminal here, or clear its input. Other shells do not yet support preparing commands.",
         "offline": "The machine of this chat is not connected.",
         "failed": "The command could not be prepared.",
         "ready": "Command prepared",

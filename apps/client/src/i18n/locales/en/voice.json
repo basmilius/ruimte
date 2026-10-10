@@ -78,7 +78,7 @@
         "error": "Dictation stopped",
         "preview": "Live transcript",
         "failed": "Speech to Text could not start",
-        "unsupportedLanguage": "This language is not supported by Speech to Text. Choose another language in Voice settings.",
+        "unsupportedLanguage": "Speech to Text does not support this language. Choose another language in Voice settings.",
         "terminalDraft": "Dictated text to paste",
         "paste": "Paste into terminal",
         "discard": "Discard",

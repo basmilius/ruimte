@@ -40,8 +40,7 @@ async function load(language: AppLanguage): Promise<void> {
 
 /*
  * English is loaded beside any other language, never instead of it: a key that has not been
- * translated yet reads as English rather than as its own name. It is the one language that is
- * always in memory, which is what makes a missing word a small flaw and not a broken screen.
+ * translated yet reads as English rather than as its own name.
  */
 async function ensure(language: AppLanguage): Promise<void> {
     await load(language);
