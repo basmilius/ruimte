@@ -35,28 +35,32 @@ struct UiChoiceView: View {
         let answeredID = model.answer?["choiceId"]?.stringValue
         let chosen = answeredID == node.id || (model.sending && context.local.pick("choosing") == node.id)
         let waiting = context.streaming
-        let unavailable = node.bool("disabled") == true || !context.host.connected
+        let refused = model.readings.values.contains { $0["state"] == .string("refused") }
+        let unavailable = node.bool("disabled") == true || !context.host.connected || refused
         let failed = model.answer == nil && model.failedChoiceID == node.id
-        // A live reading or a changed input closes a block for a moment; only what lasts dims the rows.
         let closed = waiting || unavailable || model.answer != nil || model.sending
+        // A live reading or a changed input closes a block for a moment; only what lasts dims the rows.
+        let reading = !closed && !model.canChoose
         let reason: String? =
             waiting
             ? String(localized: "Available when the reply is done")
-            : model.answer == nil && !model.sending && unavailable ? String(localized: "Not available") : nil
+            : reading
+                ? String(localized: "Reading live data")
+                : model.answer == nil && !model.sending && unavailable ? String(localized: "Not available") : nil
         VStack(alignment: .leading, spacing: 4) {
             Button {
                 choose()
             } label: {
-                row(label: label, detail: detail, chosen: chosen, failed: failed)
+                row(label: label, detail: detail, chosen: chosen, failed: failed, reading: reading)
             }
-            .buttonStyle(UiChoiceStyle(open: !closed))
-            .disabled(closed)
+            .buttonStyle(UiChoiceStyle(open: !closed && !reading))
+            .disabled(closed || reading)
             .opacity(waiting ? 0.6 : closed && !chosen ? 0.5 : 1)
             .accessibilityLabel(label)
             .accessibilityHint(reason ?? detail ?? "")
             .accessibilityValue(chosen ? stateWord : "")
             .contextMenu {
-                Button(String(localized: "Send"), lucideIcon: "arrow-right") { choose() }.disabled(closed)
+                Button(String(localized: "Send"), lucideIcon: "arrow-right") { choose() }.disabled(closed || reading)
                 Button(String(localized: "Copy text"), lucideIcon: "copy") {
                     UIPasteboard.general.string = detail ?? label
                 }
@@ -92,7 +96,7 @@ struct UiChoiceView: View {
         context.model.answerState == "queued" ? String(localized: "Queued") : String(localized: "Sent")
     }
 
-    private func row(label: String, detail: String?, chosen: Bool, failed: Bool) -> some View {
+    private func row(label: String, detail: String?, chosen: Bool, failed: Bool, reading: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(lucide: "arrow-right", size: 14)
                 .foregroundStyle(node.bool("primary") == true ? MobileStyle.accent : MobileStyle.faint)
@@ -115,6 +119,8 @@ struct UiChoiceView: View {
                 }
                 .font(.caption.weight(.medium)).foregroundStyle(MobileStyle.accent)
                 .accessibilityHidden(true)
+            } else if reading {
+                Spinner(size: 12).accessibilityHidden(true)
             }
         }
         .padding(.horizontal, 12).padding(.vertical, 10)
@@ -153,7 +159,8 @@ struct UiChoiceJump: Equatable {
     let itemID: String
     let blockID: String
     let revision: String
-    let nonce = UUID()
+    /// New for every tap, so tapping the same line again reveals it again.
+    let nonce: UUID
 
     init?(_ origin: JSONValue) {
         guard let itemID = origin["itemId"]?.stringValue, !itemID.isEmpty,
@@ -163,6 +170,7 @@ struct UiChoiceJump: Equatable {
         self.itemID = itemID
         self.blockID = blockID
         self.revision = revision
+        nonce = UUID()
     }
 }
 

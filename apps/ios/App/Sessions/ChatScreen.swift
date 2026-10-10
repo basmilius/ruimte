@@ -158,9 +158,7 @@ struct ChatScreen: View {
             renameAfterList = nil
             askBookmarkName(id)
         }
-        .task(id: model.presentation.uiChoiceRequest) {
-            if let target = model.presentation.uiChoiceRequest { await model.revealUiChoice(target) }
-        }
+        .task(id: model.presentation.uiChoiceRequest) { await revealRequestedChoice() }
         .onChange(of: model.presentation.bookmarkRequest) { _, request in
             guard let request else { return }
             model.presentation.bookmarkRequest = nil
@@ -296,6 +294,15 @@ struct ChatScreen: View {
                     description: Text("Messages and agent work appear here.")))
         }
         return nil
+    }
+
+    /// Clears the request once it was revealed, so tapping the same line again asks again.
+    private func revealRequestedChoice() async {
+        guard let target = model.presentation.uiChoiceRequest else { return }
+        await model.revealUiChoice(target)
+        if !Task.isCancelled, model.presentation.uiChoiceRequest == target {
+            model.presentation.uiChoiceRequest = nil
+        }
     }
 
     private func start() {

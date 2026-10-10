@@ -12,8 +12,8 @@ struct ChatUserMessage: View {
     private var long: Bool { item.text("text").count > 600 || item.text("text").split(separator: "\n").count > 8 }
 
     private func choiceReveal(_ origin: JSONValue) -> (() -> Void)? {
-        guard let presentation, let target = UiChoiceJump(origin) else { return nil }
-        return { presentation.uiChoiceRequest = target }
+        guard let presentation, UiChoiceJump(origin) != nil else { return nil }
+        return { presentation.uiChoiceRequest = UiChoiceJump(origin) }
     }
 
     var body: some View {
