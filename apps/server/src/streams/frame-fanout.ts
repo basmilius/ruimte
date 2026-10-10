@@ -3,10 +3,7 @@ import type { ClientSinks } from '../client-sinks.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import type { LiveStreamHub } from './live-stream.ts';
 
-/*
- * A subscription that may be cancelled before `subscribe` came back with what releases it; the flag
- * is what a frame arriving in between reads.
- */
+/* Cancellable before `subscribe` returns its release; a frame arriving in between reads the flag. */
 interface FrameSubscription {
     cancelled: boolean;
     release: (() => void) | null;
@@ -68,7 +65,6 @@ export class FrameFanout {
         this.forget(streamKey, clientId);
     }
 
-    /* Takes every client off one stream, for a session that is going. */
     stopAll(streamKey: string): void {
         for (const clientId of [...(this.byStream.get(streamKey)?.keys() ?? [])]) {
             this.stop(streamKey, clientId);

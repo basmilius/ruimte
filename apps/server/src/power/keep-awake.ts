@@ -81,7 +81,6 @@ export class KeepAwake {
         return keepAwakeAvailable(this.options.platform);
     }
 
-    /* Whether a block is held right now. */
     get holding(): boolean {
         return this.held !== null;
     }

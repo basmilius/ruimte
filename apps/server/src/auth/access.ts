@@ -21,10 +21,9 @@ export function reachabilityOf(address: string): Reachability {
 }
 
 /*
- * A browser sends the page's origin with the upgrade; a page that is not ours must not drive
- * the daemon with the person's cookies-free but reachable socket. Our own origin, the desktop app's
- * own scheme and any loopback origin (the dev server) pass; no header passes too, since that is a
- * non-browser client which has to hold a credential anyway.
+ * A browser sends the page's origin with the upgrade, and a page that is not ours must not drive the
+ * daemon. Our own origin, the desktop app's scheme and any loopback origin (the dev server) pass; no
+ * header passes too, since that is a non-browser client which has to hold a credential anyway.
  */
 export function originAllowed(origin: string | null, host: string | null): boolean {
     if (!origin || origin === DESKTOP_APP_ORIGIN) {
@@ -71,18 +70,20 @@ export function preflightHeaders(cors: Record<string, string>): Record<string, s
     };
 }
 
+function setAll(target: Headers, headers: Record<string, string>): void {
+    for (const [name, value] of Object.entries(headers)) {
+        target.set(name, value);
+    }
+}
+
 /* `response` with `headers` on top. A response whose headers are fixed (a redirect, a fetched one) is copied rather than changed. */
 export function withHeaders(response: Response, headers: Record<string, string>): Response {
     try {
-        for (const [name, value] of Object.entries(headers)) {
-            response.headers.set(name, value);
-        }
+        setAll(response.headers, headers);
         return response;
     } catch {
         const merged = new Headers(response.headers);
-        for (const [name, value] of Object.entries(headers)) {
-            merged.set(name, value);
-        }
+        setAll(merged, headers);
         return new Response(response.body, { status: response.status, statusText: response.statusText, headers: merged });
     }
 }

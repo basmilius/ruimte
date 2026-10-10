@@ -36,21 +36,24 @@ interface SessionRecord {
     push?: PushSubscribePayload;
 }
 
+function emptyState(account: Binding): State {
+    return { sessions: [], spentNonces: [], revokedKeys: [], account };
+}
+
 function statementRecord(record: z.infer<typeof StoredRecordSchema>): SessionRecord | null {
     return record.origin === 'statement' && record.publicKey !== undefined ? { ...record, publicKey: record.publicKey, origin: 'statement' } : null;
 }
 
-/*
- * The nonces of statements this machine took, kept until the statement could no longer be believed
- * anyway, and the keys a person revoked. Both are on disk: a restart inside a statement's lifetime
- * must not make its nonce new again, and a revoked device must not walk back in on the next statement
- * the address book hands it. Dropped rather than refused when they will not read, like the sessions.
- */
 const AccountBindingSchema = z.object({ id: z.string().min(1), since: z.number() });
 export type AccountBinding = z.infer<typeof AccountBindingSchema>;
 
 const FileSchema = z.object({
     sessions: z.array(StoredRecordSchema),
+    /*
+     * Nonces are kept until their statement could no longer be believed anyway, and revoked keys for good,
+     * both on disk: a restart must not make a nonce new again, and a revoked device must not walk back in
+     * on the next statement. Dropped rather than refused when they will not read, like the sessions.
+     */
     spentNonces: z
         .array(z.object({ nonce: z.string().min(1), until: z.number() }))
         .optional()
@@ -299,12 +302,12 @@ export class AuthStore {
                       revokedKeys: parsed.data.revokedKeys ?? [],
                       account: parsed.data.account
                   }
-                : { sessions: [], spentNonces: [], revokedKeys: [], account: null };
+                : emptyState(null);
         } catch (e) {
             if (!isNotFound(e)) {
                 console.warn('The auth file would not parse; starting with no sessions:', errorText(e));
             }
-            this.state = { sessions: [], spentNonces: [], revokedKeys: [], account: isNotFound(e) ? undefined : null };
+            this.state = emptyState(isNotFound(e) ? undefined : null);
         }
         return this.state;
     }

@@ -57,6 +57,12 @@ export async function handleLiveStreamRequest(
     let pending: Uint8Array | null = null;
     let awaitingKeyFrame = false;
     let cancelled = false;
+    const release = (): void => {
+        cancelled = true;
+        pending = null;
+        unsubscribe?.();
+        unsubscribe = null;
+    };
     const stream = new ReadableStream<Uint8Array>({
         async start(controller) {
             controller.enqueue(LIVE_STREAM_MAGIC.slice());
@@ -93,23 +99,9 @@ export async function handleLiveStreamRequest(
                 pending = null;
             }
         },
-        cancel() {
-            cancelled = true;
-            pending = null;
-            unsubscribe?.();
-            unsubscribe = null;
-        }
+        cancel: release
     });
-    request.signal.addEventListener(
-        'abort',
-        () => {
-            cancelled = true;
-            pending = null;
-            unsubscribe?.();
-            unsubscribe = null;
-        },
-        { once: true }
-    );
+    request.signal.addEventListener('abort', release, { once: true });
     return new Response(stream, {
         headers: {
             ...headers,
