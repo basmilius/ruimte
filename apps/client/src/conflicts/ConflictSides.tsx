@@ -6,20 +6,18 @@ import { Button, EmptyState, Icon } from '@adecore/ui';
 interface SideProps {
     readonly label: string;
     readonly lines: readonly string[];
-    readonly take: string;
-    readonly disabled: boolean;
     onTake(): void;
 }
 
 /* One side of the conflict on screen: what that side holds, and the button that makes it the answer. */
-function Side({ label, lines, take, disabled, onTake }: SideProps) {
+function Side({ label, lines, onTake }: SideProps) {
     const { t } = useTranslation('conflicts');
     return (
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-2">
                 <span className="truncate text-xs font-medium text-text-muted">{label}</span>
-                <Button size="xs" className="ml-auto" disabled={disabled} onClick={onTake}>
-                    {take}
+                <Button size="xs" className="ml-auto" onClick={onTake}>
+                    {t('side.take')}
                 </Button>
             </div>
             <div className="min-h-0 grow overflow-auto">
@@ -42,11 +40,7 @@ interface Props {
     onBoth(first: MergeSide): void;
 }
 
-/*
- * The two sides of the conflict a person is on, under the merged file. Only the block in hand is
- * drawn: the whole of both files next to each other says less than the stretch that disagrees, and
- * the file itself is right above with the answer already in it.
- */
+/* The two sides of the conflict in hand only, since the whole file is right above with the answer in it. */
 export function ConflictSides({ block, ours, theirs, settled, onTake, onBoth }: Props) {
     const { t } = useTranslation('conflicts');
     if (block === null) {
@@ -59,8 +53,8 @@ export function ConflictSides({ block, ours, theirs, settled, onTake, onBoth }: 
     return (
         <div className="flex h-full min-h-0 flex-col">
             <div className="flex min-h-0 grow divide-x divide-border">
-                <Side label={ours} lines={sideLines(block, 'ours')} take={t('side.take')} disabled={false} onTake={() => onTake('ours')} />
-                <Side label={theirs} lines={sideLines(block, 'theirs')} take={t('side.take')} disabled={false} onTake={() => onTake('theirs')} />
+                <Side label={ours} lines={sideLines(block, 'ours')} onTake={() => onTake('ours')} />
+                <Side label={theirs} lines={sideLines(block, 'theirs')} onTake={() => onTake('theirs')} />
             </div>
             <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border px-2">
                 {settled && (

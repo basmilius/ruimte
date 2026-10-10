@@ -15,8 +15,8 @@ export interface EditorHandle {
 
 interface Props {
     readonly file: ConflictFile;
-    /* What was typed the last time this file was open, or null to start from the merged draft. Read
-       when the file opens rather than passed in, since it is held outside React between openings. */
+    /* What was typed the last time this file was open, or null to start from the merged draft. A
+       getter, since the draft lives outside React between openings. */
     held(): ConflictDraft | null;
     onChange(draft: ConflictDraft, current: number | null): void;
     onReady(handle: EditorHandle | null): void;

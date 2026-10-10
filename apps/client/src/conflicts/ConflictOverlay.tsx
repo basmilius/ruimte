@@ -15,6 +15,7 @@ import {
     rereadConflict,
     usableBlocks,
     writeConflict,
+    type ConflictCache,
     type ConflictFile
 } from '@/conflicts/conflict-model';
 import type { ConflictDraft } from '@/conflicts/editor';
@@ -59,8 +60,7 @@ export function ConflictOverlay() {
     const [open, setOpen] = useState<Record<string, number>>({});
     const [busy, setBusy] = useState(false);
     const [run, setRun] = useState<AiRun | null>(null);
-    /* Every file that has been read and what was made of it so far, so walking away from one and
-       coming back lands on the same half-finished work. */
+    /* Every file read so far and what was made of it, so coming back to one finds the work where it was. */
     const files = useRef(new Map<string, ConflictFile>());
     const drafts = useRef(new Map<string, ConflictDraft>());
     const editor = useRef<EditorHandle | null>(null);
@@ -69,18 +69,16 @@ export function ConflictOverlay() {
     const failure = reading !== null && reading.cwd === cwd && 'failure' in reading ? reading.failure : null;
     const list = useMemo<readonly GitConflictFile[]>(() => answer?.files ?? [], [answer]);
 
-    /* The files git still holds unmerged, as one word: the list is read again when that word changes
-       and not on every keystroke the working tree sees. */
-    const signature = useMemo(
-        () =>
-            status === null
-                ? ''
-                : `${status.operation ?? ''}\u0000${status.files
-                      .filter((file) => file.state === 'conflicted')
-                      .map((file) => file.path)
-                      .join('\u0000')}`,
-        [status]
-    );
+    /* The unmerged files as one word, so the list is read again when that changes and not on every keystroke. */
+    const signature = useMemo(() => {
+        if (status === null) {
+            return '';
+        }
+        const conflicted = status.files.filter((entry) => entry.state === 'conflicted').map((entry) => entry.path);
+        return [status.operation ?? '', ...conflicted].join('\u0000');
+    }, [status]);
+
+    const errorText = useCallback((error: unknown): string => (error instanceof Error ? error.message : t('failed')), [t]);
 
     const read = useCallback((): void => {
         if (cwd === null) {
@@ -88,8 +86,8 @@ export function ConflictOverlay() {
         }
         performAsPerson('git.conflicts', { repository: cwd })
             .then((next) => setReading({ cwd, answer: next }))
-            .catch((error: unknown) => setReading({ cwd, failure: error instanceof Error ? error.message : t('failed') }));
-    }, [cwd, t]);
+            .catch((error: unknown) => setReading({ cwd, failure: errorText(error) }));
+    }, [cwd, errorText]);
 
     /* A fresh opening starts on the file it was pointed at, and forgets what was read for the one
        before it: the checkout may be another machine's. */
@@ -138,7 +136,7 @@ export function ConflictOverlay() {
             })
             .catch((error: unknown) => {
                 if (!cancelled) {
-                    setReading({ cwd, failure: error instanceof Error ? error.message : t('failed') });
+                    setReading({ cwd, failure: errorText(error) });
                 }
             })
             .finally(() => {
@@ -149,7 +147,7 @@ export function ConflictOverlay() {
         return () => {
             cancelled = true;
         };
-    }, [transport, cwd, activeFile, t]);
+    }, [transport, cwd, activeFile, errorText]);
 
     const file = held !== null && held.path === activeFile ? held.file : null;
     const conflicts = useMemo(() => (file === null ? [] : conflictIndexes(file)), [file]);
@@ -253,14 +251,14 @@ export function ConflictOverlay() {
             }
             useToasts.getState().show({ title: answered === 0 ? t('ai.none') : t('ai.done', { count: answered }), kind: 'success' });
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : t('failed');
-            useToasts.getState().show({ title: t('ai.failed'), description: message.split('\n')[0], kind: 'error', output: message });
+            showFailure(t('ai.failed'), errorText(error));
         } finally {
             setRun(null);
             setBusy(false);
         }
     };
 
+    const cache = (): ConflictCache => ({ files: files.current, drafts: drafts.current });
     const readerOf = (repository: string) => (path: string) => performAsPerson('git.conflict', { repository, path });
 
     /* A file read again after a refusal: the editor takes it up only when what it draws changed. */
@@ -276,7 +274,7 @@ export function ConflictOverlay() {
         if (cwd === null) {
             return;
         }
-        await writeConflict({ files: files.current, drafts: drafts.current }, path, {
+        await writeConflict(cache(), path, {
             resolve: (target, content, hash) => performAsPerson('git.resolveConflict', { repository: cwd, path: target, content, take: null, hash }),
             read: readerOf(cwd)
         });
@@ -291,8 +289,7 @@ export function ConflictOverlay() {
                 await write(path);
             }
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : t('failed');
-            useToasts.getState().show({ title: t('save.failed'), description: message.split('\n')[0], kind: 'error', output: message });
+            showFailure(t('save.failed'), errorText(error));
             showReread();
         } finally {
             // Whatever went through is out of the list, so the next file that needs a person takes over.
@@ -315,10 +312,9 @@ export function ConflictOverlay() {
             setActivePath(null);
             read();
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : t('failed');
-            useToasts.getState().show({ title: t('save.failed'), description: message.split('\n')[0], kind: 'error', output: message });
+            showFailure(t('save.failed'), errorText(error));
             if (files.current.has(path)) {
-                await rereadConflict({ files: files.current, drafts: drafts.current }, path, readerOf(cwd)).catch(() => undefined);
+                await rereadConflict(cache(), path, readerOf(cwd)).catch(() => undefined);
                 showReread();
             }
         } finally {
@@ -334,8 +330,7 @@ export function ConflictOverlay() {
         try {
             const result = await performAsPerson('git.operation', { repository: cwd, step: action, run: nextActionId() });
             const left = result.conflicts.length;
-            /* The daemon's summary is English wherever it lands; what happened is known here, so the
-               toast says it in the language the rest of the overlay is in. */
+            // The daemon's summary is English; the toast says it in the overlay's language instead.
             const title =
                 action === 'abort' ? t('finish.aborted', { operation }) : left > 0 ? t('finish.more', { count: left }) : t('finish.done', { operation });
             useToasts.getState().show({ title, kind: 'success' });
@@ -348,8 +343,7 @@ export function ConflictOverlay() {
                 read();
             }
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : t('failed');
-            useToasts.getState().show({ title: t('finish.failed'), description: message.split('\n')[0], kind: 'error', output: message });
+            showFailure(t('finish.failed'), errorText(error));
         } finally {
             setBusy(false);
         }
@@ -412,36 +406,7 @@ export function ConflictOverlay() {
                 </header>
 
                 <div className="flex min-h-0 grow">
-                    <nav className="w-64 shrink-0 overflow-y-auto border-r border-border py-1">
-                        {list.length === 0 && <EmptyState>{t('list.none')}</EmptyState>}
-                        {list.map((entry) => {
-                            const remaining = open[entry.path];
-                            return (
-                                <button
-                                    key={entry.path}
-                                    className={clsx(
-                                        'flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface-hover',
-                                        entry.path === activeFile && 'bg-surface-active'
-                                    )}
-                                    disabled={busy}
-                                    onClick={() => setActivePath(entry.path)}
-                                >
-                                    <Icon
-                                        icon={remaining === 0 ? Check : FileWarning}
-                                        size={14}
-                                        className={remaining === 0 ? 'shrink-0 text-status-idle' : 'shrink-0 text-status-needs-you'}
-                                    />
-                                    <span className="min-w-0 grow">
-                                        <span className="block truncate text-xs text-text">{basenameOf(entry.path)}</span>
-                                        <span className="block truncate text-xs text-text-faint">{entry.path}</span>
-                                    </span>
-                                    {remaining !== undefined && remaining > 0 && (
-                                        <span className="shrink-0 text-xs text-text-faint tabular-nums">{remaining}</span>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </nav>
+                    <FileList list={list} open={open} activeFile={activeFile} busy={busy} onPick={setActivePath} />
 
                     <div className="flex min-w-0 grow flex-col">
                         {failure !== null && <FormError className="border-b border-border px-3 py-2">{failure}</FormError>}
@@ -512,6 +477,57 @@ export function ConflictOverlay() {
             </Dialog.Popup>
         </Dialog.Root>
     );
+}
+
+function FileList({
+    list,
+    open,
+    activeFile,
+    busy,
+    onPick
+}: {
+    readonly list: readonly GitConflictFile[];
+    readonly open: Readonly<Record<string, number>>;
+    readonly activeFile: string | null;
+    readonly busy: boolean;
+    onPick(path: string): void;
+}) {
+    const { t } = useTranslation('conflicts');
+    return (
+        <nav className="w-64 shrink-0 overflow-y-auto border-r border-border py-1">
+            {list.length === 0 && <EmptyState>{t('list.none')}</EmptyState>}
+            {list.map((entry) => {
+                const remaining = open[entry.path];
+                return (
+                    <button
+                        key={entry.path}
+                        className={clsx(
+                            'flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface-hover',
+                            entry.path === activeFile && 'bg-surface-active'
+                        )}
+                        disabled={busy}
+                        onClick={() => onPick(entry.path)}
+                    >
+                        <Icon
+                            icon={remaining === 0 ? Check : FileWarning}
+                            size={14}
+                            className={remaining === 0 ? 'shrink-0 text-status-idle' : 'shrink-0 text-status-needs-you'}
+                        />
+                        <span className="min-w-0 grow">
+                            <span className="block truncate text-xs text-text">{basenameOf(entry.path)}</span>
+                            <span className="block truncate text-xs text-text-faint">{entry.path}</span>
+                        </span>
+                        {remaining !== undefined && remaining > 0 && <span className="shrink-0 text-xs text-text-faint tabular-nums">{remaining}</span>}
+                    </button>
+                );
+            })}
+        </nav>
+    );
+}
+
+/* The first line of an error on the toast, the whole of it behind it. */
+function showFailure(title: string, message: string): void {
+    useToasts.getState().show({ title, description: message.split('\n')[0], kind: 'error', output: message });
 }
 
 /* A file that is not merged line by line: one side, the other, or gone. */
