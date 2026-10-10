@@ -8,10 +8,10 @@ import {
     type ChatImageSavePayload,
     type ChatImageSaveResult,
     type ChatImageTargetPayload,
-    type ChatImageTargetResult
+    type ChatImageTargetResult,
+    sniffImageMime
 } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents/coded-error';
-import { generatedImage } from '@adecore/agents/chat/generated-image';
 import { isInside } from '../canvas/project-paths.ts';
 import { isRuimteState } from '../projects/project-files.ts';
 
@@ -132,13 +132,17 @@ export class ChatImageFiles {
                     offset += read.bytesRead;
                 }
                 bytes = bytes.subarray(0, offset);
-                if (bytes.length !== file.size || generatedImage(Buffer.from(bytes).toString('base64')).upload.mime !== attachment.mime) {
+                if (bytes.length !== file.size || sniffImageMime(bytes) !== attachment.mime) {
                     throw new ImageFileError('invalid-image', 'The attached image changed or is not an image');
                 }
             } finally {
                 await source.close();
             }
-            const output = await open(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, before?.mode ?? 0o644);
+            const output = await open(
+                temporary,
+                constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+                before === null ? 0o644 : before.mode & 0o777
+            );
             try {
                 await output.writeFile(bytes);
             } finally {

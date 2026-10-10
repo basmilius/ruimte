@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { link, mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, link, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ChatImageFiles } from './image-files.ts';
@@ -66,6 +66,16 @@ describe('ChatImageFiles', () => {
         await files.save({ ...payload, replace: target.revision! }, 'person');
         expect(await readFile(path)).toEqual(IMAGE);
         await expect(files.save({ ...payload, replace: target.revision! }, 'person')).rejects.toMatchObject({ code: 'stale' });
+    });
+
+    test('a replacement keeps only the permission bits of the file it replaces', async () => {
+        const { folder, files, payload } = await fixture();
+        const path = join(folder, payload.path);
+        await writeFile(path, 'existing');
+        await chmod(path, 0o4750);
+        const target = await files.target(payload, 'person');
+        await files.save({ ...payload, replace: target.revision! }, 'person');
+        expect((await stat(path)).mode & 0o7777).toBe(0o750);
     });
 
     test('a replacement does not write through hard links to another folder', async () => {

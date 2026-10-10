@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { CHAT_ATTACHMENT_MAX_BYTES } from '@ruimte/contracts';
+import { CHAT_ATTACHMENT_MAX_BYTES, sniffImageMime } from '@ruimte/contracts';
 
 const EXTENSIONS: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' };
 
@@ -16,13 +16,7 @@ export async function openImageCopy(folder: string, name: string, bytes: Uint8Ar
     ) {
         throw new Error('Not a supported image');
     }
-    const buffer = Buffer.from(bytes);
-    const matches =
-        (mime === 'image/png' && buffer.length >= 33 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) ||
-        (mime === 'image/jpeg' && buffer.length >= 4 && buffer[0] === 255 && buffer[1] === 216 && buffer[2] === 255) ||
-        (mime === 'image/gif' && buffer.length >= 13 && /^GIF8[79]a$/.test(buffer.toString('ascii', 0, 6))) ||
-        (mime === 'image/webp' && buffer.length >= 20 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP');
-    if (!matches) {
+    if (sniffImageMime(bytes) !== mime) {
         throw new Error('The image type does not match its bytes');
     }
     const stem =
