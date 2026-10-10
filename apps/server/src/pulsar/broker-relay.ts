@@ -1,4 +1,13 @@
-import { BrokerPeer, brokerHostOf, type BrokerIce, type BrokerRelayed, type IceServer, type SignalEnvelope } from '@ruimte/pulsar';
+import {
+    BrokerPeer,
+    brokerHostOf,
+    type BrokerError,
+    type BrokerIce,
+    type BrokerRateLimited,
+    type BrokerRelayed,
+    type IceServer,
+    type SignalEnvelope
+} from '@ruimte/pulsar';
 import type { Relay } from '../auth/relay.ts';
 import { errorText } from '../error-text.ts';
 import type { SignalGate } from './signal-gate.ts';
@@ -145,31 +154,7 @@ export class BrokerRelay implements Relay {
                 // The daemon's guard exits on a stray rejection, and a full disk under a statement is enough for one.
                 relayed: (frame) => void this.relayed(frame).catch((e) => this.log.warn('Handling a relayed signal failed:', errorText(e))),
                 ice: (frame) => this.receivedIce(frame),
-                refused: (frame) => {
-                    if (frame.id !== undefined && frame.id === this.iceRequestId) {
-                        this.iceRequestId = null;
-                        this.scheduleIce(frame.type === 'rate-limited' ? frame.retryAfterMs : ICE_RETRY_MS);
-                        return;
-                    }
-                    if (frame.type === 'error' && frame.code === 'bad-frame' && frame.id === undefined && this.iceRequestId !== null) {
-                        // A broker from before `ice` refuses the frame without its id and keeps the socket; it has no servers to give.
-                        this.iceRequestId = null;
-                        return;
-                    }
-                    if (frame.id !== undefined) {
-                        // A reply that did not reach its client; the client's own timeout says so on that side.
-                        return;
-                    }
-                    if (frame.type === 'rate-limited') {
-                        this.nextDelayMs = frame.retryAfterMs;
-                        return;
-                    }
-                    if (frame.code === 'replaced') {
-                        // Another process holds this key on the broker; fighting it would knock both off in turn.
-                        this.nextDelayMs = this.options.backoffMaxMs ?? BACKOFF_MAX_MS;
-                    }
-                    this.lost(`The broker refused this machine: ${frame.message}`);
-                },
+                refused: (frame) => this.refused(frame),
                 failed: (reason) => {
                     this.lost(reason);
                 }
@@ -201,6 +186,32 @@ export class BrokerRelay implements Relay {
             },
             Math.max(10, Math.floor(silenceMs / 6))
         );
+    }
+
+    private refused(frame: BrokerError | BrokerRateLimited): void {
+        if (frame.id !== undefined && frame.id === this.iceRequestId) {
+            this.iceRequestId = null;
+            this.scheduleIce(frame.type === 'rate-limited' ? frame.retryAfterMs : ICE_RETRY_MS);
+            return;
+        }
+        if (frame.type === 'error' && frame.code === 'bad-frame' && frame.id === undefined && this.iceRequestId !== null) {
+            // A broker from before `ice` refuses the frame without its id and keeps the socket; it has no servers to give.
+            this.iceRequestId = null;
+            return;
+        }
+        if (frame.id !== undefined) {
+            // A reply that did not reach its client; the client's own timeout says so on that side.
+            return;
+        }
+        if (frame.type === 'rate-limited') {
+            this.nextDelayMs = frame.retryAfterMs;
+            return;
+        }
+        if (frame.code === 'replaced') {
+            // Another process holds this key on the broker; fighting it would knock both off in turn.
+            this.nextDelayMs = this.options.backoffMaxMs ?? BACKOFF_MAX_MS;
+        }
+        this.lost(`The broker refused this machine: ${frame.message}`);
     }
 
     private lost(reason: string): void {

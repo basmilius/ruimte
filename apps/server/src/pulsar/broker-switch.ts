@@ -37,7 +37,6 @@ export class BrokerSwitch implements Relay {
         this.options = options;
     }
 
-    /* The URL this daemon dials. */
     get dialUrl(): string | null {
         return effectiveBrokerUrl(this.options.override, this.options.setting());
     }

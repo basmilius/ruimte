@@ -106,13 +106,14 @@ export class DirectPeers {
             icePortRange: this.options.portRange ?? undefined,
             iceAdditionalHostAddresses: this.options.hostAddresses.length > 0 ? this.options.hostAddresses : undefined
         });
+        const timeoutMs = this.options.attemptTimeoutMs ?? ATTEMPT_TIMEOUT_MS;
         const attempt: Attempt = {
             peer,
             channel: null,
             timer: setTimeout(() => {
                 reply({ connectionId, signal: { kind: 'close', reason: 'timeout' } });
-                this.end(connectionId, `did not open in time (${Math.round((this.options.attemptTimeoutMs ?? ATTEMPT_TIMEOUT_MS) / 1000)} s)`);
-            }, this.options.attemptTimeoutMs ?? ATTEMPT_TIMEOUT_MS)
+                this.end(connectionId, `did not open in time (${Math.round(timeoutMs / 1000)} s)`);
+            }, timeoutMs)
         };
         this.attempts.set(connectionId, attempt);
 

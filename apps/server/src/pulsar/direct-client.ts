@@ -228,25 +228,7 @@ export class DirectClient {
                             return;
                         }
                     }
-                    const proof: DirectProofFrame =
-                        credential.kind === 'key'
-                            ? {
-                                  type: 'direct.key',
-                                  protocol: PROTOCOL_VERSION,
-                                  challenge: challenge.data.challenge,
-                                  publicKey: credential.publicKey,
-                                  signature: signMessage(
-                                      credential.privateKey,
-                                      clientChannelMessage(credential.daemonId, challenge.data.challenge, credential.publicKey, binding)
-                                  )
-                              }
-                            : {
-                                  type: 'direct.secret',
-                                  protocol: PROTOCOL_VERSION,
-                                  challenge: challenge.data.challenge,
-                                  proof: localSecretProof(credential.secret, credential.daemonId, challenge.data.challenge, binding)
-                              };
-                    channel.send(JSON.stringify(proof));
+                    channel.send(JSON.stringify(proofFor(credential, challenge.data.challenge, binding)));
                     return;
                 }
                 const verdict = DirectVerdictFrameSchema.safeParse(json);
@@ -283,6 +265,24 @@ export class DirectClient {
             entry.reject(new Error(`${frame.error?.code}: ${frame.error?.message}`));
         }
     }
+}
+
+function proofFor(credential: Exclude<DirectCredential, { kind: 'none' }>, challenge: string, binding: string): DirectProofFrame {
+    if (credential.kind === 'key') {
+        return {
+            type: 'direct.key',
+            protocol: PROTOCOL_VERSION,
+            challenge,
+            publicKey: credential.publicKey,
+            signature: signMessage(credential.privateKey, clientChannelMessage(credential.daemonId, challenge, credential.publicKey, binding))
+        };
+    }
+    return {
+        type: 'direct.secret',
+        protocol: PROTOCOL_VERSION,
+        challenge,
+        proof: localSecretProof(credential.secret, credential.daemonId, challenge, binding)
+    };
 }
 
 async function waitFor(ready: () => boolean, timeoutMs: number): Promise<void> {
