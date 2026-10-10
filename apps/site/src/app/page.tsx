@@ -112,7 +112,7 @@ export default function Home() {
                             Link a note, terminal or another chat to an agent. It can read the sources you connected when it needs them.
                         </PreviewCard>
                         <PreviewCard title="A plan you can follow." picture={<PlanVignette />}>
-                            Open the agent's plan beside the chat. See the current step, check the results and leave a note where it matters.
+                            Open the agent's plan beside the chat. See the current step, check the results and leave notes along the way.
                         </PreviewCard>
                     </div>
                 </section>

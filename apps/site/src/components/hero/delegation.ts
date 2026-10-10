@@ -630,7 +630,6 @@ export function createDelegation(ctx: CanvasRenderingContext2D, fonts: Fonts): D
                 ctx.globalAlpha = 1;
             }
 
-            /* The lead. */
             const hoverLead = hover[CHILDREN.length]!;
             const leadY = PY - hoverLead * 3;
             nodeFrame(px, leadY, PW, PH, HEADER, 2 + hoverLead * 2, 0.11 + hoverLead * 0.08);
