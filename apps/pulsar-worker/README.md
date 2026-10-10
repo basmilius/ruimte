@@ -23,7 +23,7 @@ in `packages/pulsar/src/statement-key.ts`. The wire shapes live in `packages/pul
 | `POST /v1/session/refresh`                 | A new access and refresh token, signed with the session key                                |
 | `DELETE /v1/session`                       | Sign out                                                                                   |
 | `GET /v1/providers`                        | The providers that are configured, so a client only offers those                           |
-| `GET /v1/models/benchmarks`                | Model indices, costs and output speed per effort, for the model comparison        |
+| `GET /v1/models/benchmarks`                | Model indices, costs and output speed per effort, for the model comparison                 |
 | `GET /v1/models/catalog`                   | The shipped model catalogs per agent kind, for a machine to pick up a new model            |
 | `GET /v1/account`                          | The account and its identities                                                             |
 | `DELETE /v1/account`                       | Delete the account and everything bound to it, with the typed name and an Apple code       |
@@ -46,8 +46,8 @@ A client from before names ignores the field, and one reading an older Worker fi
 GitHub hands the public name of the profile to every sign-in and link, so a rename on GitHub follows at the
 next one. Apple sends the name only on the first authorization of an Apple ID for this app: on the web as
 the `user` field of its form post, native as the credential's `fullName`, which the app may pass on as
-`displayName` to `/v1/apple/complete` (the iOS app asks for no scope and sends none yet). Neither is signed, but each arrives with the id_token that proves the
-identity it names. A sign-in without a name keeps the stored one; to have Apple send it again, stop using
+`displayName` to `/v1/apple/complete` (the iOS app asks for no scope and sends none yet). Neither is
+signed, but each arrives with the id_token that proves the identity it names. A sign-in without a name keeps the stored one; to have Apple send it again, stop using
 Sign in with Apple for Ruimte in the Apple ID settings and sign in once more. A name has its control
 characters and runs of whitespace folded and is cut at 100 characters. Migration `0013_display_name.sql`
 adds the nullable columns, so the Worker still running while it applies keeps working.
@@ -68,8 +68,8 @@ or a device link left half done. The rate limit windows keyed on it go with the 
 A machine leaves the account by its row going, so another account may list its key afterwards. The machine
 itself is not told: it keeps the account it signed for in its own `auth.json`, no statement for that account can
 be signed any more, and it takes another account only once a person on it leaves the first
-(`apps/server/README.md`, "One account per machine"). A client a statement already let in stays paired with the
-machine until then. The desktop app takes its own machine off right after a deletion, with the local secret.
+(`apps/server/README.md`, "One account per machine"). A client a statement already let in keeps its access to
+the machine until then. The desktop app takes its own machine off right after a deletion, with the local secret.
 
 ### Revoking Sign in with Apple
 
@@ -145,7 +145,8 @@ PULSAR_STATEMENT_PRIVATE_KEY=... bun test   # also checks a statement against th
 
 A push to `main` that touches the Worker, its shared API package, deploy script or workflow runs
 `.github/workflows/pulsar-worker.yml`: typecheck, tests, remote migrations, deploy, benchmark refresh,
-and a request to `/health`. It needs the repository secret `CLOUDFLARE_API_TOKEN`, a Cloudflare API token with:
+and a request to `/health`. It needs the repository secret `CLOUDFLARE_API_TOKEN`, a Cloudflare API
+token with:
 
 - Account, `Workers Scripts`, Edit
 - Account, `D1`, Edit
@@ -227,14 +228,14 @@ benchmark task are not available on Free and are not inferred from output speed.
 The optional `measurements` and `intelligenceIndexVersion` fields extend the response. `models.points`
 still contains complete Intelligence/cost pairs for older clients, and a cache created before migration
 `0015_benchmark_measurements.sql` remains readable. Apply the migration before deploying this Worker;
-the deploy refresh fills the new fields. A failed, malformed, truncated or mixed-version fetch
-keeps the previous snapshot. Unrelated source fields are neither stored nor returned. Without the key
+the refresh after the deploy fills the new fields. A failed, malformed, truncated or mixed-version
+fetch keeps the previous snapshot. Unrelated source fields are neither stored nor returned. Without the key
 the route answers `503` with `not-configured`; before the first successful refresh it answers `503` with
 `no-benchmarks`.
 
 Which model of Artificial Analysis stands for which model and effort of Ruimte is `src/benchmark-models.ts`,
-looked up by id. A new model is a row there and a deploy of this Worker, not a release of the app. `X-RateLimit-Remaining` and `X-RateLimit-Reset`
-on an answer say how much of the day is left.
+looked up by id. A new model is a row there and a deploy of this Worker, not a release of the app.
+`X-RateLimit-Remaining` and `X-RateLimit-Reset` on an answer say how much of the day is left.
 
 ### Refresh after deployment
 
@@ -246,7 +247,7 @@ the Worker. While the deployment reaches Cloudflare's edges, the script waits up
 an old version's `404` or `401` to clear. Those requests never reach Artificial Analysis. Other errors
 are not retried because the refresh may already have consumed quota.
 
-The route validates the token and atomically consumes it before fetching, including when the upstream
+The route validates the token and consumes it atomically before fetching, also when the upstream
 request fails. Repeated or concurrent calls cannot spend the Free quota again. The response confirms
 the new snapshot only after D1 has stored it. A failed refresh fails the deployment job while retaining
 the previous snapshot; it does not undo the deployed Worker. The three-hour schedule continues, and
@@ -263,8 +264,8 @@ GitHub, Settings, Developer settings, OAuth Apps, New OAuth App:
 - Enable Device Flow: off
 
 Generate a client secret on the app's page and put both values in the secrets above. The Worker asks
-for no scope: the numeric user id, the login and the public name come with any token, and the token is dropped after
-one request to `/user`.
+for no scope: the numeric user id, the login and the public name come with any token, and the token is
+dropped after one request to `/user`.
 
 ## Sign in with Apple
 
@@ -280,8 +281,8 @@ Apple Developer, Certificates, Identifiers & Profiles:
    key's page, the team id in the top right of the portal and under Membership.
 4. Put the four secrets above with `wrangler secret put`, and check `/health` says `"apple": true`.
 
-Only the `name` scope is asked, never `email`, so no email relay has to be configured. If the portal asks to verify the domain, put
-the file it hands out in the `APPLE_DOMAIN_ASSOCIATION` secret: the Worker serves it at
+Only the `name` scope is asked, never `email`, so no email relay has to be configured. If the portal
+asks to verify the domain, put the file it hands out in the `APPLE_DOMAIN_ASSOCIATION` secret: the Worker serves it at
 `/.well-known/apple-developer-domain-association.txt`.
 
 ### Native iOS sign-in

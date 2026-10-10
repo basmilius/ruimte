@@ -1,13 +1,13 @@
 # @ruimte/pulsar-broker
 
-The broker from remote access: a Bun WebSocket
-server that brings a client and a machine together without either reaching the other's address. A peer
-announces its ed25519 public key, signs the broker's nonce over `brokerHelloMessage` from
-`@ruimte/pulsar`, and is then held in a `Map` from key to socket. A signal for another key is written to
-that key's socket with the sender filled in, and that is all the broker does: no database, no accounts,
-nothing on disk, and the envelope goes on as the sender wrote it. It only checks that the envelope
-parses, since an older daemon leaves the broker over one it cannot read. The receiver verifies the
-sender's signature, since the receiver is the one a lying broker would be lying to.
+The broker behind remote access: a Bun WebSocket server that brings a client and a machine together
+without either reaching the other's address. A peer announces its ed25519 public key, signs the
+broker's nonce over `brokerHelloMessage` from `@ruimte/pulsar`, and is then held in a `Map` from key to
+socket. A signal for another key is written to that key's socket with the sender filled in, and that
+is all the broker does: no database, no accounts, nothing on disk, and the envelope goes on as the
+sender wrote it. It only checks that the envelope parses, since an older daemon leaves the broker over
+one it cannot read. The receiver verifies the sender's signature, since the receiver is the one a lying
+broker would be lying to.
 
 Once the offer and the answer have crossed, client and machine talk over their own DataChannel and the
 broker is out of the picture: stopping it drops no connection that is already open.
@@ -25,30 +25,30 @@ any other path is a peer.
 Every flag also reads an environment variable, `PULSAR_BROKER_` plus the flag in upper snake case
 (`--key-relays-per-minute` is `PULSAR_BROKER_KEY_RELAYS_PER_MINUTE`); a flag wins over the variable.
 
-| Flag                          | Default     | Meaning                                                                                                                                                                                                                                     |
-| ----------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--host`                      | `127.0.0.1` | Interface to listen on.                                                                                                                                                                                                                     |
-| `--port`                      | `4400`      | Port for the peers and `/health`.                                                                                                                                                                                                           |
-| `--name <host>`               | none        | A host name the broker answers to and signs into its challenge. Repeatable (`PULSAR_BROKER_NAMES` takes a comma-separated list). Without one the `Host` header is taken as it is.                                                           |
-| `--trust-proxy`               | off         | Count limits against the last `X-Forwarded-For` entry, for a socket from loopback only. For a broker behind Caddy on the same host.                                                                                                         |
-| `--trust-cloudflare`          | off         | Count limits against `CF-Connecting-IP`, but only when the connection came from one of Cloudflare's published ranges (the socket itself, or the last `X-Forwarded-For` entry with `--trust-proxy`). For a broker behind Cloudflare's proxy. |
-| `--max-message-bytes`         | `65536`     | A frame larger than this closes the socket.                                                                                                                                                                                                 |
-| `--max-sockets-per-ip`        | `32`        | Open sockets one address may hold; the next upgrade gets a 429.                                                                                                                                                                             |
-| `--ip-connections-per-minute` | `30`        | Upgrades per address per minute; the next gets a 429 with `Retry-After`.                                                                                                                                                                    |
-| `--ip-frames-per-second`      | `20`        | Frames per address per second; a frame over it gets `rate-limited` and is dropped unread.                                                                                                                                                   |
-| `--key-relays-per-minute`     | `60`        | Relays per key per minute; a relay over it gets `rate-limited` with its id.                                                                                                                                                                 |
-| `--key-announces-per-minute`  | `10`        | Proven announcements per key per minute; one over it gets `rate-limited` and a closed socket, and the socket that already holds the key stays. A hello never counts, so nobody without the key can use up the budget.                       |
-| `--heartbeat-seconds`         | `25`        | A ping this often; a socket that answers nothing for two heartbeats is dropped. At most 40, because a daemon gives up on a broker it has not heard from in 90 seconds.                                                                      |
-| `--hello-timeout-seconds`     | `10`        | Time from open to a verified signature.                                                                                                                                                                                                     |
-| `--key-ice-per-minute`        | `10`        | `ice` questions per key per minute; one over it gets `rate-limited` with its id.                                                                                                                                                           |
-| `--ip-ice-per-minute`         | `30`        | `ice` questions per address per minute, summed over every key behind it, since a key costs nothing to make; one over it gets `rate-limited` with its id.                                                                                    |
-| `--ice-per-minute`            | `120`       | `ice` questions per minute over every key and address together, so a crowd of addresses cannot mint credentials faster than coturn's quota frees them; one over it gets `rate-limited` (scope `ip`) with its id, and the log says so once a minute. |
-| `--turn`                      | `none`      | Where TURN credentials come from: `none`, `shared-secret` or `cloudflare`. See "TURN" below.                                                                                                                                                |
-| `--turn-secret-file`          | none        | With `shared-secret`: the file with coturn's `static-auth-secret`, read on every question.                                                                                                                                                  |
-| `--turn-url`                  | none        | With `shared-secret`: a `turn:` or `turns:` URL to hand out. Repeatable (`PULSAR_BROKER_TURN_URLS` takes a comma-separated list).                                                                                                          |
-| `--turn-ttl-seconds`          | `3600`      | How long a credential lives, from 60 seconds to a week. A daemon asks again at two thirds of that time.                                                                                                                                     |
-| `--cloudflare-turn-key-id`    | none        | With `cloudflare`: the TURN key id of Cloudflare's service.                                                                                                                                                                                |
-| `--cloudflare-turn-token-file` | none       | With `cloudflare`: a file with that key's API token.                                                                                                                                                                                       |
+| Flag                           | Default     | Meaning                                                                                                                                                                                                                                             |
+| ------------------------------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--host`                       | `127.0.0.1` | Interface to listen on.                                                                                                                                                                                                                             |
+| `--port`                       | `4400`      | Port for the peers and `/health`.                                                                                                                                                                                                                   |
+| `--name <host>`                | none        | A host name the broker answers to and signs into its challenge. Repeatable (`PULSAR_BROKER_NAMES` takes a comma-separated list). Without one the `Host` header is taken as it is.                                                                   |
+| `--trust-proxy`                | off         | Count limits against the last `X-Forwarded-For` entry, for a socket from loopback only. For a broker behind Caddy on the same host.                                                                                                                 |
+| `--trust-cloudflare`           | off         | Count limits against `CF-Connecting-IP`, but only when the connection came from one of Cloudflare's published ranges (the socket itself, or the last `X-Forwarded-For` entry with `--trust-proxy`). For a broker behind Cloudflare's proxy.         |
+| `--max-message-bytes`          | `65536`     | A frame larger than this closes the socket.                                                                                                                                                                                                         |
+| `--max-sockets-per-ip`         | `32`        | Open sockets one address may hold; the next upgrade gets a 429.                                                                                                                                                                                     |
+| `--ip-connections-per-minute`  | `30`        | Upgrades per address per minute; the next gets a 429 with `Retry-After`.                                                                                                                                                                            |
+| `--ip-frames-per-second`       | `20`        | Frames per address per second; a frame over it gets `rate-limited` and is dropped unread.                                                                                                                                                           |
+| `--key-relays-per-minute`      | `60`        | Relays per key per minute; a relay over it gets `rate-limited` with its id.                                                                                                                                                                         |
+| `--key-announces-per-minute`   | `10`        | Proven announcements per key per minute; one over it gets `rate-limited` and a closed socket, and the socket that already holds the key stays. A hello never counts, so nobody without the key can use up the budget.                               |
+| `--heartbeat-seconds`          | `25`        | A ping this often; a socket that answers nothing for two heartbeats is dropped. At most 40, because a daemon gives up on a broker it has not heard from in 90 seconds.                                                                              |
+| `--hello-timeout-seconds`      | `10`        | Time from open to a verified signature.                                                                                                                                                                                                             |
+| `--key-ice-per-minute`         | `10`        | `ice` questions per key per minute; one over it gets `rate-limited` with its id.                                                                                                                                                                    |
+| `--ip-ice-per-minute`          | `30`        | `ice` questions per address per minute, summed over every key behind it, since a key costs nothing to make; one over it gets `rate-limited` with its id.                                                                                            |
+| `--ice-per-minute`             | `120`       | `ice` questions per minute over every key and address together, so a crowd of addresses cannot mint credentials faster than coturn's quota frees them; one over it gets `rate-limited` (scope `ip`) with its id, and the log says so once a minute. |
+| `--turn`                       | `none`      | Where TURN credentials come from: `none`, `shared-secret` or `cloudflare`. See "TURN" below.                                                                                                                                                        |
+| `--turn-secret-file`           | none        | With `shared-secret`: the file with coturn's `static-auth-secret`, read on every question.                                                                                                                                                          |
+| `--turn-url`                   | none        | With `shared-secret`: a `turn:` or `turns:` URL to hand out. Repeatable (`PULSAR_BROKER_TURN_URLS` takes a comma-separated list).                                                                                                                   |
+| `--turn-ttl-seconds`           | `3600`      | How long a credential lives, from 60 seconds to a week. A daemon asks again at two thirds of that time.                                                                                                                                             |
+| `--cloudflare-turn-key-id`     | none        | With `cloudflare`: the TURN key id of Cloudflare's service.                                                                                                                                                                                         |
+| `--cloudflare-turn-token-file` | none        | With `cloudflare`: a file with that key's API token.                                                                                                                                                                                                |
 
 A bucket fills to its limit and refills evenly over its window, so the limits are also the bursts. An
 IPv6 address counts by its /64, since a host gets the whole prefix and would otherwise have a fresh
@@ -79,8 +79,10 @@ One JSON frame per WebSocket message, all shapes in `packages/pulsar/src/broker.
    without TURN), `rate-limited` or `error internal` with the id
 
 A machine relays to clients and a client to machines; a relay to the same role is `not-connected`. A
-second announcement of a key replaces the first socket, which hears `error replaced` and is closed with 4009. The close codes: 4002 a bad frame before `ready`, 4003 a bad signature, 4008 a hello timeout or a
-missed heartbeat, 4009 replaced, 4029 announcing too often, and 1006 or 1009 for a frame over the size cap.
+second announcement of a key replaces the first socket, which hears `error replaced` and is closed
+with 4009. The close codes: 4002 a bad frame before `ready`, 4003 a bad signature, 4008 a hello timeout
+or a missed heartbeat, 4009 replaced, 4029 announcing too often, and 1006 or 1009 for a frame over the
+size cap.
 
 `BrokerPeer` in `@ruimte/pulsar` is the peer's side of this without a socket; the daemon
 (`apps/server/src/pulsar/broker-relay.ts`), the client (`apps/client/src/transport/broker-signaling.ts`)
@@ -208,8 +210,8 @@ lifetime, so with the default hour the broker asks the API once every forty minu
 
 ## Behind Cloudflare's proxy
 
-Only signaling crosses the broker, and the channel itself goes direct, so the broker can sit behind
-Cloudflare's proxy (the orange cloud) at no cost in bandwidth. Three things change.
+Only signaling crosses the broker and the channel itself goes direct, so the broker can sit behind
+Cloudflare's proxy (the orange cloud) without costing bandwidth. Three things change.
 
 - **The client address.** Every socket now comes from a Cloudflare edge, and Caddy's `X-Forwarded-For`
   names that edge. Start the broker with `--trust-cloudflare` (the unit does) so the limits count
@@ -223,9 +225,10 @@ Cloudflare's proxy (the orange cloud) at no cost in bandwidth. Three things chan
   tries again on its next attempt, and an open channel does not notice.
 - **The origin.** Open ports 80 and 443 only to Cloudflare's ranges, for example with ufw, one rule per
   range from the two lists above. Caddy's `trusted_proxies` in `deploy/Caddyfile` lists the same ranges,
-  so its logs and `{client_ip}` name the client. Caddy 2.6.2 does not know the option and refuses the file;
-  on a Caddy that old leave the global block out, since the broker reads the header on its own. Caddy gets its certificate with the HTTP challenge on
-  port 80, which passed the proxy on a zone that redirects HTTP to HTTPS. If the challenge fails, use a
+  so its logs and `{client_ip}` name the client. Caddy 2.6.2 does not know the option and refuses the
+  file; on a Caddy that old leave the global block out, since the broker reads the header on its own.
+  Caddy gets its certificate with the HTTP challenge on port 80, which passed the proxy on a zone that
+  redirects HTTP to HTTPS. If the challenge fails, use a
   Cloudflare Origin CA certificate in the site block (`tls /etc/caddy/origin.pem /etc/caddy/origin.key`),
   or a Caddy build with the Cloudflare DNS module and an API token that may edit the zone's DNS. Keep
   the zone's SSL mode on Full (strict) either way.
