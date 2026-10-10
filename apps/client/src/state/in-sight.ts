@@ -2,7 +2,7 @@ import { isCanvasView, isSessionView } from '@ruimte/contracts';
 import { READABLE_ZOOM } from '@/canvas/culling';
 import { intersects, isMeasured, visibleRect, type Camera, type Rect } from '@/canvas/math';
 import { shownViewIdsIn } from '@/shell/split';
-import { liveCanvas, maximizedNodeOf, type CanvasState } from '@/state/canvas';
+import { liveCanvas, maximizedNodeOf, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 
 /*
@@ -47,7 +47,7 @@ export function readableNodes(canvas: CanvasSight): string[] {
 }
 
 /* An open canvas as the question about sight: a store keys its nodes, a sight lists them in order. */
-export function sightOf(canvas: CanvasState): CanvasSight {
+export function sightOf(canvas: CanvasState): CanvasSight & { nodes: readonly CanvasNode[] } {
     return {
         camera: canvas.camera,
         viewport: canvas.viewport,

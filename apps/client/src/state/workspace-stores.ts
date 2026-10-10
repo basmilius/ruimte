@@ -62,22 +62,16 @@ export function useEditorStoreOf<T>(registry: EditorRegistry<T>): StoreApi<T> {
 }
 
 /*
- * A hook over one editor and nothing else. It is deliberately not a store. `useCanvas.getState()`
- * used to read whichever cell had the focus, while `useCanvas(selector)` two lines above it read the
- * cell the component was drawn in, so a drawing beside another one wrote into its neighbor. Without
- * the store half the two cannot disagree, and a reader who really means the focused cell has to
- * write `focusedCanvas()` or `focusedDrawing()`, where it is visible.
+ * A hook over one editor, deliberately not a store: a `getState()` beside it would read the focused
+ * cell while the selector reads the cell the component is drawn in. A reader who means the focused
+ * cell writes `focusedCanvas()` or `focusedDrawing()`, where it is visible.
  */
 export interface EditorHook<T> {
     (): T;
     <U>(selector: (state: T) => U): U;
 }
 
-/*
- * One editor of the open project, as a hook. A view with no editor of this kind (a chat where a
- * canvas is asked for) reads the blank one, which is what the single editor held back when a view
- * that was not a canvas left it empty.
- */
+/* One editor of the open project, as a hook. A view with no editor of this kind (a chat where a canvas is asked for) reads the blank one. */
 export function editorHook<T>(registry: EditorRegistry<T>): EditorHook<T> {
     return (<U>(selector?: (state: T) => U): T | U => useStore(useEditorStoreOf(registry), selector as (state: T) => U)) as EditorHook<T>;
 }

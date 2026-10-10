@@ -1,10 +1,8 @@
 import type { StoreApi } from 'zustand';
 
 /*
- * The editors of the open project that hold a single view each, by view id. A canvas and a drawing were
- * one store for the project, which is what kept it to one view on screen: the store was the
- * editor of whichever view was active and a switch wrote it back and loaded the next. A store per
- * view is what lets a grid of cells edit nine of them without any of them knowing the others exist.
+ * The editors of the open project that hold a single view each, by view id. A store per view is what
+ * lets a grid of cells edit several of them without any knowing the others exist.
  */
 export interface EditorRegistry<T> {
     /*

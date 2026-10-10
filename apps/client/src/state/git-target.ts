@@ -31,10 +31,10 @@ function boundGroupOf(nodes: Record<string, CanvasNode>, id: string): CanvasNode
 }
 
 /*
- * Which checkout the git panel is looking at. A selected group with a worktree, a selected node
- * that sits in one, or a terminal or chat whose own folder is a worktree, points the panel at that checkout; everything else points it at the project
- * folder. It is the same rule that decides where a node made inside such a group starts, so what
- * the panel shows and what an agent in the group works on are never two different trees.
+ * Which checkout the git panel is looking at. A selected group with a worktree, a selected node that
+ * sits in one, or a terminal or chat whose own folder is a worktree points the panel at that checkout;
+ * everything else at the project folder. It is the rule that decides where a node made inside such a
+ * group starts, so the panel and an agent in the group never look at two different trees.
  */
 export function gitTarget(nodes: Record<string, CanvasNode>, selection: string[], folder: string | null, worktrees: readonly Worktree[] = []): GitTarget {
     for (const id of selection) {

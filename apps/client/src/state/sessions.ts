@@ -45,6 +45,20 @@ interface SessionsStore {
     clear(endpointId: string): void;
 }
 
+/* One row patched, keeping `attached` false for a row this client never attached. */
+function patchRow(byKey: SessionsByKey, key: string, patch: Partial<SessionState>): { byKey: SessionsByKey } {
+    return { byKey: { ...byKey, [key]: { ...byKey[key], attached: byKey[key]?.attached ?? false, ...patch } } };
+}
+
+/* A field set only when it changes, and never on a row that does not exist only to clear it. */
+function setOptional<K extends 'heldCommand' | 'account'>(byKey: SessionsByKey, key: string, field: K, value: SessionState[K]): { byKey?: SessionsByKey } {
+    const current = byKey[key];
+    if (current?.[field] === value || (!current && value === undefined)) {
+        return {};
+    }
+    return patchRow(byKey, key, { [field]: value });
+}
+
 export const useSessions = create<SessionsStore>((set) => ({
     byKey: {},
     restarts: {},
@@ -59,28 +73,16 @@ export const useSessions = create<SessionsStore>((set) => ({
         });
     },
     setExited(key, exitCode) {
-        set((s) => ({ byKey: { ...s.byKey, [key]: { ...s.byKey[key], attached: s.byKey[key]?.attached ?? false, exited: exitCode } } }));
+        set((s) => patchRow(s.byKey, key, { exited: exitCode }));
     },
     setAgent(key, agent) {
-        set((s) => ({ byKey: { ...s.byKey, [key]: { ...s.byKey[key], attached: s.byKey[key]?.attached ?? false, agent } } }));
+        set((s) => patchRow(s.byKey, key, { agent }));
     },
     setHeldCommand(key, heldCommand) {
-        set((s) => {
-            const current = s.byKey[key];
-            if (current?.heldCommand === heldCommand || (!current && heldCommand === undefined)) {
-                return {};
-            }
-            return { byKey: { ...s.byKey, [key]: { ...current, attached: current?.attached ?? false, heldCommand } } };
-        });
+        set((s) => setOptional(s.byKey, key, 'heldCommand', heldCommand));
     },
     setAccount(key, account) {
-        set((s) => {
-            const current = s.byKey[key];
-            if (current?.account === account || (!current && account === undefined)) {
-                return {};
-            }
-            return { byKey: { ...s.byKey, [key]: { ...current, attached: current?.attached ?? false, account } } };
-        });
+        set((s) => setOptional(s.byKey, key, 'account', account));
     },
     forget(key) {
         set((s) => {

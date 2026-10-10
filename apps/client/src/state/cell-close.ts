@@ -1,13 +1,12 @@
+import type { SplitLayout } from '@ruimte/contracts';
 import { cellAt, cellViewIds, locateView, type CellAt } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 
 /*
- * Closing cells through the guards of their loose tabs: a file with unsaved changes is saved first and a
- * table with edits nobody submitted asks first. The tabs close one after another, and a person who keeps
- * one at its question stops the whole close, which then leaves the cell standing with what is left.
- * The pure grid operations are the document's (`closeCellAt` and the like); these run once every loose
- * tab in their way is closed.
+ * Closing cells through the guards of their loose tabs, one after another. A person who keeps one at
+ * its question stops the whole close. The pure grid operations (`closeCellAt` and the like) are the
+ * document's; these run once every loose tab in their way is closed.
  */
 
 /* What has a question to ask: a loose tab, and a database view of the project that holds edits nobody submitted. */
@@ -42,37 +41,35 @@ export async function closeCellGuarded(at: CellAt): Promise<boolean> {
     return true;
 }
 
-export async function closeOtherCellsGuarded(at: CellAt): Promise<boolean> {
+/* Closes the loose tabs `closing` picks around the cell at `at`, then runs `close` on where that cell stands now. */
+async function closeAroundGuarded(at: CellAt, closing: (layout: SplitLayout, keptIds: string[]) => string[], close: (now: CellAt) => void): Promise<boolean> {
     const { layout } = useDocument.getState();
     const kept = layout === null ? null : cellAt(layout, at);
     if (layout === null || kept === null) {
         return false;
     }
-    const keptIds = cellViewIds(kept);
-    const others = layout.columns.flatMap((column) => column.cells.flatMap(cellViewIds)).filter((id) => !keptIds.includes(id));
-    if (!(await useFiles.getState().closeInOrder(looseKeysIn(others)))) {
+    if (!(await useFiles.getState().closeInOrder(looseKeysIn(closing(layout, cellViewIds(kept)))))) {
         return false;
     }
     const now = cellOfView(kept.viewId);
     if (now !== null) {
-        useDocument.getState().closeOtherCells(now);
+        close(now);
     }
     return true;
 }
 
-export async function closeCellsRightOfGuarded(at: CellAt): Promise<boolean> {
-    const { layout } = useDocument.getState();
-    const kept = layout === null ? null : cellAt(layout, at);
-    if (layout === null || kept === null) {
-        return false;
-    }
-    const right = layout.columns.slice(at.column + 1).flatMap((column) => column.cells.flatMap(cellViewIds));
-    if (!(await useFiles.getState().closeInOrder(looseKeysIn(right)))) {
-        return false;
-    }
-    const now = cellOfView(kept.viewId);
-    if (now !== null) {
-        useDocument.getState().closeCellsRightOf(now);
-    }
-    return true;
+export function closeOtherCellsGuarded(at: CellAt): Promise<boolean> {
+    return closeAroundGuarded(
+        at,
+        (layout, keptIds) => layout.columns.flatMap((column) => column.cells.flatMap(cellViewIds)).filter((id) => !keptIds.includes(id)),
+        (now) => useDocument.getState().closeOtherCells(now)
+    );
+}
+
+export function closeCellsRightOfGuarded(at: CellAt): Promise<boolean> {
+    return closeAroundGuarded(
+        at,
+        (layout) => layout.columns.slice(at.column + 1).flatMap((column) => column.cells.flatMap(cellViewIds)),
+        (now) => useDocument.getState().closeCellsRightOf(now)
+    );
 }

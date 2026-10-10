@@ -81,11 +81,7 @@ export abstract class HeldWatches {
     protected released(_endpointId: string, _path: string): void {}
 
     /* Asks the daemon again for the paths held on one machine that `which` picks. */
-    protected askAgain(endpointId: string, which: (path: string) => boolean): void {
-        this.reask(endpointId, which);
-    }
-
-    private reask(endpointId: string, which: (path: string) => boolean): Held[] {
+    protected askAgain(endpointId: string, which: (path: string) => boolean): Held[] {
         const link = this.linkFor(endpointId);
         const asked = this.heldOn(endpointId).filter((held) => which(held.path));
         for (const held of asked) {
@@ -106,7 +102,7 @@ export abstract class HeldWatches {
             if (status !== 'open') {
                 return;
             }
-            for (const held of this.reask(endpointId, () => true)) {
+            for (const held of this.askAgain(endpointId, () => true)) {
                 void held.ready.then(() => {
                     for (const reader of [...held.renewed]) {
                         reader();

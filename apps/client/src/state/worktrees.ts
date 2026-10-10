@@ -54,48 +54,7 @@ export class WorktreeLists {
 
     hold(transport: Transport, endpointId: string, folder: string, inspect: boolean): () => void {
         const key = endpointKey(endpointId, folder);
-        let held = this.held.get(key);
-        if (!held) {
-            let generation = 0;
-            const entry: Held = {
-                count: 0,
-                inspecting: 0,
-                inspectedAt: null,
-                reload: () => {
-                    const asked = ++generation;
-                    if (entry.inspecting > 0) {
-                        entry.inspectedAt = this.now();
-                    }
-                    transport
-                        .request('git.worktree-list', { repo: folder, ...(entry.inspecting > 0 ? { inspect: true } : {}) })
-                        .then((answer) => {
-                            if (asked === generation) {
-                                useWorktreeRows.getState().put(key, answer.worktrees);
-                            }
-                        })
-                        .catch(() => {
-                            if (asked === generation) {
-                                useWorktreeRows.getState().put(key, NONE);
-                            }
-                        });
-                },
-                stop: () => undefined
-            };
-            // The event names the repository, not the folder a project sits in, so every list of the machine asks again.
-            const offChanged = transport.on('git.worktrees', () => entry.reload());
-            const offStatus = transport.subscribeStatus((status) => {
-                if (status === 'open') {
-                    entry.reload();
-                }
-            });
-            entry.stop = () => {
-                offChanged();
-                offStatus();
-            };
-            held = entry;
-            this.held.set(key, held);
-        }
-        const current = held;
+        const current = this.held.get(key) ?? this.open(transport, key, folder);
         current.count += 1;
         if (inspect) {
             current.inspecting += 1;
@@ -119,6 +78,47 @@ export class WorktreeLists {
                 this.held.delete(key);
             }
         };
+    }
+
+    private open(transport: Transport, key: string, folder: string): Held {
+        let generation = 0;
+        const entry: Held = {
+            count: 0,
+            inspecting: 0,
+            inspectedAt: null,
+            reload: () => {
+                const asked = ++generation;
+                if (entry.inspecting > 0) {
+                    entry.inspectedAt = this.now();
+                }
+                transport
+                    .request('git.worktree-list', { repo: folder, ...(entry.inspecting > 0 ? { inspect: true } : {}) })
+                    .then((answer) => {
+                        if (asked === generation) {
+                            useWorktreeRows.getState().put(key, answer.worktrees);
+                        }
+                    })
+                    .catch(() => {
+                        if (asked === generation) {
+                            useWorktreeRows.getState().put(key, NONE);
+                        }
+                    });
+            },
+            stop: () => undefined
+        };
+        // The event names the repository, not the folder a project sits in, so every list of the machine asks again.
+        const offChanged = transport.on('git.worktrees', () => entry.reload());
+        const offStatus = transport.subscribeStatus((status) => {
+            if (status === 'open') {
+                entry.reload();
+            }
+        });
+        entry.stop = () => {
+            offChanged();
+            offStatus();
+        };
+        this.held.set(key, entry);
+        return entry;
     }
 
     reload(endpointId: string, folder: string): void {

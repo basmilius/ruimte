@@ -85,7 +85,7 @@ interface EndpointsStore {
     reload(): void;
     setLabel(id: string, label: string): void;
     learnDaemonId(id: string, daemonId: string): void;
-    /* Moves a row onto the id its daemon answers with, over a row already under that id; the pre-phase-1 rows were keyed on an address. */
+    /* Moves a row onto the id its daemon answers with, over a row already under that id; rows of storage version 1 were keyed on an address. */
     rekeyEndpoint(oldId: string, newId: string): void;
     noteMismatch(id: string, daemonId: string): void;
     setDirect(id: string, direct: boolean): void;
@@ -179,126 +179,119 @@ function read(): { endpoints: Endpoint[]; activeId: string } {
 }
 
 /* Every daemon this client knows and which one it talks to; the loopback one is always there. */
-export const useEndpoints = create<EndpointsStore>((set, get) => ({
-    ...read(),
-    mismatched: {},
-    add(endpoint) {
-        const known = get().endpoints.find((entry) => entry.id === endpoint.id);
-        // The row keeps its place in the list; the key it pinned survives a row that brings none.
-        const row = known
-            ? { ...endpoint, daemonPublicKey: endpoint.daemonPublicKey ?? known.daemonPublicKey, ...(known.direct === true ? { direct: true } : {}) }
-            : endpoint;
-        const endpoints = known ? get().endpoints.map((entry) => (entry.id === row.id ? row : entry)) : [...get().endpoints, row];
+export const useEndpoints = create<EndpointsStore>((set, get) => {
+    const patchRow = (id: string, patch: Partial<Endpoint>): void => {
+        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry));
         set({ endpoints });
         persist({ endpoints, activeId: get().activeId });
-    },
-    remove(id) {
-        if (id === LOCAL_ENDPOINT_ID) {
-            return;
-        }
-        const endpoints = get().endpoints.filter((entry) => entry.id !== id);
-        const activeId = get().activeId === id ? LOCAL_ENDPOINT_ID : get().activeId;
-        const { [id]: _gone, ...mismatched } = get().mismatched;
-        set({ endpoints, activeId, mismatched });
-        persist({ endpoints, activeId });
-    },
-    setActive(id) {
-        if (!get().endpoints.some((entry) => entry.id === id)) {
-            return;
-        }
-        set({ activeId: id });
-        persist({ endpoints: get().endpoints, activeId: id });
-    },
-    reload() {
-        const stored = read();
-        const before = get();
-        // The page's own row knows what it learned this session, and only the Direct switch is kept in storage.
-        const ownLocal = before.endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID);
-        const endpoints = stored.endpoints.map((endpoint) => {
-            if (endpoint.id !== LOCAL_ENDPOINT_ID || !ownLocal) {
-                return endpoint;
+    };
+    return {
+        ...read(),
+        mismatched: {},
+        add(endpoint) {
+            const known = get().endpoints.find((entry) => entry.id === endpoint.id);
+            // The row keeps its place in the list; the key it pinned survives a row that brings none.
+            const row = known
+                ? { ...endpoint, daemonPublicKey: endpoint.daemonPublicKey ?? known.daemonPublicKey, ...(known.direct === true ? { direct: true } : {}) }
+                : endpoint;
+            const endpoints = known ? get().endpoints.map((entry) => (entry.id === row.id ? row : entry)) : [...get().endpoints, row];
+            set({ endpoints });
+            persist({ endpoints, activeId: get().activeId });
+        },
+        remove(id) {
+            if (id === LOCAL_ENDPOINT_ID) {
+                return;
             }
-            const { direct: _direct, ...local } = ownLocal;
-            return endpoint.direct === true ? { ...local, direct: true } : local;
-        });
-        const known = (id: string | null | undefined): id is string => typeof id === 'string' && endpoints.some((endpoint) => endpoint.id === id);
-        const movedTo = before.endpoints.find((endpoint) => endpoint.id === before.activeId)?.daemonId;
-        const activeId = known(before.activeId) ? before.activeId : known(movedTo) ? movedTo : LOCAL_ENDPOINT_ID;
-        const mismatched = Object.fromEntries(Object.entries(before.mismatched).filter(([id]) => known(id)));
-        set({ endpoints, activeId, mismatched });
-    },
-    setLabel(id, label) {
-        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, label } : entry));
-        set({ endpoints });
-        persist({ endpoints, activeId: get().activeId });
-    },
-    learnDaemonId(id, daemonId) {
-        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, daemonId } : entry));
-        set({ endpoints });
-        persist({ endpoints, activeId: get().activeId });
-    },
-    rekeyEndpoint(oldId, newId) {
-        if (oldId === newId || oldId === LOCAL_ENDPOINT_ID || !get().endpoints.some((entry) => entry.id === oldId)) {
-            return;
+            const endpoints = get().endpoints.filter((entry) => entry.id !== id);
+            const activeId = get().activeId === id ? LOCAL_ENDPOINT_ID : get().activeId;
+            const { [id]: _gone, ...mismatched } = get().mismatched;
+            set({ endpoints, activeId, mismatched });
+            persist({ endpoints, activeId });
+        },
+        setActive(id) {
+            if (!get().endpoints.some((entry) => entry.id === id)) {
+                return;
+            }
+            set({ activeId: id });
+            persist({ endpoints: get().endpoints, activeId: id });
+        },
+        reload() {
+            const stored = read();
+            const before = get();
+            // The page's own row knows what it learned this session, and only the Direct switch is kept in storage.
+            const ownLocal = before.endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID);
+            const endpoints = stored.endpoints.map((endpoint) => {
+                if (endpoint.id !== LOCAL_ENDPOINT_ID || !ownLocal) {
+                    return endpoint;
+                }
+                const { direct: _direct, ...local } = ownLocal;
+                return endpoint.direct === true ? { ...local, direct: true } : local;
+            });
+            const known = (id: string | null | undefined): id is string => typeof id === 'string' && endpoints.some((endpoint) => endpoint.id === id);
+            const movedTo = before.endpoints.find((endpoint) => endpoint.id === before.activeId)?.daemonId;
+            const activeId = known(before.activeId) ? before.activeId : known(movedTo) ? movedTo : LOCAL_ENDPOINT_ID;
+            const mismatched = Object.fromEntries(Object.entries(before.mismatched).filter(([id]) => known(id)));
+            set({ endpoints, activeId, mismatched });
+        },
+        setLabel(id, label) {
+            patchRow(id, { label });
+        },
+        learnDaemonId(id, daemonId) {
+            patchRow(id, { daemonId });
+        },
+        rekeyEndpoint(oldId, newId) {
+            if (oldId === newId || oldId === LOCAL_ENDPOINT_ID || !get().endpoints.some((entry) => entry.id === oldId)) {
+                return;
+            }
+            // The row that just answered carries the address that works, so it wins from an older row under that id.
+            const replaced = get().endpoints.find((entry) => entry.id === newId);
+            const endpoints = get()
+                .endpoints.filter((entry) => entry.id !== newId)
+                .map((entry) =>
+                    entry.id === oldId
+                        ? // Trust on first use is about the daemon, not about the row, so the key the older row pinned outlives it.
+                          { ...entry, id: newId, daemonId: newId, daemonPublicKey: entry.daemonPublicKey ?? replaced?.daemonPublicKey ?? null }
+                        : entry
+                );
+            const activeId = get().activeId === oldId ? newId : get().activeId;
+            const { [oldId]: _gone, ...mismatched } = get().mismatched;
+            set({ endpoints, activeId, mismatched });
+            persist({ endpoints, activeId });
+        },
+        noteMismatch(id, daemonId) {
+            set({ mismatched: { ...get().mismatched, [id]: daemonId } });
+        },
+        setDirect(id, direct) {
+            patchRow(id, { direct });
+        },
+        learnBrokerUrl(id, brokerUrl) {
+            // Asked on every connection, and nearly always the same answer; a write per connection would buy nothing.
+            if (!get().endpoints.some((entry) => entry.id === id && (entry.brokerUrl ?? null) !== brokerUrl)) {
+                return;
+            }
+            patchRow(id, { brokerUrl });
+        },
+        learnLan(id, lan) {
+            // Asked on every connection like the broker, and written only when the door moved.
+            if (!get().endpoints.some((entry) => entry.id === id && JSON.stringify(entry.lan ?? null) !== JSON.stringify(lan))) {
+                return;
+            }
+            patchRow(id, { lan });
+        },
+        settleStatement(id) {
+            if (!get().endpoints.some((entry) => entry.id === id && entry.needsStatement === true)) {
+                return;
+            }
+            patchRow(id, { needsStatement: false });
+        },
+        requireStatement(id) {
+            if (id === LOCAL_ENDPOINT_ID || !get().endpoints.some((entry) => entry.id === id && entry.needsStatement !== true)) {
+                return;
+            }
+            patchRow(id, { needsStatement: true });
         }
-        // The row that just answered carries the address that works, so it wins from an older row under that id.
-        const replaced = get().endpoints.find((entry) => entry.id === newId);
-        const endpoints = get()
-            .endpoints.filter((entry) => entry.id !== newId)
-            .map((entry) =>
-                entry.id === oldId
-                    ? // Trust on first use is about the daemon, not about the row, so the key the older row pinned outlives it.
-                      { ...entry, id: newId, daemonId: newId, daemonPublicKey: entry.daemonPublicKey ?? replaced?.daemonPublicKey ?? null }
-                    : entry
-            );
-        const activeId = get().activeId === oldId ? newId : get().activeId;
-        const { [oldId]: _gone, ...mismatched } = get().mismatched;
-        set({ endpoints, activeId, mismatched });
-        persist({ endpoints, activeId });
-    },
-    noteMismatch(id, daemonId) {
-        set({ mismatched: { ...get().mismatched, [id]: daemonId } });
-    },
-    setDirect(id, direct) {
-        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, direct } : entry));
-        set({ endpoints });
-        persist({ endpoints, activeId: get().activeId });
-    },
-    learnBrokerUrl(id, brokerUrl) {
-        // Asked on every connection, and nearly always the same answer; a write per connection would buy nothing.
-        if (!get().endpoints.some((entry) => entry.id === id && (entry.brokerUrl ?? null) !== brokerUrl)) {
-            return;
-        }
-        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, brokerUrl } : entry));
-        set({ endpoints });
-        persist({ endpoints, activeId: get().activeId });
-    },
-    learnLan(id, lan) {
-        // Asked on every connection like the broker, and written only when the door moved.
-        if (!get().endpoints.some((entry) => entry.id === id && JSON.stringify(entry.lan ?? null) !== JSON.stringify(lan))) {
-            return;
-        }
-        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, lan } : entry));
-        set({ endpoints });
-        persist({ endpoints, activeId: get().activeId });
-    },
-    settleStatement(id) {
-        if (!get().endpoints.some((entry) => entry.id === id && entry.needsStatement === true)) {
-            return;
-        }
-        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, needsStatement: false } : entry));
-        set({ endpoints });
-        persist({ endpoints, activeId: get().activeId });
-    },
-    requireStatement(id) {
-        if (id === LOCAL_ENDPOINT_ID || !get().endpoints.some((entry) => entry.id === id && entry.needsStatement !== true)) {
-            return;
-        }
-        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, needsStatement: true } : entry));
-        set({ endpoints });
-        persist({ endpoints, activeId: get().activeId });
-    }
-}));
+    };
+});
 
 /*
  * The broker route of a row: Direct on, a broker the machine announced, and a machine key pinned to

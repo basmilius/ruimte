@@ -136,7 +136,3 @@ export function subscribePushAttention(listener: () => void): () => void {
         changeListeners.delete(listener);
     };
 }
-
-export function clearPushNotification(endpointId: string, nodeId: string): void {
-    return machines.get(endpointId)?.markSeen(nodeId);
-}

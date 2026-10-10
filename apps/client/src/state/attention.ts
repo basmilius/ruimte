@@ -5,9 +5,9 @@ import { desktop } from '@/desktop/bridge';
 import { projectNodes } from '@/project/views';
 import { shownViewIdsIn } from '@/shell/split';
 import { nodeWorking } from '@/state/agent-work';
-import { nodesInSight, seenNodes, type CanvasSight } from '@/state/in-sight';
-import { seePushNotifications, clearPushNotification, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
-import { liveCanvas, maximizedNodeOf, subscribeCanvases } from '@/state/canvas';
+import { nodesInSight, seenNodes, sightOf, type CanvasSight } from '@/state/in-sight';
+import { seePushNotifications, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
+import { liveCanvas, subscribeCanvases } from '@/state/canvas';
 import { useChats, type ChatStatuses } from '@adecore/agents-react/state/chats';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';
@@ -71,15 +71,7 @@ export function liveChatSight(): ChatSightWorkspace {
         layout,
         canvasOf: (viewId) => {
             const canvas = liveCanvas(viewId);
-            return canvas === null
-                ? null
-                : {
-                      camera: canvas.camera,
-                      viewport: canvas.viewport,
-                      nodes: canvas.order.map((id) => canvas.nodes[id]!),
-                      hidden: canvas.hidden,
-                      maximized: maximizedNodeOf(canvas)
-                  };
+            return canvas === null ? null : sightOf(canvas);
         }
     };
 }
@@ -205,16 +197,6 @@ export function isUnseen(unseen: Readonly<Record<string, true>>, endpointId: str
 export function useUnseen(nodeId: string): boolean {
     const endpointId = useEndpointId();
     return useAttention((s) => isUnseen(s.unseen, endpointId, nodeId));
-}
-
-/*
- * Takes the mark off by hand, for a person who dismisses it rather than goes to the node. Looking at
- * the node does this on its own, so nothing has to call this to keep the marks honest.
- */
-export function clearUnseen(nodeId: string): void {
-    clearPushNotification(currentEndpointId(), nodeId);
-    const key = endpointKey(currentEndpointId(), nodeId);
-    useAttention.getState().setUnseen(new Set(Object.keys(useAttention.getState().unseen).filter((entry) => entry !== key)));
 }
 
 /* Whether each node needs you, keyed for the snoozes; a node with no status yet says nothing either way. */

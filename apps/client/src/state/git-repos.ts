@@ -20,9 +20,8 @@ export interface GitCheckout extends GitCheckoutRef {
     /* Null until this checkout's first status lands. */
     status: GitStatus | null;
     failure: string | null;
-    /* Goes up whenever HEAD may have moved in this checkout, which is when the log has to be read
-       again. A file that changed moves the status without moving a single commit, and a folder of nine
-       repositories under an agent would otherwise reread nine logs a few times a second. */
+    /* Goes up whenever HEAD may have moved, which is when the log has to be read again. A file that
+       changed moves the status without moving a commit, so it leaves the log alone. */
     revision: number;
 }
 

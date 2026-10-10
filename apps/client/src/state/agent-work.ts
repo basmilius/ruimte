@@ -3,11 +3,9 @@ import { endpointKey } from '@/state/keys';
 import type { SessionState, SessionsByKey, StatusOf } from '@/state/sessions';
 
 /*
- * Whether a session has an agent in the middle of a turn. Not `nodeStatus`, which calls a terminal
- * running the moment it is attached, which every open terminal is, so a shell waiting at its prompt
- * would count as work. A session counts only through the agent its hooks reported, and only while
- * that agent is `live`, since a record left behind by a CLI that went down with its shell keeps
- * whatever status it had. `needs-you` is a person's turn, not work.
+ * Whether a session has an agent in the middle of a turn. Not `nodeStatus`, which calls every attached
+ * terminal running. Only a `live` agent counts, since a record left by a CLI that went down with its
+ * shell keeps whatever status it had. `needs-you` is a person's turn, not work.
  */
 export function sessionWorking(session: SessionState | undefined): boolean {
     return session?.agent?.live === true && session.agent.status === 'running';

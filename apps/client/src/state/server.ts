@@ -151,33 +151,28 @@ interface ServersStore {
 }
 
 /* What every daemon this client talked to said about itself. */
-export const useServers = create<ServersStore>((set, get) => ({
-    byEndpoint: {},
-    setInfo(endpointId, info) {
+export const useServers = create<ServersStore>((set, get) => {
+    const merge = (endpointId: string, patch: Partial<ServerInfo>): void => {
         const current = get().byEndpoint[endpointId] ?? UNKNOWN;
-        set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, ...info } } });
-    },
-    setEndpoint(endpointId, info) {
-        const current = get().byEndpoint[endpointId] ?? UNKNOWN;
-        set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, ...info } } });
-    },
-    setAccount(endpointId, accountId) {
-        const current = get().byEndpoint[endpointId] ?? UNKNOWN;
-        set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, accountId } } });
-    },
-    setIdentity(endpointId, info) {
-        const current = get().byEndpoint[endpointId] ?? UNKNOWN;
-        set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, ...info } } });
-    },
-    setUpdate(endpointId, update) {
-        const current = get().byEndpoint[endpointId] ?? UNKNOWN;
-        set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, update } } });
-    },
-    forget(endpointId) {
-        const { [endpointId]: _gone, ...rest } = get().byEndpoint;
-        set({ byEndpoint: rest });
-    }
-}));
+        set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, ...patch } } });
+    };
+    return {
+        byEndpoint: {},
+        setInfo: merge,
+        setEndpoint: merge,
+        setAccount(endpointId, accountId) {
+            merge(endpointId, { accountId });
+        },
+        setIdentity: merge,
+        setUpdate(endpointId, update) {
+            merge(endpointId, { update });
+        },
+        forget(endpointId) {
+            const { [endpointId]: _gone, ...rest } = get().byEndpoint;
+            set({ byEndpoint: rest });
+        }
+    };
+});
 
 /* What the machine in scope said about itself, read the way a component asks for one field. */
 export function useServer<T>(select: (info: ServerInfo) => T): T {
