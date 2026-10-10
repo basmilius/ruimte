@@ -35,8 +35,7 @@ type SessionErrorCode =
  */
 const RESUME_GRACE_MS = 15_000;
 
-/* What a fresh screen says before the shell has printed anything: the linked context, then whatever
-   was left for this node while it did not exist. */
+/* What a fresh screen says before the shell prints anything: the linked context, then what was left for this node while it did not exist. */
 function motdOf(hint: string | null, notices: readonly string[]): string | undefined {
     const lines = [...(hint === null ? [] : [hint]), ...notices];
     return lines.length === 0 ? undefined : lines.join('\n');
@@ -114,8 +113,8 @@ export interface SessionManagerOptions {
     commands?: CommandGate;
     // The widest mode the agent of this node may start in, whatever the node says; null for no limit.
     modeCeiling?: (sessionId: string) => RuntimeMode | null;
-    /* The widest mode a person gave a node no agent opened, which an edit of the project file cannot
-       widen; null for no limit. Asked only where `modeCeiling` has none. */
+    // The widest mode a person gave a node no agent opened, which an edit of the project file cannot
+    // widen; null for no limit. Asked only where `modeCeiling` has none.
     personMode?: (sessionId: string) => RuntimeMode | null;
     // Refuses a directory this node may not start in, asked right before every spawn.
     checkCwd?: (sessionId: string, cwd: string) => Promise<void>;
@@ -153,6 +152,8 @@ export class SessionManager {
     private readonly lifecycleListeners = new Set<(session: Session, phase: 'created' | 'closed') => void>();
     private readonly creating = new Map<string, Promise<SessionInfo>>();
     private readonly sinks = new ClientSinks();
+    private readonly observers = new Set<SessionSink>();
+    private readonly exitListeners = new Set<(sessionId: string, exitCode: number) => void>();
     private readonly tokens = new Map<string, string>();
     // Ids whose kill is in flight: the exit that follows removes the session instead of parking it.
     private readonly killing = new Set<string>();
@@ -231,10 +232,6 @@ export class SessionManager {
         return sessionId !== undefined && this.sessions.has(sessionId);
     }
 
-    private readonly observers = new Set<SessionSink>();
-
-    private readonly exitListeners = new Set<(sessionId: string, exitCode: number) => void>();
-
     observe(sink: SessionSink): () => void {
         this.observers.add(sink);
         return () => {
@@ -311,9 +308,7 @@ export class SessionManager {
         });
         session.heldCommand = held;
         this.sessions.set(session.id, session);
-        for (const listener of this.lifecycleListeners) {
-            listener(session, 'created');
-        }
+        this.announce(session, 'created');
         this.tokens.set(session.hookToken, session.id);
         if (options.forClient) {
             this.clientSessions.set(session.id, options.forClient);
@@ -595,9 +590,7 @@ export class SessionManager {
         await this.creating.get(sessionId)?.catch(() => undefined);
         const session = this.require(sessionId);
         this.deleted.add(session);
-        for (const listener of this.lifecycleListeners) {
-            listener(session, 'closed');
-        }
+        this.announce(session, 'closed');
         await this.snapshots?.delete(sessionId);
         await this.agents?.delete(sessionId);
         if (session.exited) {
@@ -672,12 +665,23 @@ export class SessionManager {
         }
     }
 
+    private announce(session: Session, phase: 'created' | 'closed'): void {
+        for (const listener of this.lifecycleListeners) {
+            listener(session, phase);
+        }
+    }
+
+    /* The note about the verbs a CLI of this session starts with. */
+    private noteFor(sessionId: string): string {
+        return verbsNote({ depth: this.depthOf(sessionId), standalone: this.standalone(sessionId), terminal: true, computer: this.computerUse() });
+    }
+
     // Restored shells resume after attach; typing here could land in the input of a CLI that is still alive.
     private async startLine(sessionId: string, launch: AgentLaunch | undefined, restored: boolean): Promise<string | undefined> {
         if (!launch || restored) {
             return undefined;
         }
-        const note = verbsNote({ depth: this.depthOf(sessionId), standalone: this.standalone(sessionId), terminal: true, computer: this.computerUse() });
+        const note = this.noteFor(sessionId);
         if (launch.resume) {
             return resumeOrFreshCommand(launch, launch.resume, note);
         }
@@ -692,7 +696,7 @@ export class SessionManager {
     private resumeLine(session: Session, agent: AgentInfo): string {
         // A person who started another CLI by hand in this shell is resumed as that CLI, not as the node's.
         const launch: AgentLaunch = session.launch?.kind === agent.kind ? session.launch : { kind: agent.kind };
-        const note = verbsNote({ depth: this.depthOf(session.id), standalone: this.standalone(session.id), terminal: true, computer: this.computerUse() });
+        const note = this.noteFor(session.id);
         if (agent.transcriptPath === null) {
             return resumeOrFreshCommand(launch, agent.agentSessionId, note);
         }
@@ -739,9 +743,8 @@ export class SessionManager {
             this.shellEnvironment?.(options.shell, env);
         }
 
-        let session: Session;
         try {
-            session = new Session({
+            return new Session({
                 ...options,
                 env,
                 hookToken,
@@ -753,7 +756,6 @@ export class SessionManager {
         } catch (e) {
             throw new SessionError('spawn-failed', e instanceof Error ? e.message : `Could not start ${options.shell}`);
         }
-        return session;
     }
 
     private handleExit(sessionId: string, exitCode: number): void {
@@ -761,9 +763,7 @@ export class SessionManager {
         if (!session) {
             return;
         }
-        for (const listener of this.lifecycleListeners) {
-            listener(session, 'closed');
-        }
+        this.announce(session, 'closed');
         for (const clientId of session.attachedClients()) {
             this.emit(clientId, { event: 'session.exit', payload: { sessionId, exitCode } });
         }

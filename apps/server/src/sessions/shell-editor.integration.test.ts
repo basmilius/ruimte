@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
 import { access, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { holdsForeground } from '../processes/foreground';
-import { realShell } from './shell-editor-test-helpers';
-import { waitFor, waitForAsync } from './test-helpers';
+import { holdsForeground } from '../processes/foreground.ts';
+import { realShell } from './shell-editor-test-helpers.ts';
+import { waitFor, waitForAsync } from './test-helpers.ts';
 
 function forged(cwd: string): string {
     return `printf '\\033]133;A\\007\\033]7;file://localhost${cwd}\\007forged prompt\\033]133;B\\007\\033[?2004h'`;

@@ -21,6 +21,10 @@ interface Options {
 type Owner = { startTime: number; uid: number };
 const UNKNOWN: SessionPortsResult = { status: 'unknown' };
 const INTERVAL_MS = 5000;
+const VERIFY_INTERVAL_MS = 1000;
+const MAX_TREE_PROCESSES = 2048;
+const MAX_SESSIONS = 128;
+const MAX_PORTS = 128;
 
 export function sessionTree(
     table: readonly RawProcess[],
@@ -43,7 +47,7 @@ export function sessionTree(
     const pending = [process];
     while (pending.length > 0) {
         const entry = pending.pop()!;
-        if (found.has(entry.pid) || found.size >= 2048 || entry.startTime <= 0 || entry.uid !== owner.uid) {
+        if (found.has(entry.pid) || found.size >= MAX_TREE_PROCESSES || entry.startTime <= 0 || entry.uid !== owner.uid) {
             throw new Error('Session tree cannot be verified');
         }
         found.set(entry.pid, entry);
@@ -100,7 +104,7 @@ export class SessionPorts {
         if (!this.options.sampler) {
             return UNKNOWN;
         }
-        const now = (this.options.now ?? Date.now)();
+        const now = this.now();
         if (this.pending) {
             await this.pending;
         } else if (now - this.scannedAt >= INTERVAL_MS) {
@@ -110,7 +114,7 @@ export class SessionPorts {
                 await pending;
             } finally {
                 this.pending = null;
-                this.scannedAt = (this.options.now ?? Date.now)();
+                this.scannedAt = this.now();
             }
         }
         return this.options.current(id) === session ? (this.cache.get(session) ?? UNKNOWN) : { status: 'closed' };
@@ -118,12 +122,12 @@ export class SessionPorts {
 
     async verify(id: string, listener: SessionPort): Promise<SessionPortVerification> {
         const session = this.options.current(id);
-        const now = (this.options.now ?? Date.now)();
+        const now = this.now();
         if (!session) {
             throw new RequestError('session-port-closed', 'This session has ended');
         }
         // Verification always reads afresh, with one global scan and no unbounded queue of clicks.
-        if (this.pending || now - this.verifiedAt < 1000) {
+        if (this.pending || now - this.verifiedAt < VERIFY_INTERVAL_MS) {
             throw new RequestError('session-port-busy', 'Port verification is busy. Try again');
         }
         this.verifiedAt = now;
@@ -148,17 +152,13 @@ export class SessionPorts {
 
     private async scan(target?: { session: PortSession; port: number }): Promise<void> {
         const { sampler, probe } = this.options;
-        if (target) {
-            this.cache.delete(target.session);
-        } else {
-            this.cache.clear();
-        }
+        this.dropCached(target);
         if (!sampler || !probe) {
             return;
         }
         const allSessions = this.options.sessions();
         const sessions = target ? [target.session] : allSessions;
-        if (sessions.length === 0 || allSessions.length > 128) {
+        if (sessions.length === 0 || allSessions.length > MAX_SESSIONS) {
             return;
         }
         const controller = new AbortController();
@@ -184,57 +184,73 @@ export class SessionPorts {
             const listeners = await probe.read(pids, controller.signal, target?.port);
             const after = sampler.sample().processes;
             for (const [session, tree] of trees) {
-                if (controller.signal.aborted || this.options.current(session.id) !== session) {
+                const owner = this.owners.get(session);
+                if (controller.signal.aborted || this.options.current(session.id) !== session || !owner) {
                     continue;
                 }
                 try {
-                    const owner = this.owners.get(session);
-                    if (!owner) {
-                        continue;
-                    }
-                    const current = sessionTree(after, session, owner, roots);
-                    const ports: SessionPort[] = [];
-                    for (const listener of listeners) {
-                        const process = tree.get(listener.pid);
-                        if (!process) {
-                            continue;
-                        }
-                        if (!isLoopbackBinding(listener)) {
-                            continue;
-                        }
-                        if (listeners.some((other) => other.pid !== listener.pid && competesForDestination(listener, other))) {
-                            throw new Error('Another process can receive this listener destination');
-                        }
-                        const fresh = current.get(listener.pid);
-                        const identity = sampler.inspect(listener.pid);
-                        if (!fresh || fresh.startTime !== process.startTime || identity?.startTime !== process.startTime || identity.uid !== owner.uid) {
-                            throw new Error('Listener owner changed during discovery');
-                        }
-                        const port = { ...listener, startTime: process.startTime };
-                        if (!ports.some((entry) => sameListener(entry, port))) {
-                            ports.push(port);
-                        }
-                    }
-                    if (ports.length > 128) {
-                        throw new Error('Too many session listeners');
-                    }
-                    this.cache.set(session, { status: 'ready', ports: ports.sort((one, other) => one.port - other.port || one.pid - other.pid) });
+                    const ports = portsOf(sampler, listeners, tree, sessionTree(after, session, owner, roots), owner);
+                    this.cache.set(session, { status: 'ready', ports });
                 } catch {
                     this.cache.set(session, UNKNOWN);
                 }
             }
         } catch {
-            if (target) {
-                this.cache.delete(target.session);
-            } else {
-                this.cache.clear();
-            }
+            this.dropCached(target);
         } finally {
             if (this.controller === controller) {
                 this.controller = null;
             }
         }
     }
+
+    private dropCached(target: { session: PortSession } | undefined): void {
+        if (target) {
+            this.cache.delete(target.session);
+        } else {
+            this.cache.clear();
+        }
+    }
+
+    private now(): number {
+        return (this.options.now ?? Date.now)();
+    }
+}
+
+/*
+ * The loopback listeners of one session tree, read between two readings of the table. Throws when
+ * another process could take the same destination or an owner changed in between.
+ */
+function portsOf(
+    sampler: ProcessSampler,
+    listeners: readonly TcpListener[],
+    before: Map<number, RawProcess>,
+    after: Map<number, RawProcess>,
+    owner: Owner
+): SessionPort[] {
+    const ports: SessionPort[] = [];
+    for (const listener of listeners) {
+        const process = before.get(listener.pid);
+        if (!process || !isLoopbackBinding(listener)) {
+            continue;
+        }
+        if (listeners.some((other) => other.pid !== listener.pid && competesForDestination(listener, other))) {
+            throw new Error('Another process can receive this listener destination');
+        }
+        const fresh = after.get(listener.pid);
+        const identity = sampler.inspect(listener.pid);
+        if (!fresh || fresh.startTime !== process.startTime || identity?.startTime !== process.startTime || identity.uid !== owner.uid) {
+            throw new Error('Listener owner changed during discovery');
+        }
+        const port = { ...listener, startTime: process.startTime };
+        if (!ports.some((entry) => sameListener(entry, port))) {
+            ports.push(port);
+        }
+    }
+    if (ports.length > MAX_PORTS) {
+        throw new Error('Too many session listeners');
+    }
+    return ports.sort((one, other) => one.port - other.port || one.pid - other.pid);
 }
 
 function sameListener(one: SessionPort, other: SessionPort): boolean {

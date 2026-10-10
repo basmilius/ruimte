@@ -29,6 +29,9 @@ interface Ticket {
     expires: number;
 }
 
+const MAX_TICKETS = 100;
+const TICKET_LIFETIME_MS = 60_000;
+
 function refuse(message: string): never {
     throw new CodedError('terminal-prepare-refused', message);
 }
@@ -76,7 +79,7 @@ export class PrepareTerminal {
             if (!this.eligible(session, client, place) || session.shellPrompt.snapshot()?.revision !== prompt.revision) {
                 continue;
             }
-            if (this.tickets.size >= 100) {
+            if (this.tickets.size >= MAX_TICKETS) {
                 this.tickets.delete(this.tickets.keys().next().value!);
             }
             const token = crypto.randomUUID();
@@ -87,7 +90,7 @@ export class PrepareTerminal {
                 session,
                 revision: prompt.revision,
                 command,
-                expires: this.now() + 60_000
+                expires: this.now() + TICKET_LIFETIME_MS
             });
             targets.push({ token, sessionId: session.id, title: this.host.title(session.id, place.projectId)!, cwd: prompt.cwd });
         }

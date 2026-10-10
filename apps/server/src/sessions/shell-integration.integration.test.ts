@@ -3,12 +3,12 @@ import { spawn } from 'node:child_process';
 import { access, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { prepareShellIntegration } from './shell-integration';
-import { SessionManager } from './manager';
-import { BunPtyAdapter } from '../pty/bun-pty';
-import { PrepareTerminal, shellSyntax } from './prepare-terminal';
-import { holdsForeground } from '../processes/foreground';
-import { waitFor, waitForAsync } from './test-helpers';
+import { prepareShellIntegration } from './shell-integration.ts';
+import { SessionManager } from './manager.ts';
+import { BunPtyAdapter } from '../pty/bun-pty.ts';
+import { PrepareTerminal, shellSyntax } from './prepare-terminal.ts';
+import { holdsForeground } from '../processes/foreground.ts';
+import { waitFor, waitForAsync } from './test-helpers.ts';
 
 test('a real zsh preserves startup files and holds the prepared command until the person presses Enter', async () => {
     const home = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-prepare-shell-')));

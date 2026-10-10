@@ -1,8 +1,8 @@
 import type { Socket } from 'bun';
 import { join } from 'node:path';
-import { realShell } from './shell-editor-test-helpers';
+import { realShell } from './shell-editor-test-helpers.ts';
 
-/* The independent review's relay delays the prepare frame after the real daemon dispatched it. */
+/* A relay on the editor socket that holds back the prepare frame after the real daemon dispatched it. */
 export async function relayedShell() {
     let downstream: Socket<undefined> | undefined;
     let upstream: Socket<undefined> | undefined;

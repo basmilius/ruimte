@@ -1,9 +1,9 @@
+import { basename } from 'node:path';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Terminal } from '@xterm/headless';
 import { trackTerminalCwd, terminalCwdScreenSize, type TerminalCwd, type AgentInfo, type AgentLaunch, type RuntimeMode } from '@ruimte/contracts';
 import type { PtyAdapter, PtyProcess } from '../pty/pty.ts';
 import { fitScreen } from './fit-screen.ts';
-import { basename } from 'node:path';
 import { ShellPrompt } from './shell-prompt.ts';
 import { openShellEditor } from './shell-editor.ts';
 

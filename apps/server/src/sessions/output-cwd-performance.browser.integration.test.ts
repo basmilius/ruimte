@@ -3,7 +3,7 @@ import { realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Terminal } from '@xterm/headless';
 import { trackTerminalCwd } from '@ruimte/contracts';
-import { clientDirectory, withBrowserFixture } from '../../../client/testing/browser-fixture';
+import { clientDirectory, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
 
 // Measurements belong in integration checks: machine load must not turn a unit test red.
 test('cwd tracking remains bounded over 50000 lines, measured against bare headless and browser xterm', async () => {

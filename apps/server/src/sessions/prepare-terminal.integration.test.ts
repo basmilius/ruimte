@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { shellSyntax } from './prepare-terminal';
+import { shellSyntax } from './prepare-terminal.ts';
 import { access, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';

@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { realShell } from './shell-editor-test-helpers';
-import { waitForAsync } from './test-helpers';
+import { realShell } from './shell-editor-test-helpers.ts';
+import { waitForAsync } from './test-helpers.ts';
 
 for (const tostop of [true, false]) {
     test(`redirected background cwd output completes with tostop=${tostop}`, async () => {

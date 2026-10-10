@@ -1,7 +1,12 @@
 import { chmodSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Socket } from 'bun';
-import { ShellPrompt, type ShellEditorConnection, type ShellEditorState, type ShellPrepareOutcome } from './shell-prompt';
+import { ShellPrompt, type ShellEditorConnection, type ShellEditorState, type ShellPrepareOutcome } from './shell-prompt.ts';
+
+// The version of the line protocol the shell integration's `hello` must name.
+const EDITOR_PROTOCOL = '2';
+const MAX_BUFFERED = 16_384;
+const REQUEST_TIMEOUT_MS = 1000;
 
 interface Peer {
     buffer: string;
@@ -29,7 +34,7 @@ export function openShellEditor(env: Record<string, string>, prompt: ShellPrompt
             data(socket, bytes) {
                 const peer = socket.data;
                 peer.buffer += peer.decoder.decode(bytes, { stream: true });
-                if (peer.buffer.length > 16_384) {
+                if (peer.buffer.length > MAX_BUFFERED) {
                     socket.terminate();
                     return;
                 }
@@ -38,7 +43,13 @@ export function openShellEditor(env: Record<string, string>, prompt: ShellPrompt
                     const fields = peer.buffer.slice(0, end).split('\t');
                     peer.buffer = peer.buffer.slice(end + 1);
                     if (!peer.authorized) {
-                        if (fields.length !== 4 || fields[0] !== 'hello' || fields[1] !== secret || fields[2] !== String(pid) || fields[3] !== '2') {
+                        if (
+                            fields.length !== 4 ||
+                            fields[0] !== 'hello' ||
+                            fields[1] !== secret ||
+                            fields[2] !== String(pid) ||
+                            fields[3] !== EDITOR_PROTOCOL
+                        ) {
                             socket.terminate();
                             return;
                         }
@@ -116,12 +127,12 @@ export function openShellEditor(env: Record<string, string>, prompt: ShellPrompt
                 writeFileSync(permit, '', { flag: 'wx', mode: 0o600 });
                 signal.addEventListener('abort', revoke, { once: true });
             }
-            const deadline = Date.now() + 1000;
+            const deadline = Date.now() + REQUEST_TIMEOUT_MS;
             const timer = setTimeout(() => {
                 // A timed-out request must not survive until a later editor cycle.
                 socket.terminate();
                 closePeer(socket);
-            }, 1000);
+            }, REQUEST_TIMEOUT_MS);
             socket.data.pending.set(id, { resolve: finish, timer });
             const frame = `${id}\t${kind}\t${deadline}\t${cwd}\t${command}\n`;
             if (socket.write(frame) !== Buffer.byteLength(frame)) {

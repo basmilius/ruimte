@@ -1,7 +1,9 @@
 import { shellCommandLine, type ChatItem, type TerminalPrepareSource } from '@ruimte/contracts';
 
-/* Only a closed top-level fence of the finished main reply can authorize a preview.
-   Quotes, nested fences and subagent text deliberately do not establish an owner here. */
+/*
+ * Only a closed top-level fence of the finished main reply can authorize a preview. Quotes, nested
+ * fences and subagent text deliberately do not establish an owner here.
+ */
 export function hasPrepareSource(item: ChatItem | undefined, source: TerminalPrepareSource): boolean {
     if (item?.kind !== 'assistant' || item.streaming || item.parentToolUseId || item.id !== source.itemId) {
         return false;

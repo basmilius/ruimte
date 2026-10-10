@@ -1,12 +1,12 @@
 import { mkdtemp, mkdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { BunPtyAdapter } from '../pty/bun-pty';
-import type { PtyProcess } from '../pty/pty';
-import { holdsForeground } from '../processes/foreground';
-import { SessionManager } from './manager';
-import { PrepareTerminal, shellSyntax } from './prepare-terminal';
-import { prepareShellIntegration } from './shell-integration';
-import { waitFor, waitForAsync } from './test-helpers';
+import { BunPtyAdapter } from '../pty/bun-pty.ts';
+import type { PtyProcess } from '../pty/pty.ts';
+import { holdsForeground } from '../processes/foreground.ts';
+import { SessionManager } from './manager.ts';
+import { PrepareTerminal, shellSyntax } from './prepare-terminal.ts';
+import { prepareShellIntegration } from './shell-integration.ts';
+import { waitFor, waitForAsync } from './test-helpers.ts';
 
 export async function realShell(rc: (home: string) => string = () => "PS1='editor> '\n", options: { zshenv?: string } = {}) {
     const home = await realpath(await mkdtemp('/tmp/ruimte-editor-test-'));

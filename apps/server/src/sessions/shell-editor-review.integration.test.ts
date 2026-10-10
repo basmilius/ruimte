@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
 import { access, readFile, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { realShell } from './shell-editor-test-helpers';
-import { relayedShell } from './shell-editor-relay-test-helpers';
-import { waitFor, waitForAsync } from './test-helpers';
+import { realShell } from './shell-editor-test-helpers.ts';
+import { relayedShell } from './shell-editor-relay-test-helpers.ts';
+import { waitFor, waitForAsync } from './test-helpers.ts';
 
 for (const startup of ['.zshenv', '.zshrc']) {
     for (const options of ['nounset', 'errexit', 'nounset errexit']) {
