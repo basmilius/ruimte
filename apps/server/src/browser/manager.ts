@@ -32,6 +32,8 @@ interface CapturedFrame {
     data: string;
 }
 
+type PublishFrame = (frame: { sequence: number; width: number; height: number; data: Uint8Array }) => void;
+
 export interface BrowserPage {
     readonly url: string;
     readonly title: string;
@@ -75,7 +77,7 @@ function normalizeUrl(input: string): string {
     return value;
 }
 
-/* A page the length of a book would push everything else out of an agent's window; an article fits well inside this. */
+const JPEG_QUALITY = 78;
 const FAVICON_DATA_URL = /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/]+=*$/i;
 const LOCATION_EXPRESSION = 'location.href';
 const USER_AGENT_EXPRESSION = 'navigator.userAgent';
@@ -116,7 +118,7 @@ class BrowserSession implements LiveFrameSource {
     private state: BrowserInfo;
     private pageTail = Promise.resolve<unknown>(undefined);
     private resizeTail = Promise.resolve<unknown>(undefined);
-    private publish: ((frame: { sequence: number; width: number; height: number; data: Uint8Array }) => void) | null = null;
+    private publish: PublishFrame | null = null;
     private sequence = 0;
     private streaming = false;
     private bootstrapping = false;
@@ -343,7 +345,7 @@ class BrowserSession implements LiveFrameSource {
         });
     }
 
-    async start(publish: (frame: { sequence: number; width: number; height: number; data: Uint8Array }) => void): Promise<void> {
+    async start(publish: PublishFrame): Promise<void> {
         this.publish = publish;
         if (this.streaming) {
             return;
@@ -351,7 +353,7 @@ class BrowserSession implements LiveFrameSource {
         await this.enqueueCdp('Page.enable');
         await this.enqueueCdp('Page.startScreencast', {
             format: 'jpeg',
-            quality: 78,
+            quality: JPEG_QUALITY,
             maxWidth: Math.round(this.width * this.deviceScaleFactor),
             maxHeight: Math.round(this.height * this.deviceScaleFactor),
             everyNthFrame: 1
@@ -373,20 +375,12 @@ class BrowserSession implements LiveFrameSource {
         this.page.close();
     }
 
-    private emitFrame(
-        publish: (frame: { sequence: number; width: number; height: number; data: Uint8Array }) => void,
-        data: Uint8Array,
-        width: number,
-        height: number
-    ): void {
+    private emitFrame(publish: PublishFrame, data: Uint8Array, width: number, height: number): void {
         this.sequence = (this.sequence + 1) >>> 0;
         publish({ sequence: this.sequence, width, height, data });
     }
 
-    private captureHighDensityFrame(
-        publish: (frame: { sequence: number; width: number; height: number; data: Uint8Array }) => void,
-        screencastSessionId: number
-    ): void {
+    private captureHighDensityFrame(publish: PublishFrame, screencastSessionId: number): void {
         if (this.capturingHighDensityFrame) {
             this.enqueueCdp('Page.screencastFrameAck', { sessionId: screencastSessionId }).catch(() => undefined);
             return;
@@ -399,7 +393,7 @@ class BrowserSession implements LiveFrameSource {
             await this.page.cdp('Page.screencastFrameAck', { sessionId: screencastSessionId });
             return this.page.cdp<CapturedFrame>('Page.captureScreenshot', {
                 format: 'jpeg',
-                quality: 78,
+                quality: JPEG_QUALITY,
                 fromSurface: true,
                 captureBeyondViewport: false
             });
@@ -553,10 +547,8 @@ export class BrowserManager {
     }
 
     /*
-     * The text of a page this machine has open under that node, for an agent a line into it lets
-     * read. Null when no client opened one here, which on a desktop is the usual answer: that shell
-     * draws the page itself. Whichever client opened it, the page is the same page, so the first
-     * session under the id answers.
+     * The text of a page this machine has open under that node, for an agent a line into it lets read.
+     * Null when no client opened one here, which on a desktop is the usual answer: that shell draws the page itself.
      */
     async text(browserId: string): Promise<string | null> {
         const session = this.sessionOf(browserId);

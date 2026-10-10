@@ -53,14 +53,7 @@ export interface RenderedPreview {
 }
 
 /* A preview as an agent gets it: the png written where it can open it. */
-export interface VisualPreview {
-    path: string;
-    width: number;
-    height: number;
-    shotHeight: number;
-    console: ConsoleEntry[];
-    omitted: number;
-}
+export type VisualPreview = Omit<RenderedPreview, 'png'> & { path: string };
 
 type RunOutcome = { kind: 'answer'; answer: RenderAnswer | null } | { kind: 'late' } | { kind: 'stopped' };
 
