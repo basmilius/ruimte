@@ -17,7 +17,9 @@ import type { FileChange } from '../language/file-watch.ts';
 import type { ProjectSqlSettings } from '../language/profiles.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
 import type { SessionSink } from '../sessions/manager.ts';
-import { startDatabaseOf, type SchemaSnapshots, type SnapshotFacts, type SnapshotTarget } from './schema-snapshots.ts';
+import { CONSOLES_DIR, PRIVATE_DIR, PROJECT_DIR } from '../projects/project-files.ts';
+import { startDatabaseOf } from './agent-databases.ts';
+import type { SchemaSnapshots, SnapshotFacts, SnapshotTarget } from './schema-snapshots.ts';
 
 export type SqlAnalysisErrorCode = 'project-not-found' | 'unknown-connection' | 'bad-path' | 'snapshot-failed';
 
@@ -25,12 +27,12 @@ export class SqlAnalysisError extends CodedError<SqlAnalysisErrorCode> {}
 
 /* Where a project keeps a person's consoles, the folder of each connection under it; the same as the client's `consoleFolderOf`. */
 export function consoleFolderOf(folder: string, connectionId: string): string {
-    return resolve(folder, '.ruimte', 'private', 'consoles', encodeURIComponent(connectionId));
+    return resolve(folder, PROJECT_DIR, PRIVATE_DIR, CONSOLES_DIR, encodeURIComponent(connectionId));
 }
 
 /* The connection a console file belongs to by the folder it is in, or null for any other file. */
 export function consoleConnectionOf(folder: string, path: string): string | null {
-    const root = `${resolve(folder, '.ruimte', 'private', 'consoles')}/`;
+    const root = `${resolve(folder, PROJECT_DIR, PRIVATE_DIR, CONSOLES_DIR)}/`;
     if (!path.startsWith(root) || !path.toLowerCase().endsWith('.sql')) {
         return null;
     }

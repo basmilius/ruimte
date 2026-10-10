@@ -91,6 +91,15 @@ export function connectionTarget(config: DatabaseConnection['config']): string {
     return JSON.stringify(Object.entries(rest).sort(([a], [b]) => a.localeCompare(b)));
 }
 
+/* The database a connection starts in: `main` for a SQLite file, the configured one of a server, or null for a server that starts in none. */
+export function startDatabaseOf(connection: DatabaseConnection): string | null {
+    if (connection.config.engine === 'sqlite') {
+        return 'main';
+    }
+    const database = (connection.config as MysqlConfig).database;
+    return typeof database === 'string' && database !== '' ? database : null;
+}
+
 function describeTarget(config: DatabaseConnection['config']): string {
     if (config.engine === 'sqlite') {
         return config.path;
@@ -208,7 +217,7 @@ export class AgentDatabases {
      */
     async tableOf(place: DatabasePlace, wanted: string, schema: string | null): Promise<{ connectionId: string; schema: string }> {
         const connection = await this.named(place, wanted);
-        const resolved = schema ?? this.defaultSchema(connection);
+        const resolved = schema ?? startDatabaseOf(connection);
         if (resolved === null) {
             refuse('schema-required', `${connection.name} starts in no database; name one with --schema`);
         }
@@ -278,7 +287,7 @@ export class AgentDatabases {
                     cellLimit: AGENT_CELL_LIMIT,
                     ...(options.schema === null ? {} : { schema: options.schema })
                 });
-                return { connection: connection.name, schema: options.schema ?? this.defaultSchema(connection), result };
+                return { connection: connection.name, schema: options.schema ?? startDatabaseOf(connection), result };
             },
             options.signal,
             options.uiAccess
@@ -362,7 +371,7 @@ export class AgentDatabases {
     private uiTarget(connection: DatabaseConnection): string {
         // UI access travels to clients; keep a fingerprint instead of connection secrets.
         return createHash('sha256')
-            .update(JSON.stringify([connectionTarget(connection.config), this.defaultSchema(connection)]))
+            .update(JSON.stringify([connectionTarget(connection.config), startDatabaseOf(connection)]))
             .digest('hex');
     }
 
@@ -383,16 +392,8 @@ export class AgentDatabases {
         }
     }
 
-    private defaultSchema(connection: DatabaseConnection): string | null {
-        if (connection.config.engine === 'sqlite') {
-            return 'main';
-        }
-        const database = (connection.config as MysqlConfig).database;
-        return typeof database === 'string' && database !== '' ? database : null;
-    }
-
     private async schemaOf(connection: DatabaseConnection, call: <T>(method: string, params: Record<string, unknown>) => Promise<T>): Promise<string> {
-        const fallback = this.defaultSchema(connection);
+        const fallback = startDatabaseOf(connection);
         if (fallback !== null) {
             return fallback;
         }

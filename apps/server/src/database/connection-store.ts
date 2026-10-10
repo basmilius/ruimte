@@ -5,7 +5,6 @@ import {
     DatabasesPrivateFileSchema,
     DatabasesSharedFileSchema,
     isAbsolutePath,
-    newerVersionIn,
     readDatabaseEntries,
     resolveStoredPath,
     storedPathOf,
@@ -26,6 +25,7 @@ import {
     PROJECT_DIR,
     PROJECT_FILE,
     climbsOut,
+    parseVersioned,
     readJsonDocument,
     tooNewMessage,
     writeGitignoreIfMissing,
@@ -81,17 +81,11 @@ function privatePathIn(folder: string): string {
 
 function parseWith<T>(schema: { safeParse(value: unknown): { success: true; data: T } | { success: false } }) {
     return (text: string): JsonDocumentParse<T> => {
-        let value: unknown;
-        try {
-            value = JSON.parse(text);
-        } catch {
-            return { kind: 'unreadable' };
+        const versioned = parseVersioned(text, DATABASES_VERSION);
+        if (versioned.kind !== 'value') {
+            return versioned;
         }
-        const newer = newerVersionIn(value, DATABASES_VERSION);
-        if (newer !== null) {
-            return { kind: 'too-new', version: newer };
-        }
-        const parsed = schema.safeParse(value);
+        const parsed = schema.safeParse(versioned.value);
         return parsed.success ? { kind: 'ok', document: parsed.data } : { kind: 'unreadable' };
     };
 }
@@ -198,14 +192,7 @@ export class DatabaseConnectionStore {
             if (folder === null) {
                 throw new DatabaseConnectionError('project-not-found', `No project ${projectId} on this machine`);
             }
-            const state = emptyState(folder);
-            const [shared, own] = await Promise.all([
-                readConnectionsFile(sharedPathIn(folder), parseShared, false),
-                readConnectionsFile(privatePathIn(folder), parsePrivate, false)
-            ]);
-            takeShared(state, shared);
-            takePrivate(state, own);
-            return documentOf(state).connections;
+            return documentOf(await readState(folder, false)).connections;
         });
     }
 
@@ -295,13 +282,7 @@ export class DatabaseConnectionStore {
         if (known) {
             return known;
         }
-        const state = emptyState(folder);
-        const [shared, own] = await Promise.all([
-            readConnectionsFile(sharedPathIn(folder), parseShared),
-            readConnectionsFile(privatePathIn(folder), parsePrivate)
-        ]);
-        takeShared(state, shared);
-        takePrivate(state, own);
+        const state = await readState(folder, true);
         this.loaded.set(projectId, state);
         this.watch(projectId, state);
         return state;
@@ -309,10 +290,7 @@ export class DatabaseConnectionStore {
 
     /* Takes in a write the watcher has not reported yet. A file that does not parse is left for its next event. */
     private async takeOutsideEdits(projectId: string, state: LoadedConnections): Promise<'none' | 'taken' | 'unreadable'> {
-        const [shared, own] = await Promise.all([
-            readConnectionsFile(sharedPathIn(state.folder), parseShared, false),
-            readConnectionsFile(privatePathIn(state.folder), parsePrivate, false)
-        ]);
+        const [shared, own] = await readBothFiles(state.folder, false);
         if (shared.kind === 'unreadable' || own.kind === 'unreadable') {
             return 'unreadable';
         }
@@ -388,7 +366,7 @@ export function hasDatabaseConnections(folder: string): boolean {
 }
 
 /* A file from a newer Ruimte is refused and left as it is, never set aside: a later release reads it. */
-async function readConnectionsFile<T>(path: string, parse: (text: string) => JsonDocumentParse<T>, setAside = true): Promise<JsonDocumentRead<T>> {
+async function readConnectionsFile<T>(path: string, parse: (text: string) => JsonDocumentParse<T>, setAside: boolean): Promise<JsonDocumentRead<T>> {
     const read = await readJsonDocument(path, parse, { setAside });
     if (read.kind === 'too-new') {
         throw new DatabaseConnectionError('connections-invalid', tooNewMessage('connections file', read.version, DATABASES_VERSION));
@@ -397,6 +375,18 @@ async function readConnectionsFile<T>(path: string, parse: (text: string) => Jso
         console.warn(`Set aside a database connections file that would not parse: ${read.setAside}`);
     }
     return read;
+}
+
+function readBothFiles(folder: string, setAside: boolean): Promise<[JsonDocumentRead<DatabasesSharedFile>, JsonDocumentRead<DatabasesPrivateFile>]> {
+    return Promise.all([readConnectionsFile(sharedPathIn(folder), parseShared, setAside), readConnectionsFile(privatePathIn(folder), parsePrivate, setAside)]);
+}
+
+async function readState(folder: string, setAside: boolean): Promise<LoadedConnections> {
+    const state = emptyState(folder);
+    const [shared, own] = await readBothFiles(folder, setAside);
+    takeShared(state, shared);
+    takePrivate(state, own);
+    return state;
 }
 
 function textOf<T>(read: JsonDocumentRead<T>): string {

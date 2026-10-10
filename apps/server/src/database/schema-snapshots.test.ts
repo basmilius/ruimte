@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DatabaseConnection } from '@ruimte/contracts';
 import type { DatabaseResponse, TableStructure } from '@adecore/database/protocol';
-import { generationOf, SchemaSnapshots, startDatabaseOf, viewQueryOf } from './schema-snapshots.ts';
+import { startDatabaseOf } from './agent-databases.ts';
+import { generationOf, SchemaSnapshots, viewQueryOf } from './schema-snapshots.ts';
 
 let root = '';
 

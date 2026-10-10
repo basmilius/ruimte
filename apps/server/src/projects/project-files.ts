@@ -165,7 +165,7 @@ export async function writeGitignoreIfMissing(documentPath: string): Promise<boo
 }
 
 /* JSON that is not from a newer version, or the parse result that says why there is none. */
-function parseVersioned(text: string, known: number): { kind: 'value'; value: unknown } | JsonDocumentParse<never> {
+export function parseVersioned(text: string, known: number): { kind: 'value'; value: unknown } | JsonDocumentParse<never> {
     let value: unknown;
     try {
         value = JSON.parse(text);

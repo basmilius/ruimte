@@ -56,15 +56,6 @@ function segmentOf(name: string): string {
     return encodeURIComponent(name).replace(/[!'()*~]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
 }
 
-/* The database a connection starts in: `main` for a SQLite file, the configured one of a server, or null for a server that starts in none. */
-export function startDatabaseOf(connection: DatabaseConnection): string | null {
-    if (connection.config.engine === 'sqlite') {
-        return 'main';
-    }
-    const database = (connection.config as Record<string, unknown>).database;
-    return typeof database === 'string' && database !== '' ? database : null;
-}
-
 const PRODUCTS: Record<ServerInfo['flavor'], string> = { sqlite: 'SQLite', mysql: 'MySQL', mariadb: 'MariaDB' };
 
 /* An action as the snapshot writes it: `CASCADE` as `cascade`, nothing for the engine's default. */
@@ -283,13 +274,14 @@ export class SchemaSnapshots {
         const path = this.pathOf(projectId, { connectionId: connection.id, database });
         const text = `${JSON.stringify(snapshot, null, 2)}\n`;
         const before = await readFile(path, 'utf8').catch(() => null);
-        if (before === null || comparable(before) !== comparable(text)) {
+        const unchanged = before !== null && comparable(before) === comparable(text);
+        if (!unchanged) {
             await mkdir(join(path, '..'), { recursive: true });
             const partial = `${path}.${randomUUID()}.partial`;
             await writeFile(partial, text);
             await rename(partial, path);
         }
-        const facts = factsOf(path, connection.id, database, before !== null && comparable(before) === comparable(text) ? before : text);
+        const facts = factsOf(path, connection.id, database, unchanged ? before : text);
         if (facts === null) {
             throw new SnapshotError(`The snapshot of ${connection.name} could not be read back`);
         }
