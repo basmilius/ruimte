@@ -3,9 +3,19 @@ import { basename, dirname, relative, resolve } from 'node:path';
 import type { ChatInfo } from '@ruimte/contracts';
 import type { UiLinkResolution, UiLinkTarget } from '@adecore/intelligent-ui/links';
 import { checkCwd, isInside } from '../canvas/project-paths.ts';
+import { listRepos } from '../git/repos.ts';
 import { git, toplevel } from '../git/run.ts';
 import type { UiSourceHosts } from './ui-sources.ts';
 import { UiSourceAccessSchema } from './ui-access.ts';
+
+/* The real path of the repository a directory is in; null outside one. */
+async function repositoryOf(directory: string): Promise<string | null> {
+    try {
+        return await realpath(await toplevel(directory));
+    } catch {
+        return null;
+    }
+}
 
 export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, input: unknown, target: UiLinkTarget): Promise<UiLinkResolution> {
     const access = UiSourceAccessSchema.parse(input);
@@ -25,24 +35,31 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
         throw new Error('The writer’s working directory is outside its original project.');
     }
     if (target.type === 'Commit') {
-        const root = await toplevel(cwd);
-        if (!root || !access.roots.some((allowed) => isInside(allowed, root))) {
-            throw new Error('This repository is outside the writer’s original project.');
+        // The agent's own repository first, then every other checkout of the project folder (submodules, repositories beside it).
+        const candidates = new Set<string>();
+        for (const directory of [cwd, ...(await listRepos(place.folder)).repos.map((repo) => repo.path)]) {
+            const root = await repositoryOf(directory);
+            if (root !== null && access.roots.some((allowed) => isInside(allowed, root))) {
+                candidates.add(root);
+            }
         }
-        await checkCwd(place.folder, root, host.worktreePaths);
-        const resolved = await git(['rev-parse', '--verify', `${target.sha}^{commit}`], root);
-        if (!resolved) {
-            throw new Error('This commit is no longer available.');
+        for (const root of candidates) {
+            const resolved = await git(['rev-parse', '--verify', '--quiet', `${target.sha}^{commit}`], root);
+            if (!resolved) {
+                continue;
+            }
+            await checkCwd(place.folder, root, host.worktreePaths);
+            const sha = resolved.trim();
+            const subject = await git(['show', '-s', '--format=%s', sha], root);
+            return {
+                state: 'chip',
+                projectId: place.projectId,
+                target: { type: 'Commit', sha },
+                cwd: root,
+                label: subject?.trim().slice(0, 256) || sha.slice(0, 7)
+            };
         }
-        const sha = resolved.trim();
-        const subject = await git(['show', '-s', '--format=%s', sha], root);
-        return {
-            state: 'chip',
-            projectId: place.projectId,
-            target: { type: 'Commit', sha },
-            cwd: root,
-            label: subject?.trim().slice(0, 256) || sha.slice(0, 7)
-        };
+        throw new Error('This commit is no longer available.');
     }
     let path = resolve(access.cwd, target.path);
     let parent = path;
@@ -71,7 +88,7 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
     if (target.type === 'File') {
         return { state: 'chip', projectId: place.projectId, target: { ...target, path }, cwd, label: basename(path) };
     }
-    const root = await toplevel(cwd);
+    const root = await repositoryOf(missing.length ? real : dirname(path));
     if (!root || !access.roots.some((allowed) => isInside(allowed, root)) || !isInside(root, path)) {
         throw new Error('This diff is outside the writer’s repository.');
     }

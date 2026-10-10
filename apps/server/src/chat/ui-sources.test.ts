@@ -140,9 +140,13 @@ test('a file removed after its initial validation is refused at open time', asyn
     await expect(host.link!(info(), access, { type: 'File', path: 'readme.md' })).rejects.toThrow('no longer available');
 });
 
-async function fixtureGit(...args: string[]): Promise<string> {
+function fixtureGit(...args: string[]): Promise<string> {
+    return fixtureGitIn(folder, ...args);
+}
+
+async function fixtureGitIn(cwd: string, ...args: string[]): Promise<string> {
     const process = Bun.spawn(['git', '-c', 'commit.gpgsign=false', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', ...args], {
-        cwd: folder,
+        cwd,
         stdout: 'pipe',
         stderr: 'pipe'
     });
@@ -202,4 +206,36 @@ test('diff links retain a deleted file and select the staged side', async () => 
         relativePath: 'a.md'
     });
     await expect(host.link!(info(), access, { type: 'Diff', path: 'other.md' })).rejects.toThrow('no current diff');
+});
+
+test('commit and diff links resolve in a repository beside the agent’s own', async () => {
+    const { writeFile } = await import('node:fs/promises');
+    await fixtureGit('init', '-q');
+    const nested = join(folder, 'lib');
+    await mkdir(nested);
+    const nestedGit = (...args: string[]) => fixtureGitIn(nested, ...args);
+    await nestedGit('init', '-q');
+    await writeFile(join(nested, 'b.md'), 'initial');
+    await nestedGit('add', 'b.md');
+    await nestedGit('commit', '-qm', 'Nested commit');
+    const sha = await nestedGit('rev-parse', 'HEAD');
+    await writeFile(join(nested, 'b.md'), 'changed');
+    hosts.gitStatus = async (cwd) => ({
+        repo: true,
+        root: cwd,
+        branch: 'main',
+        detached: false,
+        upstream: null,
+        ahead: 0,
+        behind: 0,
+        base: null,
+        mergeBase: null,
+        files: cwd === nested ? [{ path: 'b.md', state: 'unstaged', status: 'M', added: 1, deleted: 1, binary: false }] : [],
+        truncated: false,
+        live: false
+    });
+    const host = ruimteUiSources(hosts);
+    const access = await host.capture(info());
+    expect(await host.link!(info(), access, { type: 'Commit', sha })).toMatchObject({ state: 'chip', cwd: nested, label: 'Nested commit' });
+    expect(await host.link!(info(), access, { type: 'Diff', path: 'lib/b.md' })).toMatchObject({ state: 'chip', cwd: nested, relativePath: 'b.md' });
 });
