@@ -1,8 +1,4 @@
-/*
- * The worklet that pulls samples off the microphone, as a file of its own because a worklet is a
- * module at run time and the policy in `packages/csp` allows a script from this origin and no blob.
- * `capture.ts` is the only thing that loads it, and the names have to match what it posts back.
- */
+/* Loaded by URL from `capture.ts` (which says why), so the names here have to match what it reads back. */
 
 /* 64 ms at 16 kHz: fifteen messages a second, which is cheap enough for the pipe and fast enough
    that a level meter drawn from these blocks reads as a voice rather than as a slideshow. */

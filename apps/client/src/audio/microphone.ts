@@ -1,8 +1,6 @@
 import i18next from 'i18next';
 import { desktop } from '@/desktop/bridge';
-import { WAVEFORM_BAND_COUNT, easeBands } from '@/audio/waveform';
-
-export { WAVEFORM_BAND_COUNT };
+import { WAVEFORM_BAND_COUNT, easeBands, silentBands } from '@/audio/waveform';
 
 export interface MicrophoneSnapshot {
     deviceName: string;
@@ -70,7 +68,7 @@ export class WaveformMonitor {
     #frame: number | null = null;
     #lastFrame = 0;
     #stopped = false;
-    #levels = Array(WAVEFORM_BAND_COUNT).fill(0);
+    #levels = silentBands();
 
     constructor(onBands: (bands: number[]) => void) {
         this.#onBands = onBands;
@@ -172,14 +170,11 @@ export class MicrophoneMonitor {
             throw new Error(i18next.t('common:microphone.error.noTrack'));
         }
         this.#stream = stream;
-        this.#waveform = new WaveformMonitor((bands) => {
+        const report = (bands: number[]): void => {
             this.#onSnapshot({ deviceName: track.label || i18next.t('common:microphone.default'), bands, trackStatus: this.#trackStatus(track) });
-        });
-        this.#onSnapshot({
-            deviceName: track.label || i18next.t('common:microphone.default'),
-            bands: Array(WAVEFORM_BAND_COUNT).fill(0),
-            trackStatus: this.#trackStatus(track)
-        });
+        };
+        this.#waveform = new WaveformMonitor(report);
+        report(silentBands());
         await this.#waveform.start(stream);
         return stream;
     }

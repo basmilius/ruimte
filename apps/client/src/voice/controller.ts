@@ -15,7 +15,8 @@ import { activeViewOf, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { LiveSession, type LiveEvent } from '@/voice/live-session';
-import { MicrophoneMonitor, WaveformMonitor, WAVEFORM_BAND_COUNT } from '@/audio/microphone';
+import { MicrophoneMonitor, WaveformMonitor } from '@/audio/microphone';
+import { silentBands } from '@/audio/waveform';
 import { microphoneFailureText } from '@/audio/microphone-failure';
 import { ResponseToolLoop } from '@/voice/response-tool-loop';
 import { chatCompletion, type VoiceChatFollowUp } from '@/voice/chat-follow-up';
@@ -218,8 +219,8 @@ export async function startVoice(): Promise<void> {
         error: null,
         transcript: [],
         actions: [],
-        inputBands: Array(WAVEFORM_BAND_COUNT).fill(0),
-        outputBands: Array(WAVEFORM_BAND_COUNT).fill(0),
+        inputBands: silentBands(),
+        outputBands: silentBands(),
         sessionStartedAt: null
     });
     undo.clear();
@@ -399,13 +400,13 @@ async function startMicrophone(): Promise<MediaStream> {
 function stopMicrophone(): void {
     microphone?.stop();
     microphone = null;
-    useVoice.setState({ inputBands: Array(WAVEFORM_BAND_COUNT).fill(0) });
+    useVoice.setState({ inputBands: silentBands() });
 }
 
 function stopOutputWaveform(): void {
     outputWaveform?.stop();
     outputWaveform = null;
-    useVoice.setState({ outputBands: Array(WAVEFORM_BAND_COUNT).fill(0) });
+    useVoice.setState({ outputBands: silentBands() });
 }
 
 export function closeVoicePanel(): void {
