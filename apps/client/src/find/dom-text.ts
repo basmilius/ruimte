@@ -84,7 +84,6 @@ export function locateOffset(starts: readonly number[], offset: number): { index
     return { index: found, offset: offset - (starts[found] ?? 0) };
 }
 
-/* The ranges of the matches, for the page's highlights and for scrolling one into view. */
 export function rangesOf(dom: DomText, matches: readonly TextMatch[]): Range[] {
     if (dom.nodes.length === 0) {
         return [];

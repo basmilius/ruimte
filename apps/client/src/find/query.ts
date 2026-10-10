@@ -67,7 +67,7 @@ export function matchesIn(text: string, pattern: RegExp, limit: number = MATCH_L
     return matches;
 }
 
-/* The step from one match to the next or the one before, round at either end. */
+/* Wraps around at either end. */
 export function stepIndex(current: number | null, count: number, direction: 1 | -1): number | null {
     if (count === 0) {
         return null;

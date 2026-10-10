@@ -81,11 +81,7 @@ describe('the translation files', () => {
         }
     });
 
-    /*
-     * The one rule that keeps a half-translated screen out: a key that English has and another
-     * language does not falls back and reads English in the middle of a Dutch sentence, and a key
-     * only the other language has is a word nobody ever draws.
-     */
+    /* A key missing from one language reads English mid-sentence; a key only another language has is never drawn. */
     test('hold the same keys in every language', async () => {
         for (const namespace of namespacesOn(FALLBACK_LANGUAGE)) {
             const english = keysOf(await read(FALLBACK_LANGUAGE, namespace)).sort();

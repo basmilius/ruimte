@@ -145,7 +145,6 @@ export function answerInto(draft: ConflictDraft | undefined, file: ConflictFile,
     return { text, spans };
 }
 
-/* The conflicts of a draft that still need a person. */
 export function openInDraft(draft: ConflictDraft): number[] {
     return draft.spans.filter((span) => span.kind === 'conflict' && !span.settled).map((span) => span.block);
 }
@@ -216,7 +215,6 @@ export interface ConflictCache {
     drafts: Map<string, ConflictDraft>;
 }
 
-/* What writing a file asks of the machine. */
 export interface ConflictWriter {
     resolve(path: string, content: string, hash: string): Promise<unknown>;
     read(path: string): Promise<GitConflictResult>;

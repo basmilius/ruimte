@@ -1,8 +1,4 @@
-/*
- * The languages the interface is written in. A language is a whole translation or it is not on this
- * list: half a language reads worse than a language nobody speaks, since the half that is missing
- * lands in the middle of a sentence.
- */
+/* A language is a whole translation or it is not on this list: a missing half lands mid-sentence. */
 export const LANGUAGE_SYSTEM = 'system';
 
 export const APP_LANGUAGES = ['en', 'nl'] as const;
@@ -24,11 +20,7 @@ export function languageFrom(stored: unknown): string {
     return isAppLanguage(stored) ? stored : LANGUAGE_SYSTEM;
 }
 
-/*
- * Which of our languages a list of system languages asks for. Only the language is read, never the
- * country: someone whose Mac is set to Dutch in Belgium wants Dutch, and the country is the region's
- * business, not this one's.
- */
+/* Only the language is read, never the country: Dutch in Belgium wants Dutch, and the country is the region's business. */
 export function languageOf(preferred: readonly string[]): AppLanguage | null {
     for (const tag of preferred) {
         const base = tag.toLowerCase().split(/[-_]/)[0];

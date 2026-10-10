@@ -86,7 +86,6 @@ export interface ProjectLaunches {
     views: Map<string, LaunchView>;
 }
 
-/* The launches of the project on screen, with the state of each. */
 export function useProjectLaunches(): ProjectLaunches {
     const endpointId = useEndpointId();
     const projectId = useProject((s) => s.current?.projectId ?? null);

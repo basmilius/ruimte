@@ -99,7 +99,6 @@ export function OnboardingDialog() {
     );
 }
 
-/* The sky, the icon and two ways on. */
 function Welcome({ titleId }: { titleId: string }) {
     const { t } = useTranslation('onboarding');
     // Held from the welcome on, so the list opens on what the machine already said.

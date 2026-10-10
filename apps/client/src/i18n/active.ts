@@ -3,9 +3,8 @@ import { FALLBACK_LANGUAGE, LANGUAGE_SYSTEM, languageOf, type AppLanguage } from
 import { useSettings } from '@/state/settings';
 
 /*
- * Which languages the operating system was asked for, in the order it prefers them. The shell reads
- * them from the system rather than from Chromium, which only ever names the language of the app
- * bundle. A browser has `navigator.languages`, which is the same list by another name.
+ * The operating system's languages, in its order. The shell reads them from the system, since
+ * Chromium only names the language of the app bundle; a browser has `navigator.languages`.
  */
 export function systemLanguages(): readonly string[] {
     const fromShell = desktop()?.systemLanguages;

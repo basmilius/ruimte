@@ -15,7 +15,6 @@ export interface PendingEnd {
 
 export const useEndingAgents = create<{ pending: PendingEnd | null }>(() => ({ pending: null }));
 
-/* The question the dialog asks, in the language on screen. */
 export function endingTitle(pending: PendingEnd): string {
     if (pending.action === 'stop-subagents') {
         return i18next.t('agents:dialog.stopSubagentsTitle');

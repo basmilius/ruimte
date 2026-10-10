@@ -29,7 +29,7 @@ function activeRules(): PlanPanelRules {
     return (rules ??= new PlanPanelRules(uiIo(windowClock)));
 }
 
-/* A press on a chat's pill opens that plan in the panel, whatever was closed before. */
+/* Opens the plan in the panel, even after a person closed it. */
 export function openPlanFromPill(chatId: string, planId: string): void {
     usePlans.getState().markSeen(currentEndpointId(), chatId);
     activeRules().pill(chatId, planId);
