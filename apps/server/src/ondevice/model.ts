@@ -55,7 +55,7 @@ export class OnDeviceModel {
             return { available: false, reason: UNSUPPORTED };
         }
         try {
-            const { result, exited } = await (this.options.probe ?? probeAppleHelper)((this.options.command ?? helperCommand)(), this.environment());
+            const { result, exited } = await (this.options.probe ?? probeAppleHelper)(this.command(), this.environment());
             if (result.type === 'availability' && exited === 0) {
                 return result.available ? { available: true } : { available: false, reason: describeReason(result.reason) };
             }
@@ -97,6 +97,10 @@ export class OnDeviceModel {
         return (this.options.supported ?? appleSiliconMac)();
     }
 
+    private command(): string {
+        return (this.options.command ?? helperCommand)();
+    }
+
     private environment(): Record<string, string | undefined> {
         return this.options.env ?? process.env;
     }
@@ -124,7 +128,7 @@ export class OnDeviceModel {
             };
             try {
                 const child = new ChatChild({
-                    command: [(this.options.command ?? helperCommand)(), '--oneshot'],
+                    command: [this.command(), '--oneshot'],
                     cwd: '/',
                     env: Object.fromEntries(Object.entries(this.environment()).filter((entry): entry is [string, string] => entry[1] !== undefined)),
                     ...(this.options.spawn ? { spawn: this.options.spawn } : {}),
