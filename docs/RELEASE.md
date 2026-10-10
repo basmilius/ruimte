@@ -19,11 +19,19 @@ computer use app is assembled with that version before signing and notarization.
 
 ## npm
 
-Publishing a release also publishes `ruimte` and its three platform binary packages at the application version. Shared libraries are consumed from Adecore at the version pinned in the manifests and `bun.lock`; Ruimte's application version advances independently.
+Publishing a release also publishes `ruimte` and its three platform binary packages at the
+application version. Shared libraries come from Adecore at the version pinned in the manifests and
+`bun.lock`; Ruimte's application version moves on its own.
 
-`.github/workflows/npm.yml` runs on `release: published`, on the dispatch sent by `release.yml`, or by hand (`gh workflow run npm.yml -f version=0.2.0`, for an existing tag). It compiles the daemon for `darwin-arm64` on macOS and `linux-x64`/`linux-arm64` on Ubuntu, then uses `packages/npm/scripts/build.ts` to prepare the packages. `publish.ts` publishes the platform binaries before the launcher, skips versions already on npm and uses `next` for prereleases.
+`.github/workflows/npm.yml` runs on `release: published`, on the dispatch sent by `release.yml`, or
+by hand (`gh workflow run npm.yml -f version=0.2.0`, for an existing tag). It compiles the daemon
+for `darwin-arm64` on macOS and `linux-x64`/`linux-arm64` on Ubuntu, then prepares the packages
+with `packages/npm/scripts/build.ts`. `publish.ts` publishes the platform binaries before the
+launcher, skips versions already on npm and uses `next` for prereleases.
 
-The `libraries-v*` trigger, library publication jobs, build script and library placeholders have been removed. Adecore owns library builds and Trusted Publishing for its npm names.
+This repository no longer publishes libraries: the `libraries-v*` trigger, the library jobs, their
+build script and their placeholders are gone. Adecore owns its library builds and the Trusted
+Publishing of its npm names.
 
 There is no npm token. Every package trusts the workflow through Trusted Publishing, set on
 npmjs.com per package under Settings, Trusted publishing: GitHub Actions, owner `basmilius`,
@@ -95,12 +103,11 @@ codesign -dv --entitlements - apps/desktop/release/mac-arm64/Ruimte.app/Contents
 spctl -a -vvv -t exec apps/desktop/release/mac-arm64/Ruimte.app
 ```
 
-The daemon should report `flags=0x10000(runtime)`, a `Timestamp` and the five entitlements, including
-`com.apple.security.device.audio-input`. macOS attributes a microphone request made by an app
-started in a Ruimte terminal to this bundled daemon, so the entitlement has to be present there as
-well as on the Electron shell. `spctl`
-answers `rejected / source=Unnotarized Developer ID` until the app has been through notarization,
-which is the expected answer for a local build.
+The daemon should report `flags=0x10000(runtime)`, a `Timestamp` and the five entitlements,
+`com.apple.security.device.audio-input` among them. macOS attributes a microphone request from an
+app started in a Ruimte terminal to this bundled daemon, so the daemon needs the entitlement as well as
+the Electron shell. `spctl` answers `rejected / source=Unnotarized Developer ID` until the app has
+been through notarization, which is the expected answer for a local build.
 
 ## Notarization
 
@@ -147,13 +154,12 @@ appears in `releases.atom`.
 
 The `publish` job publishes the draft once `verify` (every job of `ci.yml`, run on the tagged commit)
 and every build succeed. It publishes as Latest, or as a prerelease for a tag with a `-` in it, and
-it does not download the build to try the daemon in it first. If a release does turn out broken on
-start, that is where to look: start
-`Contents/Resources/bin/ruimte` from the arm64 zip with a temporary `RUIMTE_HOME` and another port,
-wait for `/health`, then open a socket with `?protocol=N&token=<local.key>` and check that
-`endpoint.info` carries `protocol`. v0.0.12 shipped a daemon that crashed on start (tsyringe loaded
-before reflect-metadata in the bundle), and v0.0.12 and v0.0.13 left `protocol` out of `endpoint.info`,
-so every client refused every machine as older.
+it does not download the build to try the daemon in it first. If a release does turn out broken
+on start, look there: start `Contents/Resources/bin/ruimte` from the arm64 zip with a temporary
+`RUIMTE_HOME` and another port, wait for `/health`, then open a socket with
+`?protocol=N&token=<local.key>` and check that `endpoint.info` carries `protocol`. v0.0.12 shipped a
+daemon that crashed on start (tsyringe loaded before reflect-metadata in the bundle), and v0.0.12
+and v0.0.13 left `protocol` out of `endpoint.info`, so every client refused every machine as older.
 
 ## The secrets in CI
 
@@ -172,8 +178,8 @@ The workflow creates the draft release before electron-builder starts. Left to i
 that finish at the same moment both see no release, both create one, and the upload behind the race
 it loses disappears without an error in the log.
 
-Export the certificate and its private key from Keychain Access, then encode
-it with `base64 -i cert.p12 | pbcopy`. The workflow writes the `.p8` to a file under `RUNNER_TEMP`
+Export the certificate and its private key from Keychain Access, then encode it with
+`base64 -i cert.p12 | pbcopy`. The workflow writes the `.p8` to a file under `RUNNER_TEMP`
 for the length of the job, because notarytool reads the key from disk, and removes it afterwards.
 
 Two things about that `.p12` cost an afternoon once.

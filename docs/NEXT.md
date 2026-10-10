@@ -1,8 +1,8 @@
 # Next
 
-Only open implementation, decisions and verification belong in this plan. Each numbered package
-is a reviewable change; split larger packages into issues when implementation starts. The order
-is a priority recommendation. Run measurements or a design spike before estimating larger work.
+This plan holds only open implementation, decisions and verification. Each numbered package
+is a reviewable change; split a larger package into issues when implementation starts. The order
+is a recommended priority. Run measurements or a design spike before estimating larger work.
 
 Reviewed against `aada37fe5` on October 7, 2026. Implementation, acceptance and product decisions
 are separate tasks below. The ADE CORE extraction, initial language-server implementation and
@@ -10,24 +10,24 @@ multiwindow implementation are complete; their remaining acceptance does not req
 
 ## Implementation order
 
-| Package                               | Priority                             | Depends on                                     |
-| ------------------------------------- | ------------------------------------ | ---------------------------------------------- |
-| 1. Chat lifecycle and native requests | First                                | Nothing                                        |
-| 2. Ownership and persistent files     | First                                | Nothing                                        |
-| 3. Test floor and measurements        | Early                                | Nothing for a baseline                         |
-| 4. Keyboard and settings              | Next                                 | DOM setup from 3 for interaction tests         |
-| 5. File and diff entry points         | Next                                 | Nothing                                        |
-| 6. Terminal basics                    | Next                                 | 4 for new bindings; 5 for file links           |
-| 7. Canvas ergonomics                  | Next                                 | 4 for bindings; baseline from 3                |
-| 8. Chat depth                         | Next                                 | 1 for lifecycle; 5 for shared file locations   |
-| 9. Accounts                           | Next                                 | 1 for continuation/recovery                    |
-| 10. Remote access and media           | Next                                 | 2; measurements from 3                         |
-| 11. iOS, devices and worktrees        | Next                                 | 1 for task status; 5 for locations             |
-| 12. Multiple windows                  | Acceptance                           | Existing implementation; baseline from 3      |
-| 13. Copilot and Gemini chat           | Later                                | 1 and 9; compatibility checks below            |
-| 14. Editor and language servers        | Acceptance and remaining features    | Existing implementation; server policy per addition |
-| 15. Plugins                           | Decision first                       | Registry inventory and a compatibility release |
-| 16. Linux and Windows                 | Linux checks early, Windows deferred | Platform spikes and CI                         |
+| Package                               | Priority                             | Depends on                                          |
+| ------------------------------------- | ------------------------------------ | --------------------------------------------------- |
+| 1. Chat lifecycle and native requests | First                                | Nothing                                             |
+| 2. Ownership and persistent files     | First                                | Nothing                                             |
+| 3. Test floor and measurements        | Early                                | Nothing for a baseline                              |
+| 4. Keyboard and settings              | Next                                 | DOM setup from 3 for interaction tests              |
+| 5. File and diff entry points         | Next                                 | Nothing                                             |
+| 6. Terminal basics                    | Next                                 | 4 for new bindings; 5 for file links                |
+| 7. Canvas ergonomics                  | Next                                 | 4 for bindings; baseline from 3                     |
+| 8. Chat depth                         | Next                                 | 1 for lifecycle; 5 for shared file locations        |
+| 9. Accounts                           | Next                                 | 1 for continuation/recovery                         |
+| 10. Remote access and media           | Next                                 | 2; measurements from 3                              |
+| 11. iOS, devices and worktrees        | Next                                 | 1 for task status; 5 for locations                  |
+| 12. Multiple windows                  | Acceptance                           | Existing implementation; baseline from 3            |
+| 13. Copilot and Gemini chat           | Later                                | 1 and 9; compatibility checks below                 |
+| 14. Editor and language servers       | Acceptance and remaining features    | Existing implementation; server policy per addition |
+| 15. Plugins                           | Decision first                       | Registry inventory and a compatibility release      |
+| 16. Linux and Windows                 | Linux checks early, Windows deferred | Platform spikes and CI                              |
 
 Measurements must finish before changing the WebGL budget, splitting the composer chunk or
 choosing media buffer sizes.
@@ -36,16 +36,16 @@ choosing media buffer sizes.
 
 Sources: `@adecore/agents/chat`, task coordination and the host's resume handlers.
 
-Queue, Stop, recovery, durable task delivery and native-request ownership fixes are implemented.
-Only the following live evidence remains; do not rerun historical implementation prompts.
+The fixes for Queue, Stop, recovery, durable task delivery and native-request ownership are in.
+Only the live evidence below is left; do not rerun historical implementation prompts.
 
 1. Capture a natural provider-limit/reset sequence when one occurs, using a new bounded probe
    against the current packages. A quota read alone is not a refusal/reset replay. Do not consume
    budget to force a limit. Unknown reset times keep the queue paused; this capture does not block
    other fixes.
-2. Preserve natural early-before-tool metadata or mid-run child model changes if they occur.
-   Current regressions cover those orderings deterministically; the latest live capture shows
-   normal nesting and reuse. This is supplementary evidence, not an implementation gate.
+2. Keep a natural capture of early-before-tool metadata or a mid-run child model change if one
+   occurs. Deterministic regressions already cover those orderings, and the latest live capture
+   shows normal nesting and reuse. This is extra evidence, not an implementation gate.
 
 The remaining full-client memory verification belongs to package 3.
 
@@ -92,10 +92,10 @@ unknown services remain unchanged, and handwritten launches have a verified rout
    cells. Measure ten file nodes with representative large files, including zoom below/above the
    editor gate and repeated view switching.
 3. Measure the fixed ten-context WebGL budget on representative hardware and under context loss.
-   Choose any cap/adaptation change from those results. A user setting is not automatically required.
+   Base any cap or adaptation change on those results. That does not by itself call for a user setting.
 4. Finish the collected Electron heap and frame/latency measurement for a 100-idle-chat
    full-client fixture. The previous run stopped before collecting that evidence. Recreate the
-   fixture against the current ADE CORE packages; obtain app access for any computer-use round.
+   fixture against the current ADE CORE packages; get app access for any computer-use round.
    Earlier runs covered a 1,000-child deterministic probe, a nine-child Claude replay, Electron
    view switching and Bun/JSC/mimalloc attribution; they did not collect the required full-client
    heap and latency evidence. Do not infer collected Electron heap from RSS or change cache/GC
@@ -198,7 +198,7 @@ connector label layering and explicit pan ownership are implemented. Current beh
 3. Rank palette results by exact match, prefix and substring; add `>` for actions. Track recently
    visited nodes independently of recent commands, and use them on an empty query.
 4. Save pasted images under `<folder>/.ruimte/images` and create file nodes pointing at them.
-   Handle a project without a folder, failed writes and unused-image cleanup deliberately.
+   Decide how to handle a project without a folder, failed writes and cleanup of unused images.
 5. Add optional color/arrowhead styling to plain lines, preserving the meaning and permissions
    of context/target/origin edges. Give notes a first body heading derived from their title without
    duplicating or overwriting an existing heading; settle rename behavior before implementation.
@@ -298,9 +298,9 @@ existing binary reply path, range streaming and explicit direct-connection failu
 1. Add typing to physical iOS devices behind the existing backend input capability. Verify Unicode,
    multiline text and the taken-over/stopped state on an actual device. Android's current text
    path is limited to ASCII, so do not claim Unicode parity without a fix.
-2. Decide how to merge into a branch checked out nowhere. The current code intentionally refuses
-   `target-not-checked-out`. A ref-only merge needs its own conflict/result path and must never move
-   a ref behind a working tree; implement it only after updating that invariant deliberately.
+2. Decide how to merge into a branch checked out nowhere. The current code refuses that on purpose
+   with `target-not-checked-out`. A ref-only merge needs its own conflict/result path and must never
+   move a ref behind a working tree; implement it only after a deliberate update of that invariant.
 3. Verify the implemented visual replies on a real iPhone in both themes, with links opening in
    Safari. Check desktop/station rendering and the machine's off switch too. The daemon verb,
    preview renderer, sandbox host and native iOS presentation are already built; the current
@@ -409,10 +409,11 @@ architectures/formats.
 
 ## Decisions and completion rules
 
-The decision-dependent steps are shared-folder restore with concurrent edits, Claude account configuration sharing, ref-only merges,
-the protocol window, Bonjour discovery, plugin scope, formatter policy and the later language-server execution rules. Decide each before
-its dependent implementation, while continuing the other steps. Measurements settle buffer, cap
-and chunk choices. Automatic redelivery after an accepted parent turn fails remains disabled by
+These steps wait on a decision: shared-folder restore with concurrent edits, sharing Claude
+account configuration, ref-only merges, the protocol window, Bonjour discovery, plugin scope,
+formatter policy and the later language-server execution rules. Decide each before the
+implementation that depends on it, and keep going with the other steps meanwhile. Measurements
+settle the buffer, cap and chunk choices. Automatic redelivery after an accepted parent turn fails remains disabled by
 the existing product decision; it is not an unanswered implementation question.
 
 For each code change, run focused deterministic regressions and the repository's required checks.

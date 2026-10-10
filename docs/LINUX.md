@@ -1,11 +1,11 @@
 # Linux
 
-Linux packaging exists; CI coverage and packaged-app acceptance remain open. Reviewed on
+Linux packaging exists; CI coverage and packaged-app acceptance are still open. Reviewed on
 October 7, 2026. The daemon has a Debian setup in `apps/server/docker`, spawns PTYs through
 `Bun.spawn({ terminal })`, reads DMI and the device tree for the machine model, reveals through
-`xdg-open` and falls back to per-directory watching. New native dependencies, including the
-ADE CORE database helper and the separately installed PHP language server, need their own
-Linux build and runtime checks; the older shell smoke test below does not cover them.
+`xdg-open` and falls back to per-directory watching. Newer native dependencies, such as the
+ADE CORE database helper and the separately installed PHP language server, need Linux build and
+runtime checks of their own; the older shell smoke test below does not cover them.
 
 An rpm and an AppImage were built and run on Fedora 44 (x64, Wayland) on 11 September 2026. The
 packaged app brought its daemon up, loaded the window and shut down cleanly on SIGTERM. The rpm
@@ -61,21 +61,26 @@ The `linux` job in `.github/workflows/release.yml` builds x64 on `ubuntu-22.04` 
 
 ## Open
 
-1. **Linux verification and integration jobs in `.github/workflows/ci.yml`.** Those jobs currently
-   run on `macos-latest`; the presence of Ubuntu bookkeeping jobs does not cover Linux behavior.
-2. **Fonts with a Linux face.** `--font-sans` and `--font-mono` in `@adecore/ui/theme.css`
-   name Apple, Microsoft and web faces only (an issue for that library, not a patch here), so both fall through to the generic on a Linux
-   desktop. Cantarell, Ubuntu and Noto Sans for the first, DejaVu Sans Mono, Liberation Mono and
-   Noto Sans Mono for the second. `DEFAULT_FONT_STACKS` in `@adecore/drawing/text.ts` has the
+1. **Linux verification and integration jobs in `.github/workflows/ci.yml`.** Those jobs run on
+   `macos-latest`; the Ubuntu bookkeeping jobs say nothing about Linux behavior.
+2. **Fonts with a Linux face.** `--font-sans` and `--font-mono` in `@adecore/ui/theme.css` name
+   only Apple, Microsoft and web faces (an issue for that library, not a patch here), so both fall
+   through to the generic on a Linux desktop. Candidates are Cantarell, Ubuntu and Noto Sans for the
+   first, and DejaVu Sans Mono, Liberation Mono and Noto Sans Mono for the second. `DEFAULT_FONT_STACKS` in `@adecore/drawing/text.ts` has the
    same gap, and its `hand` stack names nothing a stock Linux box ships.
 3. **Wayland.** The app runs under XWayland by default, which is blurry on fractional scaling.
    Whether to pass `--ozone-platform-hint=auto` is a choice, not a bug.
 
-Unverified: the deb (never built, and the `deb.depends` list in `apps/desktop/electron-builder.yml`
-names `libgtk-3-0` and `libxss1`, both renamed or dropped in the t64 transition, so install it on
-trixie and noble); arm64; the
-AppImage on Ubuntu 24.04, whose AppArmor policy takes away the unprivileged user namespaces
-Fedora allows; the frameless window under GNOME on X11 and under KDE, where resize borders and the
-compositor's own title bar menu are worth a look; and Linux execution of both test suites. Deterministic cases run under `bun run test`; real
-shells, processes, sockets and watchers belong to `bun run test:integration`. No Linux run is
-established by the September smoke result.
+Unverified:
+
+- the deb. It was never built, and the `deb.depends` list in `apps/desktop/electron-builder.yml`
+  names `libgtk-3-0` and `libxss1`, both renamed or dropped in the t64 transition, so install it on
+  trixie and noble;
+- arm64;
+- the AppImage on Ubuntu 24.04, whose AppArmor policy takes away the unprivileged user namespaces
+  Fedora allows;
+- the frameless window under GNOME on X11 and under KDE, where resize borders and the compositor's
+  own title bar menu are worth a look;
+- both test suites on Linux. Deterministic cases run under `bun run test`; real shells, processes,
+  sockets and watchers belong to `bun run test:integration`. The September smoke result is not a
+  Linux test run.
