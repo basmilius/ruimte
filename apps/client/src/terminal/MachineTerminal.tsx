@@ -1,17 +1,17 @@
-import { trackOutputCwd } from './output-cwd';
-import { openFileLink } from '@/shell/panels/file-links';
-import { bindTerminalFileLinks, type TerminalFileLink } from './file-links';
 import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { TerminalView, type TerminalViewProps, type TerminalLinkBounds, type TerminalViewHandle } from '@adecore/terminal';
 import { Tooltip } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
 import { isApplePlatform, isDesktop } from '@/desktop/bridge';
+import { openFileLink } from '@/shell/panels/file-links';
 import { useEndpoints } from '@/state/endpoints';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useWindow, workspaceOf } from '@/state/window';
+import { bindTerminalFileLinks, type TerminalFileLink } from './file-links';
 import { isTerminalLinkClick, openTerminalLink, terminalLinkTarget } from './links';
 import { openTerminalLinkInRuimte } from './open-in-ruimte';
+import { trackOutputCwd } from './output-cwd';
 
 type MachineTerminalProps = Omit<TerminalViewProps, 'onOpenLink' | 'onLinkHover'> & {
     endpointId: string;
@@ -20,6 +20,19 @@ type MachineTerminalProps = Omit<TerminalViewProps, 'onOpenLink' | 'onLinkHover'
 };
 
 type HoveredLink = { endpointId: string; sourceId?: string; bounds: TerminalLinkBounds } & ({ kind: 'url'; uri: string } | { kind: 'file'; text: string });
+
+function sameFileHover(current: HoveredLink, next: HoveredLink & { kind: 'file' }): boolean {
+    return (
+        current.kind === 'file' &&
+        current.text === next.text &&
+        current.endpointId === next.endpointId &&
+        current.sourceId === next.sourceId &&
+        current.bounds.x === next.bounds.x &&
+        current.bounds.y === next.bounds.y &&
+        current.bounds.width === next.bounds.width &&
+        current.bounds.height === next.bounds.height
+    );
+}
 
 export function MachineTerminal({ endpointId, sourceId, onFileLinkHover, className, ref, ...props }: MachineTerminalProps) {
     const { t } = useTranslation('canvas');
@@ -45,19 +58,8 @@ export function MachineTerminal({ endpointId, sourceId, onFileLinkHover, classNa
                     if (!link || !bounds) {
                         return current?.kind === 'file' ? null : current;
                     }
-                    if (
-                        current?.kind === 'file' &&
-                        current.text === link.text &&
-                        current.endpointId === endpointId &&
-                        current.sourceId === sourceId &&
-                        current.bounds.x === bounds.x &&
-                        current.bounds.y === bounds.y &&
-                        current.bounds.width === bounds.width &&
-                        current.bounds.height === bounds.height
-                    ) {
-                        return current;
-                    }
-                    return { kind: 'file', text: link.text, bounds, endpointId, sourceId };
+                    const next: HoveredLink = { kind: 'file', text: link.text, bounds, endpointId, sourceId };
+                    return current !== null && sameFileHover(current, next) ? current : next;
                 });
             }
         });

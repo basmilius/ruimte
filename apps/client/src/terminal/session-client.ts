@@ -126,7 +126,7 @@ export class SessionClient {
         try {
             await this.ensure(nodeId, options, cols, rows);
             // The node may have left the canvas while the create was on the wire.
-            if (this.mounted.get(nodeId) !== registered || this.attachments.get(nodeId) !== attachment) {
+            if (!this.isCurrent(nodeId, registered, attachment)) {
                 return null;
             }
             // A resize meanwhile updated the entry; the attach claims the PTY, so the grid of the mount would undo it.
@@ -151,7 +151,7 @@ export class SessionClient {
     /* A preview shares the stream, never another snapshot that could consume a renderer's pending output. */
     async retain(nodeId: string): Promise<() => void> {
         if (this.disposed || this.transport.status !== 'open') {
-            throw new TransportError('disconnected', 'The session client is disconnected.');
+            throw disconnected();
         }
         const attachment = this.attachment(nodeId);
         const holder = Symbol();
@@ -176,7 +176,7 @@ export class SessionClient {
                 }
             }
             if (this.disposed || this.attachments.get(nodeId) !== attachment) {
-                throw new TransportError('disconnected', 'The session client is disconnected.');
+                throw disconnected();
             }
             return release;
         } catch (error) {
@@ -262,8 +262,7 @@ export class SessionClient {
         return this.mounted.has(nodeId);
     }
 
-    /* Lets go of the machine, which is not the same as ending its sessions. They keep running; the
-       daemon only stops streaming their output to a socket this client no longer reads. */
+    /* Lets go of the machine without ending its sessions; the daemon only stops streaming to this socket. */
     dispose(): void {
         this.disposed = true;
         this.mounted.clear();
@@ -276,6 +275,19 @@ export class SessionClient {
             off();
         }
         this.unsubscribe.length = 0;
+    }
+
+    /*
+     * The agent in every shell on this machine, attached or not. `session.status` only carries a
+     * change, so a workspace that just opened asks for the standing answer.
+     */
+    async loadStatuses(): Promise<void> {
+        const sessions = await this.listSessions();
+        for (const session of sessions ?? []) {
+            if (session.agent) {
+                this.sink.setAgent(session.sessionId, session.agent);
+            }
+        }
     }
 
     /*
@@ -307,7 +319,7 @@ export class SessionClient {
         const attachment = this.register(nodeId, entry);
         await this.ensure(nodeId, { cwd: entry.cwd, command: entry.command, agent: entry.agent, follow: entry.follow }, entry.cols, entry.rows);
         // The node may have left the canvas while the create was on the wire, or mounted again with an open of its own.
-        if (this.mounted.get(nodeId) !== entry || this.attachments.get(nodeId) !== attachment) {
+        if (!this.isCurrent(nodeId, entry, attachment)) {
             return;
         }
         const result = await this.attachWith(nodeId, entry.cols, entry.rows, sessions);
@@ -329,12 +341,12 @@ export class SessionClient {
             // A hidden follow's unused snapshot must finish before the renderer takes its current screen.
             if (attachment.following) {
                 await attachment.following.catch(() => undefined);
-                if (this.mounted.get(nodeId) !== entry || this.attachments.get(nodeId) !== attachment) {
+                if (!this.isCurrent(nodeId, entry, attachment)) {
                     return null;
                 }
             }
             const result = await this.requestAttachment(nodeId, attachment, { sessionId: nodeId, cols: entry.cols, rows: entry.rows });
-            if (this.mounted.get(nodeId) !== entry || this.attachments.get(nodeId) !== attachment) {
+            if (!this.isCurrent(nodeId, entry, attachment)) {
                 return null;
             }
             entry.attached = true;
@@ -372,6 +384,10 @@ export class SessionClient {
             attachment.renderer = null;
         }
         void this.releaseUnused(nodeId, attachment);
+    }
+
+    private isCurrent(nodeId: string, entry: Mounted, attachment: Attachment): boolean {
+        return this.mounted.get(nodeId) === entry && this.attachments.get(nodeId) === attachment;
     }
 
     private requestAttachment(nodeId: string, attachment: Attachment, payload: SessionAttachPayload): Promise<SessionAttachResult> {
@@ -450,19 +466,6 @@ export class SessionClient {
         }
     }
 
-    /*
-     * The agent in every shell on this machine, attached or not. `session.status` only carries a
-     * change, so a workspace that just opened asks for the standing answer.
-     */
-    async loadStatuses(): Promise<void> {
-        const sessions = await this.listSessions();
-        for (const session of sessions ?? []) {
-            if (session.agent) {
-                this.sink.setAgent(session.sessionId, session.agent);
-            }
-        }
-    }
-
     private async listSessions(): Promise<SessionInfo[] | null> {
         try {
             return (await this.transport.request('session.list', {})).sessions;
@@ -470,4 +473,8 @@ export class SessionClient {
             return null;
         }
     }
+}
+
+function disconnected(): TransportError {
+    return new TransportError('disconnected', 'The session client is disconnected.');
 }

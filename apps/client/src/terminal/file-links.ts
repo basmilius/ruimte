@@ -13,12 +13,18 @@ export interface TerminalFileLink {
     text: string;
 }
 
-export function terminalFileLinks(term: Terminal, row: number, cwd: string | null, endpointId: string): Array<TerminalFileLink & Pick<ILink, 'range'>> {
-    const buffer = term.buffer.active;
+/* The zero-based buffer line where the wrapped line holding the one-based `row` starts. */
+function logicalLineStart(term: Terminal, row: number): number {
     let first = row - 1;
-    while (first > 0 && buffer.getLine(first)?.isWrapped) {
+    while (first > 0 && term.buffer.active.getLine(first)?.isWrapped) {
         first--;
     }
+    return first;
+}
+
+export function terminalFileLinks(term: Terminal, row: number, cwd: string | null, endpointId: string): Array<TerminalFileLink & Pick<ILink, 'range'>> {
+    const buffer = term.buffer.active;
+    const first = logicalLineStart(term, row);
     let last = row - 1;
     while (buffer.getLine(last + 1)?.isWrapped) {
         last++;
@@ -36,15 +42,8 @@ export function terminalFileLinks(term: Terminal, row: number, cwd: string | nul
                 continue;
             }
             // xterm leaves an empty final cell when a wide glyph wraps; a typed space has chars.
-            if (
-                x === term.cols - 1 &&
-                cell.getChars() === '' &&
-                buffer.getLine(y + 1)?.isWrapped &&
-                buffer
-                    .getLine(y + 1)
-                    ?.getCell(0)
-                    ?.getWidth() === 2
-            ) {
+            const next = buffer.getLine(y + 1);
+            if (x === term.cols - 1 && cell.getChars() === '' && next?.isWrapped && next.getCell(0)?.getWidth() === 2) {
                 continue;
             }
             const chars = cell.getChars() || ' ';
@@ -109,12 +108,8 @@ export function bindTerminalFileLinks(
     const changes = [term.onScroll(leave), term.onResize(leave), term.onWriteParsed(leave)];
     const provider = term.registerLinkProvider({
         provideLinks(row, callback) {
-            let first = row - 1;
-            while (first > 0 && term.buffer.active.getLine(first)?.isWrapped) {
-                first--;
-            }
             callback(
-                terminalFileLinks(term, row, cwdAt(first + 1), endpointId).map((link) => ({
+                terminalFileLinks(term, row, cwdAt(logicalLineStart(term, row) + 1), endpointId).map((link) => ({
                     ...link,
                     activate: (event) => {
                         // xterm activates on mouseup, even after a modifier-drag that makes no selection.

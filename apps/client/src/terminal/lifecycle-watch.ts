@@ -1,4 +1,4 @@
-import { isSessionView, type CanvasNodeKind } from '@ruimte/contracts';
+import type { CanvasNodeKind } from '@ruimte/contracts';
 import { nodesOfView } from '@/project/view-deletion';
 import { projectNodes } from '@/project/views';
 import { liveCanvases, subscribeCanvases } from '@/state/canvas';
@@ -17,22 +17,14 @@ export type NodeExit = 'closed' | 'gone';
 export type NodeEnder = (endpointId: string, id: string, kind: CanvasNodeKind, exit: NodeExit) => void;
 
 /*
- * Every node the project holds, on any view, keyed on the machine it runs on, with the kind that says
- * how to end it. A session dies when its id leaves the document, not when it leaves the screen, since a
- * view switch takes nodes off the canvas while they keep running. The canvas store edits one view at a
- * time and says which one, so its nodes win over the document's own copy of that view.
+ * Every node of the project on any view, keyed on its machine. A session ends when its id leaves the
+ * document, not the screen, since a view switch takes nodes off the canvas while they keep running.
  */
 function liveNodes(): Map<string, CanvasNodeKind> {
     const endpointId = currentEndpointId();
     const live = new Map<string, CanvasNodeKind>();
     for (const node of projectNodes()) {
         live.set(endpointKey(endpointId, node.id), node.kind);
-    }
-    for (const view of useDocument.getState().views) {
-        if (isSessionView(view)) {
-            // A standalone view is one node without a canvas, under the same id as its session.
-            live.set(endpointKey(endpointId, view.id), view.kind);
-        }
     }
     // A deleted view that can still be taken back keeps what runs on it until it is purged.
     for (const { view } of useDocument.getState().trashed) {
@@ -104,8 +96,7 @@ export function watchNodes(end: NodeEnder): () => void {
             state.merging || canvasMerging()
         );
     });
-    /* Another machine is another project on another daemon. What this one holds keeps running, and
-       what the next one holds was never this watcher's to end. */
+    /* Switching machines ends nothing: both daemons keep what they hold running. */
     const offEndpoint = useEndpoints.subscribe((state, before) => {
         if (state.activeId !== before.activeId) {
             previous = new Map();
