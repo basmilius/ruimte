@@ -1,19 +1,15 @@
 /*
- * The Content Security Policy the client runs under, as data. Three places serve the same page and
- * each wrote the policy out in full: the `<meta http-equiv>` in `apps/client/index.html` (which is
- * what covers the Vite dev server and an Electron window, since a window without one has no policy
- * at all and `eval` is free), the header the desktop app's scheme sends, and the header the station
- * worker sends. The html cannot import, so a test holds its tag against this table.
+ * The client's Content Security Policy as data, for the header of the desktop app's scheme and of the
+ * station. The `<meta>` in `apps/client/index.html` covers Vite and an Electron window (without it
+ * `eval` is free); html cannot import, so a test holds that tag against this table.
  */
 
 export type CspDirectives = Readonly<Record<string, readonly string[]>>;
 
 /*
- * `connect-src`, `img-src` and `media-src` are wide because a machine's door on the local network is
- * whatever address that machine reports and its broker whatever host a person picks, and its signals,
- * images, attachments and file bytes come over those. Shiki needs
- * WebAssembly and the UI libraries inject styles, which is what the other two exceptions are for.
- * A frame only ever shows the sandbox host page of a visual, on the page's own origin.
+ * `connect-src`, `img-src` and `media-src` are wide because a machine's LAN door and broker are whatever
+ * address it reports or a person picks. Shiki needs WebAssembly and the UI libraries inject styles. A
+ * frame only ever shows a visual's sandbox host page, on the page's own origin.
  */
 export const CLIENT_CSP_DIRECTIVES = {
     'default-src': ["'self'"],
@@ -40,20 +36,13 @@ export function cspString(overrides: CspDirectives = {}): string {
     return directivesString({ ...CLIENT_CSP_DIRECTIVES, ...overrides });
 }
 
-/*
- * Where every server of the client answers the sandbox host page of a visual (`VISUAL_HOST_PAGE`):
- * the Vite dev server, the desktop app's scheme and the station. It is on the client's own origin,
- * since the frame's sandbox gives the page an opaque origin of its own.
- */
+// On the client's own origin (Vite, the desktop scheme, the station); the frame's sandbox makes the page's origin opaque.
 export const VISUAL_HOST_PATH = '/__visual/';
 
 /*
- * An agent's page is written into the host page, so it runs under this policy and never under the
- * client's. It runs its inline scripts and styles and loads public sources, which is how a chart
- * library from a CDN works. Plain `http:` and `ws:` are left out: a secure page loads those only from
- * the person's own computer (the daemon, a dev server), which is no public source. The sandbox repeats
- * the frame's, so the page never gets the client's origin, also where something frames it without
- * one, and only the client may frame it at all.
+ * An agent's page runs under this policy, never the client's: inline code and public sources such as a
+ * CDN chart library. Plain `http:` and `ws:` only reach the person's own computer, so they stay out. The
+ * sandbox repeats the frame's, so the page never gets the client's origin even when framed without one.
  */
 export const VISUAL_HOST_CSP_DIRECTIVES = {
     'default-src': ["'none'"],

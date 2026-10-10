@@ -1,9 +1,6 @@
 /*
- * What crosses the IPC boundary between the Electron shell and the page it hosts. Not a wire in the
- * sense of `packages/contracts`, which is about a client and a daemon that are often different
- * releases and may sit on different machines; this never leaves the machine. It is one place because
- * the preload hands every answer to the page as `unknown`, so two copies of a shape drift without
- * the compiler ever saying so.
+ * The shapes crossing IPC between the Electron shell and its page. One place because the preload hands
+ * every answer over as `unknown`, so two copies would drift without the compiler noticing.
  */
 
 export * from './service.ts';

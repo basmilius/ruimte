@@ -1,6 +1,7 @@
 import { homedir, userInfo } from 'node:os';
 import { join } from 'node:path';
 import { diskFiles, platformServiceManager as createPlatformServiceManager, runCommand, type ServiceManager, type ServiceSpec } from '@adecore/service';
+
 const LAUNCH_AGENT_LABEL = 'app.ruimte.daemon';
 const SYSTEMD_UNIT_NAME = 'ruimte-daemon.service';
 
