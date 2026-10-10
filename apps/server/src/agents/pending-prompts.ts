@@ -14,10 +14,9 @@ const PendingPromptSchema = z.object({
 type PendingPrompt = z.infer<typeof PendingPromptSchema>;
 
 /*
- * The first prompt of an agent node, held against the node id until the session or the chat for it
- * comes into being. It does not belong in `project.json`: the prompt is not part of the canvas two
- * people share, and a project open in two windows would deliver it twice. On disk, because the node
- * may well be made on a daemon that is restarted before the node is started.
+ * The first prompt of an agent node, held against the node id until its session or chat exists. Not
+ * in `project.json`, which two people share and two windows would deliver twice; on disk, since the
+ * daemon may restart before the node starts.
  */
 export class PendingPromptStore {
     readonly dir: string;

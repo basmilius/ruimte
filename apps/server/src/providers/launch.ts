@@ -128,7 +128,7 @@ export function terminalCommand(launch: AgentLaunch, firstPrompt?: string, note?
         throw new Error(`${provider.name} is only available as a chat.`);
     }
     if (launch.resume) {
-        return resumeCommandFor(provider.resumeCommand, launch.resume, launchFlags(launch, launch.runtimeMode));
+        return resumeCommand(launch, launch.resume);
     }
     // Only the executable: the arguments on a provider are the ones its chat backend needs.
     const parts = [provider.command[0]!, ...launchFlags(launch, launch.runtimeMode ?? DEFAULT_RUNTIME_MODE)];
@@ -160,8 +160,7 @@ export function freshCommand(launch: AgentLaunch, note?: string): string {
 
 /*
  * A resume the daemon has no evidence for, in one line. The CLI exits non-zero when the session it
- * was handed is not there, so the shell starts a fresh one itself: the node ends up with its CLI
- * either way and the shell still reads a single line, which is what typing two of them cost before.
+ * was handed is not there, so the shell then starts a fresh one itself.
  */
 export function resumeOrFreshCommand(launch: AgentLaunch, agentSessionId: string, note?: string): string {
     return `${resumeCommand(launch, agentSessionId)} || ${freshCommand(launch, note)}`;

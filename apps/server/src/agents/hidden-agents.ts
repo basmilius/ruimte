@@ -16,6 +16,7 @@ const HiddenAgentSchema = z.object({
 
 export type HiddenAgent = z.infer<typeof HiddenAgentSchema>;
 
+/* The agents a caller holds open: a hidden one counts only while it still runs, has an open task or is owed work. */
 export function openedAgentCount(
     deps: {
         lineage: AgentLineageStore;

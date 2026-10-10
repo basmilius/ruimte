@@ -38,6 +38,31 @@ const EVENT_STATUS: Record<string, AgentStatus | 'gone'> = {
 // Tools that stop and wait for the person, even though they arrive as a plain tool call.
 export const ASKING_TOOLS: ReadonlySet<string> = new Set(['AskUserQuestion', 'request_user_input']);
 
+function optionLabel(option: unknown): string | null {
+    if (typeof option === 'string') {
+        return option;
+    }
+    return typeof option === 'object' && option !== null ? asString((option as Record<string, unknown>).label) : null;
+}
+
+/* The questions of an asking tool as text: each question with its options under it as bullets. */
+function questionsText(questions: unknown): string {
+    if (!Array.isArray(questions)) {
+        return '';
+    }
+    return questions
+        .map((entry: unknown) => {
+            if (typeof entry !== 'object' || entry === null) {
+                return '';
+            }
+            const item = entry as Record<string, unknown>;
+            const options = Array.isArray(item.options) ? item.options.map(optionLabel).filter(Boolean) : [];
+            return [asString(item.question) ?? asString(item.title), ...options.map((option) => `• ${option}`)].filter(Boolean).join('\n');
+        })
+        .filter(Boolean)
+        .join('\n\n');
+}
+
 export function requestOfHook(body: unknown, createdAt: number): AgentRequest | null {
     if (typeof body !== 'object' || body === null) {
         return null;
@@ -49,30 +74,7 @@ export function requestOfHook(body: unknown, createdAt: number): AgentRequest | 
         return null;
     }
     const input = typeof hook.tool_input === 'object' && hook.tool_input !== null ? (hook.tool_input as Record<string, unknown>) : {};
-    const questions = Array.isArray(input.questions) ? input.questions : [];
-    const text = question
-        ? questions
-              .map((entry: unknown) => {
-                  if (typeof entry !== 'object' || entry === null) {
-                      return '';
-                  }
-                  const item = entry as Record<string, unknown>;
-                  const options = Array.isArray(item.options)
-                      ? item.options
-                            .map((option: unknown) =>
-                                typeof option === 'string'
-                                    ? option
-                                    : typeof option === 'object' && option !== null
-                                      ? asString((option as Record<string, unknown>).label)
-                                      : null
-                            )
-                            .filter(Boolean)
-                      : [];
-                  return [asString(item.question) ?? asString(item.title), ...options.map((option) => `• ${option}`)].filter(Boolean).join('\n');
-              })
-              .filter(Boolean)
-              .join('\n\n')
-        : (asString(input.command) ?? JSON.stringify(input, null, 2));
+    const text = question ? questionsText(input.questions) : (asString(input.command) ?? JSON.stringify(input, null, 2));
     const source = asString(hook.agent_id) ?? '';
     return {
         id: `${source}:${asString(hook.tool_use_id) ?? asString(hook.turn_id) ?? String(hook.hook_event_name)}:${toolName}`,
