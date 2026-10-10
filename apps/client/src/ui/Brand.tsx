@@ -23,7 +23,6 @@ interface BrandProps {
     className?: string;
 }
 
-/* The icon with the name beside it, at the top of the sidebar. */
 export function Brand({ className }: BrandProps) {
     return (
         <span className={clsx('inline-flex h-6 items-center gap-1.75 font-brand text-xs font-semibold text-(--wordmark)', className)}>
@@ -33,7 +32,6 @@ export function Brand({ className }: BrandProps) {
     );
 }
 
-/* The start screen's welcome: the icon, the wordmark at the largest size the theme has, and the tagline under it. */
 export function BrandIntro({ className }: { className?: string }) {
     return (
         <header className={clsx('flex flex-col items-center gap-4 py-6 text-center', className)}>

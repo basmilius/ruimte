@@ -91,8 +91,7 @@ startOnboarding();
 startWakeReconnect(pool);
 startLastSeen();
 refuseStrayDrops(document);
-/* The shell dresses its native chrome and every page it hosts in the theme the client is in. The
-   background travels with it, so `styles.css` stays the only place the token is written down. */
+/* The background travels with the theme, so `styles.css` stays the only place the token is written down. */
 function reportTheme(): void {
     const { theme, resolved } = useTheme.getState();
     desktop()?.setTheme?.({
@@ -111,8 +110,7 @@ if (import.meta.env.DEV) {
     exposeTerminalTestHooks();
 }
 
-/* The words come first. A screen drawn before its language is in is a screen in the wrong one,
-   and swapping it under a person is worse than the moment it takes to load. */
+/* The words come first: a screen drawn before its language is in would swap under a person. */
 await initI18n();
 
 createRoot(document.getElementById('root')!).render(<App />);

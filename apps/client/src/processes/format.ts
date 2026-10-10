@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import type { ProcessAlert, ProcessGroup, ProcessPoint } from '@ruimte/contracts';
 import { formatDuration, formatBytes as bytesOf, formatPercent as percentOf } from '@adecore/ui/format';
 
-/* A number that could not be read is shown as nothing rather than as zero, which is what it is not. */
+/* A number that could not be read is shown as a dash, never as zero. */
 export const UNREADABLE = '-';
 
 export function formatPercent(value: number | null): string {
@@ -25,9 +25,8 @@ export function diskOf(row: { diskRead: number | null; diskWrite: number | null 
 }
 
 /*
- * Which series the charts draw: the fine one once it has a line to draw, the coarse day until then.
- * The window is what the x axis spans, so a fine series that has only just started still fills from
- * the right and does not stretch three points over the whole width.
+ * The fine series once it has a line to draw, the coarse day until then. The window is what the x axis
+ * spans, so a fine series that has only just started fills from the right instead of stretching.
  */
 export function chartSeries(fine: readonly ProcessPoint[], coarse: readonly ProcessPoint[], fineIntervalMs = 2000, coarseIntervalMs = 300_000) {
     return fine.length >= 2 ? { points: fine, windowMs: 300 * fineIntervalMs, fine: true } : { points: coarse, windowMs: 288 * coarseIntervalMs, fine: false };

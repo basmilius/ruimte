@@ -24,7 +24,6 @@ interface EclipseProps {
     stars: { count: number; seed: number };
     /* `fade` runs the sky out into the surface of the dialog it sits in, for a scene behind a pane. */
     sky?: 'full' | 'fade';
-    /* The height of the scene, and anything else about its box. */
     className?: string;
 }
 
