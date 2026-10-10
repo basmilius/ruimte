@@ -1,5 +1,5 @@
 import { constants } from 'node:fs';
-import { open, realpath } from 'node:fs/promises';
+import { lstat, open, realpath } from 'node:fs/promises';
 import { basename, dirname, join, relative, sep } from 'node:path';
 import { FS_READ_MAX_TEXT_BYTES, type FsWriteResult } from '@ruimte/contracts';
 import { isInside } from '../canvas/project-paths.ts';
@@ -32,6 +32,30 @@ export async function realRoots(boundary: WriteBoundary): Promise<string[]> {
     const listed = worktreesRoot === null ? [] : (await Promise.all(boundary.folders.map(boundary.worktreesOf))).flat();
     const worktrees = (await Promise.all(listed.map(realOrNull))).filter((path) => path !== null && worktreesRoot !== null && isInside(worktreesRoot, path));
     return [...folders, ...worktrees].filter((root): root is string => root !== null);
+}
+
+/* The real path of an entry; a link keeps its own name, so it is handled as the link and never followed. */
+export async function realEntryPath(path: string): Promise<string | null> {
+    const entry = await lstat(path).catch(() => null);
+    if (entry === null) {
+        return null;
+    }
+    // Anything but a link is named the way the disk spells it, so `.GIT` on a volume that ignores case is `.git`.
+    return await (entry.isSymbolicLink() ? realpath(dirname(path)).then((folder) => join(folder, basename(path))) : realpath(path)).catch(() => null);
+}
+
+/*
+ * Why a request may not touch this path below a project root, or null when it may. Submodules and
+ * repositories beside the project carry a `.git` of their own, so any level counts.
+ */
+export function stateRefusal(segments: readonly string[], path: string, verb: string): { code: 'git-state' | 'ruimte-state'; message: string } | null {
+    if (segments.includes('.git')) {
+        return { code: 'git-state', message: `${path} is part of a repository's own state and is not ${verb} from here` };
+    }
+    if (isRuimteState(segments)) {
+        return { code: 'ruimte-state', message: `${path} is Ruimte's own state and is not ${verb} from here` };
+    }
+    return null;
 }
 
 /* What opening the file for writing may run into after the checks passed, in the codes a read answers with. */

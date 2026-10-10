@@ -4,6 +4,7 @@ import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import type { FsBrowseResult } from '@ruimte/contracts';
 import { PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
 import { classifyEntry } from './visibility.ts';
+import { fileExists } from '@adecore/agents/fs';
 import { CodedError } from '@adecore/agents/coded-error';
 
 type BrowseErrorCode = 'cwd-required' | 'windows-path';
@@ -78,7 +79,7 @@ export async function browseDirectories(partialPath: string, cwd: string | undef
     const entries = await Promise.all(
         matches.map(async (entry) => {
             const fullPath = join(parentPath, entry.name);
-            return { name: entry.name, fullPath, hasCanvas: await exists(join(fullPath, PROJECT_DIR, PROJECT_FILE)) };
+            return { name: entry.name, fullPath, hasCanvas: await fileExists(join(fullPath, PROJECT_DIR, PROJECT_FILE)) };
         })
     );
     return { parentPath: trimTrailing(parentPath), entries, exists: true };
@@ -87,15 +88,6 @@ export async function browseDirectories(partialPath: string, cwd: string | undef
 /* A separator on the end says "list this", which the answer no longer means; the root keeps its. */
 function trimTrailing(path: string): string {
     return path.endsWith(sep) && path.length > 1 ? path.slice(0, -1) : path;
-}
-
-async function exists(path: string): Promise<boolean> {
-    try {
-        await stat(path);
-        return true;
-    } catch {
-        return false;
-    }
 }
 
 async function isDirectory(path: string): Promise<boolean> {

@@ -4,8 +4,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { FS_READ_MAX_TEXT_BYTES, type FsCreatePayload, type FsCreateResult } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents/coded-error';
 import { isInside } from '../canvas/project-paths.ts';
-import { isRuimteState } from '../projects/project-files.ts';
-import { realRoots, type WriteBoundary } from './write.ts';
+import { realRoots, stateRefusal, type WriteBoundary } from './write.ts';
 
 type CreateErrorCode = 'bad-path' | 'exists' | 'not-a-directory' | 'outside-project' | 'git-state' | 'ruimte-state' | 'too-large' | 'not-writable';
 
@@ -78,12 +77,9 @@ export async function createEntry(payload: FsCreatePayload, boundary: WriteBound
     if (root === undefined) {
         throw new CreateError('outside-project', `${target} is outside the projects open here and their worktrees`);
     }
-    const segments = relative(root, real).split(sep);
-    if (segments.includes('.git')) {
-        throw new CreateError('git-state', `${target} is part of a repository's own state and is not created from here`);
-    }
-    if (isRuimteState(segments)) {
-        throw new CreateError('ruimte-state', `${target} is Ruimte's own state and is not created from here`);
+    const refused = stateRefusal(relative(root, real).split(sep), target, 'created');
+    if (refused !== null) {
+        throw new CreateError(refused.code, refused.message);
     }
     const bytes = kind === 'file' ? new TextEncoder().encode(payload.text ?? '') : null;
     if (bytes !== null && bytes.length > FS_READ_MAX_TEXT_BYTES) {

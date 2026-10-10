@@ -74,10 +74,9 @@ async function readEntries(dir: string, includeHidden: boolean, inRepository: bo
 }
 
 /*
- * Never follow a symlink or anything git ignores while expanding
- * levels, keeping the listing inside its root and out of trees such as `node_modules`. Ignore
- * status is asked once per level per checkout, and what git ignores is hidden: the project says
- * itself what is generated.
+ * Never follows a symlink or anything git ignores while expanding levels, so the listing stays inside
+ * its root and out of trees such as `node_modules`. Git is asked once per level per checkout, and what
+ * it ignores is hidden: the project says itself what is generated.
  */
 export async function listDirectory(path: string, options: ListOptions = {}): Promise<FsListResult> {
     const root = resolve(path);

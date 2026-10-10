@@ -2,8 +2,7 @@ import { lstat, mkdir, realpath, rename, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents/coded-error';
 import { isInside } from '../canvas/project-paths.ts';
-import { isRuimteState } from '../projects/project-files.ts';
-import { realRoots, type WriteBoundary } from './write.ts';
+import { realEntryPath, realRoots, stateRefusal, type WriteBoundary } from './write.ts';
 
 type RenameErrorCode =
     | 'bad-path'
@@ -19,13 +18,8 @@ type RenameErrorCode =
 
 export class RenameError extends CodedError<RenameErrorCode> {}
 
-/* A link keeps its own name and is moved as the link; anything else is named the way the disk spells it. */
 async function realSource(path: string): Promise<string> {
-    const entry = await lstat(path).catch(() => null);
-    const real =
-        entry === null
-            ? null
-            : await (entry.isSymbolicLink() ? realpath(dirname(path)).then((folder) => join(folder, basename(path))) : realpath(path)).catch(() => null);
+    const real = await realEntryPath(path);
     if (real === null) {
         throw new RenameError('not-found', `${path} is not there`);
     }
@@ -69,12 +63,9 @@ function failure(e: unknown, path: string): unknown {
 }
 
 function assertOpenGround(segments: readonly string[], path: string): void {
-    // Submodules and repositories beside the project carry a `.git` of their own, so any level counts.
-    if (segments.includes('.git')) {
-        throw new RenameError('git-state', `${path} is part of a repository's own state and is not moved from here`);
-    }
-    if (isRuimteState(segments)) {
-        throw new RenameError('ruimte-state', `${path} is Ruimte's own state and is not moved from here`);
+    const refused = stateRefusal(segments, path, 'moved');
+    if (refused !== null) {
+        throw new RenameError(refused.code, refused.message);
     }
 }
 

@@ -1,10 +1,8 @@
-import { lstat, realpath } from 'node:fs/promises';
-import { basename, dirname, join, relative, sep } from 'node:path';
+import { relative, sep } from 'node:path';
 import { CodedError } from '@adecore/agents/coded-error';
 import { isInside } from '../canvas/project-paths.ts';
-import { isRuimteState } from '../projects/project-files.ts';
 import { trashPath } from './trash.ts';
-import { realRoots, type WriteBoundary } from './write.ts';
+import { realEntryPath, realRoots, stateRefusal, type WriteBoundary } from './write.ts';
 
 type DeleteErrorCode = 'not-found' | 'outside-project' | 'project-root' | 'git-state' | 'ruimte-state';
 
@@ -16,12 +14,7 @@ export class DeleteError extends CodedError<DeleteErrorCode> {}
  * take its target along.
  */
 export async function deletePath(path: string, boundary: WriteBoundary, trash: (path: string) => Promise<void> = trashPath): Promise<void> {
-    const entry = await lstat(path).catch(() => null);
-    if (entry === null) {
-        throw new DeleteError('not-found', 'That path is not there');
-    }
-    // A link keeps its own name; anything else is named the way the disk spells it, so `.GIT` on a volume that ignores case is `.git`.
-    const real = await (entry.isSymbolicLink() ? realpath(dirname(path)).then((folder) => join(folder, basename(path))) : realpath(path)).catch(() => null);
+    const real = await realEntryPath(path);
     if (real === null) {
         throw new DeleteError('not-found', 'That path is not there');
     }
@@ -33,13 +26,9 @@ export async function deletePath(path: string, boundary: WriteBoundary, trash: (
     if (roots.includes(real)) {
         throw new DeleteError('project-root', 'A project folder is removed by closing the project, not from here');
     }
-    const segments = relative(root, real).split(sep);
-    // Submodules and repositories beside the project carry a `.git` of their own, so any level counts.
-    if (segments.includes('.git')) {
-        throw new DeleteError('git-state', `${path} is part of a repository's own state and is not deleted from here`);
-    }
-    if (isRuimteState(segments)) {
-        throw new DeleteError('ruimte-state', `${path} is Ruimte's own state and is not deleted from here`);
+    const refused = stateRefusal(relative(root, real).split(sep), path, 'deleted');
+    if (refused !== null) {
+        throw new DeleteError(refused.code, refused.message);
     }
     await trash(real);
 }
