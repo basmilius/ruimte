@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitFork } from 'lucide-react';
-import { CHAT_FORK_TITLE_MAX, clipText, type ChatForkInfoResult } from '@ruimte/contracts';
+import { CHAT_FORK_TITLE_MAX, clipText, type ChatForkInfoResult, type ProviderInfo } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
 import { AccountDot } from '@adecore/agents-react/agents/AccountDot';
 import { canContinueOn } from '@adecore/agents-react/agents/accounts';
-import { useAccountChoice } from '@adecore/agents-react/chat/account-choice';
+import { useAccountChoice, type AccountChoice } from '@adecore/agents-react/chat/account-choice';
 import {
     branchRefusal,
     FORKABLE_PROVIDERS,
@@ -62,7 +62,6 @@ export function ForkDialog() {
 
 function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; onDone(): void }) {
     const { t } = useTranslation(['shell', 'common']);
-    const transport = useTransport();
     const info = useChatRow(chatId, (row) => row?.info ?? null);
     const items = useChatRow(chatId, (row) => row?.structure);
     const order = useChatRow(chatId, (row) => row?.order);
@@ -76,30 +75,13 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
     const [shape, setShape] = useState<ForkShape>(shapes[0]!);
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
-    // Null while the machine is asked; a machine that cannot say offers no worktree.
-    const [folder, setFolder] = useState<ChatForkInfoResult | null>(null);
+    const folder = useForkInfo(chatId, turnId);
     const [inWorktree, setInWorktree] = useState(true);
     const [branch, setBranch] = useState<string | null>(null);
     const [filesAfterTurn, setFilesAfterTurn] = useState(true);
     const [cli, setCli] = useState<ForkCliChoice | null>(null);
-    const [pickerOpen, setPickerOpen] = useState(false);
     const providers = useProviders((s) => s.providers);
     const endpointId = useEndpointId();
-
-    useEffect(() => {
-        let current = true;
-        transport
-            .request('chat.forkInfo', { chatId, turnId })
-            .catch(() => ({ repository: false, branches: [], branch: null, filesAfterTurn: false }))
-            .then((answer) => {
-                if (current) {
-                    setFolder(answer);
-                }
-            });
-        return () => {
-            current = false;
-        };
-    }, [transport, chatId, turnId]);
 
     const point = items && order ? forkPointOf(items, order, turnId, whole) : null;
     const refusal = forkRefusal(info, items?.[turnId]);
@@ -176,36 +158,14 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                 {shape === 'view' ? t('fork.intoView', { after: origin === 'view' ? t('fork.theOriginal') : t('fork.itsCanvas') }) : t('fork.intoNode')}
             </Dialog.Text>
             {chosenCli !== null && pickable.length > 0 && (
-                <>
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                        <span className="text-xs text-text-muted">{t('fork.continueWith')}</span>
-                        <ModelPicker
-                            providers={pickable}
-                            provider={chosenCli.provider}
-                            selection={chosenCli.selection}
-                            open={pickerOpen}
-                            onOpenChange={setPickerOpen}
-                            onChange={chooseCli}
-                        />
-                    </div>
-                    {accountChoice !== null && (
-                        <div className="mt-3 flex items-center justify-between gap-3">
-                            <span className="text-xs text-text-muted">{t('fork.account')}</span>
-                            <Select
-                                label={t('fork.accountOf', { provider: accountChoice.providerName })}
-                                variant="outlined"
-                                value={accountChoice.currentId}
-                                onValueChange={(account) => setCli({ ...chosenCli, account })}
-                                items={accountChoice.offered.map((entry) => ({
-                                    value: entry.id,
-                                    label: accountChoice.nameOf(entry),
-                                    icon: <AccountDot color={entry.account.color} />
-                                }))}
-                            />
-                        </div>
-                    )}
-                    {handoff && <FieldHint>{t('fork.handoffNote')}</FieldHint>}
-                </>
+                <ForkCliFields
+                    providers={pickable}
+                    chosen={chosenCli}
+                    accountChoice={accountChoice}
+                    handoff={handoff}
+                    onModel={chooseCli}
+                    onAccount={(account) => setCli({ ...chosenCli, account })}
+                />
             )}
             <label className="mt-3 block text-xs text-text-muted" htmlFor="fork-title">
                 {t('fork.titleLabel')}
@@ -257,6 +217,73 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                     {busy ? t('fork.forking') : t('fork.fork')}
                 </Button>
             </Dialog.Footer>
+        </>
+    );
+}
+
+/* What the machine says about the chat's folder; null while it is asked, and a machine that cannot say offers no worktree. */
+function useForkInfo(chatId: string, turnId: string): ChatForkInfoResult | null {
+    const transport = useTransport();
+    const [folder, setFolder] = useState<ChatForkInfoResult | null>(null);
+    useEffect(() => {
+        let current = true;
+        transport
+            .request('chat.forkInfo', { chatId, turnId })
+            .catch(() => ({ repository: false, branches: [], branch: null, filesAfterTurn: false }))
+            .then((answer) => {
+                if (current) {
+                    setFolder(answer);
+                }
+            });
+        return () => {
+            current = false;
+        };
+    }, [transport, chatId, turnId]);
+    return folder;
+}
+
+interface ForkCliFieldsProps {
+    providers: ProviderInfo[];
+    chosen: ForkCliChoice;
+    accountChoice: AccountChoice | null;
+    handoff: boolean;
+    onModel(provider: ForkCliChoice['provider'], model: string): void;
+    onAccount(account: string): void;
+}
+
+function ForkCliFields({ providers, chosen, accountChoice, handoff, onModel, onAccount }: ForkCliFieldsProps) {
+    const { t } = useTranslation('shell');
+    const [pickerOpen, setPickerOpen] = useState(false);
+    return (
+        <>
+            <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="text-xs text-text-muted">{t('fork.continueWith')}</span>
+                <ModelPicker
+                    providers={providers}
+                    provider={chosen.provider}
+                    selection={chosen.selection}
+                    open={pickerOpen}
+                    onOpenChange={setPickerOpen}
+                    onChange={onModel}
+                />
+            </div>
+            {accountChoice !== null && (
+                <div className="mt-3 flex items-center justify-between gap-3">
+                    <span className="text-xs text-text-muted">{t('fork.account')}</span>
+                    <Select
+                        label={t('fork.accountOf', { provider: accountChoice.providerName })}
+                        variant="outlined"
+                        value={accountChoice.currentId}
+                        onValueChange={onAccount}
+                        items={accountChoice.offered.map((entry) => ({
+                            value: entry.id,
+                            label: accountChoice.nameOf(entry),
+                            icon: <AccountDot color={entry.account.color} />
+                        }))}
+                    />
+                </div>
+            )}
+            {handoff && <FieldHint>{t('fork.handoffNote')}</FieldHint>}
         </>
     );
 }
