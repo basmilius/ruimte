@@ -3,10 +3,10 @@ import { createStore, type StoreApi } from 'zustand';
 import type { AgentKind, ProjectNewInlineChatPayload, ProjectNewInlineChatResult } from '@ruimte/contracts';
 import type { Editor, EditorRange, EditorTrackedRange } from '@adecore/editor';
 import { waitingRequestsOf, type ChatState } from '@adecore/agents-react/state/chats';
-import type { DiskText } from '@/state/text-drafts';
-import { inlineMessage } from './inline-message';
 import { endOfInsertion, fitReplacement, locateSelection, parseAnswer, replaceRange, type InlineProblem, type LineSpan } from '@adecore/editor-react/models';
+import type { DiskText } from '@/state/text-drafts';
 import type { InlineEditRecord } from './inline-edit-record';
+import { inlineMessage } from './inline-message';
 
 export type InlinePhase = 'running' | 'proposal' | 'answer' | 'failed' | 'stopped';
 
@@ -98,8 +98,7 @@ export function turnOutcome(chat: ChatState, turnId: string): TurnOutcome {
     const turn = chat.items[turnId];
     const items = chat.order.map((id) => chat.items[id]).filter((item) => item?.turnId === turnId);
     const text = items
-        .filter((item) => item?.kind === 'assistant' && !item.parentToolUseId)
-        .map((item) => (item?.kind === 'assistant' ? item.text.trim() : ''))
+        .flatMap((item) => (item?.kind === 'assistant' && !item.parentToolUseId ? [item.text.trim()] : []))
         .filter((part) => part !== '')
         .join('\n\n');
     const note = items.find((item) => item?.kind === 'note' && item.level === 'error');
@@ -121,6 +120,10 @@ export function lastTurnId(chat: ChatState): string | null {
         }
     }
     return null;
+}
+
+function errorText(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
 }
 
 const sessions = new Map<string, InlineEditSession>();
@@ -287,7 +290,7 @@ export class InlineEditSession {
         try {
             await this.deps.stopChat(chatId);
         } catch (e) {
-            this.deps.notify({ kind: 'error', title: i18next.t('inline-edit:error.stop'), description: e instanceof Error ? e.message : String(e) });
+            this.deps.notify({ kind: 'error', title: i18next.t('inline-edit:error.stop'), description: errorText(e) });
         }
     }
 
@@ -407,7 +410,7 @@ export class InlineEditSession {
         try {
             await this.deps.showChat(this.init.projectId, viewId);
         } catch (e) {
-            this.deps.notify({ kind: 'error', title: i18next.t('inline-edit:error.open'), description: e instanceof Error ? e.message : String(e) });
+            this.deps.notify({ kind: 'error', title: i18next.t('inline-edit:error.open'), description: errorText(e) });
             return;
         }
         this.deps.forgetRecord(this.init.path, chatId);
@@ -577,7 +580,7 @@ export class InlineEditSession {
     }
 
     private fail(error: unknown): void {
-        this.store.setState({ phase: 'failed', error: error instanceof Error ? error.message : String(error), endedAt: this.deps.now() });
+        this.store.setState({ phase: 'failed', error: errorText(error), endedAt: this.deps.now() });
     }
 
     private async remove(): Promise<void> {

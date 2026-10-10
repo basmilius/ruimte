@@ -1,8 +1,7 @@
 import { splitLines } from '@adecore/merge';
 import type { AgentKind, ProvenanceChangedEvent, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
 import type { Editor, EditorRect } from '@adecore/editor';
-import type { Timers } from '@/language/timers';
-import { realTimers } from '@/language/timers';
+import { realTimers, type Timers } from '@/language/timers';
 import type { AgentChangesMode } from '@/state/ai-settings';
 import { colorOfChat, drawnRuns, lastWritten, removalRuns, type DrawnRun, type RemovalRun } from './agent-runs';
 
@@ -226,7 +225,7 @@ export class AgentChanges {
         if (this.state.live === null) {
             this.editor.setRemoteCursors([]);
         }
-        // Runs of another version of the file would land on the wrong lines; the bars stay where the editor has been carrying them until the read of this one comes.
+        // Runs of another version of the file would land on the wrong lines; the bars stay put until the read of this one comes.
         if (this.result.mtime !== disk.mtime || this.result.lines !== diskLines.length) {
             return;
         }

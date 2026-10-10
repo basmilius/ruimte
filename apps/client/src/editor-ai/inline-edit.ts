@@ -5,9 +5,20 @@ import { fileUriToPath } from '@adecore/lsp';
 import type { EditorRange, EditorTrackedRange } from '@adecore/editor';
 import { knownAccounts, providerAccountsOf } from '@adecore/agents-react/state/provider-accounts';
 import { providersOf } from '@adecore/agents-react/state/providers';
+import { highlightLayers } from '@adecore/editor-react';
+import {
+    codeLabelOf,
+    inlineRangeOf,
+    isEmptyRange,
+    lineSpanOf,
+    locateSelection,
+    problemsOnLines,
+    severityOf,
+    type InlineProblem,
+    type LineSpan
+} from '@adecore/editor-react/models';
 import { availableAgents } from '@/agents/creation';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { codeLabelOf, severityOf } from '@adecore/editor-react/models';
 import type { HostLanguage as EditorLanguage } from '@/language/host-language';
 import { shikiLanguageOf } from '@/language/language-ids-host';
 import { isShortcut } from '@/language/shortcut-keys';
@@ -16,9 +27,7 @@ import { useProject } from '@/state/project';
 import { inlineEditAccountOn } from '@/state/ai-settings';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { highlightLayers } from '@adecore/editor-react';
 import { inlineEditDeps } from './inline-edit-deps';
-import { inlineRangeOf, isEmptyRange, lineSpanOf, locateSelection, problemsOnLines, type InlineProblem, type LineSpan } from '@adecore/editor-react/models';
 import { inlineEditFor, onInlineEditsChange } from './inline-edit-record';
 import { sweepInlineEdits } from './inline-edit-prune';
 import { InlineEditSession, inlineSessionOf, type InlineEditDeps } from './inline-edit-session';
@@ -143,6 +152,11 @@ export class InlineEditFeature {
         return currentEndpointId();
     }
 
+    /* The highlighter id the agent is told the selection is in, null for plain text. */
+    private get highlighter(): string | null {
+        return PLAIN_IDS.has(this.language.languageId) ? null : shikiLanguageOf(this.language.languageId);
+    }
+
     /* Opens the question for the selected lines, or brings the edit this file already has back. */
     start(): void {
         const { session } = this.store.getState();
@@ -161,7 +175,7 @@ export class InlineEditFeature {
         );
         this.store.setState({ session: null });
         this.setPrompt({ range, selectedText: editor.textInRange(range), span, problems, ...inlineAgentNow(this.endpointId), instruction: '' });
-        // The selection and the tint would draw the lines twice over, so the selection steps aside while the card is up: the caret waits on the line above, which no tint covers.
+        // The selection and the tint would mark the lines twice, so the caret waits on the line above while the card is up.
         const selection = editor.getSelection();
         this.selectionFolded = !isEmptyRange(selection);
         if (this.selectionFolded) {
@@ -217,12 +231,11 @@ export class InlineEditFeature {
             return;
         }
         const path = this.path;
-        const language = PLAIN_IDS.has(this.language.languageId) ? null : shikiLanguageOf(this.language.languageId);
         const session = new InlineEditSession(this.endpointId, this.depsFor(this.endpointId), {
             projectId: project.projectId,
             path,
             storedPath: storedPathOf(project.folder, path),
-            language,
+            language: this.highlighter,
             range: prompt.range,
             selectedText: prompt.selectedText,
             span: prompt.span,
@@ -250,13 +263,12 @@ export class InlineEditFeature {
             useToasts.getState().show({ kind: 'error', title: i18next.t('inline-edit:toast.none') });
             return;
         }
-        const language = PLAIN_IDS.has(this.language.languageId) ? null : shikiLanguageOf(this.language.languageId);
         const session = InlineEditSession.fromRecord(
             this.endpointId,
             this.depsFor(this.endpointId),
             record,
             storedPathOf(project.folder, record.path),
-            language
+            this.highlighter
         );
         this.adopt(session);
         await session.restore();
@@ -277,20 +289,9 @@ export class InlineEditFeature {
     /* Puts the question above its lines, or takes it away. */
     private setPrompt(prompt: InlinePrompt | null): void {
         this.store.setState({ prompt, ...(prompt === null ? { promptContainer: null } : {}) });
-        this.language.editor.setWidgets(
-            prompt === null
-                ? []
-                : [
-                      {
-                          id: 'prompt',
-                          line: prompt.range.start.line,
-                          placement: 'above',
-                          height: PROMPT_HEIGHT,
-                          render: (container) => this.store.setState({ promptContainer: container })
-                      }
-                  ],
-            PROMPT_OWNER
-        );
+        const render = (container: HTMLElement): void => this.store.setState({ promptContainer: container });
+        const widgets = prompt === null ? [] : [{ id: 'prompt', line: prompt.range.start.line, placement: 'above' as const, height: PROMPT_HEIGHT, render }];
+        this.language.editor.setWidgets(widgets, PROMPT_OWNER);
         this.updateTint();
     }
 

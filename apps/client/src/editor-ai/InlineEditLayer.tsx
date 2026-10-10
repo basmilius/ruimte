@@ -1,10 +1,10 @@
 import { createPortal } from 'react-dom';
 import { useStore } from 'zustand';
 import type { EditorLanguage as RuimteEditorLanguage } from '@/language/ruimte-editor-language';
-
-type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
 import { InlinePromptCard } from './InlinePromptCard';
 import { InlineProposalCard } from './InlineProposalCard';
+
+type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
 
 /*
  * What an inline edit draws over an editor: the question in a row above the selected lines, and once

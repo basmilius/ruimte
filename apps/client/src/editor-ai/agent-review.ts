@@ -1,15 +1,12 @@
-import { splitLines } from '@adecore/merge';
 import { createStore, type StoreApi } from 'zustand';
 import type { ProvenanceReviewState, ProvenanceRun } from '@ruimte/contracts';
 import type { Editor } from '@adecore/editor';
+import { highlightLayers, LineActionHost, ReviewGroup, RowHost, type HostedAction, type HostedRow, type ReviewMember } from '@adecore/editor-react';
+import { replaceAllLines, replacedWords, type LineReplacement } from '@adecore/editor-react/models';
+import { splitLines } from '@adecore/merge';
 import { lineRangeLabel, selectionBlock } from '@/chat/selection-to-chat';
 import type { AgentChanges, DrawFrame } from './agent-changes';
 import { registerAgentReview } from './agent-review-registry';
-import { highlightLayers } from '@adecore/editor-react';
-import { replaceAllLines, type LineReplacement } from '@adecore/editor-react/models';
-import { ReviewGroup, type ReviewMember } from '@adecore/editor-react';
-import { LineActionHost, RowHost, type HostedAction, type HostedRow } from '@adecore/editor-react';
-import { replacedWords } from '@adecore/editor-react/models';
 
 const ROW_OWNER = 'review';
 const ACTION_OWNER = 'review';
@@ -105,10 +102,8 @@ export class AgentReview implements ReviewMember {
     }
 
     keepAll(): void {
-        void this.settle(
-            this.store.getState().items.map((item) => item.run.id),
-            'kept'
-        );
+        const runIds = this.store.getState().items.map((item) => item.run.id);
+        void this.settle(runIds, 'kept');
     }
 
     undo(runId: string): void {
@@ -342,11 +337,11 @@ export class AgentReview implements ReviewMember {
         if (reverted.length === 0) {
             return;
         }
-        const replacements = reverted.map<LineReplacement>((item) =>
-            item.endLine < item.startLine
-                ? { from: item.startLine - 1, to: item.startLine - 1, lines: item.run.before! }
-                : { from: item.startLine - 1, to: item.endLine, lines: item.run.before! }
-        );
+        const replacements = reverted.map<LineReplacement>((item) => ({
+            from: item.startLine - 1,
+            to: item.endLine < item.startLine ? item.startLine - 1 : item.endLine,
+            lines: item.run.before!
+        }));
         if (!this.editor.applyEdits(replaceAllLines(this.editor.getText(), replacements))) {
             return;
         }
@@ -356,10 +351,8 @@ export class AgentReview implements ReviewMember {
                 notes.set(item.run.chatId, [...(notes.get(item.run.chatId) ?? []), this.rangeLabel(item)]);
             }
         }
-        await this.settle(
-            reverted.map((item) => item.run.id),
-            'undone'
-        );
+        const runIds = reverted.map((item) => item.run.id);
+        await this.settle(runIds, 'undone');
         for (const [chatId, ranges] of notes) {
             this.source.offer(chatId, `${revertNote(ranges)}\n\n`);
         }

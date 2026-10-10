@@ -1,20 +1,24 @@
 import { useChats } from '@adecore/agents-react/state/chats';
+import { draftFiles } from '@/language/project-files';
+import { focusChat } from '@/plan/plan-actions';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
 import { chatClientFor } from '@/transport/connections';
 import { TransportError } from '@/transport/transport';
-import { focusChat } from '@/plan/plan-actions';
-import { draftFiles } from '@/language/project-files';
-import type { InlineEditDeps } from './inline-edit-session';
 import { forgetInlineEdit, saveInlineEdit } from './inline-edit-record';
+import type { InlineEditDeps } from './inline-edit-session';
+
+function notConnected(): TransportError {
+    return new TransportError('not-connected', 'The machine is not connected.');
+}
 
 /* The machine this edit runs on, or the reason it cannot: a card never starts a chat on a machine it lost. */
 function transportOf(endpointId: string) {
     const transport = transportFor(endpointId);
     if (transport === null || transport.status !== 'open') {
-        throw new TransportError('not-connected', 'The machine is not connected.');
+        throw notConnected();
     }
     return transport;
 }
@@ -22,7 +26,7 @@ function transportOf(endpointId: string) {
 function clientOf(endpointId: string) {
     const client = chatClientFor(endpointId);
     if (client === null) {
-        throw new TransportError('not-connected', 'The machine is not connected.');
+        throw notConnected();
     }
     return client;
 }

@@ -1,12 +1,12 @@
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import type { Editor } from '@adecore/editor';
 import { useChats } from '@adecore/agents-react/state/chats';
+import { joinReviewGroup } from '@adecore/editor-react';
 import { endpointKey } from '@/state/keys';
 import { type TextDraft, useTextDrafts } from '@/state/text-drafts';
 import type { Transport } from '@/transport/transport';
 import { AgentChanges } from './agent-changes';
 import { AgentReview, type ReviewSource } from './agent-review';
-import { joinReviewGroup } from '@adecore/editor-react';
 import { providerNameOf } from './use-chat-identity';
 
 export interface AgentChangesFile {
@@ -25,6 +25,19 @@ export type AgentReviewApp = Pick<ReviewSource, 'offer' | 'focusChat' | 'chatExi
 /* The path the way a chat reads it: inside the project folder it is relative to it. */
 export function projectRelative(path: string, folder: string | null): string {
     return folder !== null && path.startsWith(`${folder}/`) ? path.slice(folder.length + 1) : path;
+}
+
+function reviewSourceOf(transport: Pick<Transport, 'request'>, file: AgentChangesFile, app: AgentReviewApp): ReviewSource {
+    return {
+        mark: async (runIds, state) => {
+            await transport.request('provenance.review', { projectId: file.projectId, path: file.path, runIds: [...runIds], state });
+        },
+        offer: app.offer,
+        focusChat: app.focusChat,
+        chatExists: app.chatExists,
+        label: () => projectRelative(file.path, app.folder()),
+        language: app.language
+    };
 }
 
 /*
@@ -58,24 +71,7 @@ export function mountAgentChanges(
     });
     // One review per file and window: every editor on the file answers through the same group.
     const membership = app === undefined ? null : joinReviewGroup(key);
-    const review =
-        app === undefined || membership === null
-            ? null
-            : new AgentReview(
-                  editor,
-                  changes,
-                  {
-                      mark: async (runIds, state) => {
-                          await transport.request('provenance.review', { projectId: file.projectId, path: file.path, runIds: [...runIds], state });
-                      },
-                      offer: app.offer,
-                      focusChat: app.focusChat,
-                      chatExists: app.chatExists,
-                      label: () => projectRelative(file.path, app.folder()),
-                      language: app.language
-                  },
-                  membership.group
-              );
+    const review = app === undefined || membership === null ? null : new AgentReview(editor, changes, reviewSourceOf(transport, file, app), membership.group);
     const stopEvents = transport.on('provenance.changed', (event) => {
         if (event.projectId === file.projectId && event.path === file.path) {
             changes.changed(event);

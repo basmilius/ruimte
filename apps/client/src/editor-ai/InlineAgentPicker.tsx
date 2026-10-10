@@ -55,11 +55,7 @@ function AccountChip({
     );
 }
 
-/*
- * Which agent answers an inline edit: the provider's mark and name with the model, and beside it the
- * account while the CLI has a choice of them. The card and the AI settings both draw it, so the choice
- * reads the same where it is made and where it is kept.
- */
+/* Which agent answers an inline edit, and its account while the CLI has more than one. The card and the AI settings both draw it. */
 export function InlineAgentPicker({
     agent,
     onChange,

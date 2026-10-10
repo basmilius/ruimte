@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { CircleX, Info, Sparkles, TriangleAlert } from 'lucide-react';
 import { FileIcon, Icon, Tooltip } from '@adecore/ui';
 import { lineRangeLabel } from '@/chat/selection-to-chat';
+import type { InlineProblem } from '@adecore/editor-react/models';
 import type { EditorLanguage as RuimteEditorLanguage } from '@/language/ruimte-editor-language';
-
-type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
 import { basenameOf } from '@/shell/panels/files-tree';
 import { InlineAgentPicker } from './InlineAgentPicker';
 import type { InlineEditFeature, InlinePrompt } from './inline-edit';
 import { problemChips, problemDetail, problemLabel } from './inline-edit-layout';
-import type { InlineProblem } from '@adecore/editor-react/models';
+
+type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
 
 const SEVERITY_ICONS = { error: CircleX, warning: TriangleAlert, info: Info, hint: Info } as const;
 const SEVERITY_TONES = { error: 'text-status-error', warning: 'text-status-needs-you', info: 'text-text-muted', hint: 'text-text-muted' } as const;
@@ -55,11 +55,7 @@ function Problems({ problems }: { problems: readonly InlineProblem[] }) {
     );
 }
 
-/*
- * The question over the selected lines, in the row the editor makes for it: what to change, which
- * agent answers, the lines and the problems on them that go along, and the keys. Each part has its own
- * place and the row wraps instead of overlapping when the editor is narrow.
- */
+/* The question over the selected lines: what to change, which agent answers, and the lines and problems that go along. */
 export function InlinePromptCard({ feature, language, prompt }: { feature: InlineEditFeature; language: EditorLanguage; prompt: InlinePrompt }) {
     const { t } = useTranslation('inline-edit');
     const input = useRef<HTMLInputElement>(null);

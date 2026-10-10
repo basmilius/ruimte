@@ -1,12 +1,10 @@
 import { createStore, type StoreApi } from 'zustand';
 import type { AgentKind, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
 import type { Editor, EditorContentChange, EditorTrackedRange } from '@adecore/editor';
+import { highlightLayers, RowHost, type HostedRow } from '@adecore/editor-react';
+import { planConflict, replaceAllLines, replaceLines, type ConflictStretch } from '@adecore/editor-react/models';
 import type { DiskText } from '@/state/text-drafts';
 import { useConflictInfo } from './conflict-info';
-import { planConflict, type ConflictStretch } from '@adecore/editor-react/models';
-import { highlightLayers } from '@adecore/editor-react';
-import { replaceAllLines, replaceLines } from '@adecore/editor-react/models';
-import { RowHost, type HostedRow } from '@adecore/editor-react';
 
 const ROW_OWNER = 'conflict';
 const LAYER_OWNER = 'conflict';
@@ -76,6 +74,11 @@ function boundaryAt(editor: Editor, line: number): Boundary {
 function lineOf(boundary: Boundary): number | null {
     const range = boundary.range.get();
     return range === null ? null : range.start.line + (boundary.atEnd ? 1 : 0);
+}
+
+function untrack(block: OpenBlock): void {
+    block.start.range.dispose();
+    block.end.range.dispose();
 }
 
 /* The newest run that touches the lines, which is who wrote them as far as anyone knows. */
@@ -268,17 +271,13 @@ export class ConflictResolution {
     }
 
     private dissolve(block: OpenBlock): void {
-        block.start.range.dispose();
-        block.end.range.dispose();
+        untrack(block);
         this.open = this.open.filter((candidate) => candidate !== block);
     }
 
     private close(): void {
         this.drawn = '';
-        for (const block of this.open) {
-            block.start.range.dispose();
-            block.end.range.dispose();
-        }
+        this.open.forEach(untrack);
         this.open = [];
         this.rows.clear();
         highlightLayers(this.editor).set(LAYER_OWNER, null);
@@ -307,7 +306,12 @@ export class ConflictResolution {
 
     /* The rows and the tint, where the blocks stand now. */
     private draw(): void {
-        const signature = this.open.map((block) => `${block.id}@${this.spanOf(block)?.from}-${this.spanOf(block)?.to}`).join('|');
+        const signature = this.open
+            .map((block) => {
+                const span = this.spanOf(block);
+                return `${block.id}@${span?.from}-${span?.to}`;
+            })
+            .join('|');
         if (signature === this.drawn) {
             return;
         }

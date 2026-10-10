@@ -25,8 +25,6 @@ export function providerNameOf(providers: readonly ProviderInfo[], kind: AgentKi
 }
 
 export function useProviderName(kind: AgentKind | undefined): string {
-    return providerNameOf(
-        useProviders((s) => s.providers),
-        kind
-    );
+    const providers = useProviders((s) => s.providers);
+    return providerNameOf(providers, kind);
 }

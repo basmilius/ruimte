@@ -8,12 +8,12 @@ import { ProviderLogo } from '@adecore/agents-react/agents/ProviderLogo';
 import { useProviders } from '@adecore/agents-react/state/providers';
 import { Button, Icon, IconButton, Input, Kbd, Spinner, shortcut } from '@adecore/ui';
 import { formatDuration } from '@adecore/ui/format';
+import { diffSegments, emphasisOf } from '@adecore/editor-react/models';
 import type { EditorLanguage as RuimteEditorLanguage } from '@/language/ruimte-editor-language';
+import { isShortcut } from '@/language/shortcut-keys';
+import type { ApplyOutcome, InlineEditSession, InlineEditState } from './inline-edit-session';
 
 type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
-import { isShortcut } from '@/language/shortcut-keys';
-import { diffSegments, emphasisOf } from '@adecore/editor-react/models';
-import type { ApplyOutcome, InlineEditSession } from './inline-edit-session';
 
 const APPLY = shortcut('Mod+Enter');
 
@@ -78,6 +78,17 @@ function Status({ session }: { session: InlineEditSession }) {
             {t('card.done', { duration: formatDuration((endedAt ?? startedAt) - startedAt) })}
         </span>
     );
+}
+
+/* What a card without a proposal says once its turn is over. */
+function settledText(state: InlineEditState, t: (key: string) => string): string | null {
+    if (state.phase === 'failed') {
+        return state.error;
+    }
+    if (state.answer !== '') {
+        return state.answer;
+    }
+    return state.phase === 'stopped' ? t('card.stoppedEmpty') : t('card.noChange');
 }
 
 /* The field while there is something to answer, the card itself while the agent works, so Escape and Stop are a key away. */
@@ -172,13 +183,7 @@ export function InlineProposalCard({ language, session }: { language: EditorLang
                 {state.phase === 'proposal' && <Proposal language={language} session={session} />}
                 {state.phase !== 'proposal' && state.phase !== 'running' && (
                     <p className={`px-3 py-2 whitespace-pre-wrap ${state.phase === 'failed' ? 'text-status-error' : 'text-text-muted'}`}>
-                        {state.phase === 'failed'
-                            ? state.error
-                            : state.answer === ''
-                              ? state.phase === 'stopped'
-                                  ? t('card.stoppedEmpty')
-                                  : t('card.noChange')
-                              : state.answer}
+                        {settledText(state, t)}
                     </p>
                 )}
                 {state.phase === 'proposal' && state.answer !== '' && <p className="px-3 pb-2 whitespace-pre-wrap text-text-muted">{state.answer}</p>}

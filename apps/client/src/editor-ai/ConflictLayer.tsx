@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from 'zustand';
 import { Button } from '@adecore/ui';
-import { ProviderLogo } from '@adecore/agents-react/agents/ProviderLogo';
 import type { Editor } from '@adecore/editor';
 import { colorOfChat } from './agent-runs';
+import { ChatMark } from './ChatMark';
 import type { ConflictAuthor, ConflictBlockState, ConflictResolution } from './conflict-resolution';
 import { useProviderName } from './use-chat-identity';
 
@@ -15,12 +15,9 @@ const INDENT = { paddingLeft: 'var(--se-gutter-width)' };
 function Heading({ author, note }: { author: ConflictAuthor | null; note?: string }) {
     const { t } = useTranslation('panels');
     const name = useProviderName(author?.provider);
-    const logo = author?.provider === 'claude' || author?.provider === 'codex' ? author.provider : null;
     return (
         <span className="flex min-w-0 items-center gap-1.5">
-            <span className="flex shrink-0 items-center" style={{ color: author === null ? 'var(--status-needs-you)' : `var(${colorOfChat(author.chatId)})` }}>
-                {logo === null ? <span className="size-2 rounded-full bg-current" /> : <ProviderLogo provider={logo} size={12} />}
-            </span>
+            <ChatMark provider={author?.provider} color={author === null ? '--status-needs-you' : colorOfChat(author.chatId)} size={12} />
             <span className="truncate font-medium text-text">{author === null ? t('file.conflict.other') : name || t('file.conflict.agent')}</span>
             {author?.turn !== undefined && <span className="shrink-0 text-text-muted">· {t('file.agent.turn', { turn: author.turn })}</span>}
             {note !== undefined && <span className="shrink-0 text-text-muted">· {note}</span>}

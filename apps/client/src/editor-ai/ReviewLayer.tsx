@@ -49,9 +49,8 @@ function ReviewActions({ review, item }: { review: AgentReview; item: ReviewItem
 }
 
 /*
- * The lines a run took out, tinted as removed and faded, with the words the added lines replaced marked.
- * A removal that put nothing in its place has no line to carry its buttons, so they stand here, after the
- * last of the lines.
+ * The lines a run took out, faded, with the words the added lines replaced marked. A removal that put
+ * nothing in its place has no line to carry its buttons, so they stand after the last of these lines.
  */
 function RemovedRow({ review, editor, item }: { review: AgentReview; editor: Editor; item: ReviewItem }) {
     const { t } = useTranslation('panels');

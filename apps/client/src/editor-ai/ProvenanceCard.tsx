@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { Button, useNow } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
-import { ProviderLogo } from '@adecore/agents-react/agents/ProviderLogo';
 import { AnchoredPopup } from '@adecore/editor-react';
 import { relativeTime } from '@/shell/panels/commit-log';
 import { useEndpointId } from '@/state/keys';
 import type { AgentHover } from './agent-changes';
 import { colorOfChat } from './agent-runs';
+import { ChatMark } from './ChatMark';
 import { openChatAtTurn } from './chat-turn';
 import { useChatIdentity, useProviderName } from './use-chat-identity';
 
@@ -17,11 +17,7 @@ function linesText(start: number, end: number): string {
     return start === end ? formatNumber(start) : `${formatNumber(start)}-${formatNumber(end)}`;
 }
 
-/*
- * What stands behind a bar in the gutter: which chat and which turn wrote those lines, when, and the
- * prompt that turn started from. The pointer can cross into the card, to open the chat at that turn or
- * to see everything the turn changed.
- */
+/* Which chat and turn wrote the lines behind a bar in the gutter, when, and the prompt that turn started from. */
 export function ProvenanceCard({ hover, onHold }: { hover: AgentHover; onHold(inside: boolean): void }) {
     const { t } = useTranslation('panels');
     const now = Math.floor(useNow(MINUTE_MS) / 1000);
@@ -29,7 +25,6 @@ export function ProvenanceCard({ hover, onHold }: { hover: AgentHover; onHold(in
     const { run, startLine, endLine } = hover;
     const chat = useChatIdentity(run.chatId);
     const name = useProviderName(run.provider);
-    const logo = run.provider === 'claude' || run.provider === 'codex' ? run.provider : null;
     const count = endLine - startLine + 1;
     const wrote = t(run.via === 'checkpoint' ? 'file.agent.wrotePossibly' : 'file.agent.wrote', { count, lines: linesText(startLine, endLine) });
     const where = run.turn === undefined ? wrote : `${t('file.agent.turn', { turn: formatNumber(run.turn) })} · ${wrote}`;
@@ -38,9 +33,7 @@ export function ProvenanceCard({ hover, onHold }: { hover: AgentHover; onHold(in
         <AnchoredPopup rect={hover.rect} className="flex w-105 flex-col text-xs" onPointerEnter={() => onHold(true)} onPointerLeave={() => onHold(false)}>
             <div className="flex flex-col gap-2 px-3 pt-3 pb-2.5">
                 <div className="flex items-center gap-2">
-                    <span className="flex shrink-0 items-center" style={{ color: `var(${colorOfChat(run.chatId)})` }}>
-                        {logo === null ? <span className="size-2 rounded-full bg-current" /> : <ProviderLogo provider={logo} size={14} />}
-                    </span>
+                    <ChatMark provider={run.provider} color={colorOfChat(run.chatId)} size={14} />
                     <span className="shrink-0 text-sm font-semibold text-text">{name}</span>
                     {chat.title !== null && <span className="min-w-0 truncate text-sm text-text-muted">{t('file.agent.inChat', { chat: chat.title })}</span>}
                     <span className="ml-auto shrink-0 text-text-faint">{relativeTime(Math.floor(run.at / 1000), now)}</span>
