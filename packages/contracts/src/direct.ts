@@ -3,10 +3,8 @@ import { SignalEnvelopeSchema } from '@ruimte/pulsar';
 import { ProtocolVersionSchema } from './protocol.ts';
 
 /*
- * A direct connection: the client's wire over a WebRTC DataChannel instead of a WebSocket. Until
- * there is a broker the signals ride over a socket the client already holds to the same daemon, as
- * `direct.signal` one way and `direct.signaled` the other, carrying the Pulsar envelope unchanged so
- * the broker can take over that leg without anything here changing shape.
+ * The client's wire over a WebRTC DataChannel. Over a socket the client already holds, signals go as
+ * `direct.signal` and `direct.signaled`, carrying the Pulsar envelope unchanged, the same shape the broker carries.
  */
 export const DirectSignalPayloadSchema = z.object({
     envelope: SignalEnvelopeSchema
@@ -109,10 +107,9 @@ export function localSecretChannelMessage(daemonId: string, challenge: string, b
 }
 
 /*
- * A frame larger than the peer's SCTP max-message-size is refused outright (werift announces 64 KiB,
- * Chromium 256 KiB), and a screen at attach or a project document is easily more. So every frame goes
- * out in pieces: a first character that says whether more follow, then at most this many UTF-16 code
- * units, which is at most 48 KiB of UTF-8.
+ * A frame past the peer's SCTP max-message-size is refused outright (werift announces 64 KiB, Chromium
+ * 256 KiB), so every frame goes in pieces: a mark saying whether more follow, then at most this many
+ * UTF-16 code units, at most 48 KiB of UTF-8.
  */
 export const DIRECT_PIECE_CHARS = 16_000;
 

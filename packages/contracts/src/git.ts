@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 import { WorktreeSchema } from '@adecore/agent-contracts/worktree';
 
-// A worktree for a branch of the repository; made under the app data dir when it does not exist yet.
+// Made under the app data dir when the branch has no worktree yet.
 export const WorktreeAddPayloadSchema = z.object({
     repo: z.string().min(1),
     branch: z.string().min(1),
@@ -46,13 +46,12 @@ export const WorktreeRemoveResultSchema = z.object({
 });
 export type WorktreeRemoveResult = z.infer<typeof WorktreeRemoveResultSchema>;
 
-// The worktrees of this repository changed; a client that lists them asks again.
 export const GitWorktreesEventSchema = z.object({
     repo: z.string()
 });
 export type GitWorktreesEvent = z.infer<typeof GitWorktreesEventSchema>;
 
-// Which group a changed file sits in. A file that is both staged and changed since is in two.
+// A file that is both staged and changed since is in two groups.
 export const GitFileStateSchema = z.enum(['staged', 'unstaged', 'untracked', 'conflicted']);
 export type GitFileState = z.infer<typeof GitFileStateSchema>;
 
@@ -71,14 +70,14 @@ export const GitFileSchema = z.object({
 });
 export type GitFile = z.infer<typeof GitFileSchema>;
 
-// A git operation that stopped halfway and waits in the checkout, by git's own word for it.
+// An operation that stopped halfway and waits in the checkout.
 export const GitOperationSchema = z.enum(['merge', 'rebase', 'cherry-pick', 'revert']);
 export type GitOperation = z.infer<typeof GitOperationSchema>;
 
 export const GitStatusSchema = z.object({
     // False when the folder is not inside a repository; everything below is then empty.
     repo: z.boolean(),
-    // Set while the checkout is in the middle of one, whether or not anything conflicts.
+    // Set while the checkout is in the middle of one, conflicts or not.
     operation: GitOperationSchema.optional(),
     root: z.string().nullable(),
     // Null on a detached HEAD, which `detached` says apart from a repository without commits.
@@ -106,16 +105,15 @@ export const GitCwdPayloadSchema = z.object({
 });
 export type GitCwdPayload = z.infer<typeof GitCwdPayloadSchema>;
 
-// Which checkout a repository under the project folder is: the folder's own, a submodule of it, or one
-// that happens to sit beside it.
+// `nested`: a repository that happens to sit under the project folder.
 export const GitRepoKindSchema = z.enum(['root', 'submodule', 'nested']);
 export type GitRepoKind = z.infer<typeof GitRepoKindSchema>;
 
 export const GitRepoSchema = z.object({
-    // Absolute on the daemon's machine, which is what every git verb takes as its cwd.
+    // Absolute on the daemon's machine; every git verb takes it as its cwd.
     path: z.string(),
-    // What a person reads and what a hidden repository is remembered under: the path under the project
-    // folder, or the folder's own name for the repository the folder itself is in.
+    // What a hidden repository is remembered under: the path under the project folder, or the folder's
+    // own name for the repository the folder itself is in.
     label: z.string(),
     // What the checkout calls itself (`.idea/.name`, or the name of a Ruimte project in it), for a
     // heading that reads better than its folder. Absent when it declares none; never an identity.
@@ -143,9 +141,8 @@ export const GitStatusEventSchema = z.object({
 });
 export type GitStatusEvent = z.infer<typeof GitStatusEventSchema>;
 
-// The working tree of a checkout moved. Said apart from `git.status`, which only goes out when the
-// status itself reads differently: a second edit to a file that was already modified leaves every
-// word of the status alone while the diff of that file is another one.
+// Apart from `git.status`, which only goes out when the status reads differently: a second edit to a
+// modified file leaves the status alone while its diff changed.
 export const GitChangedEventSchema = z.object({
     cwd: z.string()
 });
@@ -180,12 +177,11 @@ export const GitDiffFileSchema = z.object({
     deleted: z.number().int().nonnegative(),
     binary: z.boolean(),
     omitted: z.enum(['binary', 'too-large']).optional(),
-    // What the file went through, which a file the patch leaves out cannot say. A daemon from before it leaves it out.
+    // Set even when the patch is omitted. A daemon from before it leaves it out.
     kind: z.enum(['add', 'update', 'delete']).optional()
 });
 export type GitDiffFile = z.infer<typeof GitDiffFileSchema>;
 
-// One commit as a log row: what it is, who wrote it and the names pointing at it.
 export const GitCommitSchema = z.object({
     hash: z.string(),
     shortHash: z.string(),
@@ -193,8 +189,8 @@ export const GitCommitSchema = z.object({
     author: z.string(),
     // Seconds since the epoch, the way git writes an author date.
     at: z.number().int(),
-    // The commit date, in the same unit: what `git log` sorts by, which a rebase or an amend moves
-    // and the author date keeps. A daemon from before it leaves it out.
+    // What `git log` sorts by; a rebase or an amend moves it and keeps the author date. A daemon from
+    // before it leaves it out.
     committedAt: z.number().int().optional(),
     // Branch and tag names on this commit, without their `refs/` prefix.
     refs: z.array(z.string())
@@ -217,15 +213,13 @@ export const GitDiffResultSchema = GitDiffFileSchema.extend({
 });
 export type GitDiffResult = z.infer<typeof GitDiffResultSchema>;
 
-// Who wrote each line of a file in the working tree, for the editor's code vision. `path` is relative
-// to the repository root, as `git.status` names it, and is held to the checkout like a diff's.
+// For the editor's code vision. `path` is relative to the repository root and held to the checkout like a diff's.
 export const GitBlamePayloadSchema = z.object({
     cwd: z.string().min(1),
     path: z.string().min(1)
 });
 export type GitBlamePayload = z.infer<typeof GitBlamePayloadSchema>;
 
-// A commit that wrote at least one line of the file.
 export const GitBlameCommitSchema = z.object({
     hash: z.string(),
     shortHash: z.string(),
@@ -272,9 +266,7 @@ export const GitRefSchema = z.object({
     // `main` for a local branch, `origin/main` for a remote one, as git itself shortens them.
     name: z.string(),
     kind: z.enum(['local', 'remote']),
-    // Whether HEAD is on this branch right now.
     current: z.boolean(),
-    // The base branch of the repository, so a menu can mark it.
     isDefault: z.boolean(),
     // The checkout that has this branch out, when another worktree does; git refuses a second one.
     worktree: z.string().optional(),
@@ -283,7 +275,6 @@ export const GitRefSchema = z.object({
 });
 export type GitRef = z.infer<typeof GitRefSchema>;
 
-// One entry of `git stash list`: the ref that pops it and the line it was saved under.
 export const GitStashSchema = z.object({
     ref: z.string(),
     message: z.string()
@@ -313,11 +304,7 @@ export const GitLogResultSchema = z.object({
 });
 export type GitLogResult = z.infer<typeof GitLogResultSchema>;
 
-/*
- * Everything the panel can do to a checkout, as one request. They are one kind and not one request
- * each because they share a shape: a stream of progress lines while git runs, one summary line when
- * it is over, and the output of a failure as the error.
- */
+// One request because they share a shape: progress lines while git runs, a summary line, failure output as the error.
 export const GitActionKindSchema = z.enum([
     'fetch',
     'pull',
@@ -379,7 +366,6 @@ export const GitActionResultSchema = z.object({
 });
 export type GitActionResult = z.infer<typeof GitActionResultSchema>;
 
-// Where an action is: the step it is on, `done` when the last one is over, `failed` when git said no.
 export const GitActionPhaseSchema = z.enum(['start', 'fetch', 'stage', 'commit', 'push', 'pull', 'branch', 'stash', 'merge', 'rebase', 'pr', 'done', 'failed']);
 export type GitActionPhase = z.infer<typeof GitActionPhaseSchema>;
 
@@ -420,10 +406,7 @@ export const GitSuggestMessageResultSchema = z.object({
 });
 export type GitSuggestMessageResult = z.infer<typeof GitSuggestMessageResultSchema>;
 
-/*
- * What kind of thing a person has to decide for one unmerged file. Only `text` has two versions to
- * weigh line by line; the rest is a choice between whole files, or between a file and its absence.
- */
+// Only `text` is weighed line by line; the rest is a choice between whole files, or a file and its absence.
 export const GitConflictKindSchema = z.enum(['text', 'binary', 'deleted-by-us', 'deleted-by-them', 'submodule']);
 export type GitConflictKind = z.infer<typeof GitConflictKindSchema>;
 
@@ -433,12 +416,7 @@ export const GitConflictFileSchema = z.object({
 });
 export type GitConflictFile = z.infer<typeof GitConflictFileSchema>;
 
-/*
- * Everything a checkout waiting halfway holds, in one answer: which operation stopped, what to call
- * the two sides, and every file it left unmerged. The names matter more than they look: in a rebase
- * "ours" is the branch being replayed onto and "theirs" is the person's own commit, which is the
- * other way around from a merge.
- */
+// In a rebase "ours" is the branch replayed onto and "theirs" the person's own commit, the reverse of a merge.
 export const GitConflictsResultSchema = z.object({
     operation: GitOperationSchema.nullable(),
     // What a person reads above each side: a branch name, a commit subject, or a plain word.
@@ -488,10 +466,7 @@ export const GitResolveResultSchema = z.object({
 });
 export type GitResolveResult = z.infer<typeof GitResolveResultSchema>;
 
-/*
- * Finishing or taking back the operation that waits in a checkout. `continue` commits what was
- * resolved and carries a rebase on to its next commit; `abort` puts the checkout back as it was.
- */
+// `continue` commits what was resolved and carries a rebase on; `abort` puts the checkout back as it was.
 export const GitOperationPayloadSchema = z.object({
     cwd: z.string().min(1),
     actionId: z.string().min(1),
@@ -526,7 +501,6 @@ export const GitResolveAiResultSchema = z.object({
 });
 export type GitResolveAiResult = z.infer<typeof GitResolveAiResultSchema>;
 
-// How a worktree's branch lands on the branch it was made from.
 export const WorktreeMergeStrategySchema = z.enum(['merge', 'squash', 'rebase']);
 export type WorktreeMergeStrategy = z.infer<typeof WorktreeMergeStrategySchema>;
 

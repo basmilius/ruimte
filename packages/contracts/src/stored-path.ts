@@ -9,11 +9,8 @@ function withoutTrailingSeparator(path: string): string {
 }
 
 /*
- * Whether a path is the folder itself or something under it. A bare `startsWith` also said yes to
- * `/repo-old` for a root of `/repo`, and what came out of that was `old/src/a.ts`, which resolves
- * back to a file in `/repo` that nobody meant. Only a separator right after the root makes one
- * folder part of the other. Both separators count: contracts has no node:path, and the daemon at
- * the other end may speak Windows.
+ * Needs a separator right after the root: a bare `startsWith` put `/repo-old` under `/repo`. Both
+ * separators count, since contracts has no node:path and the daemon may speak Windows.
  */
 function isUnder(base: string, path: string): boolean {
     return path === base || (path.startsWith(base) && (path[base.length] === '/' || path[base.length] === '\\'));
@@ -44,11 +41,7 @@ export function isAbsolutePath(path: string): boolean {
     return /^[\\/]/.test(path) || /^[a-zA-Z]:[\\/]/.test(path);
 }
 
-/*
- * A path the way a file node or a file view stores it, so the project file says the same thing in
- * every checkout: relative to the project folder, POSIX. A file outside that folder keeps the
- * absolute path it has, which is what `relativeTo` hands back for a path it cannot shorten.
- */
+// Relative to the project folder and POSIX, so the project file holds in every checkout; absolute outside it.
 export function storedPathOf(folder: string | null, path: string): string {
     return folder === null ? path : relativeTo(folder, path);
 }

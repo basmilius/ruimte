@@ -1,10 +1,8 @@
 import { z } from 'zod';
 
 /*
- * How many samples a subscriber holds. An agreement rather than a preference: it is how long a plot
- * goes back and how much of it travels on `processes.subscribe`, so the daemon and a client that
- * stays subscribed for a day have to cut at the same point. Ten minutes at two seconds, a day at
- * five minutes.
+ * How many samples a subscriber holds: an agreement, since the daemon and a client subscribed for a day
+ * have to cut at the same point. Ten minutes at two seconds, a day at five minutes.
  */
 export const FINE_POINTS = 300;
 export const COARSE_POINTS = 288;

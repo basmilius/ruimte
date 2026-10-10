@@ -12,10 +12,7 @@ export type ProjectId = z.infer<typeof ProjectIdSchema>;
 export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'device', 'group', 'note', 'drawing', 'diagram', 'file']);
 export type NodeKind = z.infer<typeof NodeKindSchema>;
 
-/*
- * Wrap entries from newer versions so they can be preserved verbatim. The reserved discriminant
- * keeps TypeScript narrowing useful for every known `kind`.
- */
+// Wraps an entry of a newer version so it is written back verbatim; a reserved kind keeps narrowing useful.
 export const UNKNOWN_KIND = 'unknown';
 
 const KNOWN_NODE_KINDS: ReadonlySet<string> = new Set(NodeKindSchema.options);
@@ -37,7 +34,6 @@ function positiveOr(value: unknown, fallback: number): number {
     return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-/* The frame of a node of an unknown kind as the entry gives it, with what a plate needs where the entry is silent. */
 function unknownNodeFrameOf(raw: Record<string, unknown>): { id: unknown; title: string; x: number; y: number; w: number; h: number } {
     return {
         id: raw.id,
@@ -49,14 +45,13 @@ function unknownNodeFrameOf(raw: Record<string, unknown>): { id: unknown; title:
     };
 }
 
-// What a person may change about such a node: where it stands, how big it is, and its id when a canvas is copied.
+// The id changes when a canvas is copied.
 const UNKNOWN_NODE_WRITABLE = ['id', 'x', 'y', 'w', 'h'] as const;
 
 /*
- * The shape an entry is read in. A kind this version knows stays as it is and is checked as usual;
- * one it does not know, with an id, becomes an `unknown` entry around what it read. An `unknown`
- * entry coming back over the wire is opened up first, so a machine that does know the kind reads the
- * real thing again.
+ * An entry of a kind this version does not know, with an id, becomes an `unknown` entry around what
+ * it read. An `unknown` entry from the wire is opened up first, so a machine that knows the kind reads
+ * the real thing again.
  */
 function readEntry(
     value: unknown,
@@ -77,8 +72,7 @@ function readEntry(
     return wrap(entry);
 }
 
-// Where the title of a node came from: the session named itself from its first prompt, or a person
-// typed it. The title follows the session until someone sets it.
+// `auto`: the session named itself from its first prompt and keeps doing so until a person sets it.
 export const NodeTitleSourceSchema = z.enum(['auto', 'user']);
 export type NodeTitleSource = z.infer<typeof NodeTitleSourceSchema>;
 
@@ -86,8 +80,7 @@ export const ProjectNodeSchema = z.object({
     id: z.string().min(1),
     kind: z.union([NodeKindSchema, z.literal(UNKNOWN_KIND)]),
     title: z.string(),
-    // Who named the node. Absent on a node nobody named yet, which is the only state in which its
-    // session may still name it.
+    // Absent on a node nobody named yet, the only state in which its session may still name it.
     titleSource: NodeTitleSourceSchema.optional(),
     x: z.number(),
     y: z.number(),
@@ -125,22 +118,20 @@ export const ProjectNodeSchema = z.object({
     color: z.string().optional(),
     // Drawing and diagram only: the view of that kind this node mirrors, which lives in the same project.
     viewId: z.string().optional(),
-    /* File only: the file it reads. Relative to the project folder, POSIX, so the node still points
-       at the same file in another checkout; a file outside that folder keeps its absolute path. */
+    // File only: relative to the project folder and POSIX, so it holds in another checkout; absolute outside it.
     path: z.string().optional(),
     // Unknown kind only: the entry exactly as it was read.
     raw: RawEntrySchema.optional()
 });
 export type ProjectNode = z.infer<typeof ProjectNodeSchema>;
 
-/* Every kind a node on a canvas can have in memory: the ones this version makes, and the one it only carries. */
 export type CanvasNodeKind = ProjectNode['kind'];
 
 export function isUnknownNode(node: Pick<ProjectNode, 'kind'>): boolean {
     return node.kind === UNKNOWN_KIND;
 }
 
-/* A node the way the file holds it: an unknown one is what was read, with whatever a person moved on top. */
+// An unknown node is written as it was read, with whatever a person moved on top.
 export function storedNodeOf(node: ProjectNode): unknown {
     if (node.kind !== UNKNOWN_KIND || !node.raw) {
         return node;
@@ -185,37 +176,31 @@ export const ProjectTextSchema = z.object({
 });
 export type ProjectText = z.infer<typeof ProjectTextSchema>;
 
-/* The side of a node a line leaves from or lands on. */
 export const NodeSideSchema = z.enum(['top', 'right', 'bottom', 'left']);
 export type NodeSide = z.infer<typeof NodeSideSchema>;
 
 /*
- * A line between two things on the canvas. Into an agent's node it also means the agent may read the
- * source. Loose, so a field a newer Ruimte put on an edge is read, carried and written back
- * untouched, the way an entry of an unknown kind is. An edge is flat and has no `kind` to hang a
- * wrapper on, so keeping the extra keys where they already sit is all it takes; nothing here may
- * rebuild an edge out of the fields this version knows.
+ * Into an agent's node a line also lets the agent read the source. Loose, so a field a newer Ruimte
+ * put on an edge is carried and written back untouched: nothing may rebuild an edge from the fields
+ * this version knows.
  */
 export const ProjectEdgeSchema = z.looseObject({
     id: z.string().min(1),
     from: z.string().min(1),
     to: z.string().min(1),
     label: z.string().optional(),
-    /* The port a person drew this line from, which it keeps whatever the two nodes do afterwards.
-       An end without one is free: the canvas puts it on the side that reads best. */
+    // A drawn port sticks whatever the nodes do afterwards; an end without one goes where it reads best.
     fromSide: NodeSideSchema.optional(),
     toSide: NodeSideSchema.optional(),
-    /* What the line means; see `EDGE_ROLES`. A plain string and not an enum, or a word a newer
-       Ruimte wrote would fail the parse and take the whole edge with it. Read it with `edgeRole`. */
+    // A string and not an enum, so a role a newer Ruimte wrote does not fail the whole edge. Read it with `edgeRole`.
     role: z.string().optional()
 });
 export type ProjectEdge = z.infer<typeof ProjectEdgeSchema>;
 
 /*
- * What a line is for. `context` is the one every version has drawn: the agent it touches reads the
- * other end with `ruimte-context read` and may notify along it, and between two agents the head is
- * the one that reads. `target` runs from an agent into something it can drive. `origin` is drawn by the daemon when one node opened another and carries no permission of
- * its own, only where the node came from.
+ * `context` is the one every version has drawn: the agent it touches reads the other end with
+ * `ruimte-context read` and may notify along it; between two agents the head reads. `target` runs from
+ * an agent into something it can drive. `origin` only records which node opened another and grants nothing.
  */
 export const EDGE_ROLES = ['context', 'target', 'origin'] as const;
 export const EdgeRoleSchema = z.enum(EDGE_ROLES);
@@ -223,11 +208,7 @@ export type EdgeRole = z.infer<typeof EdgeRoleSchema>;
 
 const KNOWN_EDGE_ROLES: ReadonlySet<string> = new Set(EDGE_ROLES);
 
-/*
- * The role of a line as this version understands it. A role it does not know reads as none, so the
- * line falls back to what a line without a role has always been, while the word itself stays on the
- * edge for the Ruimte that wrote it. Same rule as a node or a view of an unknown kind.
- */
+// A role this version does not know reads as none, while the word stays on the edge for the Ruimte that wrote it.
 export function edgeRole(edge: Pick<ProjectEdge, 'role'>): EdgeRole | null {
     return edge.role !== undefined && KNOWN_EDGE_ROLES.has(edge.role) ? (edge.role as EdgeRole) : null;
 }
@@ -427,17 +408,14 @@ export function isProjectIconName(value: string): value is ProjectIconName {
  */
 export const ProjectIconNameSchema = z.string().min(1).max(64);
 
-// What a person picked, in the shared file next to the name. One of the Lucide names and nothing
-// else: a mark is drawn beside a name at 14 pixels, where the app's own line weight is what makes a
-// row of them read as a list. An image is never a blob here: it is a file at `.ruimte/icon.<ext>`,
-// which the derived chain finds on its own.
+// Only a Lucide name: at 14 pixels the app's own line weight is what makes a row of marks read as a
+// list. An image is never stored here; it is a file at `.ruimte/icon.<ext>` the derived chain finds.
 export const ProjectIconChoiceSchema = z.object({ kind: z.literal('lucide'), value: ProjectIconNameSchema });
 export type ProjectIconChoice = z.infer<typeof ProjectIconChoiceSchema>;
 
 /*
- * What the client renders: the choice, or what the daemon derived from the folder. An image
- * carries the path it was found at and a version that changes with the file, so the bytes come
- * from `GET /projects/<id>/icon?v=<version>` and the browser cache can hold them forever.
+ * The choice, or what the daemon derived from the folder. An image's version changes with the file,
+ * so `GET /projects/<id>/icon?v=<version>` can be cached forever.
  */
 export const ProjectIconSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('lucide'), value: ProjectIconNameSchema }),
@@ -460,30 +438,25 @@ export const MAIN_VIEW_ID = 'main';
 export const MAIN_VIEW_NAME = 'Canvas';
 
 /*
- * The node that made this view with a canvas verb; absent on one a person made. It is in the shared
- * file on purpose, unlike the depth of a node, which is daemon state: a maker is a fact both sides
- * read (`ruimte-context view delete` only removes a view whose maker is the caller, and the sidebar
- * can say who made a row), and nothing has to be defended with it, since a person deleting a view
- * of their own is not something the rule is about.
+ * The node that made this view with a canvas verb; absent on one a person made. In the shared file on
+ * purpose, unlike a node's depth: `view delete` only reads it to limit an agent to its own views, and
+ * nothing a person does has to be defended with it.
  */
 const CreatedBySchema = z.string().min(1).optional();
 
 const ViewBaseSchema = z.object({
     id: z.string().min(1),
     name: z.string().min(1),
-    // Who named the view, the rule a node follows: absent or 'auto' means the page it hosts may
-    // still name it, 'user' means a person did and nothing renames it again.
+    // The rule a node follows: absent or 'auto' lets the page it hosts name it, 'user' is final.
     titleSource: NodeTitleSourceSchema.optional(),
-    // Absent means the row wears the mark of what it is: its kind, its CLI, or a page's favicon.
-    // Present means a person overruled that, so nothing the view hosts changes it again.
+    // Absent wears the mark of its kind, CLI or favicon; present is a person's choice nothing overrides.
     icon: ProjectIconChoiceSchema.optional(),
     createdBy: CreatedBySchema
 });
 
 /*
- * A standalone view hosts one node without a place on a canvas, so it carries what a node carries
- * minus its frame. Its id is the session id, the same rule a node follows, which is why moving a
- * node between a canvas and a view of its own never restarts anything.
+ * A node without a frame. Its id is the session id, as a node's is, so moving a node between a canvas
+ * and a view of its own never restarts anything.
  */
 export const StandaloneNodeSchema = ProjectNodeSchema.pick({
     cwd: true,
@@ -507,11 +480,7 @@ export const ProjectCanvasViewSchema = ViewBaseSchema.extend({
 });
 export type ProjectCanvasView = z.infer<typeof ProjectCanvasViewSchema>;
 
-/*
- * A line between rows in the sidebar. It rides in the view list because the order of the file is the
- * order of the list, but it holds nothing, never opens and takes no node: only the rows around it
- * read differently for it being there. Its label is optional, since a bare line groups just as well.
- */
+// A line between sidebar rows. It rides in the view list because the file's order is the list's order.
 export const ProjectSeparatorViewSchema = z.object({
     kind: z.literal('separator'),
     id: z.string().min(1),
@@ -520,11 +489,7 @@ export const ProjectSeparatorViewSchema = z.object({
 });
 export type ProjectSeparatorView = z.infer<typeof ProjectSeparatorViewSchema>;
 
-/*
- * A heading over the rows under it. Like a separator it is a row that divides the list rather than
- * a place to go, but its whole point is what it says, so the name is required where a separator's
- * is optional. It wears no mark: the text lines up with the marks of the rows it heads.
- */
+// A heading over the rows under it; unlike a separator its name is required. It wears no mark.
 export const ProjectSubheaderViewSchema = z.object({
     kind: z.literal('subheader'),
     id: z.string().min(1),
@@ -536,10 +501,9 @@ export type ProjectSubheaderView = z.infer<typeof ProjectSubheaderViewSchema>;
 export const ProjectChatViewSchema = ViewBaseSchema.extend({
     kind: z.literal('chat'),
     node: StandaloneNodeSchema,
-    // A chat the daemon made in the machine's Chats project that nobody wrote in yet. It is not listed and the next
-    // new chat reuses it; the daemon drops the mark with the first message.
+    // A Chats project chat nobody wrote in yet: unlisted, reused by the next new chat, cleared by the first message.
     empty: z.boolean().optional(),
-    // A chat an inline edit in the editor runs in: no list shows it and no tab offers it, and the card in the editor is how it is found again.
+    // A chat an inline edit runs in: no list or tab shows it, only its card in the editor.
     hidden: z.boolean().optional()
 });
 export type ProjectChatView = z.infer<typeof ProjectChatViewSchema>;
@@ -553,27 +517,22 @@ export type ProjectBrowserView = z.infer<typeof ProjectBrowserViewSchema>;
 export const ProjectDeviceViewSchema = ViewBaseSchema.extend({ kind: z.literal('device'), device: DeviceReferenceSchema });
 export type ProjectDeviceView = z.infer<typeof ProjectDeviceViewSchema>;
 
-/* A sketch of its own. The elements live in `.ruimte/drawings/<id>.json`, never in this file. */
+// The elements live in `.ruimte/drawings/<id>.json`, never in this file.
 export const ProjectDrawingViewSchema = ViewBaseSchema.extend({ kind: z.literal('drawing') });
 export type ProjectDrawingView = z.infer<typeof ProjectDrawingViewSchema>;
 
-/* A graph that is written rather than drawn. The graph lives in `.ruimte/diagrams/<id>.json`, never in this file. */
+// The graph lives in `.ruimte/diagrams/<id>.json`, never in this file.
 export const ProjectDiagramViewSchema = ViewBaseSchema.extend({ kind: z.literal('diagram') });
 export type ProjectDiagramView = z.infer<typeof ProjectDiagramViewSchema>;
 
-/* One file on disk, read and never written. The path is the whole view: the bytes are the
-   file system's, so there is nothing here for Ruimte to own, migrate or save. */
+// The path is the whole view: the bytes are the file system's.
 export const ProjectFileViewSchema = ViewBaseSchema.extend({ kind: z.literal('file'), path: z.string().min(1) });
 export type ProjectFileView = z.infer<typeof ProjectFileViewSchema>;
 
-/* Whether a table is a view, as the database last said. */
+// As the database last said.
 const ProjectTableKindSchema = z.enum(['table', 'view']);
 
-/*
- * One table of a database connection, as its rows or as its structure. The connection is a name in
- * the project's connection store, which is per machine, so the view is only as good as that name
- * is where it is opened. An older release keeps this kind as unknown and writes it back unchanged.
- */
+// The connection is a name in the per-machine connection store, so it only resolves where that name exists.
 export const ProjectDatabaseViewSchema = ViewBaseSchema.extend({
     kind: z.literal('database'),
     connectionId: z.string().min(1),
@@ -585,7 +544,6 @@ export const ProjectDatabaseViewSchema = ViewBaseSchema.extend({
     tableKind: ProjectTableKindSchema.optional()
 });
 export type ProjectDatabaseView = z.infer<typeof ProjectDatabaseViewSchema>;
-/* What a database view shows, without the row it makes in the sidebar. */
 export type ProjectDatabaseTarget = Pick<ProjectDatabaseView, 'connectionId' | 'schema' | 'table' | 'mode' | 'where' | 'tableKind'>;
 
 const KNOWN_VIEW_SCHEMAS = [
@@ -602,20 +560,16 @@ const KNOWN_VIEW_SCHEMAS = [
     ProjectSubheaderViewSchema
 ] as const;
 
-/* The kinds this version can make and open, in the order of the union. */
 export const PROJECT_VIEW_KINDS = KNOWN_VIEW_SCHEMAS.map((schema) => schema.shape.kind.value);
 
 const KNOWN_VIEW_KINDS: ReadonlySet<string> = new Set(PROJECT_VIEW_KINDS);
 
-/*
- * A view of a kind a newer Ruimte made: listed under its name, never opened, and written back as it
- * was read. The name falls back to the kind, since a sidebar row needs something to say.
- */
+// A view of a kind a newer Ruimte made: listed, never opened, written back as read. The name falls back to the kind.
 export const ProjectUnknownViewSchema = z.object({
     kind: z.literal(UNKNOWN_KIND),
     id: z.string().min(1),
     name: z.string().min(1),
-    // Read from the entry, so `view delete` still knows who made it; never written from here.
+    // Read from the entry so `view delete` still knows the maker; never written from here.
     createdBy: CreatedBySchema,
     raw: RawEntrySchema
 });
@@ -652,8 +606,7 @@ export function isSubheaderView(view: ProjectView): view is ProjectSubheaderView
     return view.kind === 'subheader';
 }
 
-/* The rows that divide the list rather than stand in it: a line, and a heading over what follows.
-   Neither opens, neither holds a session, and neither is shared on its own. */
+// Neither opens, holds a session or is shared on its own.
 export function isDividerView(view: ProjectView): view is ProjectSeparatorView | ProjectSubheaderView {
     return isSeparatorView(view) || isSubheaderView(view);
 }
@@ -678,16 +631,11 @@ export function isUnknownView(view: ProjectView): view is ProjectUnknownView {
     return view.kind === UNKNOWN_KIND;
 }
 
-/* The mark a person picked for a view; a divider has no room for one and an unknown view keeps whatever it has in the file. */
 export function viewIconOf(view: ProjectView): ProjectIconChoice | null {
     return isDividerView(view) || view.kind === UNKNOWN_KIND ? null : (view.icon ?? null);
 }
 
-/*
- * The views that are one session under their own id: what a node carries, without a canvas around
- * it. A divider holds nothing, and a drawing, a diagram and a file are all read off disk, so none
- * of them has a session to attach to.
- */
+// The views that are one session under their own id; drawings, diagrams and files are read off disk.
 export function isSessionView(view: ProjectView): view is ProjectChatView | ProjectTerminalView | ProjectBrowserView | ProjectDeviceView {
     return view.kind === 'chat' || view.kind === 'terminal' || view.kind === 'browser' || view.kind === 'device';
 }
@@ -700,18 +648,14 @@ export function isHiddenChatView(view: ProjectView): view is ProjectChatView {
     return view.kind === 'chat' && view.hidden === true;
 }
 
-/* A chat view no list shows: one nobody wrote in yet, or one an inline edit runs in. */
 export function isUnlistedChatView(view: ProjectView): view is ProjectChatView {
     return isEmptyChatView(view) || isHiddenChatView(view);
 }
 
-/* The views a person can put on screen. A divider marks the list rather than standing in it, and
-   this version has nothing to draw a view of an unknown kind with. */
 export function isOpenableView(view: ProjectView): boolean {
     return !isDividerView(view) && view.kind !== UNKNOWN_KIND && !isHiddenChatView(view);
 }
 
-/* A view the way the file holds it. */
 export function storedViewOf(view: ProjectView): unknown {
     if (view.kind === UNKNOWN_KIND) {
         return view.raw;
@@ -720,17 +664,13 @@ export function storedViewOf(view: ProjectView): unknown {
 }
 
 /*
- * The flags one person put on views and nodes, by id, since a view id and a node id are one
- * namespace. A color is a node accent name (`NODE_ACCENT_NAMES`), kept as a plain string so a name
- * a newer Ruimte adds reads as no flag here and is still written back; read one with `flagOf`.
+ * By view or node id, one namespace. A color is a `NODE_ACCENT_NAMES` entry kept as a plain string, so
+ * a name a newer Ruimte adds reads as no flag and is still written back; read one with `flagOf`.
  */
 export const ProjectFlagsSchema = z.record(z.string().min(1), z.string().min(1));
 export type ProjectFlags = z.infer<typeof ProjectFlagsSchema>;
 
-/*
- * The connection and database the SQL of a file is read against. A null connection is a person's
- * choice to read it against no schema at all, whatever the project's default says.
- */
+// A null connection is a person's choice to read against no schema at all, whatever the default says.
 export const SqlBindingSchema = z.object({
     connectionId: z.string().min(1).nullable(),
     // Absent reads the database the connection starts in.
@@ -738,11 +678,7 @@ export const SqlBindingSchema = z.object({
 });
 export type SqlBinding = z.infer<typeof SqlBindingSchema>;
 
-/*
- * One person's choices for the SQL of the project: the default every `.sql` file without a choice of
- * its own and the SQL in other files is read against, and the choice of each file by its stored path.
- * Only ever in the private file, since a choice names a connection, and a connection has a secret.
- */
+// `files` is keyed by stored path. Only ever in the private file, since a choice names a connection.
 export const ProjectSqlSchema = z.object({
     default: SqlBindingSchema.optional(),
     files: z.record(z.string().min(1), SqlBindingSchema).optional()
@@ -753,30 +689,25 @@ export type ProjectSql = z.infer<typeof ProjectSqlSchema>;
 export const ProjectContentSchema = z.object({
     name: z.string().min(1),
     color: z.string(),
-    // Absent means "show what the folder declares"; a file written before this existed parses fine.
+    // Absent shows what the folder declares.
     icon: ProjectIconChoiceSchema.optional(),
     // In sidebar order. A new project has no views until someone adds one.
     views: z.array(ProjectViewSchema),
-    /* Only ever in the private file, whatever file the flagged view is in. A save without it keeps
-       the flags on disk, which is what a client from before flags amounts to. */
+    // Only ever in the private file. A save without it keeps the flags on disk, as a client from before flags does.
     flags: ProjectFlagsSchema.optional(),
-    /* Only ever in the private file. A save without it keeps what is on disk: only `language.sql.bind` changes it. */
+    // Only ever in the private file. A save without it keeps what is on disk; only `language.sql.bind` changes it.
     sql: ProjectSqlSchema.optional()
 });
 export type ProjectContent = z.infer<typeof ProjectContentSchema>;
 
 /*
- * The views that live in the shared file, which is the one a team commits. Derived by the daemon
- * from which of the two files a view was read out of and never stored as a list of its own, so
- * there is nothing here that can fall out of step with the folder. Absent means nothing is shared,
- * which is every project until a person says otherwise.
- *
- * It rides beside the content and not in it on purpose: a verb hands back content, so this is one
- * thing an agent cannot change by writing a canvas. Only a person's save names a different list.
+ * The views in the shared file, derived from which file each was read from and never stored as a list.
+ * Beside the content and not in it on purpose: a verb hands back content, so an agent cannot change
+ * this by writing a canvas. Only a person's save names a different list.
  */
 export const SharedViewIdsSchema = z.array(z.string()).optional();
 
-/* The version this Ruimte writes. A file that says a higher number is not broken, only newer. */
+// A file with a higher number is not broken, only newer.
 export const PROJECT_VERSION = 3;
 
 export const ProjectDocumentSchema = ProjectContentSchema.extend({
@@ -787,19 +718,14 @@ export const ProjectDocumentSchema = ProjectContentSchema.extend({
 });
 export type ProjectDocument = z.infer<typeof ProjectDocumentSchema>;
 
-/*
- * Views as a file holds them: every entry of an unknown kind back in the shape it was read in. The
- * wire takes either shape, since reading opens an `unknown` entry up again.
- */
+// The wire takes either shape, since reading opens an `unknown` entry up again.
 export function storedViewsOf(views: readonly ProjectView[]): unknown[] {
     return views.map(storedViewOf);
 }
 
 /*
- * What `.ruimte/project.json` holds: the identity of the project and the views a person put in git.
- * No rev, because that line changes on every write and would be the one thing that conflicts on
- * every pull; it lives in the private file, which never travels. The list may be empty, which is
- * every project nobody shared anything of.
+ * `.ruimte/project.json`, what a team commits. No rev: it changes on every write and would conflict on
+ * every pull, so it lives in the private file.
  */
 export const ProjectSharedFileSchema = z.object({
     version: z.literal(PROJECT_VERSION),
@@ -819,8 +745,7 @@ export const ProjectNodeOverlaySchema = ProjectNodeSchema.pick({
     worktree: true,
     path: true
 }).extend({
-    // The name a session gave a shared node (`title`) or view (`name`). Only a session names
-    // anything automatically, and the session is one person's too.
+    // The name a session gave a shared node (`title`) or view (`name`): the session is one person's too.
     title: z.string().optional(),
     name: z.string().min(1).optional()
 });
@@ -829,31 +754,26 @@ export type ProjectNodeOverlay = z.infer<typeof ProjectNodeOverlaySchema>;
 export const PROJECT_PRIVATE_VERSION = 1;
 
 /*
- * What `.ruimte/private/project.json` holds, which the `.gitignore` beside it keeps out of the
- * repository: the views only you have, where every row of the sidebar sits, and per shared node the
- * fields that could not travel. One flat map is enough for the last of those, since a view id and a
- * node id are the same namespace.
+ * `.ruimte/private/project.json`, kept out of git by the `.gitignore` beside it. `overlay` is one flat
+ * map since a view id and a node id share a namespace.
  */
 export const ProjectPrivateFileSchema = z.object({
     version: z.literal(PROJECT_PRIVATE_VERSION),
-    // The rev of the whole document, shared file included. Only ever compared on this machine.
+    // Of the whole document, shared file included. Only ever compared on this machine.
     rev: z.number().int().nonnegative(),
     views: z.array(ProjectViewSchema),
-    /* Every view id in sidebar order, the shared ones among them. An id the shared file has and
-       this list does not falls in behind the one before it, so a view a colleague added arrives in
-       the right place without anybody merging an order. */
+    // Every view id, shared ones included. A shared id missing here falls in behind the one before it in
+    // the shared file, so a colleague's view lands in place without merging an order.
     order: z.array(z.string()),
     overlay: z.record(z.string(), ProjectNodeOverlaySchema).default({}),
-    // Absent when nothing is flagged, so a file from before flags reads the same as one without any.
     flags: ProjectFlagsSchema.optional(),
-    // Absent when nothing was chosen.
     sql: ProjectSqlSchema.optional()
 });
 export type ProjectPrivateFile = z.infer<typeof ProjectPrivateFileSchema>;
 
 export const EMPTY_PRIVATE_FILE: ProjectPrivateFile = { version: PROJECT_PRIVATE_VERSION, rev: 0, views: [], order: [], overlay: {} };
 
-/* What a version-2 file holds: one file for everything, with the rev in it. Read, migrated, never written again. */
+// One file for everything, with the rev in it. Read, migrated, never written again.
 export const ProjectDocumentV2Schema = z.object({
     version: z.literal(2),
     rev: z.number().int().nonnegative(),
@@ -864,7 +784,7 @@ export const ProjectDocumentV2Schema = z.object({
 });
 export type ProjectDocumentV2 = z.infer<typeof ProjectDocumentV2Schema>;
 
-/* What a version-1 file holds: one project is one canvas. Read, migrated, never written again. */
+// One project is one canvas. Read, migrated, never written again.
 export const ProjectDocumentV1Schema = z.object({
     version: z.literal(1),
     rev: z.number().int().nonnegative(),
@@ -878,11 +798,10 @@ export const ProjectDocumentV1Schema = z.object({
 });
 export type ProjectDocumentV1 = z.infer<typeof ProjectDocumentV1Schema>;
 
-// The surfaces beside the canvas that can be up; the toolbar has a button per kind.
 export const ProjectPanelKindSchema = z.enum(['files', 'git', 'processes', 'devices']);
 export type ProjectPanelKind = z.infer<typeof ProjectPanelKindSchema>;
 
-// A tab that shows the file's diff instead of the file itself, so both can be open at once.
+// The diff of a file, so it can be open beside the file itself.
 export const ProjectFileTabViewSchema = z.object({
     kind: z.literal('diff'),
     // The checkout the diff is read from; a bound group's worktree is not the project folder.
@@ -896,7 +815,7 @@ export const ProjectFileTabViewSchema = z.object({
 });
 export type ProjectFileTabView = z.infer<typeof ProjectFileTabViewSchema>;
 
-// The connection a tab of a `.sql` file runs its statements on, which makes the tab a console.
+// Makes a `.sql` tab a console on this connection.
 export const ProjectConsoleBindingSchema = z.object({
     connectionId: z.string().min(1),
     // Absent runs in the schema the connection starts in.
@@ -904,7 +823,7 @@ export const ProjectConsoleBindingSchema = z.object({
 });
 export type ProjectConsoleBinding = z.infer<typeof ProjectConsoleBindingSchema>;
 
-// One file open as a loose view. Whether it is edited is view state and stays out of the file.
+// Whether it is edited is view state and stays out of the file.
 export const ProjectFileTabSchema = z.object({
     path: z.string().min(1),
     pinned: z.boolean(),
@@ -914,10 +833,7 @@ export const ProjectFileTabSchema = z.object({
 });
 export type ProjectFileTab = z.infer<typeof ProjectFileTabSchema>;
 
-/*
- * One loose view in `strip`, of any kind. A database tab carries an id of its own, since
- * two tabs may show one table: a filtered one, or a new table's designer before it has a name.
- */
+// A database tab has an id of its own: two tabs may show one table, or a new table has no name yet.
 const ProjectDatabaseTabFields = {
     id: z.string().min(1),
     pinned: z.boolean(),
@@ -940,47 +856,40 @@ export const ProjectStripTabSchema = z.discriminatedUnion('kind', [
 ]);
 export type ProjectStripTab = z.infer<typeof ProjectStripTabSchema>;
 
-/*
- * How the panels around the canvas stood when this project was last on screen. Every field is
- * optional on its own, so a local file written before the panels moved in here still parses and
- * a field that is missing falls back to what the app defaults to.
- */
+// Every field is optional so an older local file parses; a missing one takes the app default.
 export const ProjectPanelsSchema = z.object({
     panel: z.object({ open: z.boolean(), kind: ProjectPanelKindSchema }).optional(),
-    // The panel is the launches panel. A field of its own, since a new kind would break an older client
-    // reading this file; `panel` still holds a kind it knows.
+    // A field of its own: a new panel kind would break an older client, so `panel` keeps a kind it knows.
     launchesPanel: z.boolean().optional(),
-    // The panel is the databases panel, beside `panel` for the same reason as `launchesPanel`.
+    // Beside `panel` for the same reason as `launchesPanel`.
     databasesPanel: z.boolean().optional(),
-    // Whole pixels. Absent means the panel opens at the width the app picks for it.
+    // Whole pixels.
     panelWidth: z.number().int().positive().optional(),
-    // The plan the plan panel shows. Whether it is open follows from whether its chat is on screen, never from this file.
+    // Whether the plan panel is open follows from its chat being on screen, never from this file.
     plan: z.object({ chatId: z.string().min(1), planId: z.string().min(1), dismissed: z.boolean() }).optional(),
     planWidth: z.number().int().positive().optional(),
     // The file tabs alone, for a client from before `strip`.
     tabs: z.array(ProjectFileTabSchema).optional(),
     activeTab: z.string().nullable().optional(),
-    // Every loose view in the order it was opened, files and database views alike (`ProjectStripTabSchema`); the
-    // layout says which cell holds each. A release from before tab hosts had them in a cell of its own, in this order.
-    // The client reads each tab on its own, so a kind a newer release adds drops that tab and not the list.
+    // `ProjectStripTabSchema` entries in opening order; the layout says which cell holds each. Read tab by
+    // tab, so a kind a newer release adds drops that tab and not the list.
     strip: z.array(z.unknown()).optional(),
-    // What the file tree had open, the way the tree names a directory: relative, POSIX, trailing slash.
+    // Relative, POSIX, trailing slash.
     expandedDirs: z.array(z.string()).optional(),
     // The tabs of the databases cell of a release before `strip`, which the client reads into it once.
     databases: z.object({ tabs: z.array(z.unknown()), activeTab: z.string().nullable().optional() }).optional(),
-    // The canvases the sidebar has folded open. Absent means the list has never been folded by hand.
+    // Absent means the list was never folded by hand.
     sidebarExpanded: z.array(z.string()).optional(),
-    // The last favicon of every browser node, by node id, so a reload draws it before the page loads.
+    // By node id, so a reload draws a favicon before the page loads.
     favicons: z.record(z.string(), z.string()).optional(),
-    // The git panel's own state: the scope a diff tab opens in and the folders its list has folded up.
     git: z
         .object({
             scope: GitDiffScopeSchema,
             // Relative to the repository root, POSIX, no trailing slash, as `git.status` names a path.
             collapsedDirs: z.array(z.string()).optional(),
-            // Whole pixels the commit log takes at the bottom of the panel.
+            // Whole pixels.
             logHeight: z.number().int().positive().optional(),
-            // The repositories under the folder a person folded away, by the label the panel gave them.
+            // By the label the panel gave them.
             hiddenRepos: z.array(z.string()).optional()
         })
         .optional()
@@ -990,23 +899,17 @@ export type ProjectPanels = z.infer<typeof ProjectPanelsSchema>;
 export const CameraSchema = z.object({ x: z.number(), y: z.number(), zoom: z.number().positive() });
 export type Camera = z.infer<typeof CameraSchema>;
 
-/*
- * A camera the way it is stored: the world point in the middle of the cell and the zoom. The screen
- * offset a `Camera` holds only means something against the size of the cell it was taken in, so a
- * smaller window or another cell would put a different part of the canvas in front.
- */
+// Stored by its center, since a `Camera`'s screen offset only means something in the cell it was taken in.
 export const ViewCameraSchema = z.object({
     center: z.object({ x: z.number(), y: z.number() }),
     zoom: z.number().positive()
 });
 export type ViewCamera = z.infer<typeof ViewCameraSchema>;
 
-/* A camera in the old screen-offset shape cannot be turned around without the viewport it was taken
-   in, so it reads as none and the view is fitted once. Accepting it at all keeps an older client
-   from having its whole local file refused over one field. */
+// An old screen-offset camera reads as none and the view is fitted once, rather than refusing the whole file.
 const StoredViewCameraSchema = z.union([ViewCameraSchema, CameraSchema.transform((): null => null)]).nullable();
 
-/* Which gestures a canvas refuses. Commands (dock buttons, shortcuts) always work. */
+// Gestures only: commands (dock buttons, shortcuts) always work.
 export const ViewLocksSchema = z.object({
     pan: z.boolean(),
     zoom: z.boolean(),
@@ -1015,25 +918,20 @@ export const ViewLocksSchema = z.object({
 });
 export type ViewLocks = z.infer<typeof ViewLocksSchema>;
 
-// Where one view stood when it was last on screen. Per client, like everything around it.
 export const ProjectViewLocalSchema = z.object({
     camera: StoredViewCameraSchema,
     focusedNodeId: z.string().nullable(),
-    /* Absent means nothing locked, which is every file written before a lock outlived a view switch. */
     locks: ViewLocksSchema.optional()
 });
 export type ProjectViewLocal = z.infer<typeof ProjectViewLocalSchema>;
 
-/*
- * A cell shows one view, or several as tabs. A view stands in at most one cell and, in a tab host,
- * at most one tab of it.
- */
+// A view stands in at most one cell and, in a tab host, at most one tab of it.
 export const SplitCellSchema = z.object({
-    // The view that is drawn: the active tab of a host, and all an older client reads.
+    // The active tab of a host, and all an older client reads.
     viewId: z.string().min(1),
-    // Present means the cell is a tab host: its views in order, `viewId` among them. Absent is a plain cell.
+    // Present makes the cell a tab host, `viewId` among them.
     tabs: z.array(z.string().min(1)).min(1).optional(),
-    // Share of its column's height; the cells of a column sum to 1.
+    // Share of the column's height; a column's cells sum to 1.
     size: z.number().positive()
 });
 export type SplitCell = z.infer<typeof SplitCellSchema>;
@@ -1045,36 +943,26 @@ export const SplitColumnSchema = z.object({
 });
 export type SplitColumn = z.infer<typeof SplitColumnSchema>;
 
-/*
- * How the views of one project stood next to each other on this client: columns of cells, never a
- * free tree. The two limits live in the client's `shell/split.ts` and not here, so a file that was
- * hand-edited past them parses and is trimmed on the way in rather than throwing the layout away.
- */
+// The limits live in the client's `shell/split.ts`, so a file edited past them is trimmed rather than refused.
 export const SplitLayoutSchema = z.object({
     columns: z.array(SplitColumnSchema).min(1),
-    // Which cell has the focus; the sidebar reads the view in it as the active row.
+    // The sidebar reads the view in this cell as the active row.
     focus: z.object({ column: z.number().int().nonnegative(), cell: z.number().int().nonnegative() })
 });
 export type SplitLayout = z.infer<typeof SplitLayoutSchema>;
 
-/*
- * Per client, never in the shared file: which view was open, where its camera was and what had
- * focus, how the views stood next to each other and how the panels stood. The panels are per
- * project, not per view: they are about the folder, so they stay put while you switch views.
- */
+// Per client, never in the shared file. Panels are per project, so they stay put across view switches.
 export const ProjectLocalSchema = z.object({
     activeViewId: z.string().nullable(),
     views: z.record(z.string(), ProjectViewLocalSchema),
     panels: ProjectPanelsSchema.optional(),
-    /* Absent means one column with one cell on `activeViewId`, which is every file written before
-       views could stand side by side and every project that has never been split. */
+    // Absent means one column with one cell on `activeViewId`.
     layout: SplitLayoutSchema.optional(),
-    /* Distinguishes closing every view from an older client that has never saved a layout. */
+    // Tells closing every view apart from an older client that never saved a layout.
     emptyLayout: z.boolean().optional()
 });
 export type ProjectLocal = z.infer<typeof ProjectLocalSchema>;
 
-/* What a version-1 local file holds: one camera and one focus, for the one canvas there was. */
 export const ProjectLocalV1Schema = z.object({
     camera: CameraSchema.nullable(),
     focusedNodeId: z.string().nullable(),
@@ -1089,17 +977,13 @@ export const ProjectSummarySchema = z
         color: z.string(),
         folder: z.string().min(1),
         lastOpenedAt: z.number(),
-        /* When a person last closed this project, which is the only thing that moves it out of the list
-       of projects in use and under Recent. Null while it belongs in the list; absent from a daemon
-       that has no notion of closing, whose projects therefore all read as in use. */
+        // Set moves it under Recent. Absent from a daemon without closing, whose projects all read as in use.
         closedAt: z.number().nullish(),
         // False when a folder project's file has gone missing since it was last seen.
         available: z.boolean(),
-        // The choice from the file, or what the folder declares, or the initial on the project color.
         icon: ProjectIconSchema,
         nameSource: ProjectNameSourceSchema,
-        /* The one project per machine the daemon keeps for chats outside any project (`project.newChat`).
-       Its folder is the daemon's, so a client shows no path of it. Absent on every other project. */
+        // The machine's Chats project (`project.newChat`). Its folder is the daemon's, so no client shows its path.
         scratch: z.boolean().optional()
     })
     // A name a newer Ruimte picked reads as the initial, the one mark this side can derive without the folder.
@@ -1120,8 +1004,7 @@ export const ProjectOpenPayloadSchema = z
         folder: z.string().min(1).optional(),
         name: z.string().optional(),
         color: z.string().optional(),
-        /* Makes the folder, and every missing folder above it, when nothing is there yet. Only the
-       folder picker asks for this; every other caller opens what already exists. */
+        // Makes the folder and its missing parents. Only the folder picker asks for this.
         createFolder: z.boolean().optional()
     })
     .refine((payload) => Boolean(payload.projectId || payload.folder), { message: 'A project id or folder is required' });
@@ -1143,8 +1026,7 @@ export const ProjectSavePayloadSchema = z.object({
 });
 export type ProjectSavePayload = z.infer<typeof ProjectSavePayloadSchema>;
 
-/* A chat outside any project: a chat view in the machine's scratch project, made by the daemon so
-   every client holding that project sees it at once. */
+// Made by the daemon in the scratch project so every client holding it sees the chat at once.
 export const ProjectNewChatPayloadSchema = z.object({
     provider: AgentKindSchema.optional(),
     account: ProviderAccountIdSchema.optional()
@@ -1158,9 +1040,8 @@ export const ProjectNewChatResultSchema = z.object({
 export type ProjectNewChatResult = z.infer<typeof ProjectNewChatResultSchema>;
 
 /*
- * A chat view that is hidden, for an edit of the selected lines of one file: the daemon makes the view
- * and the chat in one write, in the folder of the project or of the worktree the file is in, in the
- * mode that asks before it changes a file. `path` is the file as a file node keeps it.
+ * A hidden chat view for an edit of selected lines, made with its chat in one write, in the folder of
+ * the project or worktree the file is in and in the mode that asks before a change. `path` is stored-path form.
  */
 export const ProjectNewInlineChatPayloadSchema = z.object({
     projectId: ProjectIdSchema,
@@ -1177,7 +1058,6 @@ export const ProjectNewInlineChatResultSchema = z.object({
 });
 export type ProjectNewInlineChatResult = z.infer<typeof ProjectNewInlineChatResultSchema>;
 
-/* Names a hidden chat view of a project: what a card in the editor lists, shows as a chat or takes away. */
 export const ProjectInlineChatTargetPayloadSchema = z.object({
     projectId: ProjectIdSchema,
     viewId: z.string().min(1)
@@ -1198,25 +1078,20 @@ export type ProjectSaveLocalPayload = z.infer<typeof ProjectSaveLocalPayloadSche
 export const ProjectTargetPayloadSchema = z.object({ projectId: ProjectIdSchema });
 export type ProjectTargetPayload = z.infer<typeof ProjectTargetPayloadSchema>;
 
-/*
- * What closing this project would do, asked before the confirmation so it can name a number rather
- * than hedge. `otherClients` are the clients that also have it open: as long as one of them does,
- * nothing ends and the project keeps its place in their menu.
- */
+// Asked before the confirmation so it can name a number. While `otherClients` is above zero nothing ends.
 export const ProjectClosingResultSchema = z.object({
     sessions: z.number(),
     otherClients: z.number()
 });
 export type ProjectClosingResult = z.infer<typeof ProjectClosingResultSchema>;
 
-/* What closing did. Absent from a daemon that answered nothing but an acknowledgement. */
+// Fields absent from a daemon that answered nothing but an acknowledgement.
 export const ProjectCloseResultSchema = z.object({
     ended: z.number().optional(),
     otherClients: z.number().optional()
 });
 export type ProjectCloseResult = z.infer<typeof ProjectCloseResultSchema>;
 
-/* A project a person closed. The menu keeps it under Recent until someone opens it again. */
 export function isRecentProject(summary: ProjectSummary): boolean {
     return summary.closedAt !== null && summary.closedAt !== undefined;
 }
@@ -1236,15 +1111,13 @@ export const ProjectChangedEventSchema = z.object({
 export type ProjectChangedEvent = z.infer<typeof ProjectChangedEventSchema>;
 
 /*
- * An agent asked for a view to be shown. Making is shared and lands in `project.json`; showing is
- * personal, so this changes no document and every client with the project on screen decides for
- * itself whether to follow it. The caller rides along as an id, never as a title, so a client that
- * wants to name the agent reads the name out of the document it already holds.
+ * An agent asked for a view to be shown. Showing is personal, so this changes no document and every
+ * client decides whether to follow. The caller is an id, never a title; a client reads its name from the document.
  */
 export const ProjectShowViewEventSchema = z.object({
     projectId: ProjectIdSchema,
     viewId: z.string().min(1),
-    // The node or view the verb ran from: a terminal session, a chat, or a session that is a view of its own.
+    // The node or view the verb ran from.
     by: z.string().min(1)
 });
 export type ProjectShowViewEvent = z.infer<typeof ProjectShowViewEventSchema>;

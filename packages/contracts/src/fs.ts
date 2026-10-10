@@ -6,8 +6,7 @@ export const FsBrowsePayloadSchema = z.object({
     partialPath: z.string().min(1).max(512),
     // The directory a relative path counts from, usually the open project's folder.
     cwd: z.string().optional(),
-    /* Whether folders with a leading dot come along; they stay out by default. Optional, because a
-       daemon older than this client would fail the whole parse on a field it does not know. */
+    // Includes folders with a leading dot.
     hidden: z.boolean().optional()
 });
 export type FsBrowsePayload = z.infer<typeof FsBrowsePayloadSchema>;
@@ -15,17 +14,15 @@ export type FsBrowsePayload = z.infer<typeof FsBrowsePayloadSchema>;
 export const FsBrowseEntrySchema = z.object({
     name: z.string(),
     fullPath: z.string(),
-    // Whether the folder already holds a Ruimte canvas.
     hasCanvas: z.boolean()
 });
 export type FsBrowseEntry = z.infer<typeof FsBrowseEntrySchema>;
 
 export const FsBrowseResultSchema = z.object({
-    // The directory the entries were read from, as an absolute path.
+    // Absolute.
     parentPath: z.string(),
     entries: z.array(FsBrowseEntrySchema),
-    /* Whether `parentPath` is a directory that is there; an empty listing alone cannot tell a
-       missing folder from an empty one. Undefined from a daemon that predates the field. */
+    // An empty listing alone cannot tell a missing folder from an empty one.
     exists: z.boolean().optional()
 });
 export type FsBrowseResult = z.infer<typeof FsBrowseResultSchema>;
@@ -48,7 +45,7 @@ export type FsSearchPayload = z.infer<typeof FsSearchPayloadSchema>;
 export const FsSearchResultSchema = z.object({
     // Paths relative to `cwd`, best match first.
     files: z.array(z.string()),
-    // Whether the walk stopped before seeing every file, so a miss is not proof of absence.
+    // The walk stopped early, so a miss is not proof of absence.
     truncated: z.boolean()
 });
 export type FsSearchResult = z.infer<typeof FsSearchResultSchema>;
@@ -62,7 +59,6 @@ export const FS_GREP_CONTEXT_LINES = 2;
 export const FsGrepPayloadSchema = z.object({
     cwd: z.string().min(1),
     query: z.string().min(1).max(512),
-    // Whether the query is a regular expression rather than the literal text it reads as.
     regex: z.boolean().optional(),
     caseSensitive: z.boolean().optional(),
     wholeWord: z.boolean().optional(),
@@ -73,13 +69,13 @@ export type FsGrepPayload = z.infer<typeof FsGrepPayloadSchema>;
 export const FsGrepMatchSchema = z.object({
     // Relative to `cwd` with POSIX separators, the shape `fs.search` answers with.
     path: z.string(),
-    // One-based, the number a viewer puts in its gutter.
+    // One-based.
     line: z.number().int().positive(),
-    // Where the hit sits in `text`, as an offset and a length in UTF-16 code units.
+    // In `text`, in UTF-16 code units.
     column: z.number().int().nonnegative(),
     length: z.number().int().nonnegative(),
     text: z.string(),
-    // The lines around the hit, nearest last and nearest first; fewer at the edges of a file.
+    // Nearest last and nearest first; fewer at the edges of a file.
     before: z.array(z.string()),
     after: z.array(z.string())
 });
@@ -88,9 +84,9 @@ export type FsGrepMatch = z.infer<typeof FsGrepMatchSchema>;
 export const FsGrepResultSchema = z.object({
     // Grouped by file in the order the files were walked, and by line within a file.
     matches: z.array(FsGrepMatchSchema),
-    // How many files those matches come from, which the list cannot say once it is cut short.
+    // The list cannot say this once it is cut short.
     files: z.number().int().nonnegative(),
-    // Whether the limit stopped the search, so a miss is not proof of absence.
+    // The limit stopped the search, so a miss is not proof of absence.
     truncated: z.boolean()
 });
 export type FsGrepResult = z.infer<typeof FsGrepResultSchema>;
@@ -108,12 +104,10 @@ export const FsEntrySchema = z.object({
     // Absolute on the daemon's machine, the shape `fs.reveal` takes.
     path: z.string(),
     kind: FsEntryKindSchema,
-    // Null for anything that is not a file.
     size: z.number().nullable(),
     mtime: z.number(),
-    /* Whether this is out of the way until a person asks for everything: what git ignores, build
-       output by name, and a leading dot in a folder without a repository. OS rubbish and Ruimte's
-       own state are never listed at all, whatever the caller asks. */
+    // What git ignores, build output by name, and a leading dot outside a repository. OS rubbish and
+    // Ruimte's own state are never listed at all.
     hidden: z.boolean(),
     // What `git check-ignore` says, plus `.git` itself; false everywhere outside a repository.
     ignored: z.boolean()
@@ -124,17 +118,16 @@ export type FsEntry = z.infer<typeof FsEntrySchema>;
 export const FsListPayloadSchema = z.object({
     path: z.string().min(1),
     depth: z.number().int().positive().max(FS_LIST_MAX_DEPTH).optional(),
-    // Whether hidden and ignored entries come along; they stay out by default.
     hidden: z.boolean().optional()
 });
 export type FsListPayload = z.infer<typeof FsListPayloadSchema>;
 
 export const FsListResultSchema = z.object({
-    // The directory that was read, as an absolute path.
+    // Absolute.
     path: z.string(),
     // Directories before files per level, then by name; a deeper level follows its own directory.
     entries: z.array(FsEntrySchema),
-    // Whether the cap cut the listing short, so a missing name is not proof of absence.
+    // A missing name is not proof of absence.
     truncated: z.boolean()
 });
 export type FsListResult = z.infer<typeof FsListResultSchema>;
@@ -190,8 +183,7 @@ export type FsReadTooLarge = z.infer<typeof FsReadTooLargeSchema>;
 export const FsReadResultSchema = z.discriminatedUnion('kind', [FsReadTextSchema, FsReadBinarySchema, FsReadTooLargeSchema]);
 export type FsReadResult = z.infer<typeof FsReadResultSchema>;
 
-/* Saves a file `fs.read` answered as text, in place. The text is held to `FS_READ_MAX_TEXT_BYTES`
-   in UTF-8 bytes, and a file whose mtime is not `expectedMtime` any more is refused as `stale`. */
+// Held to `FS_READ_MAX_TEXT_BYTES` in UTF-8; a file whose mtime moved past `expectedMtime` is refused as `stale`.
 export const FsWritePayloadSchema = z.object({
     path: z.string().min(1),
     text: z.string(),
@@ -206,13 +198,11 @@ export const FsWriteResultSchema = z.object({
 });
 export type FsWriteResult = z.infer<typeof FsWriteResultSchema>;
 
-/* Creates one file or folder, and the folders above it that are missing. A path that is already
-   there is refused as `exists`, whatever it is. Held to the boundary of `fs.write`, and `.git` and
-   `.ruimte` stay closed. A file starts with `text`, which is held to `FS_READ_MAX_TEXT_BYTES`. */
+/* Makes missing parent folders. An existing path is refused as `exists`. Held to the boundary of
+   `fs.write`, with `.git` and `.ruimte` closed; `text` is held to `FS_READ_MAX_TEXT_BYTES`. */
 export const FsCreatePayloadSchema = z.object({
     path: z.string().min(1),
     kind: z.enum(['file', 'directory']),
-    // Only for a file; a directory has no text.
     text: z.string().optional()
 });
 export type FsCreatePayload = z.infer<typeof FsCreatePayloadSchema>;
@@ -223,18 +213,18 @@ export const FsCreateResultSchema = z.object({
 });
 export type FsCreateResult = z.infer<typeof FsCreateResultSchema>;
 
-/* Moves a file or folder to the machine's trash. Only inside an open project or one of its
-   worktrees, and never the project folder itself, `.git` or `.ruimte`. */
+/* To the machine's trash. Only inside an open project or one of its worktrees, and never the project
+   folder itself, `.git` or `.ruimte`. */
 export const FsDeletePayloadSchema = z.object({
     path: z.string().min(1)
 });
 export type FsDeletePayload = z.infer<typeof FsDeletePayloadSchema>;
 
-/* Moves or renames a file or folder, inside the boundary of `fs.write`; `.git` and `.ruimte` stay closed. A path that is
-   taken is refused as `exists`, and the folders above `to` that are missing are made. With a `projectId` the project's
-   language servers hear of it: they first answer with the edits the move brings (imports, a namespace), which are made
-   before the file moves, and afterwards they are told it moved. A server that is slow or fails changes nothing and
-   holds nothing up. */
+/*
+ * Inside the boundary of `fs.write`, with `.git` and `.ruimte` closed. A taken path is refused as
+ * `exists`; missing folders above `to` are made. With a `projectId` the language servers first make the
+ * edits the move brings (imports, a namespace) and then hear it moved; a slow or failing server holds nothing up.
+ */
 export const FsRenamePayloadSchema = z.object({
     path: z.string().min(1),
     to: z.string().min(1),

@@ -33,11 +33,7 @@ function snap(value: number): number {
     return Math.round(value / CANVAS_GRID) * CANVAS_GRID;
 }
 
-/*
- * The frame a group takes around what it holds: room on every side and the title band above it,
- * snapped to the grid. Both the client's own grouping and the daemon's `node group` action run this, so a
- * frame an agent draws sits where a person's drag would have put it. Nothing to hold is no frame.
- */
+// The client's grouping and the daemon's `node group` both run this, so an agent's frame lands where a person's would.
 export function groupFrame(members: readonly NodeRect[]): NodeRect | null {
     if (members.length === 0) {
         return null;
@@ -71,11 +67,7 @@ export interface GroupItem {
     h?: number;
 }
 
-/*
- * The rectangle a group holds its members in. A collapsed group is drawn as its header alone, but
- * its members keep the places they had, so what lies inside it is measured against the height it
- * goes back to when it opens.
- */
+// A collapsed group is measured at the height it opens to, since its members keep their places.
 export function groupRect(group: Omit<GroupFrame, 'id'>): NodeRect {
     return {
         x: group.x,
@@ -92,10 +84,8 @@ function holds(rect: NodeRect, item: GroupItem): boolean {
 }
 
 /*
- * Which of these things the group holds, in the order they came in. Open, that is read off the
- * positions, which is what makes membership a matter of where a thing lies and not of a field;
- * collapsed, the file spells it out, because the members sit nowhere near the header the group has
- * shrunk to. Only ids that are still there come back, so a member removed while collapsed is gone.
+ * Open, membership is read off the positions; collapsed, the file spells it out, since the members sit
+ * nowhere near the header. Only ids still present come back.
  */
 export function groupMemberIds(group: GroupFrame, items: readonly GroupItem[]): string[] {
     if (group.collapsed === true) {
@@ -107,10 +97,8 @@ export function groupMemberIds(group: GroupFrame, items: readonly GroupItem[]): 
 }
 
 /*
- * The colors a node's accent and a group's frame pick from, in the hue order the picker draws them
- * in. Shared because both sides need the same closed set: the client paints the swatches and the
- * daemon refuses a `--color` that is not one of them. The hex per name stays in the client
- * (`canvas/accents.ts`), which is the only side that paints.
+ * In the picker's hue order. Shared because the daemon refuses a `--color` outside the set; the hex per
+ * name stays in the client (`canvas/accents.ts`), the only side that paints.
  */
 export const NODE_ACCENT_NAMES = [
     'red',

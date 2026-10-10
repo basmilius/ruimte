@@ -1,9 +1,6 @@
 /*
- * The languages the live voice speaks, as the picker offers them and as the shell names them in the
- * instruction it sends with a session. One list: a language in only one of the two would be offered
- * by the picker and then quietly refused when the shell read the preference back. A label is how a
- * language writes its own name, the same in a Dutch interface and an English one; `english` is the
- * name the instruction to the model is built with.
+ * One list for the picker and the shell's session instruction, so the picker never offers a language
+ * the shell refuses. A label is the language's own name; `english` is what the instruction is built with.
  */
 export const VOICE_LANGUAGES = [
     { id: 'ar', label: 'العربية', english: 'Arabic' },

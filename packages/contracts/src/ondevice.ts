@@ -1,10 +1,8 @@
 import { z } from 'zod';
 
 /*
- * One-shot generations on the machine's own model (Apple Foundation Models), for the editor's short help:
- * an explanation, names for a symbol, a continuation at the caret. The daemon runs them in a helper process
- * that has no tools and no network, so the code a client sends never leaves the machine. Each purpose has
- * its instructions on the daemon; the client sends only the text the model reads.
+ * One-shot generations on Apple Foundation Models in a helper without tools or network, so the code
+ * never leaves the machine. The instructions per purpose live on the daemon; the client sends only the text.
  */
 export const OnDevicePurposeSchema = z.enum(['explain', 'names', 'ghost']);
 export type OnDevicePurpose = z.infer<typeof OnDevicePurposeSchema>;

@@ -24,11 +24,9 @@ export interface SharedFileRead {
 }
 
 /*
- * Reading a project file, on every version there has been. Version 1 was one canvas and version 2
- * put everything in one file; both become the shared file of version 3, and the daemon decides what
- * of it stays shared. A version-1 canvas keeps the fixed view id `main` on purpose: the file can be
- * committed, and two machines that migrate it on their own have to end up on the same id, or the
- * second save would add a ghost view next to the first one.
+ * Versions 1 and 2 both become the shared file of version 3. A version-1 canvas gets the fixed view id
+ * `main`: two machines migrating a committed file on their own must land on the same id, or the second
+ * save adds a ghost view.
  */
 export function migrateSharedFile(value: unknown): SharedFileRead | null {
     const current = ProjectSharedFileSchema.safeParse(value);
@@ -58,10 +56,8 @@ export function migrateSharedFile(value: unknown): SharedFileRead | null {
 }
 
 /*
- * The version a file claims when this Ruimte is too old to know it. Such a file is not broken and
- * must never be set aside or written over: the release that understands it reads it back, and until
- * then it is someone's work. Null for anything this version can read, including a file with no
- * version at all, which the migrations answer for.
+ * A newer file is not broken and must never be set aside or written over. Null for anything this
+ * version can read, including a file without a version, which the migrations answer for.
  */
 export function newerVersionIn(value: unknown, known: number): number | null {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -92,11 +88,7 @@ export function migrateLocal(value: unknown): ProjectLocal {
 
 export const EMPTY_LOCAL: ProjectLocal = { activeViewId: null, views: {} };
 
-/*
- * The ids of every view and of every node on every canvas share one namespace, because together
- * they are the keys of the daemon's flat session map. A repeat means two things would attach to
- * one shell, so a file that has one is refused with a message that names the id.
- */
+// View and node ids are the keys of the daemon's flat session map, so a repeat would attach two things to one shell.
 export function duplicateIdIn(views: ProjectView[]): string | null {
     const seen = new Set<string>();
     for (const view of views) {

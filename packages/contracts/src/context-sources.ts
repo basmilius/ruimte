@@ -55,10 +55,8 @@ function sourceOf(
 }
 
 /*
- * What the far end of a line makes readable. A group is the corner of the canvas it frames, so it
- * hands over the things inside it, each under its own title, and a frame inside that frame hands
- * over its own in turn: a person who draws a line at the outer one means everything it holds.
- * `framed` keeps that walk finite, since two frames can each hold the other's center.
+ * A group hands over everything inside it, nested frames included: a line to the outer one means all
+ * it holds. `framed` keeps the walk finite, since two frames can each hold the other's center.
  */
 function sourcesFrom(
     nodes: Readonly<Record<string, ProjectNode>>,
@@ -83,10 +81,8 @@ function sourcesFrom(
 }
 
 /*
- * Which end of a line reads, and what it reads there. Only an agent reads, so a line with an agent
- * at one end alone says the same thing whichever way a person happened to draw it: a note, a page
- * or a device has nothing to read with, and the direction is a detail of the file. With an agent at
- * both ends the direction is the whole point, and there the head reads the tail, as it always did.
+ * Only an agent reads, so with one agent on a line the direction does not matter. With an agent at both
+ * ends the head reads the tail.
  */
 function readerOf(nodes: Readonly<Record<string, ProjectNode>>, edge: ProjectEdge): { agentId: string; sourceId: string } | null {
     const head = nodes[edge.to];
@@ -101,10 +97,8 @@ function readerOf(nodes: Readonly<Record<string, ProjectNode>>, edge: ProjectEdg
 }
 
 /*
- * What every agent node may read, derived from the lines it sits on. A line between two nodes that
- * neither read is only a line. Terminals, chats and browser pages are read live by the daemon; the
- * rest travels as text. The folder is what turns a file node's stored path into the path the
- * agent's own tools take.
+ * Terminals, chats and browser pages are read live by the daemon; the rest travels as text. The folder
+ * turns a file node's stored path into the path the agent's own tools take.
  */
 export function deriveContextSources(
     nodes: Readonly<Record<string, ProjectNode>>,
@@ -119,8 +113,7 @@ export function deriveContextSources(
             continue;
         }
         const current = byTarget.get(reader.agentId) ?? [];
-        /* A node reached twice, by a line of its own and by the frame around it, or by two frames,
-           is one source: `read` takes an id, and the same id twice in a list is a riddle. */
+        // A node reached by a line and by a frame, or by two frames, is one source: `read` takes an id.
         const known = new Set(current.map((source) => source.id));
         const added: ContextSource[] = [];
         for (const source of sourcesFrom(nodes, texts, reader.sourceId, reader.agentId, folder, new Set())) {
@@ -140,11 +133,7 @@ function byId<T extends { id: string }>(items: readonly T[]): Record<string, T> 
     return Object.fromEntries(items.map((item) => [item.id, item]));
 }
 
-/*
- * What every agent node of a project may read, over every canvas view: an agent on a canvas that is
- * not on screen keeps the lines drawn at it. A node id never repeats across the views of one
- * project (the daemon refuses such a file), so the canvases merge without overwriting each other.
- */
+// A node id never repeats across a project's views (the daemon refuses such a file), so the canvases merge safely.
 export function deriveProjectContextSources(views: readonly ProjectView[], folder: string | null): Map<string, ContextSource[]> {
     const merged = new Map<string, ContextSource[]>();
     for (const view of views) {

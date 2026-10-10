@@ -101,10 +101,8 @@ export function withMovedView(views: readonly ProjectView[], id: string, toIndex
 }
 
 /*
- * A copy of a canvas, a drawing or a diagram, right under the one it came from. A copy is new nodes
- * with new sessions, so every id inside it is renamed and no node resumes what the original was
- * attached to; a drawing or a diagram holds nothing here, since its content lives in a file the
- * daemon copies.
+ * A copy goes right under its source. Every id inside is renamed so no node resumes the original's
+ * session; a drawing or diagram's content is a file the daemon copies.
  */
 export function withDuplicatedView(views: readonly ProjectView[], id: string, nextId: (prefix: string) => string): { views: ProjectView[]; id: string } | null {
     const source = views.find((view) => view.id === id);
@@ -149,9 +147,8 @@ export function withoutView(views: readonly ProjectView[], id: string): { views:
 }
 
 /*
- * A node lifted off its canvas into a view of its own, keeping its id and so its session. Only a
- * chat, a terminal, a browser or a device can stand on its own; the lines the node was part of stay behind,
- * because an edge lives on the canvas it was drawn on and the node is leaving that canvas.
+ * Keeps the node's id and so its session. Only a chat, terminal, browser or device can stand on its
+ * own; its lines stay behind, since an edge lives on the canvas it was drawn on.
  */
 export function withNodeAsView(views: readonly ProjectView[], nodeId: string): { views: ProjectView[]; view: ProjectView } | null {
     const source = views.find((view) => isCanvasView(view) && view.nodes.some((node) => node.id === nodeId));
@@ -272,12 +269,7 @@ function isSessionKind(kind: string): kind is ViewSessionNode['kind'] {
     return kind === 'terminal' || kind === 'chat';
 }
 
-/*
- * What keeps running on the machine for one view: a shell for a terminal, a CLI for a chat. A
- * browser is a page inside a client and a group, note, drawing or file is drawing and nothing else,
- * so neither is a session anybody has to end or be warned about. A canvas holds the nodes on it; a
- * chat or terminal that is a view of its own is the one node it is.
- */
+// What keeps running on the machine for a view: a shell or a CLI. A browser page lives in a client, so it is none.
 export function sessionNodesOfView(view: ProjectView): ViewSessionNode[] {
     if (isSessionView(view)) {
         return isSessionKind(view.kind) ? [{ id: view.id, kind: view.kind }] : [];
