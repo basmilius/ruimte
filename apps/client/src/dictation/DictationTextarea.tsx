@@ -8,7 +8,7 @@ interface DictationTextareaProps extends ComponentProps<'textarea'> {
     buttonClassName?: string;
 }
 
-// Used by prompt answers: the final insertion goes through the existing change handler.
+// The final insertion goes through the field's own change handler.
 export function DictationTextarea({ buttonClassName, ref, ...props }: DictationTextareaProps) {
     const root = useRef<HTMLDivElement>(null);
     const field = useRef<HTMLTextAreaElement>(null);

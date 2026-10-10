@@ -426,7 +426,6 @@ function promptRowsOf(editor: Editor): readonly { id: string; line: number; plac
     return rows?.map(({ id, line, placement }) => ({ id, line, ...(placement === undefined ? {} : { placement }) }));
 }
 
-/* The markers the inline edit gave the fake editor. */
 function markersOf(editor: Editor): readonly { id: string; line: number; label: string }[] | undefined {
     return (editor as unknown as { gutterMarkersByOwner: Map<string, readonly { id: string; line: number; label: string }[]> }).gutterMarkersByOwner.get(
         'inline-edit'

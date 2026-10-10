@@ -114,10 +114,9 @@ function outermostPaths(machine: FilesMachine, paths: readonly string[], actor: 
 }
 
 /*
- * What a person does with the files of a project, as actions: the files panel, its search, find in
- * files and the menus a file has on a tab, a node and a view of its own. None of them writes over a
- * file; only a person creates one, renames or moves one, or deletes one, to the trash. Revealing a file in the machine's file manager
- * stays the menu's own: it acts on the screen of whichever machine the project runs on.
+ * None of these writes over a file; only a person creates, renames, moves or deletes one (to the
+ * trash). Revealing a file in the file manager stays the menu's own: it acts on the screen of the
+ * project's machine.
  */
 export function filesActions(overrides: Partial<FilesMachine> = {}): ActionHandlers<void> {
     const machine: FilesMachine = { ...LIVE_MACHINE, ...overrides };
