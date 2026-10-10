@@ -1,8 +1,8 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
-import { extname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { extname, isAbsolute, resolve, sep } from 'node:path';
 import { clipText } from '@ruimte/contracts';
 import { looksLikeSvg, sniffMime } from '../fs/sniff.ts';
-import { climbsOut, PROJECT_DIR } from './project-files.ts';
+import { isBelow, PROJECT_DIR } from './project-files.ts';
 
 // A logo is a few kilobytes; anything past this is a photo that happens to be called icon.png.
 export const ICON_MAX_BYTES = 256 * 1024;
@@ -104,11 +104,6 @@ interface ImageFile extends StampedFile {
     mime: string;
 }
 
-function isInside(folder: string, path: string): boolean {
-    const rel = relative(folder, path);
-    return rel !== '' && !climbsOut(rel);
-}
-
 /*
  * Resolves a candidate to a real file inside the folder. A symlink that points out of the folder
  * is refused after `realpath`, so a repository cannot hand the daemon someone's private key.
@@ -118,12 +113,12 @@ async function jailedFile(folder: string, candidate: string): Promise<StampedFil
         return null;
     }
     const path = resolve(folder, candidate);
-    if (!isInside(folder, path)) {
+    if (!isBelow(folder, path)) {
         return null;
     }
     try {
         const real = await realpath(path);
-        if (!isInside(await realpath(folder), real)) {
+        if (!isBelow(await realpath(folder), real)) {
             return null;
         }
         const info = await stat(real);

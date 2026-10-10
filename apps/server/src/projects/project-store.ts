@@ -477,7 +477,7 @@ export class ProjectStore {
      * icon and where the name came from. A chosen icon wins; without one the folder is asked.
      */
     private async summarize(entry: RegistryEntry): Promise<ProjectSummary> {
-        const available = await exists(this.documentPath(entry));
+        const available = await fileExists(this.documentPath(entry));
         const derived = await this.identity.resolve(entry.folder);
         const image = derived.icon ?? null;
         const icon: ProjectIcon = entry.icon ?? (image ? imageIcon(image) : initialIconOf(entry.name));
@@ -530,7 +530,7 @@ export class ProjectStore {
             const folder = resolve(payload.folder);
             /* Nothing is ever created over something that is already there: a file in the way falls
                through to the check below, which says so in the sentence written for it. */
-            if (payload.createFolder && !(await exists(folder))) {
+            if (payload.createFolder && !(await fileExists(folder))) {
                 try {
                     await mkdir(folder, { recursive: true });
                 } catch (e) {
@@ -638,7 +638,7 @@ export class ProjectStore {
             const known = entries.find((candidate) => candidate.folder === folder);
             if (known) {
                 await this.recover(known);
-                if (await exists(this.documentPath(known))) {
+                if (await fileExists(this.documentPath(known))) {
                     return this.summarize(known);
                 }
             }
@@ -1320,15 +1320,6 @@ function decodeImage(base64: string): Uint8Array {
         throw new ProjectError('bad-icon', 'That image is empty or larger than 256 KB');
     }
     return bytes;
-}
-
-async function exists(path: string): Promise<boolean> {
-    try {
-        await stat(path);
-        return true;
-    } catch {
-        return false;
-    }
 }
 
 async function isDirectory(path: string): Promise<boolean> {

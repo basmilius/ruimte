@@ -3,7 +3,7 @@ import { fingerprint, splitBlocks, splitLines, type MergeBlock } from '@adecore/
 import type { ChatProvider } from '@adecore/agents/providers/provider';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { readConflict } from './conflict.ts';
-import { streamCommand, toplevel, GitError } from './run.ts';
+import { streamWithTimeout, toplevel, GitError } from './run.ts';
 
 // Lines of the file kept around a conflict, so a model reads what the stretch sits in.
 const CONTEXT_LINES = 6;
@@ -14,6 +14,14 @@ const TIMEOUT_MS = 120_000;
 
 function block(label: string, lines: readonly string[]): string {
     return `${label}:\n${lines.length === 0 ? '(nothing)' : lines.join('\n')}`;
+}
+
+export interface ResolvePrompt {
+    prompt: string;
+    /* The blocks the prompt asks about, by index. */
+    asked: number[];
+    /* The conflicts left out because they would not fit; those stay with the person. */
+    skipped: number[];
 }
 
 /*
@@ -72,14 +80,6 @@ export function buildResolvePrompt(path: string, blocks: readonly MergeBlock[], 
         asked.push(index);
     }
     return { prompt: parts.join('\n'), asked, skipped };
-}
-
-export interface ResolvePrompt {
-    prompt: string;
-    /* The blocks the prompt asks about, by index. */
-    asked: number[];
-    /* The conflicts left out because they would not fit; those stay with the person. */
-    skipped: number[];
 }
 
 /* How a one-shot CLI gets its prompt: on stdin where it reads it there, since an argument is capped and shows in the process list. */
@@ -165,33 +165,21 @@ export async function resolveWithAgent(
     if (run === null) {
         throw new GitError('git-failed', `${provider.name} cannot answer a single prompt.`);
     }
-    let kill: (() => void) | null = null;
-    const timer = setTimeout(() => kill?.(), TIMEOUT_MS);
-    try {
-        const result = await streamCommand(provider.command[0]!, run.args, top, {
-            onSpawn: (stop) => {
-                kill = stop;
-                options.onSpawn?.(stop);
-            },
-            ...(run.stdin === undefined ? {} : { stdin: run.stdin })
-        });
-        if (result.code !== 0) {
-            throw new GitError('git-failed', `${provider.name} stopped: ${result.stderr.trim() || 'no output'}`);
-        }
-        const answers: GitResolveBlock[] = [];
-        for (const answer of parseResolution(result.stdout)) {
-            const entry = blocks[answer.index];
-            // An answer for a stretch it was not asked about is one the model made up.
-            if (entry !== undefined && entry.kind === 'conflict' && built.asked.includes(answer.index)) {
-                answers.push({ index: answer.index, fingerprint: fingerprint(entry), lines: answer.lines });
-            }
-        }
-        const left = open.length - answers.length;
-        return {
-            blocks: answers,
-            ...(left > 0 ? { note: `${tooLarge}${provider.name} left ${left} of ${open.length} conflicts for you.` } : {})
-        };
-    } finally {
-        clearTimeout(timer);
+    const result = await streamWithTimeout(provider.command[0]!, run.args, top, TIMEOUT_MS, { onSpawn: options.onSpawn, stdin: run.stdin });
+    if (result.code !== 0) {
+        throw new GitError('git-failed', `${provider.name} stopped: ${result.stderr.trim() || 'no output'}`);
     }
+    const answers: GitResolveBlock[] = [];
+    for (const answer of parseResolution(result.stdout)) {
+        const entry = blocks[answer.index];
+        // An answer for a stretch it was not asked about is one the model made up.
+        if (entry !== undefined && entry.kind === 'conflict' && built.asked.includes(answer.index)) {
+            answers.push({ index: answer.index, fingerprint: fingerprint(entry), lines: answer.lines });
+        }
+    }
+    const left = open.length - answers.length;
+    return {
+        blocks: answers,
+        ...(left > 0 ? { note: `${tooLarge}${provider.name} left ${left} of ${open.length} conflicts for you.` } : {})
+    };
 }

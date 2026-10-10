@@ -124,13 +124,14 @@ export class GitActions {
             }
         };
 
+        const fail = (text: string, command: string, args: string[]): never => {
+            sink('failed', text);
+            throw new GitError('git-failed', job.canceled ? 'The action was canceled.' : text || `${command} ${args[0]} failed`);
+        };
+
         const step: Step = async (phase, args, options = {}) => {
             const { code, text } = await attempt(phase, args, options);
-            if (code !== 0) {
-                sink('failed', text);
-                throw new GitError('git-failed', job.canceled ? 'The action was canceled.' : text || `${options.command ?? 'git'} ${args[0]} failed`);
-            }
-            return text;
+            return code === 0 ? text : fail(text, options.command ?? 'git', args);
         };
 
         const done = (summary: string, extra: Partial<GitActionResult> = {}): GitActionResult => {
@@ -150,8 +151,7 @@ export class GitActions {
             }
             const conflicts = await conflictedFiles(top);
             if (conflicts.length === 0) {
-                sink('failed', text);
-                throw new GitError('git-failed', job.canceled ? 'The action was canceled.' : text || `git ${args[0]} failed`);
+                return fail(text, 'git', args);
             }
             return done(conflicts.length === 1 ? '1 file conflicts.' : `${conflicts.length} files conflict.`, { conflicts });
         };
@@ -272,7 +272,6 @@ export class GitActions {
         return await steps.joining('pull', args, summary, { timeout: NETWORK_TIMEOUT_MS });
     }
 
-    /* The one push there is: with an upstream, without one, or over what the remote holds. */
     private async push(payload: GitActionPayload, step: Step, branch: string, upstream: string | null): Promise<string> {
         const args = ['push', '--progress'];
         if (payload.kind === 'force-push') {

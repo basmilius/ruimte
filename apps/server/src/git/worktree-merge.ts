@@ -1,7 +1,6 @@
 import type { GitActionPhase, WorktreeMergePayload, WorktreeMergeResult } from '@ruimte/contracts';
-import { rm } from 'node:fs/promises';
 import { Job, type ProgressSink } from './actions.ts';
-import { abortOperation, conflictedFiles, gitPath, gitPathExists, hasStaged, operationOf, squashWaits } from './conflict.ts';
+import { abortOperation, conflictedFiles, dropSquashMessage, gitPathExists, hasStaged, operationOf, squashWaits } from './conflict.ts';
 import { resolveBase } from './status.ts';
 import { GitError, git, runGit, streamGit } from './run.ts';
 import type { Worktrees } from './worktrees.ts';
@@ -167,27 +166,8 @@ export class WorktreeMerge {
         if (into === branch) {
             throw new GitError('target-not-checked-out', `${branch} cannot be merged into itself.`);
         }
-        const checkouts = await this.worktrees.checkouts(main);
-        const target = checkouts.find((checkout) => checkout.branch === into && checkout.path !== entry.path);
-        if (target === undefined) {
-            const project = checkouts[0];
-            const on = project?.branch === null || project === undefined ? 'a detached HEAD' : project.branch;
-            throw new GitError('target-not-checked-out', `${into} is not checked out anywhere; ${project?.path ?? main} is on ${on}.`);
-        }
+        const target = await this.targetOf(main, entry.path, into, limits);
         settings = settingsFor(into);
-        const busy = (await this.worktrees.operationIn(target.path)) ?? ((await squashWaits(target.path)) ? 'squash' : null);
-        if (busy !== null) {
-            throw new GitError('target-busy', `A ${busy} waits halfway in ${target.path}. Finish or abort it there first.`);
-        }
-        /* Untracked files do not count: git refuses a merge that would overwrite one. Neither does
-           `.ruimte`, tracked or not: a person moving a node dirties it all day, and what it holds is
-           never what a merge is about. */
-        if (
-            limits.cleanTarget === true &&
-            (await git(['status', '--porcelain', '--untracked-files=no', '--', '.', `:(exclude)${PROJECT_DIR}`], target.path))?.trim() !== ''
-        ) {
-            throw new GitError('target-dirty', `${target.path} has uncommitted changes of its own; a person merges into a checkout like that, not an agent.`);
-        }
 
         const agents = this.agents.in(entry.path, record?.nodeId);
         const working = agents.filter((agent) => agent.working);
@@ -291,11 +271,8 @@ export class WorktreeMerge {
                     const subject = payload.subject?.trim() || `Merge ${branch}`;
                     await must('commit', ['commit', '--message', subject, ...messageBody(payload.body)], target.path);
                 } else {
-                    // Git prepares the message even for a squash of nothing, and it would open as the draft of the next commit.
-                    const message = await gitPath(target.path, 'SQUASH_MSG');
-                    if (message !== null) {
-                        await rm(message, { force: true });
-                    }
+                    // Git prepares the message even for a squash of nothing.
+                    await dropSquashMessage(target.path);
                 }
                 squashed = true;
                 summary = staged ? `Squashed ${branch} into ${into}.` : `${into} already has everything in ${branch}.`;
@@ -321,6 +298,32 @@ export class WorktreeMerge {
         this.worktrees.announce(main);
         sink('done', summary);
         return { ...base, summary, output: output.join('\n').trim(), ...removal };
+    }
+
+    /* The checkout that has `into` out, refused while it waits on an operation or, for an agent, holds work of its own. */
+    private async targetOf(main: string, source: string, into: string, limits: MergeLimits): Promise<{ path: string }> {
+        const checkouts = await this.worktrees.checkouts(main);
+        const target = checkouts.find((checkout) => checkout.branch === into && checkout.path !== source);
+        if (target === undefined) {
+            const project = checkouts[0];
+            throw new GitError(
+                'target-not-checked-out',
+                `${into} is not checked out anywhere; ${project?.path ?? main} is on ${project?.branch ?? 'a detached HEAD'}.`
+            );
+        }
+        const busy = (await this.worktrees.operationIn(target.path)) ?? ((await squashWaits(target.path)) ? 'squash' : null);
+        if (busy !== null) {
+            throw new GitError('target-busy', `A ${busy} waits halfway in ${target.path}. Finish or abort it there first.`);
+        }
+        /* Untracked files do not count: git refuses a merge that would overwrite one. Neither does
+           `.ruimte`, tracked or not: a person moving a node dirties it all day. */
+        if (
+            limits.cleanTarget === true &&
+            (await git(['status', '--porcelain', '--untracked-files=no', '--', '.', `:(exclude)${PROJECT_DIR}`], target.path))?.trim() !== ''
+        ) {
+            throw new GitError('target-dirty', `${target.path} has uncommitted changes of its own; a person merges into a checkout like that, not an agent.`);
+        }
+        return target;
     }
 
     /* The repository's base as a local branch, since only a local branch can be checked out to merge into. */

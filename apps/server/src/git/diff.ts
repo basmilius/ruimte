@@ -1,7 +1,8 @@
 import { copyFile, lstat, mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, relative, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative } from 'node:path';
 import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
+import { climbsOut } from '../projects/project-files.ts';
 import { readCommit } from './log.ts';
 import { git, runGit, runGitBytes, toplevel, GitError } from './run.ts';
 
@@ -242,11 +243,6 @@ async function readBlob(top: string, name: string): Promise<string | null> {
     return blob.code !== 0 || hasNul(blob.stdout) ? null : KEEP_BOM.decode(blob.stdout);
 }
 
-/* A path relative to a folder that climbs out of it. */
-function leaves(inside: string): boolean {
-    return inside === '..' || inside.startsWith(`..${sep}`) || isAbsolute(inside);
-}
-
 /*
  * Whether a path a client named stays inside the checkout, also once every symlinked folder on the
  * way is followed. The file itself may be gone, so the nearest folder of it that exists resolves.
@@ -254,13 +250,13 @@ function leaves(inside: string): boolean {
  */
 export async function insideCheckout(top: string, path: string): Promise<boolean> {
     const root = await realpath(top);
-    if (isAbsolute(path) || leaves(relative(root, join(root, path)))) {
+    if (isAbsolute(path) || climbsOut(relative(root, join(root, path)))) {
         return false;
     }
     let folder = dirname(join(root, path));
     for (;;) {
         try {
-            return !leaves(relative(root, await realpath(folder)));
+            return !climbsOut(relative(root, await realpath(folder)));
         } catch {
             if (folder === root) {
                 return false;
@@ -279,7 +275,7 @@ async function readWorktree(top: string, path: string): Promise<string | null> {
         const root = await realpath(top);
         const file = join(root, path);
         const inside = relative(root, await realpath(file));
-        if (inside === '' || leaves(inside)) {
+        if (inside === '' || climbsOut(inside)) {
             return null;
         }
         const stat = await lstat(file);
@@ -378,6 +374,11 @@ export async function diffCommit(cwd: string, commit: string): Promise<GitDiffRe
     }
     const diff = await diffTrees(top, await parentOf(top, hash), hash);
     const meta = await readCommit(top, hash);
+    return { ...filesResult(diff), ...(meta ? { commit: meta } : {}) };
+}
+
+/* A tree diff as the answer for many files at once, the counts summed over its files. */
+function filesResult(diff: ChatCheckpointDiff | null): GitDiffResult {
     const files: GitDiffFile[] = (diff?.files ?? []).map((file) => ({
         path: file.path,
         kind: file.kind,
@@ -394,8 +395,7 @@ export async function diffCommit(cwd: string, commit: string): Promise<GitDiffRe
         deleted: files.reduce((total, file) => total + file.deleted, 0),
         binary: false,
         files,
-        truncated: diff?.truncated ?? false,
-        ...(meta ? { commit: meta } : {})
+        truncated: diff?.truncated ?? false
     };
 }
 
@@ -423,25 +423,7 @@ export async function diffCheckout(cwd: string, from: string | null): Promise<Gi
             throw new GitError('git-failed', `Could not read the working tree of ${top}.`);
         }
         const start = from ?? (await git(['rev-parse', '--verify', '--quiet', 'HEAD'], top))?.trim() ?? EMPTY_TREE;
-        const diff = await diffTrees(top, start || EMPTY_TREE, tree);
-        const files: GitDiffFile[] = (diff?.files ?? []).map((file) => ({
-            path: file.path,
-            kind: file.kind,
-            diff: file.diff,
-            added: file.added,
-            deleted: file.deleted,
-            binary: file.omitted === 'binary',
-            ...(file.omitted ? { omitted: file.omitted } : {})
-        }));
-        return {
-            path: '',
-            diff: '',
-            added: files.reduce((total, file) => total + file.added, 0),
-            deleted: files.reduce((total, file) => total + file.deleted, 0),
-            binary: false,
-            files,
-            truncated: diff?.truncated ?? false
-        };
+        return filesResult(await diffTrees(top, start || EMPTY_TREE, tree));
     } finally {
         await rm(scratch, { recursive: true, force: true });
     }

@@ -1,6 +1,6 @@
 import type { AgentKind, GitSuggestMessageResult } from '@ruimte/contracts';
 import type { ProviderRegistry } from '../providers/registry.ts';
-import { git, streamCommand, toplevel, GitError } from './run.ts';
+import { git, streamWithTimeout, toplevel, GitError } from './run.ts';
 
 // Enough of the change for a subject line; a patch past this says nothing the first pages did not.
 const MAX_PATCH_BYTES = 24 * 1024;
@@ -94,21 +94,10 @@ export async function suggestMessage(cwd: string, registry: ProviderRegistry, op
     if (args === null) {
         throw new GitError('git-failed', `${provider.name} cannot answer a single prompt.`);
     }
-    let kill: (() => void) | null = null;
-    const timer = setTimeout(() => kill?.(), TIMEOUT_MS);
-    try {
-        const result = await streamCommand(provider.command[0]!, args, top, {
-            onSpawn: (stop) => {
-                kill = stop;
-                options.onSpawn?.(stop);
-            }
-        });
-        const suggestion = result.code === 0 ? parseSuggestion(result.stdout) : null;
-        if (suggestion === null || suggestion.subject === '') {
-            throw new GitError('git-failed', `${provider.name} wrote no message: ${result.stderr.trim() || 'no output'}`);
-        }
-        return suggestion;
-    } finally {
-        clearTimeout(timer);
+    const result = await streamWithTimeout(provider.command[0]!, args, top, TIMEOUT_MS, { onSpawn: options.onSpawn });
+    const suggestion = result.code === 0 ? parseSuggestion(result.stdout) : null;
+    if (suggestion === null || suggestion.subject === '') {
+        throw new GitError('git-failed', `${provider.name} wrote no message: ${result.stderr.trim() || 'no output'}`);
     }
+    return suggestion;
 }

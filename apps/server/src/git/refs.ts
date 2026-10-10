@@ -1,12 +1,9 @@
 import type { GitRef, GitRefsResult, GitStash } from '@ruimte/contracts';
-import { git, toplevel } from './run.ts';
+import { FIELD, git, toplevel } from './run.ts';
 import { resolveBase } from './status.ts';
 
 // A branch menu nobody scrolls past this; the field on top of it is what finds the rest.
 const MAX_REFS = 200;
-
-// A branch name may hold anything but a control character, so this one cannot appear inside a field.
-const FIELD = '\u001f';
 
 export const REF_FORMAT = `%(refname:short)${FIELD}%(committerdate:unix)${FIELD}%(HEAD)`;
 

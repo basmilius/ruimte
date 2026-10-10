@@ -52,6 +52,14 @@ function count(field: string | undefined): number {
     return Number.isNaN(parsed) ? 0 : Math.abs(parsed);
 }
 
+/* A `1`, `2` or `u` record: the two status letters come second and the path takes the fields from `pathAt` on. */
+function changedEntry(record: string, pathAt: number, unmerged: boolean): PorcelainEntry {
+    const fields = record.split(' ');
+    const xy = fields[1] ?? '';
+    const fallback = unmerged ? 'U' : '.';
+    return { path: fields.slice(pathAt).join(' '), index: xy[0] ?? fallback, worktree: xy[1] ?? fallback, unmerged, untracked: false };
+}
+
 /*
  * `status --porcelain=v2 --branch -z`: header lines start with `#`, an ordinary change with `1`, a
  * rename with `2`, an unmerged file with `u` and an untracked one with `?`. Every record is NUL
@@ -77,26 +85,12 @@ export function parsePorcelain(output: string): PorcelainStatus {
             status.ahead = count(ahead);
             status.behind = count(behind);
         } else if (record.startsWith('1 ')) {
-            const fields = record.split(' ');
-            const xy = fields[1] ?? '..';
-            status.entries.push({ path: fields.slice(8).join(' '), index: xy[0] ?? '.', worktree: xy[1] ?? '.', unmerged: false, untracked: false });
+            status.entries.push(changedEntry(record, 8, false));
         } else if (record.startsWith('2 ')) {
-            const fields = record.split(' ');
-            const xy = fields[1] ?? '..';
-            const entry: PorcelainEntry = {
-                path: fields.slice(9).join(' '),
-                index: xy[0] ?? '.',
-                worktree: xy[1] ?? '.',
-                unmerged: false,
-                untracked: false
-            };
             i += 1;
-            entry.oldPath = records[i] ?? '';
-            status.entries.push(entry);
+            status.entries.push({ ...changedEntry(record, 9, false), oldPath: records[i] ?? '' });
         } else if (record.startsWith('u ')) {
-            const fields = record.split(' ');
-            const xy = fields[1] ?? '??';
-            status.entries.push({ path: fields.slice(10).join(' '), index: xy[0] ?? 'U', worktree: xy[1] ?? 'U', unmerged: true, untracked: false });
+            status.entries.push(changedEntry(record, 10, true));
         } else if (record.startsWith('? ')) {
             status.entries.push({ path: record.slice(2), index: '?', worktree: '?', unmerged: false, untracked: true });
         }

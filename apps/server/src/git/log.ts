@@ -1,10 +1,7 @@
 import type { GitCommit, GitLogResult } from '@ruimte/contracts';
-import { git, toplevel } from './run.ts';
+import { FIELD, git, toplevel } from './run.ts';
 
 export const DEFAULT_LIMIT = 30;
-
-// A branch name may hold anything but a control character, so this one cannot appear inside a field.
-const FIELD = '\u001f';
 
 const LOG_FORMAT = ['%H', '%h', '%an', '%at', '%ct', '%D', '%s'].join(FIELD);
 

@@ -305,17 +305,23 @@ export async function abortOperation(cwd: string): Promise<{ operation: GitOpera
         throw new GitError('git-failed', 'No merge or rebase waits in this checkout.');
     }
     const squash = operation === 'merge' && !(await gitPathExists(root, 'MERGE_HEAD'));
-    const result = await runGit(squash ? ['reset', '--merge'] : ABORT[operation], root);
+    const args = squash ? ['reset', '--merge'] : ABORT[operation];
+    const result = await runGit(args, root);
     if (result.code !== 0) {
-        throw new GitError('git-failed', result.stderr.trim() || `git ${squash ? 'reset --merge' : ABORT[operation].join(' ')} failed`);
+        throw new GitError('git-failed', result.stderr.trim() || `git ${args.join(' ')} failed`);
     }
     if (squash) {
-        const message = await gitPath(root, 'SQUASH_MSG');
-        if (message !== null) {
-            await rm(message, { force: true });
-        }
+        await dropSquashMessage(root);
     }
     return { operation, output: `${result.stdout}${result.stderr}`.trim() };
+}
+
+/* The message git prepared for a squash, which would otherwise open as the draft of the next commit. */
+export async function dropSquashMessage(cwd: string): Promise<void> {
+    const message = await gitPath(cwd, 'SQUASH_MSG');
+    if (message !== null) {
+        await rm(message, { force: true });
+    }
 }
 
 const PHASE: Record<GitOperation, GitActionPhase> = {

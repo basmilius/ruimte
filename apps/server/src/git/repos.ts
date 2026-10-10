@@ -1,7 +1,8 @@
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
+import { fileExists } from '@adecore/agents/fs';
 import { basename, join, relative } from 'node:path';
 import type { GitRepo, GitReposResult } from '@ruimte/contracts';
-import { climbsOut, parseSharedFile, PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
+import { climbsOut, isBelow, parseSharedFile, PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
 import { readIdeaName } from '../projects/project-identity.ts';
 import { ignoredPaths } from './ignore.ts';
 import { git } from './run.ts';
@@ -71,13 +72,8 @@ function inOrder(repos: readonly GitRepo[]): GitRepo[] {
 
 /* Whether a folder is a checkout. A submodule and a linked worktree carry `.git` as a file rather
    than a directory, and both are one. */
-async function isCheckout(dir: string): Promise<boolean> {
-    try {
-        await stat(join(dir, '.git'));
-        return true;
-    } catch {
-        return false;
-    }
+function isCheckout(dir: string): Promise<boolean> {
+    return fileExists(join(dir, '.git'));
 }
 
 /*
@@ -109,12 +105,6 @@ async function scan(folder: string, dir: string, depth: number, found: Set<strin
     }
 }
 
-/* Whether a path sits inside the project folder, which every repository but the root has to. */
-function isInside(folder: string, path: string): boolean {
-    const within = relative(folder, path);
-    return within !== '' && !climbsOut(within);
-}
-
 /*
  * The initialized submodules of these checkouts, however deep they nest. Git is asked before the scan
  * runs, because a submodule is a checkout the scan would find too and only git can say it is one.
@@ -127,7 +117,7 @@ async function addSubmodules(folder: string, checkouts: readonly string[], add: 
         })
     );
     for (const path of lists.flat()) {
-        if (isInside(folder, path) && (await isCheckout(path))) {
+        if (isBelow(folder, path) && (await isCheckout(path))) {
             add(path, 'submodule');
         }
     }

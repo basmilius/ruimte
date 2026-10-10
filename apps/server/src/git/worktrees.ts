@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { mkdir, realpath, rm, stat } from 'node:fs/promises';
+import { mkdir, realpath, rm } from 'node:fs/promises';
+import { fileExists } from '@adecore/agents/fs';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import type { Worktree, WorktreeWork } from '@ruimte/contracts';
 import type { SessionSink } from '../sessions/manager.ts';
@@ -65,13 +66,6 @@ export interface Listed {
     head: string | null;
     locked: boolean;
     prunable: boolean;
-}
-
-function exists(path: string): Promise<boolean> {
-    return stat(path).then(
-        () => true,
-        () => false
-    );
 }
 
 function parsePorcelain(output: string): Listed[] {
@@ -178,7 +172,7 @@ export class Worktrees {
         const listed = await Promise.all(
             entries.map(async (entry): Promise<Worktree> => {
                 const record = records.get(entry.path);
-                const missing = entry.prunable || !(await exists(entry.path));
+                const missing = entry.prunable || !(await fileExists(entry.path));
                 return {
                     path: entry.path,
                     branch: entry.branch ?? '(detached)',
@@ -332,7 +326,7 @@ export class Worktrees {
             }
             throw new GitError('worktree-not-found', `${path} is not a worktree of ${main}`);
         }
-        const missing = entry === null || entry.prunable || !(await exists(entry.path));
+        const missing = entry === null || entry.prunable || !(await fileExists(entry.path));
         const { work, target } = await this.inspect(main, entry, record, missing);
         return { entry, key, record, missing, work, target, label: entry?.branch ?? record?.branch ?? basename(wanted) };
     }
@@ -350,7 +344,7 @@ export class Worktrees {
         const { entry, key, record, missing, work: counted, target, label } = await this.describe(main, path);
         // A squash leaves the branch's commits off the target while their content is on it; that is not work to lose.
         const squashed =
-            options.squashedInto !== undefined && entry?.branch !== null && entry !== null && (await this.contentIn(main, entry.branch, options.squashedInto));
+            options.squashedInto !== undefined && entry !== null && entry.branch !== null && (await this.contentIn(main, entry.branch, options.squashedInto));
         const work = squashed ? { ...counted, ahead: 0 } : counted;
         if (!options.force && hasWork(work)) {
             throw new GitError('worktree-has-work', `${workSentence(label, work, target)}. Remove it with force to lose that.`);
@@ -440,16 +434,13 @@ export class Worktrees {
                 tips.push(`refs/heads/${name}`);
             }
         }
+        const count = async (args: string[]): Promise<number> => Number.parseInt((await git(['rev-list', '--count', ...args], main))?.trim() ?? '', 10) || 0;
         let ahead = 0;
+        let behind = 0;
         if (tips.length > 0) {
             const not = target === null ? [...branches.map((name) => `--exclude=refs/heads/${name}`), '--branches'] : [target];
-            const counted = await git(['rev-list', '--count', ...tips, '--not', ...not], main);
-            ahead = counted === null ? 0 : Number.parseInt(counted.trim(), 10) || 0;
-        }
-        let behind = 0;
-        if (tips.length > 0 && target !== null) {
-            const counted = await git(['rev-list', '--count', target, '--not', ...tips], main);
-            behind = counted === null ? 0 : Number.parseInt(counted.trim(), 10) || 0;
+            ahead = await count([...tips, '--not', ...not]);
+            behind = target === null ? 0 : await count([target, '--not', ...tips]);
         }
         const moved = behind > 0 ? { behind } : {};
         if (missing || entry === null) {
@@ -469,7 +460,7 @@ export class Worktrees {
         const paths = output.split('\n').filter((line) => line !== '');
         for (const [index, operation] of OPERATIONS.entries()) {
             const found = paths[index];
-            if (found !== undefined && (await exists(isAbsolute(found) ? found : join(path, found)))) {
+            if (found !== undefined && (await fileExists(isAbsolute(found) ? found : join(path, found)))) {
                 return operation.name;
             }
         }

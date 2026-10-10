@@ -32,6 +32,9 @@ export type GitErrorCode =
 
 export class GitError extends CodedError<GitErrorCode> {}
 
+// A branch name or a subject may hold anything but a control character, so this one never appears inside a field.
+export const FIELD = '\u001f';
+
 /* `runGit` with stdout as the bytes git wrote, for content that is not known to be text. A git that
    cannot start reads as code 128, the same code git itself uses for "this is not a repository". */
 export async function runGitBytes(args: string[], cwd: string, options: GitOptions = {}): Promise<GitResult<Uint8Array>> {
@@ -153,6 +156,29 @@ export async function streamCommand(command: string, args: string[], cwd: string
     options.onSpawn?.(options.group === true ? killGroup : () => started.kill());
     const [stdout, stderr, code] = await Promise.all([pump(proc.stdout, onLine), pump(proc.stderr, onLine), proc.exited]);
     return { code, stdout, stderr };
+}
+
+/* A command that is ended once it runs past `timeoutMs`, for a one-shot agent CLI a person waits on. */
+export async function streamWithTimeout(
+    command: string,
+    args: string[],
+    cwd: string,
+    timeoutMs: number,
+    options: Pick<StreamOptions, 'onSpawn' | 'stdin'> = {}
+): Promise<GitResult> {
+    let kill: (() => void) | null = null;
+    const timer = setTimeout(() => kill?.(), timeoutMs);
+    try {
+        return await streamCommand(command, args, cwd, {
+            onSpawn: (stop) => {
+                kill = stop;
+                options.onSpawn?.(stop);
+            },
+            ...(options.stdin === undefined ? {} : { stdin: options.stdin })
+        });
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 export function streamGit(args: string[], cwd: string, options: StreamOptions = {}): Promise<GitResult> {

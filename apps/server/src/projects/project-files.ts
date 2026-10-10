@@ -340,6 +340,12 @@ export function climbsOut(rel: string): boolean {
     return rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel);
 }
 
+/* Whether `path` lies below `folder`, the folder itself not counted. */
+export function isBelow(folder: string, path: string): boolean {
+    const rel = relative(folder, path);
+    return rel !== '' && !climbsOut(rel);
+}
+
 /* A relative folder that climbs out of the project is one `toPortable` never writes, so it is somebody else's and goes. */
 export function fromPortable<T extends ProjectContent>(content: T, folder: string | null): T {
     if (!folder) {
