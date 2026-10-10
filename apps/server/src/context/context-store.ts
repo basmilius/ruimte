@@ -29,7 +29,6 @@ export const CONTEXT_PATH = '/context';
 // A screen is read live; this keeps a long scrollback from flooding an agent's context.
 export const MAX_SCREEN_LINES = 2000;
 
-/* What `--tail` asks for. */
 function lastLines(text: string, count: number): string {
     const lines = text.split('\n');
     return lines.slice(Math.max(0, lines.length - count)).join('\n');
@@ -215,10 +214,8 @@ export class ContextStore {
     }
 
     /*
-     * What changed since this agent was last told, and remembers what it is being told now. A chat
-     * hears this between two turns of its own (`ChatSession`); a terminal agent has no such moment
-     * and hears it through its hooks, which is the only way a line drawn while the shell runs
-     * reaches the model at all. Null the first time, since the first answer carries the whole list.
+     * What changed since this agent was last told, for a terminal agent's hooks: it has no moment
+     * between turns the way a chat has. Null the first time, since the first answer carries the whole list.
      */
     changeSince(targetId: string): string | null {
         const current = this.readers.sources(targetId);
@@ -232,18 +229,11 @@ export class ContextStore {
     }
 
     /*
-     * One source as text. `tail` is the cheap read: the last lines of it, counted here rather than
-     * in the CLI, because only this side knows what a line of each kind is (a chat and a drawing
-     * are rendered here) and because the wire then carries fifteen lines instead of two thousand.
+     * One source as text. `tail` is counted here rather than in the CLI, since only this side knows
+     * what a line of each kind is, and the wire then carries fifteen lines instead of two thousand.
      */
     async read(targetId: string, sourceId: string, tail: number | null = null, subagent: string | null = null): Promise<string | null> {
-        // Only what is linked into the asker matches, so a node id opens nothing an edge, a person's attachment or the asker's own lineage did not.
-        const source =
-            [...this.readers.sources(targetId), ...(this.readers.referenced?.(targetId) ?? [])].find(
-                (entry) => entry.id === sourceId || entry.nodeId === sourceId
-            ) ??
-            this.readers.opened?.(targetId, sourceId) ??
-            null;
+        const source = this.findSource(targetId, sourceId);
         if (!source) {
             return null;
         }
@@ -261,19 +251,9 @@ export class ContextStore {
                 // The screen cap stays the ceiling: a --tail past it cannot reach further back than the daemon keeps.
                 return lastLines(text, Math.min(tail ?? MAX_SCREEN_LINES, MAX_SCREEN_LINES));
             }
-            case 'chat': {
-                const items = this.readers.chatItems(source.id);
-                if (!items) {
-                    return null;
-                }
-                const transcript = renderTranscript(items);
-                const thread = tail === null ? transcript : lastLines(transcript, tail);
-                // Above the thread, where a tail never cuts it off: how far a child got is what its parent reads for first.
-                const plans = (await this.readers.chatPlans?.(source.id).catch(() => [])) ?? [];
-                return plans.length === 0 ? thread : `${plans.map((plan) => renderPlanText(plan)).join('\n\n')}\n\n${thread}`;
-            }
-            /* The page as it stands, under the address it is at now, or the one the project file knows when
-               nobody has it open. Reading never moves it; where the page goes is `ruimte-context browser`, over the same line. */
+            case 'chat':
+                return this.readChat(source.id, tail);
+            // The address the project file knows stands in when nobody has the page open.
             case 'browser': {
                 const page = (await this.readers.browserPage?.(source.id).catch(() => null)) ?? null;
                 if (page === null) {
@@ -281,8 +261,7 @@ export class ContextStore {
                 }
                 return renderPage(page.url || (source.text ?? ''), page.text, tail, true);
             }
-            /* Which device, looked up now rather than when the line was drawn: what a machine has
-               changes while nobody touches the canvas. A tail has three lines to leave out, so it does nothing. */
+            // Looked up now rather than when the line was drawn: what a machine has changes while nobody touches the canvas.
             case 'device': {
                 if (!source.device) {
                     return null;
@@ -298,15 +277,30 @@ export class ContextStore {
                 return document ? renderDiagram(document, tail) : null;
             }
             /*
-             * The path, never the bytes. An agent has file tools of its own, so reading it there is
-             * fresher than whatever this answered, it does not count twice against the window, and a
-             * file of a megabyte cannot push the rest of the context out. A drawing is the opposite
-             * case, which is why that one is rendered here: an agent can read it nowhere else.
-             * Three lines is the whole answer, so `--tail` has nothing to leave out here.
+             * The path, never the bytes: an agent's own file tools read a fresher copy, and a large file
+             * cannot push the rest of its context out. A drawing is rendered here since nothing else reads it.
              */
             case 'file':
                 return source.text ? `This is a file on disk. Read it with your own tools.\n\n${source.text}` : null;
         }
+    }
+
+    // Only what is linked into the asker matches, so a node id opens nothing an edge, a person's attachment or the asker's own lineage did not.
+    private findSource(targetId: string, sourceId: string): ContextSource | null {
+        const linked = [...this.readers.sources(targetId), ...(this.readers.referenced?.(targetId) ?? [])];
+        return linked.find((entry) => entry.id === sourceId || entry.nodeId === sourceId) ?? this.readers.opened?.(targetId, sourceId) ?? null;
+    }
+
+    private async readChat(chatId: string, tail: number | null): Promise<string | null> {
+        const items = this.readers.chatItems(chatId);
+        if (!items) {
+            return null;
+        }
+        const transcript = renderTranscript(items);
+        const thread = tail === null ? transcript : lastLines(transcript, tail);
+        // Above the thread, where a tail never cuts it off: how far a child got is what its parent reads for first.
+        const plans = (await this.readers.chatPlans?.(chatId).catch(() => [])) ?? [];
+        return plans.length === 0 ? thread : `${plans.map((plan) => renderPlanText(plan)).join('\n\n')}\n\n${thread}`;
     }
 
     /* A subagent is only ever reached through the chat it belongs to, so a link to that chat is what lets it be read. */

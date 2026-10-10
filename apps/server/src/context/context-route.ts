@@ -1,6 +1,8 @@
 import type { ActionResult } from '@ruimte/actions';
 import { serverActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
+import { linesOf } from '../canvas/action-verb.ts';
+import { bearerCaller } from '../canvas/canvas-route.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import { refusalRows } from '@adecore/agents/context/refusal';
 import { CONTEXT_PATH } from './context-store.ts';
@@ -9,10 +11,6 @@ import { CONTEXT_PATH } from './context-store.ts';
 const UNREAD: ReadonlySet<string> = new Set(['unknown-source', 'not-linked', 'unreadable']);
 
 const TEXT = { 'content-type': 'text/plain; charset=utf-8' };
-
-function linesOf(details: unknown): string[] {
-    return Array.isArray(details) && details.every((line) => typeof line === 'string') ? (details as string[]) : [];
-}
 
 /*
  * The statuses a `ruimte-context` of any build reads: a 404 carries the refusal rows of a source that
@@ -46,9 +44,7 @@ export async function handleContextRequest(request: Request, pathname: string, d
     if (request.method !== 'GET') {
         return new Response('Method not allowed', { status: 405 });
     }
-    const header = request.headers.get('authorization') ?? '';
-    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
-    const caller = token ? deps.targetForToken(token) : null;
+    const caller = bearerCaller(request, deps.targetForToken);
     if (!caller) {
         return new Response('Unknown token', { status: 401 });
     }

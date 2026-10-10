@@ -129,6 +129,13 @@ export function verbsNote({
 }): string {
     // A task child at any depth answers its parent, never a person reading blocks.
     const ui = depth === 0;
+    const closing = [
+        ...(visuals ? [visualNote(ui, databases)] : []),
+        ...(databases ? [databaseNote(visuals && ui)] : []),
+        ...(computer ? [COMPUTER_NOTE] : []),
+        ...(device ? [DEVICE_NOTE] : []),
+        'Ids in its output are for your commands; to the person, name things by their title, never by id.'
+    ];
     if (standalone && !terminal) {
         return [
             PRODUCT_NOTE,
@@ -143,36 +150,21 @@ export function verbsNote({
                 : []),
             'For a note or drawing the person asks for in Ruimte, name its destination with --view.',
             ALERT_NOTE,
-            ...(visuals ? [visualNote(ui, databases)] : []),
-            ...(databases ? [databaseNote(visuals && ui)] : []),
-            ...(computer ? [COMPUTER_NOTE] : []),
-            ...(device ? [DEVICE_NOTE] : []),
-            'Ids in its output are for your commands; to the person, name things by their title, never by id.'
+            ...closing
         ].join(' ');
     }
-    const parts = [PRODUCT_NOTE, COMMANDS_NOTE, standalone ? TERMINAL_VIEW_NOTE : CANVAS_NODE_NOTE];
-    parts.push(ALERT_NOTE);
     const opens = opensAt(depth);
-    if (opens !== null) {
-        parts.push(opens);
-    }
-    if (depth < MAX_AGENT_DEPTH && !standalone) {
-        parts.push('With `--task` a result comes back as your next message once it settles, so end your turn instead of polling.');
-    }
-    if (visuals) {
-        parts.push(visualNote(ui, databases));
-    }
-    if (databases) {
-        parts.push(databaseNote(visuals && ui));
-    }
-    if (computer) {
-        parts.push(COMPUTER_NOTE);
-    }
-    if (device) {
-        parts.push(DEVICE_NOTE);
-    }
-    parts.push('Ids in its output are for your commands; to the person, name things by their title, never by id.');
-    return parts.join(' ');
+    return [
+        PRODUCT_NOTE,
+        COMMANDS_NOTE,
+        standalone ? TERMINAL_VIEW_NOTE : CANVAS_NODE_NOTE,
+        ALERT_NOTE,
+        ...(opens === null ? [] : [opens]),
+        ...(depth < MAX_AGENT_DEPTH && !standalone
+            ? ['With `--task` a result comes back as your next message once it settles, so end your turn instead of polling.']
+            : []),
+        ...closing
+    ].join(' ');
 }
 
 function linksDevice(sources: readonly ContextSource[]): boolean {

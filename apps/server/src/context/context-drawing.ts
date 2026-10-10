@@ -2,11 +2,9 @@ import type { DrawingElement } from '@ruimte/contracts';
 import { DEFAULT_PALETTE, readingOrder, toSvg } from '@adecore/drawing';
 
 /*
- * A drawing as an agent reads it: the texts in reading order with the arrows between them, and the
- * picture itself after them. The SVG sits behind a heading of its own, so an agent that only wants
- * to know what the drawing says can stop at the list. A `tail` asks for the cheap read and gets the
- * last lines of the reading order alone: the picture is the expensive half, and the last lines of an
- * SVG are markup, not an answer.
+ * A drawing as an agent reads it: the texts in reading order with the arrows between them, then the
+ * SVG under a heading of its own. A `tail` counts the reading order alone, since the last lines of an
+ * SVG are markup and not an answer.
  */
 export function renderDrawing(elements: readonly DrawingElement[], tail: number | null = null): string {
     const lines = readingOrder(elements);

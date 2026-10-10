@@ -1,10 +1,8 @@
 import { deviceMatches, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
 
 /*
- * Which device a line from a device node points at, so an agent asked to put something on it knows
- * which one without asking back. The ids are the machine's and not the project file's, so the
- * reference is looked up among the devices this machine has at the moment of reading; one that is
- * not among them says so, since a name without a device behind it is nothing to build for.
+ * Which device a line from a device node points at. The ids are the machine's, so the reference is
+ * looked up among the devices this machine has now, and one that is not among them says so.
  */
 export function renderDevice(reference: DeviceReference, devices: readonly DeviceInfo[]): string {
     const device = devices.find((candidate) => deviceMatches(candidate, reference));

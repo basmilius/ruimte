@@ -37,6 +37,13 @@ function joinedWordsLines(name: string): string[] {
     return [`note\tA verb and its arguments are separate words, so this is ruimte-context ${first} ${rest.join(' ')}, not one name`];
 }
 
+/* The session or chat the request's bearer token speaks for; null for a missing or unknown token. */
+export function bearerCaller(request: Request, targetForToken: (token: string) => string | null): string | null {
+    const header = request.headers.get('authorization') ?? '';
+    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+    return token ? targetForToken(token) : null;
+}
+
 interface CanvasRouteDeps {
     /* The session or chat a bearer token speaks for. */
     targetForToken(token: string): string | null;
@@ -51,9 +58,7 @@ export async function handleCanvasRequest(request: Request, pathname: string, de
     if (request.method !== 'POST') {
         return new Response('Method not allowed', { status: 405 });
     }
-    const header = request.headers.get('authorization') ?? '';
-    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
-    const caller = token ? deps.targetForToken(token) : null;
+    const caller = bearerCaller(request, deps.targetForToken);
     if (!caller) {
         return new Response('Unknown token', { status: 401 });
     }

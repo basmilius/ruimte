@@ -12,9 +12,8 @@ function drawLine(sourceId: string, readerId: string): string {
 }
 
 /*
- * Why a read found nothing, which a refused read answers with. The CLI knows only the sources it was handed,
- * so it cannot tell a neighbor whose line runs the other way from an id that is on no canvas at
- * all; the daemon has the project, so the sentence that says which of the two it is comes from here.
+ * Why a read found nothing. Only the daemon has the project, so only it can tell a neighbor whose
+ * line runs the other way from an id that is on no canvas at all.
  */
 export function readRefusal(readerId: string, sourceId: string, sources: readonly ContextSource[], canvas: ProjectCanvasView | null): ParsedRefusal {
     // The line is there and the read still came back empty, so calling it unlinked would be untrue.

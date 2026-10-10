@@ -10,19 +10,14 @@ export function renderNotice(notice: Notice): string {
     return `Ruimte: node ${notice.from}${notice.fromTitle === '' ? '' : ` ("${notice.fromTitle}")`} sent you a message: ${notice.text}`;
 }
 
-/*
- * What a person reads in the thread: the sender by the name it carries on the canvas, since that is
- * what they can point at, and the message whole. Not what the agent hears: this one is addressed to
- * nobody and names no id to act on.
- */
+/* What a person reads in the thread: the sender by its name on the canvas, and no id to act on. */
 export function noticeNote(notice: Notice): string {
     return `${notice.fromTitle === '' ? `Node ${notice.from}` : notice.fromTitle} sent a message: ${notice.text}`;
 }
 
 /*
- * What the CLI is sent under the messages themselves, which the preamble of this turn carries. The
- * last sentence is the rule the daemon enforces a moment later: without it an agent answers and then
- * waits for a reply that only comes when a person prompts the other side.
+ * What the CLI is sent under the messages in the preamble. The last sentence is the rule the daemon
+ * enforces; without it an agent answers and then waits for a reply that never comes on its own.
  */
 export function messageText(count: number): string {
     return `${count === 1 ? 'A node linked to you sent you the message above' : `${count} nodes linked to you sent you the messages above`}. Act on it, and answer with ruimte-context notify if you were asked something. A message starts one turn and no further: what you send from this turn is read by that node at the start of its next one.`;
@@ -44,14 +39,9 @@ export interface NoticeDelivery {
     wake: boolean;
 }
 
-/*
- * The tail of every answer to a notify. The sender reads it at the one moment it decides whether to
- * wait for something back, and nothing here ever sends it one: without this a model polls the node
- * it wrote to until it gives up.
- */
+// Without this tail on every answer to a notify, a model polls the node it wrote to until it gives up.
 export const NO_REPLY_NOTICE = 'nothing comes back to you, and ruimte-context task new is what brings a result back';
 
-/* One delivery line: where the message went, and the tail that says not to wait for an answer. */
 function delivered(at: NoticeDelivery['at'], wake: boolean, detail: string): NoticeDelivery {
     return { at, wake, detail: `${detail}; ${NO_REPLY_NOTICE}` };
 }
@@ -85,11 +75,9 @@ export interface NoticeTargets extends ChatNoticeTargets {
 }
 
 /*
- * One message on its way to a node. A chat is `deliverToChat`'s, which owes a chat between turns one
- * of its own. A terminal keeps what it always did. Starting a turn there means typing into the shell
- * a person types in, so an agent that answers a context hook hears the message at the start of the
- * next turn it takes itself, and every other terminal gets the line on its screen, which is what the
- * motd does.
+ * One message on its way to a node. A terminal is never woken, since that means typing into a
+ * person's shell: an agent that answers a context hook hears it at the start of its next turn, and
+ * every other terminal gets the line on its screen.
  */
 export async function deliverNotice(store: NoticeStore, targets: NoticeTargets, notice: Omit<Notice, 'createdAt'>): Promise<NoticeDelivery> {
     const terminal = targets.terminal(notice.targetId);

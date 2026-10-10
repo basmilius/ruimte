@@ -1,11 +1,9 @@
 import { BROWSER_TEXT_MAX_CHARS } from '@ruimte/contracts';
 
 /*
- * A browser as an agent reads it: the address at the top, because that is where it starts, and what
- * the page says under it. The text is the page this machine has open, read the moment it is asked;
- * no page of it here is said plainly rather than fetched, since loading the address again would be
- * another visit and a page behind a login would answer something else entirely. A `tail` counts the
- * lines of the page and leaves the address standing, the way a drawing's tail leaves its picture out.
+ * A browser as an agent reads it: the address, then the text of the page this machine has open. With
+ * no page open it says so rather than fetching the address, which would be another visit and could
+ * answer something else behind a login. A `tail` counts the page's lines and keeps the address.
  */
 export function renderPage(url: string, text: string | null, tail: number | null = null, open: boolean = text !== null): string {
     if (url === '') {

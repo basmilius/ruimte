@@ -15,11 +15,9 @@ function apart(one: IndexedPlace | null, other: IndexedPlace | null): boolean {
 }
 
 /*
- * What a fork may read, with its original added when no edge could carry it, and what an original
- * may read, with its forks added the same way: a fork of a view, or into a view, stands on no canvas
- * beside its original, and a fork that could not read what came before its cut would be less than
- * the node fork it is, just as a summary that points at a fork nobody can read. Two nodes on one
- * canvas are left to their edges, so a line a person removed there stays removed.
+ * What a fork or an original may read, with the other added when no edge could join them (a fork of
+ * or into a view stands on no canvas beside its original). Two nodes on one canvas are left to their
+ * edges, so a line a person removed there stays removed.
  */
 export function withForkOrigin(targetId: string, sources: ContextSource[], readers: ForkOriginReaders): ContextSource[] {
     const target = readers.locate(targetId);

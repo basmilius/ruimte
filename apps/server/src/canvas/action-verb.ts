@@ -9,7 +9,7 @@ import { REVISION_LINE, VerbRefusal, canvasLines, defineAction, defineVerb, plac
 /* What the daemon's registry answers when a handler failed outright rather than refused. */
 const FAILURES: ReadonlySet<string> = new Set(['action-failed', 'invalid-output']);
 
-function linesOf(details: unknown): string[] {
+export function linesOf(details: unknown): string[] {
     return Array.isArray(details) && details.every((line) => typeof line === 'string') ? (details as string[]) : [];
 }
 
