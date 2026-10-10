@@ -31,6 +31,7 @@ async function removeDurable(path: string): Promise<void> {
 }
 
 export const PROJECT_WRITE_IO: ProjectWriteIO = { write: writeAtomic, remove: removeDurable };
+
 export function pendingWritePathOf(path: string): string {
     return join(privateDirOf(path), 'pending-save.json');
 }
@@ -100,11 +101,6 @@ async function checkUnmoved(path: string, pending: PendingWrite): Promise<void> 
     }
 }
 
-async function complete(path: string, pending: PendingWrite, io: ProjectWriteIO): Promise<void> {
-    await checkUnmoved(path, pending);
-    await apply(path, pending, io);
-}
-
 async function apply(path: string, pending: PendingWrite, io: ProjectWriteIO): Promise<void> {
     for (const file of filesOf(path, pending)) {
         if ((await textAt(file.path)) !== file.after) {
@@ -132,7 +128,8 @@ export async function recoverProjectWrite(path: string, io: ProjectWriteIO = PRO
         return null;
     }
     const pending = WriteSchema.parse(JSON.parse(text));
-    await complete(path, pending, io);
+    await checkUnmoved(path, pending);
+    await apply(path, pending, io);
     return pending.after;
 }
 

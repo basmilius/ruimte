@@ -1,7 +1,6 @@
-import { readFile } from 'node:fs/promises';
 import { DIAGRAM_VERSION, EMPTY_DIAGRAM, diagramProblemIn, isDiagramView, type DiagramContent, type DiagramDocument } from '@ruimte/contracts';
 import type { WatchSeams } from '@adecore/agents/watch-seam';
-import { diagramsDirOf, parseDiagram, privateDiagramsDirOf, readDiagram, tooNewMessage, viewFilePathOf, writeDiagram } from './project-files.ts';
+import { diagramsDirOf, privateDiagramsDirOf, readDiagram, tooNewMessage, viewFilePathOf, writeDiagram } from './project-files.ts';
 import { ProjectError, type ProjectPlace, type ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';
 import { CodedError } from '@adecore/agents/coded-error';
@@ -81,24 +80,17 @@ export class DiagramStore extends ProjectViewFileStore<DiagramDocument, DiagramC
 
     /*
      * What an agent reads: the diagram of a view, open or not, or null when the project has no
-     * diagram under that id or its file is not one. Unlike `open` it never sets a broken file
-     * aside, since a read nobody asked to repair anything should leave the folder as it found it.
+     * diagram under that id or its file is not one. Unlike `open` it never sets a broken file aside.
      */
     async read(projectId: string, viewId: string): Promise<DiagramDocument | null> {
         const place = await this.projects.place(projectId).catch(() => null);
         if (!place || !place.views.some((view) => view.id === viewId && isDiagramView(view))) {
             return null;
         }
-        let text: string;
-        try {
-            text = await readFile(viewFilePathOf(place.documentPath, 'diagram', viewId, place.shared), 'utf8');
-        } catch (e) {
-            if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
-                return EMPTY_DIAGRAM;
-            }
-            throw e;
+        const outcome = await readDiagram(viewFilePathOf(place.documentPath, 'diagram', viewId, place.shared), { setAside: false });
+        if (outcome.kind === 'missing') {
+            return EMPTY_DIAGRAM;
         }
-        const parsed = parseDiagram(text);
-        return parsed.kind === 'ok' ? parsed.document : null;
+        return outcome.kind === 'ok' ? outcome.document : null;
     }
 }

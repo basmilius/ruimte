@@ -12,12 +12,9 @@ export async function documentOnDisk(folder: string, fallback = { name: 'repo', 
     if (!read) {
         throw new Error(`${path} does not parse as a project`);
     }
-    const parsed = parsePrivateFile(await readFile(privatePathOf(path), 'utf8'));
-    if (parsed.kind !== 'ok') {
-        throw new Error(`the private file of ${folder} does not parse`);
-    }
-    const merged = mergeFiles(read.file, parsed.document, fallback);
-    return { version: PROJECT_VERSION, rev: parsed.document.rev, ...merged.content, shared: merged.shared };
+    const privateFile = await privateFileOnDisk(folder);
+    const merged = mergeFiles(read.file, privateFile, fallback);
+    return { version: PROJECT_VERSION, rev: privateFile.rev, ...merged.content, shared: merged.shared };
 }
 
 /* The views of the private file exactly as the bytes hold them, which is what a test about an entry

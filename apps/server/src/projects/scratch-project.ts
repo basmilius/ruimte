@@ -17,7 +17,7 @@ export function scratchFolderOf(home: string): string {
     return join(resolve(home), 'scratch');
 }
 
-function newChatId(): string {
+export function newChatId(): string {
     return `chat-${randomBytes(6).toString('hex')}`;
 }
 

@@ -222,12 +222,22 @@ function viewIdsIn(views: ProjectView[], kind: 'drawing' | 'diagram'): Set<strin
     return new Set(views.filter((view) => view.kind === kind || view.kind === UNKNOWN_KIND).map((view) => view.id));
 }
 
-function drawingIdsIn(views: ProjectView[]): Set<string> {
-    return viewIdsIn(views, 'drawing');
+/* Takes in a write or read of both files, so the watcher can tell the next outside edit from this one. */
+function remember(state: OpenProject, written: { text: string; private: string }, rev: number, shared: readonly string[], views: ProjectView[]): void {
+    state.lastText = written.text;
+    state.lastPrivate = written.private;
+    state.rev = rev;
+    state.shared = [...shared];
+    state.drawingIds = viewIdsIn(views, 'drawing');
+    state.diagramIds = viewIdsIn(views, 'diagram');
 }
 
-function diagramIdsIn(views: ProjectView[]): Set<string> {
-    return viewIdsIn(views, 'diagram');
+function entryIn(entries: readonly RegistryEntry[], projectId: string): RegistryEntry {
+    const entry = entries.find((candidate) => candidate.projectId === projectId);
+    if (!entry) {
+        throw new ProjectError('project-not-found', `No project ${projectId}`);
+    }
+    return entry;
 }
 
 /*
@@ -433,7 +443,6 @@ export class ProjectStore {
         }
     }
 
-    /* The clients that have the project on screen. */
     holdersOf(projectId: string): string[] {
         return this.holds.clientsOf(projectId);
     }
@@ -603,8 +612,8 @@ export class ProjectStore {
             watcher: null,
             cancelSettle: null,
             iconTouched: false,
-            drawingIds: drawingIdsIn(document.views),
-            diagramIds: diagramIdsIn(document.views)
+            drawingIds: viewIdsIn(document.views, 'drawing'),
+            diagramIds: viewIdsIn(document.views, 'diagram')
         };
         this.open.set(entry.projectId, state);
         this.startWatching(state, path);
@@ -650,12 +659,7 @@ export class ProjectStore {
             await writeGitignoreIfMissing(path);
             const state = this.open.get(entry.projectId);
             if (state) {
-                state.lastText = written.text;
-                state.lastPrivate = written.private;
-                state.rev = loaded.rev;
-                state.shared = [];
-                state.drawingIds = new Set();
-                state.diagramIds = new Set();
+                remember(state, written, loaded.rev, [], []);
             }
             this.index.set(entry.projectId, folder, content);
             if (!known) {
@@ -701,25 +705,20 @@ export class ProjectStore {
         const portable = toPortable({ ...content, ...(flags ? { flags } : {}), ...(sql ? { sql } : {}) }, state.entry.folder);
         const document: ProjectDocument = { version: PROJECT_VERSION, rev: state.rev + 1, ...portable, shared: ids };
         const written = await this.writeFiles(this.documentPath(state.entry), portable, ids, document.rev, moved);
-        state.lastText = written.text;
-        state.lastPrivate = written.private;
-        state.shared = ids;
-        state.rev = document.rev;
+        const drawingsBefore = state.drawingIds;
+        const diagramsBefore = state.diagramIds;
+        remember(state, written, document.rev, ids, document.views);
         const daemonSide = fromPortable(document, state.entry.folder);
         this.index.set(projectId, state.entry.folder, daemonSide);
         await this.personSaved(state.entry.folder, before ?? daemonSide.views, daemonSide.views);
-        const drawingIds = drawingIdsIn(document.views);
         // A view that a person deleted here takes its file with it. An outside edit never does:
         // a git pull can drop a view whose file is still on its way, and that file is someone's work.
-        if (this.drawings && [...state.drawingIds].some((id) => !drawingIds.has(id))) {
-            await this.drawings.removeOrphans(projectId, drawingIds);
+        if (this.drawings && [...drawingsBefore].some((id) => !state.drawingIds.has(id))) {
+            await this.drawings.removeOrphans(projectId, state.drawingIds);
         }
-        state.drawingIds = drawingIds;
-        const diagramIds = diagramIdsIn(document.views);
-        if (this.diagrams && [...state.diagramIds].some((id) => !diagramIds.has(id))) {
-            await this.diagrams.removeOrphans(projectId, diagramIds);
+        if (this.diagrams && [...diagramsBefore].some((id) => !state.diagramIds.has(id))) {
+            await this.diagrams.removeOrphans(projectId, state.diagramIds);
         }
-        state.diagramIds = diagramIds;
         const icon = content.icon ?? null;
         if (content.name !== state.entry.name || content.color !== state.entry.color || !sameIcon(icon, state.entry.icon ?? null)) {
             state.entry = { ...state.entry, name: content.name, color: content.color, icon };
@@ -789,12 +788,7 @@ export class ProjectStore {
         }
         if (state) {
             state.entry = nextEntry;
-            state.lastText = written.text;
-            state.lastPrivate = written.private;
-            state.shared = [...shared];
-            state.rev = document.rev;
-            state.drawingIds = drawingIdsIn(document.views);
-            state.diagramIds = diagramIdsIn(document.views);
+            remember(state, written, document.rev, shared, document.views);
         }
         const daemonSide = fromPortable(document, entry.folder);
         this.index.set(projectId, entry.folder, daemonSide);
@@ -850,10 +844,7 @@ export class ProjectStore {
         projectId: string,
         readOnly = false
     ): Promise<{ entry: RegistryEntry; path: string; rev: number; content: ProjectContent; shared: string[] }> {
-        const entry = (await this.loadRegistry()).find((candidate) => candidate.projectId === projectId);
-        if (!entry) {
-            throw new ProjectError('project-not-found', `No project ${projectId}`);
-        }
+        const entry = entryIn(await this.loadRegistry(), projectId);
         const path = this.documentPath(entry);
         await this.recover(entry);
         let text: string;
@@ -908,20 +899,12 @@ export class ProjectStore {
                 }
                 return { content: next, result: null };
             });
-            const entry = (await this.loadRegistry()).find((candidate) => candidate.projectId === payload.projectId);
-            if (!entry) {
-                throw new ProjectError('project-not-found', `No project ${payload.projectId}`);
-            }
-            return this.summarize(entry);
+            return this.summarize(entryIn(await this.loadRegistry(), payload.projectId));
         });
     }
 
     private async setIconUnlocked(payload: ProjectSetIconPayload): Promise<ProjectSummary> {
-        const entries = await this.loadRegistry();
-        const entry = entries.find((candidate) => candidate.projectId === payload.projectId);
-        if (!entry) {
-            throw new ProjectError('project-not-found', `No project ${payload.projectId}`);
-        }
+        const entry = entryIn(await this.loadRegistry(), payload.projectId);
         if (payload.image === null) {
             await removeIconFiles(entry.folder);
         } else {
@@ -1003,11 +986,7 @@ export class ProjectStore {
             }
             this.release(projectId);
             const entries = await this.loadRegistry();
-            const entry = entries.find((candidate) => candidate.projectId === projectId);
-            if (!entry) {
-                throw new ProjectError('project-not-found', `No project ${projectId}`);
-            }
-            const closed = { ...entry, closedAt: Date.now() };
+            const closed = { ...entryIn(entries, projectId), closedAt: Date.now() };
             await this.saveRegistry(entries.map((candidate) => (candidate.projectId === projectId ? closed : candidate)));
             // What a machine holds is the same for everyone on it, agents included; which projects a
             // person keeps in their own menu is that client's business.
@@ -1023,10 +1002,7 @@ export class ProjectStore {
 
     private async deleteUnlocked(projectId: string, removeFiles: boolean): Promise<void> {
         const entries = await this.loadRegistry();
-        const entry = entries.find((candidate) => candidate.projectId === projectId);
-        if (!entry) {
-            throw new ProjectError('project-not-found', `No project ${projectId}`);
-        }
+        const entry = entryIn(entries, projectId);
         this.release(projectId);
         this.index.remove(projectId);
         await this.saveRegistry(entries.filter((candidate) => candidate.projectId !== projectId));
@@ -1101,7 +1077,6 @@ export class ProjectStore {
         return this.open.get(projectId)?.shared.includes(viewId) === true;
     }
 
-    /* The projects that are open right now, in no particular order. */
     openProjectIds(): string[] {
         return [...this.open.keys()];
     }
@@ -1237,12 +1212,7 @@ export class ProjectStore {
             await writePrivateFile(privatePathOf(path), privateFile);
         }
         const document: ProjectDocument = { version: PROJECT_VERSION, rev, ...loaded.content, shared: loaded.shared };
-        state.lastText = text;
-        state.lastPrivate = privateText;
-        state.shared = loaded.shared;
-        state.rev = rev;
-        state.drawingIds = drawingIdsIn(document.views);
-        state.diagramIds = diagramIdsIn(document.views);
+        remember(state, { text, private: privateText }, rev, loaded.shared, document.views);
         state.entry = { ...state.entry, name: document.name, color: document.color, icon: document.icon ?? null };
         this.index.set(state.entry.projectId, state.entry.folder, fromPortable(document, state.entry.folder));
         this.emit({ event: 'project.changed', payload: { projectId: state.entry.projectId, document: fromPortable(document, state.entry.folder) } });
@@ -1265,12 +1235,7 @@ export class ProjectStore {
         const document: ProjectDocument = { version: PROJECT_VERSION, rev: loaded.rev, ...loaded.content, shared: loaded.shared };
         const state = this.open.get(entry.projectId);
         if (state) {
-            state.lastText = written.text;
-            state.lastPrivate = written.private;
-            state.rev = loaded.rev;
-            state.shared = loaded.shared;
-            state.drawingIds = drawingIdsIn(document.views);
-            state.diagramIds = diagramIdsIn(document.views);
+            remember(state, written, loaded.rev, loaded.shared, document.views);
         }
         const daemonSide = fromPortable(document, entry.folder);
         this.index.set(entry.projectId, entry.folder, daemonSide);

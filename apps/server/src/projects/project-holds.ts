@@ -45,23 +45,11 @@ export class ProjectHolds {
     }
 
     holders(projectId: string): number {
-        let count = 0;
-        for (const held of this.byClient.values()) {
-            if (held.has(projectId)) {
-                count += 1;
-            }
-        }
-        return count;
+        return this.clientsOf(projectId).length;
     }
 
     /* Everyone but this client, which is what a confirmation asks before it says anything ends. */
     others(clientId: string, projectId: string): number {
-        let count = 0;
-        for (const [candidate, held] of this.byClient) {
-            if (candidate !== clientId && held.has(projectId)) {
-                count += 1;
-            }
-        }
-        return count;
+        return this.clientsOf(projectId).filter((candidate) => candidate !== clientId).length;
     }
 }

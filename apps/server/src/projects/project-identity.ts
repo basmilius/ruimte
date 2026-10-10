@@ -12,7 +12,7 @@ const NAME_MAX_BYTES = 4 * 1024;
 const NAME_MAX_CHARS = 64;
 
 // A folder is not re-read on every list; an icon dropped in by hand shows up within this window.
-export const DERIVE_TTL_MS = 5 * 60 * 1000;
+const DERIVE_TTL_MS = 5 * 60 * 1000;
 
 // Only the `index.html` at the root is scanned, and only this far in: the head is at the top.
 const HTML_SCAN_BYTES = 16 * 1024;
@@ -94,7 +94,16 @@ export function sniffIconMime(bytes: Uint8Array): string | null {
     return mime !== null && ICON_MIMES.has(mime) ? mime : null;
 }
 
-/* True while `path` stays inside `folder`, symlinks resolved. */
+interface StampedFile {
+    path: string;
+    size: number;
+    mtimeMs: number;
+}
+
+interface ImageFile extends StampedFile {
+    mime: string;
+}
+
 function isInside(folder: string, path: string): boolean {
     const rel = relative(folder, path);
     return rel !== '' && !climbsOut(rel);
@@ -104,7 +113,7 @@ function isInside(folder: string, path: string): boolean {
  * Resolves a candidate to a real file inside the folder. A symlink that points out of the folder
  * is refused after `realpath`, so a repository cannot hand the daemon someone's private key.
  */
-async function jailedFile(folder: string, candidate: string): Promise<{ path: string; size: number; mtimeMs: number } | null> {
+async function jailedFile(folder: string, candidate: string): Promise<StampedFile | null> {
     if (candidate.includes('\0') || isAbsolute(candidate)) {
         return null;
     }
@@ -112,34 +121,20 @@ async function jailedFile(folder: string, candidate: string): Promise<{ path: st
     if (!isInside(folder, path)) {
         return null;
     }
-    let real: string;
     try {
-        real = await realpath(path);
-    } catch {
-        return null;
-    }
-    let realFolder: string;
-    try {
-        realFolder = await realpath(folder);
-    } catch {
-        return null;
-    }
-    if (!isInside(realFolder, real)) {
-        return null;
-    }
-    try {
-        const info = await stat(real);
-        if (!info.isFile()) {
+        const real = await realpath(path);
+        if (!isInside(await realpath(folder), real)) {
             return null;
         }
-        return { path: real, size: info.size, mtimeMs: info.mtimeMs };
+        const info = await stat(real);
+        return info.isFile() ? { path: real, size: info.size, mtimeMs: info.mtimeMs } : null;
     } catch {
         return null;
     }
 }
 
 /* The bytes of a candidate with its sniffed MIME, or null when it is missing, too big or not an image. */
-async function readImage(folder: string, candidate: string): Promise<{ path: string; mime: string; size: number; mtimeMs: number } | null> {
+async function readImage(folder: string, candidate: string): Promise<ImageFile | null> {
     const file = await jailedFile(folder, candidate);
     if (!file || file.size === 0 || file.size > ICON_MAX_BYTES) {
         return null;
@@ -162,12 +157,12 @@ function darkVariantOf(candidate: string): string {
     return `${candidate.slice(0, candidate.length - ext.length)}_dark${ext}`;
 }
 
-function versionOf(light: { size: number; mtimeMs: number }, dark: { size: number; mtimeMs: number } | null): string {
-    const stamp = (file: { size: number; mtimeMs: number }): string => `${Math.round(file.mtimeMs)}-${file.size}`;
+function versionOf(light: StampedFile, dark: StampedFile | null): string {
+    const stamp = (file: StampedFile): string => `${Math.round(file.mtimeMs)}-${file.size}`;
     return dark ? `${stamp(light)}.${stamp(dark)}` : stamp(light);
 }
 
-async function toDerived(folder: string, candidate: string, light: { path: string; mime: string; size: number; mtimeMs: number }): Promise<DerivedIcon> {
+async function toDerived(folder: string, candidate: string, light: ImageFile): Promise<DerivedIcon> {
     const dark = await readImage(folder, darkVariantOf(candidate));
     return {
         from: candidate,
@@ -309,10 +304,6 @@ export class IdentityCache {
 
     invalidate(folder: string): void {
         this.entries.delete(normalizeKey(folder));
-    }
-
-    clear(): void {
-        this.entries.clear();
     }
 }
 

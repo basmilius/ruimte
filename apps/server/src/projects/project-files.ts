@@ -1,5 +1,5 @@
 import { mkdir, readFile, rename, rm } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import {
     DIAGRAM_VERSION,
     DRAWING_VERSION,
@@ -121,12 +121,10 @@ export async function writeJsonDocument<T>(path: string, document: T, serialize:
     return text;
 }
 
-/* What a file from a later release is refused with, in the one sentence a person can act on. */
 export function tooNewMessage(noun: string, version: number, known: number): string {
     return `This ${noun} was written by a newer Ruimte (file version ${version}, this one reads ${known}). Update Ruimte to open it.`;
 }
 
-/* Where the two files of a project sit, and the one line that keeps the second out of the repository. */
 export function documentPathInFolder(folder: string): string {
     return join(folder, PROJECT_DIR, PROJECT_FILE);
 }
@@ -144,9 +142,8 @@ export function gitignorePathOf(documentPath: string): string {
 }
 
 /*
- * Written once, when a project folder has none, and never touched again: a person who edits these
- * rules keeps their edit. `private/` is the whole point; the other two are the leftovers of a write
- * that crashed and of a file this daemon had to set aside, neither of which belongs in a commit.
+ * Written once, when a project folder has none, so a person who edits these rules keeps their edit.
+ * Besides `private/` it hides the leftovers of a crashed write and of a file set aside as corrupt.
  */
 export const GITIGNORE_TEXT = [
     '# Ruimte writes this folder. Everything here is meant to be committed,',
@@ -167,23 +164,29 @@ export async function writeGitignoreIfMissing(documentPath: string): Promise<boo
     return true;
 }
 
-/* Reads `.ruimte/project.json` on any version there has been. */
-export function readSharedFile(path: string): Promise<JsonDocumentRead<SharedFileRead>> {
-    return readJsonDocument(path, parseSharedFile);
-}
-
-export function parseSharedFile(text: string): JsonDocumentParse<SharedFileRead> {
+/* JSON that is not from a newer version, or the parse result that says why there is none. */
+function parseVersioned(text: string, known: number): { kind: 'value'; value: unknown } | JsonDocumentParse<never> {
     let value: unknown;
     try {
         value = JSON.parse(text);
     } catch {
         return { kind: 'unreadable' };
     }
-    const newer = newerVersionIn(value, PROJECT_VERSION);
-    if (newer !== null) {
-        return { kind: 'too-new', version: newer };
+    const newer = newerVersionIn(value, known);
+    return newer === null ? { kind: 'value', value } : { kind: 'too-new', version: newer };
+}
+
+/* Reads `.ruimte/project.json` on any version there has been. */
+export function readSharedFile(path: string): Promise<JsonDocumentRead<SharedFileRead>> {
+    return readJsonDocument(path, parseSharedFile);
+}
+
+export function parseSharedFile(text: string): JsonDocumentParse<SharedFileRead> {
+    const versioned = parseVersioned(text, PROJECT_VERSION);
+    if (versioned.kind !== 'value') {
+        return versioned;
     }
-    const read = migrateSharedFile(value);
+    const read = migrateSharedFile(versioned.value);
     if (!read) {
         return { kind: 'unreadable' };
     }
@@ -195,17 +198,11 @@ export function parseSharedFile(text: string): JsonDocumentParse<SharedFileRead>
 }
 
 export function parsePrivateFile(text: string): JsonDocumentParse<ProjectPrivateFile> {
-    let value: unknown;
-    try {
-        value = JSON.parse(text);
-    } catch {
-        return { kind: 'unreadable' };
+    const versioned = parseVersioned(text, PROJECT_PRIVATE_VERSION);
+    if (versioned.kind !== 'value') {
+        return versioned;
     }
-    const newer = newerVersionIn(value, PROJECT_PRIVATE_VERSION);
-    if (newer !== null) {
-        return { kind: 'too-new', version: newer };
-    }
-    const parsed = ProjectPrivateFileSchema.safeParse(value);
+    const parsed = ProjectPrivateFileSchema.safeParse(versioned.value);
     if (!parsed.success) {
         return { kind: 'unreadable' };
     }
@@ -217,11 +214,8 @@ export function readPrivateFile(path: string): Promise<JsonDocumentRead<ProjectP
 }
 
 /*
- * The file the way git reads best: two spaces for the shape, and every node, text, line and
- * arrangement of a canvas on a line of its own. `JSON.stringify(document, null, 2)` puts a node
- * over twenty lines, so two people who each add one collide at the end of the same array; this way
- * moving a node is one changed line and adding one is one line more. The drawings and the diagrams
- * have been written like this all along.
+ * Every node, text, edge and layout of a canvas on a line of its own, so moving a node is one changed
+ * line and two people adding one do not collide in a twenty-line block `JSON.stringify` would write.
  */
 const INDENT = '  ';
 
@@ -252,6 +246,11 @@ function serializeView(view: unknown, indent: string): string {
     return `${indent}{\n${fields.join(',\n')}\n${indent}}`;
 }
 
+/* A nested object pretty-printed, indented to sit one level into the file. */
+function nested(value: unknown): string {
+    return JSON.stringify(value, null, 2).split('\n').join(`\n${INDENT}`);
+}
+
 function viewsOnLines(views: readonly ProjectView[], indent: string): string {
     const stored = storedViewsOf(views);
     return stored.length === 0 ? '[]' : `[\n${stored.map((view) => serializeView(view, `${indent}${INDENT}`)).join(',\n')}\n${indent}]`;
@@ -274,15 +273,11 @@ export function serializePrivateFile(file: ProjectPrivateFile): string {
         `${INDENT}"rev": ${file.rev}`,
         `${INDENT}"views": ${viewsOnLines(file.views, INDENT)}`,
         `${INDENT}"order": ${itemsOnLines(file.order, INDENT)}`,
-        `${INDENT}"overlay": ${JSON.stringify(file.overlay, null, 2).split('\n').join(`\n${INDENT}`)}`,
-        ...(file.flags ? [`${INDENT}"flags": ${JSON.stringify(file.flags, null, 2).split('\n').join(`\n${INDENT}`)}`] : []),
-        ...(file.sql ? [`${INDENT}"sql": ${JSON.stringify(file.sql, null, 2).split('\n').join(`\n${INDENT}`)}`] : [])
+        `${INDENT}"overlay": ${nested(file.overlay)}`,
+        ...(file.flags ? [`${INDENT}"flags": ${nested(file.flags)}`] : []),
+        ...(file.sql ? [`${INDENT}"sql": ${nested(file.sql)}`] : [])
     ];
     return `{\n${fields.join(',\n')}\n}\n`;
-}
-
-export function writeSharedFile(path: string, file: ProjectSharedFile): Promise<string> {
-    return writeJsonDocument(path, file, serializeSharedFile);
 }
 
 export function writePrivateFile(path: string, file: ProjectPrivateFile): Promise<string> {
@@ -386,8 +381,8 @@ export function viewFilePathIn(dir: string, viewId: string): string {
 }
 
 export function viewFilePathOf(documentPath: string, kind: 'drawing' | 'diagram', viewId: string, shared: readonly string[]): string {
-    const dir = kind === 'drawing' ? drawingsDirOf(documentPath) : diagramsDirOf(documentPath);
-    return viewFilePathIn(shared.includes(viewId) ? dir : join(privateDirOf(documentPath), basename(dir)), viewId);
+    const dir = shared.includes(viewId) ? dirname(documentPath) : privateDirOf(documentPath);
+    return viewFilePathIn(join(dir, kind === 'drawing' ? DRAWINGS_DIR : DIAGRAMS_DIR), viewId);
 }
 
 /* The view a drawing or diagram file belongs to, or null for a name that is not one of ours. */
@@ -415,20 +410,12 @@ export function serializeDrawing(document: DrawingDocument): string {
     return ['{', `  "version": ${document.version},`, `  "rev": ${document.rev},`, `  "elements": ${oneItemPerLine(document.elements)}`, '}', ''].join('\n');
 }
 
-export type DrawingParse = JsonDocumentParse<DrawingDocument>;
-
-export function parseDrawing(text: string): DrawingParse {
-    let value: unknown;
-    try {
-        value = JSON.parse(text);
-    } catch {
-        return { kind: 'unreadable' };
+export function parseDrawing(text: string): JsonDocumentParse<DrawingDocument> {
+    const versioned = parseVersioned(text, DRAWING_VERSION);
+    if (versioned.kind !== 'value') {
+        return versioned;
     }
-    const newer = newerVersionIn(value, DRAWING_VERSION);
-    if (newer !== null) {
-        return { kind: 'too-new', version: newer };
-    }
-    const document = migrateDrawing(value);
+    const document = migrateDrawing(versioned.value);
     if (!document) {
         // JSON that is not a drawing at all: a person's file under our name, so it stays where it is.
         return { kind: 'invalid', message: 'This file is not a drawing Ruimte can read' };
@@ -463,20 +450,12 @@ export function serializeDiagram(document: DiagramDocument): string {
     ].join('\n');
 }
 
-export type DiagramParse = JsonDocumentParse<DiagramDocument>;
-
-export function parseDiagram(text: string): DiagramParse {
-    let value: unknown;
-    try {
-        value = JSON.parse(text);
-    } catch {
-        return { kind: 'unreadable' };
+export function parseDiagram(text: string): JsonDocumentParse<DiagramDocument> {
+    const versioned = parseVersioned(text, DIAGRAM_VERSION);
+    if (versioned.kind !== 'value') {
+        return versioned;
     }
-    const newer = newerVersionIn(value, DIAGRAM_VERSION);
-    if (newer !== null) {
-        return { kind: 'too-new', version: newer };
-    }
-    const document = migrateDiagram(value);
+    const document = migrateDiagram(versioned.value);
     if (!document) {
         // JSON that is not a diagram at all: a person's file under our name, so it stays where it is.
         return { kind: 'invalid', message: 'This file is not a diagram Ruimte can read' };

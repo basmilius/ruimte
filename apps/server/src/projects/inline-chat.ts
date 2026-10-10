@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
 import type {
     ChatCreatePayload,
@@ -11,6 +10,7 @@ import { isHiddenChatView } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents/coded-error';
 import { isInside } from '../canvas/project-paths.ts';
 import type { ProjectStore } from './project-store.ts';
+import { newChatId } from './scratch-project.ts';
 
 export class InlineChatError extends CodedError<'project-not-found' | 'inline-path-outside' | 'inline-chat-not-found'> {}
 
@@ -25,10 +25,6 @@ export interface InlineChatHost {
 }
 
 const INLINE_CHAT_NAME = 'Inline edit';
-
-function newChatId(): string {
-    return `chat-${randomBytes(6).toString('hex')}`;
-}
 
 /*
  * The folder the agent works in: the project's, or the checkout of the repository the file is in when
