@@ -33,11 +33,9 @@ const cache = new BlobCache({ maxIdleBytes: IDLE_BYTES });
 const NOTHING: MachineUrl = { url: null, failure: null };
 
 /*
- * The HTTP route for the bytes, with the machine's credential in the URL the way the socket carries it,
- * since an `<img>` cannot send a header. The version is in the URL too, which is what lets the browser
- * keep the answer for good. The machine is the one the thing on screen belongs to, never simply the
- * active one. A second workspace or a list that spans machines would otherwise ask the wrong daemon.
- * Null for a machine this client no longer knows.
+ * The credential rides in the URL since an `<img>` cannot send a header, and so does the version, so
+ * the browser keeps the answer for good. The machine is the one the thing on screen belongs to, never
+ * simply the active one. Null for a machine this client no longer knows.
  */
 export function httpUrlFor(endpointId: string, resource: MachineResource): string | null {
     const endpoint = endpointById(endpointId);
@@ -105,12 +103,9 @@ export function machineResourceKey(endpointId: string, resource: MachineResource
 
 /*
  * The one way something on screen turns bytes on a machine into a URL. Over a socket that is the HTTP
- * route. Over a direct connection there is no HTTP to count on, even where the address happens to
- * answer, because across two networks it will not. The bytes come over the channel instead, and the
- * URL is a blob URL from a cache shared by everything on screen. A load that failed is tried again
- * when the connection opens, since the usual reason is that it was not open. Media is the exception:
- * the bytes worker answers its player's ranges on this page's origin, so it starts at once and never
- * sits in memory whole, and it only falls back to a blob while the worker does not control the page.
+ * route. Across two networks a direct connection has no HTTP to count on, so the bytes come over the
+ * channel into a blob URL from a shared cache, tried again when the connection opens. Media streams
+ * through the bytes worker instead, and falls back to a blob while the worker does not control the page.
  */
 export function useMachineUrl(resource: MachineResource | null, endpointId?: string): MachineUrl {
     const activeId = useEndpoints((s) => s.activeId);
