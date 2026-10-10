@@ -176,11 +176,10 @@ function sameOrder(left: readonly string[], right: readonly string[]): boolean {
 }
 
 /*
- * The stacking order of the merged nodes. When only the other side moved the nodes both sides have
- * (a node brought to the front there), those take its order in the places they already hold here;
- * otherwise this client's order stands, both moving included. Stacking is the one field where both
- * sides changing it is no conflict. A click into a node brings it to the front, and a dialog for two
- * people clicking would be the dialog on every other save.
+ * The stacking order of the merged nodes. When only the other side moved the nodes both sides have,
+ * those take its order in the places they already hold here; otherwise this client's order stands.
+ * Both moving is no conflict: a click brings a node to the front, so it would be a dialog on every
+ * other save.
  */
 function stackingOf(base: readonly ProjectNode[], mine: readonly ProjectNode[], theirs: readonly ProjectNode[], merged: ProjectNode[]): ProjectNode[] {
     const inBase = new Set(base.map((node) => node.id));
@@ -255,15 +254,7 @@ function mergeCanvas(base: ProjectCanvasView, mine: ProjectCanvasView, theirs: P
         order,
         mine.nodes.map((node) => node.id)
     );
-    const empty =
-        nodes.put.length === 0 &&
-        texts.put.length === 0 &&
-        edges.put.length === 0 &&
-        nodes.removed.length === 0 &&
-        texts.removed.length === 0 &&
-        edges.removed.length === 0 &&
-        layouts === null &&
-        !moved;
+    const changed = moved || layouts !== null || [nodes, texts, edges].some((merge) => merge.put.length > 0 || merge.removed.length > 0);
     const patch: CanvasPatch = {
         nodes: nodes.put,
         texts: texts.put,
@@ -272,7 +263,7 @@ function mergeCanvas(base: ProjectCanvasView, mine: ProjectCanvasView, theirs: P
         order,
         layouts
     };
-    return { ok: true, view, patch: empty ? null : patch };
+    return { ok: true, view, patch: changed ? patch : null };
 }
 
 /*

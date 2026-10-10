@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { isCanvasView, isOpenableView, isSessionView, sessionNodesOfView, type AgentKind, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, isOpenableView, sessionNodesOfView, type AgentKind, type ProjectView } from '@ruimte/contracts';
 import { askBeforeEndingAgents } from '@/agents/end-children';
 import {
     createNodeAction,
@@ -17,7 +17,7 @@ import {
 import { offerDraft } from '@adecore/agents-react/chat/drafts';
 import { GRID, type Point } from '@/canvas/math';
 import { databaseTargetOf, databaseViewName } from '@/database/view-name';
-import { filesOfView } from '@/project/view-deletion';
+import { filesOfView, nodesOfView } from '@/project/view-deletion';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { NODE_SIZE, focusedCanvas, liveCanvas } from '@/state/canvas';
@@ -30,7 +30,6 @@ import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 
-/* Puts a view on screen. A node that lives on another canvas is reached by switching there first. */
 export function showView(id: string, options: { newTab?: boolean } = {}): void {
     if (options.newTab) {
         openInNewTabAction(id);
@@ -57,6 +56,7 @@ export function showViewWhenItLands(id: string): void {
     });
 }
 
+/* A node that lives on another canvas is reached by switching there first. */
 export function revealNode(nodeId: string): void {
     const { views, activeViewId } = useDocument.getState();
     const view = viewOfNode(views, nodeId);
@@ -115,10 +115,9 @@ function canvasForFile(): string | null {
 }
 
 /*
- * A file as a node on the canvas. The path may be absolute on the daemon's machine or already
- * stored the way a node holds one; both come out the same, since shortening a stored path is a
- * no-op. `at` says where the node's middle goes, in world units, which a drop knows and a menu does
- * not. Without one it lands near the middle of the view and the camera travels to it.
+ * A file as a node on the canvas. The path may be absolute on the daemon's machine or already stored.
+ * `at` is the node's middle in world units; without it the node lands near the middle of the view and
+ * the camera travels to it.
  */
 export async function showFileOnCanvas(path: string, at?: Point): Promise<string | null> {
     const canvasViewId = canvasForFile();
@@ -188,10 +187,8 @@ export async function promoteLooseDatabase(key: string, after?: string | null): 
 }
 
 /*
- * Puts a view in the shared file, or takes it back out, and says what happened with a way back. No
- * dialog. Nothing reaches anyone until the person commits, so there is nothing here to confirm. The
- * line names the count, which is the one thing a person did not see coming; the titles ride along
- * with it, and a chat titles itself after its first prompt.
+ * Puts a view in the shared file, or takes it back out, and says so with a way back. No dialog:
+ * nothing reaches anyone until the person commits.
  */
 export async function setViewShared(viewId: string, shared: boolean): Promise<void> {
     const done = await shareViewAction(viewId, shared);
@@ -216,9 +213,8 @@ export interface SessionHandoff {
 
 /*
  * The same CLI session in the other kind of view: a chat for what a terminal is running, a terminal
- * for the CLI's own screen of a chat. Nothing is copied and neither view moves; both read the one
- * session, and the daemon owns the resume. It lands right under the view it came from, the way a
- * fork does, since a list is where a person looks for what they just opened.
+ * for the CLI's own screen of a chat. Both read the one session, and the daemon owns the resume. It
+ * lands right under the view it came from, the way a fork does.
  */
 export async function openSessionInKind(viewId: string, kind: 'chat' | 'terminal', handoff: SessionHandoff): Promise<string | null> {
     const source = useDocument.getState().views.find((view) => view.id === viewId);
@@ -259,18 +255,7 @@ export interface ProjectNodeRef extends StatusOf {
  * lifecycle) reads this rather than the canvas on screen.
  */
 export function projectNodes(): ProjectNodeRef[] {
-    const { views } = useDocument.getState();
-    return views.flatMap<ProjectNodeRef>((view) => {
-        if (isSessionView(view)) {
-            return [{ id: view.id, kind: view.kind, title: view.name }];
-        }
-        if (!isCanvasView(view)) {
-            return [];
-        }
-        // Every view on screen has an editor of its own, and what it holds is newer than the copy here.
-        const editor = liveCanvas(view.id);
-        return editor === null ? view.nodes : editor.order.map((id) => editor.nodes[id]!);
-    });
+    return useDocument.getState().views.flatMap(nodesOfView);
 }
 
 /* Which nodes can leave a canvas for a view of their own: the ones that are a session, not a frame. */

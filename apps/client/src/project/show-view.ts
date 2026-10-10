@@ -29,10 +29,9 @@ export interface ShowViewNotice {
 }
 
 /*
- * What an agent's `view open` says, in all three cases. Every one of them is the banner over the views.
- * Whether the view moved or not, it is the same agent speaking about the same thing, and a message
- * that changes place with a setting is two features to learn instead of one. `alreadyThere` is asked
- * before anything moves, since offering a way back to where the person is standing reads as a bug.
+ * What an agent's `view open` says, always in the banner over the views, whether the view moved or
+ * not. `alreadyThere` is asked before anything moves, since a way back to where the person stands
+ * reads as a bug.
  */
 export function showViewNotice(input: { agent: string | null; view: string; follow: boolean; alreadyThere: boolean }): ShowViewNotice {
     // What a toast calls an agent whose node this client cannot find in the document it holds.

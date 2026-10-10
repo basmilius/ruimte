@@ -33,18 +33,19 @@ export async function setProjectIdentity(
     return remember(connected.endpointId, summary);
 }
 
-export async function uploadProjectIcon(endpointId: string, projectId: string, mime: string, base64: string): Promise<ProjectSettingsResult> {
+/* Clears a picked icon first, so the image (or, with null, the folder's own icon) is what shows. */
+async function setIconImage(endpointId: string, projectId: string, image: { mime: string; base64: string } | null): Promise<ProjectSettingsResult> {
     const connected = await connectedTransport(endpointId);
     const cleared = await connected.transport.request('project.setIdentity', { projectId, icon: null });
     remember(connected.endpointId, cleared.summary);
-    const { summary } = await connected.transport.request('project.setIcon', { projectId, image: { mime, base64 } });
+    const { summary } = await connected.transport.request('project.setIcon', { projectId, image });
     return remember(connected.endpointId, summary);
 }
 
-export async function setProjectFolderIcon(endpointId: string, projectId: string): Promise<ProjectSettingsResult> {
-    const connected = await connectedTransport(endpointId);
-    const cleared = await connected.transport.request('project.setIdentity', { projectId, icon: null });
-    remember(connected.endpointId, cleared.summary);
-    const { summary } = await connected.transport.request('project.setIcon', { projectId, image: null });
-    return remember(connected.endpointId, summary);
+export function uploadProjectIcon(endpointId: string, projectId: string, mime: string, base64: string): Promise<ProjectSettingsResult> {
+    return setIconImage(endpointId, projectId, { mime, base64 });
+}
+
+export function setProjectFolderIcon(endpointId: string, projectId: string): Promise<ProjectSettingsResult> {
+    return setIconImage(endpointId, projectId, null);
 }

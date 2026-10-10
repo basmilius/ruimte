@@ -1,10 +1,11 @@
 import { ProjectDocumentSchema, type ProjectDocument } from '@ruimte/contracts';
 import { z } from 'zod';
+import i18next from 'i18next';
 import { endpointKey } from '@/state/keys';
 import type { LastProjectStorage } from './last-project';
-import i18next from 'i18next';
 
 const DraftSchema = z.object({ base: ProjectDocumentSchema, document: ProjectDocumentSchema });
+
 function keyOf(endpointId: string, projectId: string): string {
     return `ruimte.projectDraft.${endpointKey(endpointId, projectId)}`;
 }

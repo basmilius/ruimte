@@ -262,10 +262,8 @@ export class ProjectClient {
         await this.flush();
         this.flushLocal();
         this.opened = false;
-        if (current) {
-            if (this.transport.status === 'open' && !this.locallyDrafted) {
-                await this.transport.request('project.release', { projectId: current.projectId }).catch(() => undefined);
-            }
+        if (current && this.transport.status === 'open' && !this.locallyDrafted) {
+            await this.transport.request('project.release', { projectId: current.projectId }).catch(() => undefined);
         }
     }
 
@@ -329,24 +327,12 @@ export class ProjectClient {
 
     /* Writes `<folder>/.ruimte/icon.<ext>` and lets the folder be what the glyph shows. */
     async uploadIcon(mime: string, base64: string): Promise<void> {
-        const current = this.sink.getState().current;
-        if (!current) {
-            return;
-        }
-        await this.setChosenIcon(null);
-        const { summary } = await this.transport.request('project.setIcon', { projectId: current.projectId, image: { mime, base64 } });
-        this.applySummary(summary);
+        await this.writeIconFile({ mime, base64 });
     }
 
     /* Drops the choice and the file the app wrote, so the rest of the folder gets its turn again. */
     async useFolderIcon(): Promise<void> {
-        const current = this.sink.getState().current;
-        if (!current) {
-            return;
-        }
-        await this.setChosenIcon(null);
-        const { summary } = await this.transport.request('project.setIcon', { projectId: current.projectId, image: null });
-        this.applySummary(summary);
+        await this.writeIconFile(null);
     }
 
     /* Takes what is on disk, or keeps the screen and writes it over the file's newer rev. */
@@ -356,9 +342,7 @@ export class ProjectClient {
             return;
         }
         this.sink.setConflict(null);
-        this.base = contentOf(conflict);
-        this.baseRev = conflict.rev;
-        this.baseShared = [...(conflict.shared ?? [])];
+        this.setBase(conflict);
         if (choice === 'theirs') {
             this.documents.getState().reload(conflict, this.localOfScreen());
             this.sink.setChosenIcon(conflict.icon ?? null);
@@ -394,12 +378,12 @@ export class ProjectClient {
         }
     }
 
-    /* Lets go of the machine. No more events, and no timer that would write to a daemon the client left. */
     /* Settles once the project is open on the daemon again after the link came back, at once when no reopen is on its way. */
     whenOpen(): Promise<void> {
         return this.resuming ?? Promise.resolve();
     }
 
+    /* Lets go of the machine. No more events, and no timer that would write to a daemon the client left. */
     dispose(): void {
         for (const off of this.unsubscribe) {
             off();
@@ -413,6 +397,23 @@ export class ProjectClient {
             clearTimeout(this.localTimer);
             this.localTimer = null;
         }
+    }
+
+    private async writeIconFile(image: { mime: string; base64: string } | null): Promise<void> {
+        const current = this.sink.getState().current;
+        if (!current) {
+            return;
+        }
+        await this.setChosenIcon(null);
+        const { summary } = await this.transport.request('project.setIcon', { projectId: current.projectId, image });
+        this.applySummary(summary);
+    }
+
+    /* What the daemon's file holds at `document.rev`, which the next merge measures against. */
+    private setBase(document: ProjectDocument): void {
+        this.base = contentOf(document);
+        this.baseRev = document.rev;
+        this.baseShared = [...(document.shared ?? [])];
     }
 
     /* What is open on this endpoint now; the other endpoints keep what they had. */
@@ -589,13 +590,13 @@ export class ProjectClient {
             return this.saving.then((outcome) => (outcome === 'saved' && this.sink.getState().dirty ? this.save() : outcome));
         }
         const { current, rev, conflict } = this.sink.getState();
-        // A link that is down keeps the edit dirty for the resume to write, rather than a request that can only fail.
         if (!this.opened || !current) {
             return Promise.resolve('saved');
         }
         if (conflict) {
             return Promise.resolve('failed');
         }
+        // A link that is down keeps the edit dirty for the resume to write, rather than a request that can only fail.
         if (this.transport.status !== 'open') {
             return Promise.resolve('offline');
         }
@@ -628,15 +629,17 @@ export class ProjectClient {
                     /* A change that landed while this save was on its way has already been merged in,
                        rev and all, so the write only has to be made again against it. If the rev has
                        not moved the watcher's event is still coming, and carries what to merge with. */
-                    if (this.sink.getState().rev !== rev) {
-                        this.scheduleSave();
+                    if (this.sink.getState().rev === rev) {
+                        return 'failed' as const;
                     }
-                    return this.sink.getState().rev !== rev ? ('saved' as const) : ('failed' as const);
+                    this.scheduleSave();
+                    return 'saved' as const;
                 }
-                if (!isConnectionError(e)) {
-                    this.sink.setError(e instanceof Error ? e.message : i18next.t('project:error.projectNotSaved'));
+                if (isConnectionError(e)) {
+                    return 'offline' as const;
                 }
-                return isConnectionError(e) ? ('offline' as const) : ('failed' as const);
+                this.sink.setError(e instanceof Error ? e.message : i18next.t('project:error.projectNotSaved'));
+                return 'failed' as const;
             })
             .finally(() => {
                 this.saving = null;
@@ -664,9 +667,7 @@ export class ProjectClient {
             this.sink.setConflict(document);
             return;
         }
-        this.base = contentOf(document);
-        this.baseRev = document.rev;
-        this.baseShared = [...(document.shared ?? [])];
+        this.setBase(document);
         this.documents.getState().reload(document, this.localOfScreen());
         this.sink.setChosenIcon(document.icon ?? null);
         this.sink.setCurrent({ ...current, name: document.name, color: document.color, icon: document.icon ?? current.icon }, document.rev);
@@ -689,9 +690,7 @@ export class ProjectClient {
             return false;
         }
         this.refusal = null;
-        this.base = contentOf(document);
-        this.baseRev = document.rev;
-        this.baseShared = [...(document.shared ?? [])];
+        this.setBase(document);
         this.sink.setRev(document.rev);
         /* Which file a view is in is the folder's answer and not this screen's. A colleague's pull
            can share one, and nothing here may argue with what the daemon just read off disk. */

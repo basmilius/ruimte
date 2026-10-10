@@ -25,9 +25,8 @@ function showInWorkspace(payload: ProjectShowViewEvent): void {
     /* The grid moves first, so the way back is recorded against the grid as it stands after the move
        and a second `view open` undoes the second one rather than the first. */
     const shown = notice.action === 'back' ? useDocument.getState().showView(payload.viewId) : null;
-    /* One banner. An agent that shows three views in a row leaves the last of them on
-       screen, not a stack nobody asked for. Nothing to go back to when the grid was empty, which is a
-       project whose views all went, so that one only reports. */
+    /* One banner, so three views in a row leave the last on screen. An empty grid has nothing to go
+       back to, so that one only reports. */
     useDocument.getState().showNotice({
         message: notice.message,
         action: notice.action === 'go' ? { kind: 'go', viewId: payload.viewId } : shown === null ? null : { kind: 'back', shown }

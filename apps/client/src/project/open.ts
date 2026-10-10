@@ -65,12 +65,11 @@ function requestOf(plan: SwitchPlan): OpenRequest {
 }
 
 /*
- * The steps of one switch. The machine is reached before anything moves, since no machine keeps a
- * link while nothing is open on it; one that does not answer leaves the window where it was. Then
- * the shell is asked for the project, since a project is in one window at a time: when another
- * window has it, that one comes to the front and this one stays as it was. Then the open project
- * is left (written and released) and the next one is built in a workspace of its own. A run
- * remembers what it left and what it entered, so going back undoes exactly that.
+ * The steps of one switch. The machine is reached before anything moves; one that does not answer
+ * leaves the window where it was. Then the shell is asked for the project, which is in one window
+ * at a time: when another window has it, that one comes to the front. Then the open project is left
+ * and the next one is built in a workspace of its own. A run remembers what it left and what it
+ * entered, so going back undoes exactly that.
  */
 export function switchRun(plan: SwitchPlan, deps: SwitchDeps = REAL_DEPS): SwitchRun {
     let left: Whereabouts | null = null;
@@ -244,9 +243,8 @@ export async function closingProject(endpointId: string, summary: ProjectSummary
 
 /* Removes a project from its machine. The open one is closed first, so its sessions end with it. */
 export async function deleteProject(endpointId: string, projectId: string, removeFiles: boolean): Promise<void> {
-    const { current, currentEndpointId } = useProject.getState();
     // Deleting takes the unsaved edits of an open conflict with it, which the person already agreed to.
-    if (windowWorkspace() && current?.projectId === projectId && currentEndpointId === endpointId) {
+    if (isOpenHere(endpointId, projectId)) {
         await putAway();
     }
     const machine = machineFor(endpointId);

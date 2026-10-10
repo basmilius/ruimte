@@ -2,29 +2,24 @@ import i18next from 'i18next';
 import { sessionNodesOfView, type ProjectClosingResult, type ProjectView, type ViewSessionNode } from '@ruimte/contracts';
 
 /*
- * Every session a project holds, over every view it has. The views have to be the exported ones
- * (`exportViews`), so the view on screen is counted with what the canvas store has of it rather
- * than with the copy the document was loaded with. What one view holds is the daemon's rule too,
- * since `ruimte-context view delete` ends the same sessions on a canvas it removes.
+ * Every session a project holds, over every view it has. Pass the exported views (`exportViews`), so
+ * the view on screen counts what its canvas store holds. The daemon's `view delete` ends the same set.
  */
 export function sessionNodesOf(views: readonly ProjectView[]): ViewSessionNode[] {
     return views.flatMap(sessionNodesOfView);
 }
 
 /*
- * What the confirmation counts. The document on screen knows its own sessions better than the
- * machine's copy of it does, since a node made a moment ago has not been saved yet, so it wins
- * whenever there is one. A project another client keeps loses nothing either way.
+ * What the confirmation counts. The document on screen wins, since a node made a moment ago has not
+ * been saved yet. A project another client keeps loses nothing either way.
  */
 export function closingCount(answer: ProjectClosingResult, local: number | null): ProjectClosingResult {
     return answer.otherClients > 0 || local === null ? answer : { ...answer, sessions: local };
 }
 
 /*
- * What the confirmation says before a project closes. It counts rather than hedges, since a person
- * about to lose an agent mid-run wants to know how many, and the scrollback of a terminal is gone
- * with the session, which is the part that cannot be undone. A project another client still has
- * open loses nothing, so that is what it says instead of a count of what stays.
+ * What the confirmation says before a project closes: how many sessions end, since their scrollback
+ * cannot come back. A project another client still has open loses nothing, so it says that instead.
  */
 export function closeWarning(sessions: number, otherClients = 0): string {
     if (otherClients > 0) {
