@@ -3,6 +3,7 @@ import { AgentKindSchema, type ContextSource } from '@ruimte/contracts';
 import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
 import { NODE_VERB_KINDS } from '../canvas/node-kinds.ts';
 import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
+import { uiSourceExamples } from '../chat/ui-source-args.ts';
 
 /* Asked for a CLI by name, a model that has not read the names goes looking through its own tools
    for one and reports back that this machine has none, so the verb names them where it is offered. */
@@ -63,17 +64,45 @@ export const VISUAL_FILES_NOTE =
 export const VISUAL_LAYOUT_NOTE =
     'Visuals follow the reply column by default. For an application mockup or dashboard that benefits from more width, opt in with `visual show --layout wide`. The host chooses the width within the chat pane; keep the page responsive and preview it at both 360px and 1200px with `visual preview --width`.';
 
-export const VISUAL_NOTE =
-    uiSessionNote({ fenceLanguage: RUIMTE_UI_FENCE }) +
-    ' Live data: $name = @Query("source", {args}). Sources: git.status {repo:"."}, git.log {repo:".",limit:30}, launch.status {name:"api"}, chat.tasks {}, database.query {connection:"id",sql:"SELECT ...",schema:null,limit:50}. Database rows are records for Table. Sources are literal; arguments may reference local inputs. Queries only read. ' +
-    ' For free diagrams, collages, mockups and local images outside the catalog, show a self-contained HTML page above your reply with `ruimte-context visual show --title T < page.html` after checking it with `visual preview` (`ruimte-context help visual` has the rules), and let the reply add only what the page does not say. ' +
-    VISUAL_FILES_NOTE +
-    ' ' +
-    VISUAL_LAYOUT_NOTE;
+/*
+ * The catalog of UI blocks and how to use it, said only to an agent a person reads in a thread: a
+ * hidden task child's answer reaches its parent as text, where a block would be source.
+ */
+function uiNote(databases: boolean): string {
+    const sources = uiSourceExamples(databases)
+        .map(({ name, args }) => `${name} ${args}`)
+        .join(', ');
+    // The note ends its example with the closing fence on a line of its own, which the rest must not join.
+    return (
+        uiSessionNote({ fenceLanguage: RUIMTE_UI_FENCE }) +
+        [
+            'Write a block when the answer has structure a person scans or acts on (numbers to compare, rows, steps, a status, next steps to pick); what a sentence or a short list says stays prose. `ruimte-context help ui` describes every component.',
+            'Children sit in their parent: Stat in Stats, Column in Table, Option in Segmented, Item in Checklist, Choice in Choices, Step in Steps, Entry in EntityList, Tab in Tabs, Section in Sections, Source in Sources.',
+            'Each items={$rows} as="row" names each item, read without $ as {row.name}. Chart data rows are {label: "Core", passed: 32, failed: 1}. File and Diff paths are relative to your working folder; a Node id is one ruimte-context printed.',
+            `Live data: $name = @Query("source", {args}), with these sources and arguments: ${sources}. git.status gives the branch, ahead, behind, counts per state and the first files.${databases ? ' database.query rows are records for Table and Chart.' : ''} Sources are literal; arguments may reference local inputs. Queries only read, never start work or run writes.`
+        ].join(' ')
+    );
+}
+
+/* What an AI chat is told while visual replies are on; `ui` adds the block catalog, which keeps pages for what it cannot draw. */
+function visualNote(ui: boolean, databases: boolean): string {
+    const page = ui
+        ? 'Keep an HTML visual for what the catalog cannot draw (a free diagram, a collage, a mockup, local images): show a self-contained page above your reply'
+        : 'When a chart, a table, a diagram, a collage of images or a mockup would say more than prose, show a self-contained HTML page above your reply';
+    return [
+        ...(ui ? [uiNote(databases)] : []),
+        `${page} with \`ruimte-context visual show --title T < page.html\` after checking it with \`visual preview\` (\`ruimte-context help visual\` has the rules), and let the reply add only what the page does not say.`,
+        VISUAL_FILES_NOTE,
+        VISUAL_LAYOUT_NOTE
+    ].join(' ');
+}
+
+/* What a chat hears again when its CLI resumes: the catalog is in the conversation already, where to keep files is not. */
+export const VISUAL_RESUME_NOTE = `${VISUAL_FILES_NOTE} ${VISUAL_LAYOUT_NOTE}`;
 
 /* Said only in a project with database connections: without it a model asked about the data reads the schema from migrations and guesses. */
-function databaseNote(visuals: boolean): string {
-    return `This project has databases: answer a question about its data with \`ruimte-context database\` (list, tables, describe, query), which reads with one SELECT or WITH statement on a read-only session${visuals ? ', and `query --show TITLE` shows the rows as a table above your reply' : ''}; \`ruimte-context help database\` has the rules.`;
+function databaseNote(ui: boolean): string {
+    return `This project has databases: answer a question about its data with \`ruimte-context database\` (list, tables, describe, query), which reads with one SELECT or WITH statement on a read-only session${ui ? '; to show rows, write a block with $rows = @Query("database.query", {...}) and a Table or Chart' : ''}; \`ruimte-context help database\` has the rules.`;
 }
 
 /* Said only while a device node is linked in: without it a model asked to try an app reaches for a simulator of its own. */
@@ -98,6 +127,8 @@ export function verbsNote({
     visuals?: boolean;
     databases?: boolean;
 }): string {
+    // A task child at any depth answers its parent, never a person reading blocks.
+    const ui = depth === 0;
     if (standalone && !terminal) {
         return [
             PRODUCT_NOTE,
@@ -112,8 +143,8 @@ export function verbsNote({
                 : []),
             'For a note or drawing the person asks for in Ruimte, name its destination with --view.',
             ALERT_NOTE,
-            ...(visuals ? [VISUAL_NOTE] : []),
-            ...(databases ? [databaseNote(visuals)] : []),
+            ...(visuals ? [visualNote(ui, databases)] : []),
+            ...(databases ? [databaseNote(visuals && ui)] : []),
             ...(computer ? [COMPUTER_NOTE] : []),
             ...(device ? [DEVICE_NOTE] : []),
             'Ids in its output are for your commands; to the person, name things by their title, never by id.'
@@ -129,10 +160,10 @@ export function verbsNote({
         parts.push('With `--task` a result comes back as your next message once it settles, so end your turn instead of polling.');
     }
     if (visuals) {
-        parts.push(VISUAL_NOTE);
+        parts.push(visualNote(ui, databases));
     }
     if (databases) {
-        parts.push(databaseNote(visuals));
+        parts.push(databaseNote(visuals && ui));
     }
     if (computer) {
         parts.push(COMPUTER_NOTE);

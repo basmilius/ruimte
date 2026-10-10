@@ -213,7 +213,7 @@ export const VISUAL_ACTIONS = [write, preview, show, list, remove] as const;
 export const VISUAL_SUMMARY = 'Saves visual sources outside the project, previews and shows them in this chat, and lists and removes the ones it shows';
 
 export const VISUAL_DETAIL: readonly string[] = [
-    'when\tA chart, a table, a diagram, a collage of images or a mockup that says more than prose; never for what a sentence or a short list says',
+    'when\tA free diagram, a collage of images, a mockup or local images that the ruimte-ui catalog cannot draw; numbers, tables, charts and statuses go in a ruimte-ui block (ruimte-context help ui). Never for what a sentence or a short list says',
     `page\t${VISUAL_PAGE_RULES}`,
     'storage\tSave HTML directly with ruimte-context visual write --name chart.html and the page on stdin. Use its returned absolute path for preview and show, and the same name to update the source. Sources and previews live with this chat under RUIMTE_HOME, outside the project; only an explicit export belongs in a project file',
     IMAGES_LINE,

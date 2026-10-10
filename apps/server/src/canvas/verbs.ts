@@ -1,9 +1,7 @@
 import { actionDescription } from '@ruimte/actions';
 import { ChatSubagentSourceSchema, ContextSourceSchema } from '@ruimte/contracts';
-import { uiReferenceText } from '@adecore/intelligent-ui/text';
 import { alertVerb } from './alert-verb.ts';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
-import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 // First: verbs join the --dry-run list as they are defined, and node new has always led it.
 import { nodeDeleteAction, nodeListAction, nodeNewAction } from './node-verb.ts';
 import { agentVerb } from './agent-verb.ts';
@@ -27,6 +25,7 @@ import { planVerb } from './plan-verb.ts';
 import { renameAction } from './rename-verb.ts';
 import { doneVerb, taskListAction, taskNewAction } from './task-verbs.ts';
 import { teamVerb } from './team-verb.ts';
+import { UI_DETAIL, UI_SUMMARY } from './ui-verb.ts';
 import { VIEW_ACTIONS, VIEW_DETAIL, VIEW_SUMMARY } from './view-verb.ts';
 import { VISUAL_ACTIONS, VISUAL_DETAIL, VISUAL_SUMMARY } from './visual-verb.ts';
 import { worktreeVerb } from './worktree-verb.ts';
@@ -143,11 +142,8 @@ const viewNoun = defineNoun({
 
 const uiNoun = defineNoun({
     name: 'ui',
-    summary: 'The catalog and syntax of fenced ruimte-ui blocks in replies; writes no project resource',
-    detail: [
-        'syntax\tWrite a fenced ruimte-ui block in your reply; this is a reference, not a command.',
-        ...uiReferenceText({ fenceLanguage: RUIMTE_UI_FENCE }).split('\n')
-    ],
+    summary: UI_SUMMARY,
+    detail: UI_DETAIL,
     actions: []
 });
 

@@ -3,9 +3,26 @@ import { compileUi } from '@adecore/intelligent-ui';
 import { AgentKindSchema, type ContextSource } from '@ruimte/contracts';
 import { NODE_VERB_KINDS } from '../canvas/node-verb.ts';
 import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
-import { chatPrompt, contextChangeNote, contextHint, contextPrompt, hookContext, verbsNote, VISUAL_NOTE } from './context-note.ts';
+import { ruimteUiSources, type UiSourceHosts } from '../chat/ui-sources.ts';
+import { chatPrompt, contextChangeNote, contextHint, contextPrompt, hookContext, verbsNote, VISUAL_RESUME_NOTE } from './context-note.ts';
 
 const VERBS_NOTE = verbsNote({ depth: 0 });
+const VISUAL_NOTE = verbsNote({ depth: 0, standalone: true, visuals: true, databases: true });
+
+// Only the argument schemas are read; a source that ran would be a bug in the test.
+const unused = (): never => {
+    throw new Error('unused');
+};
+const SOURCE_HOSTS: UiSourceHosts = {
+    place: unused,
+    node: unused,
+    worktreePaths: unused,
+    gitStatus: unused,
+    gitLog: unused,
+    launches: unused,
+    tasks: unused,
+    databases: unused
+};
 
 const text: ContextSource = { id: 'text-1', kind: 'text', title: 'Sprint goals' };
 const terminal: ContextSource = { id: 'term-1', kind: 'terminal', title: 'dev server' };
@@ -37,6 +54,34 @@ describe('verbsNote', () => {
         expect(blocks[0].nodes.some((node) => node.type === 'Summary')).toBe(true);
     });
 
+    test('every live data source the note advertises compiles against the sources the daemon reads', () => {
+        const sources = ruimteUiSources(SOURCE_HOSTS).sources;
+        const querySchemas = Object.fromEntries(Object.entries(sources).map(([name, source]) => [name, source.args]));
+        const advertised = [...VISUAL_NOTE.matchAll(/\b([a-z]+\.[a-z]+) (\{[^}]*\})/g)].filter(([, name]) => Object.hasOwn(sources, name!));
+        expect(advertised.map(([, name]) => name).toSorted()).toEqual(Object.keys(sources).toSorted());
+        for (const [, name, args] of advertised) {
+            const block = `\`\`\`${RUIMTE_UI_FENCE}\n$data = @Query("${name}", ${args})\n<Summary>{@Count($data)}</Summary>\n\`\`\``;
+            const [compiled] = compileUi(block, { id: name!, final: true, fenceLanguage: RUIMTE_UI_FENCE, querySchemas });
+            expect(compiled?.diagnostics).toEqual([]);
+            expect(Object.values(compiled?.queries ?? {}).map((query) => query.source)).toEqual([name!]);
+        }
+    });
+
+    test('teaches the catalog only to a chat a person reads, with databases only where the project has connections', () => {
+        expect(VISUAL_NOTE).toContain('Queries only read, never start work or run writes.');
+        expect(VISUAL_NOTE).toContain('`ruimte-context help ui`');
+        expect(VISUAL_NOTE).toContain('Stat in Stats');
+        expect(VISUAL_NOTE).toContain('@Query("database.query"');
+        expect(VISUAL_NOTE).not.toContain('query --show');
+        expect(VISUAL_NOTE).not.toContain('  ');
+        expect(verbsNote({ depth: 0, standalone: true, visuals: true })).not.toContain('database.query');
+        const child = verbsNote({ depth: 1, standalone: true, visuals: true, databases: true });
+        expect(child).not.toContain(RUIMTE_UI_FENCE);
+        expect(child).not.toContain('@Query');
+        expect(child).toContain('`ruimte-context visual show --title T < page.html`');
+        expect(VISUAL_RESUME_NOTE).not.toContain(RUIMTE_UI_FENCE);
+    });
+
     test('names computer use only while it is on for this machine', () => {
         for (const standalone of [false, true]) {
             expect(verbsNote({ depth: 0, standalone })).not.toContain('computer');
@@ -53,7 +98,7 @@ describe('verbsNote', () => {
 
     test('tells an AI chat about visuals only while they are on, on a canvas and in a view alike, and never a terminal', () => {
         for (const standalone of [false, true]) {
-            expect(chatPrompt({ sources: [], depth: 0, standalone, visuals: true })).toContain(VISUAL_NOTE);
+            expect(chatPrompt({ sources: [], depth: 0, standalone, visuals: true })).toContain('`ruimte-context visual show --title T < page.html`');
             expect(chatPrompt({ sources: [], depth: 0, standalone })).not.toContain('visual');
             expect(chatPrompt({ sources: [], depth: 0, standalone, visuals: false })).not.toContain('visual');
         }

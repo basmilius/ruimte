@@ -322,7 +322,7 @@ export const DATABASE_SUMMARY =
 export const DATABASE_DETAIL: readonly string[] = [
     "when\tA question about the project's data, such as the last orders over an amount or how many users signed up this week: database list for the connections, database tables and database describe for where the data is, then database query",
     'read\tA query is one statement that starts with SELECT or WITH, on a session opened read only; it never changes anything',
-    'show\tquery --show TITLE puts the rows as a table above your reply in an AI chat; the reply then adds what the table does not say and does not repeat the rows',
+    'show\tIn an AI chat, show rows with a ruimte-ui block: $rows = @Query("database.query", {connection: "<connection>", sql: "<sql>"}) and a Table or Chart (ruimte-context help ui). query --show TITLE still puts a static table above your reply; either way the reply adds what the rows do not say and does not repeat them',
     'write\tdatabase execute writes, only on a connection a person on this machine allowed agents to write to in the connections dialog of the app; you cannot allow it yourself',
     'access\tA person can also turn a connection off for agents, and every action on it is refused with database-access-off',
     SESSION_LINE,

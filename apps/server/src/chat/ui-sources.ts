@@ -9,6 +9,7 @@ import type { LaunchReading } from '../canvas/verb.ts';
 import type { AgentDatabases, DatabasePlace } from '../database/agent-databases.ts';
 import { ChatError } from './errors.ts';
 import { UiSourceAccessSchema } from './ui-access.ts';
+import { UI_SOURCE_ARGS } from './ui-source-args.ts';
 import { resolveUiProjectLink } from './ui-links.ts';
 
 export interface UiSourceHosts {
@@ -81,10 +82,9 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
         }
         return cwd;
     };
-    const repositoryArgs = z.object({ repo: z.string().min(1).max(4096).default('.') }).strict();
     const sources = {
         'git.status': {
-            args: repositoryArgs,
+            args: UI_SOURCE_ARGS['git.status'],
             result: UiGitStatusSchema,
             authorize: async (info, access, args) => {
                 await repository(info, access, args);
@@ -94,7 +94,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
             }
         },
         'git.log': {
-            args: repositoryArgs.extend({ limit: z.number().int().min(1).max(60).default(30) }),
+            args: UI_SOURCE_ARGS['git.log'],
             result: GitLogResultSchema,
             authorize: async (info, access, args) => {
                 await repository(info, access, args);
@@ -104,7 +104,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
             }
         },
         'launch.status': {
-            args: z.object({ name: z.string().min(1).max(256) }).strict(),
+            args: UI_SOURCE_ARGS['launch.status'],
             result: z.object({
                 name: z.string(),
                 launchId: z.string(),
@@ -135,7 +135,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
             }
         },
         'chat.tasks': {
-            args: z.object({}).strict(),
+            args: UI_SOURCE_ARGS['chat.tasks'],
             result: z.array(TaskSchema.pick({ id: true, childId: true, title: true, status: true, createdAt: true, settledAt: true })).max(100),
             authorize: async (info, access) => {
                 await authorize(info, access);
@@ -147,14 +147,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
                     .map(({ id, childId, title, status, createdAt, settledAt }) => ({ id, childId, title, status, createdAt, settledAt }))
         },
         'database.query': {
-            args: z
-                .object({
-                    connection: z.string().min(1).max(256),
-                    sql: z.string().min(1).max(16384),
-                    schema: z.string().min(1).max(256).nullable().default(null),
-                    limit: z.number().int().min(1).max(100).default(50)
-                })
-                .strict(),
+            args: UI_SOURCE_ARGS['database.query'],
             result: z.object({
                 connection: z.string(),
                 schema: z.string().nullable(),
