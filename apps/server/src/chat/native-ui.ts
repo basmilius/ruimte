@@ -6,7 +6,7 @@ import {
     UiState,
     UiFailure,
     UI_CATALOG_VERSION,
-    UI_LIMITS,
+    type UiLimits,
     uiValidatedState,
     type UiViewNode
 } from '@adecore/intelligent-ui';
@@ -20,7 +20,7 @@ export interface NativeUiRequest {
 }
 
 // JavaScriptCore runs without a JIT on an older iPhone, so wall-clock time is looser here; steps still bound the work.
-Object.assign(UI_LIMITS, { milliseconds: 250 });
+const NATIVE_LIMITS: Partial<UiLimits> = { milliseconds: 250 };
 
 function boundedTree(value: unknown, depth = 0, remaining = { count: 10000 }): void {
     if (depth > 96 || --remaining.count < 0) {
@@ -36,7 +36,7 @@ function boundedTree(value: unknown, depth = 0, remaining = { count: 10000 }): v
 export function evaluateNativeUi(request: NativeUiRequest): Record<string, unknown> {
     boundedTree(request);
     const block = UiBlockSchema.parse(request.block);
-    const state = new UiState(block);
+    const state = new UiState(block, NATIVE_LIMITS);
     const supported = block.catalogVersion === UI_CATALOG_VERSION;
     if (supported) {
         for (const [name, value] of Object.entries(request.queries ?? {})) {
@@ -50,7 +50,7 @@ export function evaluateNativeUi(request: NativeUiRequest): Record<string, unkno
             state.set(name, value);
         }
     }
-    let evaluated = evaluateUiBlock(block, state);
+    let evaluated = evaluateUiBlock(block, state, NATIVE_LIMITS);
     const find = (nodes: readonly UiViewNode[], id: string): UiViewNode | undefined => {
         for (const node of nodes) {
             if (node.id === id) {
@@ -81,8 +81,8 @@ export function evaluateNativeUi(request: NativeUiRequest): Record<string, unkno
             node.onAction();
         }
         // Membership of Segmented and Checklist values is checked against the visible controls as well.
-        uiValidatedState(block, uiInputValues(block, state), request.queries);
-        evaluated = evaluateUiBlock(block, state);
+        uiValidatedState(block, uiInputValues(block, state), request.queries, NATIVE_LIMITS);
+        evaluated = evaluateUiBlock(block, state, NATIVE_LIMITS);
     }
     const nodes = (input: readonly UiViewNode[]): Record<string, unknown>[] =>
         input.map((node) => ({
@@ -92,7 +92,7 @@ export function evaluateNativeUi(request: NativeUiRequest): Record<string, unkno
         }));
     let links = {};
     if (supported && block.complete) {
-        links = uiLinkTargets(block, uiInputValues(block, state), request.queries);
+        links = uiLinkTargets(block, uiInputValues(block, state), request.queries, NATIVE_LIMITS);
     }
     return { nodes: nodes(evaluated.nodes), diagnostics: evaluated.diagnostics, values: uiInputValues(block, state), links };
 }
