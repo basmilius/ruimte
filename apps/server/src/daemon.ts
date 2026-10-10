@@ -412,8 +412,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
             worktreePaths: (folder) => canvasHost.worktreePaths(folder),
             gitStatus: (cwd) => statuses.status(cwd),
             gitLog: readLog,
-            launches: (projectId) =>
-                agentLaunches(launchStore, launches, (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null)).list(projectId),
+            launches: (projectId) => launchHost.list(projectId),
             tasks: (chatId) => tasks.ofParent(chatId),
             databases: () => agentDatabases
         }),
@@ -568,6 +567,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         sessions: managerSessions(manager, foregroundGroup),
         checkCwd: (folder, cwd) => checkCwd(folder, cwd, (inside) => canvasHost.worktreePaths(inside))
     });
+    const launchHost = agentLaunches(launchStore, launches, (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null));
     projects.attachLaunches({
         opened: (projectId) => void launches.opened(projectId),
         running: (projectId) => launches.running(projectId),
@@ -735,7 +735,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         agents: agentStates({ outbox, lineage, chats, sessions: manager }),
         requests: chatRequests(chats),
         computer,
-        launches: agentLaunches(launchStore, launches, (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null)),
+        launches: launchHost,
         databases: agentDatabases,
         language: new AgentLanguage({
             host: { forAgent: (projectId, request, work) => language.forAgent(projectId, request, work), programOf: (kind) => language.programOf(kind) },
