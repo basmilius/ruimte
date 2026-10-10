@@ -1,5 +1,13 @@
 import { randomBytes } from 'node:crypto';
-import { BrokerPeerFrameSchema, brokerHelloMessage, type BrokerRole, type BrokerServerFrame, type SignalEnvelope } from '@ruimte/pulsar';
+import {
+    BrokerPeerFrameSchema,
+    brokerHelloMessage,
+    type BrokerHello,
+    type BrokerRelay,
+    type BrokerRole,
+    type BrokerServerFrame,
+    type SignalEnvelope
+} from '@ruimte/pulsar';
 import { addressKeyOf, type BrokerLimits } from './config.ts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { RateLimiter } from './rate-limit.ts';
@@ -142,44 +150,17 @@ export class Broker {
         }
         const frame = parsed.data;
         switch (frame.type) {
-            case 'hello': {
-                if (peer.state !== 'new') {
-                    this.refuseFrame(peer, 'A socket announces once');
-                    return;
-                }
-                peer.role = frame.role;
-                peer.publicKey = frame.publicKey;
-                peer.nonce = randomBytes(24).toString('base64url');
-                peer.state = 'challenged';
-                this.send(peer, { type: 'challenge', broker: peer.name, nonce: peer.nonce });
+            case 'hello':
+                this.hello(peer, frame);
                 return;
-            }
             case 'prove':
                 this.prove(peer, frame.signature);
                 return;
-            case 'relay': {
-                if (peer.state !== 'ready' || peer.publicKey === null) {
-                    this.refuseFrame(peer, 'Announce before relaying');
-                    return;
-                }
-                const waitRelay = this.relays.take(peer.publicKey);
-                if (waitRelay > 0) {
-                    this.send(peer, { type: 'rate-limited', scope: 'key', retryAfterMs: waitRelay, id: frame.id });
-                    return;
-                }
-                const target = this.announced.get(frame.to);
-                // A machine talks to clients and a client to machines; anything else is a key that is not there for this sender.
-                if (!target || target.role === peer.role) {
-                    this.send(peer, { type: 'error', code: 'not-connected', message: 'Nobody with that key is connected', id: frame.id });
-                    return;
-                }
+            case 'relay':
                 /* The envelope as the sender wrote it, since the parse strips what this broker does not know. It still
                    has to parse: an older daemon leaves the broker over a frame it cannot read. */
-                const envelope = (json as { envelope: SignalEnvelope }).envelope;
-                this.send(target, { type: 'relayed', from: peer.publicKey, envelope, signature: frame.signature });
-                this.send(peer, { type: 'delivered', id: frame.id });
+                this.relay(peer, frame, (json as { envelope: SignalEnvelope }).envelope);
                 return;
-            }
             case 'ice':
                 void this.ice(peer, frame.id);
                 return;
@@ -237,6 +218,38 @@ export class Broker {
         for (const peer of [...this.peers]) {
             this.close(peer, 1001, 'Broker going away');
         }
+    }
+
+    private hello(peer: Peer, frame: BrokerHello): void {
+        if (peer.state !== 'new') {
+            this.refuseFrame(peer, 'A socket announces once');
+            return;
+        }
+        peer.role = frame.role;
+        peer.publicKey = frame.publicKey;
+        peer.nonce = randomBytes(24).toString('base64url');
+        peer.state = 'challenged';
+        this.send(peer, { type: 'challenge', broker: peer.name, nonce: peer.nonce });
+    }
+
+    private relay(peer: Peer, frame: BrokerRelay, envelope: SignalEnvelope): void {
+        if (peer.state !== 'ready' || peer.publicKey === null) {
+            this.refuseFrame(peer, 'Announce before relaying');
+            return;
+        }
+        const wait = this.relays.take(peer.publicKey);
+        if (wait > 0) {
+            this.send(peer, { type: 'rate-limited', scope: 'key', retryAfterMs: wait, id: frame.id });
+            return;
+        }
+        const target = this.announced.get(frame.to);
+        // A machine talks to clients and a client to machines; anything else is a key that is not there for this sender.
+        if (!target || target.role === peer.role) {
+            this.send(peer, { type: 'error', code: 'not-connected', message: 'Nobody with that key is connected', id: frame.id });
+            return;
+        }
+        this.send(target, { type: 'relayed', from: peer.publicKey, envelope, signature: frame.signature });
+        this.send(peer, { type: 'delivered', id: frame.id });
     }
 
     private prove(peer: Peer, signature: string): void {
