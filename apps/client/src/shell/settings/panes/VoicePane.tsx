@@ -1,4 +1,3 @@
-import { DictationSection } from './DictationSection';
 import { LIVE_VOICES } from '@ruimte/contracts';
 import { useEffect, useState, type FormEvent } from 'react';
 import i18next from 'i18next';
@@ -12,6 +11,7 @@ import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useVoice } from '@/voice/state';
 import { closeVoicePanel, stopVoice } from '@/voice/controller';
+import { DictationSection } from './DictationSection';
 import { VoiceInputSection } from './VoiceInputSection';
 
 function titleCase(value: string): string {
@@ -63,26 +63,29 @@ export function VoicePane() {
         };
     }, [bridge, attempt]);
 
-    async function save(event: FormEvent<HTMLFormElement>): Promise<void> {
+    const adopt = (next: OpenAiCredentialStatus): void => {
+        setStatus(next);
+        useVoice.getState().setCredential(next);
+        setDraft('');
+    };
+
+    const save = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
         event.preventDefault();
         if (!bridge || draft.trim() === '') {
             return;
         }
         setBusy(true);
         try {
-            const next = await bridge.saveApiKey(draft);
-            setStatus(next);
-            useVoice.getState().setCredential(next);
-            setDraft('');
+            adopt(await bridge.saveApiKey(draft));
             useToasts.getState().show({ kind: 'success', title: t('voice.toast.saved') });
         } catch (error) {
             useToasts.getState().show({ kind: 'error', title: t('voice.toast.saveFailed'), description: messageOf(error, t('voice.key.saveFailure')) });
         } finally {
             setBusy(false);
         }
-    }
+    };
 
-    async function remove(): Promise<void> {
+    const remove = async (): Promise<void> => {
         if (!bridge) {
             return;
         }
@@ -91,16 +94,14 @@ export function VoicePane() {
             const next = await bridge.clearApiKey();
             stopVoice();
             closeVoicePanel();
-            setStatus(next);
-            useVoice.getState().setCredential(next);
-            setDraft('');
+            adopt(next);
             useToasts.getState().show({ kind: 'success', title: t('voice.toast.removed') });
         } catch (error) {
             useToasts.getState().show({ kind: 'error', title: t('voice.toast.removeFailed'), description: messageOf(error, t('voice.key.removeFailure')) });
         } finally {
             setBusy(false);
         }
-    }
+    };
 
     if (!bridge) {
         return (
