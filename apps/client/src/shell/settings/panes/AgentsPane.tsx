@@ -35,225 +35,249 @@ const KEEP_AWAKE_DESCRIPTIONS = {
 const STREAMING_MODES = ['words', 'blocks', 'whole'] as const;
 
 export function AgentsPane() {
+    return (
+        <>
+            <AgentDefaultsSection />
+            <ChatsSection />
+            <MachineSwitchSections />
+            <WorkingSection />
+        </>
+    );
+}
+
+function AgentDefaultsSection() {
     const { t } = useTranslation('settings');
     const preferences = useChatPreferences();
+    return (
+        <SettingsSection
+            title={t('agents.defaults.title')}
+            description={
+                <Trans
+                    t={t}
+                    i18nKey="agents.defaults.description"
+                    components={{
+                        link: (
+                            <button
+                                type="button"
+                                className="text-accent hover:underline"
+                                onClick={() => useUi.getState().setSettings({ section: 'providers' })}
+                            />
+                        )
+                    }}
+                />
+            }
+        >
+            <SettingsRow
+                searchId="agents.defaults.permissions"
+                label={t('agents.defaults.permissions')}
+                control={
+                    <Select
+                        value={preferences.runtimeMode}
+                        label={t('agents.defaults.permissions')}
+                        align="end"
+                        items={runtimeModeItems()}
+                        onValueChange={(value) => rememberChatPreferences({ runtimeMode: value })}
+                    />
+                }
+            />
+            <SettingsRow
+                searchId="agents.defaults.terminalMode"
+                label={t('agents.defaults.terminalMode')}
+                control={
+                    <Select
+                        value={preferences.terminalRuntimeMode}
+                        label={t('agents.defaults.terminalMode')}
+                        align="end"
+                        items={runtimeModeItems()}
+                        onValueChange={(value) => rememberChatPreferences({ terminalRuntimeMode: value })}
+                    />
+                }
+            />
+        </SettingsSection>
+    );
+}
+
+function ChatsSection() {
+    const { t } = useTranslation('settings');
     const agentsShowViews = useSettings((s) => s.agentsShowViews);
-    const { keepAwake, keepAwakeOnBattery, keepAwakeDisplay } = useKeepAwakeChoice();
-    const agentsTurnSound = useSettings((s) => s.agentsTurnSound);
     const chatStreaming = useSettings((s) => s.chatStreaming);
     const chatSteerByDefault = useSettings((s) => s.chatSteerByDefault);
+    const update = useSettings((s) => s.update);
+    return (
+        <SettingsSection title={t('agents.chats.title')} scope="client">
+            <SettingsRow
+                searchId="agents.chats.steerByDefault"
+                label={t('agents.chats.steerByDefault.label')}
+                description={t('agents.chats.steerByDefault.description')}
+                control={
+                    <Switch
+                        checked={chatSteerByDefault}
+                        onCheckedChange={(checked) => update({ chatSteerByDefault: checked })}
+                        label={t('agents.chats.steerByDefault.label')}
+                    />
+                }
+            />
+            <SettingsRow
+                searchId="agents.chats.streaming"
+                label={t('agents.chats.streaming.label')}
+                description={t(`agents.chats.streaming.${chatStreaming}.description`)}
+                control={
+                    <Select
+                        value={chatStreaming}
+                        label={t('agents.chats.streaming.label')}
+                        align="end"
+                        items={STREAMING_MODES.map((mode) => ({
+                            value: mode,
+                            label: t(`agents.chats.streaming.${mode}.label`),
+                            description: t(`agents.chats.streaming.${mode}.description`)
+                        }))}
+                        onValueChange={(value) => update({ chatStreaming: value })}
+                    />
+                }
+            />
+            <SettingsRow
+                searchId="agents.chats.showViews"
+                label={t('agents.chats.showViews.label')}
+                description={t('agents.chats.showViews.description')}
+                control={
+                    <Switch
+                        checked={agentsShowViews}
+                        onCheckedChange={(checked) => update({ agentsShowViews: checked })}
+                        label={t('agents.chats.showViews.label')}
+                    />
+                }
+            />
+        </SettingsSection>
+    );
+}
+
+function WorkingSection() {
+    const { t } = useTranslation('settings');
+    const { keepAwake, keepAwakeOnBattery, keepAwakeDisplay } = useKeepAwakeChoice();
+    const agentsTurnSound = useSettings((s) => s.agentsTurnSound);
     const update = useSettings((s) => s.update);
     // A browser cannot keep anything awake, so it is told nothing about a choice it has no way to honor.
     const awake = useKeepAwakeAvailable();
     // The machine holds the display only with battery allowed; the shell from before weighed the power source itself.
     const displayNeedsBattery = useMachineKeepsAwake() && !keepAwakeOnBattery;
     const keepAwakeDescription = KEEP_AWAKE_DESCRIPTIONS[keepAwake];
-    const lid = useClosedLid();
-    const lidShown = awake && lid.offered && keepAwake !== 'off';
-    // The rule waits on macOS's administrator dialog, so the row stays busy for as long as that is up.
-    const [lidBusy, setLidBusy] = useState(false);
-    const [lidError, setLidError] = useState<string | null>(null);
-
-    const changeLidRule = (install: boolean): void => {
-        setLidBusy(true);
-        setLidError(null);
-        void setClosedLidRule(install)
-            .catch((e: unknown) => setLidError(e instanceof Error ? e.message : String(e)))
-            .finally(() => setLidBusy(false));
-    };
-
     return (
-        <>
-            <SettingsSection
-                title={t('agents.defaults.title')}
-                description={
-                    <Trans
-                        t={t}
-                        i18nKey="agents.defaults.description"
-                        components={{
-                            link: (
-                                <button
-                                    type="button"
-                                    className="text-accent hover:underline"
-                                    onClick={() => useUi.getState().setSettings({ section: 'providers' })}
-                                />
-                            )
-                        }}
+        <SettingsSection title={t('agents.working.title')} description={awake ? t('agents.working.description') : undefined} scope="computer">
+            <SettingsRow
+                searchId="agents.working.sound"
+                label={t('agents.working.sound.label')}
+                description={t('agents.working.sound.description')}
+                control={
+                    <Switch
+                        checked={agentsTurnSound}
+                        onCheckedChange={(checked) => update({ agentsTurnSound: checked })}
+                        label={t('agents.working.sound.label')}
                     />
                 }
+            />
+            {awake && (
+                <SettingsRow
+                    searchId="agents.keepAwake.mode"
+                    label={t('agents.keepAwake.mode.label')}
+                    description={keepAwakeDescription === null ? undefined : t(keepAwakeDescription)}
+                    control={
+                        <Select
+                            value={keepAwake}
+                            label={t('agents.keepAwake.mode.label')}
+                            align="end"
+                            items={[
+                                { value: 'off', label: t('agents.keepAwake.mode.off') },
+                                {
+                                    value: 'working',
+                                    label: t('agents.keepAwake.mode.working.label'),
+                                    description: t('agents.keepAwake.mode.working.description')
+                                },
+                                {
+                                    value: 'always',
+                                    label: t('agents.keepAwake.mode.always.label'),
+                                    description: t('agents.keepAwake.mode.always.description')
+                                }
+                            ]}
+                            onValueChange={(value) => setKeepAwake({ keepAwake: value })}
+                        />
+                    }
+                />
+            )}
+            {awake && keepAwake !== 'off' && (
+                <SettingsRow
+                    indent
+                    label={t('agents.keepAwake.battery.label')}
+                    description={t('agents.keepAwake.battery.description')}
+                    control={
+                        <Switch
+                            checked={keepAwakeOnBattery}
+                            onCheckedChange={(checked) => setKeepAwake({ keepAwakeOnBattery: checked })}
+                            label={t('agents.keepAwake.battery.label')}
+                        />
+                    }
+                />
+            )}
+            <ClosedLidRows shown={awake && keepAwake !== 'off'} />
+            {awake && keepAwake === 'always' && (
+                <SettingsRow
+                    indent
+                    label={t('agents.keepAwake.display.label')}
+                    description={t(displayNeedsBattery ? 'agents.keepAwake.display.needsBattery' : 'agents.keepAwake.display.description')}
+                    control={
+                        <Switch
+                            checked={keepAwakeDisplay}
+                            onCheckedChange={(checked) => setKeepAwake({ keepAwakeDisplay: checked })}
+                            label={t('agents.keepAwake.display.label')}
+                        />
+                    }
+                />
+            )}
+        </SettingsSection>
+    );
+}
+
+/* Mounted with the section, so a rule still waiting on macOS keeps its row busy while keep awake is off and on again. */
+function ClosedLidRows({ shown }: { shown: boolean }) {
+    const { t } = useTranslation('settings');
+    const lid = useClosedLid();
+    // The rule waits on macOS's administrator dialog, so the row stays busy for as long as that is up.
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const changeRule = (install: boolean): void => {
+        setBusy(true);
+        setError(null);
+        void setClosedLidRule(install)
+            .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
+            .finally(() => setBusy(false));
+    };
+
+    if (!shown || !lid.offered) {
+        return null;
+    }
+    return (
+        <>
+            <SettingsRow
+                indent
+                searchId="agents.keepAwake.lid"
+                label={t('agents.keepAwake.lid.label')}
+                description={t('agents.keepAwake.lid.description', { percent: formatPercent(CLOSED_LID_BATTERY_FLOOR) })}
+                control={
+                    <Switch checked={lid.on} disabled={!lid.rule || busy} onCheckedChange={setKeepAwakeLidClosed} label={t('agents.keepAwake.lid.label')} />
+                }
+            />
+            <SettingsRow
+                indent
+                label={t('agents.keepAwake.lid.rule.label')}
+                description={t(lid.rule ? 'agents.keepAwake.lid.rule.installed' : 'agents.keepAwake.lid.rule.missing')}
+                control={
+                    <Button variant="secondary" disabled={busy} onClick={() => changeRule(!lid.rule)}>
+                        {t(lid.rule ? 'agents.keepAwake.lid.rule.remove' : 'agents.keepAwake.lid.rule.install')}
+                    </Button>
+                }
             >
-                <SettingsRow
-                    searchId="agents.defaults.permissions"
-                    label={t('agents.defaults.permissions')}
-                    control={
-                        <Select
-                            value={preferences.runtimeMode}
-                            label={t('agents.defaults.permissions')}
-                            align="end"
-                            items={runtimeModeItems()}
-                            onValueChange={(value) => rememberChatPreferences({ runtimeMode: value })}
-                        />
-                    }
-                />
-                <SettingsRow
-                    searchId="agents.defaults.terminalMode"
-                    label={t('agents.defaults.terminalMode')}
-                    control={
-                        <Select
-                            value={preferences.terminalRuntimeMode}
-                            label={t('agents.defaults.terminalMode')}
-                            align="end"
-                            items={runtimeModeItems()}
-                            onValueChange={(value) => rememberChatPreferences({ terminalRuntimeMode: value })}
-                        />
-                    }
-                />
-            </SettingsSection>
-            <SettingsSection title={t('agents.chats.title')} scope="client">
-                <SettingsRow
-                    searchId="agents.chats.steerByDefault"
-                    label={t('agents.chats.steerByDefault.label')}
-                    description={t('agents.chats.steerByDefault.description')}
-                    control={
-                        <Switch
-                            checked={chatSteerByDefault}
-                            onCheckedChange={(checked) => update({ chatSteerByDefault: checked })}
-                            label={t('agents.chats.steerByDefault.label')}
-                        />
-                    }
-                />
-                <SettingsRow
-                    searchId="agents.chats.streaming"
-                    label={t('agents.chats.streaming.label')}
-                    description={t(`agents.chats.streaming.${chatStreaming}.description`)}
-                    control={
-                        <Select
-                            value={chatStreaming}
-                            label={t('agents.chats.streaming.label')}
-                            align="end"
-                            items={STREAMING_MODES.map((mode) => ({
-                                value: mode,
-                                label: t(`agents.chats.streaming.${mode}.label`),
-                                description: t(`agents.chats.streaming.${mode}.description`)
-                            }))}
-                            onValueChange={(value) => update({ chatStreaming: value })}
-                        />
-                    }
-                />
-                <SettingsRow
-                    searchId="agents.chats.showViews"
-                    label={t('agents.chats.showViews.label')}
-                    description={t('agents.chats.showViews.description')}
-                    control={
-                        <Switch
-                            checked={agentsShowViews}
-                            onCheckedChange={(checked) => update({ agentsShowViews: checked })}
-                            label={t('agents.chats.showViews.label')}
-                        />
-                    }
-                />
-            </SettingsSection>
-            <MachineSwitchSections />
-            <SettingsSection title={t('agents.working.title')} description={awake ? t('agents.working.description') : undefined} scope="computer">
-                <SettingsRow
-                    searchId="agents.working.sound"
-                    label={t('agents.working.sound.label')}
-                    description={t('agents.working.sound.description')}
-                    control={
-                        <Switch
-                            checked={agentsTurnSound}
-                            onCheckedChange={(checked) => update({ agentsTurnSound: checked })}
-                            label={t('agents.working.sound.label')}
-                        />
-                    }
-                />
-                {awake && (
-                    <SettingsRow
-                        searchId="agents.keepAwake.mode"
-                        label={t('agents.keepAwake.mode.label')}
-                        description={keepAwakeDescription === null ? undefined : t(keepAwakeDescription)}
-                        control={
-                            <Select
-                                value={keepAwake}
-                                label={t('agents.keepAwake.mode.label')}
-                                align="end"
-                                items={[
-                                    { value: 'off', label: t('agents.keepAwake.mode.off') },
-                                    {
-                                        value: 'working',
-                                        label: t('agents.keepAwake.mode.working.label'),
-                                        description: t('agents.keepAwake.mode.working.description')
-                                    },
-                                    {
-                                        value: 'always',
-                                        label: t('agents.keepAwake.mode.always.label'),
-                                        description: t('agents.keepAwake.mode.always.description')
-                                    }
-                                ]}
-                                onValueChange={(value) => setKeepAwake({ keepAwake: value })}
-                            />
-                        }
-                    />
-                )}
-                {awake && keepAwake !== 'off' && (
-                    <SettingsRow
-                        indent
-                        label={t('agents.keepAwake.battery.label')}
-                        description={t('agents.keepAwake.battery.description')}
-                        control={
-                            <Switch
-                                checked={keepAwakeOnBattery}
-                                onCheckedChange={(checked) => setKeepAwake({ keepAwakeOnBattery: checked })}
-                                label={t('agents.keepAwake.battery.label')}
-                            />
-                        }
-                    />
-                )}
-                {lidShown && (
-                    <SettingsRow
-                        indent
-                        searchId="agents.keepAwake.lid"
-                        label={t('agents.keepAwake.lid.label')}
-                        description={t('agents.keepAwake.lid.description', { percent: formatPercent(CLOSED_LID_BATTERY_FLOOR) })}
-                        control={
-                            <Switch
-                                checked={lid.on}
-                                disabled={!lid.rule || lidBusy}
-                                onCheckedChange={setKeepAwakeLidClosed}
-                                label={t('agents.keepAwake.lid.label')}
-                            />
-                        }
-                    />
-                )}
-                {lidShown && (
-                    <SettingsRow
-                        indent
-                        label={t('agents.keepAwake.lid.rule.label')}
-                        description={t(lid.rule ? 'agents.keepAwake.lid.rule.installed' : 'agents.keepAwake.lid.rule.missing')}
-                        control={
-                            <Button variant="secondary" disabled={lidBusy} onClick={() => changeLidRule(!lid.rule)}>
-                                {t(lid.rule ? 'agents.keepAwake.lid.rule.remove' : 'agents.keepAwake.lid.rule.install')}
-                            </Button>
-                        }
-                    >
-                        {lidError !== null && <FormError>{lidError}</FormError>}
-                    </SettingsRow>
-                )}
-                {awake && keepAwake === 'always' && (
-                    <SettingsRow
-                        indent
-                        label={t('agents.keepAwake.display.label')}
-                        description={t(displayNeedsBattery ? 'agents.keepAwake.display.needsBattery' : 'agents.keepAwake.display.description')}
-                        control={
-                            <Switch
-                                checked={keepAwakeDisplay}
-                                onCheckedChange={(checked) => setKeepAwake({ keepAwakeDisplay: checked })}
-                                label={t('agents.keepAwake.display.label')}
-                            />
-                        }
-                    />
-                )}
-            </SettingsSection>
+                {error !== null && <FormError>{error}</FormError>}
+            </SettingsRow>
         </>
     );
 }
