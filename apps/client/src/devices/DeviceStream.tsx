@@ -291,28 +291,27 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
         pointerMode.current = 'multi';
         sendMultiPointer('down');
     };
-    const onPointerMove = (event: ReactPointerEvent<HTMLCanvasElement>): void => {
-        if (!pointers.current.has(event.pointerId)) {
-            return;
+    /* Moves a tracked pointer to where the event is and sends it; false for a pointer this canvas does not track. */
+    const followPointer = (event: ReactPointerEvent<HTMLCanvasElement>, phase: 'move' | 'up'): boolean => {
+        const previous = pointers.current.get(event.pointerId);
+        if (!previous) {
+            return false;
         }
-        const previous = pointers.current.get(event.pointerId)!;
-        pointers.current.set(event.pointerId, { ...position(event), edge: previous.edge });
+        const next = { ...position(event), edge: previous.edge };
+        pointers.current.set(event.pointerId, next);
         if (pointerMode.current === 'single') {
-            sendInput({ kind: 'pointer', phase: 'move', ...pointers.current.get(event.pointerId)! });
+            sendInput({ kind: 'pointer', phase, ...next });
         } else if (pointerMode.current === 'multi') {
-            sendMultiPointer('move');
+            sendMultiPointer(phase);
         }
+        return true;
+    };
+    const onPointerMove = (event: ReactPointerEvent<HTMLCanvasElement>): void => {
+        followPointer(event, 'move');
     };
     const endPointer = (event: ReactPointerEvent<HTMLCanvasElement>): void => {
-        if (!pointers.current.has(event.pointerId)) {
+        if (!followPointer(event, 'up')) {
             return;
-        }
-        const previous = pointers.current.get(event.pointerId)!;
-        pointers.current.set(event.pointerId, { ...position(event), edge: previous.edge });
-        if (pointerMode.current === 'single') {
-            sendInput({ kind: 'pointer', phase: 'up', ...pointers.current.get(event.pointerId)! });
-        } else if (pointerMode.current === 'multi') {
-            sendMultiPointer('up');
         }
         pointers.current.delete(event.pointerId);
         pointerMode.current = pointers.current.size === 0 ? 'none' : 'draining';

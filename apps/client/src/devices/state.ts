@@ -79,9 +79,6 @@ export function sameDevice(left: Pick<DeviceInfo, 'backendId' | 'deviceId'>, rig
     return left.backendId === right.backendId && left.deviceId === right.deviceId;
 }
 
-// Re-exported, since what a reference points at is one rule and the daemon answers it too.
-export { deviceMatches };
-
 export function useDeviceList(endpointId: string): DeviceListState {
     return useDevices((state) => state.byEndpoint[endpointId] ?? EMPTY_DEVICE_LIST);
 }

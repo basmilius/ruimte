@@ -44,8 +44,8 @@ export function useOperatedDevice(endpointId: string, device: Target | null): De
     return useDeviceOperated((s) => operatedOf(s, endpointId, device));
 }
 
-/* Android names three of the buttons its own way, as the node's controls do. */
-const ANDROID_BUTTONS: Readonly<Record<string, string>> = { appSwitcher: 'recentApps', lock: 'power', siri: 'assistant' };
+/* Android names three of the buttons its own way. */
+export const ANDROID_BUTTONS: Readonly<Record<string, string>> = { appSwitcher: 'recentApps', lock: 'power', siri: 'assistant' };
 
 const BUTTONS: ReadonlySet<string> = new Set(['home', 'back', 'swipeHome', 'appSwitcher', 'recentApps', 'lock', 'power', 'siri', 'assistant']);
 

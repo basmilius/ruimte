@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { CircleAlert, Hand, House, LoaderCircle, Lock, Mic, RotateCcw, RotateCw, Smartphone, Undo2, type LucideIcon } from 'lucide-react';
 import { deviceButtons, type DeviceButton, type DeviceInfo, type DeviceInput, type DeviceReference } from '@ruimte/contracts';
 import { useNodeHost } from '@/nodes/node-host';
+import { ANDROID_BUTTONS } from '@/devices/operated';
 import { useDeviceList, useResolvedDevice } from '@/devices/state';
 import { DeviceStream } from '@/devices/DeviceStream';
 import { useEndpointId } from '@/state/keys';
@@ -15,8 +16,6 @@ const GESTURES: ReadonlyArray<{ button: DeviceButton; icon: LucideIcon }> = [
     { button: 'lock', icon: Lock },
     { button: 'siri', icon: Mic }
 ];
-
-const ANDROID_LABELS: Partial<Record<DeviceButton, string>> = { appSwitcher: 'recentApps', lock: 'power', siri: 'assistant' };
 
 function useDeviceFor(reference: DeviceReference | undefined): { device: DeviceInfo | null; loading: boolean; error: string | null } {
     const endpointId = useEndpointId();
@@ -36,7 +35,7 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
     const gestures = GESTURES.filter((gesture) => buttons.includes(gesture.button));
     const send = (command: DeviceInput): void => deviceClientFor(endpointId)?.input(device, command);
     const label = (button: DeviceButton): string => {
-        const androidName = device.platform === 'android' ? ANDROID_LABELS[button] : undefined;
+        const androidName = device.platform === 'android' ? ANDROID_BUTTONS[button] : undefined;
         return t(`device.controls.${androidName ?? button}`);
     };
     return (
