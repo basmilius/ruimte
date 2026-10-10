@@ -90,8 +90,8 @@ describe('ChatManager', () => {
         manager = makeManager({ holdsProject: async (_chatId, clientId) => holders.has(clientId) });
         await manager.create({ chatId: 'ui-gate', cwd: home });
         manager.attach('ui-gate', 'c1');
-        const query = { chatId: 'ui-gate', itemId: 'reply', blockId: 'block', revision: 1, query: 'status' } as Parameters<ChatManager['queryUi']>[0];
-        const link = { chatId: 'ui-gate', itemId: 'reply', blockId: 'block', revision: 1, nodeId: 'node' } as Parameters<ChatManager['linkUi']>[0];
+        const query = { chatId: 'ui-gate', itemId: 'reply', blockId: 'block', revision: '1', query: 'status' };
+        const link = { chatId: 'ui-gate', itemId: 'reply', blockId: 'block', revision: '1', nodeId: 'node' };
         await expect(manager.queryUi(query, 'c1')).rejects.toThrow("Open this chat's project");
         await expect(manager.linkUi(link, 'c1')).rejects.toThrow("Open this chat's project");
         holders.add('c1');
