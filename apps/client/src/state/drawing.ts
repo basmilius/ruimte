@@ -20,7 +20,6 @@ import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
 import { boundsOfElements } from '@adecore/drawing';
 import { fitTextBox } from '@/drawing/paint';
 
-/* Every tool in the dock, in the order the dock lists them. */
 export type DrawingTool = 'select' | 'hand' | 'rect' | 'diamond' | 'ellipse' | 'arrow' | 'line' | 'freehand' | 'text' | 'note' | 'eraser';
 
 /* The tools that make an element by dragging; after one the tool goes back to select unless locked. */
@@ -63,7 +62,6 @@ export const HISTORY_LIMIT = 100;
 export const DUPLICATE_OFFSET = 16;
 
 export interface DrawingState extends CameraSlice {
-    /* The drawing view this store holds, or null while none is on screen. */
     viewId: string | null;
     /* In stacking order, back to front, the way the file lists them. */
     elements: DrawingElement[];
@@ -154,20 +152,6 @@ function changed(state: DrawingState, elements: DrawingElement[], first = true):
         elements,
         edits: state.edits + 1,
         ...(first ? remember(state) : {})
-    };
-}
-
-/* The style of one element, which is what the dock shows while it is the only thing selected. */
-export function styleOfElement(element: DrawingElement): Partial<DrawingStyle> {
-    return {
-        stroke: element.stroke,
-        strokeWidth: element.strokeWidth,
-        ...(element.strokeStyle ? { strokeStyle: element.strokeStyle } : {}),
-        ...(element.kind === 'note'
-            ? { noteColor: element.fillColor ?? DEFAULT_STYLE.noteColor }
-            : { ...(element.fill ? { fill: element.fill } : {}), ...(element.fillColor ? { fillColor: element.fillColor } : {}) }),
-        roughness: element.roughness ?? 1,
-        ...(isWritten(element) ? { font: element.font ?? 'hand', textSize: element.size, align: element.align ?? 'left' } : {})
     };
 }
 
@@ -371,8 +355,7 @@ export function createDrawingStore(): StoreApi<DrawingState> {
             if (!element || !isWritten(element) || element.text === text) {
                 return;
             }
-            // An empty text is nothing at all, so it takes itself off the drawing. An empty note is
-            // still a sheet of paper, so it stays, and waits for what is written on it later.
+            // An empty text takes itself off the drawing; an empty note is still a sheet of paper.
             const gone = text.trim() === '' && element.kind === 'text';
             const elements = gone
                 ? state.elements.filter((candidate) => candidate.id !== id)
@@ -464,7 +447,7 @@ export function createDrawingStore(): StoreApi<DrawingState> {
 
 export const defaultDrawingStore = createDrawingStore();
 
-/* The drawing editors of the window; its blank editor is the store this module made. */
+/* Its blank editor is the store this module made. */
 export const defaultDrawings = createEditorRegistry(createDrawingStore, defaultDrawingStore);
 
 export const {

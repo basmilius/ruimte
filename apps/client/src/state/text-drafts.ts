@@ -74,12 +74,9 @@ function messageOf(error: unknown): string {
 }
 
 /*
- * The text of every file being edited on this client, one draft per file whatever number of tabs,
- * views and nodes show it, so two editors on one file type into the same text and never save over
- * each other. A draft saves itself a moment after the typing stops, and never while a save of the
- * same file is still out. The machine refuses a write over a file that moved (`stale`), and a read
- * that finds the file moved under an unsaved draft stops the saving the same way: only a person
- * decides between the two versions.
+ * One draft per file however many surfaces show it, so two editors on one file never save over each
+ * other. A draft saves a moment after typing stops, never while a save of it is still out. A file that
+ * moved under unsaved text, found by a refused write or by a read, stops saving until a person decides.
  */
 export class TextDrafts {
     private readonly linkFor: (endpointId: string) => DraftLink | null;

@@ -117,9 +117,8 @@ export type { CameraRequest, Viewport } from '@/canvas/camera-slice';
 
 export interface CanvasState extends CameraSlice {
     /*
-     * The view whose content this store is holding. The document store flips `activeViewId` before
-     * it hands the canvas the next view, so pairing on that id makes the canvas stand in for a view
-     * it does not hold yet; anything asking which nodes the project has must pair on this instead.
+     * The view whose content this store holds. The document store flips `activeViewId` before it hands
+     * the canvas the next view, so anything asking which nodes a view has pairs on this instead.
      */
     viewId: string | null;
     nodes: Record<string, CanvasNode>;
@@ -1053,9 +1052,8 @@ export const defaultCanvasStore = createCanvasStore();
 export const defaultCanvases = createEditorRegistry(createCanvasStore, defaultCanvasStore);
 
 /*
- * `useCanvas` reads, `useCanvasStore` writes and subscribes, and `focusedCanvas` is "the canvas in
- * front of me", which is what a shortcut, a window menu or a palette row means. Inside a cell that
- * last one is the wrong store as often as not.
+ * `focusedCanvas` is the canvas a shortcut, a window menu or a palette row means. Inside a cell it is
+ * the wrong store as often as not.
  */
 export const {
     use: useCanvas,

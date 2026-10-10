@@ -26,8 +26,7 @@ const PANEL_KINDS: readonly PanelKind[] = ['files', 'git', 'processes', 'devices
 const SIDEBAR_STORAGE_KEY = 'ruimte.sidebar';
 const CHOSEN_LAUNCH_STORAGE_KEY = 'ruimte.launches.chosen';
 
-/* The keys the panels lived in before they became a per-project thing. They are read once, as what
-   a project that has never had panels of its own starts from, and never written again. */
+/* Where the panels lived before they were per project: read as a new project's defaults, never written. */
 const LEGACY_PANEL_KEY = 'ruimte.panel';
 const LEGACY_PANEL_WIDTH_KEY = 'ruimte.panel.width';
 
@@ -194,10 +193,7 @@ interface UiStore {
     sidebarExpanded: string[] | null;
     /* Text the palette opens with; a path puts it straight into folder browsing. */
     paletteSeed: string;
-    /* How often the folder browser has been asked for. A count and not a flag. The command can be
-       chosen while the palette is already open, which changes nothing else about this store, and
-       choosing it twice in a row has to start browsing twice. Which step browsing is on after that
-       is the palette's own business. */
+    /* A count and not a flag: asking twice while the palette is open has to start browsing twice. */
     paletteBrowseAt: number;
     /* The machine the folder browser was asked to open on, or null to open on the machines as usual. */
     paletteBrowseMachine: string | null;
@@ -214,9 +210,8 @@ interface UiStore {
     planAnchor: PlanAnchor | null;
     planOpen: boolean;
     planWidth: number | null;
-    /* Whether the columns around the canvas show what was stored rather than what a person did.
-       True from startup and again for every project that opens, false from the first change made
-       here by hand. A column only slides when it is false, so a restore lands at its width. */
+    /* True while the columns show what was stored, false from the first change by hand. A column
+       only slides when it is false, so a restore lands at its width. */
     panelsRestoring: boolean;
     layoutDialogOpen: boolean;
     /* The group a worktree is being bound to, while its dialog is up. */
@@ -231,8 +226,7 @@ interface UiStore {
     forkDialog: { chatId: string; turnId: string } | null;
     /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
     viewDialog: ViewDialog;
-    /* The row the sidebar puts the caret in, which is how a new heading opens. It is nothing but
-       what it says, so it is typed where it stands rather than in a dialog. */
+    /* The sidebar row the caret is in, which is how a new heading opens. */
     renamingViewId: string | null;
     /* The application menu asks for the open project's settings; the project menu owns that dialog. */
     projectSettingsAsked: boolean;
@@ -257,8 +251,7 @@ interface UiStore {
     openPalette(seed?: string): void;
     /* The palette in its find-in-files mode, from the palette itself or from the files panel. */
     openFindInFiles(seed?: string): void;
-    /* The palette browsing folders, from its own command or from the project menu. Nothing is
-       typed. With one machine it opens on that machine's start folder, with more on the machines. */
+    /* With one machine it opens on that machine's start folder, with more on the machines. */
     openFolderBrowser(machineId?: string): void;
     /* The machines, for a new chat on the one that is picked. */
     openChatMachines(): void;
@@ -295,8 +288,7 @@ export const useUi = create<UiStore>((set, get) => ({
     sidebarOpen: readSidebarOpen(),
     sidebarExpanded: null,
     settings: { open: false, section: 'appearance', target: null, searchAt: 0 },
-    /* Closed until a project says otherwise. The panels belong to a project and there is none
-       yet, so the first paint of a reload cannot flash open a panel the project has closed. */
+    /* Closed until a project says otherwise, so a reload cannot flash open a panel the project has closed. */
     panel: CLOSED_PANEL,
     panelWidth: null,
     planAnchor: null,
@@ -433,8 +425,7 @@ export const useUi = create<UiStore>((set, get) => ({
         set({ sidebarExpanded: ids });
     },
     setPanels(state) {
-        /* One update, so a panel and the width it opens at reach the DOM together. Two would put a
-           frame with the default width in between, and that frame is a slide. */
+        /* One update, so a panel and its width reach the DOM together instead of sliding from the default. */
         set({
             panel: state.panel,
             panelWidth: state.panelWidth,

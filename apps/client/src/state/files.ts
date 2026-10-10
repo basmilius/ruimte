@@ -97,11 +97,9 @@ export function placeTab(state: TabPool, tab: Tab): TabState {
 }
 
 /*
- * The tabs of one host that have to close for the limit, the way a preview tab works in an editor:
- * the leftmost unpinned one makes room. `tabs` are the loose tabs of the host in strip order. The tab
- * that opened is never the one that goes, or opening a file could close the file it just opened, and
- * neither is one `keeps` holds on to, such as a file with unsaved changes or a table with edits nobody
- * submitted.
+ * The tabs of one host that close for the limit: the leftmost unpinned one makes room. `tabs` are the
+ * host's loose tabs in strip order. Never the tab that just opened, nor one `keeps` holds on to, such
+ * as a file with unsaved changes.
  */
 export function tabsOverLimit(tabs: readonly Tab[], limit: number, opened: string, keeps: (tab: Tab) => boolean = () => false): string[] {
     const remaining = [...tabs];
@@ -332,11 +330,9 @@ interface FilesStore extends TabPool {
 }
 
 /*
- * What the loose views are: the files, diffs, commits and database views a person opened, with what
- * the tree has unfolded. Machine state: it travels with the project's local file on this machine
- * (`project/panels-port.ts`), never in `project.json`, so another person opening the same canvas gets
- * none of it. The layout owns where they stand and which one is in front; a loose view that leaves
- * the layout leaves the pool, and the pool never holds one the layout does not place.
+ * The files, diffs, commits and database views a person opened, with what the tree has unfolded.
+ * Machine state in the project's local file (`project/panels-port.ts`), never in `project.json`. The
+ * layout owns where they stand; the pool never holds a view the layout does not place.
  */
 export const useFiles = create<FilesStore>((set, get) => {
     const hostTabs = (key: string): Tab[] => {

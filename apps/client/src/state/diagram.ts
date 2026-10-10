@@ -7,7 +7,6 @@ import { editorBindings } from '@/state/editor-bindings';
 import { createEditorRegistry } from '@/state/editors';
 
 export interface DiagramState extends CameraSlice {
-    /* The diagram view this store holds, or null while none is on screen. */
     viewId: string | null;
     content: DiagramContent;
     /* Computed from `content` whenever it changes, once a frame during a drag, so a render never lays the graph out itself. */
@@ -31,7 +30,7 @@ export interface DiagramState extends CameraSlice {
     replaceContent(content: DiagramContent): void;
     /* `first` says this is the first step of a drag, which is the one that goes into the history. */
     moveNode(id: string, pos: [number, number], first: boolean): void;
-    /* Gives a dragged node back to the layout. */
+    /* Hands a dragged node back to the layout. */
     resetPosition(id: string): void;
     undo(): void;
     redo(): void;
@@ -57,7 +56,7 @@ const EMPTY_CONTENT = contentOf(EMPTY_DIAGRAM);
 
 export const DIAGRAM_HISTORY_LIMIT = 100;
 
-/* Every change to the content is an edit; the client saves on the counter. */
+/* The client saves on the edit counter. */
 function changed(state: DiagramState, content: DiagramContent, first = true): Partial<DiagramState> {
     return {
         content,
@@ -66,7 +65,7 @@ function changed(state: DiagramState, content: DiagramContent, first = true): Pa
     };
 }
 
-/* The next frame on screen; without one, as in a test, at once. */
+/* Without a frame, as in a test, at once. */
 function nextFrame(callback: () => void): void {
     if (typeof requestAnimationFrame === 'function') {
         requestAnimationFrame(() => callback());
@@ -259,7 +258,7 @@ export function createDiagramStore(frame: (callback: () => void) => void = nextF
 
 export const defaultDiagramStore = createDiagramStore();
 
-/* The diagram editors of the window; its blank editor is the store this module made. */
+/* Its blank editor is the store this module made. */
 export const defaultDiagrams = createEditorRegistry(createDiagramStore, defaultDiagramStore);
 
 export const {

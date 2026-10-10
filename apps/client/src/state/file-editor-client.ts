@@ -3,7 +3,7 @@ import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import { viewIdsIn } from '@/shell/split';
 import type { EditorRegistry } from '@/state/editors';
-import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
+import { isConnectionError, TransportError, type Transport, type TransportStatus } from '@/transport/transport';
 
 /* The slice of the document store this client reads; the real store has more. */
 export interface DocumentAccess {
@@ -57,11 +57,7 @@ export interface FileEditorChannel<TDocument, TContent> {
     save(transport: Transport, projectId: string, viewId: string, baseRev: number, content: TContent): Promise<number>;
     close(transport: Transport, projectId: string, viewId: string): Promise<unknown>;
     copy(transport: Transport, projectId: string, from: string, to: string): Promise<unknown>;
-    /*
-     * The keys of what a person reads when one of the three fails and the error itself says nothing
-     * useful. Keys rather than words: they are read at the moment it fails, so a language a person
-     * changed lands on the next error instead of on the next reload.
-     */
+    /* Keys rather than words, translated when it fails, so a changed language reaches the next error. */
     errors: { open: string; save: string; copy: string };
 }
 
@@ -72,10 +68,6 @@ export interface FileEditorClientOptions {
     /* Left out in tests, where there is no window to listen on. */
     window?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null;
     document?: Pick<Document, 'addEventListener' | 'removeEventListener' | 'visibilityState'> | null;
-}
-
-function isConnectionError(e: unknown): boolean {
-    return e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
 }
 
 /* One file the daemon has open for this client, with everything a save of that one file needs. */
@@ -99,11 +91,7 @@ interface OpenFile<TState> {
  */
 export class FileEditorClient<TState extends FileEditorState<TDocument, TContent>, TDocument extends { rev: number }, TContent> {
     private readonly transport: Transport;
-    /*
-     * The editors of this workspace. The client is what opens and closes one: a view of this kind is
-     * a file of its own with a rev of its own, so its editor lives exactly as long as the daemon
-     * holds it open, which is not the same span as the view being in the grid.
-     */
+    /* An editor lives exactly as long as the daemon holds its file open, not as long as its view is in the grid. */
     private readonly editors: EditorRegistry<TState>;
     private readonly documents: DocumentAccess;
     private readonly projects: ProjectAccess;
@@ -111,8 +99,7 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
     private readonly saveDelayMs: number;
     private readonly flushProject: () => Promise<void>;
     private readonly unsubscribe: Array<() => void> = [];
-    /* Every file on screen, by view id. The grid can hold more than one at a time, and each is a
-       file of its own with a rev of its own, so everything a save needs is kept per file. */
+    /* By view id: the grid can show several files, each with a rev of its own. */
     private readonly open = new Map<string, OpenFile<TState>>();
     /* The socket went away, so the daemon may have forgotten these files while it was gone. */
     private reconnecting = false;
@@ -244,15 +231,13 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
         const held = [...state.views, ...state.trashed.map((entry) => entry.view)];
         const gone = [...this.open.keys()].some((viewId) => !held.some((view) => view.id === viewId && this.channel.isView(view)));
         const wanted = this.wantedIn(state);
-        // The ids rather than the layout itself, since a project read again from disk is a new layout
-        // object holding the same views, and that is a reconnect, not a change to the grid.
+        // The ids rather than the layout: a project read again from disk is a new layout with the same views.
         const settled = wanted.length === this.open.size && wanted.every((viewId) => this.open.has(viewId));
         if (!settled || gone) {
             void this.sync(gone);
             return;
         }
-        // The project was read again after the socket came back, so the daemon is ready to be asked
-        // about these files, since a restarted daemon knows no rev for one until it is opened.
+        // The project was read again after a reconnect; a restarted daemon knows no rev until a file is opened.
         if (this.reconnecting && this.open.size > 0 && state.views !== previous.views) {
             this.reconnecting = false;
             void Promise.all([...this.open.values()].map((file) => this.reopen(file)));
@@ -303,13 +288,11 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
 
     private async close(file: OpenFile<TState>, dropped: boolean): Promise<void> {
         if (dropped) {
-            // The view is gone from the project; a save now would put the file back as an orphan.
             this.cancelSave(file);
         } else {
             await this.flushOne(file);
         }
-        // Taken out first, since emptying the editor is a change like any other, and `onEditor` reads
-        // this map to tell an edit from the view being taken off screen.
+        // Taken out first, so `onEditor` does not read emptying the editor as an edit.
         this.open.delete(file.viewId);
         file.store.getState().unload();
         this.editors.release(file.viewId);
@@ -424,8 +407,7 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
             .catch((e: unknown) => {
                 file.store.getState().setDirty(true);
                 if (e instanceof TransportError && e.code === 'rev-conflict') {
-                    // Our own write never reaches the watcher, so the newer document has to be asked
-                    // for, since without this a daemon that forgot the file leaves the work unsaved.
+                    // Our own write never reaches the watcher, so the newer document has to be asked for.
                     stale = true;
                     return;
                 }
@@ -453,8 +435,7 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
         state.applyDocument(document);
     }
 
-    /* An error belongs to the file it happened to; one without a file has nowhere to go but the
-       focused editor, which is the one whose banner a person is looking at. */
+    /* An error without a file goes to the focused editor, whose banner a person is looking at. */
     private report(file: OpenFile<TState> | null, e: unknown, fallbackKey: string): void {
         if (isConnectionError(e)) {
             return;

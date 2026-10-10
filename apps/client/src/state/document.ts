@@ -79,11 +79,7 @@ import { CellViewContext, storeHook } from '@/state/workspace-stores';
 export interface DocumentState {
     /* In sidebar order. The active canvas view is stale here, since the canvas store is the editor of that one. */
     views: ProjectView[];
-    /*
-     * The view of the cell that has the focus. It is derived from the layout and kept beside it,
-     * because it is what the sidebar marks, what a shortcut acts on and what everything outside the
-     * grid means by "the view": one answer to a question that is asked from everywhere.
-     */
+    /* The view of the focused cell, derived from the layout and kept beside it since everything outside the grid asks for it. */
     activeViewId: string | null;
     /* How the views stand beside each other on this machine. Null while no view is open at all. */
     layout: SplitLayout | null;
@@ -305,8 +301,8 @@ function withRenamedNode(views: readonly ProjectView[], viewId: string, nodeId: 
 }
 
 /*
- * The editors of the project, handed in rather than imported, so a test with stores of its own moves
- * its views into its own editors instead of into the window's. They are registries: the document decides which views are on screen, and an editor exists for exactly those.
+ * Handed in rather than imported, so a test with stores of its own moves its views into its own
+ * editors. An editor exists for exactly the views the document puts on screen.
  */
 export interface DocumentPeers {
     canvases: EditorRegistry<CanvasState>;
@@ -376,9 +372,8 @@ function centerOfView(
 }
 
 /*
- * What the document holds beside its views once the grid moved: the layout itself and everything
- * derived from which cell has the focus. Every mutation of the grid goes through here, so the
- * derived fields can never drift from the layout they are read off.
+ * The layout and everything derived from which cell has the focus. Every mutation of the grid goes
+ * through here, so the derived fields never drift from the layout.
  */
 function settledOn(
     views: ProjectView[],
