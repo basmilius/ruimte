@@ -17,7 +17,7 @@ function isMachineState(home: string, path: string): boolean {
 }
 
 /*
- * The line a client's file requests stop at. A paired client is not the owner of this machine, so
+ * The line a client's file requests stop at. A client the machine let in is not its owner, so
  * nothing it asks for by path may hand it what only the local secret grants. A path is judged by its
  * name and by where it really leads, so neither a symlink nor another spelling on a case-insensitive
  * volume walks around it.

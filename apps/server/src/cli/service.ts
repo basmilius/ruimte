@@ -84,7 +84,6 @@ export function servicePlan(facts: ServiceFacts): ServicePlan | string {
 export interface ServiceDeps {
     manager: ServiceManager;
     files: ServiceFiles;
-    /* Copies the binary files from the folder of the running one into the service's folder. */
     copyBinaries(from: string, to: string): void;
     removeBinaries(dir: string): void;
     health(port: number): Promise<BuildIdentity | null>;

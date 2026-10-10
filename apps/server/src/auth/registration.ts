@@ -49,7 +49,7 @@ export class MachineAccountError extends CodedError<'machine-has-account'> {}
  * The machine agreeing to join one account, which puts it on that account before it signs: a signature
  * handed out is a registration anyone holding it can post. The account it is on already signs again;
  * another one is refused until a person on the machine takes it off. Callers let only the local secret
- * this far, since a paired client could otherwise move the machine to an account of its choosing.
+ * this far, since a client the machine let in could otherwise move the machine to an account of its choosing.
  */
 export async function signForAccount(
     store: { bindAccount(accountId: string): Promise<AccountChange> },

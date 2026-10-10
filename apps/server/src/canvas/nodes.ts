@@ -3,7 +3,7 @@ import { isAgentKind, isCanvasView, type ProjectCanvasView, type ProjectContent,
 import { refuseMissingNodes } from './own-view.ts';
 import { VerbRefusal, field, orNote } from './verb.ts';
 
-// A plafond, not a budget: it is there to stop an agent in a loop long before a canvas stops drawing.
+// A ceiling, not a budget: it is there to stop an agent in a loop long before a canvas stops drawing.
 export const MAX_CANVAS_NODES = 500;
 
 /* The same sentence wherever a canvas is full: what is on it, what this call needs, and the cap. */

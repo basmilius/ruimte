@@ -14,7 +14,7 @@ import { CodedError } from '@adecore/agents/coded-error';
 
 export interface ClientAccess {
     reachability: 'loopback' | 'lan' | 'tunnel' | 'public';
-    // The paired session behind the socket; null for a client that presented the local secret.
+    // The session behind the socket; null for a client that presented the local secret.
     sessionId: string | null;
 }
 

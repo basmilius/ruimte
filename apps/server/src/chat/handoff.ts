@@ -10,7 +10,6 @@ export const HANDOFF_BUDGET_BYTES = 12 * 1024;
 const encoder = new TextEncoder();
 
 export interface HandoffMeta {
-    /* The name of the CLI the conversation ran with. */
     fromName: string;
     originalId: string;
     originalTitle: string;

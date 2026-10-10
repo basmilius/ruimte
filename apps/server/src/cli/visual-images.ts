@@ -39,7 +39,7 @@ const CARRIAGE_RETURN = 0x0d;
 const HELP_LINE = 'detail\truimte-context help visual';
 
 export interface ImageReference {
-    /* The path as the page writes it, without its quotes or `url(`. */
+    /* Where the path stands in the page, without its quotes or `url(`. */
     readonly start: number;
     readonly end: number;
     /* The file to read: the path as written, with the doubled backslashes of a JS string undone. */

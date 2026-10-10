@@ -1088,7 +1088,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
     if (statementKeys.length === 1 && statementKeys[0] === process.env[TEST_STATEMENT_KEY_VARIABLE]?.trim()) {
         console.warn(`Believing statements signed by the test key in ${TEST_STATEMENT_KEY_VARIABLE} instead of the address book`);
     }
-    // What lets a key nobody paired in on a statement from the address book, when the machine takes them.
+    // What lets a key the machine does not know yet in on a statement from the address book, when the machine takes them.
     const statements = new StatementGate({
         machineId: identity.id,
         machinePublicKey: identity.publicKey,

@@ -9,7 +9,6 @@ export interface Relay {
     /* Announces where this daemon listens; answers the public address, if the relay gives one. */
     publish(local: { host: string; port: number }): Promise<string | null>;
     stop(): Promise<void>;
-    /* Whether the relay is announced right now. */
     readonly isReady?: boolean;
     /* The ICE servers the relay handed out for a direct connection, TURN credentials included; none when it has none. */
     iceServers?(): IceServer[];
