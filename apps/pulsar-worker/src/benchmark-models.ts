@@ -1,10 +1,8 @@
 /*
- * The models of Ruimte against the models Artificial Analysis measures, which is where a new model gets
- * its points: a deploy of this Worker and not a release of the app. At Artificial Analysis an effort is
- * a model of its own, so every effort names the id it is looked up by and the name that id had, for a
- * person reading this table. An effort without an id was not measured there. Ultrathink and ultra have
- * no counterpart, since Artificial Analysis measures up to max. A switch such as Haiku's thinking is
- * two efforts, `off` and the id of the switch.
+ * Ruimte's models against Artificial Analysis's, so a new model gets its points with a deploy of this
+ * Worker. There an effort is a model of its own: each effort names its id and that id's name for a
+ * reader. No id means not measured; ultrathink and ultra have no counterpart above max. A switch such
+ * as Haiku's thinking is two efforts, `off` and the id of the switch.
  */
 
 export type BenchmarkProvider = 'claude' | 'codex';

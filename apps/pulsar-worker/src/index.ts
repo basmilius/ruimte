@@ -21,7 +21,26 @@ const REVOKED_SESSION_RETENTION_MS = 30 * 24 * 60 * 60_000;
 // Four pages every three hours is 32 of the 100 requests a day the free tier allows; hourly would be 96. Mirrors `wrangler.jsonc`.
 const BENCHMARKS_CRON = '17 */3 * * *';
 
-const DEVICE_ROUTES: Record<string, (request: Request, env: Env) => Promise<Response>> = {
+type Handler = (request: Request, env: Env) => Response | Promise<Response>;
+
+const ROUTES: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
+    '/v1/apple/start': { POST: startNativeApple },
+    '/v1/apple/complete': { POST: completeNativeApple },
+    '/v1/push/devices': { POST: registerPushDevice },
+    '/v1/push': { POST: (request, env) => sendPush(request, env) },
+    '/v1/providers': { GET: (_request, env) => listProviders(env) },
+    '/v1/models/benchmarks': { GET: (_request, env) => readBenchmarks(env) },
+    '/v1/models/catalog': { GET: () => readCatalogs() },
+    '/v1/account': { GET: getAccount, DELETE: deleteAccount },
+    '/v1/account/link': { POST: startIdentityLink },
+    '/v1/account/identities': { POST: completeIdentityLink },
+    '/v1/machines': { GET: listMachines, POST: registerMachine },
+    '/v1/statements': { POST: issueStatement },
+    '/v1/session': { POST: exchangeLoginCode, DELETE: endSession },
+    '/v1/session/refresh': { POST: refreshSession }
+};
+
+const DEVICE_ROUTES: Readonly<Record<string, Handler>> = {
     start: startDeviceLink,
     poll: pollDeviceLink,
     complete: completeDeviceLink,
@@ -30,6 +49,10 @@ const DEVICE_ROUTES: Record<string, (request: Request, env: Env) => Promise<Resp
     approve: approveDeviceLink,
     deny: denyDeviceLink
 };
+
+function ownEntry<Value>(table: Readonly<Record<string, Value>> | undefined, key: string): Value | undefined {
+    return table !== undefined && Object.hasOwn(table, key) ? table[key] : undefined;
+}
 
 async function health(env: Env): Promise<Response> {
     let statementKey: string | null = null;
@@ -44,81 +67,26 @@ async function health(env: Env): Promise<Response> {
 
 async function api(request: Request, env: Env, path: string): Promise<Response> {
     const method = request.method;
-    if (path === '/v1/apple/start' && method === 'POST') {
-        return startNativeApple(request, env);
-    }
-    if (path === '/v1/apple/complete' && method === 'POST') {
-        return completeNativeApple(request, env);
-    }
-    if (path === '/v1/push/devices' && method === 'POST') {
-        return registerPushDevice(request, env);
-    }
-    if (path === '/v1/push' && method === 'POST') {
-        return sendPush(request, env);
+    const exact = ownEntry(ownEntry(ROUTES, path), method);
+    if (exact) {
+        return exact(request, env);
     }
     const pushDevice = /^\/v1\/push\/devices\/([A-Za-z0-9_-]{43})(?:\/(activities|start-activity))?$/.exec(path);
     if (pushDevice && ((method === 'DELETE' && !pushDevice[2]) || (method === 'PUT' && pushDevice[2]))) {
         return changePushDevice(request, env, pushDevice[1]!, pushDevice[2] === 'activities' ? 'update' : pushDevice[2] === 'start-activity' ? 'start' : null);
     }
-    if (path === '/v1/providers' && method === 'GET') {
-        return listProviders(env);
-    }
-    if (path === '/v1/models/benchmarks' && method === 'GET') {
-        return readBenchmarks(env);
-    }
-    if (path === '/v1/models/catalog' && method === 'GET') {
-        return readCatalogs();
-    }
-    if (path === '/v1/account') {
-        if (method === 'GET') {
-            return getAccount(request, env);
-        }
-        if (method === 'DELETE') {
-            return deleteAccount(request, env);
-        }
-    }
-    if (path === '/v1/account/link' && method === 'POST') {
-        return startIdentityLink(request, env);
-    }
-    if (path === '/v1/account/identities' && method === 'POST') {
-        return completeIdentityLink(request, env);
-    }
     const identity = /^\/v1\/account\/identities\/([a-z]+)$/.exec(path)?.[1];
     if (identity !== undefined && method === 'DELETE') {
         return unlinkIdentity(request, env, identity);
-    }
-    if (path === '/v1/machines') {
-        if (method === 'GET') {
-            return listMachines(request, env);
-        }
-        if (method === 'POST') {
-            return registerMachine(request, env);
-        }
     }
     const machine = /^\/v1\/machines\/([^/]+)$/.exec(path);
     if (machine?.[1] && method === 'DELETE') {
         return deleteMachine(request, env, machine[1]);
     }
-    if (path === '/v1/statements' && method === 'POST') {
-        return issueStatement(request, env);
-    }
     const device = /^\/v1\/device\/([a-z]+)$/.exec(path)?.[1];
-    if (device !== undefined && method === 'POST') {
-        const handler = DEVICE_ROUTES[device];
-        if (handler) {
-            return handler(request, env);
-        }
-    }
-    if (path === '/v1/session') {
-        if (method === 'POST') {
-            return exchangeLoginCode(request, env);
-        }
-        if (method === 'DELETE') {
-            return endSession(request, env);
-        }
-    }
-    if (path === '/v1/session/refresh' && method === 'POST') {
-        return refreshSession(request, env);
+    const deviceRoute = device !== undefined && method === 'POST' ? ownEntry(DEVICE_ROUTES, device) : undefined;
+    if (deviceRoute) {
+        return deviceRoute(request, env);
     }
     return failure('not-found', 'No such route');
 }
