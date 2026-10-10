@@ -1,11 +1,22 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { ActionRefusal } from '@ruimte/actions';
 import { Button, Dialog } from '@adecore/ui';
 import type { TerminalPreparePreview } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
 import { useToasts } from '@/state/toasts';
 import type { PrepareDestination } from '@/terminal/prepare-destination';
+
+function prepareFailure(error: unknown, t: TFunction<'chat'>): string {
+    if (error instanceof ActionRefusal && error.code === 'terminal-prepare-unconfirmed') {
+        return t('prepare.unconfirmed');
+    }
+    if (error instanceof ActionRefusal && error.code === 'terminal-editor-refused') {
+        return t('prepare.refused');
+    }
+    return error instanceof Error ? error.message : t('prepare.failed');
+}
 
 export function PrepareTerminalDialog({
     endpointId,
@@ -51,15 +62,7 @@ export function PrepareTerminalDialog({
             }
             setOpen(false);
         } catch (error) {
-            setError(
-                error instanceof ActionRefusal && error.code === 'terminal-prepare-unconfirmed'
-                    ? t('prepare.unconfirmed')
-                    : error instanceof ActionRefusal && error.code === 'terminal-editor-refused'
-                      ? t('prepare.refused')
-                      : error instanceof Error
-                        ? error.message
-                        : t('prepare.failed')
-            );
+            setError(prepareFailure(error, t));
         } finally {
             working.current = false;
             setBusy(false);

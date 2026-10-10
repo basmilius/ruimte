@@ -1,9 +1,10 @@
-import type { ShellCodeBlockContext } from './prepare-code-block';
+import type { ShellCodeBlockContext } from '@adecore/agents-react/host';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ErrorBoundary, IconButton, lazyNamed } from '@adecore/ui';
 import { SquareTerminal } from 'lucide-react';
-import { shellCommandLine, ShellLanguageSchema, type TerminalPreparePreview } from '@ruimte/contracts';
+import type { TerminalPreparePreview } from '@ruimte/contracts';
+import { preparableShell } from '@/chat/preparable-shell';
 import { performAsPerson } from '@/actions/client-actions';
 import { endpointById } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
@@ -18,13 +19,13 @@ export function PrepareCodeBlockAction({ context }: { context: ShellCodeBlockCon
     useEffect(() => () => destination.current?.dispose(), []);
     const [busy, setBusy] = useState(false);
     const [preview, setPreview] = useState<{ endpointId: string; result: TerminalPreparePreview; destination: PrepareDestination | null } | null>(null);
-    const language = ShellLanguageSchema.safeParse(context.language);
-    if (!context.complete || !language.success || shellCommandLine(context.code) === null) {
+    const language = preparableShell(context);
+    if (language === null) {
         return null;
     }
 
     async function open(): Promise<void> {
-        if (working.current || !language.success) {
+        if (working.current || language === null) {
             return;
         }
         working.current = true;
@@ -47,7 +48,7 @@ export function PrepareCodeBlockAction({ context }: { context: ShellCodeBlockCon
                 machineId,
                 chatId: context.chatId,
                 itemId: context.itemId,
-                language: language.data,
+                language,
                 code: context.code
             });
             if (scope && !scope.current()) {

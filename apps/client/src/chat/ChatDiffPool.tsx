@@ -7,7 +7,6 @@ function makeWorker(): Worker {
     return new DiffWorker();
 }
 
-/* The chat's highlighter pool, with its workers made the way Vite bundles them. */
 export default function ChatDiffPool({ children }: { children: ReactNode }) {
     return <DiffPool workerFactory={makeWorker}>{children}</DiffPool>;
 }

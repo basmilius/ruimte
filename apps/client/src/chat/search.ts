@@ -24,7 +24,7 @@ export interface ChatSearch {
     invalid: boolean;
 }
 
-const NOTHING: ChatSearch = { hits: [], invalid: false };
+export const NOTHING: ChatSearch = { hits: [], invalid: false };
 
 /* A sub-agent's own steps, and the agents it opened, belong to its row, which the thread keeps shut; they are its business. */
 function isChild(item: ChatItem): boolean {
@@ -71,7 +71,6 @@ export function findableFields(item: ChatItem): { field: ChatFindField; text: st
     }
 }
 
-/* Every hit in the items, in their order. */
 export function searchChat(items: readonly ChatItem[], query: FindQuery): ChatSearch {
     const compiled = compileFind(query);
     if (compiled.kind === 'empty') {

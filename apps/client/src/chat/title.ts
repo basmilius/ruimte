@@ -21,10 +21,8 @@ function withoutTail(text: string): string {
 }
 
 /*
- * The name a node takes from the prompt that opened it. Only the first line: a prompt that goes on
- * is a message, not a name. A cut lands on a word boundary when there is one worth using, and the
- * punctuation that ended the sentence goes, since a title is not a sentence. Answers null when the
- * prompt leaves nothing readable, so the node keeps the name it has.
+ * The name a node takes from the first line of the prompt that opened it, cut on a word boundary when
+ * one is worth using and without the closing punctuation. Null leaves the node the name it has.
  */
 export function deriveNodeTitle(prompt: string): string | null {
     const line = (prompt.split('\n')[0] ?? '').replace(/\s+/g, ' ').trim();

@@ -36,7 +36,7 @@ function noop(): void {
 }
 
 function closeLogin(): void {
-    return useUi.getState().setLogin(null);
+    useUi.getState().setLogin(null);
 }
 
 /*

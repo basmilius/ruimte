@@ -71,7 +71,6 @@ export function chooserSections(chats: readonly ChooserChat[], linkedIds: readon
     };
 }
 
-/* The sections for a source, from what the sidebar and the grid hold now. */
 export function useChooserSections(linkedIds: readonly string[]): ChooserSections {
     const source = useSidebarSource();
     const layout = useDocument((s) => s.layout);

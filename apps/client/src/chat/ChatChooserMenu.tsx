@@ -32,7 +32,7 @@ function ChatRows({
 
 /*
  * Which chat gets a block of text: the ones linked to where it came from, the ones in sight, the rest of
- * the project, and a new chat per agent the app offers. Nothing is sent from here, which the last line says.
+ * the project, and a new chat per agent the app offers. A pick only fills the prompt; nothing is sent.
  */
 function ChooserMenu({ offer, x, y }: { offer: SelectionOffer; x: number; y: number }) {
     const { t } = useTranslation('chat');

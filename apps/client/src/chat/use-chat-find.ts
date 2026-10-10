@@ -1,5 +1,5 @@
 import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { hitKey, hitRow, indexRows, placeOfHit, searchChat, type ChatHit, type ChatSearch } from '@/chat/search';
+import { hitKey, hitRow, indexRows, NOTHING, placeOfHit, searchChat, type ChatHit } from '@/chat/search';
 import type { FindReveal } from '@adecore/agents-react/chat/ui/find-reveal';
 import type { TimelineFind, TimelineFindOptions } from '@adecore/agents-react/host';
 import { findRanges } from '@/find/dom-text';
@@ -7,8 +7,6 @@ import { FindBar } from '@/find/FindBar';
 import { clearFindHighlights, setFindHighlights } from '@/find/highlights';
 import { compileFind, stepIndex } from '@/find/query';
 import { useFind, type FindState } from '@/find/use-find';
-
-const NOTHING: ChatSearch = { hits: [], invalid: false };
 
 // A fold that opens but still hides the hit would otherwise be asked again on every render.
 const MAX_SEEK_STEPS = 4;
