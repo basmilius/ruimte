@@ -163,22 +163,26 @@ if (!bundle.success) {
 }
 
 /* The package a bundled file belongs to and its place there, so the digest does not depend on where packages are installed or linked. */
-function sourceName(path: string): string {
+function sourceName(path: string): readonly [name: string, contents: string] {
     let folder = dirname(path);
     while (dirname(folder) !== folder) {
         const manifest = resolve(folder, 'package.json');
-        if (existsSync(manifest)) {
-            return `${JSON.parse(readFileSync(manifest, 'utf8')).name}/${relative(folder, path)}`;
+        // Packages such as zod carry a nameless package.json per subpath, which only sets the module type.
+        const { name, version } = existsSync(manifest) ? JSON.parse(readFileSync(manifest, 'utf8')) : {};
+        if (name) {
+            // Which files of a third-party package a bundle lists differs between Bun versions, its version does not.
+            if (path.includes('/node_modules/') && !name.startsWith('@adecore/')) {
+                return [`${name}@${version}`, ''];
+            }
+            return [`${name}/${relative(folder, path)}`, readFileSync(path, 'utf8')];
         }
         folder = dirname(folder);
     }
-    return path;
+    return [path, readFileSync(path, 'utf8')];
 }
 
 // Minified output differs between Bun versions, so a check compares what went in rather than the bytes that came out.
-const sources = Object.keys(bundle.metafile!.inputs)
-    .map((input) => resolve(process.cwd(), input))
-    .map((path) => [sourceName(path), readFileSync(path, 'utf8')] as const)
+const sources = [...new Map(Object.keys(bundle.metafile!.inputs).map((input) => sourceName(resolve(process.cwd(), input))))]
     .sort(([left], [right]) => left.localeCompare(right));
 const digest = createHash('sha256');
 for (const [name, contents] of sources) {
