@@ -15,6 +15,7 @@ interface Props {
     capture(): DictationInsertion | null;
     disabled?: boolean;
 }
+
 export function DictationControl(props: Props) {
     const { t } = useTranslation('voice');
     return (
@@ -23,6 +24,7 @@ export function DictationControl(props: Props) {
         </ErrorBoundary>
     );
 }
+
 function Control({ targetRef, capture, disabled = false, buttonContainer, inlinePreview = false }: Props) {
     const { t } = useTranslation('voice');
     const id = useId();
@@ -51,6 +53,12 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
     if (!enabled || (disabled && !active)) {
         return null;
     }
+    const toggle = (): void => {
+        const element = targetRef.current;
+        if (element) {
+            toggleDictation({ id, element, capture: () => latest.current(), disabled: () => latestDisabled.current });
+        }
+    };
     const label = active && phase !== 'error' ? t('dictation.stop') : t('dictation.start');
     if (buttonContainer !== undefined) {
         const working = active && (phase === 'starting' || phase === 'finishing');
@@ -74,12 +82,7 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
                                 event.preventDefault();
                                 event.stopPropagation();
                             }}
-                            onClick={() => {
-                                const element = targetRef.current;
-                                if (element) {
-                                    toggleDictation({ id, element, capture: () => latest.current(), disabled: () => latestDisabled.current });
-                                }
-                            }}
+                            onClick={toggle}
                         />,
                         buttonContainer
                     )}
@@ -110,12 +113,7 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
                         aria-pressed={active && phase !== 'error'}
                         disabled={active && phase === 'finishing'}
                         onPointerDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                            const element = targetRef.current;
-                            if (element) {
-                                toggleDictation({ id, element, capture: () => latest.current(), disabled: () => latestDisabled.current });
-                            }
-                        }}
+                        onClick={toggle}
                     />
                     {active && <IconButton icon={X} label={t('dictation.cancel')} onClick={cancelDictation} />}
                 </ButtonGroup>

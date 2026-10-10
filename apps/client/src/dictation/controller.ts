@@ -6,7 +6,6 @@ import { desktop } from '@/desktop/bridge';
 import { useSettings } from '@/state/settings';
 import { dictationFailureText } from './failure';
 import { helperEngine } from './helper';
-import { applyChunk, EMPTY_TRANSCRIPT, transcriptText } from './transcript';
 import type { DictationEngine, DictationSession } from './engine';
 
 export const SPEECH_LOCALES: Record<string, string> = {
@@ -225,9 +224,8 @@ export function toggleDictation(target: DictationTarget): void {
                     if (generation !== token) {
                         return;
                     }
-                    const text = transcriptText(applyChunk(EMPTY_TRANSCRIPT, chunk));
-                    captured.preview?.(text);
-                    useDictation.setState({ text });
+                    captured.preview?.(chunk.text);
+                    useDictation.setState({ text: chunk.text });
                     if (chunk.final) {
                         finalText = chunk.text;
                     }

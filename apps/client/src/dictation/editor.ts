@@ -32,6 +32,8 @@ export const dictationRange = StateField.define<InsertionRange | null>({
 export const dictationPreviewEffect = StateEffect.define<string>();
 export const dictationLevelsEffect = StateEffect.define<readonly number[] | null>();
 
+const WAVEFORM_BARS = 5;
+
 class WaveformWidget extends WidgetType {
     readonly levels: readonly number[];
 
@@ -48,7 +50,7 @@ class WaveformWidget extends WidgetType {
         const element = document.createElement('span');
         element.className = 'dictation-waveform';
         element.setAttribute('aria-hidden', 'true');
-        for (let index = 0; index < 5; index++) {
+        for (let index = 0; index < WAVEFORM_BARS; index++) {
             element.append(document.createElement('span'));
         }
         this.updateDOM(element);
@@ -56,9 +58,9 @@ class WaveformWidget extends WidgetType {
     }
 
     updateDOM(element: HTMLElement): boolean {
-        for (let index = 0; index < 5; index++) {
-            const from = Math.floor((index * this.levels.length) / 5);
-            const to = Math.max(from + 1, Math.floor(((index + 1) * this.levels.length) / 5));
+        for (let index = 0; index < WAVEFORM_BARS; index++) {
+            const from = Math.floor((index * this.levels.length) / WAVEFORM_BARS);
+            const to = Math.max(from + 1, Math.floor(((index + 1) * this.levels.length) / WAVEFORM_BARS));
             let level = 0;
             for (let band = from; band < to; band++) {
                 level += this.levels[band] ?? 0;
