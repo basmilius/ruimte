@@ -4,6 +4,7 @@ import type { ChatItem, ChatWorkflowAgent, ContextSource, DeviceInfo, DiagramDoc
 import type { CanvasHost } from '../canvas/verb.ts';
 import { handleContextRequest } from './context-route.ts';
 import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
+import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 
 /* The route in front of a store, for a caller no project places: `list` and `read` never ask where it stands. */
 function route(context: ContextStore) {
@@ -568,7 +569,7 @@ test('reading an assistant UI block returns its fallback between the surrounding
         turnId: null,
         text,
         streaming: false,
-        ui: compileUi(text, { id: 'reply', final: true })
+        ui: compileUi(text, { id: 'reply', final: true, fenceLanguage: RUIMTE_UI_FENCE })
     };
     const transcript = renderTranscript([item]);
     expect(transcript).toContain('Before');

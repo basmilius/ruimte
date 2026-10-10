@@ -2,6 +2,7 @@ import { uiSessionNote } from '@adecore/intelligent-ui/text';
 import { AgentKindSchema, type ContextSource } from '@ruimte/contracts';
 import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
 import { NODE_VERB_KINDS } from '../canvas/node-kinds.ts';
+import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 
 /* Asked for a CLI by name, a model that has not read the names goes looking through its own tools
    for one and reports back that this machine has none, so the verb names them where it is offered. */
@@ -63,7 +64,7 @@ export const VISUAL_LAYOUT_NOTE =
     'Visuals follow the reply column by default. For an application mockup or dashboard that benefits from more width, opt in with `visual show --layout wide`. The host chooses the width within the chat pane; keep the page responsive and preview it at both 360px and 1200px with `visual preview --width`.';
 
 export const VISUAL_NOTE =
-    uiSessionNote() +
+    uiSessionNote({ fenceLanguage: RUIMTE_UI_FENCE }) +
     ' Live data: $name = @Query("source", {args}). Sources: git.status {repo:"."}, git.log {repo:".",limit:30}, launch.status {name:"api"}, chat.tasks {}, database.query {connection:"id",sql:"SELECT ...",schema:null,limit:50}. Database rows are records for Table. Sources are literal; arguments may reference local inputs. Queries only read. ' +
     ' For free diagrams, collages, mockups and local images outside the catalog, show a self-contained HTML page above your reply with `ruimte-context visual show --title T < page.html` after checking it with `visual preview` (`ruimte-context help visual` has the rules), and let the reply add only what the page does not say. ' +
     VISUAL_FILES_NOTE +

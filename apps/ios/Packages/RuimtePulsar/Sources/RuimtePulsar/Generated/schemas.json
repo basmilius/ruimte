@@ -10800,7 +10800,6 @@
                     "authorChatId": {
                       "type": "string"
                     },
-                    "access": {},
                     "blocks": {
                       "type": "object",
                       "propertyNames": {
@@ -10835,6 +10834,9 @@
                                 "readAt": {
                                   "type": "number",
                                   "minimum": 0
+                                },
+                                "code": {
+                                  "type": "string"
                                 },
                                 "reason": {
                                   "type": "string"
@@ -10969,6 +10971,9 @@
                                 "label": {
                                   "type": "string"
                                 },
+                                "code": {
+                                  "type": "string"
+                                },
                                 "reason": {
                                   "type": "string"
                                 }
@@ -10989,7 +10994,6 @@
                   },
                   "required": [
                     "authorChatId",
-                    "access",
                     "blocks"
                   ]
                 },
@@ -12998,7 +13002,6 @@
                     "authorChatId": {
                       "type": "string"
                     },
-                    "access": {},
                     "blocks": {
                       "type": "object",
                       "propertyNames": {
@@ -13033,6 +13036,9 @@
                                 "readAt": {
                                   "type": "number",
                                   "minimum": 0
+                                },
+                                "code": {
+                                  "type": "string"
                                 },
                                 "reason": {
                                   "type": "string"
@@ -13167,6 +13173,9 @@
                                 "label": {
                                   "type": "string"
                                 },
+                                "code": {
+                                  "type": "string"
+                                },
                                 "reason": {
                                   "type": "string"
                                 }
@@ -13187,7 +13196,6 @@
                   },
                   "required": [
                     "authorChatId",
-                    "access",
                     "blocks"
                   ]
                 },
@@ -14506,7 +14514,6 @@
                     "authorChatId": {
                       "type": "string"
                     },
-                    "access": {},
                     "blocks": {
                       "type": "object",
                       "propertyNames": {
@@ -14541,6 +14548,9 @@
                                 "readAt": {
                                   "type": "number",
                                   "minimum": 0
+                                },
+                                "code": {
+                                  "type": "string"
                                 },
                                 "reason": {
                                   "type": "string"
@@ -14675,6 +14685,9 @@
                                 "label": {
                                   "type": "string"
                                 },
+                                "code": {
+                                  "type": "string"
+                                },
                                 "reason": {
                                   "type": "string"
                                 }
@@ -14695,7 +14708,6 @@
                   },
                   "required": [
                     "authorChatId",
-                    "access",
                     "blocks"
                   ]
                 },
@@ -16008,7 +16020,6 @@
                             "authorChatId": {
                               "type": "string"
                             },
-                            "access": {},
                             "blocks": {
                               "type": "object",
                               "propertyNames": {
@@ -16043,6 +16054,9 @@
                                         "readAt": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "code": {
+                                          "type": "string"
                                         },
                                         "reason": {
                                           "type": "string"
@@ -16177,6 +16191,9 @@
                                         "label": {
                                           "type": "string"
                                         },
+                                        "code": {
+                                          "type": "string"
+                                        },
                                         "reason": {
                                           "type": "string"
                                         }
@@ -16197,7 +16214,6 @@
                           },
                           "required": [
                             "authorChatId",
-                            "access",
                             "blocks"
                           ]
                         },
@@ -17280,7 +17296,6 @@
                     "authorChatId": {
                       "type": "string"
                     },
-                    "access": {},
                     "blocks": {
                       "type": "object",
                       "propertyNames": {
@@ -17315,6 +17330,9 @@
                                 "readAt": {
                                   "type": "number",
                                   "minimum": 0
+                                },
+                                "code": {
+                                  "type": "string"
                                 },
                                 "reason": {
                                   "type": "string"
@@ -17449,6 +17467,9 @@
                                 "label": {
                                   "type": "string"
                                 },
+                                "code": {
+                                  "type": "string"
+                                },
                                 "reason": {
                                   "type": "string"
                                 }
@@ -17469,7 +17490,6 @@
                   },
                   "required": [
                     "authorChatId",
-                    "access",
                     "blocks"
                   ]
                 },
@@ -19038,7 +19058,6 @@
                               "authorChatId": {
                                 "type": "string"
                               },
-                              "access": {},
                               "blocks": {
                                 "type": "object",
                                 "propertyNames": {
@@ -19073,6 +19092,9 @@
                                           "readAt": {
                                             "type": "number",
                                             "minimum": 0
+                                          },
+                                          "code": {
+                                            "type": "string"
                                           },
                                           "reason": {
                                             "type": "string"
@@ -19207,6 +19229,9 @@
                                           "label": {
                                             "type": "string"
                                           },
+                                          "code": {
+                                            "type": "string"
+                                          },
                                           "reason": {
                                             "type": "string"
                                           }
@@ -19227,7 +19252,6 @@
                             },
                             "required": [
                               "authorChatId",
-                              "access",
                               "blocks"
                             ]
                           },
@@ -20592,6 +20616,9 @@
         "type": "number",
         "minimum": 0
       },
+      "code": {
+        "type": "string"
+      },
       "reason": {
         "type": "string"
       }
@@ -20771,6 +20798,9 @@
         "type": "string"
       },
       "label": {
+        "type": "string"
+      },
+      "code": {
         "type": "string"
       },
       "reason": {
@@ -23893,7 +23923,6 @@
                     "authorChatId": {
                       "type": "string"
                     },
-                    "access": {},
                     "blocks": {
                       "type": "object",
                       "propertyNames": {
@@ -23928,6 +23957,9 @@
                                 "readAt": {
                                   "type": "number",
                                   "minimum": 0
+                                },
+                                "code": {
+                                  "type": "string"
                                 },
                                 "reason": {
                                   "type": "string"
@@ -24062,6 +24094,9 @@
                                 "label": {
                                   "type": "string"
                                 },
+                                "code": {
+                                  "type": "string"
+                                },
                                 "reason": {
                                   "type": "string"
                                 }
@@ -24082,7 +24117,6 @@
                   },
                   "required": [
                     "authorChatId",
-                    "access",
                     "blocks"
                   ]
                 },
@@ -52093,7 +52127,6 @@
                           "authorChatId": {
                             "type": "string"
                           },
-                          "access": {},
                           "blocks": {
                             "type": "object",
                             "propertyNames": {
@@ -52128,6 +52161,9 @@
                                       "readAt": {
                                         "type": "number",
                                         "minimum": 0
+                                      },
+                                      "code": {
+                                        "type": "string"
                                       },
                                       "reason": {
                                         "type": "string"
@@ -52262,6 +52298,9 @@
                                       "label": {
                                         "type": "string"
                                       },
+                                      "code": {
+                                        "type": "string"
+                                      },
                                       "reason": {
                                         "type": "string"
                                       }
@@ -52282,7 +52321,6 @@
                         },
                         "required": [
                           "authorChatId",
-                          "access",
                           "blocks"
                         ]
                       },
@@ -53365,7 +53403,6 @@
                   "authorChatId": {
                     "type": "string"
                   },
-                  "access": {},
                   "blocks": {
                     "type": "object",
                     "propertyNames": {
@@ -53400,6 +53437,9 @@
                               "readAt": {
                                 "type": "number",
                                 "minimum": 0
+                              },
+                              "code": {
+                                "type": "string"
                               },
                               "reason": {
                                 "type": "string"
@@ -53534,6 +53574,9 @@
                               "label": {
                                 "type": "string"
                               },
+                              "code": {
+                                "type": "string"
+                              },
                               "reason": {
                                 "type": "string"
                               }
@@ -53554,7 +53597,6 @@
                 },
                 "required": [
                   "authorChatId",
-                  "access",
                   "blocks"
                 ]
               },
@@ -55123,7 +55165,6 @@
                             "authorChatId": {
                               "type": "string"
                             },
-                            "access": {},
                             "blocks": {
                               "type": "object",
                               "propertyNames": {
@@ -55158,6 +55199,9 @@
                                         "readAt": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "code": {
+                                          "type": "string"
                                         },
                                         "reason": {
                                           "type": "string"
@@ -55292,6 +55336,9 @@
                                         "label": {
                                           "type": "string"
                                         },
+                                        "code": {
+                                          "type": "string"
+                                        },
                                         "reason": {
                                           "type": "string"
                                         }
@@ -55312,7 +55359,6 @@
                           },
                           "required": [
                             "authorChatId",
-                            "access",
                             "blocks"
                           ]
                         },

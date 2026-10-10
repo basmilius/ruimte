@@ -32,6 +32,7 @@ import { errorText } from '../error-text.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { continueOnWake, continuedInForkNote } from './continue-on.ts';
 import { ChatError } from './errors.ts';
+import { RUIMTE_UI_FENCE } from './ui-fence.ts';
 import { InlineEditNotes } from './inline-edit.ts';
 
 export type { InterruptedRun } from '@adecore/agents/chat/chat-core';
@@ -224,7 +225,7 @@ export class ChatManager extends ChatCore {
     private readonly childHolds = new Map<string, { parentId: string; toolUseId: string; childId: string; clients: Set<string> }>();
 
     constructor(options: ChatManagerOptions) {
-        super({ codexClient: RUIMTE_CODEX_CLIENT, ...options, env: chatEnvOf(options.env ?? process.env, options.binDir) });
+        super({ codexClient: RUIMTE_CODEX_CLIENT, uiFenceLanguage: RUIMTE_UI_FENCE, ...options, env: chatEnvOf(options.env ?? process.env, options.binDir) });
         this.contextUrl = options.contextUrl ?? null;
         this.depthOf = options.depthOf ?? (() => 0);
         this.standalone = options.standalone ?? (() => false);

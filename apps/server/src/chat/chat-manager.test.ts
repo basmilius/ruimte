@@ -84,6 +84,16 @@ function subagentWork(): Array<Extract<ChatItem, { kind: 'tool' | 'assistant' }>
 }
 
 describe('ChatManager', () => {
+    test('a reply compiles UI blocks under the ruimte-ui fence that stored chats and agents use', async () => {
+        await manager.create({ chatId: 'ui-chat', cwd: home });
+        manager.attach('ui-chat', 'c1');
+        await manager.send('ui-chat', 'Status\n```ruimte-ui\n<Summary>Ready</Summary>\n```');
+        await recorder.until(idle);
+        const [reply] = recorder.ofKind('assistant');
+        expect(reply?.ui).toHaveLength(1);
+        expect(reply?.ui?.[0]?.complete).toBe(true);
+    });
+
     test('create spawns nothing; the first send starts the CLI with the selection and streams a reply', async () => {
         const info = await manager.create({ chatId: 'chat-1', cwd: home });
         expect(info).toMatchObject({

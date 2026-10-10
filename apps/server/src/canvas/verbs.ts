@@ -3,6 +3,7 @@ import { alertVerb } from './alert-verb.ts';
 import { actionDescription } from '@ruimte/actions';
 import { ChatSubagentSourceSchema, ContextSourceSchema } from '@ruimte/contracts';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
+import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 // First: verbs join the --dry-run list as they are defined, and node new has always led it.
 import { nodeDeleteAction, nodeListAction, nodeNewAction } from './node-verb.ts';
 import { agentVerb } from './agent-verb.ts';
@@ -143,7 +144,10 @@ const viewNoun = defineNoun({
 const uiNoun = defineNoun({
     name: 'ui',
     summary: 'The catalog and syntax of fenced ruimte-ui blocks in replies; writes no project resource',
-    detail: ['syntax\tWrite a fenced ruimte-ui block in your reply; this is a reference, not a command.', ...uiReferenceText().split('\n')],
+    detail: [
+        'syntax\tWrite a fenced ruimte-ui block in your reply; this is a reference, not a command.',
+        ...uiReferenceText({ fenceLanguage: RUIMTE_UI_FENCE }).split('\n')
+    ],
     actions: []
 });
 

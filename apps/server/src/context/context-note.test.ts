@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { compileUi } from '@adecore/intelligent-ui';
 import { AgentKindSchema, type ContextSource } from '@ruimte/contracts';
 import { NODE_VERB_KINDS } from '../canvas/node-verb.ts';
+import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 import { chatPrompt, contextChangeNote, contextHint, contextPrompt, hookContext, verbsNote, VISUAL_NOTE } from './context-note.ts';
 
 const VERBS_NOTE = verbsNote({ depth: 0 });
@@ -30,7 +31,7 @@ describe('contextHint', () => {
 
 describe('verbsNote', () => {
     test('the complete agent note contains a closed and compilable UI example', () => {
-        const blocks = compileUi(VISUAL_NOTE, { id: 'agent-note-example', final: true });
+        const blocks = compileUi(VISUAL_NOTE, { id: 'agent-note-example', final: true, fenceLanguage: RUIMTE_UI_FENCE });
         expect(blocks).toHaveLength(1);
         expect(blocks[0].diagnostics).toEqual([]);
         expect(blocks[0].nodes.some((node) => node.type === 'Summary')).toBe(true);
