@@ -18,7 +18,7 @@ ships. Both are loaded beside these files. The same rules hold in the chat's wor
 change in its own repository.
 
 `common` holds what several surfaces say the same way: Cancel, Close, Delete, Try again. Read from
-it freely, add to it only when a word is genuinely shared, never to park a string that has a home.
+it freely, add to it only when a word is really shared, never to park a string that has a home.
 
 ## In a component
 
@@ -37,7 +37,7 @@ the next language will not count the way these two do.
 
 ## Outside a component
 
-A store, a watcher or an action that raises a toast calls `i18next.t('<namespace>:<key>')` directly.
+A store, a watcher or an action that raises a toast calls `i18next.t('<namespace>:<key>')` itself.
 That is safe inside a function, because `initI18n()` runs before the first render; it is not safe at
 the top level of a module, where the words are not in yet. A string built at module level is a
 constant, so give it a key and translate it where it is used.
@@ -56,7 +56,7 @@ Finder; `Stem` is a translation of the word, not the name of the thing.
 Address the reader as `je`, never `u`. Same voice as the English: active, one idea per sentence, no
 words doing the work of a shrug.
 
-The test for a word is simple: **if a Dutch developer says it in English out loud, it stays English.**
+The test for a word: **if a Dutch developer says it in English out loud, it stays English.**
 Reaching for a Dutch word where the trade has borrowed the English one does not read as Dutch, it
 reads as a translation. `Stage & Commit` stays `Stage & Commit`; `Alles klaarzetten en commit` is
 what this rule exists to prevent.

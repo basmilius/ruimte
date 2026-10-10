@@ -5,73 +5,76 @@ The React UI. It never touches a Node or Bun API and reaches the daemon only thr
 ## Workspace and tabs
 
 `WorkspaceShell`, `SplitGrid` and `TabStrip` adapt the shared ADE CORE workspace, split view
-and document tabs. A cell can show a single view or a tab host; the active view and ordered
-tabs are stored in the client's local layout. Opening an already placed view activates it.
+and document tabs. A cell shows a single view or a tab host; the client's local layout stores the
+active view and the tab order. Opening a view that is already placed activates it.
 A focused tab host takes new views beside its active tab; Open in New Tab also turns a
 single-view cell into a host. Moving a tab moves its view without recreating its session.
 
-Files, diffs and database tabs can be loose views without a sidebar row. A database table
-or structure can also be a saved view. Sharing a database view requires a shared connection;
-a missing connection has its own empty state. Tab attention reflects chat and terminal
-attention, and unsaved editor or database work keeps its view mounted. The application
+File, diff and database tabs can be loose views without a sidebar row. A database table
+or structure can also be a saved view. Sharing a database view requires a shared connection,
+and a missing connection has its own empty state. A tab shows the attention of its chat or
+terminal, and unsaved editor or database work keeps its view mounted. The application
 adapters own drag policy, native view bounds and persistence.
 
 ## Canvas interaction
 
-Option/Alt exposes gap handles for neighboring nodes and rows or columns. Equal gaps can
-move together; one drag is one undo step, and Escape restores the starting positions.
+Holding Option/Alt shows gap handles between neighboring nodes and between rows or columns.
+Equal gaps can move together; one drag is one undo step, and Escape restores the starting positions.
 Selection keeps its canvas anchor while scrolling. Connector paths are drawn before their
 labels so crossing lines cannot cover a label or its editor.
 
 Alt+Arrow selects a neighboring node while the canvas owns the keyboard; Enter gives that
 node input focus. Mod+Shift+2 fits the focused node in view. Explicit Space or middle-button
 panning keeps wheel input with the canvas over focused node bodies and browser guests.
-Text entry retains its own keys. Geometry and input ownership are covered by the canvas
-unit tests and `canvas-interaction.browser.integration.test.ts` in the manual browser suite.
+Text entry keeps its own keys. The canvas unit tests and
+`canvas-interaction.browser.integration.test.ts` in the manual browser suite cover geometry and
+input ownership.
 
 ## Terminal links
 
-Hover an HTTP/HTTPS link to see its target and activation hint in a tooltip. Cmd+click opens it on macOS;
-Ctrl+click does so on other platforms. Ordinary clicks focus the terminal, and dragging selects
-text. Wrapped URLs and OSC 8 web hyperlinks retain their complete target.
+Hovering an HTTP/HTTPS link shows its target and how to open it in a tooltip, centered above or
+below the hovered line of the link. Cmd+click opens it on macOS, Ctrl+click on other platforms. A
+plain click focuses the terminal, and dragging selects text. Wrapped URLs and OSC 8 web hyperlinks
+keep their complete target.
 
-Settings → Terminal chooses between the external browser (the default) and Ruimte.
-Externally, the desktop uses the system browser through its bridge; the web client opens a new tab.
-Inside Ruimte, a canvas terminal opens a browser node beside itself on that same canvas; a standalone
-terminal opens a new browser view. Without a project on the terminal's machine, links open externally.
-The tooltip shows the destination, centered above or below the hovered line of the link.
+Settings → Terminal chooses between the external browser (the default) and Ruimte. Externally, the
+desktop uses the system browser through its bridge and the web client opens a new tab. Inside
+Ruimte, a canvas terminal opens a browser node beside itself on the same canvas, and a standalone
+terminal opens a new browser view. Without a project on the terminal's machine, links open
+externally.
 
-A localhost, loopback or bind address belongs to the terminal's machine. Only the desktop's local
-machine opens these addresses directly. Other terminals explain that Ruimte does not forward
-remote ports; the link is not opened against the client computer. Plain file paths and file-scheme
-links are outside this web-link route.
+A localhost, loopback or bind address belongs to the terminal's machine. Only a terminal on the
+desktop's local machine opens these addresses. Any other terminal explains that Ruimte does not
+forward remote ports, and never opens the link against the client computer. Plain file paths and
+file-scheme links do not take this route.
 
-On macOS, a live terminal shows a compact `:port` badge in its existing toolbar for TCP listeners
-owned by its process tree. Canvas nodes and standalone terminal views use the same badge.
-Clicking checks the listener again and creates a linked browser node beside that terminal, on its
-own canvas. A standalone terminal opens a browser view. Scan failures read as unknown; closed
-sessions stop polling and late replies cannot open a browser. Hidden windows pause discovery.
-Remote and web clients show why these ports cannot be opened through their local browser.
-This route does not forward ports or infer HTTPS; it opens HTTP on verified loopback listeners.
-Verification has a five-second deadline measured from the click; a later reply is ignored and a
-new click checks that port again. An older daemon that does not know the request is unavailable
-and stops polling. Session browsers save their machine owner with the URL, including when moved
-between a canvas node and a standalone view. Reopening, navigation and creation require that
+On macOS, a live terminal shows a compact `:port` badge in its toolbar for each TCP listener its
+process tree owns, in a canvas node and in a standalone terminal view alike. A click checks the
+listener again and creates a linked browser node beside that terminal on its own canvas; a
+standalone terminal opens a browser view. A failed scan reads as unknown, a closed session stops
+polling, and a late reply cannot open a browser. A hidden window pauses discovery. Remote and web
+clients say why these ports cannot open in their local browser.
+
+This route does not forward ports or guess HTTPS; it opens HTTP on verified loopback listeners.
+The check has a five-second deadline from the click. A later reply is ignored, and a new click
+checks the port again. An older daemon that does not know the request counts as unavailable and
+stops polling. A session browser saves the machine that owns it with the URL, also when it moves
+between a canvas node and a standalone view. Reopening, navigating and creating one require that
 owner to be the proven local daemon. Another desktop shows an unavailable message instead of
-opening its own localhost, even when the project was copied to that desktop.
+opening its own localhost, even when the project was copied there.
 
 ## Model comparison
 
-The models dialog (`src/shell/models`) shares model, provider, legacy and reasoning filters
-across its score/cost comparison, speed chart and grouped or ranked bar charts. Metrics
-include Intelligence, Coding and Agentic indices, cost per task, total benchmark cost and
-output speed. A selected reference and comparison point keep their model/effort identity
-across view changes; filtering either point updates the comparison explicitly.
+The models dialog (`src/shell/models`) shares one set of model, provider, legacy and reasoning
+filters across its score/cost comparison, speed chart and grouped or ranked bar charts. The
+metrics are the Intelligence, Coding and Agentic indices, cost per task, total benchmark cost and
+output speed. A selected reference and comparison point keep their model and effort across view
+changes; filtering either point updates the comparison explicitly.
 
-The Pulsar worker stores partial measurements independently and reports the Intelligence
+The Pulsar worker stores each partial measurement on its own and reports the Intelligence
 Index version. Older clients can still read the original score/cost payload. Missing data
-is not replaced with zero. The dialog shows source attribution and snapshot age; benchmark
-costs describe benchmark tasks rather than a predicted Ruimte session cost. The client
+stays missing and never becomes zero. The dialog shows the source and the age of the snapshot;
+benchmark costs describe benchmark tasks, not a predicted cost for a Ruimte session. The client
 comparison tests and worker benchmark tests cover filtering, point selection and partial data.
 
 ## Code editor
@@ -83,9 +86,9 @@ React integration and shared language models. Ruimte owns the language adapters 
 `src/ondevice`. Monaco has been removed.
 
 The client reaches language servers through the daemon's transport. `@adecore/lsp` and
-`apps/server/src/language` own their processes and document versions. Installation, custom
-commands, server selection and restart behavior are documented in the
-[daemon README](../server/README.md#language-servers).
+`apps/server/src/language` own their processes and document versions. The
+[daemon README](../server/README.md#language-servers) covers installation, custom commands,
+server selection and restarts.
 
 `RUIMTE_EDITOR_KEYMAP` in `src/shell/editor-keymap.ts` supplies editor shortcuts and the keys
 printed in menus, the palette and settings. `editor-keymap.test.ts` checks collisions with
@@ -95,16 +98,16 @@ checks in `code-themes.test.ts`. Editor settings hold General, Smart keys, Langu
 and AI; the code font stays under Appearance because terminals share it.
 
 Code vision in `@adecore/editor-react` shows usages from language-server references and
-authors from `git.blame`, mapped onto unsaved text. Uncommitted lines have no attributed
-author. Clicking a usage count opens references; clicking authors opens their contribution
-card. The two features have separate settings.
+authors from `git.blame`, mapped onto unsaved text. Uncommitted lines have no author. Clicking a
+usage count opens the references; clicking the authors opens their contribution card. Each of
+the two has its own setting.
 
 ### Language edits
 
-Workspace edits normally become unsaved drafts. Every edit is checked against its target
-text before applying it. An edit that also moves a file saves the affected files and moves
-them through the machine in the edit's order. Files-panel moves ask the daemon for
-`workspace/willRenameFiles` edits before moving, then send `workspace/didRenameFiles`.
+A workspace edit normally becomes an unsaved draft. The editor checks every edit against its
+target text before applying it. An edit that also moves a file saves the affected files and moves
+them through the machine in the edit's order. A move in the Files panel asks the daemon for
+`workspace/willRenameFiles` edits first, then sends `workspace/didRenameFiles`.
 Tabs and remembered editor state follow the new path. Refactor lists group Extract, Inline
 and Move actions; a server refusal stays visible in the list.
 
@@ -113,15 +116,14 @@ and Move actions; a server refusal stays visible in the list.
 Selection to chat adds code to a linked chat's draft. Inline edit (Mod+I) starts a hidden
 project chat and shows a replacement proposal. Apply checks that the tracked selection
 still contains the original text and makes one undo step. Stop cancels the turn; Open as
-chat exposes the conversation. The daemon owns the chat, and the client keeps its per-file
+chat shows the conversation. The daemon owns the chat, and the client keeps its per-file
 record across reloads for seven days.
 
 Agent changes have Off, Gutter and Review modes. The daemon records provenance from tool
-edits and turn checkpoints; checkpoint-only attribution is shown as uncertain. The client
-maps those runs onto unsaved text. Review offers Keep, Undo and Comment; comments and undo
-messages become chat drafts. Two editors of the same file share review state. Provenance
-ends when its lines change, are committed, the file is removed or the record reaches thirty
-days.
+edits and turn checkpoints; attribution from a checkpoint alone shows as uncertain. The client
+maps those runs onto unsaved text. Review offers Keep, Undo and Comment, and comments and undo
+messages become chat drafts. Two editors of the same file share review state. Provenance ends
+when its lines change or are committed, when the file is removed, or after thirty days.
 
 When disk changes overlap an unsaved draft, the editor compares the original, draft and
 incoming text. Non-overlapping changes merge as one undo step; overlapping changes offer
@@ -129,9 +131,9 @@ Keep yours, Keep theirs and Keep both. Autosave waits until every conflict is an
 and the next save still checks the disk version.
 
 Explain, rename suggestions and ghost text use Apple Foundation Models on the daemon's
-Mac. Requests carry no tools and change no files. Ghost text runs on request rather than
-while typing; Tab accepts it, Option+] accepts a word and Escape dismisses it. Settings
-show why the model is unavailable. The [daemon's on-device documentation](../server/README.md#on-device-help-for-the-editor)
+Mac. A request carries no tools and changes no files. Ghost text runs on request, not while
+typing; Tab accepts it, Option+] accepts a word and Escape dismisses it. Settings say why the
+model is unavailable when it is. The [daemon's on-device documentation](../server/README.md#on-device-help-for-the-editor)
 describes the helper and transport.
 
 Remaining acceptance, formatter choices and feature limits are in
