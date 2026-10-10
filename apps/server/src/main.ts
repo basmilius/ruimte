@@ -16,13 +16,7 @@ function fail(error: unknown): never {
 process.on('uncaughtException', fail);
 process.on('unhandledRejection', fail);
 
-/*
- * One binary, several jobs: `ruimte` serves, `ruimte login` puts the machine on an account with a code
- * and `ruimte logout` takes it off, `ruimte status` says how clients reach it, `ruimte service` sets up the
- * background service, `ruimte closed-lid` installs the rule behind keep awake with the lid closed,
- * `ruimte context` is the agent-side CLI. The daemon is imported only when it is needed, so the CLI
- * commands do not pay for loading the terminal emulator.
- */
+/* One binary, several jobs. The daemon is imported only when it serves, so the CLI commands do not pay for loading the terminal emulator. */
 const arguments_ = process.argv.slice(2);
 if (arguments_[0] === 'device-helper') {
     const deviceId = arguments_[1];

@@ -18,11 +18,8 @@ import type { SessionEvent, SessionSink } from './sessions/manager.ts';
 import { ClientSinks } from './client-sinks.ts';
 
 /*
- * The key pair arrived after the id did, and the name and icon after the keys; the version stays at
- * 1 on purpose: zod strips what it does not know, so a daemon from before any of them reads this
- * file, keeps its id and leaves the extra fields alone. Bumping the version would make that daemon
- * set the file aside and mint a new id, and every paired client would see the machine it knows
- * answer as a stranger.
+ * The version stays at 1 on purpose as fields are added: zod strips what it does not know, so an older
+ * daemon keeps its id. A bump would make it mint a new one, and every paired client would see a stranger.
  */
 const FileSchema = z.object({
     version: z.literal(1),
@@ -125,11 +122,9 @@ export interface IdentityFlags {
 }
 
 /*
- * The daemon's own name for itself and the key that proves it, minted once and kept in
- * `$RUIMTE_HOME`. A client keys everything it remembers about a machine on the id and pins the
- * public key at pairing, so both have to survive a restart and a new address; only a new home is a
- * new daemon. The name and the icon a person picked live here too, rather than in one client's
- * storage, because every client paired with this machine has to see the same ones.
+ * The daemon's id and the key that proves it, minted once in `$RUIMTE_HOME`: a client keys what it
+ * remembers on the id and pins the key, so only a new home is a new daemon. The name and icon a person
+ * picked live here too, so every client of this machine sees the same ones.
  */
 export class EndpointIdentity {
     readonly id: string;

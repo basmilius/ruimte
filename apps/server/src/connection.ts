@@ -4,10 +4,7 @@ import { OutputGate } from './backpressure.ts';
 import { sendEvent, type ClientAccess, type ClientConnection, type Dispatcher } from './dispatcher.ts';
 import type { SessionSink } from './sessions/manager.ts';
 
-/*
- * The one thing a connected client needs from whatever carries its frames. A Bun WebSocket is one
- * and a WebRTC DataChannel is meant to be the next, so nothing past this interface knows which.
- */
+/* What a connected client needs from whatever carries its frames, a Bun WebSocket or a WebRTC DataChannel. */
 export interface ClientChannel {
     // Answers like Bun's `ServerWebSocket.send`: 0 when the frame was dropped, -1 when it was queued under backpressure, else the byte count.
     send(data: string | Uint8Array): number;
