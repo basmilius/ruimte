@@ -41,7 +41,7 @@ export class Checkpoints implements CheckpointService {
         this.root = join(home, 'checkpoints');
     }
 
-    /* The tree of the working tree as it is now, or null when there is nothing to check point. */
+    /* The tree of the working tree as it is now, or null when there is nothing to checkpoint. */
     async take(cwd: string): Promise<string | null> {
         const top = await this.toplevel(cwd);
         if (top === null) {

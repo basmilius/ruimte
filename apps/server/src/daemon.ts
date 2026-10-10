@@ -217,8 +217,6 @@ const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id }
 // Past anything a hook or a verb sends, a visual of 16 MiB with its JSON escaping included, and the ceiling on what an unauthenticated request can make the daemon buffer.
 const MAX_REQUEST_BODY_BYTES = 24 * 1024 * 1024;
 
-// Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
-
 /* Runs the daemon until a signal ends the process. */
 export async function startDaemon(config: ServerConfig): Promise<void> {
     // `ruimte-context` lives next to the binary, or next to the source in dev; it goes on the PATH of every shell and chat.
@@ -1207,6 +1205,15 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
 
     type SocketData = ClientAccess & { protocolRefused: boolean; ticket: string | null };
 
+    // What a route only the local secret reaches answers before it does anything: null to go on.
+    const refuseUnlessOwner = async (request: Request, remote: string, method: 'GET' | 'POST'): Promise<Response | null> => {
+        if (request.method !== method) {
+            return new Response('Method not allowed', { status: 405 });
+        }
+        const decision = await decideAccess(request, remote, access, 'local');
+        return decision.ok && isOwner(decision.access) ? null : new Response('Forbidden', { status: 403 });
+    };
+
     // Every HTTP route and the upgrade, before the cross-origin headers the desktop app's page needs.
     const route = async (request: Request, server: Server<SocketData>): Promise<Response | undefined> => {
         const url = new URL(request.url);
@@ -1233,24 +1240,14 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         }
 
         if (url.pathname === MACHINE_WORK_PATH) {
-            // Only for the local secret: the desktop app asks before it restarts the service, and nobody else needs to know.
-            if (request.method !== 'GET') {
-                return new Response('Method not allowed', { status: 405 });
-            }
-            const decision = await decideAccess(request, remote, access, 'local');
-            if (!decision.ok || decision.access.sessionId !== null) {
-                return new Response('Forbidden', { status: 403 });
-            }
-            return Response.json(machineWork());
+            // The desktop app asks before it restarts the service, and nobody else needs to know.
+            return (await refuseUnlessOwner(request, remote, 'GET')) ?? Response.json(machineWork());
         }
 
         if (url.pathname === MACHINE_LEAVE_ACCOUNT_PATH) {
-            if (request.method !== 'POST') {
-                return new Response('Method not allowed', { status: 405 });
-            }
-            const decision = await decideAccess(request, remote, access, 'local');
-            if (!decision.ok || !isOwner(decision.access)) {
-                return new Response('Forbidden', { status: 403 });
+            const refused = await refuseUnlessOwner(request, remote, 'POST');
+            if (refused) {
+                return refused;
             }
             const revoked = await auth.leaveAccount();
             revoked.forEach(disconnectSession);
@@ -1259,12 +1256,9 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
 
         if (url.pathname === MACHINE_STATUS_PATH) {
             // `ruimte status` on the local secret; a client sees the same through `endpoint.info`.
-            if (request.method !== 'GET') {
-                return new Response('Method not allowed', { status: 405 });
-            }
-            const decision = await decideAccess(request, remote, access, 'local');
-            if (!decision.ok || !isOwner(decision.access)) {
-                return new Response('Forbidden', { status: 403 });
+            const refused = await refuseUnlessOwner(request, remote, 'GET');
+            if (refused) {
+                return refused;
             }
             const binding = await auth.accountBinding();
             return Response.json({
@@ -1285,12 +1279,9 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
 
         if (url.pathname === MACHINE_LINK_PATH || url.pathname === MACHINE_REGISTRATION_PATH) {
             // `ruimte login` on the local secret: the machine signs, the terminal talks to the address book.
-            if (request.method !== 'POST') {
-                return new Response('Method not allowed', { status: 405 });
-            }
-            const decision = await decideAccess(request, remote, access, 'local');
-            if (!decision.ok || decision.access.sessionId !== null) {
-                return new Response('Forbidden', { status: 403 });
+            const refused = await refuseUnlessOwner(request, remote, 'POST');
+            if (refused) {
+                return refused;
             }
             const { brokerUrl } = brokerSwitch.describe();
             if (url.pathname === MACHINE_LINK_PATH) {
