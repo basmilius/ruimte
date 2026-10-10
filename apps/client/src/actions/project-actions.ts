@@ -10,6 +10,7 @@ import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { windowWorkspace } from '@/state/window';
+import { plural } from '@/actions/words';
 export interface ListedProject {
     endpointId: string;
     projectId: string;
@@ -98,10 +99,6 @@ const LIVE_MACHINE: ProjectMachine = {
         await (await import('@/project/settings')).setProjectFolderIcon(project.endpointId, project.projectId);
     }
 };
-
-function plural(count: number, noun: string): string {
-    return `${count} ${count === 1 ? noun : `${noun}s`}`;
-}
 
 /* In the words the close dialog uses, so Voice asks what a person reads. */
 function closeConsequences(answer: ProjectClosingResult | null): string[] {

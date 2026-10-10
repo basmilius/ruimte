@@ -54,6 +54,7 @@ import { databaseViewShareRefusal } from '@/database/view-sharing';
 import { addAgentView, agentNodeOptions, type AgentSession, type AgentTarget } from '@/agents/nodes';
 import { LOCK_KEYS } from '@/canvas/locks';
 import { toWorld, type Point } from '@/canvas/math';
+import { centerOf } from '@adecore/drawing';
 import { nearestFreeNodeRect } from '@/canvas/place-node';
 import type { ChatSendExtras } from '@adecore/agents-react/chat/chat-client';
 import { recentChatMessages } from '@adecore/agents-react/chat/recent-messages';
@@ -99,6 +100,7 @@ import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { providersOf } from '@adecore/agents-react/state/providers';
 import { chatClient, diagramClient, drawingClient, sessionClient } from '@/transport/connections';
+import { listed } from '@/actions/words';
 
 function kindOf(view: ProjectView): ActionOutput<'view.focus'>['kind'] {
     return isUnknownView(view) ? 'unknown' : view.kind;
@@ -200,7 +202,7 @@ function centerWorld(canvas: CanvasState) {
 
 function addNodeInFreeSpace(canvas: CanvasState, kind: NodeKind, options: AddNodeOptions): string | null {
     const placed = nearestFreeNodeRect(Object.values(canvas.nodes), NODE_SIZE[kind], centerWorld(canvas));
-    return canvas.addNode(kind, { x: placed.x + placed.w / 2, y: placed.y + placed.h / 2 }, options);
+    return canvas.addNode(kind, centerOf(placed), options);
 }
 
 /* The editor of a view on screen: a canvas, a drawing and a diagram each keep their own history and camera. */
@@ -216,10 +218,6 @@ function editorOnScreen(document: StoreApi<DocumentState>, viewId: string, doing
         throw refusal();
     }
     return { view, editor: () => live(viewId)! };
-}
-
-function listed(items: readonly string[]): string {
-    return items.length === 1 ? items[0]! : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
 }
 
 function quoted(names: readonly string[]): string {
@@ -244,6 +242,20 @@ function historyUndo(viewId: string, expectedDepth: number, stillThere?: (canvas
 
 function unknownView(viewId: string): ActionRefusal {
     return new ActionRefusal('unknown-view', `No view with id “${viewId}” exists in this project.`);
+}
+
+function existingView(state: DocumentState, viewId: string): ProjectView {
+    const view = state.views.find((candidate) => candidate.id === viewId);
+    if (!view) {
+        throw unknownView(viewId);
+    }
+    return view;
+}
+
+function refuseUnreachableBrowser(kind: string, url: string | null | undefined, browserOwner: string | null | undefined): void {
+    if (kind === 'browser' && !browserRouteAvailable(currentEndpointId(), url ?? '', browserOwner ?? undefined)) {
+        throw new ActionRefusal('browser-owner-unavailable', 'Open this browser in Ruimte on the machine running the session.');
+    }
 }
 
 /* The canvas a view becomes a node on: the one that was up last, else the first there is. */
@@ -524,10 +536,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         },
         'view.focus': ({ viewId }) => {
             const state = document.getState();
-            const view = state.views.find((candidate) => candidate.id === viewId);
-            if (!view) {
-                throw new ActionRefusal('unknown-view', `No view with id “${viewId}” exists in this project.`);
-            }
+            const view = existingView(state, viewId);
             if (!isOpenableView(view)) {
                 throw new ActionRefusal('never-opens', `“${view.name}” is a ${view.kind} and cannot be focused.`);
             }
@@ -545,10 +554,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         },
         'view.rename': ({ viewId, name }) => {
             const state = document.getState();
-            const view = state.views.find((candidate) => candidate.id === viewId);
-            if (!view) {
-                throw new ActionRefusal('unknown-view', `No view with id “${viewId}” exists in this project.`);
-            }
+            const view = existingView(state, viewId);
             if (isUnknownView(view)) {
                 throw new ActionRefusal('unsupported-view', `The view “${view.name}” has a kind this version of Ruimte cannot rename.`);
             }
@@ -579,9 +585,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
             };
         },
         'view.create': ({ kind, name, url, browserOwner, command, path, provider, account, device, resume, cwd, connection, schema, table, mode, where }) => {
-            if (kind === 'browser' && !browserRouteAvailable(currentEndpointId(), url ?? '', browserOwner ?? undefined)) {
-                throw new ActionRefusal('browser-owner-unavailable', 'Open this browser in Ruimte on the machine running the session.');
-            }
+            refuseUnreachableBrowser(kind, url, browserOwner);
             refuseResumeWithout(resume, provider);
             const agent = agentFor(providers(), kind, provider, command);
             if (account != null && agent === null) {
@@ -714,9 +718,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
             };
         },
         'node.create': ({ viewId, kind, title, content, url, browserOwner, command, path, provider, account, at, cwd, resume }) => {
-            if (kind === 'browser' && !browserRouteAvailable(currentEndpointId(), url ?? '', browserOwner ?? undefined)) {
-                throw new ActionRefusal('browser-owner-unavailable', 'Open this browser in Ruimte on the machine running the session.');
-            }
+            refuseUnreachableBrowser(kind, url, browserOwner);
             const { view, canvas } = canvasOnScreen(document, viewId);
             refuseResumeWithout(resume, provider);
             const agent = agentFor(providers(), kind, provider, command, account ?? null);
@@ -982,10 +984,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         },
         'view.duplicate': ({ viewId }) => {
             const state = document.getState();
-            const source = state.views.find((candidate) => candidate.id === viewId);
-            if (!source) {
-                throw unknownView(viewId);
-            }
+            const source = existingView(state, viewId);
             if (!isCanvasView(source) && !isDrawingView(source) && !isDiagramView(source)) {
                 throw new ActionRefusal(
                     'view-not-duplicable',
@@ -1021,10 +1020,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         },
         'view.placeOnCanvas': ({ viewId }) => {
             const state = document.getState();
-            const view = state.views.find((candidate) => candidate.id === viewId);
-            if (!view) {
-                throw unknownView(viewId);
-            }
+            const view = existingView(state, viewId);
             if (!isSessionView(view)) {
                 throw new ActionRefusal(
                     'view-not-placeable',
@@ -1056,10 +1052,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         },
         'view.showOnCanvas': ({ viewId }) => {
             const state = document.getState();
-            const view = state.views.find((candidate) => candidate.id === viewId);
-            if (!view) {
-                throw unknownView(viewId);
-            }
+            const view = existingView(state, viewId);
             if (!isDrawingView(view) && !isDiagramView(view)) {
                 throw new ActionRefusal('view-not-mirrorable', `“${view.name}” is a ${view.kind} view; only a drawing or diagram is shown on a canvas.`);
             }
@@ -1082,10 +1075,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         },
         'view.share': ({ viewId, shared }) => {
             const state = document.getState();
-            const view = state.views.find((candidate) => candidate.id === viewId);
-            if (!view) {
-                throw unknownView(viewId);
-            }
+            const view = existingView(state, viewId);
             if (shared && (!canShareView(view) || databaseViewShareRefusal(view) !== null)) {
                 throw new ActionRefusal('view-not-shareable', `“${view.name ?? viewId}” cannot go in the shared file.`);
             }
@@ -1110,10 +1100,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         },
         'view.move': ({ viewId, afterViewId }) => {
             const state = document.getState();
-            const view = state.views.find((candidate) => candidate.id === viewId);
-            if (!view) {
-                throw unknownView(viewId);
-            }
+            const view = existingView(state, viewId);
             let toIndex = 0;
             if (afterViewId !== null) {
                 if (afterViewId === viewId) {
@@ -1146,10 +1133,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         },
         'view.setIcon': ({ viewId, icon }) => {
             const state = document.getState();
-            const view = state.views.find((candidate) => candidate.id === viewId);
-            if (!view) {
-                throw unknownView(viewId);
-            }
+            const view = existingView(state, viewId);
             if (!isOpenableView(view) || isUnknownView(view)) {
                 throw new ActionRefusal('not-markable', `“${view.name ?? viewId}” divides the sidebar and has no room for a mark.`);
             }
@@ -1583,7 +1567,6 @@ export interface CreateViewOptions extends AgentSession {
     device?: DeviceReference;
 }
 
-/* Resolves the id of the new view, or null when there is none. */
 export async function createViewAction(kind: CreatableViewKind, options: CreateViewOptions = {}): Promise<string | null> {
     const created = await runAsPerson('view.create', {
         kind,
@@ -1618,7 +1601,6 @@ export function placeViewOnCanvasAction(viewId: string): void {
     void runAsPerson('view.placeOnCanvas', { viewId });
 }
 
-/* Resolves the id of the node that mirrors the view. */
 export async function showViewOnCanvasAction(viewId: string): Promise<string | null> {
     return (await runAsPerson('view.showOnCanvas', { viewId }))?.nodeId ?? null;
 }

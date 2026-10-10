@@ -25,6 +25,7 @@ import { liveCanvas, nextId, type CanvasState } from '@/state/canvas';
 import { defaultDiagrams, type DiagramState } from '@/state/diagram';
 import type { DocumentState } from '@/state/document';
 import { defaultDrawings, DUPLICATE_OFFSET, isWritten, newSeed, withStyle, type DrawingState, type DrawingStyle } from '@/state/drawing';
+import { plural } from '@/actions/words';
 
 type Call = ActionCall<void> & { confirmed: boolean };
 
@@ -68,10 +69,6 @@ function isOnScreen(state: DocumentState, viewId: string): boolean {
 
 function withLine(body: string, text: string): string {
     return body === '' ? text : `${body}${body.endsWith('\n') ? '' : '\n'}${text}`;
-}
-
-function plural(count: number, noun: string): string {
-    return `${count} ${count === 1 ? noun : `${noun}s`}`;
 }
 
 /*

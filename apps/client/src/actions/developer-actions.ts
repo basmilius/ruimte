@@ -30,6 +30,7 @@ import { soleRepo, visibleRepos } from '@/state/git-repos';
 import { useProject } from '@/state/project';
 import { windowWorkspace } from '@/state/window';
 import { TransportError, type Transport } from '@/transport/transport';
+import { listed, plural } from '@/actions/words';
 
 type Requester = Pick<Transport, 'request'>;
 
@@ -81,16 +82,8 @@ function labelOf(folder: string, path: string): string {
     return path.startsWith(`${folder}/`) ? path.slice(folder.length + 1) : basenameOf(path);
 }
 
-function listed(items: readonly string[]): string {
-    return items.length === 1 ? items[0]! : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
-}
-
 function quoted(items: readonly string[]): string {
     return items.length === 0 ? 'none' : listed(items.map((item) => `“${item}”`));
-}
-
-function plural(count: number, noun: string): string {
-    return `${count} ${count === 1 ? noun : `${noun}s`}`;
 }
 
 function runOutput(checkout: Checkout, result: GitActionResult): GitRun {

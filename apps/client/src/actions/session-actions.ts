@@ -37,6 +37,7 @@ import { useSessions, type SessionState } from '@/state/sessions';
 import { screenOf } from '@/terminal/registry';
 import { chatClient, machineFor, sessionClient } from '@/transport/connections';
 import type { Transport } from '@/transport/transport';
+import { plural } from '@/actions/words';
 
 type Requester = Pick<Transport, 'request'>;
 type Call = ActionCall<void> & { confirmed: boolean };
@@ -130,10 +131,6 @@ export function sessionTitle(document: StoreApi<DocumentState>, id: string, kind
         }
     }
     return null;
-}
-
-function plural(count: number, noun: string): string {
-    return `${count} ${count === 1 ? noun : `${noun}s`}`;
 }
 
 const DEFAULT_TERMINAL_LINES = 40;
