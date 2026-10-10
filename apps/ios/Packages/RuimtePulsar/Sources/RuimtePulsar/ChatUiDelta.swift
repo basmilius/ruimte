@@ -11,11 +11,14 @@ public enum ChatUiDelta {
         } else {
             let updated = (item["text"]?.stringValue ?? "") + text
             item["text"] = .string(updated)
+            let assistant = item["kind"]?.stringValue == "assistant"
             // Daemon offsets use JavaScript UTF-16 units; a delayed preview must not replace a newer one.
-            if let blocks = event["ui"], event["textLength"]?.numberValue == Double(updated.utf16.count) {
+            if assistant, item["streaming"]?.boolValue == true, let blocks = event["ui"],
+                event["textLength"]?.numberValue == Double(updated.utf16.count)
+            {
                 item["ui"] = blocks
             }
-            if let queries = event["uiQueries"] { item["uiQueries"] = queries }
+            if assistant, let queries = event["uiQueries"] { item["uiQueries"] = queries }
         }
         return .object(item)
     }
