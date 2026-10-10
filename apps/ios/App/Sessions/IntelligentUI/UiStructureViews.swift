@@ -30,7 +30,7 @@ struct UiTabsView: View {
                                     .foregroundStyle(chosen ? MobileStyle.onAccent : MobileStyle.text)
                                     .padding(.horizontal, 12).frame(minHeight: 32)
                                     .background(chosen ? MobileStyle.accent : MobileStyle.hover, in: Capsule())
-                                    .frame(minHeight: 44)
+                                    .frame(minHeight: 44).contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .accessibilityAddTraits(chosen ? [.isSelected] : [])

@@ -8,6 +8,9 @@ struct UiChartView: View {
     let node: UiNode
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var grown = false
+    @ScaledMetric(relativeTo: .footnote) private var rowHeight: CGFloat = 28
+    @ScaledMetric(relativeTo: .footnote) private var stackedRowHeight: CGFloat = 32
+    @ScaledMetric(relativeTo: .footnote) private var plotHeight: CGFloat = 160
 
     private static let colors: [Color] = [
         MobileStyle.accent, MobileStyle.chart2, MobileStyle.chart3, MobileStyle.chart4, MobileStyle.chart5,
@@ -24,7 +27,12 @@ struct UiChartView: View {
     var body: some View {
         let kind = node.string("kind") ?? "bar"
         let rows = min(max(1, node.props["data"]?.arrayValue?.count ?? 1), UiChartData.maxRows)
-        let height: CGFloat = kind == "hbar" ? CGFloat(rows) * 28 : kind == "stacked" ? CGFloat(rows) * 32 : 160
+        let height =
+            switch kind {
+            case "hbar": CGFloat(rows) * rowHeight
+            case "stacked": CGFloat(rows) * stackedRowHeight
+            default: plotHeight
+            }
         if !node.complete {
             RoundedRectangle(cornerRadius: 12).fill(MobileStyle.hover).frame(height: height)
                 .padding(.horizontal, 8).accessibilityHidden(true)
