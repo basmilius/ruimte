@@ -33,7 +33,7 @@ export interface NodeAccountDeps {
     session(nodeId: string): { launch: AgentLaunch | null; agent: AgentInfo | null } | undefined;
 }
 
-/* The CLI and account the agent of a node runs under. A CLI a person started by hand in a terminal runs under its default account. */
+/* The CLI and account the agent of a node runs under; a CLI a person started by hand runs under its default account. */
 export function nodeAccount(deps: NodeAccountDeps) {
     return (nodeId: string): NodeAccount | null => {
         const chat = deps.chat(nodeId);
@@ -102,11 +102,9 @@ export interface StartAgentDeps {
 }
 
 /*
- * Starts the chat or the terminal of an agent node a verb wrote, the way a client mounting it would,
- * so a client that mounts it later attaches to what already runs. Nothing it does is retried. The
- * create takes the node's first prompt before it spawns, and a second attempt would start the agent
- * without its task. A failure is logged and the node stays as it is, so a client that mounts it
- * tries again the way it always did.
+ * Starts the chat or the terminal of an agent node a verb wrote, so a client that mounts it later
+ * attaches to what already runs. Never retried: the create takes the node's first prompt before it
+ * spawns, so a second attempt would start the agent without its task.
  */
 export function startAgentHandler(deps: StartAgentDeps) {
     return async (entry: StartAgentEntry): Promise<void> => {

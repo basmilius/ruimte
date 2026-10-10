@@ -28,9 +28,8 @@ export interface OutboxLinkOptions {
 }
 
 /*
- * The chat manager and the worker each need the other. A run a restart interrupted is owed a resume
- * before the worker that would run it exists. Both sides hold this instead, and `wireOutbox` fills
- * it in once the worker is built.
+ * The chat manager and the worker each need the other: a run a restart interrupted is owed a resume
+ * before the worker exists. Both hold this, and `wireOutbox` binds the worker once it is built.
  */
 export class OutboxLink {
     /* What the chat manager reports an interrupted run to. */
@@ -71,8 +70,7 @@ export class OutboxLink {
             return;
         }
         await this.lapseLimitResume(chatId);
-        await this.require().enqueue(projectId, chatId, { kind: 'resume-limit', payload: { turnId } }, at);
-        this.onEnqueued?.({ kind: 'resume-limit', payload: { turnId } });
+        await this.enqueue(projectId, chatId, { kind: 'resume-limit', payload: { turnId } }, at);
     }
 
     owesLimitResume(chatId: string): boolean {

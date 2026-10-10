@@ -37,14 +37,13 @@ export interface PlanCreateInput {
 /*
  * The plans of every chat, one file per chat beside its record under `$RUIMTE_HOME/chats`, not in
  * the record itself, which is rewritten on every turn and strips what it does not know. The daemon
- * is the only writer, so there is no watcher, and one promise chain per chat puts a person's click
- * and an agent's verb after each other instead of beside each other.
+ * is the only writer, so there is no watcher.
  */
 export class PlanStore {
     readonly dir: string;
     private readonly now: () => number;
     private readonly mintId: () => string;
-    // One write at a time per chat; the plans of two chats never wait on each other.
+    // A person's click and an agent's verb run after each other per chat; two chats never wait on each other.
     private readonly writes = new KeyedSerializer();
     private readonly sinks = new ClientSinks();
 

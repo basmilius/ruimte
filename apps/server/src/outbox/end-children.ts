@@ -29,9 +29,8 @@ export interface EndChildrenWiring {
     owe(nodeId: string): Promise<number>;
     handler(entry: EndChildrenEntry): Promise<void>;
     /*
-     * Stops one node the way a stop of its parent would, for a person who stops a task from the list of
-     * the chat that gave it. Its open task is cancelled first, so nobody is woken, then its CLI or shell
-     * ends with its thread and screen kept, and the agents it opened are owed an end of their own.
+     * Stops one node the way a stop of its parent would, for a person who stops a task from the chat that
+     * gave it: its open task is cancelled first, so nobody is woken, and its own agents are owed an end.
      */
     stopNode(nodeId: string, reason: string): Promise<void>;
     /* The agents stopping this node would end that still run; this is what `agent.children` answers. */

@@ -40,7 +40,7 @@ const DeliverSummarySchema = z.object({
     payload: z.object({ forkId: z.string().min(1), turnId: z.string().min(1), text: z.string() })
 });
 
-// The kinds a task owes, ending children and delivering a message are @adecore/agents' own (`tasks/task-work.ts`, `tasks/end-children.ts`, `messages/deliver-message.ts`), each at the place it always had.
+// The kinds of tasks, ending children and delivering a message are @adecore/agents' own, each at the place it always had.
 const OutboxWorkSchema = z.discriminatedUnion('kind', [
     StartAgentSchema,
     ResumeRunSchema,
