@@ -18,7 +18,6 @@ const DIAGRAMS: FileEditorChannel<DiagramDocument, DiagramContent> = {
     }
 };
 
-/* Keeps the diagram on screen and its file in step. Everything it does is `FileEditorClient`. */
 export class DiagramClient extends FileEditorClient<DiagramState, DiagramDocument, DiagramContent> {
     constructor(
         transport: Transport,

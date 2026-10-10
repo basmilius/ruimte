@@ -28,11 +28,9 @@ export async function tradeLocalSecret(endpoint: Endpoint, secret: string): Prom
 }
 
 /*
- * The address a socket for this machine opens on, credential and all. Runs before every connection
- * and every reconnect, because a ticket opens one socket only. The URL carries a ticket and not the
- * local secret (except for a daemon from before the trade), so a leaked address gives away bytes
- * while that ticket lives, and never a second socket. Only the row of this machine has an address of
- * its own; every other machine is reached through a route.
+ * Runs before every connection and reconnect, because a ticket opens one socket only. The URL carries
+ * a ticket and not the local secret (except for a daemon from before the trade), so a leaked address
+ * never opens a second socket. Only this machine's row has an address; every other one has a route.
  */
 export async function socketAddressFor(endpointId: string): Promise<string> {
     const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);

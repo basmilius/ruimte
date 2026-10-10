@@ -191,10 +191,9 @@ function EmptyDiagram({ viewId }: { viewId: string }) {
 }
 
 /*
- * A diagram on screen, as SVG in the DOM rather than on a canvas: a few dozen boxes with text in
- * them, where the DOM gives text rendering and selection for nothing. A person pans, zooms, drags a
- * node to where it should stand, renames it and gives it a tone; the graph itself is written, by hand
- * in its file or by an agent.
+ * SVG in the DOM rather than a canvas: a few dozen boxes with text, where the DOM gives text rendering
+ * and selection for nothing. A person only moves, renames and tones nodes; the graph itself is written
+ * in its file, by hand or by an agent.
  */
 export function DiagramView({ id }: { id: string }) {
     const { t } = useTranslation('drawing');

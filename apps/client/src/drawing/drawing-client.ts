@@ -18,7 +18,6 @@ const DRAWINGS: FileEditorChannel<DrawingDocument, DrawingContent> = {
     }
 };
 
-/* Keeps the drawing on screen and its file in step. Everything it does is `FileEditorClient`. */
 export class DrawingClient extends FileEditorClient<DrawingState, DrawingDocument, DrawingContent> {
     constructor(
         transport: Transport,
