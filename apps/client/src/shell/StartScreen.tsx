@@ -254,6 +254,16 @@ function StartContent() {
             />
         );
 
+    const connectTile = (disabled: boolean) => (
+        <Tile
+            icon={<Icon icon={MonitorSmartphone} size={16} />}
+            title={t('start.connectMachine')}
+            description={t('start.throughAccount')}
+            disabled={disabled}
+            onClick={() => setDialog('add')}
+        />
+    );
+
     const machineList = (
         <Section label={t('start.machines')}>
             {machines.length === 0 ? (
@@ -285,12 +295,7 @@ function StartContent() {
                     <p className="px-1 pb-2 text-center text-xs text-text-muted">{t('start.projectIsAFolder')}</p>
                     <div className="grid gap-2">
                         {chatTile(false)}
-                        <Tile
-                            icon={<Icon icon={MonitorSmartphone} size={16} />}
-                            title={t('start.connectMachine')}
-                            description={t('start.throughAccount')}
-                            onClick={() => setDialog('add')}
-                        />
+                        {connectTile(false)}
                     </div>
                     {offerSignIn && <SignInCard description={t('start.reachMachines')} />}
                 </div>
@@ -320,13 +325,7 @@ function StartContent() {
                                 {chats.map((row) => (
                                     <ChatsTile key={row.endpointId} row={row} showMachine={chats.length > 1} disabled={waiting} />
                                 ))}
-                                <Tile
-                                    icon={<Icon icon={MonitorSmartphone} size={16} />}
-                                    title={t('start.connectMachine')}
-                                    description={t('start.throughAccount')}
-                                    disabled={waiting}
-                                    onClick={() => setDialog('add')}
-                                />
+                                {connectTile(waiting)}
                                 {offerSignIn && <SignInCard description={t('start.reachMachines')} />}
                             </div>
                         </Section>
