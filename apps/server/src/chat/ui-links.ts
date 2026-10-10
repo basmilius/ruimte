@@ -28,6 +28,9 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
         if (!node || node.projectId !== place.projectId) {
             throw new Error('This node is outside the project or no longer available.');
         }
+        if (node.hidden) {
+            return { state: 'plain', label: node.title, reason: 'This agent works out of sight and has no node or view to open.' };
+        }
         return { state: 'chip', projectId: place.projectId, target, label: node.title, viewId: node.canvasId ?? undefined };
     }
     const cwd = await checkCwd(place.folder, access.cwd, host.worktreePaths);

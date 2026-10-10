@@ -13,7 +13,8 @@ import type { LaunchReading } from '../canvas/verb.ts';
 
 export interface UiSourceHosts {
     place(chatId: string): DatabasePlace | null;
-    node(id: string): { projectId: string; title: string; canvasId: string | null } | null;
+    // `hidden` for an agent that works out of sight, with no node or view to open.
+    node(id: string): { projectId: string; title: string; canvasId: string | null; hidden: boolean } | null;
     worktreePaths(folder: string): Promise<string[]>;
     gitStatus(cwd: string): Promise<z.infer<typeof GitStatusSchema>>;
     gitLog(cwd: string, limit: number): Promise<z.infer<typeof GitLogResultSchema>>;

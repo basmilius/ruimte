@@ -402,7 +402,12 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
                 const place = projects.index.locate(id);
                 return !place || projects.index.isHiddenChat(id)
                     ? null
-                    : { projectId: place.projectId, canvasId: place.canvasId, title: projects.index.titleFor(id) ?? id };
+                    : {
+                          projectId: place.projectId,
+                          canvasId: place.canvasId,
+                          title: projects.index.titleFor(id) ?? id,
+                          hidden: projects.hiddenAgents.get(id) !== undefined
+                      };
             },
             worktreePaths: (folder) => canvasHost.worktreePaths(folder),
             gitStatus: (cwd) => statuses.status(cwd),

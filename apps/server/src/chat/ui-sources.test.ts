@@ -22,10 +22,12 @@ beforeEach(async () => {
         place: () => ({ projectId: 'p', folder }),
         node: (id) =>
             id === 'local'
-                ? { projectId: 'p', title: 'Local', canvasId: null }
-                : id === 'other'
-                  ? { projectId: 'other', title: 'Other', canvasId: null }
-                  : null,
+                ? { projectId: 'p', title: 'Local', canvasId: null, hidden: false }
+                : id === 'child'
+                  ? { projectId: 'p', title: 'Child', canvasId: null, hidden: true }
+                  : id === 'other'
+                    ? { projectId: 'other', title: 'Other', canvasId: null, hidden: false }
+                    : null,
         worktreePaths: async () => [],
         gitStatus: async (cwd) => {
             reads.push(cwd);
@@ -124,6 +126,8 @@ test('node links never cross a project and are checked again after removal', asy
     const host = ruimteUiSources(hosts);
     const access = await host.capture(info());
     expect(await host.link!(info(), access, { type: 'Node', id: 'local' })).toMatchObject({ state: 'chip', label: 'Local' });
+    // A hidden task child has no view a click could focus, so it stays text.
+    expect(await host.link!(info(), access, { type: 'Node', id: 'child' })).toMatchObject({ state: 'plain', label: 'Child' });
     await expect(host.link!(info(), access, { type: 'Node', id: 'other' })).rejects.toThrow('outside');
     hosts.node = () => null;
     await expect(host.link!(info(), access, { type: 'Node', id: 'local' })).rejects.toThrow('no longer available');
