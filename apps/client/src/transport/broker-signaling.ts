@@ -11,7 +11,7 @@ import {
     type SignalEnvelope
 } from '@ruimte/pulsar';
 import type { ClientKey } from '@/endpoint/client-key';
-import type { SignalingOpener } from './signaling';
+import { messageOf, withAccess, type SignalingOpener } from './signaling';
 
 interface Member {
     ready(iceServers: IceServer[]): void;
@@ -54,11 +54,7 @@ export class BrokerSockets {
 
     join(url: string, key: ClientKey, member: Member): BrokerMembership {
         const id = `${url} ${key.publicKey}`;
-        let shared = this.open.get(id) ?? null;
-        if (!shared) {
-            shared = this.connect(id, url, key);
-        }
-        const joined = shared;
+        const joined = this.open.get(id) ?? this.connect(id, url, key);
         if (joined) {
             joined.members.add(member);
             if (joined.peer.isReady) {
@@ -185,7 +181,7 @@ export interface BrokerSignalingOptions {
     machineKey: string;
     key(): Promise<ClientKey | null>;
     verify(publicKey: string, message: string, signature: string): Promise<boolean>;
-    /* A statement for the offer, for a machine that does not know this client's key yet; asked per offer, since the machine spends each one. */
+    /* See `withAccess`. */
     access?(key: ClientKey): Promise<SignalAccess>;
     sockets?: BrokerSockets;
 }
@@ -263,21 +259,11 @@ export function brokerSignaling(options: BrokerSignalingOptions): SignalingOpene
                     lost: (reason) => fail(reason)
                 });
             })
-            .catch((e: unknown) => fail(i18next.t('machines:broker.signInFailed', { reason: e instanceof Error ? e.message : String(e) })));
+            .catch((e: unknown) => fail(i18next.t('machines:broker.signInFailed', { reason: messageOf(e) })));
 
         return {
             send: (signal) => {
-                const outgoing =
-                    signal.kind === 'offer' && options.access && signer
-                        ? options
-                              .access(signer)
-                              .then((access) => ({ ...signal, access }))
-                              .catch((e: unknown) => {
-                                  fail(i18next.t('machines:broker.noVouch', { reason: e instanceof Error ? e.message : String(e) }));
-                                  return null;
-                              })
-                        : Promise.resolve(signal);
-                void outgoing.then((ready) => {
+                void withAccess(signal, signer, options.access, fail).then((ready) => {
                     if (ready === null || closed) {
                         return;
                     }

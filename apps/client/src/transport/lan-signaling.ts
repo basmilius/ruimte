@@ -9,7 +9,7 @@ import {
     type SignalAccess
 } from '@ruimte/pulsar';
 import type { ClientKey } from '@/endpoint/client-key';
-import type { SignalingOpener } from './signaling';
+import { messageOf, withAccess, type SignalingOpener } from './signaling';
 
 // 24 random bytes, comfortably above the 16 the door asks for.
 const NONCE_BYTES = 24;
@@ -23,14 +23,10 @@ export interface LanSignalingOptions {
     machineId: string | null;
     key(): Promise<ClientKey | null>;
     verify(publicKey: string, message: string, signature: string): Promise<boolean>;
-    /* A statement for the offer, for a machine that does not know this client's key yet; asked per offer, as over the broker. */
+    /* See `withAccess`. */
     access?(key: ClientKey): Promise<SignalAccess>;
     createSocket?(url: string): WebSocket;
     nonce?(): string;
-}
-
-function messageOf(e: unknown): string {
-    return e instanceof Error ? e.message : String(e);
 }
 
 /*
@@ -150,17 +146,7 @@ export function lanSignaling(options: LanSignalingOptions): SignalingOpener {
                 if (key === null || closed) {
                     return;
                 }
-                const outgoing =
-                    signal.kind === 'offer' && options.access
-                        ? options
-                              .access(key)
-                              .then((access) => ({ ...signal, access }))
-                              .catch((e: unknown) => {
-                                  fail(i18next.t('machines:broker.noVouch', { reason: messageOf(e) }));
-                                  return null;
-                              })
-                        : Promise.resolve(signal);
-                void outgoing
+                void withAccess(signal, key, options.access, fail)
                     .then(async (ready) => {
                         if (ready === null || closed) {
                             return;

@@ -19,7 +19,7 @@ import {
 import { mergeIceServers, relayedFromStats } from './ice';
 import type { Link, LinkOpener } from './link-transport';
 import { protocolRefusal } from './protocol';
-import { socketSignaling, type Signal, type Signaling, type SignalingOpener } from './signaling';
+import { messageOf, socketSignaling, type Signal, type Signaling, type SignalingOpener } from './signaling';
 
 // Offer to handshake; ICE with a STUN server that answers slowly still fits, a path that does not exist does not.
 const CONNECT_TIMEOUT_MS = 20_000;
@@ -65,10 +65,6 @@ function connectionIdOf(): string {
         .replaceAll('+', '-')
         .replaceAll('/', '_')
         .replace(/=+$/, '');
-}
-
-function messageOf(e: unknown): string {
-    return e instanceof Error ? e.message : String(e);
 }
 
 /*

@@ -24,6 +24,10 @@ interface Registration {
     off: (() => void) | null;
 }
 
+function notConnected(): Promise<never> {
+    return Promise.reject(new TransportError('not-connected', i18next.t('machines:connection.notConnected')));
+}
+
 /*
  * Event handlers follow the active machine immediately. In-flight requests remain bound to the
  * socket that sent them, so callers must reject stale answers after a machine switch.
@@ -56,14 +60,14 @@ export class ActiveTransport implements Transport {
 
     request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
         if (!this.bound) {
-            return Promise.reject(new TransportError('not-connected', i18next.t('machines:connection.notConnected')));
+            return notConnected();
         }
         return this.bound.request(type, payload);
     }
 
     readBytes(payload: BytesReadPayload): Promise<BytesPiece> {
         if (!this.bound) {
-            return Promise.reject(new TransportError('not-connected', i18next.t('machines:connection.notConnected')));
+            return notConnected();
         }
         return readPiece(this.bound, payload);
     }
@@ -100,17 +104,13 @@ export class ActiveTransport implements Transport {
         this.offBoundStatus = null;
         for (const registration of this.registrations) {
             registration.off?.();
-            registration.off = next ? this.subscribeOne(next, registration) : null;
+            registration.off = next ? next.on(registration.event, registration.handler as (payload: EventMap[EventType]) => void) : null;
         }
         this.bound = next;
         this.announced = null;
         if (next) {
             this.offBoundStatus = next.subscribeStatus(() => this.announce());
         }
-    }
-
-    private subscribeOne(target: Transport, registration: Registration): () => void {
-        return target.on(registration.event, registration.handler as (payload: EventMap[EventType]) => void);
     }
 
     /* Only a real change goes out. Another machine's socket flapping is not this one's news. */

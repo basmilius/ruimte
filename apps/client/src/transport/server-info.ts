@@ -61,10 +61,8 @@ function load(endpointId: string): void {
 }
 
 /*
- * A name a person gave a machine is the machine's own, so the endpoint row this client keeps takes
- * it and every list stops saying two things at once. A default name is a hostname, which the row's
- * own label ("This MacBook Pro", or the name the account lists) reads better than. Clearing the name
- * lands here too, which is why the row for this machine is written back rather than left alone.
+ * A name a person gave a machine becomes the row's label. A default name is a hostname, which the
+ * row's own label reads better than; clearing the name lands here too, so the local row is written back.
  */
 export function adoptMachineName(endpointId: string, label: string, nameSource: EndpointNameSource | null): void {
     if (nameSource === 'chosen') {

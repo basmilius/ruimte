@@ -98,6 +98,10 @@ function projectSink(endpointId: () => string): ProjectSink {
     };
 }
 
+function preferencesFor(endpointId: string): ReturnType<typeof chatPreferencesPayload> {
+    return chatPreferencesPayload(useChatPreferences.getState(), endpointId, knownAccounts(providerAccountsOf(endpointId)));
+}
+
 function buildMachine(endpoint: Endpoint): Machine {
     const transport = machineTransport(endpoint.id);
     const stopNotifications = transport.on('push.notification', (alert) => notifyRequested(endpoint.id, alert));
@@ -109,7 +113,7 @@ function buildMachine(endpoint: Endpoint): Machine {
     const chats = new ChatClient(transport, chatSinkFor(endpoint.id), providerSinkFor(endpoint.id));
     const browsers = new BrowserClient(endpoint.id, transport);
     const devices = new DeviceClient(endpoint.id, transport);
-    chats.setPreferences(chatPreferencesPayload(useChatPreferences.getState(), endpoint.id, knownAccounts(providerAccountsOf(endpoint.id))));
+    chats.setPreferences(preferencesFor(endpoint.id));
     return {
         endpointId: endpoint.id,
         transport,
@@ -151,8 +155,7 @@ function machineOn(endpoint: Endpoint): Machine {
 export function machineFor(endpointId: string): Machine | null {
     const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
     if (!endpoint) {
-        machines.get(endpointId)?.dispose();
-        machines.delete(endpointId);
+        dropMachine(endpointId);
         return null;
     }
     return machineOn(endpoint);
@@ -173,6 +176,8 @@ function connect(endpoint: Endpoint, onLoad: (connection: Connection, summary: P
     const transport = machineOn(endpoint).transport;
     /* Asked again on every save. A row that learns its daemon's id renames the connection under the same clients. */
     const endpointId = (): string => connection.endpointId;
+    // Asked for rather than held: the machine's clients go when its row is forgotten, while this connection stays.
+    const machine = (): Machine => machineOn(endpointById(connection.endpointId) ?? endpoint);
     const drawings = new DrawingClient(transport, stores.drawings, stores.document, stores.project, {
         flushProject: (): Promise<void> => projects.flush()
     });
@@ -200,19 +205,17 @@ function connect(endpoint: Endpoint, onLoad: (connection: Connection, summary: P
     const connection: Connection = {
         endpointId: endpoint.id,
         transport,
-        /* Asked for rather than held. The sessions and the threads belong to the machine, and a row
-           that is forgotten drops them while this connection stays the same object. */
         get sessions(): SessionClient {
-            return machineOn(endpointById(connection.endpointId) ?? endpoint).sessions;
+            return machine().sessions;
         },
         get chats(): ChatClient {
-            return machineOn(endpointById(connection.endpointId) ?? endpoint).chats;
+            return machine().chats;
         },
         get browsers(): BrowserClient {
-            return machineOn(endpointById(connection.endpointId) ?? endpoint).browsers;
+            return machine().browsers;
         },
         get devices(): DeviceClient {
-            return machineOn(endpointById(connection.endpointId) ?? endpoint).devices;
+            return machine().devices;
         },
         projects,
         drawings,
@@ -377,26 +380,8 @@ export function useFocusedMachine(): { endpointId: string; transport: Transport 
     return connection ?? { endpointId: activeId, transport: machineTransport(activeId) };
 }
 
-/*
- * A stand-in for one of the workspace's clients, so a call site keeps reading as "the daemon this
- * project is on" and holds on to nothing that a switch replaced. Only a surface of the workspace may
- * call one. The start screen has nothing to act on.
- */
-function workspaceClient<T extends object>(pick: (connection: Connection) => T): T {
-    return new Proxy({} as T, {
-        get(_target, property) {
-            const workspace = windowWorkspace();
-            if (!workspace) {
-                throw new Error('This acts on the open project, and the window shows the start screen');
-            }
-            const client = pick(workspace.connection);
-            const value = Reflect.get(client, property) as unknown;
-            return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(client) : value;
-        }
-    });
-}
-
-function activeClient<T extends object>(pick: () => T): T {
+/* A stand-in that looks the client up on every property, so a call site holds on to nothing a switch replaced. */
+function forwarding<T extends object>(pick: () => T): T {
     return new Proxy({} as T, {
         get(_target, property) {
             const client = pick();
@@ -406,8 +391,19 @@ function activeClient<T extends object>(pick: () => T): T {
     });
 }
 
-export const sessionClient = activeClient(() => activeMachine().sessions);
-export const chatClient = activeClient(() => activeMachine().chats);
+/* One of the workspace's clients. Only a surface of the workspace may call one; the start screen has nothing to act on. */
+function workspaceClient<T extends object>(pick: (connection: Connection) => T): T {
+    return forwarding(() => {
+        const workspace = windowWorkspace();
+        if (!workspace) {
+            throw new Error('This acts on the open project, and the window shows the start screen');
+        }
+        return pick(workspace.connection);
+    });
+}
+
+export const sessionClient = forwarding(() => activeMachine().sessions);
+export const chatClient = forwarding(() => activeMachine().chats);
 export const projectClient = workspaceClient((connection) => connection.projects);
 export const drawingClient = workspaceClient((connection) => connection.drawings);
 export const diagramClient = workspaceClient((connection) => connection.diagrams);
@@ -490,11 +486,7 @@ export function startConnections(): () => void {
             activeMachine();
         }
     });
-    const tellPreferences = (machine: Machine): void => {
-        machine.chats.setPreferences(
-            chatPreferencesPayload(useChatPreferences.getState(), machine.endpointId, knownAccounts(providerAccountsOf(machine.endpointId)))
-        );
-    };
+    const tellPreferences = (machine: Machine): void => machine.chats.setPreferences(preferencesFor(machine.endpointId));
     const offChatPreferences = useChatPreferences.subscribe((state, before) => {
         if (state.changedAt !== before.changedAt) {
             machines.forEach(tellPreferences);

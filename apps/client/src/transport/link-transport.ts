@@ -13,6 +13,7 @@ import {
     type RequestType
 } from '@ruimte/contracts';
 import { decodeBase64, type BytesPiece } from './piece';
+import { messageOf } from './signaling';
 import type { PooledTransport } from './pool';
 import { TransportError, type ConnectionState, type SignalRoute, type TransportStatus } from './transport';
 
@@ -160,27 +161,11 @@ export class LinkTransport implements PooledTransport {
     }
 
     request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
-        if (this.status !== 'open' || !this.link) {
-            return Promise.reject(new TransportError('not-connected', i18next.t('machines:connection.notConnected')));
-        }
-        const id = String(this.nextId++);
-        const promise = new Promise<RequestMap[T]['result']>((resolve, reject) => {
-            this.pending.set(id, { type, resolve: resolve as (result: unknown) => void, reject });
-        });
-        this.link.send(JSON.stringify({ id, type, payload }));
-        return promise;
+        return this.ask(type, payload, false);
     }
 
     readBytes(payload: BytesReadPayload): Promise<BytesPiece> {
-        if (this.status !== 'open' || !this.link) {
-            return Promise.reject(new TransportError('not-connected', i18next.t('machines:connection.notConnected')));
-        }
-        const id = String(this.nextId++);
-        const promise = new Promise<BytesPiece>((resolve, reject) => {
-            this.pending.set(id, { type: 'bytes.read', resolve: resolve as (result: unknown) => void, reject, bytes: true });
-        });
-        this.link.send(JSON.stringify({ id, type: 'bytes.read', payload: { ...payload, binary: true } }));
-        return promise;
+        return this.ask('bytes.read', { ...payload, binary: true }, true);
     }
 
     // Stops reconnecting for good; used when the module that owns the transport is torn down.
@@ -232,7 +217,7 @@ export class LinkTransport implements PooledTransport {
                 // A daemon that will not say how to reach it is a daemon that is not reachable; the backoff is the same one.
                 this.log.warn('Could not work out how to connect to the machine', e);
                 this.scheduleReconnect();
-                this.setConnection({ status: 'closed', failure: e instanceof Error ? e.message : String(e) });
+                this.setConnection({ status: 'closed', failure: messageOf(e) });
             }
         );
     }
@@ -279,7 +264,7 @@ export class LinkTransport implements PooledTransport {
         } catch (e) {
             // An opener that throws would otherwise leave the transport connecting forever, with no link and no timer.
             if (this.linkToken === token) {
-                events.close(i18next.t('machines:connection.openFailed', { reason: e instanceof Error ? e.message : String(e) }));
+                events.close(i18next.t('machines:connection.openFailed', { reason: messageOf(e) }));
             }
             return;
         }
@@ -299,6 +284,18 @@ export class LinkTransport implements PooledTransport {
             this.reconnectTimer = null;
             this.connect();
         }, delay);
+    }
+
+    private ask<R>(type: RequestType, payload: unknown, bytes: boolean): Promise<R> {
+        if (this.status !== 'open' || !this.link) {
+            return Promise.reject(new TransportError('not-connected', i18next.t('machines:connection.notConnected')));
+        }
+        const id = String(this.nextId++);
+        const promise = new Promise<R>((resolve, reject) => {
+            this.pending.set(id, { type, resolve: resolve as (result: unknown) => void, reject, ...(bytes ? { bytes: true as const } : {}) });
+        });
+        this.link.send(JSON.stringify({ id, type, payload }));
+        return promise;
     }
 
     private rejectPending(code: string, message: string): void {

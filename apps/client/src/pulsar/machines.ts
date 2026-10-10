@@ -113,12 +113,6 @@ export async function leaveAccount(endpointId: string, machineId: string): Promi
     return revoked;
 }
 
-/* Off the account list; the machine keeps every client it already let in. */
-export async function removeMachineFromAccount(machineId: string): Promise<void> {
-    await withAccessToken((client, token) => client.deleteMachine(token, machineId));
-    await refreshAccountMachines();
-}
-
 export function openAccountMachine(machine: Machine): Endpoint {
     const known = rowForAccountMachine(machine.id, useEndpoints.getState().endpoints);
     if (known) {

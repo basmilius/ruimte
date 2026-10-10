@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import { DirectSignalPayloadSchema, type DirectSignalPayload } from '@ruimte/contracts';
-import type { IceServer } from '@ruimte/pulsar';
+import type { IceServer, SignalAccess } from '@ruimte/pulsar';
+import type { ClientKey } from '@/endpoint/client-key';
 
 export type Signal = DirectSignalPayload['envelope']['signal'];
 
@@ -25,8 +26,29 @@ export interface Signaling {
  */
 export type SignalingOpener = (connectionId: string, events: SignalingEvents) => Signaling;
 
-function messageOf(e: unknown): string {
+export function messageOf(e: unknown): string {
     return e instanceof Error ? e.message : String(e);
+}
+
+/*
+ * An offer with a statement for a machine that does not know this client's key yet, asked per offer
+ * since the machine spends each one. Null once `fail` was told why there is none.
+ */
+export function withAccess(
+    signal: Signal,
+    key: ClientKey | null,
+    access: ((key: ClientKey) => Promise<SignalAccess>) | undefined,
+    fail: (reason: string) => void
+): Promise<Signal | null> {
+    if (signal.kind !== 'offer' || !access || key === null) {
+        return Promise.resolve(signal);
+    }
+    return access(key)
+        .then((statement): Signal => ({ ...signal, access: statement }))
+        .catch((e: unknown) => {
+            fail(i18next.t('machines:broker.noVouch', { reason: messageOf(e) }));
+            return null;
+        });
 }
 
 /*
