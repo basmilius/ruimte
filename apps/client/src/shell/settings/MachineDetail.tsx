@@ -13,9 +13,10 @@ import { MachineIdentityForm } from '@/shell/settings/MachineIdentityForm';
 import { BrokerRow, DirectRow, LanDoorRow, MachineAccess, StreamingRow, WithReason } from '@/shell/settings/MachineSettings';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
-import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps } from '@/shell/settings/machine-actions';
+import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps, type MachineDialogModel } from '@/shell/settings/machine-actions';
 import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-list';
 import { useServers } from '@/state/server';
+import type { Endpoint } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
 
@@ -25,8 +26,6 @@ const ACTION_DEPS: MachineActionDeps = {
     refreshAccount: refreshAccountMachines
 };
 
-type Confirming = 'forget' | 'remove' | 'leave' | null;
-
 /* Everything about one machine, beside its row in the Account pane. */
 export function MachineDetail({ entry }: { entry: MachineEntry }) {
     const { t } = useTranslation('settings');
@@ -34,23 +33,15 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
     useMachineHold(entry.endpoint);
     const connection = useEndpointConnection(entry.endpoint?.id ?? entry.id);
     const signedIn = usePulsarAccount((s) => s.status === 'signed-in');
-    const signedInAccount = usePulsarAccount((s) => (s.status === 'signed-in' ? (s.account?.id ?? null) : null));
     const removedMachineIds = usePulsarMachines((s) => s.removedMachineIds);
     const info = useServers((s) => (entry.endpoint ? s.byEndpoint[entry.endpoint.id] : undefined));
     const icon = useMachineIcon(entry);
-    const registrationFailure = useRegistrationFailures((s) => s.byMachine[entry.endpoint?.daemonId ?? entry.id] ?? null);
-    const [confirming, setConfirming] = useState<Confirming>(null);
-    const [busy, setBusy] = useState(false);
     // Only the app on this machine is told which account it is on.
     const machineAccount = entry.local ? info?.accountId : undefined;
     const model = machineDialogModel(entry, { connected: connection.status === 'open', signedIn, removedMachineIds, machineAccount });
     const reason = model.settings === 'not-answering' ? t('machineDialog.availableWhenAnswering') : null;
     const name = nameOf(entry);
     const version = info?.version ?? null;
-
-    const failed = (title: string, e: unknown): void => {
-        useToasts.getState().show({ id: `machine-${entry.id}-${title}`, kind: 'error', title, description: messageOf(e) });
-    };
 
     const open = (): void => {
         if (entry.machine === null) {
@@ -59,45 +50,9 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
         try {
             openAccountMachine(entry.machine);
         } catch (e) {
-            failed(t('machineDialog.openFailed', { machine: name }), e);
+            showFailure(entry, t('machineDialog.openFailed', { machine: name }), e);
         }
     };
-
-    const addAgain = async (): Promise<void> => {
-        if (entry.endpoint === null) {
-            return;
-        }
-        setBusy(true);
-        try {
-            await addMachineToAccount(entry.endpoint.id);
-        } catch (e) {
-            failed(t('machineDialog.addFailed', { machine: name }), e);
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    const leave = async (): Promise<void> => {
-        if (entry.endpoint === null) {
-            return;
-        }
-        const revoked = await leaveAccount(entry.endpoint.id, entry.endpoint.daemonId ?? entry.id);
-        useToasts.getState().show({
-            id: `machine-${entry.id}-left`,
-            kind: 'success',
-            title: t('machineDialog.left.title', { machine: name }),
-            ...(revoked === 0 ? {} : { description: t('machineDialog.left.revoked', { count: revoked }) })
-        });
-    };
-
-    const accountState =
-        typeof machineAccount === 'string'
-            ? machineAccount === signedInAccount
-                ? t('machineDialog.account.onYours')
-                : t('machineDialog.account.onAnother')
-            : machineAccount === null
-              ? t('machineDialog.account.onNone')
-              : null;
 
     return (
         <>
@@ -137,47 +92,124 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                         {model.direct && <DirectRow endpoint={entry.endpoint} />}
                         <StreamingRow endpoint={entry.endpoint} reason={reason} />
                     </SettingsSection>
-                    {(registrationFailure !== null || model.canAddToAccountAgain || accountState !== null) && (
-                        <SettingsSection title={t('machineDialog.account.title')}>
-                            {accountState !== null && (
-                                <SettingsRow
-                                    label={accountState}
-                                    description={model.canLeaveAccount ? t('machineDialog.account.leave.description') : undefined}
-                                    control={
-                                        model.canLeaveAccount ? (
-                                            <WithReason reason={reason}>
-                                                <Button variant="danger-outline" disabled={reason !== null} onClick={() => setConfirming('leave')}>
-                                                    {t('machineDialog.account.leave.action')}
-                                                </Button>
-                                            </WithReason>
-                                        ) : undefined
-                                    }
-                                />
-                            )}
-                            {registrationFailure && (
-                                <FormError className="px-4.5 py-3 break-words">
-                                    {t('machineDialog.account.registrationFailure', { reason: registrationFailure })}
-                                </FormError>
-                            )}
-                            {model.canAddToAccountAgain && (
-                                <SettingsRow
-                                    label={t('machineDialog.account.addAgain.label')}
-                                    description={t('machineDialog.account.addAgain.description')}
-                                    control={
-                                        <WithReason reason={reason}>
-                                            <Button variant="secondary" disabled={busy || reason !== null} onClick={() => void addAgain()}>
-                                                <Icon icon={CloudUpload} size={12} /> {t('machineDialog.account.addAgain.action')}
-                                            </Button>
-                                        </WithReason>
-                                    }
-                                />
-                            )}
-                        </SettingsSection>
-                    )}
+                    <AccountSection entry={entry} endpoint={entry.endpoint} model={model} machineAccount={machineAccount} reason={reason} />
                     {entry.local && <BackgroundServiceSection />}
                     <MachineAccess endpoint={entry.endpoint} />
                 </>
             )}
+            <RemoveSection entry={entry} model={model} />
+        </>
+    );
+}
+
+function showFailure(entry: MachineEntry, title: string, e: unknown): void {
+    useToasts.getState().show({ id: `machine-${entry.id}-${title}`, kind: 'error', title, description: messageOf(e) });
+}
+
+interface AccountSectionProps {
+    entry: MachineEntry;
+    endpoint: Endpoint;
+    model: MachineDialogModel;
+    machineAccount: string | null | undefined;
+    reason: string | null;
+}
+
+/* Which account the machine is on, why it could not join, and the ways back onto it or off it. */
+function AccountSection({ entry, endpoint, model, machineAccount, reason }: AccountSectionProps) {
+    const { t } = useTranslation('settings');
+    const signedInAccount = usePulsarAccount((s) => (s.status === 'signed-in' ? (s.account?.id ?? null) : null));
+    const registrationFailure = useRegistrationFailures((s) => s.byMachine[endpoint.daemonId ?? entry.id] ?? null);
+    const [confirming, setConfirming] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const name = nameOf(entry);
+
+    const addAgain = async (): Promise<void> => {
+        setBusy(true);
+        try {
+            await addMachineToAccount(endpoint.id);
+        } catch (e) {
+            showFailure(entry, t('machineDialog.addFailed', { machine: name }), e);
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const leave = async (): Promise<void> => {
+        const revoked = await leaveAccount(endpoint.id, endpoint.daemonId ?? entry.id);
+        useToasts.getState().show({
+            id: `machine-${entry.id}-left`,
+            kind: 'success',
+            title: t('machineDialog.left.title', { machine: name }),
+            ...(revoked === 0 ? {} : { description: t('machineDialog.left.revoked', { count: revoked }) })
+        });
+    };
+
+    const accountState =
+        typeof machineAccount === 'string'
+            ? machineAccount === signedInAccount
+                ? t('machineDialog.account.onYours')
+                : t('machineDialog.account.onAnother')
+            : machineAccount === null
+              ? t('machineDialog.account.onNone')
+              : null;
+
+    if (registrationFailure === null && !model.canAddToAccountAgain && accountState === null) {
+        return null;
+    }
+    return (
+        <>
+            <SettingsSection title={t('machineDialog.account.title')}>
+                {accountState !== null && (
+                    <SettingsRow
+                        label={accountState}
+                        description={model.canLeaveAccount ? t('machineDialog.account.leave.description') : undefined}
+                        control={
+                            model.canLeaveAccount ? (
+                                <WithReason reason={reason}>
+                                    <Button variant="danger-outline" disabled={reason !== null} onClick={() => setConfirming(true)}>
+                                        {t('machineDialog.account.leave.action')}
+                                    </Button>
+                                </WithReason>
+                            ) : undefined
+                        }
+                    />
+                )}
+                {registrationFailure && (
+                    <FormError className="px-4.5 py-3 break-words">{t('machineDialog.account.registrationFailure', { reason: registrationFailure })}</FormError>
+                )}
+                {model.canAddToAccountAgain && (
+                    <SettingsRow
+                        label={t('machineDialog.account.addAgain.label')}
+                        description={t('machineDialog.account.addAgain.description')}
+                        control={
+                            <WithReason reason={reason}>
+                                <Button variant="secondary" disabled={busy || reason !== null} onClick={() => void addAgain()}>
+                                    <Icon icon={CloudUpload} size={12} /> {t('machineDialog.account.addAgain.action')}
+                                </Button>
+                            </WithReason>
+                        }
+                    />
+                )}
+            </SettingsSection>
+            <ConfirmDialog
+                open={confirming}
+                onOpenChange={setConfirming}
+                title={t('machineDialog.confirmLeave.title', { machine: name })}
+                description={t('machineDialog.confirmLeave.description')}
+                confirmLabel={t('machineDialog.confirmLeave.action')}
+                onConfirm={leave}
+            />
+        </>
+    );
+}
+
+/* Forgetting the machine on this client, or taking it off the account. */
+function RemoveSection({ entry, model }: { entry: MachineEntry; model: MachineDialogModel }) {
+    const { t } = useTranslation('settings');
+    const [confirming, setConfirming] = useState<'forget' | 'remove' | null>(null);
+    const name = nameOf(entry);
+    return (
+        <>
             {(model.canForget || model.canRemoveFromAccount) && (
                 <SettingsSection title={t('machineDialog.remove.title')}>
                     {model.canForget && (
@@ -211,14 +243,6 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                 description={t('machineDialog.confirmForget.description')}
                 confirmLabel={t('machineDialog.confirmForget.action')}
                 onConfirm={() => forgetOnClient(entry, ACTION_DEPS)}
-            />
-            <ConfirmDialog
-                open={confirming === 'leave'}
-                onOpenChange={(next) => setConfirming(next ? 'leave' : null)}
-                title={t('machineDialog.confirmLeave.title', { machine: name })}
-                description={t('machineDialog.confirmLeave.description')}
-                confirmLabel={t('machineDialog.confirmLeave.action')}
-                onConfirm={leave}
             />
             <ConfirmDialog
                 open={confirming === 'remove'}
