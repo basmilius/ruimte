@@ -7,11 +7,6 @@ const TTL_MS = 60_000;
 
 let cached: { at: number; gh: boolean } | null = null;
 
-/* Only for the tests, which install and uninstall nothing but still want a fresh answer. */
-export function forgetCapabilities(): void {
-    cached = null;
-}
-
 /*
  * What this machine lets the panel offer: a pull request needs `gh` on the daemon's PATH, and the
  * "Write message" button needs an agent CLI that answers a single prompt. A client hides what is

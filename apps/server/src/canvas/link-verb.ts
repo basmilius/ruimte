@@ -3,27 +3,12 @@ import { z } from 'zod';
 import { canvasIdFor, defineActionVerb, runAction } from './action-verb.ts';
 import { MAX_LINKS } from './links.ts';
 import { idList } from './nodes.ts';
-import { MAX_TITLE_LENGTH, REVISION_ROW, SCOPE_LINE, VerbRefusal, field, placeOf, titleField } from './verb.ts';
+import { MAX_TITLE_LENGTH, REVISION_ROW, SCOPE_LINE, field, placeOf, titleField } from './verb.ts';
 
 export { MAX_LINKS } from './links.ts';
 
 /* The flag `agent` and `team` take for the nodes their new agent has to be able to read at once. */
 export const readsFlag = z.string().min(1, '--reads needs one or more node ids, separated by commas').optional();
-
-/*
- * The ids of --reads, read before the lock: a bad one should refuse the call before it cuts a
- * worktree. Which nodes they are is only known once the call knows which canvas it lands on.
- */
-export function readsIds(raw: string | undefined): string[] {
-    if (raw === undefined) {
-        return [];
-    }
-    const ids = idList(raw, '--reads');
-    if (ids.length > MAX_LINKS) {
-        throw new VerbRefusal('too-many-links', `--reads names ${ids.length} nodes and at most ${MAX_LINKS} may be linked at once`);
-    }
-    return ids;
-}
 
 /* What --reads does, said the same way by every verb that takes it; `head` is what its lines run into. */
 export function readsLines(head: string): readonly string[] {

@@ -104,7 +104,6 @@ export const PresenceResultSchema = z.union([
     z.object({ session: z.literal(true), shown: z.string(), mode: SessionModeSchema }),
     z.object({ session: z.literal(false), shown: z.null() })
 ]);
-export type PresenceResult = z.infer<typeof PresenceResultSchema>;
 
 export const DoctorResultSchema = z.object({
     accessibility: z.object({ granted: z.boolean() }),
