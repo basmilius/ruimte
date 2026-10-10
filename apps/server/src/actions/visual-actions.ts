@@ -52,6 +52,26 @@ async function callerChat({ host, place }: ServerActionContext, caller: string):
     return caller;
 }
 
+/* The caller's chat, on a machine that keeps visuals and lets agents show them. */
+async function visualChat(context: ServerActionContext, caller: string): Promise<{ visuals: VisualHost; chatId: string }> {
+    const visuals = visualsOf(context);
+    const chatId = await callerChat(context, caller);
+    requireEnabled(visuals);
+    return { visuals, chatId };
+}
+
+/* Passes on what the store refuses a page with, for the agent to change. */
+async function storeRefusalsAsVerb<Result>(work: () => Promise<Result>): Promise<Result> {
+    try {
+        return await work();
+    } catch (e) {
+        if (e instanceof CodedError && STORE_REFUSALS.has(e.code)) {
+            throw new VerbRefusal(e.code, e.message, [HELP_LINE]);
+        }
+        throw e;
+    }
+}
+
 /*
  * Shows a page above the caller's reply: only in an AI chat, only while the machine lets agents show
  * visuals, and within what the store takes. `visual show` and any action that draws a page of its
@@ -62,50 +82,33 @@ export async function showVisual(
     caller: string,
     input: { title: string; html: string; maxHeight: number | null; layout?: VisualLayout }
 ): Promise<ChatVisual> {
-    const visuals = visualsOf(context);
-    const chatId = await callerChat(context, caller);
-    requireEnabled(visuals);
+    const { visuals, chatId } = await visualChat(context, caller);
     const heights = renderable(input.html) ? await visuals.measure?.(input.html) : undefined;
-    try {
-        return await visuals.publish(chatId, {
+    return storeRefusalsAsVerb(() =>
+        visuals.publish(chatId, {
             title: input.title,
             html: input.html,
             ...(input.layout === undefined ? {} : { layout: input.layout }),
             ...(input.maxHeight === null ? {} : { maxHeight: input.maxHeight }),
             ...(heights === undefined ? {} : { heights })
-        });
-    } catch (e) {
-        if (e instanceof CodedError && STORE_REFUSALS.has(e.code)) {
-            throw new VerbRefusal(e.code, e.message, [HELP_LINE]);
-        }
-        throw e;
-    }
+        })
+    );
 }
 
 export const visualActions: ActionHandlers<ServerActionContext> = {
     'visual.write': async ({ name, html }, { actor, context }) => {
-        const visuals = visualsOf(context);
-        const chatId = await callerChat(context, actor.id);
-        requireEnabled(visuals);
-        if (!visuals.writeSource) {
+        const { visuals, chatId } = await visualChat(context, actor.id);
+        const writeSource = visuals.writeSource?.bind(visuals);
+        if (!writeSource) {
             throw new VerbRefusal('unavailable', 'This machine keeps no visual source files; pass the page directly to visual preview and visual show');
         }
-        try {
-            return { output: { path: await visuals.writeSource(chatId, name, html) } };
-        } catch (e) {
-            if (e instanceof CodedError && STORE_REFUSALS.has(e.code)) {
-                throw new VerbRefusal(e.code, e.message, [HELP_LINE]);
-            }
-            throw e;
-        }
+        return { output: { path: await storeRefusalsAsVerb(() => writeSource(chatId, name, html)) } };
     },
     'visual.show': async ({ title, html, maxHeight, layout }, { actor, context }) => ({
         output: { visual: await showVisual(context, actor.id, { title, html, maxHeight, ...(layout === undefined ? {} : { layout }) }) }
     }),
     'visual.preview': async ({ html, width, appearance }, { actor, context }) => {
-        const visuals = visualsOf(context);
-        const chatId = await callerChat(context, actor.id);
-        requireEnabled(visuals);
+        const { visuals, chatId } = await visualChat(context, actor.id);
         if (html.trim() === '') {
             throw new VerbRefusal('visual-invalid', 'The page is empty; pass one self-contained HTML document', [HELP_LINE]);
         }

@@ -56,10 +56,8 @@ function deletableLines(content: ProjectContent, place: IndexedPlace, call: Verb
 }
 
 /*
- * Who may write in a note. Not the maker alone, the way `node delete` reads a node: a shared note is
- * the point, and two agents cannot keep one between them when only the one that made it may write.
- * A line is what a person drew, so it is what grants this, and either direction counts, since a note
- * holds no agent and a line into it reads as the same relationship as one out of it.
+ * Who may write in a note: not the maker alone, so two agents can keep one between them. A line a
+ * person drew grants it, in either direction, since a note holds no agent.
  */
 function mayWrite(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall): boolean {
     return (
@@ -86,10 +84,7 @@ function withLine(body: string, text: string): string {
 
 /*
  * The lines between the caller and what the frame now holds, which the one line into the group says
- * in their place: a line into a group makes everything inside it readable at once, and a node that
- * arrives twice is read once. Both ends have to be the caller's, the rule `link delete` follows,
- * since a line a person drew is the context that person gave. Which way a line runs is not part of
- * it: a line between an agent and a node that is not one reads the same in both directions.
+ * in their place. Both ends have to be the caller's, the rule `link delete` follows, either way round.
  */
 function ownLinesInto(edges: readonly ProjectEdge[], held: ReadonlySet<string>, call: VerbCall): ProjectEdge[] {
     return edges.filter(

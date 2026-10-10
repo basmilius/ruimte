@@ -103,12 +103,8 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
         }
         const content = await host.read(place.projectId);
         const canvas = canvasFor(content, place, undefined);
-        /*
-         * The rule is the one the canvas already draws: a line from the caller into an agent node is
-         * what `deriveContextSources` turns into readable context, so a message may travel exactly
-         * where a read already can. An agent cannot poke a node it has no relationship with, and the
-         * person who drew the line can see who may reach whom.
-         */
+        /* A message travels where `deriveContextSources` already lets a read go: along a line from the
+           caller into an agent node, which the person who drew it can see. */
         const reachable = canvas.nodes.filter((node) => isAgentKind(node.kind) && canvas.edges.some((edge) => edge.from === caller && edge.to === node.id));
         const target = canvas.nodes.find((node) => node.id === nodeId);
         /* Only the nodes this same call would accept, and where there are none, what to do about
