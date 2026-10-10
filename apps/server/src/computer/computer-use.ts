@@ -73,6 +73,17 @@ function busyRefusal(nodeTitle: string | null): ComputerRefusal {
     );
 }
 
+function notInSessionRefusal(): ComputerRefusal {
+    return new ComputerRefusal('not-in-session', 'Only an agent in a chat or a terminal that runs now operates an app');
+}
+
+/* The status of a helper that answered `doctor`. */
+function runningStatus(doctor: DoctorResult): ComputerUseStatus {
+    return { enabled: true, present: true, running: true, accessibility: doctor.accessibility.granted, screenRecording: doctor.screenRecording.granted };
+}
+
+const DOCTOR: HelperRequest = { command: 'doctor', prompt: false };
+
 function offRefusal(): ComputerRefusal {
     return new ComputerRefusal('computer-use-off', 'Computer use is off on this machine; only a person turns it on, in Ruimte');
 }
@@ -381,28 +392,16 @@ export class ComputerUse {
 
     /* Asks the helper how it stands. Only a machine with computer use on starts it for that. */
     async refreshStatus(): Promise<ComputerUseStatus> {
-        const base = { enabled: this.store.enabled, present: this.helper.present };
+        const notRunning = { enabled: this.store.enabled, present: this.helper.present, running: false, accessibility: null, screenRecording: null };
         if (!this.helper.present) {
-            return this.setStatus({ ...base, running: false, accessibility: null, screenRecording: null });
+            return this.setStatus(notRunning);
         }
         try {
-            const doctor = this.store.enabled
-                ? await this.helper.request({ command: 'doctor', prompt: false }, DoctorResultSchema)
-                : await this.helper.ask({ command: 'doctor', prompt: false }, DoctorResultSchema);
+            const doctor = this.store.enabled ? await this.helper.request(DOCTOR, DoctorResultSchema) : await this.helper.ask(DOCTOR, DoctorResultSchema);
             this.noteSession(doctor?.session ?? null);
-            return this.setStatus(
-                doctor === null
-                    ? { ...base, running: false, accessibility: null, screenRecording: null }
-                    : { ...base, running: true, accessibility: doctor.accessibility.granted, screenRecording: doctor.screenRecording.granted }
-            );
+            return this.setStatus(doctor === null ? notRunning : { ...runningStatus(doctor), enabled: this.store.enabled });
         } catch (error) {
-            return this.setStatus({
-                ...base,
-                running: false,
-                accessibility: null,
-                screenRecording: null,
-                problem: error instanceof Error ? error.message : String(error)
-            });
+            return this.setStatus({ ...notRunning, problem: error instanceof Error ? error.message : String(error) });
         }
     }
 
@@ -440,13 +439,7 @@ export class ComputerUse {
         }
         const doctor = await this.helper.request({ command: 'doctor', prompt: true, grant }, DoctorResultSchema);
         this.noteSession(doctor.session ?? null);
-        return this.setStatus({
-            enabled: true,
-            present: true,
-            running: true,
-            accessibility: doctor.accessibility.granted,
-            screenRecording: doctor.screenRecording.granted
-        });
+        return this.setStatus(runningStatus(doctor));
     }
 
     /* Screen Recording applies to a fresh launch of the helper only, so a person who just granted it gets one without a command. */
@@ -552,7 +545,7 @@ export class ComputerUse {
         this.refuseOnceIfStopped(callerId);
         const run = this.runOf(callerId);
         if (run === null) {
-            throw new ComputerRefusal('not-in-session', 'Only an agent in a chat or a terminal that runs now operates an app');
+            throw notInSessionRefusal();
         }
         const { app, pid } = await this.target(command, query);
         if (await this.isTerminal(app.bundleId, app.name, pid, pid === null ? [] : await this.processes())) {
@@ -615,7 +608,7 @@ export class ComputerUse {
                 throw await this.busy();
             }
             if (outcome === 'gone') {
-                throw new ComputerRefusal('not-in-session', 'Only an agent in a chat or a terminal that runs now operates an app');
+                throw notInSessionRefusal();
             }
             if (!this.store.enabled) {
                 throw offRefusal();
@@ -723,7 +716,7 @@ export class ComputerUse {
                 return held;
             }
             await new Promise<void>((settle) => this.timers.set(settle, Math.min(HOLD_POLL_MS, left)));
-            const doctor = await this.helper.ask({ command: 'doctor', prompt: false }, DoctorResultSchema).catch(() => null);
+            const doctor = await this.helper.ask(DOCTOR, DoctorResultSchema).catch(() => null);
             this.heard(doctor?.session ?? null);
         }
         return null;
@@ -806,15 +799,9 @@ export class ComputerUse {
         if (!this.store.enabled) {
             throw offRefusal();
         }
-        const doctor = await this.call(() => this.helper.request({ command: 'doctor', prompt: false }, DoctorResultSchema));
+        const doctor = await this.call(() => this.helper.request(DOCTOR, DoctorResultSchema));
         this.noteSession(doctor.session ?? null);
-        this.setStatus({
-            enabled: true,
-            present: true,
-            running: true,
-            accessibility: doctor.accessibility.granted,
-            screenRecording: doctor.screenRecording.granted
-        });
+        this.setStatus(runningStatus(doctor));
         const missing = [...(doctor.accessibility.granted ? [] : ['Accessibility']), ...(doctor.screenRecording.granted ? [] : ['Screen Recording'])];
         if (missing.length > 0) {
             throw new ComputerRefusal(
@@ -892,7 +879,7 @@ export class ComputerUse {
         this.cancelPoll = this.timers.set(() => {
             this.cancelPoll = null;
             void this.helper
-                .ask({ command: 'doctor', prompt: false }, DoctorResultSchema)
+                .ask(DOCTOR, DoctorResultSchema)
                 .catch(() => null)
                 .then((doctor) => this.heard(doctor?.session ?? null));
         }, SESSION_POLL_MS);

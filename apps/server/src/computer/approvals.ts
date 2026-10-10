@@ -246,13 +246,7 @@ export class ComputerApprovals {
 
     /* The agent of a chat or terminal is gone: its cards go at once, instead of when they would have expired. */
     forget(nodeId: string): void {
-        const cards = [...this.pending.entries()].filter(([, pending]) => pending.request.nodeId === nodeId);
-        for (const [key] of cards) {
-            this.close(key);
-        }
-        for (const waiter of cards.flatMap(([, pending]) => [...pending.waiters])) {
-            waiter('declined');
-        }
+        this.decline([...this.pending.keys()].filter((key) => this.pending.get(key)!.request.nodeId === nodeId));
         for (const key of [...this.declined.keys()].filter((candidate) => candidate.startsWith(`${nodeId}\n`))) {
             this.declined.delete(key);
         }
@@ -263,14 +257,19 @@ export class ComputerApprovals {
 
     /* Takes every card down, when a person turns computer use off; nothing waits for an answer after that. */
     dropAll(): void {
-        const all = [...this.pending.values()];
-        for (const key of [...this.pending.keys()]) {
+        this.decline([...this.pending.keys()]);
+        this.publish();
+    }
+
+    /* Takes these cards down first, then tells whoever waits on them no. */
+    private decline(keys: string[]): void {
+        const waiters = keys.flatMap((key) => [...(this.pending.get(key)?.waiters ?? [])]);
+        for (const key of keys) {
             this.close(key);
         }
-        for (const waiter of all.flatMap((pending) => [...pending.waiters])) {
+        for (const waiter of waiters) {
             waiter('declined');
         }
-        this.publish();
     }
 
     private endThisTime(nodeId: string): void {

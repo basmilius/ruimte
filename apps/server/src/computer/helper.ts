@@ -18,6 +18,16 @@ export class HelperFailure extends CodedError<HelperFailureCode> {
     }
 }
 
+function messageOf(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
+function unreachable(error: unknown): HelperFailure {
+    return new HelperFailure('helper-unreachable', messageOf(error));
+}
+
+const UNKNOWN_SHAPE = 'The computer use helper answered in a shape this machine does not know';
+
 /* Nothing listens on the socket: the helper is not running, or went away between two requests. */
 export class HelperUnreachable extends Error {}
 
@@ -194,7 +204,7 @@ export class ComputerHelper {
     private resultOf<Schema extends z.ZodType>(reply: unknown, schema: Schema): z.infer<Schema> {
         const parsed = HelperReplySchema.safeParse(reply);
         if (!parsed.success) {
-            throw new HelperFailure('helper-invalid', 'The computer use helper answered in a shape this machine does not know');
+            throw new HelperFailure('helper-invalid', UNKNOWN_SHAPE);
         }
         if (!parsed.data.ok) {
             const message = parsed.data.error;
@@ -209,7 +219,7 @@ export class ComputerHelper {
         }
         const result = schema.safeParse(parsed.data.result);
         if (!result.success) {
-            throw new HelperFailure('helper-invalid', 'The computer use helper answered in a shape this machine does not know');
+            throw new HelperFailure('helper-invalid', UNKNOWN_SHAPE);
         }
         return result.data;
     }
@@ -227,7 +237,7 @@ export class ComputerHelper {
             return await this.transport.send(signed);
         } catch (error) {
             if (!(error instanceof HelperUnreachable)) {
-                throw new HelperFailure('helper-unreachable', error instanceof Error ? error.message : String(error));
+                throw unreachable(error);
             }
             if (!start) {
                 return null;
@@ -235,7 +245,7 @@ export class ComputerHelper {
         }
         await this.start(this.appPath);
         return this.transport.send(signed).catch((error: unknown) => {
-            throw new HelperFailure('helper-unreachable', error instanceof Error ? error.message : String(error));
+            throw unreachable(error);
         });
     }
 
@@ -251,7 +261,7 @@ export class ComputerHelper {
         try {
             await this.launch(appPath, this.home);
         } catch (error) {
-            throw new HelperFailure('helper-unreachable', `Ruimte Computer Use did not start: ${error instanceof Error ? error.message : String(error)}`);
+            throw new HelperFailure('helper-unreachable', `Ruimte Computer Use did not start: ${messageOf(error)}`);
         }
         const secret = await this.secret();
         for (let waited = 0; waited < this.startWaitMs; waited += START_POLL_MS) {
@@ -260,7 +270,7 @@ export class ComputerHelper {
                 return;
             } catch (error) {
                 if (!(error instanceof HelperUnreachable)) {
-                    throw new HelperFailure('helper-unreachable', error instanceof Error ? error.message : String(error));
+                    throw unreachable(error);
                 }
             }
             await this.sleep(START_POLL_MS);

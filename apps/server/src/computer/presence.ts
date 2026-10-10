@@ -25,6 +25,21 @@ function same(a: PresenceShow | null, b: PresenceShow | null): boolean {
     return a?.state === b?.state && a?.label === b?.label && a?.ends === b?.ends;
 }
 
+function countUp(counts: Map<string, number>, key: string): void {
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+}
+
+/* False once the count reached zero, which removes it. */
+function countDown(counts: Map<string, number>, key: string): boolean {
+    const left = (counts.get(key) ?? 1) - 1;
+    if (left > 0) {
+        counts.set(key, left);
+        return true;
+    }
+    counts.delete(key);
+    return false;
+}
+
 /* How a place in line ends: the Mac is the waiter's now, the session went without a word, or the waiter's own node went. */
 export type LineOutcome = 'yours' | 'dropped' | 'gone';
 
@@ -89,24 +104,20 @@ export class ComputerPresence {
 
     /* A call of this agent is under way: whatever it waits for, the helper or a card, nothing else is shown for it meanwhile. */
     calling(nodeId: string): void {
-        this.inFlight.set(nodeId, (this.inFlight.get(nodeId) ?? 0) + 1);
+        countUp(this.inFlight, nodeId);
     }
 
     /* The call goes to the helper for an app; one that nobody held is this agent's from now on. */
     acting(nodeId: string): void {
         this.take(nodeId);
-        this.atHelper.set(nodeId, (this.atHelper.get(nodeId) ?? 0) + 1);
+        countUp(this.atHelper, nodeId);
         // The helper shows the action itself, so whatever went before has to be said again after it.
         this.sent = null;
     }
 
     /* The call came back, however it went. */
     acted(nodeId: string): void {
-        const left = (this.inFlight.get(nodeId) ?? 1) - 1;
-        if (left > 0) {
-            this.inFlight.set(nodeId, left);
-        } else {
-            this.inFlight.delete(nodeId);
+        if (!countDown(this.inFlight, nodeId)) {
             this.atHelper.delete(nodeId);
         }
         if (nodeId === this.holderId) {
@@ -116,12 +127,7 @@ export class ComputerPresence {
 
     /* The helper answered a call that `acting` sent it. */
     answered(nodeId: string): void {
-        const left = (this.atHelper.get(nodeId) ?? 1) - 1;
-        if (left > 0) {
-            this.atHelper.set(nodeId, left);
-        } else {
-            this.atHelper.delete(nodeId);
-        }
+        countDown(this.atHelper, nodeId);
         if (nodeId === this.holderId) {
             this.endOrFlush();
         }
