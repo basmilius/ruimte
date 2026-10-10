@@ -424,11 +424,9 @@ export function DrawingView({ id }: { id: string }) {
                 }
                 if (draft.kind === 'freehand') {
                     const events = 'getCoalescedEvents' in e.nativeEvent ? e.nativeEvent.getCoalescedEvents() : [e.nativeEvent];
+                    const root = rootRef.current!.getBoundingClientRect();
                     const points = events.map((event) => {
-                        const world = toWorld(state.camera, {
-                            x: event.clientX - rootRef.current!.getBoundingClientRect().left,
-                            y: event.clientY - rootRef.current!.getBoundingClientRect().top
-                        });
+                        const world = toWorld(state.camera, { x: event.clientX - root.left, y: event.clientY - root.top });
                         return [world.x - draft.x, world.y - draft.y, ...(e.pointerType === 'mouse' ? [] : [event.pressure])] as [number, number, number?];
                     });
                     state.updateDraft({ points: [...draft.points, ...points] });
@@ -564,9 +562,6 @@ function cursorFor(tool: string, gesture: Gesture['kind'] | null, space: boolean
     }
     if (tool === 'text') {
         return 'text';
-    }
-    if (tool === 'note') {
-        return 'crosshair';
     }
     return tool === 'select' ? 'default' : 'crosshair';
 }

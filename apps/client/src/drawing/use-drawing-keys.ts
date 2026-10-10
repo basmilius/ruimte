@@ -57,6 +57,21 @@ function somethingElseHasIt(target: EventTarget | null): boolean {
     return isTypingTarget(target) || isInFloatingLayer(target) || ui.settings.open || ui.paletteOpen || ui.viewDialog !== null || ui.layoutDialogOpen;
 }
 
+/* What a shortcut with a modifier does to the drawing, in the order they are tried. */
+const SHORTCUT_ACTIONS: ReadonlyArray<readonly [Shortcut, (store: StoreApi<DrawingState>) => void]> = [
+    [DRAWING_SHORTCUTS.selectAll, (store) => store.getState().selectAll()],
+    [DRAWING_SHORTCUTS.duplicate, duplicateSelection],
+    [DRAWING_SHORTCUTS.lock, toggleLockSelection],
+    [DRAWING_SHORTCUTS.copy, (store) => void copyDrawing(store, 'elements')],
+    [DRAWING_SHORTCUTS.cut, (store) => void cutSelection(store)],
+    [DRAWING_SHORTCUTS.paste, (store) => void pasteInto(store)],
+    [DRAWING_SHORTCUTS.bringToFront, (store) => reorderSelection(store, 'front')],
+    [DRAWING_SHORTCUTS.sendToBack, (store) => reorderSelection(store, 'back')],
+    [DRAWING_SHORTCUTS.zoomReset, (store) => store.getState().zoomTo(1)],
+    [DRAWING_SHORTCUTS.fitAll, (store) => fitAction(store.getState().viewId)],
+    [DRAWING_SHORTCUTS.zoomSelection, (store) => store.getState().zoomToSelection()]
+];
+
 /* Escape clears one thing at a time, in the order the canvas uses: the draft first, the tool last. */
 function clearOne(store: StoreApi<DrawingState>): boolean {
     const state = store.getState();
@@ -106,66 +121,14 @@ export function useDrawingKeys(store: StoreApi<DrawingState>, active: boolean): 
                 historyAction(is(DRAWING_SHORTCUTS.redo) ? 'redo' : 'undo', state.viewId);
                 return;
             }
-            if (is(DRAWING_SHORTCUTS.selectAll)) {
+            const action = SHORTCUT_ACTIONS.find(([shortcut]) => is(shortcut));
+            if (action) {
                 e.preventDefault();
-                state.selectAll();
-                return;
-            }
-            if (is(DRAWING_SHORTCUTS.duplicate)) {
-                e.preventDefault();
-                duplicateSelection(store);
-                return;
-            }
-            if (is(DRAWING_SHORTCUTS.lock)) {
-                e.preventDefault();
-                toggleLockSelection(store);
-                return;
-            }
-            if (is(DRAWING_SHORTCUTS.copy)) {
-                e.preventDefault();
-                void copyDrawing(store, 'elements');
-                return;
-            }
-            if (is(DRAWING_SHORTCUTS.cut)) {
-                e.preventDefault();
-                void cutSelection(store);
-                return;
-            }
-            if (is(DRAWING_SHORTCUTS.paste)) {
-                e.preventDefault();
-                void pasteInto(store);
-                return;
-            }
-            if (is(DRAWING_SHORTCUTS.bringToFront)) {
-                e.preventDefault();
-                reorderSelection(store, 'front');
-                return;
-            }
-            if (is(DRAWING_SHORTCUTS.sendToBack)) {
-                e.preventDefault();
-                reorderSelection(store, 'back');
-                return;
-            }
-            if (is(DRAWING_SHORTCUTS.zoomReset)) {
-                e.preventDefault();
-                state.zoomTo(1);
-                return;
-            }
-            if (is(DRAWING_SHORTCUTS.fitAll)) {
-                e.preventDefault();
-                fitAction(state.viewId);
-                return;
-            }
-            if (is(DRAWING_SHORTCUTS.zoomSelection)) {
-                e.preventDefault();
-                state.zoomToSelection();
+                action[1](store);
                 return;
             }
             // A held Cmd or Ctrl is never a bare letter, or Ctrl+V on macOS would pick the select tool.
-            if (mod) {
-                return;
-            }
-            if (e.altKey) {
+            if (mod || e.altKey) {
                 return;
             }
             if (e.key === 'Delete' || e.key === 'Backspace') {

@@ -36,6 +36,22 @@ function toScreen(camera: Camera, x: number, y: number): { left: number; top: nu
     };
 }
 
+/* A handle on the selection box, centered on `at` with a target larger than the square it shows. */
+function Handle({ kind, at, cursor, round }: { kind: string; at: { x: number; y: number }; cursor: string | undefined; round: boolean }) {
+    return (
+        <span
+            data-handle={kind}
+            className="pointer-events-auto absolute grid place-items-center"
+            style={{ left: at.x - HANDLE_HIT_SIZE / 2, top: at.y - HANDLE_HIT_SIZE / 2, width: HANDLE_HIT_SIZE, height: HANDLE_HIT_SIZE, cursor }}
+        >
+            <span
+                className={`pointer-events-none border border-accent bg-surface-raised ${round ? 'rounded-full' : 'rounded-sm'}`}
+                style={{ width: HANDLE, height: HANDLE }}
+            />
+        </span>
+    );
+}
+
 /*
  * What sits above the two canvases: the selection with its handles, the marquee, and the text
  * being typed. It is DOM rather than paint, so handles stay whole pixels and the editor is a real
@@ -64,46 +80,16 @@ export function DrawingOverlay({ marquee }: { marquee: Rect | null }) {
                         transform: single?.angle ? `rotate(${single.angle}rad)` : undefined
                     }}
                 >
-                    {RESIZE_HANDLES.map((handle) => {
-                        const point = handlePoint({ x: 0, y: 0, w: bounds.w * camera.zoom, h: bounds.h * camera.zoom }, handle);
-                        return (
-                            <span
-                                key={handle}
-                                data-handle={handle}
-                                className="pointer-events-auto absolute grid place-items-center"
-                                style={{
-                                    left: point.x - HANDLE_HIT_SIZE / 2,
-                                    top: point.y - HANDLE_HIT_SIZE / 2,
-                                    width: HANDLE_HIT_SIZE,
-                                    height: HANDLE_HIT_SIZE,
-                                    cursor: CURSOR[handle]
-                                }}
-                            >
-                                <span
-                                    className="pointer-events-none rounded-sm border border-accent bg-surface-raised"
-                                    style={{ width: HANDLE, height: HANDLE }}
-                                />
-                            </span>
-                        );
-                    })}
-                    {single && (
-                        <span
-                            data-handle="rotate"
-                            className="pointer-events-auto absolute grid place-items-center"
-                            style={{
-                                left: (bounds.w * camera.zoom) / 2 - HANDLE_HIT_SIZE / 2,
-                                top: -ROTATE_OFFSET + HANDLE / 2 - HANDLE_HIT_SIZE / 2,
-                                width: HANDLE_HIT_SIZE,
-                                height: HANDLE_HIT_SIZE,
-                                cursor: 'grab'
-                            }}
-                        >
-                            <span
-                                className="pointer-events-none rounded-full border border-accent bg-surface-raised"
-                                style={{ width: HANDLE, height: HANDLE }}
-                            />
-                        </span>
-                    )}
+                    {RESIZE_HANDLES.map((handle) => (
+                        <Handle
+                            key={handle}
+                            kind={handle}
+                            at={handlePoint({ x: 0, y: 0, w: bounds.w * camera.zoom, h: bounds.h * camera.zoom }, handle)}
+                            cursor={CURSOR[handle]}
+                            round={false}
+                        />
+                    ))}
+                    {single && <Handle kind="rotate" at={{ x: (bounds.w * camera.zoom) / 2, y: -ROTATE_OFFSET + HANDLE / 2 }} cursor="grab" round />}
                 </div>
             )}
             {marquee && (

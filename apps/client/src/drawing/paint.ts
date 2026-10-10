@@ -71,7 +71,7 @@ function pathsOf(element: DrawingElement): CachedPaths['paths'] {
 
 /* Frees what a drawing left behind; called when another one is loaded. */
 export function clearPathCache(): void {
-    return cache.clear();
+    cache.clear();
 }
 
 export function fontOfElement(element: WrittenElement, fonts: Record<DrawingFont, string>): string {
