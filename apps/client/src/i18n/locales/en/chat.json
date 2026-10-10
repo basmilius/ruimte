@@ -67,5 +67,10 @@
         "readyIn": "The command is ready in {{terminal}}. Press Enter there to run it.",
         "unconfirmed": "Preparation was not confirmed. The command may already be in the terminal. Check its input before preparing again.",
         "refused": "The shell editor refused the command. Nothing was inserted. Open the preview again."
+    },
+    "offline": "The machine of this chat is not connected.",
+    "uiLink": {
+        "elsewhere": "This link leads into a project that is not open in this window.",
+        "invalidUrl": "This link is not a web address Ruimte opens."
     }
 }

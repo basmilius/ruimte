@@ -67,5 +67,10 @@
         "readyIn": "Het commando staat klaar in {{terminal}}. Druk daar op Enter om het uit te voeren.",
         "unconfirmed": "Het klaarzetten is niet bevestigd. De opdracht staat mogelijk al in de terminal. Controleer de invoer voordat je opnieuw iets klaarzet.",
         "refused": "De shelleditor heeft de opdracht geweigerd. Er is niets ingevoegd. Open het voorbeeld opnieuw."
+    },
+    "offline": "De machine van deze chat is niet verbonden.",
+    "uiLink": {
+        "elsewhere": "Deze link leidt naar een project dat niet in dit venster open is.",
+        "invalidUrl": "Deze link is geen webadres dat Ruimte opent."
     }
 }

@@ -1,6 +1,5 @@
 import { createStore } from 'zustand';
-import type { ChatImageTargetResult } from '@ruimte/contracts';
-import { absoluteOf } from '@/shell/panels/files-tree';
+import { absoluteOf, type ChatImageTargetResult } from '@ruimte/contracts';
 import type { Transport } from '@/transport';
 
 export interface ImageSaveState {
@@ -119,7 +118,11 @@ export class ImageSaveSession {
     }
 }
 
-export const imageSaveDialog = createStore<{ session: ImageSaveSession | null }>(() => ({ session: null }));
+export interface ImageSaveDialogState {
+    session: ImageSaveSession | null;
+}
+
+export const imageSaveDialog = createStore<ImageSaveDialogState>(() => ({ session: null }));
 
 export async function requestImageSave(transport: Transport, chatId: string, attachmentId: string): Promise<string | null> {
     if (imageSaveDialog.getState().session !== null) {

@@ -3,17 +3,19 @@ import i18next from 'i18next';
 import { configureChatStorage } from '@adecore/agents-react/storage';
 import { setChatHost, type ChatActions } from '@adecore/agents-react/host';
 import { setLazyPrefetch } from '@adecore/agents-react/lazy';
+import { useChats } from '@adecore/agents-react/state/chats';
 import { performAsPerson, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas/accents';
 import { searchFiles } from '@/chat/file-search';
-import { requestImageSave } from '@/chat/image-save';
 import { openLogin } from '@/chat/login';
+import { gitStatusConcernsChat } from '@/chat/ui-refresh';
 import { visualHostFor } from '@/chat/visuals';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
+import { downloadBlob } from '@/download';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId, endpointKey } from '@/state/keys';
 import { isScratchProject, useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useServers } from '@/state/server';
@@ -22,7 +24,7 @@ import { useTasks } from '@/state/tasks';
 import { useTheme } from '@/state/theme';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { transportFor } from '@/transport';
+import { transportFor, type Transport } from '@/transport';
 import { readResource } from '@/transport/byte-transfer';
 import { readPiece } from '@/transport/piece';
 import { useMachineUrl } from '@/transport/machine-url';
@@ -61,6 +63,14 @@ const PERSON_CHAT_ACTIONS: ChatActions = {
     }
 };
 
+function requireTransport(endpointId: string): Transport {
+    const transport = transportFor(endpointId);
+    if (transport === null) {
+        throw new Error(i18next.t('chat:offline'));
+    }
+    return transport;
+}
+
 /*
  * What the chat takes from Ruimte that the start screen may already need, handed over once before the
  * first render. What only a workspace draws is handed over by the workspace (`workspace-host.ts`), so
@@ -80,21 +90,26 @@ export function connectChatHost(): void {
         notify: (toast) => void useToasts.getState().show(toast),
         actions: PERSON_CHAT_ACTIONS,
         intelligentUi: {
-            link: async (endpointId, payload) => {
-                const transport = transportFor(endpointId);
-                if (transport === null) {
-                    throw new Error(i18next.t('agent-chat:composer.placeholder.disconnected'));
-                }
-                return transport.request('ui.link', payload);
-            },
+            link: async (endpointId, payload) => requireTransport(endpointId).request('ui.link', payload),
             subscribe: (endpointId, chatId, changed) => {
                 const transport = transportFor(endpointId);
                 if (transport === null) {
                     return () => {};
                 }
+                const project = (): { projectId: string; folder: string } | null => (endpointId === currentEndpointId() ? useProject.getState().current : null);
                 const off = [
-                    transport.on('git.status', changed),
-                    transport.on('launch.status', changed),
+                    transport.on('git.status', ({ cwd }) => {
+                        const chatCwd = useChats.getState().statusByKey[endpointKey(endpointId, chatId)]?.info.cwd ?? null;
+                        if (gitStatusConcernsChat(cwd, project(), chatCwd)) {
+                            changed();
+                        }
+                    }),
+                    transport.on('launch.status', (status) => {
+                        const current = project();
+                        if (current === null || status.projectId === current.projectId) {
+                            changed();
+                        }
+                    }),
                     transport.on('task.changed', ({ task }) => {
                         if (task.parentId === chatId) {
                             changed();
@@ -107,16 +122,10 @@ export function connectChatHost(): void {
                     }
                 };
             },
-            query: async (endpointId, payload) => {
-                const transport = transportFor(endpointId);
-                if (transport === null) {
-                    throw new Error(i18next.t('agent-chat:composer.placeholder.disconnected'));
-                }
-                return transport.request('ui.query', payload);
-            },
+            query: async (endpointId, payload) => requireTransport(endpointId).request('ui.query', payload),
             sendChoice: async (endpointId, payload) => {
                 if (endpointId !== currentEndpointId()) {
-                    throw new Error(i18next.t('agent-chat:composer.placeholder.disconnected'));
+                    throw new Error(i18next.t('chat:offline'));
                 }
                 const result = await performAsPerson('chat.uiChoice', payload);
                 return result.queued ? 'queued' : 'sent';
@@ -126,29 +135,18 @@ export function connectChatHost(): void {
         attachments: {
             useUrl: (endpointId, chatId, attachmentId) => useMachineUrl({ kind: 'attachment', chatId, attachmentId }, endpointId),
             read: async (endpointId, chatId, attachmentId) => {
-                const transport = transportFor(endpointId);
-                if (transport === null) {
-                    throw new Error(i18next.t('agent-chat:composer.placeholder.disconnected'));
-                }
+                const transport = requireTransport(endpointId);
                 return readResource((piece) => readPiece(transport, piece), { kind: 'attachment', chatId, attachmentId });
             },
             open: (endpointId, chatId, attachmentId, suggestedName) => {
                 void (async () => {
-                    const transport = transportFor(endpointId);
-                    if (transport === null) {
-                        throw new Error(i18next.t('agent-chat:composer.placeholder.disconnected'));
-                    }
+                    const transport = requireTransport(endpointId);
                     const image = await readResource((piece) => readPiece(transport, piece), { kind: 'attachment', chatId, attachmentId });
                     const bridge = desktop();
                     if (bridge?.openImage) {
                         await bridge.openImage(suggestedName, new Uint8Array(await image.arrayBuffer()), image.type);
                     } else {
-                        const url = URL.createObjectURL(image);
-                        const anchor = document.createElement('a');
-                        anchor.href = url;
-                        anchor.download = suggestedName;
-                        anchor.click();
-                        URL.revokeObjectURL(url);
+                        downloadBlob(image, suggestedName);
                     }
                 })().catch((error: unknown) =>
                     useToasts.getState().show({
@@ -160,10 +158,9 @@ export function connectChatHost(): void {
             },
             saveToProject: async (endpointId, chatId, attachmentId) => {
                 try {
-                    const transport = transportFor(endpointId);
-                    if (transport === null) {
-                        throw new Error(i18next.t('agent-chat:composer.placeholder.disconnected'));
-                    }
+                    const transport = requireTransport(endpointId);
+                    // The dialog and its folder tree belong to a workspace, so the start screen loads none of it.
+                    const { requestImageSave } = await import('@/chat/image-save');
                     return await requestImageSave(transport, chatId, attachmentId);
                 } catch (error) {
                     useToasts.getState().show({

@@ -2,6 +2,7 @@ import type { StoreApi } from 'zustand';
 import type { DrawingElement } from '@ruimte/contracts';
 import { DEFAULT_SVG_MARGIN, approximateMeasure, boundsOfElements, toSvg } from '@adecore/drawing';
 import { desktop } from '@/desktop/bridge';
+import { downloadBlob } from '@/download';
 import { measureLineIn, paintElements, paintOptions } from '@/drawing/paint';
 import { readCanvasBackground } from '@/drawing/palette';
 import type { DrawingState } from '@/state/drawing';
@@ -70,12 +71,7 @@ export async function download(blob: Blob, name: string, mime: string): Promise<
         await bridge.saveFile(name, new Uint8Array(await blob.arrayBuffer()), mime);
         return;
     }
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = name;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, name);
 }
 
 /* Where an export lands unless the person names it otherwise: what it is and the day it was made. */

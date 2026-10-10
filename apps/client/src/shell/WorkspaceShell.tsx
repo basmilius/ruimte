@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import i18next from 'i18next';
+import { useStore } from 'zustand';
 import { WebviewParking } from '@/browser/WebviewParking';
 import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
 import { ChatChooserMenu } from '@/chat/ChatChooserMenu';
+import { imageSaveDialog, type ImageSaveDialogState } from '@/chat/image-save';
 import { connectWorkspaceChatHost } from '@/chat/workspace-host';
 import { ensureDatabaseConnections } from '@/database/connections';
 import { useDatabasePanel } from '@/database/state';
@@ -11,7 +13,6 @@ import { CellOverlayLayer } from '@/shell/CellOverlay';
 import { startLaunchWatch } from '@/launches/watch';
 import { useLaunches } from '@/launches/state';
 import { ForkDialog } from '@/shell/ForkDialog';
-import { ImageSaveHost } from '@/chat/ImageSaveHost';
 import { LayoutDialog } from '@/shell/LayoutDialog';
 import { LeaveConflictDialog } from '@/shell/LeaveConflictDialog';
 import { MachineLostScreen } from '@/shell/MachineLostScreen';
@@ -57,6 +58,13 @@ const DatabaseConnectionsDialog = lazyDialog(
     'DatabaseConnectionsDialog',
     useDatabasePanel,
     (s) => s.dialog.open
+);
+
+const ImageSaveHost = lazyDialog(
+    () => import('@/chat/ImageSaveHost'),
+    'ImageSaveHost',
+    (select: (state: ImageSaveDialogState) => boolean) => useStore(imageSaveDialog, select),
+    (s) => s.session !== null
 );
 
 const ConflictOverlay = lazyDialog(
