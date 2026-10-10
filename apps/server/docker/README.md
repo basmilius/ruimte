@@ -3,8 +3,8 @@
 A second daemon, on Linux, in a container, so a client on this Mac has a machine to reach that is not
 its own. It is a test rig for everything that only happens over the wire: a client let in on a
 statement from the account, the door on the local network, a direct channel over UDP, a `lan`
-reachability, paths and a shell that are not this machine's, and it is a second machine to develop
-against, which is why it keeps what is put on it.
+reachability, and paths and a shell that are not this machine's. It is also a second machine to
+develop against, which is why it keeps what is put on it.
 
 The container holds a shell, git and bun, and nothing else. No Claude Code, no Codex, so chat nodes
 and agent status are out of scope here.
@@ -41,10 +41,10 @@ container announces with `--direct-host-address 127.0.0.1`.
 
 The first start seeds two repositories under `/work`:
 
-| Path | What it holds |
-| --- | --- |
-| `/work/atlas` | Three commits, a `lighthouse` branch next to `main`, `README.md` changed and an untracked `notes.txt`. |
-| `/work/beacon` | One commit, nothing outstanding. |
+| Path           | What it holds                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| `/work/atlas`  | Three commits, a `lighthouse` branch next to `main`, `README.md` changed and an untracked `notes.txt`. |
+| `/work/beacon` | One commit, nothing outstanding.                                                                       |
 
 The image installs a workspace of `apps/server` and `packages/*` only (`workspace-package.json`);
 the client and the desktop shell would drag vite and electron into every rebuild for nothing. The
