@@ -260,6 +260,16 @@ function defaultLaunch(emulator: string, arguments_: string[], avd: string): Emu
     };
 }
 
+/* The last few lines of an emulator's output that say why it stopped; empty when none does. */
+function startFailure(output: string): string {
+    return output
+        .split('\n')
+        .filter((line) => /error|fatal|panic/i.test(line))
+        .slice(-3)
+        .join('\n')
+        .trim();
+}
+
 /*
  * Android emulators and phones through adb. An emulator is known by its AVD name whether it runs or
  * not, so a view keeps its device across a boot; a phone is known by its serial. The list is read every
@@ -338,11 +348,7 @@ export class AndroidBackend implements DeviceBackend {
         if (sdk.emulator === null) {
             throw new DeviceError('emulator-unavailable', 'The Android emulator is not installed in the Android SDK');
         }
-        const used = new Set([...this.avdNames.keys(), ...[...this.booting.values()].map((booting) => booting.serial)]);
-        let port = FIRST_EMULATOR_PORT;
-        while (used.has(`emulator-${port}`) && port < LAST_EMULATOR_PORT) {
-            port += 2;
-        }
+        const port = this.freeEmulatorPort();
         const serial = `emulator-${port}`;
         const process = this.launch(sdk.emulator, ['-avd', deviceId, '-port', String(port), '-no-window', '-no-boot-anim'], deviceId);
         const booting: Booting = { serial, process };
@@ -359,16 +365,9 @@ export class AndroidBackend implements DeviceBackend {
         for (let attempt = 0; attempt < 30; attempt += 1) {
             if (exitCode !== null) {
                 this.avdNames.delete(serial);
-                const detail = process
-                    .output()
-                    .split('\n')
-                    .filter((line) => /error|fatal|panic/i.test(line))
-                    .slice(-3)
-                    .join('\n')
-                    .trim();
-                throw new DeviceError('emulator-failed', detail || `The emulator stopped while starting (exit code ${exitCode})`);
+                throw new DeviceError('emulator-failed', startFailure(process.output()) || `The emulator stopped while starting (exit code ${exitCode})`);
             }
-            if ((await this.connected(sdk)).some((entry) => entry.serial === serial)) {
+            if (await this.isConnected(sdk, serial)) {
                 break;
             }
             await this.sleep(500);
@@ -389,7 +388,7 @@ export class AndroidBackend implements DeviceBackend {
         await this.adb(sdk, ['-s', serial, 'emu', 'kill']);
         this.booting.delete(deviceId);
         for (let attempt = 0; attempt < 20; attempt += 1) {
-            if (!(await this.connected(sdk)).some((entry) => entry.serial === serial)) {
+            if (!(await this.isConnected(sdk, serial))) {
                 break;
             }
             await this.sleep(500);
@@ -556,6 +555,20 @@ export class AndroidBackend implements DeviceBackend {
             throw new DeviceError('adb-unavailable', 'The Android SDK was not found on this machine');
         }
         return this.located;
+    }
+
+    /* The first console port no emulator of this backend holds or is starting on. */
+    private freeEmulatorPort(): number {
+        const used = new Set([...this.avdNames.keys(), ...[...this.booting.values()].map((booting) => booting.serial)]);
+        let port = FIRST_EMULATOR_PORT;
+        while (used.has(`emulator-${port}`) && port < LAST_EMULATOR_PORT) {
+            port += 2;
+        }
+        return port;
+    }
+
+    private async isConnected(sdk: AndroidSdk, serial: string): Promise<boolean> {
+        return (await this.connected(sdk)).some((entry) => entry.serial === serial);
     }
 
     private async connected(sdk: AndroidSdk): Promise<AdbEntry[]> {
