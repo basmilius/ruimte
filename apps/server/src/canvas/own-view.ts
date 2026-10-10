@@ -18,9 +18,8 @@ export function ownViewOf(content: Pick<ProjectContent, 'views'>, id: string): O
 }
 
 /*
- * What a verb says about such an id. "Not a node on this canvas" is true and leaves open that it is
- * a node on another one, so an agent goes through every view of the project to find out that it is
- * not; the daemon has the document and can close that question in the sentence itself.
+ * "Not a node on this canvas" would send an agent through every view of the project looking for it,
+ * so the refusal says the id is a view of its own.
  */
 export function refuseOwnView(view: OwnView, cannot: string, lines: string[] = []): VerbRefusal {
     return new VerbRefusal(

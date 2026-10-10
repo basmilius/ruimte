@@ -60,11 +60,9 @@ export function gridColumns(count: number): number {
 }
 
 /*
- * The same rectangles tidied into a block, in the order they came in. The origin is the top left of
- * the box they already occupy, so a canvas is straightened where it stands and nothing jumps off
- * screen; a single node therefore never moves at all. A column is as wide as the widest node in it
- * and a row as tall as the tallest, which is what keeps nodes of different sizes from touching
- * without resizing any of them.
+ * The rectangles tidied into a block from the top left of the box they already occupy, so a canvas
+ * is straightened where it stands. Columns and rows take their widest and tallest node, so nodes of
+ * different sizes never touch and none is resized.
  */
 export function arrangeRects(rects: readonly Rect[], layout: ArrangeLayout, cols?: number): Rect[] {
     if (rects.length === 0) {
@@ -105,20 +103,15 @@ export function arrangeRects(rects: readonly Rect[], layout: ArrangeLayout, cols
 /* What placing inside a group needs to know about it, so a frame that is not a node yet also fits. */
 type GroupFrame = Pick<ProjectNode, 'x' | 'y' | 'w' | 'h' | 'collapsed' | 'expandedHeight'>;
 
-/*
- * What a group holds, as nodes rather than ids: which things lie inside a frame is the project
- * document's own rule (`groupMemberIds`), shared with whatever else has to answer it, and this side
- * only needs the nodes back in the order the canvas keeps them.
- */
+/* What a group holds by the project document's own rule (`groupMemberIds`), in canvas order. */
 export function groupMembers(group: ProjectNode, nodes: readonly ProjectNode[]): ProjectNode[] {
     const ids = new Set(groupMemberIds(group, nodes));
     return nodes.filter((node) => ids.has(node.id));
 }
 
 /*
- * The group each node stands in, by node id, with nested frames resolved to the innermost one: a
- * node inside a group inside a group is in both by geometry, and the smaller frame is the one a
- * person would say it is in. A node on the canvas itself is not in the map.
+ * The group each node stands in, by node id. A node in nested frames is in both by geometry, and the
+ * smaller one is the one a person would say it is in.
  */
 export function containersOf(nodes: readonly ProjectNode[]): Map<string, ProjectNode> {
     const containers = new Map<string, ProjectNode>();
@@ -176,11 +169,9 @@ export function placeInGroup(group: GroupFrame, members: readonly Rect[], size: 
 export const TEAM_COLUMNS = 4;
 
 /*
- * Where a whole team stands inside the group that holds it, and how big that group has to be. The
- * frame starts as wide as a row of members and every one of them is placed by `placeInGroup`, which
- * walks to the right until the row is full and then starts another, so the two ways a node lands in
- * a group put it in the same kind of spot. The rectangles are relative to the group's own corner:
- * the caller decides where the group lands and moves everything by that much.
+ * Where a whole team stands inside its group, and how big that group has to be. Every member goes
+ * through `placeInGroup`, so a team member lands where a single node would. The rectangles are
+ * relative to the group's own corner.
  */
 export function placeTeam(sizes: readonly { w: number; h: number }[]): { rects: Rect[]; frame: { w: number; h: number } } {
     const widest = Math.max(...sizes.map((size) => size.w));

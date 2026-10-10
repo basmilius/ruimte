@@ -98,7 +98,7 @@ export function viewNamed(content: ProjectContent, id: string, flag: string): Pr
 
 /* A path stays inside the project folder as a stored one, and stays absolute when it points out. */
 export function storedFilePath(folder: string, path: string): string {
-    return folder !== null && isInside(folder, path) ? storedPathOf(folder, path) : path;
+    return isInside(folder, path) ? storedPathOf(folder, path) : path;
 }
 
 /* What a database view shows, as the daemon resolved it from the flags. */

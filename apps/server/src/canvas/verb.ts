@@ -149,10 +149,9 @@ export interface CanvasHost {
     language?: LanguageAgentHost;
 }
 
-/* What an agent's `language` call reaches: the answers of the servers for one file, and what a `.sql` file is read against. */
 export type LanguageAgentHost = Pick<AgentLanguage, 'diagnostics' | 'hover' | 'definition' | 'references' | 'symbols' | 'sqlFile'>;
 
-/* The visuals of a chat, kept beside its record, and the machine's switch that lets an agent show a new one. */
+/* `enabled` is the machine's switch that lets an agent show a new visual. */
 export interface VisualHost {
     enabled(): boolean;
     writeSource?(chatId: string, name: string, html: string): Promise<string>;
@@ -214,7 +213,6 @@ export interface AgentStateHost {
     cancelTurn(nodeId: string): boolean;
 }
 
-/* The questions and approvals a chat node asks, as its own thread holds them. */
 export type ChatRequestHost = ChatRequests;
 
 /*
@@ -227,17 +225,14 @@ export interface BrowserDriveHost {
     shot(browserId: string): Promise<ShotOutcome | null>;
 }
 
-/* What an agent's `computer` call reaches: the setting, and the rules every call passes before the helper acts. */
 export type ComputerHost = Pick<ComputerUse, 'enabled' | 'apps' | 'operate' | 'treeView'>;
 
-/* What an agent's `device` call reaches: the device a node points at, a shot of it and the gestures on it. */
 export type DeviceDriveHost = Pick<
     DeviceDriver,
     'find' | 'screen' | 'abilities' | 'tree' | 'shot' | 'tap' | 'tapElement' | 'swipe' | 'button' | 'type' | 'launch'
 >;
 
 export interface WorktreeHost {
-    /* Every worktree of the repository a folder is in, with the work each holds. */
     list(folder: string): Promise<Worktree[]>;
     /* Everything a worktree holds over where it was made from, uncommitted and untracked files included. */
     diff(path: string, base: string | undefined): Promise<GitDiffResult>;
@@ -276,7 +271,7 @@ export interface VerbCall {
     /* The session or chat id the bearer token speaks for. */
     caller: string;
     host: CanvasHost;
-    /* What `--revision` named: the rev of the project file the caller read before it decided on this write. */
+    /* The rev of the project file the caller read before it decided on this write. */
     expectedRevision?: number;
 }
 
