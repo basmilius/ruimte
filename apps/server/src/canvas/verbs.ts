@@ -1,7 +1,7 @@
-import { uiReferenceText } from '@adecore/intelligent-ui/text';
-import { alertVerb } from './alert-verb.ts';
 import { actionDescription } from '@ruimte/actions';
 import { ChatSubagentSourceSchema, ContextSourceSchema } from '@ruimte/contracts';
+import { uiReferenceText } from '@adecore/intelligent-ui/text';
+import { alertVerb } from './alert-verb.ts';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 // First: verbs join the --dry-run list as they are defined, and node new has always led it.
