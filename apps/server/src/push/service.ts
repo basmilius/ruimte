@@ -12,6 +12,8 @@ import {
 } from '@ruimte/pulsar';
 import {
     PUSH_NOTIFY_DEFAULT,
+    clipText,
+    type ChatItem,
     type EventMap,
     type AgentStatus,
     type ProcessAlert,
@@ -25,7 +27,6 @@ import { PushAttention } from './attention.ts';
 import type { SnoozeChange } from './snoozes.ts';
 import { encryptPush } from './encrypt.ts';
 import { processAlertBody } from './process-alert.ts';
-import { clipText } from '@ruimte/contracts';
 
 interface PushServiceOptions {
     auth: AuthStore;
@@ -57,6 +58,9 @@ interface NodeState {
 }
 
 const APPROVAL_MAX_AGE_MS = 110_000;
+const TITLE_MAX = 160;
+const NEEDS_YOU_BODY = 'The agent needs your attention.';
+const BODY_MAX = 500;
 
 /* What a subscription hears of for a node: the list its project has, else its own, else what every device heard before it could choose. */
 export function notifyKinds(subscription: PushSubscribePayload, projectId: string | null): readonly PushNotifyKind[] {
@@ -125,7 +129,7 @@ export class PushService {
         body: string,
         destination: Pick<EventMap['push.notification'], 'projectId' | 'viewId'>
     ): void {
-        const alert = { ...destination, nodeId, title: clipText(title, 160), body: clipText(body, 500) };
+        const alert = { ...destination, nodeId, title: clipText(title, TITLE_MAX), body: clipText(body, BODY_MAX) };
         this.alert(target, nodeId, alert.title, alert.body);
         for (const listener of this.notificationListeners) {
             listener(alert);
@@ -141,21 +145,19 @@ export class PushService {
             listener(entry);
         }
         // Keep a read behind any alert already in flight to APNs.
-        this.alertQueue = this.alertQueue
-            .then(async () => {
-                for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
-                    if (!subscription.readSync || this.connectedSessions.has(sessionId)) {
-                        continue;
-                    }
-                    const routing = { ...this.routing(subscription, nodeId, this.now() + PUSH_MAX_AGE_MS), issuedAt: Math.max(this.now(), entry.readThrough) };
-                    const push = encryptPush(routing, subscription.publicKey, { nodeId, through: entry.readThrough, expiresAt: routing.expiresAt }, (message) =>
-                        this.options.identity.sign(message)
-                    );
-                    await this.sendCurrent(sessionId, subscription, push);
+        this.queueAlert(async () => {
+            for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
+                if (!subscription.readSync || this.connectedSessions.has(sessionId)) {
+                    continue;
                 }
-            })
-            .catch((error: unknown) => this.options.onError?.(error));
-        this.track(this.alertQueue);
+                const routing = { ...this.routing(subscription, nodeId, this.now() + PUSH_MAX_AGE_MS), issuedAt: Math.max(this.now(), entry.readThrough) };
+                await this.sendCurrent(
+                    sessionId,
+                    subscription,
+                    this.encrypt(routing, subscription, { nodeId, through: entry.readThrough, expiresAt: routing.expiresAt })
+                );
+            }
+        });
     }
 
     connected(sessionId: string | null): () => void {
@@ -191,37 +193,10 @@ export class PushService {
             } else if (chat.type === 'item' && chat.item.kind === 'tool' && chat.item.state === 'running') {
                 const node = this.nodes.get(chatId);
                 if (node) {
-                    this.track(this.deliverActivity(chatId, { title: clipText(node.title, 160), phase: 'tool', startedAt: node.startedAt }));
+                    this.track(this.deliverActivity(chatId, { title: clipText(node.title, TITLE_MAX), phase: 'tool', startedAt: node.startedAt }));
                 }
             } else if (chat.type === 'item' && chat.item.kind === 'approval') {
-                const item = chat.item;
-                const waiting = this.approvals.get(chatId) ?? new Map<string, PushAlertContent>();
-                this.approvals.set(chatId, waiting);
-                if (item.decision !== 'pending') {
-                    waiting.delete(item.requestId);
-                    return;
-                }
-                if (waiting.has(item.requestId)) {
-                    return;
-                }
-                const card: PushAlertContent = {
-                    kind: 'approval',
-                    target: 'chat',
-                    nodeId: chatId,
-                    title: this.nodes.get(chatId)?.title ?? 'Agent needs permission',
-                    body: clipText(item.description ?? item.toolName, 500),
-                    requestId: item.requestId,
-                    choices: [
-                        { id: 'allow', kind: 'allow', label: 'Allow' },
-                        { id: 'deny', kind: 'deny', label: 'Deny' },
-                        ...(item.canAllowAlways ? [{ id: 'allow-always', kind: 'remember' as const, label: 'Always allow' }] : [])
-                    ],
-                    expiresAt: this.now() + APPROVAL_MAX_AGE_MS
-                };
-                waiting.set(item.requestId, card);
-                if (!this.snoozed(chatId)) {
-                    this.enqueue(card);
-                }
+                this.approval(chatId, chat.item);
             }
         }
     }
@@ -232,8 +207,38 @@ export class PushService {
         }
     }
 
+    private approval(chatId: string, item: Extract<ChatItem, { kind: 'approval' }>): void {
+        const waiting = this.approvals.get(chatId) ?? new Map<string, PushAlertContent>();
+        this.approvals.set(chatId, waiting);
+        if (item.decision !== 'pending') {
+            waiting.delete(item.requestId);
+            return;
+        }
+        if (waiting.has(item.requestId)) {
+            return;
+        }
+        const card: PushAlertContent = {
+            kind: 'approval',
+            target: 'chat',
+            nodeId: chatId,
+            title: this.nodes.get(chatId)?.title ?? 'Agent needs permission',
+            body: clipText(item.description ?? item.toolName, BODY_MAX),
+            requestId: item.requestId,
+            choices: [
+                { id: 'allow', kind: 'allow', label: 'Allow' },
+                { id: 'deny', kind: 'deny', label: 'Deny' },
+                ...(item.canAllowAlways ? [{ id: 'allow-always', kind: 'remember' as const, label: 'Always allow' }] : [])
+            ],
+            expiresAt: this.now() + APPROVAL_MAX_AGE_MS
+        };
+        waiting.set(item.requestId, card);
+        if (!this.snoozed(chatId)) {
+            this.enqueue(card);
+        }
+    }
+
     private status(target: PushAlertContent['target'], nodeId: string, status: AgentStatus, title: string): void {
-        title = this.options.titleFor?.(nodeId) || title;
+        title = this.titleOf(nodeId, title);
         this.options.snoozes?.noteStatus(nodeId, status === 'needs-you');
         const previous = this.nodes.get(nodeId);
         const startedAt =
@@ -250,7 +255,7 @@ export class PushService {
             }
         }
         if (status === 'needs-you' && !this.snoozed(nodeId)) {
-            this.needsYou(target, nodeId, title);
+            this.alert(target, nodeId, title, NEEDS_YOU_BODY);
         }
         if (previous?.status === 'running' && (status === 'idle' || status === 'error') && !this.snoozed(nodeId)) {
             this.broadcast(
@@ -258,7 +263,7 @@ export class PushService {
                     kind: 'turn',
                     target,
                     nodeId,
-                    title: clipText(title, 160),
+                    title: clipText(title, TITLE_MAX),
                     body: status === 'idle' ? 'The agent finished its turn.' : 'The agent stopped with an error.',
                     expiresAt: this.now() + PUSH_MAX_AGE_MS
                 },
@@ -268,19 +273,12 @@ export class PushService {
         if (status === 'running' || status === 'needs-you' || status === 'idle' || status === 'error' || status === 'exited') {
             // A snoozed wait is as quiet on the node's own activity as in the machine counts.
             const phase = status === 'running' ? 'running' : status === 'needs-you' && !this.snoozed(nodeId) ? 'needs-you' : 'done';
-            this.track(this.deliverActivity(nodeId, { title: clipText(title, 160), phase, startedAt }));
+            this.track(this.deliverActivity(nodeId, { title: clipText(title, TITLE_MAX), phase, startedAt }));
         }
     }
 
-    private needsYou(target: PushAlertContent['target'], nodeId: string, title: string): void {
-        this.enqueue({
-            kind: 'attention',
-            target,
-            nodeId,
-            title: clipText(title, 160),
-            body: 'The agent needs your attention.',
-            expiresAt: this.now() + PUSH_MAX_AGE_MS
-        });
+    private titleOf(nodeId: string, fallback: string): string {
+        return this.options.titleFor?.(nodeId) || fallback;
     }
 
     private snoozed(nodeId: string): boolean {
@@ -313,11 +311,11 @@ export class PushService {
                 this.enqueue({ ...card, expiresAt: this.now() + APPROVAL_MAX_AGE_MS });
             }
             if (cards.length === 0) {
-                this.needsYou(node.target, nodeId, this.options.titleFor?.(nodeId) || node.title);
+                this.alert(node.target, nodeId, this.titleOf(nodeId, node.title), NEEDS_YOU_BODY);
             }
         }
         if (node?.status === 'needs-you') {
-            const title = clipText(this.options.titleFor?.(nodeId) || node.title, 160);
+            const title = clipText(this.titleOf(nodeId, node.title), TITLE_MAX);
             const phase = kind === 'snoozed' ? 'done' : 'needs-you';
             this.track(this.deliverActivity(nodeId, { title, phase, startedAt: this.nodes.get(nodeId)?.startedAt ?? this.now() }));
         }
@@ -330,8 +328,8 @@ export class PushService {
             kind: 'attention',
             target,
             nodeId,
-            title: clipText(title, 160),
-            body: clipText(body, 500),
+            title: clipText(title, TITLE_MAX),
+            body: clipText(body, BODY_MAX),
             expiresAt: this.now() + PUSH_MAX_AGE_MS
         });
     }
@@ -359,7 +357,7 @@ export class PushService {
                     kind: 'attention',
                     target: this.nodes.get(nodeId)?.target ?? this.options.targetOf?.(nodeId) ?? 'terminal',
                     nodeId,
-                    title: clipText(this.options.titleFor?.(nodeId) || this.nodes.get(nodeId)?.title || 'Agent', 160),
+                    title: clipText(this.titleOf(nodeId, this.nodes.get(nodeId)?.title || 'Agent'), TITLE_MAX),
                     body: processAlertBody(alert),
                     expiresAt: this.now() + PUSH_MAX_AGE_MS
                 },
@@ -379,7 +377,7 @@ export class PushService {
             .map((node) => ({
                 nodeId: node.nodeId,
                 target: node.target,
-                title: clipText(this.options.titleFor?.(node.nodeId) || node.title, 80),
+                title: clipText(this.titleOf(node.nodeId, node.title), 80),
                 phase: node.status === 'needs-you' ? 'needs-you' : 'running',
                 startedAt: this.nodes.get(node.nodeId)?.startedAt
             }));
@@ -390,7 +388,7 @@ export class PushService {
             this.machineStartedAt = this.now();
         }
         const activity: PushActivityContent = {
-            title: clipText(this.options.machineName?.() ?? 'Ruimte', 160),
+            title: clipText(this.options.machineName?.() ?? 'Ruimte', TITLE_MAX),
             phase: attentionCount ? 'needs-you' : runningCount ? 'running' : 'done',
             startedAt: this.machineStartedAt || this.now(),
             runningCount,
@@ -418,9 +416,7 @@ export class PushService {
             if (this.machineActivityStates.get(sessionId) === cacheKey) {
                 continue;
             }
-            const routing = this.routing(subscription, MACHINE_ACTIVITY_NODE, this.now() + PUSH_MAX_AGE_MS);
-            const push: PushEnvelope = { ...routing, pushType: 'liveactivity', activity, signature: '' };
-            push.signature = this.options.identity.sign(pushMessage(push));
+            const push = this.signedActivity(this.routing(subscription, MACHINE_ACTIVITY_NODE, this.now() + PUSH_MAX_AGE_MS), activity);
             if (await this.sendCurrent(sessionId, subscription, push)) {
                 this.machineActivityStates.set(sessionId, cacheKey);
             }
@@ -432,10 +428,7 @@ export class PushService {
         for (const listener of this.listeners) {
             listener(entry);
         }
-        this.alertQueue = this.alertQueue
-            .then(() => this.deliverAlert(content, entry.issuedAt, 'needs-you', true))
-            .catch((error: unknown) => this.options.onError?.(error));
-        this.track(this.alertQueue);
+        this.queueAlert(() => this.deliverAlert(content, entry.issuedAt, 'needs-you', true));
     }
 
     /*
@@ -444,9 +437,11 @@ export class PushService {
      */
     private broadcast(content: PushAlertContent, preference: PushNotifyKind): void {
         const issuedAt = this.now();
-        this.alertQueue = this.alertQueue
-            .then(() => this.deliverAlert(content, issuedAt, preference, false))
-            .catch((error: unknown) => this.options.onError?.(error));
+        this.queueAlert(() => this.deliverAlert(content, issuedAt, preference, false));
+    }
+
+    private queueAlert(work: () => Promise<void>): void {
+        this.alertQueue = this.alertQueue.then(work).catch((error: unknown) => this.options.onError?.(error));
         this.track(this.alertQueue);
     }
 
@@ -487,10 +482,7 @@ export class PushService {
             if (routing.expiresAt <= this.now()) {
                 continue;
             }
-            const push = encryptPush(routing, subscription.publicKey, { ...content, expiresAt: routing.expiresAt }, (message) =>
-                this.options.identity.sign(message)
-            );
-            await this.sendCurrent(sessionId, subscription, push);
+            await this.sendCurrent(sessionId, subscription, this.encrypt(routing, subscription, { ...content, expiresAt: routing.expiresAt }));
         }
     }
 
@@ -509,13 +501,21 @@ export class PushService {
             if (last?.phase === activity.phase || (last && this.now() - last.at < 5_000 && activity.phase === 'running')) {
                 continue;
             }
-            const routing = this.routing(subscription, nodeId, this.now() + PUSH_MAX_AGE_MS);
-            const push: PushEnvelope = { ...routing, pushType: 'liveactivity', activity, signature: '' };
-            push.signature = this.options.identity.sign(pushMessage(push));
+            const push = this.signedActivity(this.routing(subscription, nodeId, this.now() + PUSH_MAX_AGE_MS), activity);
             if (await this.sendCurrent(sessionId, subscription, push)) {
                 this.activityTimes.set(cacheKey, { phase: activity.phase, at: this.now() });
             }
         }
+    }
+
+    private encrypt(routing: PushRouting, subscription: PushSubscribePayload, content: Parameters<typeof encryptPush>[2]): PushEnvelope {
+        return encryptPush(routing, subscription.publicKey, content, (message) => this.options.identity.sign(message));
+    }
+
+    private signedActivity(routing: PushRouting, activity: PushActivityContent): PushEnvelope {
+        const push: PushEnvelope = { ...routing, pushType: 'liveactivity', activity, signature: '' };
+        push.signature = this.options.identity.sign(pushMessage(push));
+        return push;
     }
 
     private async sendCurrent(sessionId: string, subscription: PushSubscribePayload, push: PushEnvelope): Promise<boolean> {

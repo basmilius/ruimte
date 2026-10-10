@@ -5,6 +5,7 @@ import { PushAttentionResultSchema, type PushAttentionEntry } from '@ruimte/cont
 import { errorText } from '../error-text.ts';
 
 const RETENTION_MS = 30 * 24 * 60 * 60_000;
+const MAX_ENTRIES = 1000;
 
 function readSaved(path: string): ReturnType<typeof PushAttentionResultSchema.parse> | null {
     try {
@@ -78,7 +79,7 @@ export class PushAttention {
                 this.entries.delete(id);
             }
         }
-        while (this.entries.size > 1000) {
+        while (this.entries.size > MAX_ENTRIES) {
             const oldest = [...this.entries.values()].sort((left, right) => left.issuedAt - right.issuedAt)[0]!;
             this.entries.delete(oldest.nodeId);
         }
