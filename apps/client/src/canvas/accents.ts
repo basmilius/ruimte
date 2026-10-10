@@ -45,7 +45,3 @@ export const FEATURED_ACCENTS: readonly AccentId[] = ['blue', 'orange', 'lime', 
 export function accentColor(id: string | null | undefined): string | undefined {
     return NODE_ACCENTS.find((entry) => entry.id === id)?.color;
 }
-
-export function isFeatured(id: string): boolean {
-    return FEATURED_ACCENTS.some((featured) => featured === id);
-}

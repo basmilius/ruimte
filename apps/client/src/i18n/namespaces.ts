@@ -29,5 +29,3 @@ export const NAMESPACES = [
     'databases',
     'inline-edit'
 ] as const;
-
-export type Namespace = (typeof NAMESPACES)[number];
