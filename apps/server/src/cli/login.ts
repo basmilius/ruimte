@@ -6,6 +6,7 @@ import {
     RegisterMachinePayloadSchema,
     keyFingerprint,
     type Account,
+    type DeviceLinkStartPayload,
     type DeviceLinkStartResult
 } from '@ruimte/pulsar';
 import type { z } from 'zod';
@@ -52,6 +53,26 @@ function whose(account: Account): string {
 }
 
 class LoginFailure extends Error {}
+
+const CODE_EXPIRED = 'The code expired before anyone approved it. Run `ruimte login` again for a new one.';
+
+/* A poll that failed on the way rather than on its answer, which the next poll may get through. */
+function passingFailure(e: unknown): boolean {
+    return e instanceof AddressBookRequestError && (e.code === 'network' || e.code === 'internal' || e.code === 'rate-limited');
+}
+
+function printCode(out: (line: string) => void, request: DeviceLinkStartPayload, link: DeviceLinkStartResult, now: number): void {
+    const minutes = Math.max(1, Math.round((link.expiresAt - now) / 60_000));
+    out(`Linking ${request.name} to a Ruimte account.`);
+    out(`Key fingerprint: ${keyFingerprint(request.publicKey)}`);
+    out('');
+    out('On any device, open this page and sign in:');
+    out(`  ${link.verificationUriComplete}`);
+    out('Check that it shows this code and this machine:');
+    out(`  ${link.userCode}`);
+    out('');
+    out(`The code works for ${minutes} minutes. Waiting for approval (Ctrl+C to stop)...`);
+}
 
 const ON_ANOTHER_ACCOUNT =
     'This machine is on another account. Take it off that account first, with `ruimte logout` or under Settings, Machines in the app on this machine, then run `ruimte login` again.';
@@ -117,16 +138,7 @@ export async function runLogin(options: LoginOptions): Promise<number> {
         if (options.signal?.aborted) {
             return await withdraw();
         }
-        const minutes = Math.max(1, Math.round((link.expiresAt - now()) / 60_000));
-        out(`Linking ${request.name} to a Ruimte account.`);
-        out(`Key fingerprint: ${keyFingerprint(request.publicKey)}`);
-        out('');
-        out('On any device, open this page and sign in:');
-        out(`  ${link.verificationUriComplete}`);
-        out('Check that it shows this code and this machine:');
-        out(`  ${link.userCode}`);
-        out('');
-        out(`The code works for ${minutes} minutes. Waiting for approval (Ctrl+C to stop)...`);
+        printCode(out, request, link, now());
 
         let failures = 0;
         let interval = link.interval;
@@ -142,8 +154,7 @@ export async function runLogin(options: LoginOptions): Promise<number> {
                 poll = await book.pollDeviceLink({ deviceCode: link.deviceCode });
                 failures = 0;
             } catch (e) {
-                const passing = e instanceof AddressBookRequestError && (e.code === 'network' || e.code === 'internal' || e.code === 'rate-limited');
-                if (passing && ++failures < MAX_POLL_FAILURES) {
+                if (passingFailure(e) && ++failures < MAX_POLL_FAILURES) {
                     continue;
                 }
                 throw e;
@@ -159,7 +170,7 @@ export async function runLogin(options: LoginOptions): Promise<number> {
                     err('The code was withdrawn. Run `ruimte login` again for a new one.');
                     return 1;
                 case 'expired':
-                    err('The code expired before anyone approved it. Run `ruimte login` again for a new one.');
+                    err(CODE_EXPIRED);
                     return 1;
                 case 'approved': {
                     if (poll.account === null) {
@@ -188,7 +199,7 @@ export async function runLogin(options: LoginOptions): Promise<number> {
                 }
             }
         }
-        err('The code expired before anyone approved it. Run `ruimte login` again for a new one.');
+        err(CODE_EXPIRED);
         return 1;
     } catch (e) {
         if (e instanceof LoginFailure) {
