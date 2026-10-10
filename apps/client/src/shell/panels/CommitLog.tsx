@@ -135,7 +135,9 @@ export function CommitLog({ sources, reading, onOpen }: CommitLogProps) {
                                 ))}
                                 {commit.refs.length > REFS_SHOWN && (
                                     <Tooltip label={commit.refs.slice(REFS_SHOWN).join(', ')}>
-                                        <Pill size="sm" className="shrink-0 py-0 tabular-nums">{t('git.log.moreRefs', { count: commit.refs.length - REFS_SHOWN })}</Pill>
+                                        <Pill size="sm" className="shrink-0 py-0 tabular-nums">
+                                            {t('git.log.moreRefs', { count: commit.refs.length - REFS_SHOWN })}
+                                        </Pill>
                                     </Tooltip>
                                 )}
                                 <span className="grow" />
