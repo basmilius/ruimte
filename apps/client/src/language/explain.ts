@@ -2,13 +2,14 @@ import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
 import { fileUriToPath } from '@adecore/lsp';
 import type { EditorRange } from '@adecore/editor';
+import type { HoverView } from '@adecore/editor-react';
+import { isEmptyRange } from '@adecore/editor-react/models';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { functionSourceAt, isFunctionSignature } from '@/ondevice/explain-model';
 import { onDeviceClientFor, type OnDeviceClient } from '@/ondevice/ondevice-client';
 import { explainPrompt } from '@/ondevice/prompts';
 import type { HostLanguage as EditorLanguage } from './host-language';
-import type { HoverView } from '@adecore/editor-react';
 import { shikiLanguageOf } from './language-ids-host';
 
 const TOAST_ID = 'language-explain';
@@ -119,7 +120,7 @@ export class ExplainFeature {
         }
         const { editor } = this.language;
         const selection = editor.getSelection();
-        const range = isEmpty(selection) ? await this.functionAround(selection.start.line) : selection;
+        const range = isEmptyRange(selection) ? await this.functionAround(selection.start.line) : selection;
         if (range === null) {
             this.tell('nothing');
             return;
@@ -183,10 +184,6 @@ export class ExplainFeature {
     }
 }
 
-function isEmpty(range: EditorRange): boolean {
-    return range.start.line === range.end.line && range.start.character === range.end.character;
-}
-
 interface SymbolLike {
     readonly kind?: number;
     readonly range?: EditorRange;
@@ -194,14 +191,17 @@ interface SymbolLike {
     readonly children?: readonly SymbolLike[];
 }
 
-/* The class, method, constructor or function whose lines hold a line, the innermost of them. */
+/* LSP `SymbolKind`: Method, Constructor and Function. */
+const FUNCTION_KINDS = new Set([6, 9, 12]);
+
+/* The innermost method, constructor or function whose lines hold a line. */
 export function innermostFunction(symbols: readonly SymbolLike[] | null, line: number): EditorRange | null {
     let found: EditorRange | null = null;
     const walk = (list: readonly SymbolLike[]): void => {
         for (const symbol of list) {
             const range = symbol.range ?? symbol.location?.range;
             if (range !== undefined && range.start.line <= line && line <= range.end.line) {
-                if (symbol.kind === 6 || symbol.kind === 9 || symbol.kind === 12) {
+                if (symbol.kind !== undefined && FUNCTION_KINDS.has(symbol.kind)) {
                     found = range;
                 }
                 walk(symbol.children ?? []);

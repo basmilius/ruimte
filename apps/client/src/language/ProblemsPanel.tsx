@@ -27,8 +27,8 @@ const COLORS = { error: 'text-status-error', warning: 'text-status-needs-you', i
 function useProjectLanguage(): ProjectLanguage | null {
     const transport = useTransport();
     const endpointId = useEndpointId();
-    const projectId = useProject((s) => s.current?.projectId ?? null);
-    const folder = useProject((s) => s.current?.folder ?? null);
+    const projectId = useProject((state) => state.current?.projectId ?? null);
+    const folder = useProject((state) => state.current?.folder ?? null);
     const holder = useMemo(() => createHolder<ProjectLanguage>(), []);
 
     useEffect(() => {
@@ -55,7 +55,7 @@ const NONE: readonly ProblemFile[] = [];
  */
 export function ProblemsPanel() {
     const { t } = useTranslation('panels');
-    const folder = useProject((s) => s.current?.folder ?? null);
+    const folder = useProject((state) => state.current?.folder ?? null);
     const language = useProjectLanguage();
     const files = useSyncExternalStore(language?.machineProblems.subscribe ?? (() => () => undefined), language?.machineProblems.getSnapshot ?? (() => NONE));
     const [filter, setFilter] = useState('');

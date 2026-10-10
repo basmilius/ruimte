@@ -48,11 +48,9 @@ export class CustomServersTracker {
     /* Saving approves starting exactly this command on the machine. A refusal says why, and nothing changes. */
     async save(server: CustomLanguageServerInput): Promise<CustomLanguageServer> {
         const { server: saved } = await this.transport.request('language.custom.save', { server });
-        this.set(
-            this.snapshot?.some((candidate) => candidate.id === saved.id)
-                ? this.snapshot.map((c) => (c.id === saved.id ? saved : c))
-                : [...(this.snapshot ?? []), saved]
-        );
+        const servers = this.snapshot ?? [];
+        const known = servers.some((candidate) => candidate.id === saved.id);
+        this.set(known ? servers.map((candidate) => (candidate.id === saved.id ? saved : candidate)) : [...servers, saved]);
         return saved;
     }
 

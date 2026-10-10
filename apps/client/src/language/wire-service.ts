@@ -78,8 +78,9 @@ interface Origin {
 
 const RESYNC_ATTEMPTS = 3;
 
-function isCode(error: unknown, ...codes: string[]): boolean {
-    return error instanceof TransportError && codes.includes(error.code);
+/* The daemon's copy of the document is not the one this side counts on, so it is opened again. */
+function isOutOfStep(error: unknown): boolean {
+    return error instanceof TransportError && (error.code === LANGUAGE_ERROR_CODES.staleDocument || error.code === LANGUAGE_ERROR_CODES.documentNotOpen);
 }
 
 /* The wire has no cancellation, so an aborted request is only no longer waited for; a reply that comes later is dropped. */
@@ -178,12 +179,7 @@ export class WireLanguageService implements LanguageService {
             resyncing: null
         };
         this.documents.set(document.uri, open);
-        const reply = await this.options.transport.request('language.document.open', {
-            projectId: this.options.projectId,
-            path: open.path,
-            languageId: open.languageId,
-            text: document.text
-        });
+        const reply = await this.openOnDaemon(open, document.text);
         open.version = reply.version;
         open.servers = reply.servers;
         open.providers = reply.providers;
@@ -207,7 +203,7 @@ export class WireLanguageService implements LanguageService {
                 await this.resync(document);
             }
         } catch (error) {
-            if (isCode(error, LANGUAGE_ERROR_CODES.staleDocument, LANGUAGE_ERROR_CODES.documentNotOpen)) {
+            if (isOutOfStep(error)) {
                 await this.resync(document);
                 return;
             }
@@ -454,7 +450,7 @@ export class WireLanguageService implements LanguageService {
             this.remember(reply.result, { server: reply.server, version }, reply.itemServers);
             return reply.result as T;
         } catch (error) {
-            if (isCode(error, LANGUAGE_ERROR_CODES.staleDocument, LANGUAGE_ERROR_CODES.documentNotOpen)) {
+            if (isOutOfStep(error)) {
                 void this.resync(document);
             }
             throw this.translate(error, uri);
@@ -475,12 +471,7 @@ export class WireLanguageService implements LanguageService {
                     if (text === undefined || this.documents.get(document.uri) !== document) {
                         return;
                     }
-                    const reply = await this.options.transport.request('language.document.open', {
-                        projectId: this.options.projectId,
-                        path: document.path,
-                        languageId: document.languageId,
-                        text
-                    });
+                    const reply = await this.openOnDaemon(document, text);
                     document.version = reply.version;
                     document.servers = reply.servers;
                     this.setProviders(document, reply.providers);
@@ -495,6 +486,15 @@ export class WireLanguageService implements LanguageService {
             }
         })();
         return document.resyncing;
+    }
+
+    private openOnDaemon(document: OpenDocument, text: string) {
+        return this.options.transport.request('language.document.open', {
+            projectId: this.options.projectId,
+            path: document.path,
+            languageId: document.languageId,
+            text
+        });
     }
 
     private setProviders(document: OpenDocument, providers: LanguageProviders): void {

@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { EditorPosition } from '@adecore/editor';
+import { endOfInsertion } from '@adecore/editor-react/models';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { cleanGhost, firstWord } from '@/ondevice/ghost-model';
 import { onDeviceClientFor, type OnDeviceClient } from '@/ondevice/ondevice-client';
@@ -20,6 +21,10 @@ const CONTEXT_LINES = 200;
 
 function say(key: string, options?: Record<string, unknown>): string {
     return i18next.t(`panels:language.ghost.${key}`, options);
+}
+
+function samePosition(one: EditorPosition, other: EditorPosition): boolean {
+    return one.line === other.line && one.character === other.character;
 }
 
 interface Suggestion {
@@ -56,7 +61,7 @@ export class GhostTextFeature {
             }),
             editor.onCaret((position) => {
                 const shown = this.suggestion?.position;
-                if (shown !== undefined && (shown.line !== position.line || shown.character !== position.character) && !this.accepting) {
+                if (shown !== undefined && !samePosition(shown, position) && !this.accepting) {
                     this.dismiss();
                 }
             })
@@ -115,7 +120,7 @@ export class GhostTextFeature {
         }
         const { editor } = this.language;
         const selection = editor.getSelection();
-        if (selection.start.line !== selection.end.line || selection.start.character !== selection.end.character) {
+        if (!samePosition(selection.start, selection.end)) {
             return;
         }
         this.dismiss();
@@ -144,7 +149,7 @@ export class GhostTextFeature {
             this.finishProgress();
             this.controller = null;
             const caret = editor.getCaret();
-            if (result.state !== 'done' || revision !== this.revision || caret.line !== position.line || caret.character !== position.character) {
+            if (result.state !== 'done' || revision !== this.revision || !samePosition(caret, position)) {
                 return;
             }
             const cleaned = cleanGhost(result.text, before, after);
@@ -203,11 +208,7 @@ export class GhostTextFeature {
         }
         this.suggestion = null;
         this.unmountHints();
-        const lines = inserted.split('\n');
-        const next: EditorPosition =
-            lines.length === 1
-                ? { line: suggestion.position.line, character: suggestion.position.character + inserted.length }
-                : { line: suggestion.position.line + lines.length - 1, character: lines.at(-1)!.length };
+        const next = endOfInsertion(suggestion.position, inserted);
         editor.setCaret(next);
         if (rest.trim() !== '') {
             this.show({ position: next, text: rest });

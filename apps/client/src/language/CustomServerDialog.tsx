@@ -49,7 +49,7 @@ function Form({ start, endpointId, tracker, onClose }: { start: CustomDraft; end
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
     const found = useCommandCheck(tracker, draft.command);
-    const known = useProjectList((s) => s.projects);
+    const known = useProjectList((state) => state.projects);
     const choices = useMemo(
         () =>
             known
@@ -101,14 +101,7 @@ function Form({ start, endpointId, tracker, onClose }: { start: CustomDraft; end
                     <Input mono placeholder="zls" value={draft.command} onChange={(e) => set({ command: e.target.value })} />
                 </Field>
                 <Field orientation="horizontal" label={t('editor.servers.own.dialog.args')} hint={t('editor.servers.own.dialog.argsHint')}>
-                    <TextArea
-                        mono
-                        rows={2}
-                        className="field-sizing-content"
-                        placeholder="--stdio"
-                        value={draft.args}
-                        onChange={(e) => set({ args: e.target.value })}
-                    />
+                    <GrowingArea rows={2} placeholder="--stdio" value={draft.args} onChange={(args) => set({ args })} />
                 </Field>
                 <Field
                     orientation="horizontal"
@@ -124,24 +117,10 @@ function Form({ start, endpointId, tracker, onClose }: { start: CustomDraft; end
                     error={errorOf('pattern')}
                     hint={t('editor.servers.own.dialog.patternsHint')}
                 >
-                    <TextArea
-                        mono
-                        rows={2}
-                        className="field-sizing-content"
-                        placeholder="*.zig"
-                        value={draft.patterns}
-                        onChange={(e) => set({ patterns: e.target.value })}
-                    />
+                    <GrowingArea rows={2} placeholder="*.zig" value={draft.patterns} onChange={(patterns) => set({ patterns })} />
                 </Field>
                 <Field orientation="horizontal" label={t('editor.servers.own.dialog.env')} error={errorOf('env')} hint={t('editor.servers.own.dialog.envHint')}>
-                    <TextArea
-                        mono
-                        rows={2}
-                        className="field-sizing-content"
-                        placeholder="NAME=value"
-                        value={draft.env}
-                        onChange={(e) => set({ env: e.target.value })}
-                    />
+                    <GrowingArea rows={2} placeholder="NAME=value" value={draft.env} onChange={(env) => set({ env })} />
                 </Field>
                 <Field
                     orientation="horizontal"
@@ -149,14 +128,7 @@ function Form({ start, endpointId, tracker, onClose }: { start: CustomDraft; end
                     error={errorOf('options')}
                     hint={t('editor.servers.own.dialog.optionsHint')}
                 >
-                    <TextArea
-                        mono
-                        rows={3}
-                        className="field-sizing-content"
-                        placeholder="{}"
-                        value={draft.options}
-                        onChange={(e) => set({ options: e.target.value })}
-                    />
+                    <GrowingArea rows={3} placeholder="{}" value={draft.options} onChange={(options) => set({ options })} />
                 </Field>
                 <Field orientation="horizontal" group label={t('editor.servers.own.dialog.scope')} error={errorOf('projects')}>
                     <div className="flex flex-col gap-2">
@@ -175,13 +147,10 @@ function Form({ start, endpointId, tracker, onClose }: { start: CustomDraft; end
                                     <Checkbox
                                         label={project.name}
                                         checked={draft.projects.includes(project.folder)}
-                                        onCheckedChange={(on) =>
-                                            set({
-                                                projects: on
-                                                    ? [...draft.projects, project.folder]
-                                                    : draft.projects.filter((folder) => folder !== project.folder)
-                                            })
-                                        }
+                                        onCheckedChange={(on) => {
+                                            const others = draft.projects.filter((folder) => folder !== project.folder);
+                                            set({ projects: on ? [...others, project.folder] : others });
+                                        }}
                                     />
                                     <span className="min-w-0 truncate text-text">{project.name}</span>
                                     {project.name !== project.folder && (
@@ -201,6 +170,11 @@ function Form({ start, endpointId, tracker, onClose }: { start: CustomDraft; end
             </div>
         </>
     );
+}
+
+/* A command field grows with what it holds, since flags rarely fit on one line. */
+function GrowingArea({ rows, placeholder, value, onChange }: { rows: number; placeholder: string; value: string; onChange(value: string): void }) {
+    return <TextArea mono rows={rows} className="field-sizing-content" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />;
 }
 
 /* What the machine says about the command as it is typed: where it found it, or that it did not. Null before the first answer or with nothing typed. */

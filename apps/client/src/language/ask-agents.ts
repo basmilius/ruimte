@@ -7,7 +7,7 @@ const ASKED: readonly string[] = ['claude', 'codex'];
 
 /* Which of them are installed and can chat, in the order they are asked in. */
 export function useAskAgents(): ProviderInfo[] {
-    const providers = useProviders((s) => s.providers);
+    const providers = useProviders((state) => state.providers);
     return availableAgents(providers, 'chat')
         .filter((provider) => ASKED.includes(provider.kind))
         .sort((left, right) => ASKED.indexOf(left.kind) - ASKED.indexOf(right.kind));
