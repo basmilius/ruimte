@@ -236,7 +236,6 @@ export interface AgentLanguageOptions {
     readText?: (path: string) => Promise<string | null>;
 }
 
-/* The words a `.sql` file ends in, which is what makes it one the SQL server reads. */
 function isSql(path: string): boolean {
     return path.toLowerCase().endsWith('.sql');
 }
@@ -313,14 +312,13 @@ export class AgentLanguage {
             choice.source === 'unbound'
                 ? 'generic'
                 : (snapshot?.dialect ?? (connection === null ? null : connection.config.engine === 'sqlite' ? 'sqlite' : 'mysql'));
-        const quoted = (text: string): string => (/^[\w./@%+-]+$/.test(text) ? text : `'${text.replace(/'/g, "'\\''")}'`);
         const program = this.options.host.programOf('sql-native');
         const command = [
-            `${program === null ? 'sql-language-server' : quoted(program)} check`,
+            `${program === null ? 'sql-language-server' : shellQuote(program)} check`,
             ...(dialect === null ? [] : [`--dialect ${dialect}`]),
-            ...(snapshot?.version === undefined ? [] : [`--version ${quoted(snapshot.version)}`]),
-            ...(snapshot === null ? [] : [`--schema ${quoted(snapshot.path)}`]),
-            quoted(path)
+            ...(snapshot?.version === undefined ? [] : [`--version ${shellQuote(snapshot.version)}`]),
+            ...(snapshot === null ? [] : [`--schema ${shellQuote(snapshot.path)}`]),
+            shellQuote(path)
         ].join(' ');
         return {
             path: stored,
@@ -354,7 +352,7 @@ export class AgentLanguage {
                     continue;
                 }
                 if (!texts.has(target)) {
-                    texts.set(target, await (this.options.readText ?? readTextOrNull)(target));
+                    texts.set(target, await this.readText(target));
                 }
                 locations.push(spanOf(storedPathOf(place.folder, target), range, texts.get(target) ?? null));
             }
@@ -370,7 +368,7 @@ export class AgentLanguage {
         work: (document: AgentDocument, head: AgentAnswerHead) => Promise<T>
     ): Promise<T> {
         const stored = storedPathOf(place.folder, path);
-        const disk = await (this.options.readText ?? readTextOrNull)(path);
+        const disk = await this.readText(path);
         if (disk === null) {
             throw new VerbRefusal('bad-path', `${stored} cannot be read as text`);
         }
@@ -414,6 +412,10 @@ export class AgentLanguage {
         throw new VerbRefusal('language-server-starting', `The language server of ${stored} did not come up in time; ask again in a moment`);
     }
 
+    private readText(path: string): Promise<string | null> {
+        return (this.options.readText ?? readTextOrNull)(path);
+    }
+
     /* The same rule `database` holds agents to: a connection a person turned off for agents says nothing of its schema to them. */
     private gate(access: string, choice: SqlChoice): void {
         if (access === 'off' && choice.source !== 'none' && choice.source !== 'unbound') {
@@ -428,6 +430,10 @@ export class AgentLanguage {
 /* Whether a kind reads the project's SQL settings, which is what makes its answers say what a schema holds. */
 function readsSql(kind: string): boolean {
     return kind in KIND_PROFILES && KIND_PROFILES[kind as keyof typeof KIND_PROFILES].components.some((component) => component.settings !== undefined);
+}
+
+function shellQuote(text: string): string {
+    return /^[\w./@%+-]+$/.test(text) ? text : `'${text.replace(/'/g, "'\\''")}'`;
 }
 
 function positionIn(text: string, at: AgentPosition): { line: number; character: number } {

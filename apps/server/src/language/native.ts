@@ -75,7 +75,6 @@ export interface NativeCheckout {
     stubsCommit?: string;
 }
 
-/* What tells the native kinds apart: the program they run, where a development daemon finds their sources, and whether stubs come with an install. */
 interface NativeSpec {
     program: string;
     /* The checkout beside Ruimte's own, as path segments. */
@@ -84,8 +83,13 @@ interface NativeSpec {
     sourceVariable: string;
     /* What a person reads a failed build is for. */
     title: string;
+    /* Whether an install brings the standard library stubs beside the program. */
+    stubs: boolean;
     read(folder: string): NativeCheckout | null;
 }
+
+// The root of Ruimte's sources, beside which a development daemon looks for a native checkout.
+const RUIMTE_ROOT = resolve(import.meta.dir, '../../../..');
 
 const STUBS_ARCHIVE = 'https://codeload.github.com/JetBrains/phpstorm-stubs/tar.gz/';
 
@@ -132,6 +136,7 @@ const NATIVE_SPECS: Record<NativeKind, NativeSpec> = {
         sibling: ['language-servers', 'php'],
         sourceVariable: 'RUIMTE_PHP_LANGUAGE_SERVER_SOURCE',
         title: 'PHP',
+        stubs: true,
         read: readNativeCheckout
     },
     'sql-native': {
@@ -139,6 +144,7 @@ const NATIVE_SPECS: Record<NativeKind, NativeSpec> = {
         sibling: ['language-servers', 'sql'],
         sourceVariable: 'RUIMTE_SQL_LANGUAGE_SERVER_SOURCE',
         title: 'SQL',
+        stubs: false,
         read: readSqlCheckout
     }
 };
@@ -153,9 +159,8 @@ export function nativeTitleOf(kind: NativeKind): string {
     return NATIVE_SPECS[kind].title;
 }
 
-/* Whether an install of the kind brings the standard library stubs beside the program. */
 export function nativeHasStubs(kind: NativeKind): boolean {
-    return kind === 'php-native';
+    return NATIVE_SPECS[kind].stubs;
 }
 
 export function nativeProgramFile(kind: NativeKind, platform: NodeJS.Platform): string {
@@ -185,7 +190,7 @@ export function nativeCheckout(
     kind: NativeKind,
     compiled: boolean,
     sourcePath: string | null = process.env[NATIVE_SPECS[kind].sourceVariable] ?? null,
-    ruimteRoot = resolve(import.meta.dir, '../../../..')
+    ruimteRoot = RUIMTE_ROOT
 ): NativeCheckout | null {
     if (compiled) {
         return null;
@@ -212,7 +217,7 @@ export function nativeCheckout(
 export function phpLanguageServerCheckout(
     compiled: boolean,
     sourcePath: string | null = process.env.RUIMTE_PHP_LANGUAGE_SERVER_SOURCE ?? null,
-    ruimteRoot = resolve(import.meta.dir, '../../../..')
+    ruimteRoot = RUIMTE_ROOT
 ): NativeCheckout | null {
     return nativeCheckout('php-native', compiled, sourcePath, ruimteRoot);
 }
@@ -220,7 +225,7 @@ export function phpLanguageServerCheckout(
 export function sqlLanguageServerCheckout(
     compiled: boolean,
     sourcePath: string | null = process.env.RUIMTE_SQL_LANGUAGE_SERVER_SOURCE ?? null,
-    ruimteRoot = resolve(import.meta.dir, '../../../..')
+    ruimteRoot = RUIMTE_ROOT
 ): NativeCheckout | null {
     return nativeCheckout('sql-native', compiled, sourcePath, ruimteRoot);
 }

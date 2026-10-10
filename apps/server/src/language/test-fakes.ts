@@ -45,8 +45,10 @@ function nameOf(spec: LanguageProcessSpec): string {
     );
 }
 
-/* Starts no process: every `spawn` is a fake language server on the far end of an in-memory transport. */
-/* The components in `silent` never answer their handshake, and `handlers` answer requests from the first one on. */
+/*
+ * Starts no process: every `spawn` is a fake language server on the far end of an in-memory transport.
+ * The components in `silent` never answer their handshake, and `handlers` answer requests from the first one on.
+ */
 export function fakeSpawner(
     capabilities: Partial<Record<string, ServerCapabilities>> = {},
     silent: readonly string[] = [],

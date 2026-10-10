@@ -71,8 +71,9 @@ async function exists(path: string): Promise<boolean> {
 
 interface Marker {
     versions?: Record<string, string>;
-    /* Native kinds: whether a checkout built the server or a release supplied it, and the stubs installed beside it, for a kind that reads them. */
+    /* Native kinds: whether a checkout built the server (`dev`) or a release supplied it. */
     source?: string;
+    /* Native kinds that read stubs: the commit of the stubs installed beside it. */
     stubs?: string;
     /* What a person reads as the version of the install; a legacy marker has none. */
     version?: string;
@@ -169,12 +170,12 @@ export class LanguageInstaller {
 
     /* The version an install brings now. */
     pinnedVersionOf(kind: LanguageServerKind): string {
-        return isNativeKind(kind) ? (this.planOf(kind, this.directoryOf(kind))?.version ?? '') : versionOf(kind);
+        return isNativeKind(kind) ? (this.pinnedPlanOf(kind)?.version ?? '') : versionOf(kind);
     }
 
     /* A native kind this build has no way to install: no checkout to build from and no release pinned. */
     isUnavailable(kind: LanguageServerKind): boolean {
-        return isNativeKind(kind) && this.planOf(kind, this.directoryOf(kind)) === null;
+        return isNativeKind(kind) && this.pinnedPlanOf(kind) === null;
     }
 
     /* What a native kind runs: the program of the install in use and the stubs beside it. Null for any other kind and for one not installed. */
@@ -187,10 +188,10 @@ export class LanguageInstaller {
         if (!current || executable === null) {
             return null;
         }
-        const stubs = current.marker.stubs;
         if (!nativeHasStubs(kind)) {
             return { executable };
         }
+        const stubs = current.marker.stubs;
         return stubs === undefined ? null : { executable, stubsCommit: stubs };
     }
 
@@ -216,7 +217,7 @@ export class LanguageInstaller {
         if (!isNativeKind(kind)) {
             return this.matchesPins(kind, current.marker) ? null : { version: versionOf(kind) };
         }
-        const plan = this.planOf(kind, this.directoryOf(kind));
+        const plan = this.pinnedPlanOf(kind);
         if (plan === null) {
             return null;
         }
@@ -237,9 +238,9 @@ export class LanguageInstaller {
     /* Reads again the revision of every checkout a native kind builds from, which a change in the checkout moves. */
     async refreshCheckouts(): Promise<void> {
         for (const kind of LanguageServerKindSchema.options.filter(isNativeKind)) {
-            const plan = this.planOf(kind, this.directoryOf(kind));
+            const plan = this.pinnedPlanOf(kind);
             if (plan?.source === 'dev' && plan.checkout !== undefined) {
-                this.revisions.set(kind, await (this.options.checkoutRevision ?? gitRevision)(plan.checkout));
+                this.revisions.set(kind, await this.checkoutRevision(plan.checkout));
             }
         }
     }
@@ -305,6 +306,19 @@ export class LanguageInstaller {
         return this.native.plan(kind, directory);
     }
 
+    /* What an install of the kind brings now, into its own folder. */
+    private pinnedPlanOf(kind: NativeKind): NativePlan | null {
+        return this.planOf(kind, this.directoryOf(kind));
+    }
+
+    private get downloader(): Download {
+        return this.options.download ?? download;
+    }
+
+    private get checkoutRevision(): CheckoutRevision {
+        return this.options.checkoutRevision ?? gitRevision;
+    }
+
     /* The folder of an install, which for the legacy one is the kind's own. */
     private folderOf(kind: LanguageServerKind, id: string): string {
         return id === LEGACY ? this.directoryOf(kind) : join(this.directoryOf(kind), VERSIONS, id);
@@ -313,7 +327,7 @@ export class LanguageInstaller {
     /* The id an install of the pins takes: a hash of the packages, the version of a release, or the one install of a checkout. */
     private pinnedIdOf(kind: LanguageServerKind): string | null {
         if (isNativeKind(kind)) {
-            const plan = this.planOf(kind, this.directoryOf(kind));
+            const plan = this.pinnedPlanOf(kind);
             return plan === null ? null : plan.source === 'dev' ? DEV : plan.version;
         }
         const pins = Object.entries(pinnedVersionsOf(kind)).sort(([left], [right]) => left.localeCompare(right));
@@ -380,7 +394,7 @@ export class LanguageInstaller {
 
     private matchesPins(kind: LanguageServerKind, marker: Marker): boolean {
         if (isNativeKind(kind)) {
-            const plan = this.planOf(kind, this.directoryOf(kind));
+            const plan = this.pinnedPlanOf(kind);
             return (
                 plan !== null && marker.versions?.[nativeProgramOf(kind)] === plan.version && marker.source === plan.source && marker.stubs === plan.stubsCommit
             );
@@ -404,15 +418,23 @@ export class LanguageInstaller {
         return (await Promise.all(entries.map(exists))).every(Boolean);
     }
 
-    /* A server that is a program of its own has to run on this machine and be the version pinned, since an install of another platform or a bad download leaves a file that only looks right. */
+    /*
+     * Whether a program runs here and says the version with `--version`. A download or a build of another
+     * platform leaves a file that only looks right, so every program of its own has to pass this.
+     */
+    private async reportsVersion(command: string, cwd: string, version: string, push: (line: string) => void): Promise<boolean> {
+        const lines: string[] = [];
+        const code = await this.run({ command, args: ['--version'], cwd, env: {} }, (line) => {
+            lines.push(line);
+            push(line);
+        });
+        return code === 0 && lines.some((line) => line.includes(version));
+    }
+
     private async verifyPrograms(kind: NpmKind, directory: string, log: LanguageLog): Promise<void> {
         for (const component of KIND_PROFILES[kind].components.filter((candidate) => candidate.native)) {
-            const lines: string[] = [];
-            const code = await this.run({ command: join(directory, 'node_modules', component.entry), args: ['--version'], cwd: directory, env: {} }, (line) => {
-                lines.push(line);
-                log.push('install', line);
-            });
-            if (code !== 0 || !lines.some((line) => line.includes(versionOf(kind)))) {
+            const command = join(directory, 'node_modules', component.entry);
+            if (!(await this.reportsVersion(command, directory, versionOf(kind), (line) => log.push('install', line)))) {
                 throw new Error(`The ${component.name} server did not report version ${versionOf(kind)}`);
             }
         }
@@ -498,16 +520,16 @@ export class LanguageInstaller {
             if (plan.asset === undefined) {
                 throw new Error(`This release has no build for ${process.platform}-${process.arch}`);
             }
-            await installRelease(plan.asset, target, this.options.download ?? download, push);
+            await installRelease(plan.asset, target, this.downloader, push);
         }
         if (!(await exists(plan.executable))) {
             throw new Error(`The install did not leave ${plan.executable}`);
         }
         await this.verifyNative(plan, push);
         if (plan.stubsCommit !== undefined) {
-            await fetchStubs(this.directoryOf(kind), plan.stubsCommit, this.options.download ?? download, push);
+            await fetchStubs(this.directoryOf(kind), plan.stubsCommit, this.downloader, push);
         }
-        const revision = plan.source === 'dev' && plan.checkout !== undefined ? await (this.options.checkoutRevision ?? gitRevision)(plan.checkout) : null;
+        const revision = plan.source === 'dev' && plan.checkout !== undefined ? await this.checkoutRevision(plan.checkout) : null;
         if (revision !== null) {
             this.revisions.set(kind, revision);
         }
@@ -583,14 +605,8 @@ export class LanguageInstaller {
         }
     }
 
-    /* A download or a build of another platform leaves a file that only looks right, so it has to run here and say the pinned version. */
     private async verifyNative(plan: NativePlan, push: (line: string) => void): Promise<void> {
-        const lines: string[] = [];
-        const code = await this.run({ command: plan.executable, args: ['--version'], cwd: dirname(plan.executable), env: {} }, (line) => {
-            lines.push(line);
-            push(line);
-        });
-        if (code !== 0 || !lines.some((line) => line.includes(plan.version))) {
+        if (!(await this.reportsVersion(plan.executable, dirname(plan.executable), plan.version, push))) {
             throw new Error(`The server did not report version ${plan.version}`);
         }
     }

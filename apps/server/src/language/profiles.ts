@@ -583,6 +583,16 @@ export interface ProjectFacts {
     exists(path: string): Promise<boolean>;
 }
 
+const DEPENDENCY_FIELDS = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
+
+/* Whether a parsed `package.json` names a package that matches, in any kind of dependency. */
+function dependsOn(manifest: Record<string, unknown>, pattern: RegExp): boolean {
+    return DEPENDENCY_FIELDS.some((field) => {
+        const dependencies = manifest[field];
+        return typeof dependencies === 'object' && dependencies !== null && Object.keys(dependencies).some((name) => pattern.test(name));
+    });
+}
+
 function packageJsonHas(packageJson: string | null, activation: Activation): boolean {
     if (packageJson === null) {
         return false;
@@ -592,14 +602,7 @@ function packageJsonHas(packageJson: string | null, activation: Activation): boo
         if (activation.packageField !== undefined && parsed[activation.packageField] !== undefined) {
             return true;
         }
-        const { dependency } = activation;
-        return (
-            dependency !== undefined &&
-            ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'].some((field) => {
-                const dependencies = parsed[field];
-                return typeof dependencies === 'object' && dependencies !== null && Object.keys(dependencies).some((name) => dependency.test(name));
-            })
-        );
+        return activation.dependency !== undefined && dependsOn(parsed, activation.dependency);
     } catch {
         return false;
     }
@@ -642,7 +645,10 @@ export interface NativeLookupFiles {
     realPath(path: string): Promise<string>;
 }
 
-/* The native server of the TypeScript 7 a project holds in `node_modules`, or null when it holds an older one or has no server for this platform. */
+/*
+ * The native server of the TypeScript 7 a folder holds in `node_modules`: null when it holds an older one
+ * or none for this platform, undefined when it holds no `typescript` at all.
+ */
 async function ownNativeTypescript(directory: string, files: NativeLookupFiles): Promise<string | null | undefined> {
     const manifest = join(directory, 'node_modules', 'typescript', 'package.json');
     const text = await files.readText(manifest);
@@ -689,11 +695,7 @@ export function usesVue(packageJson: string | null): boolean {
         return false;
     }
     try {
-        const parsed = JSON.parse(packageJson) as Record<string, unknown>;
-        return ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'].some((field) => {
-            const dependencies = parsed[field];
-            return typeof dependencies === 'object' && dependencies !== null && Object.keys(dependencies).some((name) => VUE_PACKAGES.test(name));
-        });
+        return dependsOn(JSON.parse(packageJson) as Record<string, unknown>, VUE_PACKAGES);
     } catch {
         return false;
     }

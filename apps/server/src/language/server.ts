@@ -156,6 +156,11 @@ const SIDECAR_ACTION_OPTIONS = {
 
 type Phase = 'stopped' | 'starting' | 'ready' | 'crashed';
 
+/* What a failure or a log line calls a process. */
+function titleOf(profile: ComponentProfile): string {
+    return profile.title ?? profile.name;
+}
+
 /* What a process is told through `workspace/configuration`: its fixed settings with those of the project over them, for one document when a path says which. */
 function configurationOf(profile: ComponentProfile, context: LaunchContext, path?: string): Record<string, unknown> | undefined {
     const own = profile.settings?.(context, path) ?? {};
@@ -239,7 +244,7 @@ export class LanguageServer {
             .filter((profile) => profile.sidecar === true)
             .map((profile) => {
                 const component = this.components.find((candidate) => candidate.profile === profile);
-                const title = profile.title ?? profile.name;
+                const title = titleOf(profile);
                 if (this.sidecarFailure !== undefined) {
                     return { name: profile.name, title, state: 'crashed', message: this.sidecarFailure };
                 }
@@ -486,12 +491,10 @@ export class LanguageServer {
             const result = await open.request(method, params, { cancelPrevious: false, timeoutMs: 0 });
             return { result, server: profile.name, version: open.version };
         })();
-        const outcome = await this.beforeDeadline(answer, cold ? SIDECAR_START_DEADLINE_MS : MERGE_DEADLINE_MS);
+        const deadline = cold ? SIDECAR_START_DEADLINE_MS : MERGE_DEADLINE_MS;
+        const outcome = await this.beforeDeadline(answer, deadline);
         if (outcome === 'expired') {
-            this.log.push(
-                'host',
-                `${profile.title ?? profile.name} did not answer ${method} within ${(cold ? SIDECAR_START_DEADLINE_MS : MERGE_DEADLINE_MS) / 1000} seconds and was left out`
-            );
+            this.log.push('host', `${titleOf(profile)} did not answer ${method} within ${deadline / 1000} seconds and was left out`);
             // A late answer is dropped, and a failure of it is the log's.
             answer.catch((error) => this.log.push('host', errorText(error)));
             return null;
@@ -523,7 +526,7 @@ export class LanguageServer {
                 continue;
             }
             const answer = component.session.willRenameFiles(files);
-            const title = component.profile.title ?? component.profile.name;
+            const title = titleOf(component.profile);
             let edit: WorkspaceEdit | null | 'expired';
             try {
                 edit = await this.beforeDeadline(answer, WILL_RENAME_DEADLINE_MS);
@@ -632,27 +635,7 @@ export class LanguageServer {
         this.failure = undefined;
         this.notify();
         this.sidecarFailure = undefined;
-        const { folder, exists } = this.options;
-        const installDirectory = this.options.installDirectory();
-        const context: LaunchContext = {
-            installDirectory,
-            projectFolder: folder,
-            typescriptLib: await resolveTypescriptLib(folder, installDirectory, exists),
-            native: this.options.native?.() ?? null,
-            sql: this.options.profile.components.some((component) => component.settings !== undefined)
-                ? await (this.options.sqlSettings?.() ?? Promise.resolve(null)).catch((error: unknown) => {
-                      this.log.push('host', `Could not work out the SQL settings of the project: ${errorText(error)}`);
-                      return null;
-                  })
-                : null,
-            typescriptExecutable: this.options.profile.components.some((component) => component.native)
-                ? await resolveNativeTypescript(folder, installDirectory, {
-                      exists,
-                      readText: this.options.readText ?? ((path) => readFile(path, 'utf8').catch(() => null)),
-                      realPath: this.options.realPath ?? realpath
-                  })
-                : ''
-        };
+        const context = await this.launchContext();
         this.context = context;
         try {
             for (const profile of this.options.profile.components.filter((candidate) => candidate.sidecar !== true)) {
@@ -690,15 +673,36 @@ export class LanguageServer {
         }
     }
 
+    private async launchContext(): Promise<LaunchContext> {
+        const { folder, exists } = this.options;
+        const installDirectory = this.options.installDirectory();
+        return {
+            installDirectory,
+            projectFolder: folder,
+            typescriptLib: await resolveTypescriptLib(folder, installDirectory, exists),
+            native: this.options.native?.() ?? null,
+            sql: this.readsSettings()
+                ? await (this.options.sqlSettings?.() ?? Promise.resolve(null)).catch((error: unknown) => {
+                      this.log.push('host', `Could not work out the SQL settings of the project: ${errorText(error)}`);
+                      return null;
+                  })
+                : null,
+            typescriptExecutable: this.options.profile.components.some((component) => component.native)
+                ? await resolveNativeTypescript(folder, installDirectory, {
+                      exists,
+                      readText: this.options.readText ?? ((path) => readFile(path, 'utf8').catch(() => null)),
+                      realPath: this.options.realPath ?? realpath
+                  })
+                : ''
+        };
+    }
+
     /* A server that never answers its handshake would leave the kind starting for good. */
     private withinHandshake(handshake: Promise<unknown>, profile: ComponentProfile): Promise<unknown> {
         let cancel = (): void => undefined;
         const expired = new Promise<never>((_, reject) => {
             cancel = this.clock.set(
-                () =>
-                    reject(
-                        new Error(`the ${profile.title ?? profile.name} process did not answer its handshake within ${INITIALIZE_TIMEOUT_MS / 1000} seconds`)
-                    ),
+                () => reject(new Error(`the ${titleOf(profile)} process did not answer its handshake within ${INITIALIZE_TIMEOUT_MS / 1000} seconds`)),
                 INITIALIZE_TIMEOUT_MS
             );
         });
@@ -746,7 +750,7 @@ export class LanguageServer {
             await this.withinHandshake(component.session.initialize(), profile);
         } catch (error) {
             if (generation === this.generation) {
-                this.dropSidecar(component, `The ${profile.title ?? profile.name} process did not start: ${errorText(error)}`);
+                this.dropSidecar(component, `The ${titleOf(profile)} process did not start: ${errorText(error)}`);
             }
             return null;
         }
@@ -788,13 +792,14 @@ export class LanguageServer {
                 : { command: own, args: profile.args(context), cwd: this.options.folder, env: { ...profile.env } }
         );
         const rootUri = pathToFileUri(this.options.folder);
+        const configuration = configurationOf(profile, context);
         const session = new LspSession(child.transport, {
             rootUri,
             workspaceFolders: [{ uri: rootUri, name: basename(this.options.folder) }],
             initializationOptions: profile.initializationOptions(context),
             clientInfo: { name: 'ruimte' },
             snippetSupport: true,
-            ...(configurationOf(profile, context) === undefined ? {} : { configuration: configurationOf(profile, context) }),
+            ...(configuration === undefined ? {} : { configuration }),
             ...(profile.settings === undefined
                 ? {}
                 : {
@@ -963,7 +968,7 @@ export class LanguageServer {
               ? `was stopped by ${exit.signal}`
               : `exited with code ${exit.code ?? 'unknown'}`;
         const said = this.log.last('server');
-        const message = `The ${component.profile.title ?? component.profile.name} language server ${reason}${said ? `: ${said}` : ''}`;
+        const message = `The ${titleOf(component.profile)} language server ${reason}${said ? `: ${said}` : ''}`;
         if (component.profile.sidecar === true) {
             this.dropSidecar(component, message);
         } else if (this.phase === 'ready' && this.readyAt !== null && this.now() - this.readyAt >= STABLE_AFTER_MS) {

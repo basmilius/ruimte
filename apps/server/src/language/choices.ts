@@ -38,7 +38,6 @@ export class LanguageChoices {
         return this.picks;
     }
 
-    /* Saves the pick of a kind for its choice. */
     async set(kind: LanguageServerKind): Promise<void> {
         const choice = KIND_PROFILES[kind].choice;
         if (choice === undefined) {

@@ -205,14 +205,17 @@ function translated(error: unknown): unknown {
  * The language side of the daemon. It is the LSP client of every server, one per project per kind,
  * and the one owner of each document's text and version, so any number of clients share what a
  * server sees. A server starts when a document that needs it opens (and it is installed), and ends
- * only when its project closes, since starting one again for every file opened costs seconds of indexing. Installing happens only through `install`, which
- * a person's request calls, so no verb and no agent reaches it.
+ * only when its project closes, since starting one again for every file opened costs seconds of
+ * indexing. Installing happens only through `install`, which a person's request calls, so no verb and
+ * no agent reaches it.
  */
 export class LanguageHost {
     private readonly options: LanguageHostOptions;
     private readonly installer: LanguageInstaller;
     private readonly custom: CustomLanguageServers;
     private readonly choices: LanguageChoices;
+    private readonly clock: LanguageClock;
+    private readonly exists: (path: string) => Promise<boolean>;
     private readonly sinks = new ClientSinks((clientId) => this.dropClient(clientId));
     private readonly projects = new Map<string, ProjectLanguage>();
     private readonly edits = new Map<string, PendingEdit>();
@@ -255,6 +258,8 @@ export class LanguageHost {
         this.options = options;
         this.custom = options.custom ?? new CustomLanguageServers({ path: join(options.root, 'custom.json') });
         this.choices = options.choices ?? new LanguageChoices({ path: join(options.root, 'choices.json') });
+        this.clock = options.clock ?? realLanguageClock;
+        this.exists = options.exists ?? fileExists;
         this.installer = new LanguageInstaller({
             root: options.root,
             runtime: options.runtime ?? bunRuntime(),
@@ -498,7 +503,7 @@ export class LanguageHost {
     private beforeDeadline<T>(server: LanguageServer, method: string, answer: Promise<T>): Promise<T> {
         let cancel = (): void => undefined;
         const expired = new Promise<never>((_, reject) => {
-            cancel = (this.options.clock ?? realLanguageClock).set(() => {
+            cancel = this.clock.set(() => {
                 server.log.push('host', `Left out of a ${method} answer, which it did not give within ${MERGE_DEADLINE_MS} ms`);
                 reject(new LspError(`The ${server.kind} server did not answer ${method} in time`, ErrorCodes.RequestCancelled));
             }, MERGE_DEADLINE_MS);
@@ -631,7 +636,7 @@ export class LanguageHost {
                     finish();
                 }
             };
-            const cancel = (this.options.clock ?? realLanguageClock).set(() => finish(), ms);
+            const cancel = this.clock.set(() => finish(), ms);
             const finish = (): void => {
                 cancel();
                 this.waiters.delete(check);
@@ -663,6 +668,10 @@ export class LanguageHost {
     /* The daemon is going down. */
     async close(): Promise<void> {
         await Promise.all([...this.projects.keys()].map((projectId) => this.end(projectId)));
+    }
+
+    private readText(path: string): Promise<string | null> {
+        return (this.options.readText ?? readTextOrNull)(path);
     }
 
     private projectFor(projectId: string): ProjectLanguage {
@@ -712,8 +721,8 @@ export class LanguageHost {
         if (candidates.length > 0) {
             const facts: ProjectFacts = {
                 folder: project.folder,
-                packageJson: await (this.options.readText ?? readTextOrNull)(join(project.folder, 'package.json')),
-                exists: this.options.exists ?? fileExists
+                packageJson: await this.readText(join(project.folder, 'package.json')),
+                exists: this.exists
             };
             const active = await Promise.all(candidates.map(([, needs]) => activates(needs, facts)));
             kinds.push(...candidates.filter((_, index) => active[index]).map(([kind]) => kind));
@@ -734,7 +743,7 @@ export class LanguageHost {
         if (project.vue !== undefined) {
             return Promise.resolve(project.vue);
         }
-        project.vueCheck ??= (this.options.readText ?? readTextOrNull)(join(project.folder, 'package.json')).then((text) => {
+        project.vueCheck ??= this.readText(join(project.folder, 'package.json')).then((text) => {
             project.vue ??= usesVue(text);
             return project.vue;
         });
@@ -819,9 +828,9 @@ export class LanguageHost {
                 isInstalled: () => (catalog === null ? Promise.resolve(true) : this.installer.isInstalled(catalog)),
                 runtime: this.options.runtime ?? bunRuntime(),
                 spawn: this.options.spawn ?? spawnLanguageProcess,
-                clock: this.options.clock ?? realLanguageClock,
+                clock: this.clock,
                 now: this.options.now,
-                exists: this.options.exists ?? fileExists,
+                exists: this.exists,
                 readText: this.options.readText,
                 ...(this.options.sqlSettings === undefined ? {} : { sqlSettings: () => this.options.sqlSettings!(project.projectId) }),
                 hooks: this.hooks
@@ -847,14 +856,13 @@ export class LanguageHost {
 
     /* The server of a kind is gone from the document, so what it reported is too. */
     private clearDiagnostics(project: ProjectLanguage, document: SharedDocument, kind: LanguageServerId): void {
-        for (const component of (isCatalogKind(kind)
-            ? KIND_PROFILES[kind].components.filter((candidate) => candidate.sidecar !== true)
-            : [{ name: kind }]) as readonly {
-            name: string;
-        }[]) {
+        const names = isCatalogKind(kind)
+            ? KIND_PROFILES[kind].components.filter((component) => component.sidecar !== true).map((component) => component.name)
+            : [kind];
+        for (const name of names) {
             this.toHolders(project.projectId, {
                 event: 'language.diagnostics',
-                payload: { projectId: project.projectId, path: document.storedPath, server: component.name, diagnostics: [] }
+                payload: { projectId: project.projectId, path: document.storedPath, server: name, diagnostics: [] }
             });
         }
     }
@@ -905,7 +913,7 @@ export class LanguageHost {
             stat,
             wants: (path) =>
                 [...project.servers.values()].some((server) =>
-                    [1, 2, 3].some((type) => watchesFile(server.watchedFiles(), project.folder, path, type as 1 | 2 | 3))
+                    ([1, 2, 3] as const).some((type) => watchesFile(server.watchedFiles(), project.folder, path, type))
                 ),
             onChanges: (changes) => {
                 for (const server of project.servers.values()) {
@@ -932,10 +940,7 @@ export class LanguageHost {
     private sendEdit(projectId: string, clientId: string, edit: WorkspaceEdit, label?: string): Promise<ApplyWorkspaceEditResult> {
         const editId = `edit-${++this.editCounter}`;
         return new Promise<ApplyWorkspaceEditResult>((resolve) => {
-            const cancel = (this.options.clock ?? realLanguageClock).set(
-                () => pending.settle({ applied: false, failureReason: 'The client did not answer' }),
-                EDIT_ANSWER_MS
-            );
+            const cancel = this.clock.set(() => pending.settle({ applied: false, failureReason: 'The client did not answer' }), EDIT_ANSWER_MS);
             const pending: PendingEdit = {
                 projectId,
                 clientId,
@@ -989,25 +994,7 @@ export class LanguageHost {
         const documents = new Map<string, SharedDocument>(
             [...project.documents.values()].filter((document) => document.clients.size > 0).map((document) => [document.uri, document])
         );
-        const snapshots = new Map<string, DocumentSnapshot>();
-        const creates = new Set((edit.documentChanges ?? []).flatMap((change) => ('kind' in change && change.kind === 'create' ? [change.uri] : [])));
-        const uris = new Set([
-            ...creates,
-            ...(edit.documentChanges ?? []).flatMap((change) => ('textDocument' in change ? [change.textDocument.uri] : [])),
-            ...Object.keys(edit.changes ?? {})
-        ]);
-        for (const uri of uris) {
-            const open = documents.get(uri);
-            const text = open?.text ?? (await (this.options.readText ?? readTextOrNull)(fileUriToPath(uri) ?? ''));
-            if (text === null || text === undefined) {
-                // A file the edit creates has no text yet; if it is there all the same, making it fails.
-                if (creates.has(uri)) {
-                    continue;
-                }
-                throw new LanguageError(LANGUAGE_ERROR_CODES.failed, `${uri} cannot be read to make the edit of a rename`);
-            }
-            snapshots.set(uri, { text, version: open?.version ?? null });
-        }
+        const snapshots = await this.snapshotsOf(edit, documents);
         let planned;
         try {
             planned = planWorkspaceEdit(edit, snapshots);
@@ -1057,6 +1044,30 @@ export class LanguageHost {
         return edited;
     }
 
+    /* The text every file an edit touches has now: the editor's for a document a client holds open, else the disk's. */
+    private async snapshotsOf(edit: WorkspaceEdit, documents: ReadonlyMap<string, SharedDocument>): Promise<Map<string, DocumentSnapshot>> {
+        const snapshots = new Map<string, DocumentSnapshot>();
+        const creates = new Set((edit.documentChanges ?? []).flatMap((change) => ('kind' in change && change.kind === 'create' ? [change.uri] : [])));
+        const uris = new Set([
+            ...creates,
+            ...(edit.documentChanges ?? []).flatMap((change) => ('textDocument' in change ? [change.textDocument.uri] : [])),
+            ...Object.keys(edit.changes ?? {})
+        ]);
+        for (const uri of uris) {
+            const open = documents.get(uri);
+            const text = open?.text ?? (await this.readText(fileUriToPath(uri) ?? ''));
+            if (text === null || text === undefined) {
+                // A file the edit creates has no text yet; if it is there all the same, making it fails.
+                if (creates.has(uri)) {
+                    continue;
+                }
+                throw new LanguageError(LANGUAGE_ERROR_CODES.failed, `${uri} cannot be read to make the edit of a rename`);
+            }
+            snapshots.set(uri, { text, version: open?.version ?? null });
+        }
+        return snapshots;
+    }
+
     private projectOf(document: SharedDocument): string | null {
         for (const project of this.projects.values()) {
             if (project.documents.get(document.absolutePath) === document) {
@@ -1070,7 +1081,7 @@ export class LanguageHost {
         if (!isCatalogKind(id)) {
             return this.customStatus(project, id);
         }
-        const kind = id;
+        const kind: LanguageServerKind = id;
         const install = await this.installer.state(kind);
         const base = this.identityOf(kind);
         if (install === 'installing') {
