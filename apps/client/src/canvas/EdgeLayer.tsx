@@ -2,12 +2,12 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pencil, Trash, X } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
-import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
+import { isAgentKind, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { edgeLook, lineMeaning } from '@/canvas/edge-look';
-import { routeDraft, SIDE_NORMAL, type Side } from '@/canvas/edge-route';
+import { routeDraft, SIDE_NORMAL, type Obstacle, type Side } from '@/canvas/edge-route';
 import { lineRoutes } from '@/canvas/line-routes';
 import { markerPath, type MarkerShape } from '@/canvas/marker-path';
-import type { Point } from '@/canvas/math';
+import type { Point, Rect } from '@/canvas/math';
 import { useEndpointId } from '@/state/keys';
 import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
 import { Icon, IconButton, ContextMenu, Input } from '@adecore/ui';
@@ -110,6 +110,24 @@ function EdgeMarker({ shape, at, side, stroke }: { shape: MarkerShape; at: Point
     return <path d={path} fill={fill} stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />;
 }
 
+function DraftLine({ draft, from, obstacles }: { draft: NonNullable<CanvasState['linkDraft']>; from: Rect | null; obstacles: readonly Obstacle[] }) {
+    if (!from) {
+        return null;
+    }
+    const route = routeDraft(
+        from,
+        draft.to,
+        obstacles.filter((obstacle) => obstacle.id !== draft.from),
+        { fromSide: draft.fromSide }
+    );
+    return (
+        <>
+            <path d={route.d} fill="none" stroke="var(--accent)" strokeWidth="2" strokeDasharray="4 4" strokeLinecap="round" strokeLinejoin="round" />
+            <EdgeMarker shape="dot" at={route.from} side={route.fromSide} stroke="var(--accent)" />
+        </>
+    );
+}
+
 /* Memoized with no props: the canvas above re-renders on every pan, which moves nothing drawn here. */
 export const EdgeLayer = memo(function EdgeLayer() {
     const { t } = useTranslation('canvas');
@@ -154,7 +172,6 @@ export const EdgeLayer = memo(function EdgeLayer() {
                             if (route === undefined) {
                                 return null;
                             }
-                            const mid = route.mid;
                             const active = hovered === key || line.ids.some((id) => selection.includes(id));
                             // A line a task went along says how the task stands, and only looks open while it is.
                             const task =
@@ -213,7 +230,7 @@ export const EdgeLayer = memo(function EdgeLayer() {
                                             <EdgeLabel
                                                 ids={line.ids}
                                                 label={label}
-                                                at={mid}
+                                                at={route.mid}
                                                 editing={editing === key}
                                                 active={active}
                                                 onRemove={remove}
@@ -234,34 +251,7 @@ export const EdgeLayer = memo(function EdgeLayer() {
                                 </ContextMenu.Root>
                             );
                         })}
-                    {layer === 'lines' &&
-                        draft &&
-                        (() => {
-                            const from = rectOf(draft.from);
-                            if (!from) {
-                                return null;
-                            }
-                            const route = routeDraft(
-                                from,
-                                draft.to,
-                                obstacles.filter((obstacle) => obstacle.id !== draft.from),
-                                { fromSide: draft.fromSide }
-                            );
-                            return (
-                                <>
-                                    <path
-                                        d={route.d}
-                                        fill="none"
-                                        stroke="var(--accent)"
-                                        strokeWidth="2"
-                                        strokeDasharray="4 4"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                    <EdgeMarker shape="dot" at={route.from} side={route.fromSide} stroke="var(--accent)" />
-                                </>
-                            );
-                        })()}
+                    {layer === 'lines' && draft && <DraftLine draft={draft} from={rectOf(draft.from)} obstacles={obstacles} />}
                 </svg>
             ))}
         </>

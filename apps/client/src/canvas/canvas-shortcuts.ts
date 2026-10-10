@@ -32,7 +32,7 @@ import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/pr
 import { useSubagentView } from '@adecore/agents-react/chat/subagent-view';
 import { stepTimelineMessage } from '@adecore/agents-react/chat/timeline-scroll';
 import { openFocusedFind } from '@/find/hosts';
-import { focusedCanvas, maximizeTargetOf, zoomNodeTargetOf } from '@/state/canvas';
+import { focusedCanvas, maximizeTargetOf, zoomNodeTargetOf, type CanvasState } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
 import { drawingHasSomethingToClear, focusedDrawing } from '@/state/drawing';
 import { isScratchProject, useProject } from '@/state/project';
@@ -142,6 +142,288 @@ export function isTypingTarget(el: EventTarget | null): boolean {
     return el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA';
 }
 
+type Matches = (shortcut: Shortcut) => boolean;
+
+/* Escape steps out of a node's content, a text being edited or a link being aimed. */
+function escapeCanvas(e: KeyboardEvent, s: CanvasState): void {
+    // An open popup or dialog owns Escape. It closes itself, and the node it belongs to stays focused.
+    if (isInFloatingLayer(e.target)) {
+        return;
+    }
+    if (onStandaloneView()) {
+        leaveStandaloneView(e);
+        return;
+    }
+    if (s.linkDraft?.aiming) {
+        s.setLinkDraft(null);
+    } else if (s.editingTextId) {
+        s.setEditingText(null);
+    } else if (s.bodyFocusId === null) {
+        s.clearSelection();
+    }
+    /* Escape steps out of the content and leaves the node selected, since a press on its
+       header put the keyboard there: the keys that act on a node work again right away. */
+    s.setBodyFocus(null);
+    (document.activeElement as HTMLElement | null)?.blur();
+}
+
+/* The keys about the window, its cells and its views, which answer from anywhere. Answers whether the key is spoken for. */
+function answerWindowKey(e: KeyboardEvent, s: CanvasState, is: Matches, apple: boolean): boolean {
+    if (is(CANVAS_SHORTCUTS.zoomNode) && !onStandaloneView() && !isInFloatingLayer(e.target) && !useUi.getState().settings.open) {
+        if (zoomNodeTargetOf(s) !== null) {
+            e.preventDefault();
+            s.zoomToNode();
+        }
+        return true;
+    }
+    // A surface with nothing to search lets the key go, so a browser tab still gets its own find.
+    if (is(CANVAS_SHORTCUTS.find)) {
+        if (!isInFloatingLayer(e.target) && !useUi.getState().settings.open && openFocusedFind()) {
+            e.preventDefault();
+        }
+        return true;
+    }
+    if (is(CANVAS_SHORTCUTS.findReplace)) {
+        if (!isInFloatingLayer(e.target) && !useUi.getState().settings.open && openFocusedFind({ replace: true })) {
+            e.preventDefault();
+        }
+        return true;
+    }
+    /* The grid answers from anywhere, a focused node or a text field included: splitting,
+       closing and stepping between cells are about the window, not about what is in a cell. */
+    if (is(CANVAS_SHORTCUTS.splitRight) || is(CANVAS_SHORTCUTS.splitDown)) {
+        e.preventDefault();
+        splitAction(is(CANVAS_SHORTCUTS.splitDown) ? 'down' : 'right');
+        return true;
+    }
+    /* A node on the canvas goes first (`maximizeTargetOf`); without one the key is the grid's,
+       and with one cell and nothing maximized it is let go, since there is nothing to fill. */
+    if (is(CANVAS_SHORTCUTS.maximizeCell)) {
+        const node = onStandaloneView() ? null : maximizeTargetOf(s);
+        if (node !== null) {
+            e.preventDefault();
+            s.toggleMaximizedNode(node);
+            return true;
+        }
+        const state = useDocument.getState();
+        if (state.maximized !== null || (state.layout !== null && cellCount(state.layout) > 1)) {
+            e.preventDefault();
+            state.toggleMaximized();
+        }
+        return true;
+    }
+    const direction: SplitDirection | null = entryFor(FOCUS_SHORTCUTS, e, apple);
+    if (direction) {
+        e.preventDefault();
+        focusCellAction(direction);
+        return true;
+    }
+    /* Stepping between the tabs of the focused host, whatever the host holds: a terminal in it hands
+       the key back (`terminal/keymap.ts`) so it never reaches the PTY. It never leaves the cell, so
+       the grid's own keys stay where they are. */
+    if ((is(CANVAS_SHORTCUTS.nextTab) || is(CANVAS_SHORTCUTS.previousTab)) && focusedHostTab() !== null) {
+        e.preventDefault();
+        useDocument.getState().stepTab(is(CANVAS_SHORTCUTS.nextTab) ? 1 : -1);
+        return true;
+    }
+    // Moving the tab in front along its strip is as much about the host as stepping is.
+    if (is(CANVAS_SHORTCUTS.moveTabLeft) || is(CANVAS_SHORTCUTS.moveTabRight)) {
+        const tab = focusedHostTab();
+        if (tab !== null) {
+            e.preventDefault();
+            useDocument.getState().moveTab(tab, is(CANVAS_SHORTCUTS.moveTabRight) ? 1 : -1);
+            return true;
+        }
+    }
+    /* A host closes its tab in front, and the cell goes with the last one (`state/document.ts`), so
+       one shortcut walks out of a stack of tabs and then out of the cell that held them. A file
+       with unsaved changes is saved first, and a table with edits nobody submitted asks first.
+       Off macOS the window menu's Close answers Ctrl+W, so the shortcut is always taken there,
+       even with nothing to close. */
+    if (is(CANVAS_SHORTCUTS.closeCell)) {
+        const tab = focusedClosableTab();
+        if (tab !== null) {
+            e.preventDefault();
+            closeTabAction(tab);
+            return true;
+        }
+        const layout = useDocument.getState().layout;
+        const closes = layout !== null;
+        if (closes || !apple) {
+            e.preventDefault();
+        }
+        if (closes) {
+            closeCellAction();
+        }
+        return true;
+    }
+    // The views answer from anywhere, a focused node included: they are how you leave one.
+    const viewIndex = VIEW_SHORTCUTS.findIndex((candidate) => is(candidate));
+    if (viewIndex !== -1) {
+        e.preventDefault();
+        const view = viewAtIndex(viewIndex + 1);
+        if (view) {
+            showView(view.id);
+        }
+        return true;
+    }
+    /* With the keyboard inside the page these never get here; the guest preload sends them instead.
+       Only a focused browser takes them, so a drawing keeps them for its order. */
+    if (is(CANVAS_SHORTCUTS.browserBack) || is(CANVAS_SHORTCUTS.browserForward)) {
+        const key = focusedBrowserKey();
+        if (key !== null) {
+            e.preventDefault();
+            if (is(CANVAS_SHORTCUTS.browserForward)) {
+                browserRegistry.forward(key);
+            } else {
+                browserRegistry.back(key);
+            }
+            return true;
+        }
+    }
+    /* The composer leaves these keys alone (its keymap is the standard one, without moving lines), so
+       they work while typing. Nothing is taken when the chat has no message that way. */
+    if (is(CANVAS_SHORTCUTS.previousMessage) || is(CANVAS_SHORTCUTS.nextMessage)) {
+        const key = focusedChatKey();
+        if (key !== null && !isInFloatingLayer(e.target) && stepTimelineMessage(key, is(CANVAS_SHORTCUTS.nextMessage) ? 1 : -1)) {
+            e.preventDefault();
+            return true;
+        }
+    }
+    if (is(CANVAS_SHORTCUTS.previousView) || is(CANVAS_SHORTCUTS.nextView)) {
+        e.preventDefault();
+        stepView(is(CANVAS_SHORTCUTS.nextView) ? 1 : -1);
+        return true;
+    }
+    if (is(CANVAS_SHORTCUTS.newView)) {
+        e.preventDefault();
+        void createViewAction('canvas');
+        return true;
+    }
+    // From anywhere, a terminal included: the point is to answer without first leaving what you type in.
+    if (is(CANVAS_SHORTCUTS.focusPrompts)) {
+        if (focusPromptStack()) {
+            e.preventDefault();
+        }
+        return true;
+    }
+    if (is(CANVAS_SHORTCUTS.togglePanel)) {
+        e.preventDefault();
+        useUi.getState().togglePanel();
+        return true;
+    }
+    // From anywhere but a popup, so a flag goes on a chat view while its composer has the keyboard.
+    if (is(CANVAS_SHORTCUTS.toggleFlag)) {
+        if (!isInFloatingLayer(e.target)) {
+            e.preventDefault();
+            toggleFlagAction();
+        }
+        return true;
+    }
+    // From anywhere but a popup, a terminal included: restarting the server is what you do while typing.
+    if (is(CANVAS_SHORTCUTS.launchRun) || is(CANVAS_SHORTCUTS.launchStop)) {
+        // The Chats project has no launches, and its keys fall through to whatever has the focus.
+        if (isScratchProject(useProject.getState().current)) {
+            return true;
+        }
+        if (!isInFloatingLayer(e.target)) {
+            e.preventDefault();
+            if (is(CANVAS_SHORTCUTS.launchStop)) {
+                stopChosenLaunch();
+            } else {
+                runChosenLaunch();
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+function answerDiagramKey(e: KeyboardEvent, is: Matches): boolean {
+    /* A diagram has an undo and a camera of its own and nothing else a key reaches; a drawing binds
+       its keys in its view, since a drawing has the keyboard the way a terminal has it. */
+    const active = activeViewOf(useDocument.getState());
+    const diagramKeys = [CANVAS_SHORTCUTS.undo, CANVAS_SHORTCUTS.redo, CANVAS_SHORTCUTS.fitAll, CANVAS_SHORTCUTS.zoomSelection, CANVAS_SHORTCUTS.zoomReset];
+    if (active !== null && isDiagramView(active) && diagramKeys.some(is)) {
+        if (isTypingTarget(e.target) || isInFloatingLayer(e.target) || useUi.getState().settings.open) {
+            return true;
+        }
+        e.preventDefault();
+        if (is(CANVAS_SHORTCUTS.undo) || is(CANVAS_SHORTCUTS.redo)) {
+            historyAction(is(CANVAS_SHORTCUTS.redo) ? 'redo' : 'undo');
+        } else if (is(CANVAS_SHORTCUTS.fitAll)) {
+            fitAction();
+        } else if (is(CANVAS_SHORTCUTS.zoomSelection)) {
+            focusedDiagram().getState().zoomToSelection();
+        } else {
+            focusedDiagram().getState().zoomTo(1);
+        }
+        return true;
+    }
+    return false;
+}
+
+function answerCanvasKey(e: KeyboardEvent, s: CanvasState, is: Matches, apple: boolean): void {
+    // A dialog owns the keyboard while it is up; Backspace there must not delete nodes. Nor may
+    // a key reach the canvas that is parked behind a view of its own.
+    if (
+        isTypingTarget(e.target) ||
+        isInNodeBody(e.target) ||
+        s.bodyFocusId !== null ||
+        s.gesturing ||
+        isInFloatingLayer(e.target) ||
+        useUi.getState().settings.open ||
+        onStandaloneView()
+    ) {
+        return;
+    }
+    const nodeDirection = entryFor(NODE_NAVIGATION_SHORTCUTS, e, apple);
+    if (nodeDirection !== null) {
+        e.preventDefault();
+        s.selectNeighbor(nodeDirection);
+        return;
+    }
+    if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && s.selection.length === 1) {
+        const node = s.nodes[s.selection[0]!];
+        if (node !== undefined && node.kind !== 'group' && !s.hidden.has(node.id)) {
+            e.preventDefault();
+            s.activateNode(node.id);
+        }
+        return;
+    }
+    const addKind = entryFor(ADD_NODE_SHORTCUTS, e, apple);
+    if (addKind) {
+        e.preventDefault();
+        void createNodeAction(addKind);
+    } else if (is(CANVAS_SHORTCUTS.undo) || is(CANVAS_SHORTCUTS.redo)) {
+        e.preventDefault();
+        historyAction(is(CANVAS_SHORTCUTS.redo) ? 'redo' : 'undo');
+    } else if (is(CANVAS_SHORTCUTS.group)) {
+        e.preventDefault();
+        groupSelectionAction();
+    } else if (is(CANVAS_SHORTCUTS.zoomReset)) {
+        e.preventDefault();
+        s.zoomTo(1);
+    } else if (is(CANVAS_SHORTCUTS.fitAll)) {
+        e.preventDefault();
+        fitAction();
+    } else if (is(CANVAS_SHORTCUTS.zoomSelection)) {
+        e.preventDefault();
+        s.zoomToSelection();
+    } else if (is(CANVAS_SHORTCUTS.selectAll)) {
+        e.preventDefault();
+        selectAllAction(focusedCanvas());
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && s.selection.length > 0) {
+        e.preventDefault();
+        const endpointId = workspaceEndpointId();
+        void deleteSelectionAsking(focusedCanvas(), endpointId === null ? null : transportFor(endpointId));
+    } else if (e.key === '=' || e.key === '+') {
+        s.zoomTo(Math.round(s.camera.zoom * 100 + 10) / 100);
+    } else if (e.key === '-') {
+        s.zoomTo(Math.round(s.camera.zoom * 100 - 10) / 100);
+    }
+}
+
 /* Bind once per workspace so a split grid does not run the same project shortcut in every canvas. */
 export function useCanvasShortcuts(): void {
     useEffect(() => {
@@ -172,284 +454,19 @@ export function useCanvasShortcuts(): void {
                 return;
             }
             if (e.key === 'Escape') {
-                // An open popup or dialog owns Escape. It closes itself, and the node it belongs to stays focused.
-                if (isInFloatingLayer(e.target)) {
-                    return;
-                }
-                if (onStandaloneView()) {
-                    leaveStandaloneView(e);
-                    return;
-                }
-                if (s.linkDraft?.aiming) {
-                    s.setLinkDraft(null);
-                } else if (s.editingTextId) {
-                    s.setEditingText(null);
-                } else if (s.bodyFocusId === null) {
-                    s.clearSelection();
-                }
-                /* Escape steps out of the content and leaves the node selected, since a press on its
-                   header put the keyboard there: the keys that act on a node work again right away. */
-                s.setBodyFocus(null);
-                (document.activeElement as HTMLElement | null)?.blur();
+                escapeCanvas(e, s);
                 return;
             }
             const apple = isApplePlatform();
-            const is = (target: Shortcut): boolean => matchesShortcut(target, e, apple);
-            if (is(CANVAS_SHORTCUTS.zoomNode) && !onStandaloneView() && !isInFloatingLayer(e.target) && !useUi.getState().settings.open) {
-                if (zoomNodeTargetOf(s) !== null) {
-                    e.preventDefault();
-                    s.zoomToNode();
-                }
+            const is: Matches = (target) => matchesShortcut(target, e, apple);
+            if (answerWindowKey(e, s, is, apple) || answerDiagramKey(e, is)) {
                 return;
             }
-            // A surface with nothing to search lets the key go, so a browser tab still gets its own find.
-            if (is(CANVAS_SHORTCUTS.find)) {
-                if (!isInFloatingLayer(e.target) && !useUi.getState().settings.open && openFocusedFind()) {
-                    e.preventDefault();
-                }
-                return;
-            }
-            if (is(CANVAS_SHORTCUTS.findReplace)) {
-                if (!isInFloatingLayer(e.target) && !useUi.getState().settings.open && openFocusedFind({ replace: true })) {
-                    e.preventDefault();
-                }
-                return;
-            }
-            /* The grid answers from anywhere, a focused node or a text field included: splitting,
-               closing and stepping between cells are about the window, not about what is in a cell. */
-            if (is(CANVAS_SHORTCUTS.splitRight) || is(CANVAS_SHORTCUTS.splitDown)) {
-                e.preventDefault();
-                splitAction(is(CANVAS_SHORTCUTS.splitDown) ? 'down' : 'right');
-                return;
-            }
-            /* A node on the canvas goes first (`maximizeTargetOf`); without one the key is the grid's,
-               and with one cell and nothing maximized it is let go, since there is nothing to fill. */
-            if (is(CANVAS_SHORTCUTS.maximizeCell)) {
-                const node = onStandaloneView() ? null : maximizeTargetOf(s);
-                if (node !== null) {
-                    e.preventDefault();
-                    s.toggleMaximizedNode(node);
-                    return;
-                }
-                const state = useDocument.getState();
-                if (state.maximized !== null || (state.layout !== null && cellCount(state.layout) > 1)) {
-                    e.preventDefault();
-                    state.toggleMaximized();
-                }
-                return;
-            }
-            const direction: SplitDirection | null = entryFor(FOCUS_SHORTCUTS, e, apple);
-            if (direction) {
-                e.preventDefault();
-                focusCellAction(direction);
-                return;
-            }
-            /* Stepping between the tabs of the focused host, whatever the host holds: a terminal in it hands
-               the key back (`terminal/keymap.ts`) so it never reaches the PTY. It never leaves the cell, so
-               the grid's own keys stay where they are. */
-            if ((is(CANVAS_SHORTCUTS.nextTab) || is(CANVAS_SHORTCUTS.previousTab)) && focusedHostTab() !== null) {
-                e.preventDefault();
-                useDocument.getState().stepTab(is(CANVAS_SHORTCUTS.nextTab) ? 1 : -1);
-                return;
-            }
-            // Moving the tab in front along its strip is as much about the host as stepping is.
-            if (is(CANVAS_SHORTCUTS.moveTabLeft) || is(CANVAS_SHORTCUTS.moveTabRight)) {
-                const tab = focusedHostTab();
-                if (tab !== null) {
-                    e.preventDefault();
-                    useDocument.getState().moveTab(tab, is(CANVAS_SHORTCUTS.moveTabRight) ? 1 : -1);
-                    return;
-                }
-            }
-            /* A host closes its tab in front, and the cell goes with the last one (`state/document.ts`), so
-               one shortcut walks out of a stack of tabs and then out of the cell that held them. A file
-               with unsaved changes is saved first, and a table with edits nobody submitted asks first.
-               Off macOS the window menu's Close answers Ctrl+W, so the shortcut is always taken there,
-               even with nothing to close. */
-            if (is(CANVAS_SHORTCUTS.closeCell)) {
-                const tab = focusedClosableTab();
-                if (tab !== null) {
-                    e.preventDefault();
-                    closeTabAction(tab);
-                    return;
-                }
-                const layout = useDocument.getState().layout;
-                const closes = layout !== null;
-                if (closes || !apple) {
-                    e.preventDefault();
-                }
-                if (closes) {
-                    closeCellAction();
-                }
-                return;
-            }
-            // The views answer from anywhere, a focused node included: they are how you leave one.
-            const viewIndex = VIEW_SHORTCUTS.findIndex((candidate) => is(candidate));
-            if (viewIndex !== -1) {
-                e.preventDefault();
-                const view = viewAtIndex(viewIndex + 1);
-                if (view) {
-                    showView(view.id);
-                }
-                return;
-            }
-            /* With the keyboard inside the page these never get here; the guest preload sends them instead.
-               Only a focused browser takes them, so a drawing keeps them for its order. */
-            if (is(CANVAS_SHORTCUTS.browserBack) || is(CANVAS_SHORTCUTS.browserForward)) {
-                const key = focusedBrowserKey();
-                if (key !== null) {
-                    e.preventDefault();
-                    if (is(CANVAS_SHORTCUTS.browserForward)) {
-                        browserRegistry.forward(key);
-                    } else {
-                        browserRegistry.back(key);
-                    }
-                    return;
-                }
-            }
-            /* The composer leaves these keys alone (its keymap is the standard one, without moving lines), so
-               they work while typing. Nothing is taken when the chat has no message that way. */
-            if (is(CANVAS_SHORTCUTS.previousMessage) || is(CANVAS_SHORTCUTS.nextMessage)) {
-                const key = focusedChatKey();
-                if (key !== null && !isInFloatingLayer(e.target) && stepTimelineMessage(key, is(CANVAS_SHORTCUTS.nextMessage) ? 1 : -1)) {
-                    e.preventDefault();
-                    return;
-                }
-            }
-            if (is(CANVAS_SHORTCUTS.previousView) || is(CANVAS_SHORTCUTS.nextView)) {
-                e.preventDefault();
-                stepView(is(CANVAS_SHORTCUTS.nextView) ? 1 : -1);
-                return;
-            }
-            if (is(CANVAS_SHORTCUTS.newView)) {
-                e.preventDefault();
-                void createViewAction('canvas');
-                return;
-            }
-            // From anywhere, a terminal included: the point is to answer without first leaving what you type in.
-            if (is(CANVAS_SHORTCUTS.focusPrompts)) {
-                if (focusPromptStack()) {
-                    e.preventDefault();
-                }
-                return;
-            }
-            if (is(CANVAS_SHORTCUTS.togglePanel)) {
-                e.preventDefault();
-                useUi.getState().togglePanel();
-                return;
-            }
-            // From anywhere but a popup, so a flag goes on a chat view while its composer has the keyboard.
-            if (is(CANVAS_SHORTCUTS.toggleFlag)) {
-                if (!isInFloatingLayer(e.target)) {
-                    e.preventDefault();
-                    toggleFlagAction();
-                }
-                return;
-            }
-            // From anywhere but a popup, a terminal included: restarting the server is what you do while typing.
-            if (is(CANVAS_SHORTCUTS.launchRun) || is(CANVAS_SHORTCUTS.launchStop)) {
-                // The Chats project has no launches, and its keys fall through to whatever has the focus.
-                if (isScratchProject(useProject.getState().current)) {
-                    return;
-                }
-                if (!isInFloatingLayer(e.target)) {
-                    e.preventDefault();
-                    if (is(CANVAS_SHORTCUTS.launchStop)) {
-                        stopChosenLaunch();
-                    } else {
-                        runChosenLaunch();
-                    }
-                }
-                return;
-            }
-            /* A diagram has an undo and a camera of its own and nothing else a key reaches; a drawing binds
-               its keys in its view, since a drawing has the keyboard the way a terminal has it. */
-            const active = activeViewOf(useDocument.getState());
-            const diagramKeys = [
-                CANVAS_SHORTCUTS.undo,
-                CANVAS_SHORTCUTS.redo,
-                CANVAS_SHORTCUTS.fitAll,
-                CANVAS_SHORTCUTS.zoomSelection,
-                CANVAS_SHORTCUTS.zoomReset
-            ];
-            if (active !== null && isDiagramView(active) && diagramKeys.some(is)) {
-                if (isTypingTarget(e.target) || isInFloatingLayer(e.target) || useUi.getState().settings.open) {
-                    return;
-                }
-                e.preventDefault();
-                if (is(CANVAS_SHORTCUTS.undo) || is(CANVAS_SHORTCUTS.redo)) {
-                    historyAction(is(CANVAS_SHORTCUTS.redo) ? 'redo' : 'undo');
-                } else if (is(CANVAS_SHORTCUTS.fitAll)) {
-                    fitAction();
-                } else if (is(CANVAS_SHORTCUTS.zoomSelection)) {
-                    focusedDiagram().getState().zoomToSelection();
-                } else {
-                    focusedDiagram().getState().zoomTo(1);
-                }
-                return;
-            }
-            // A dialog owns the keyboard while it is up; Backspace there must not delete nodes. Nor may
-            // a key reach the canvas that is parked behind a view of its own.
-            if (
-                isTypingTarget(e.target) ||
-                isInNodeBody(e.target) ||
-                s.bodyFocusId !== null ||
-                s.gesturing ||
-                isInFloatingLayer(e.target) ||
-                useUi.getState().settings.open ||
-                onStandaloneView()
-            ) {
-                return;
-            }
-            const nodeDirection = entryFor(NODE_NAVIGATION_SHORTCUTS, e, apple);
-            if (nodeDirection !== null) {
-                e.preventDefault();
-                s.selectNeighbor(nodeDirection);
-                return;
-            }
-            if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && s.selection.length === 1) {
-                const node = s.nodes[s.selection[0]!];
-                if (node !== undefined && node.kind !== 'group' && !s.hidden.has(node.id)) {
-                    e.preventDefault();
-                    s.activateNode(node.id);
-                }
-                return;
-            }
-            const addKind = entryFor(ADD_NODE_SHORTCUTS, e, apple);
-            if (addKind) {
-                e.preventDefault();
-                void createNodeAction(addKind);
-            } else if (is(CANVAS_SHORTCUTS.undo) || is(CANVAS_SHORTCUTS.redo)) {
-                e.preventDefault();
-                historyAction(is(CANVAS_SHORTCUTS.redo) ? 'redo' : 'undo');
-            } else if (is(CANVAS_SHORTCUTS.group)) {
-                e.preventDefault();
-                groupSelectionAction();
-            } else if (is(CANVAS_SHORTCUTS.zoomReset)) {
-                e.preventDefault();
-                s.zoomTo(1);
-            } else if (is(CANVAS_SHORTCUTS.fitAll)) {
-                e.preventDefault();
-                fitAction();
-            } else if (is(CANVAS_SHORTCUTS.zoomSelection)) {
-                e.preventDefault();
-                s.zoomToSelection();
-            } else if (is(CANVAS_SHORTCUTS.selectAll)) {
-                e.preventDefault();
-                selectAllAction(focusedCanvas());
-            } else if ((e.key === 'Delete' || e.key === 'Backspace') && s.selection.length > 0) {
-                e.preventDefault();
-                const endpointId = workspaceEndpointId();
-                void deleteSelectionAsking(focusedCanvas(), endpointId === null ? null : transportFor(endpointId));
-            } else if (e.key === '=' || e.key === '+') {
-                s.zoomTo(Math.round(s.camera.zoom * 100 + 10) / 100);
-            } else if (e.key === '-') {
-                s.zoomTo(Math.round(s.camera.zoom * 100 - 10) / 100);
-            }
+            answerCanvasKey(e, s, is, apple);
         };
         /* In the capture phase, because leaving the node and leaving a view of its own listen on the
            window too, and only stopping the key here keeps them from also acting on it. */
-        const onEscapeCapture = (e: KeyboardEvent): void => {
+        const onKeyDownCapture = (e: KeyboardEvent): void => {
             setGapModifierDown(e.altKey);
             if (!e.isComposing && !isInFloatingLayer(e.target) && matchesShortcut(CANVAS_SHORTCUTS.voiceControl, e, isApplePlatform())) {
                 if (voiceShortcut.press(e.timeStamp, e.repeat)) {
@@ -534,12 +551,12 @@ export function useCanvasShortcuts(): void {
             }
         };
         const stopSpaceRelease = followSpaceRelease();
-        window.addEventListener('keydown', onEscapeCapture, true);
+        window.addEventListener('keydown', onKeyDownCapture, true);
         window.addEventListener('keydown', onKeyDown);
         window.addEventListener('keyup', onKeyUp, true);
         window.addEventListener('blur', onBlur);
         return () => {
-            window.removeEventListener('keydown', onEscapeCapture, true);
+            window.removeEventListener('keydown', onKeyDownCapture, true);
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp, true);
             window.removeEventListener('blur', onBlur);

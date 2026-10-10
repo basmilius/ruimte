@@ -7,7 +7,6 @@ export type LineRole = EdgeRole | 'plain';
 
 /* How one line is drawn: what it wears where it meets either node, and the stroke it runs in. */
 export interface EdgeLook {
-    /* The marker at the end the line leaves from, and the one at the end it runs into. */
     tail: MarkerShape;
     head: MarkerShape;
     dashed: boolean;

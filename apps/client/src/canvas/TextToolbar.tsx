@@ -6,7 +6,7 @@ import type { DrawingFont } from '@ruimte/contracts';
 import { accentColor, accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { textRect } from '@/canvas/edge-lines';
 import { FONT_STACK } from '@/canvas/text-font';
-import { useCanvas, useCanvasStore } from '@/state/canvas';
+import { useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { ButtonGroup, ColorSwatch, Icon, IconButton, Menu, Surface, Tooltip } from '@adecore/ui';
 
 const FONTS: readonly DrawingFont[] = ['sans', 'hand', 'mono'];
@@ -64,7 +64,7 @@ export function TextToolbar() {
         return null;
     }
 
-    const style = (patch: Parameters<ReturnType<typeof canvasStore.getState>['styleText']>[1]): void => {
+    const style = (patch: Parameters<CanvasState['styleText']>[1]): void => {
         canvasStore.getState().styleText(text.id, patch);
     };
     const left = Math.max(GAP, Math.min(text.x * camera.zoom + camera.x, viewport.w - toolbarWidth - GAP));

@@ -179,22 +179,7 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
                         </ContextMenu.Item>
                     )}
                     {groupWorktrees.length > 0 && projectFolder !== null && (
-                        <>
-                            <ContextMenu.Item
-                                onClick={() =>
-                                    useUi.getState().setWorktreeMerge({ folder: projectFolder, paths: groupWorktrees.map((worktree) => worktree.path) })
-                                }
-                            >
-                                <Icon icon={GitMerge} size={14} /> {t('menu.mergeWorktrees', { count: groupWorktrees.length })}
-                            </ContextMenu.Item>
-                            <ContextMenu.Item
-                                onClick={() =>
-                                    useUi.getState().setWorktreeRemoval({ folder: projectFolder, paths: groupWorktrees.map((worktree) => worktree.path) })
-                                }
-                            >
-                                <Icon icon={Trash} size={14} /> {t('menu.removeWorktrees', { count: groupWorktrees.length })}
-                            </ContextMenu.Item>
-                        </>
+                        <WorktreeItems folder={projectFolder} paths={groupWorktrees.map((worktree) => worktree.path)} />
                     )}
                 </>
             )}
@@ -213,12 +198,7 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
                         <Icon icon={GitBranch} size={14} /> {t('menu.viewWorktree')}
                         <ContextMenu.Hint className="font-mono">{nodeWorktree.branch}</ContextMenu.Hint>
                     </ContextMenu.Item>
-                    <ContextMenu.Item onClick={() => useUi.getState().setWorktreeMerge({ folder: projectFolder, paths: [nodeWorktree.path] })}>
-                        <Icon icon={GitMerge} size={14} /> {t('menu.mergeWorktrees', { count: 1 })}
-                    </ContextMenu.Item>
-                    <ContextMenu.Item onClick={() => useUi.getState().setWorktreeRemoval({ folder: projectFolder, paths: [nodeWorktree.path] })}>
-                        <Icon icon={Trash} size={14} /> {t('menu.removeWorktrees', { count: 1 })}
-                    </ContextMenu.Item>
+                    <WorktreeItems folder={projectFolder} paths={[nodeWorktree.path]} />
                     <ContextMenu.Separator />
                 </>
             )}
@@ -259,56 +239,84 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
                         icon={<Icon icon={Sparkles} size={14} />}
                         onPick={(provider) => void startAgentFromNote(provider)}
                     />
-                    <ContextMenu.SubmenuRoot>
-                        <ContextMenu.SubmenuTrigger>
-                            <Icon icon={Palette} size={14} /> {t('menu.noteColor')}
-                        </ContextMenu.SubmenuTrigger>
-                        <ContextMenu.Popup className="min-w-40">
-                            {NOTE_COLORS.map((color) => (
-                                <ContextMenu.Item key={color.id} onClick={() => colorNoteAction(viewId, id, color.id)}>
-                                    <ContextMenu.Check kind="radio" checked={(node.color ?? DEFAULT_NOTE_COLOR) === color.id} />
-                                    <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} /> {t(`noteColors.${color.id}`)}
-                                </ContextMenu.Item>
-                            ))}
-                        </ContextMenu.Popup>
-                    </ContextMenu.SubmenuRoot>
+                    <NoteColorSubmenu viewId={viewId} id={id} picked={node.color ?? DEFAULT_NOTE_COLOR} />
                 </>
             )}
             <FlagSubmenu id={id} />
-            <ContextMenu.SubmenuRoot>
-                <ContextMenu.SubmenuTrigger>
-                    <Icon icon={Palette} size={14} /> {t('menu.color')}
-                </ContextMenu.SubmenuTrigger>
-                {/* Every hue at once, so the labels give way to a grid the eye
-                    reads in one pass; the name of a color lives in its tooltip. */}
-                <ContextMenu.Popup className="grid min-w-0 grid-cols-6 gap-1 p-2">
-                    <Tooltip label={t('menu.noAccent')}>
-                        <ColorSwatch
-                            render={<ContextMenu.Item unstyled />}
-                            aria-label={t('menu.noAccent')}
-                            picked={!node.accent}
-                            onClick={() => canvasStore.getState().setNodeAccent(id, null)}
-                        />
-                    </Tooltip>
-                    {NODE_ACCENTS.map((accent) => (
-                        <Tooltip key={accent.id} label={accentLabel(accent.id)}>
-                            <ColorSwatch
-                                render={<ContextMenu.Item unstyled />}
-                                aria-label={accentLabel(accent.id)}
-                                color={accent.color}
-                                picked={node.accent === accent.id}
-                                on="popup"
-                                onClick={() => canvasStore.getState().setNodeAccent(id, accent.id)}
-                            />
-                        </Tooltip>
-                    ))}
-                </ContextMenu.Popup>
-            </ContextMenu.SubmenuRoot>
+            <AccentSubmenu id={id} picked={node.accent} />
             <ContextMenu.Separator />
             <ContextMenu.Item className="text-status-error" onClick={remove}>
                 <Icon icon={Trash} size={14} /> {t('common:action.delete')} <Kbd shortcut={CANVAS_SHORTCUTS.deleteSelection} />
             </ContextMenu.Item>
         </ContextMenu.Popup>
+    );
+}
+
+function WorktreeItems({ folder, paths }: { folder: string; paths: string[] }) {
+    const { t } = useTranslation('canvas');
+    return (
+        <>
+            <ContextMenu.Item onClick={() => useUi.getState().setWorktreeMerge({ folder, paths })}>
+                <Icon icon={GitMerge} size={14} /> {t('menu.mergeWorktrees', { count: paths.length })}
+            </ContextMenu.Item>
+            <ContextMenu.Item onClick={() => useUi.getState().setWorktreeRemoval({ folder, paths })}>
+                <Icon icon={Trash} size={14} /> {t('menu.removeWorktrees', { count: paths.length })}
+            </ContextMenu.Item>
+        </>
+    );
+}
+
+function NoteColorSubmenu({ viewId, id, picked }: { viewId: string | null; id: string; picked: string }) {
+    const { t } = useTranslation('canvas');
+    return (
+        <ContextMenu.SubmenuRoot>
+            <ContextMenu.SubmenuTrigger>
+                <Icon icon={Palette} size={14} /> {t('menu.noteColor')}
+            </ContextMenu.SubmenuTrigger>
+            <ContextMenu.Popup className="min-w-40">
+                {NOTE_COLORS.map((color) => (
+                    <ContextMenu.Item key={color.id} onClick={() => colorNoteAction(viewId, id, color.id)}>
+                        <ContextMenu.Check kind="radio" checked={picked === color.id} />
+                        <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} /> {t(`noteColors.${color.id}`)}
+                    </ContextMenu.Item>
+                ))}
+            </ContextMenu.Popup>
+        </ContextMenu.SubmenuRoot>
+    );
+}
+
+function AccentSubmenu({ id, picked }: { id: string; picked: string | undefined }) {
+    const { t } = useTranslation('canvas');
+    const canvasStore = useCanvasStore();
+    return (
+        <ContextMenu.SubmenuRoot>
+            <ContextMenu.SubmenuTrigger>
+                <Icon icon={Palette} size={14} /> {t('menu.color')}
+            </ContextMenu.SubmenuTrigger>
+            {/* Every hue at once as a grid the eye reads in one pass; a color's name lives in its tooltip. */}
+            <ContextMenu.Popup className="grid min-w-0 grid-cols-6 gap-1 p-2">
+                <Tooltip label={t('menu.noAccent')}>
+                    <ColorSwatch
+                        render={<ContextMenu.Item unstyled />}
+                        aria-label={t('menu.noAccent')}
+                        picked={!picked}
+                        onClick={() => canvasStore.getState().setNodeAccent(id, null)}
+                    />
+                </Tooltip>
+                {NODE_ACCENTS.map((accent) => (
+                    <Tooltip key={accent.id} label={accentLabel(accent.id)}>
+                        <ColorSwatch
+                            render={<ContextMenu.Item unstyled />}
+                            aria-label={accentLabel(accent.id)}
+                            color={accent.color}
+                            picked={picked === accent.id}
+                            on="popup"
+                            onClick={() => canvasStore.getState().setNodeAccent(id, accent.id)}
+                        />
+                    </Tooltip>
+                ))}
+            </ContextMenu.Popup>
+        </ContextMenu.SubmenuRoot>
     );
 }
 

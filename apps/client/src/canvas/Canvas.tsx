@@ -6,7 +6,8 @@ import {
     useState,
     useSyncExternalStore,
     type MouseEvent as ReactMouseEvent,
-    type PointerEvent as ReactPointerEvent
+    type PointerEvent as ReactPointerEvent,
+    type RefObject
 } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
@@ -93,13 +94,36 @@ function blurActive(): void {
     return (document.activeElement as HTMLElement | null)?.blur();
 }
 
+type PointerCapture = { element: HTMLElement; pointerId: number };
+
+function releaseCapture(captureRef: RefObject<PointerCapture | null>): void {
+    const capture = captureRef.current;
+    captureRef.current = null;
+    if (capture?.element.hasPointerCapture(capture.pointerId)) {
+        capture.element.releasePointerCapture(capture.pointerId);
+    }
+}
+
+/* Shift on an item already selected takes it out again, which ends the press there. */
+function selectPressed(s: CanvasState, id: string, additive: boolean): boolean {
+    if (!s.selection.includes(id)) {
+        s.select([id], additive);
+        return false;
+    }
+    if (additive) {
+        s.select(s.selection.filter((selected) => selected !== id));
+        return true;
+    }
+    return false;
+}
+
 export function Canvas() {
     /* The editor of this cell. Everything below a render (an effect, a gesture, a menu) goes through
        it, because the cell this canvas is drawn in is not always the cell that has the focus. */
     const canvasStore = useCanvasStore();
     const rootRef = useRef<HTMLDivElement>(null);
     const gestureRef = useRef<Gesture | null>(null);
-    const captureRef = useRef<{ element: HTMLElement; pointerId: number } | null>(null);
+    const captureRef = useRef<PointerCapture | null>(null);
     const wheelPanning = useRef(false);
     const spaceDown = useSyncExternalStore(subscribeSpacePan, isSpaceDown, () => false);
     const altDown = useSyncExternalStore(subscribeGapModifier, isGapModifierDown, () => false);
@@ -219,11 +243,7 @@ export function Canvas() {
             } else if (gesture?.kind === 'link') {
                 canvasStore.getState().setLinkDraft(null);
             }
-            const capture = captureRef.current;
-            captureRef.current = null;
-            if (capture?.element.hasPointerCapture(capture.pointerId)) {
-                capture.element.releasePointerCapture(capture.pointerId);
-            }
+            releaseCapture(captureRef);
             canvasStore.getState().setGesturing(false);
             canvasStore.getState().setPanning(false);
             setActiveGesture(null);
@@ -259,7 +279,7 @@ export function Canvas() {
         if (!el) {
             return;
         }
-        /* The store decides what to do with the size, which is where a waiting camera move runs. */
+        // A camera move waiting for the size runs in the store once it has one.
         const observer = new ResizeObserver(([entry]) => {
             canvasStore.getState().setViewport({
                 w: entry.contentRect.width,
@@ -308,6 +328,10 @@ export function Canvas() {
         const capture = (e.target as HTMLElement).closest<HTMLElement>('[data-text-resize], [data-text-id]') ?? rootRef.current!;
         captureRef.current = { element: capture, pointerId: e.pointerId };
         capture.setPointerCapture(e.pointerId);
+    };
+
+    const startMove = (point: Point, e: ReactPointerEvent): void => {
+        startGesture({ kind: 'move', start: point, applied: { x: 0, y: 0 }, moved: false }, e);
     };
 
     const onPointerDownCapture = (e: ReactPointerEvent): void => {
@@ -377,9 +401,8 @@ export function Canvas() {
         // "Connect to…" is waiting for this click; on empty canvas it is a cancel.
         if (s.linkDraft?.aiming) {
             e.preventDefault();
-            const targetId = nodeId;
-            if (targetId) {
-                s.addEdge(s.linkDraft.from, targetId);
+            if (nodeId) {
+                s.addEdge(s.linkDraft.from, nodeId);
             }
             s.setLinkDraft(null);
             return;
@@ -451,25 +474,14 @@ export function Canvas() {
                 blurActive();
                 s.setBodyFocus(framePressHandsKeyboard(s.nodes[nodeId]?.kind, e.shiftKey) ? nodeId : null);
             }
-            if (!s.selection.includes(nodeId)) {
-                s.select([nodeId], e.shiftKey);
-            } else if (e.shiftKey) {
-                s.select(s.selection.filter((id) => id !== nodeId));
+            if (selectPressed(s, nodeId, e.shiftKey)) {
                 return;
             }
             s.bringToFront(nodeId);
             if (target.closest('button') || maximizedNodeOf(s) === nodeId) {
                 return;
             }
-            startGesture(
-                {
-                    kind: 'move',
-                    start: point,
-                    applied: { x: 0, y: 0 },
-                    moved: false
-                },
-                e
-            );
+            startMove(point, e);
             return;
         }
 
@@ -479,21 +491,9 @@ export function Canvas() {
             }
             s.setBodyFocus(null);
             blurActive();
-            if (!s.selection.includes(textId)) {
-                s.select([textId], e.shiftKey);
-            } else if (e.shiftKey) {
-                s.select(s.selection.filter((id) => id !== textId));
-                return;
+            if (!selectPressed(s, textId, e.shiftKey)) {
+                startMove(point, e);
             }
-            startGesture(
-                {
-                    kind: 'move',
-                    start: point,
-                    applied: { x: 0, y: 0 },
-                    moved: false
-                },
-                e
-            );
             return;
         }
 
@@ -613,11 +613,7 @@ export function Canvas() {
             return;
         }
         const s = canvasStore.getState();
-        const capture = captureRef.current;
-        captureRef.current = null;
-        if (capture?.element.hasPointerCapture(capture.pointerId)) {
-            capture.element.releasePointerCapture(capture.pointerId);
-        }
+        releaseCapture(captureRef);
         s.setGesturing(false);
         s.setPanning(wheelPanning.current);
         if (g.kind === 'box') {
@@ -642,7 +638,6 @@ export function Canvas() {
             s.setResizing(null);
         } else if (g.kind === 'link') {
             s.setLinkDraft(null);
-            // The pointer is captured, so the target is whatever the canvas shows under it.
             const target = linkTargetUnder(e.clientX, e.clientY);
             if (target) {
                 s.addEdge(g.from, target.id, { fromSide: g.fromSide, toSide: target.side });
@@ -688,9 +683,7 @@ export function Canvas() {
         if (paths.length === 0) {
             return;
         }
-        const at = toWorld(canvasStore.getState().camera, screenPoint(e));
-        // Several files at once are several nodes in a row, so none of them lands on top of another.
-        const points = dropPoints(at, paths.length, DROP_STEP);
+        const points = dropPoints(toWorld(canvasStore.getState().camera, screenPoint(e)), paths.length, DROP_STEP);
         for (const [index, path] of paths.entries()) {
             void showFileOnCanvas(path, points[index]!);
         }

@@ -55,8 +55,7 @@ export const PortHints = memo(function PortHints({ rootRef }: { rootRef: RefObje
 
     const hints = useMemo(() => (point === null || quiet ? [] : portHints(open, point, HINT_REACH / zoom)), [open, point, quiet, zoom]);
 
-    /* A side a line already leaves from has its dot drawn by that line, so this one only takes the press.
-       Nothing is offered while a gesture runs, which is also when the routes move on every frame. */
+    /* A side a line already leaves from has its dot drawn by that line, so this one only takes the press. */
     const taken = useMemo(() => {
         if (quiet) {
             return new Set<string>();

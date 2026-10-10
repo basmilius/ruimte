@@ -1,5 +1,7 @@
 import { unionOf, type Rect } from '@/canvas/math';
 
+const EPSILON = 0.001;
+
 export interface AlignmentGuide {
     axis: 'x' | 'y';
     position: number;
@@ -17,7 +19,7 @@ export function alignmentGuides(moving: readonly Rect[], stationary: readonly Re
                 const crossSize = axis === 'x' ? 'h' : 'w';
                 for (const fraction of [0, 0.5, 1]) {
                     const position = rect[axis] + rect[size] * fraction;
-                    const matches = [0, 0.5, 1].some((value) => Math.abs(position - other[axis] - other[size] * value) < 0.001);
+                    const matches = [0, 0.5, 1].some((value) => Math.abs(position - other[axis] - other[size] * value) < EPSILON);
                     if (!matches) {
                         continue;
                     }
@@ -46,8 +48,6 @@ export interface GapGuide {
 }
 
 type Gap = Omit<GapGuide, 'equal'>;
-
-const EPSILON = 0.001;
 
 /* What the label shows, so two gaps are equal exactly when they read the same. */
 function measure(gap: Gap): number {

@@ -9,10 +9,7 @@ import { carriesMentions, droppedMentions } from '@adecore/agents-react/chat/men
  */
 export const PATHS_DRAG_TYPE = 'application/x-ruimte-paths';
 
-/*
- * What the canvas reads off a drag. The two fields are all of `DataTransfer` that matters here, so
- * the rules below are testable without one and the handler stays a few lines of wiring.
- */
+/* The part of `DataTransfer` the canvas reads, so the rules below are testable without one. */
 export interface DragPayload {
     types: readonly string[];
     getData(type: string): string;
@@ -34,10 +31,9 @@ function splitPaths(value: string): string[] {
 }
 
 /*
- * The files a drop is about, in the order the source wrote them. A directory is left out rather
- * than made into a node that cannot be read: a folder on a canvas would be a file manager, which
- * this is not. A drag carrying the mention type alone has no slashes left to judge, so it is taken
- * whole.
+ * The files a drop is about, in the order the source wrote them. A directory is left out, since a
+ * folder on a canvas would be a file manager. The mention type alone has no slashes left to judge,
+ * so it is taken whole.
  */
 export function droppedPaths(data: DragPayload): string[] {
     const marked = data.getData(PATHS_DRAG_TYPE);
@@ -56,14 +52,12 @@ export function carriesFiles(types: readonly string[]): boolean {
     return types.includes('Files');
 }
 
-/* Why a file out of the file manager cannot become a node. Null means it can. */
+/* Why a file out of the file manager cannot become a node. */
 export type FinderRefusal = 'no-bridge' | 'other-machine';
 
 /*
- * A `File` out of an OS drag has no path in a browser, which is a boundary with no way around it:
- * only the desktop shell can name the file it came from. And a path it names is a path on this
- * machine, so a project running on a daemon elsewhere cannot read it either. Copying the bytes over
- * is a feature about uploading rather than about the canvas, so both cases say so and stop.
+ * A `File` out of an OS drag has no path in a browser; only the desktop shell can name it. That path
+ * is on this machine, so a project on a daemon elsewhere cannot read it either. Null means it can.
  */
 export function finderRefusal(canNamePaths: boolean, reachability: Reachability | null): FinderRefusal | null {
     if (!canNamePaths) {
@@ -81,11 +75,7 @@ export function dropEffectFor(effectAllowed: DataTransfer['effectAllowed']): 'co
     return effectAllowed === 'move' || effectAllowed === 'linkMove' ? 'move' : 'copy';
 }
 
-/*
- * Where a run of dropped files goes: the first on the point it was let go of, the rest to its right
- * a step apart, so three files at once are three nodes side by side instead of one stack nobody can
- * see into. The points are middles, which is what `addNode` takes.
- */
+/* Dropped files stand side by side a step apart, the first on the drop point. The points are middles, which is what `addNode` takes. */
 export function dropPoints(at: Point, count: number, step: number): Point[] {
     return Array.from({ length: Math.max(0, count) }, (_unused, index) => ({ x: at.x + index * step, y: at.y }));
 }

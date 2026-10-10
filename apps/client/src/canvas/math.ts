@@ -1,6 +1,6 @@
 import { CANVAS_GRID, type ViewCamera } from '@ruimte/contracts';
 
-import { intersects, unionOf, type Point, type Rect } from '@adecore/drawing';
+import { centerOf, intersects, unionOf, type Point, type Rect } from '@adecore/drawing';
 
 /*
  * This module is what a camera does with the world it looks at. The world itself is one geometry,
@@ -65,10 +65,8 @@ export function visibleRect(camera: Camera, viewport: { w: number; h: number }, 
 }
 
 /*
- * Whether an element has been measured. An editor exists from the moment its view goes into a cell,
- * which is a frame before the element that holds it has a size, and the middle of nothing is the
- * corner: a camera worked out against a zero viewport parks what it was aimed at in the top left.
- * The two builders below answer null there, so a caller has to say what it does with "not yet".
+ * An editor exists a frame before its element has a size, and a camera worked out against a zero
+ * viewport parks what it was aimed at in the top left. The builders below answer null until then.
  */
 export function isMeasured(viewport: { w: number; h: number }): boolean {
     return viewport.w > 0 && viewport.h > 0;
@@ -87,13 +85,7 @@ export function cameraToFit(bounds: Rect, viewport: { w: number; h: number }, pa
 }
 
 export function cameraCenteredOn(rect: Rect, viewport: { w: number; h: number }, zoom: number): Camera | null {
-    return isMeasured(viewport)
-        ? {
-              zoom,
-              x: viewport.w / 2 - (rect.x + rect.w / 2) * zoom,
-              y: viewport.h / 2 - (rect.y + rect.h / 2) * zoom
-          }
-        : null;
+    return cameraOfView({ center: centerOf(rect), zoom }, viewport);
 }
 
 /* The camera the way it is stored: the world point in the middle of the viewport, so a cell of another size keeps that point in front. */

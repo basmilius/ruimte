@@ -26,11 +26,9 @@ export interface WheelCameraOptions {
 
 /*
  * The wheel over a canvas, a drawing or a diagram: two fingers pan, a pinch zooms around the pointer
- * and the zoom settles on a whole percent once the fingers stop. React registers wheel listeners as
- * passive, so `preventDefault` there cannot stop the browser's own pinch zoom: this takes a native,
- * non-passive one, in the capture phase, because a scrollable body inside (a terminal's scrollback,
- * a thread) scrolls itself rather than through a default that could be prevented, and would
- * otherwise scroll and pan at once.
+ * and the zoom settles on a whole percent once the fingers stop. React's wheel listeners are passive
+ * and cannot stop the browser's pinch zoom, so this is a native one, in the capture phase because a
+ * scrollable body inside (a terminal's scrollback, a thread) would otherwise scroll and pan at once.
  */
 export function useWheelCamera(rootRef: RefObject<HTMLElement | null>, store: StoreApi<CameraSlice>, options: WheelCameraOptions = {}): () => void {
     const latest = useRef(options);

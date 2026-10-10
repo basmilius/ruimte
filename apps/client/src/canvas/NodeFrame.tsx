@@ -160,6 +160,16 @@ function StatusMark({ status, work }: { status: AgentStatus; work: AgentWork | n
     );
 }
 
+function WorktreePill({ worktree }: { worktree: { path: string; branch: string } }) {
+    return (
+        <Tooltip label={worktree.path}>
+            <Pill mono icon={<Icon icon={GitBranch} size={12} />}>
+                {worktree.branch}
+            </Pill>
+        </Tooltip>
+    );
+}
+
 function Title({ id, title, editing, muted, onDone }: { id: string; title: string; editing: boolean; muted: boolean; onDone: () => void }) {
     const canvasStore = useCanvasStore();
     if (!editing) {
@@ -305,10 +315,8 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                           ? clsx(!maximized && 'shadow-node', noteColorClass(node.color))
                           : clsx('bg-surface', !maximized && 'shadow-node'),
                     (selected || linkTarget) && !maximized && 'node-selected',
-                    /* The border stays under the selection ring, which is drawn outside it: a
-                       transparent border would show a line of bare canvas now that a surface is
-                       clipped to its padding box. A group's is its color, which is what tells one
-                       group from another. */
+                    /* Never transparent: a surface clips to its padding box, so that would show a line of
+                       bare canvas. A group's border is its color, which tells one group from another. */
                     isGroup && accent ? 'border-(--group-accent)' : isGroup ? 'border-border-strong' : 'border-border'
                 )}
                 style={{
@@ -377,19 +385,17 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     {node.kind === 'chat' && !renaming && <SubagentBreadcrumb chatId={id} className="grow" />}
                     {!renaming && <FlagMarkOf id={id} />}
                     {collapsed && <Pill className="tabular-nums">{t('group.inside', { count: node.memberIds?.length ?? 0 })}</Pill>}
-                    {node.kind === 'chat' && !renaming && <AccountPill chatId={id} />}
-                    {node.kind === 'chat' && !renaming && <ForkPill chatId={id} />}
-                    {node.kind === 'chat' && !renaming && <PlanPill chatId={id} />}
-                    {node.kind === 'chat' && !renaming && <LimitPill chatId={id} />}
+                    {node.kind === 'chat' && !renaming && (
+                        <>
+                            <AccountPill chatId={id} />
+                            <ForkPill chatId={id} />
+                            <PlanPill chatId={id} />
+                            <LimitPill chatId={id} />
+                        </>
+                    )}
                     {node.kind === 'terminal' && !renaming && <SessionPorts id={id} />}
                     {(node.kind === 'chat' || node.kind === 'terminal') && !renaming && <ComputerIndicator nodeId={id} />}
-                    {nodeWorktree && !renaming && (
-                        <Tooltip label={nodeWorktree.path}>
-                            <Pill mono icon={<Icon icon={GitBranch} size={12} />}>
-                                {nodeWorktree.branch}
-                            </Pill>
-                        </Tooltip>
-                    )}
+                    {nodeWorktree && !renaming && <WorktreePill worktree={nodeWorktree} />}
                     {isGroup && !node.worktree && groupWorktrees.length > 0 && (
                         <Tooltip label={groupWorktrees.map((worktree) => worktree.branch).join(', ')}>
                             <Pill className="tabular-nums" icon={<Icon icon={GitBranch} size={12} />}>
@@ -397,13 +403,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                             </Pill>
                         </Tooltip>
                     )}
-                    {isGroup && node.worktree && (
-                        <Tooltip label={node.worktree.path}>
-                            <Pill mono icon={<Icon icon={GitBranch} size={12} />}>
-                                {node.worktree.branch}
-                            </Pill>
-                        </Tooltip>
-                    )}
+                    {isGroup && node.worktree && <WorktreePill worktree={node.worktree} />}
                     {node.kind === 'terminal' && hasContext && !renaming && (
                         <Tooltip label={t('node.context.tooltip')}>
                             <Pill icon={<Icon icon={Link2} size={12} />}>{t('node.context.pill')}</Pill>

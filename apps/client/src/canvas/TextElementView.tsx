@@ -87,12 +87,13 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
                 }}
                 onBlur={editing ? commit : undefined}
                 onKeyDown={(e) => {
-                    if (editing && (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey))) {
+                    if (!editing) {
+                        return;
+                    }
+                    e.stopPropagation();
+                    if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
                         e.preventDefault();
                         ref.current?.blur();
-                    }
-                    if (editing) {
-                        e.stopPropagation();
                     }
                 }}
             >

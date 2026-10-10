@@ -126,35 +126,36 @@ function unselectedGaps(nodes: readonly GapNode[]): EditableGap[] {
                         nearest = gap;
                     }
                 }
-                const gap = nearest;
-                if (gap) {
-                    const second = siblings.find((node) => node.id === gap.to)!;
-                    const size = axis === 'x' ? 'w' : 'h';
-                    const cross = axis === 'x' ? 'y' : 'x';
-                    const crossSize = axis === 'x' ? 'h' : 'w';
-                    const low = Math.max(first[cross], second[cross]);
-                    const high = Math.min(first[cross] + first[crossSize], second[cross] + second[crossSize]);
-                    if (
-                        siblings.some(
-                            (node) =>
-                                node.id !== first.id &&
-                                node.id !== second.id &&
-                                node[axis] < gap.end &&
-                                node[axis] + node[size] > gap.start &&
-                                node[cross] < high &&
-                                node[cross] + node[crossSize] > low
-                        )
-                    ) {
-                        continue;
-                    }
-                    result.push({
-                        ...gap,
-                        shared: false,
-                        minimum: gap.end - gap.start,
-                        moves: [{ id: gap.to, factor: 1 }],
-                        fixed: [gap.from]
-                    });
+                if (!nearest) {
+                    continue;
                 }
+                const gap = nearest;
+                const second = siblings.find((node) => node.id === gap.to)!;
+                const size = axis === 'x' ? 'w' : 'h';
+                const cross = axis === 'x' ? 'y' : 'x';
+                const crossSize = axis === 'x' ? 'h' : 'w';
+                const low = Math.max(first[cross], second[cross]);
+                const high = Math.min(first[cross] + first[crossSize], second[cross] + second[crossSize]);
+                if (
+                    siblings.some(
+                        (node) =>
+                            node.id !== first.id &&
+                            node.id !== second.id &&
+                            node[axis] < gap.end &&
+                            node[axis] + node[size] > gap.start &&
+                            node[cross] < high &&
+                            node[cross] + node[crossSize] > low
+                    )
+                ) {
+                    continue;
+                }
+                result.push({
+                    ...gap,
+                    shared: false,
+                    minimum: gap.end - gap.start,
+                    moves: [{ id: gap.to, factor: 1 }],
+                    fixed: [gap.from]
+                });
             }
         }
     }

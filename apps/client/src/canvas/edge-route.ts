@@ -22,7 +22,6 @@ export const NODE_GAP = 9;
  */
 const STUB = 24;
 
-/* The radius of the bend where two legs of a route meet. */
 const CORNER = 15;
 
 /* How far a route stands off a node it passes, on top of the gap it keeps at its own ends. */
@@ -53,7 +52,6 @@ export interface Obstacle extends Rect {
 }
 
 export interface EdgeRoute {
-    /* The line itself, as the `d` of a path. */
     d: string;
     /* Where the dots go: a gap out from the sides the line leaves and lands on. */
     from: Point;
@@ -627,7 +625,6 @@ function swapStates(frontier: Frontier, one: number, other: number): void {
     [frontier.scores[one], frontier.scores[other]] = [frontier.scores[other]!, frontier.scores[one]!];
 }
 
-/* Whether every leg of a run stays clear of every node. */
 function isClear(points: readonly Point[], blocked: readonly Bounds[]): boolean {
     return points.every((point, index) => index === 0 || !blocked.some((box) => crosses(points[index - 1]!, point, box)));
 }

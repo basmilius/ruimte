@@ -7,10 +7,8 @@ import { useCanvas } from '@/state/canvas';
 import { FileIcon } from '@adecore/ui';
 
 /*
- * What a file node is while it is out of sight or too small to read: its mark and its name, with no
- * read behind it and no controls in the header. Ten file nodes would otherwise be ten reads and ten
- * editors running for frames nobody is looking at, which is the bargain a terminal already makes
- * with its own plate. An editor that goes leaves its unsaved draft behind for the next one.
+ * A file node out of sight or too small to read: its mark and its name, with no read behind it, so
+ * ten file nodes are not ten editors running for nobody. An editor that goes leaves its draft behind.
  */
 export function FilePlate({ id }: { id: string }) {
     const { t } = useTranslation('canvas');

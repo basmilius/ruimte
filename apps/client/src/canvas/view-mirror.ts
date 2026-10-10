@@ -21,15 +21,12 @@ interface MirrorState<TSnapshot> {
 /* Everything one kind of mirrored view knows how to do that another kind does differently. */
 export interface ViewMirrorKind<TSnapshot> {
     /*
-     * Every change to what an editor of this kind shows. Every cell is listened to rather than the
-     * one with the focus: a node mirrors a view that may be standing in the cell beside it, and an
-     * edit there counts the same. An editor emptied on its way off screen is not the view becoming
-     * empty, so a kind only reports a change its editor really holds.
+     * Every change to what an editor of this kind shows, in every cell, since the view a node mirrors
+     * may stand in the cell beside it. An editor emptied on its way off screen reports nothing.
      */
     subscribeSnapshots(listener: (viewId: string, snapshot: TSnapshot) => void): () => void;
     /* What the editor of this view holds right now, with its unsaved edits, or null when none has it. */
     liveSnapshot(viewId: string): TSnapshot | null;
-    /* Reads the view from a machine. */
     open(link: Transport, projectId: string, viewId: string): Promise<TSnapshot>;
     /* The writes of an agent, another client or an editor on disk. */
     onChanged(link: Transport, listener: (viewId: string, snapshot: TSnapshot) => void): void;
@@ -53,6 +50,11 @@ export function createViewMirror<TSnapshot>(kind: ViewMirrorKind<TSnapshot>): Vi
     };
 
     const watchers = new Map<string, number>();
+    const refresh = (key: string, snapshot: TSnapshot): void => {
+        if (watchers.has(key)) {
+            put(key, { snapshot, gone: false, loading: false });
+        }
+    };
     /* The socket each machine's change listener sits on; a socket that was replaced needs a new one. */
     const wired = new Map<string, Transport>();
     let wiredStores = false;
@@ -62,12 +64,7 @@ export function createViewMirror<TSnapshot>(kind: ViewMirrorKind<TSnapshot>): Vi
             return;
         }
         wiredStores = true;
-        kind.subscribeSnapshots((viewId, snapshot) => {
-            const key = endpointKey(currentEndpointId(), viewId);
-            if (watchers.has(key)) {
-                put(key, { snapshot, gone: false, loading: false });
-            }
-        });
+        kind.subscribeSnapshots((viewId, snapshot) => refresh(endpointKey(currentEndpointId(), viewId), snapshot));
         useProject.subscribe((state, previous) => {
             // Another project has other views; whatever was mirrored belongs to the one that left.
             if (state.current?.projectId !== previous.current?.projectId) {
@@ -83,12 +80,7 @@ export function createViewMirror<TSnapshot>(kind: ViewMirrorKind<TSnapshot>): Vi
             return;
         }
         wired.set(endpointId, link);
-        kind.onChanged(link, (viewId, snapshot) => {
-            const key = endpointKey(endpointId, viewId);
-            if (watchers.has(key)) {
-                put(key, { snapshot, gone: false, loading: false });
-            }
-        });
+        kind.onChanged(link, (viewId, snapshot) => refresh(endpointKey(endpointId, viewId), snapshot));
     };
 
     const load = (endpointId: string, viewId: string): void => {

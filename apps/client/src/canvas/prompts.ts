@@ -43,27 +43,23 @@ export function canvasPrompts({ nodes, endpointId, sessions, chats, computer, wa
     const add = (node: CanvasPromptsInput['nodes'][number], subject: PromptSubject, provider: AgentKind | null, surface: CanvasPrompt['surface']) =>
         prompts.push({ id: promptIdOf(subject), subject, title: node.title, provider, surface });
     for (const node of nodes) {
+        if (node.kind !== 'chat' && node.kind !== 'terminal') {
+            continue;
+        }
         const key = endpointKey(endpointId, node.id);
-        if (node.kind === 'chat' || node.kind === 'terminal') {
-            const provider = (node.kind === 'chat' ? chats[key]?.info.provider : sessions[key]?.agent?.kind) ?? node.provider ?? null;
-            for (const request of computer) {
-                if (request.nodeId === node.id) {
-                    add(node, { kind: 'host', nodeId: node.id, prompt: computerPrompt(node.id, request) }, provider, node.kind);
-                }
+        const provider = (node.kind === 'chat' ? chats[key]?.info.provider : sessions[key]?.agent?.kind) ?? node.provider ?? null;
+        for (const request of computer) {
+            if (request.nodeId === node.id) {
+                add(node, { kind: 'host', nodeId: node.id, prompt: computerPrompt(node.id, request) }, provider, node.kind);
             }
         }
         if (node.kind === 'chat') {
-            const chat = chats[key];
-            for (const item of waitingRequestsOf(chat)) {
-                add(node, { kind: 'chat', nodeId: node.id, item }, chat?.info.provider ?? node.provider ?? null, 'chat');
+            for (const item of waitingRequestsOf(chats[key])) {
+                add(node, { kind: 'chat', nodeId: node.id, item }, provider, 'chat');
             }
             continue;
         }
-        if (node.kind !== 'terminal') {
-            continue;
-        }
         const session = sessions[key];
-        const provider = session?.agent?.kind ?? node.provider ?? null;
         const waiting = nodeStatus(node, sessions, chats, endpointId) === 'needs-you';
         if (!waiting) {
             since.delete(key);

@@ -1,3 +1,4 @@
+import { centerOf } from '@adecore/drawing';
 import type { Camera, Point, Rect } from '@/canvas/math';
 
 export type NodeDirection = 'left' | 'right' | 'up' | 'down';
@@ -5,17 +6,13 @@ export interface NavigationNode extends Rect {
     id: string;
 }
 
-function center(rect: Rect): Point {
-    return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
-}
-
 export function neighboringNode(nodes: readonly NavigationNode[], from: string | null, direction: NodeDirection, viewportCenter: Point): string | null {
     const origin = nodes.find((node) => node.id === from);
     if (!origin) {
         return (
             [...nodes].sort((first, second) => {
-                const a = center(first);
-                const b = center(second);
+                const a = centerOf(first);
+                const b = centerOf(second);
                 return (
                     Math.hypot(a.x - viewportCenter.x, a.y - viewportCenter.y) - Math.hypot(b.x - viewportCenter.x, b.y - viewportCenter.y) ||
                     first.id.localeCompare(second.id)
@@ -28,12 +25,12 @@ export function neighboringNode(nodes: readonly NavigationNode[], from: string |
     const cross = horizontal ? 'y' : 'x';
     const crossSize = horizontal ? 'h' : 'w';
     const sign = direction === 'left' || direction === 'up' ? -1 : 1;
-    const start = center(origin);
+    const start = centerOf(origin);
     const candidates = nodes.flatMap((node) => {
         if (node.id === origin.id) {
             return [];
         }
-        const target = center(node);
+        const target = centerOf(node);
         const forward = (target[axis] - start[axis]) * sign;
         if (forward <= 0) {
             return [];

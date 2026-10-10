@@ -34,9 +34,9 @@ export function emptyCanvasSections({ providers, hasFolder, layouts, views }: Em
             target: 'terminal',
             provider: provider.kind,
             name: provider.name
-        }))
+        })),
+        { id: 'node-chat', kind: 'node', node: 'chat' }
     ];
-    agents.push({ id: 'node-chat', kind: 'node', node: 'chat' });
 
     const place: EmptyCanvasTile[] = [
         { id: 'node-terminal', kind: 'node', node: 'terminal' },

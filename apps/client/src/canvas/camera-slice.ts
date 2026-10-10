@@ -62,7 +62,6 @@ export function createCameraSlice<TState extends CameraSlice>(
         pendingCamera: null,
 
         setViewport(viewport) {
-            // The size is the answer to whatever was waiting for one, so the wait ends here.
             const waiting = isMeasured(viewport) ? get().pendingCamera : null;
             set({ viewport });
             if (waiting === null) {

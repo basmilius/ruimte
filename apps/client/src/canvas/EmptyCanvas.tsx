@@ -21,7 +21,6 @@ interface TileLook {
     title: string;
     description?: string;
     shortcut?: Shortcut;
-    disabled?: boolean;
     run(): void;
 }
 
@@ -101,12 +100,6 @@ export function EmptyCanvas() {
         }
     };
 
-    const hint = (
-        <p className="text-center text-xs text-text-muted">
-            <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> }} />
-        </p>
-    );
-
     return (
         // The bottom padding keeps the grid clear of the dock, which floats over the same cell.
         <div className="pointer-events-none absolute inset-0 grid place-items-center overflow-hidden px-4 pt-4 pb-20">
@@ -127,7 +120,6 @@ export function EmptyCanvas() {
                                         title={look.title}
                                         description={look.description}
                                         shortcut={look.shortcut}
-                                        disabled={look.disabled}
                                         onClick={look.run}
                                     />
                                 );
@@ -135,7 +127,9 @@ export function EmptyCanvas() {
                         </div>
                     </section>
                 ))}
-                {hint}
+                <p className="text-center text-xs text-text-muted">
+                    <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> }} />
+                </p>
             </div>
         </div>
     );
