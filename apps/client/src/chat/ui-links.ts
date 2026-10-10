@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { ChatUiLinkReading } from '@ruimte/contracts';
 import { runAsPerson } from '@/actions/client-actions';
 import { desktop } from '@/desktop/bridge';
@@ -6,14 +7,18 @@ import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { useSettings } from '@/state/settings';
+import { useToasts } from '@/state/toasts';
+
+function refuse(key: 'elsewhere' | 'invalidUrl'): void {
+    useToasts.getState().show({ kind: 'error', title: i18next.t(`chat:uiLink.${key}`) });
+}
 
 export function openUiLink(endpointId: string, reading: ChatUiLinkReading): void {
-    if (
-        endpointId !== currentEndpointId() ||
-        reading.state !== 'chip' ||
-        !reading.target ||
-        (reading.projectId !== undefined && reading.projectId !== useProject.getState().current?.projectId)
-    ) {
+    if (reading.state !== 'chip' || !reading.target) {
+        return;
+    }
+    if (endpointId !== currentEndpointId() || (reading.projectId !== undefined && reading.projectId !== useProject.getState().current?.projectId)) {
+        refuse('elsewhere');
         return;
     }
     const target = reading.target;
@@ -41,15 +46,12 @@ export function openUiLink(endpointId: string, reading: ChatUiLinkReading): void
 
 export function openUiUrl(endpointId: string, input: string): void {
     if (endpointId !== currentEndpointId()) {
+        refuse('elsewhere');
         return;
     }
-    let url: URL;
-    try {
-        url = new URL(input);
-    } catch {
-        return;
-    }
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    const url = URL.canParse(input) ? new URL(input) : null;
+    if (url === null || (url.protocol !== 'http:' && url.protocol !== 'https:')) {
+        refuse('invalidUrl');
         return;
     }
     const bridge = desktop();
