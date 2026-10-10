@@ -44,7 +44,6 @@ export type DatabaseConnectionErrorCode = 'project-not-found' | 'connections-inv
 
 export class DatabaseConnectionError extends CodedError<DatabaseConnectionErrorCode> {}
 
-/* What the store needs of the projects. */
 export interface DatabaseProjects {
     folderOf(projectId: string): string | null;
     /* The clients that have the project open, which is who may read its connections and who hears a change. */

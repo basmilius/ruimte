@@ -22,7 +22,6 @@ export const EXECUTE_ROW_LIMIT = 100;
 
 export class DatabaseAgentError extends CodedError {}
 
-/* Where the caller stands: the project and its folder. */
 export interface DatabasePlace {
     projectId: string;
     folder: string;
