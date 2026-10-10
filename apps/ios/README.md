@@ -377,7 +377,7 @@ Then Appearance (theme, terminal font size), Agents, Files and Git (hidden files
   `packages/pulsar` does. An account with an Apple identity gets a fresh Sign in with Apple authorization (no scope,
   no nonce) right before `DELETE /v1/account`, and its code goes along as `appleAuthorizationCode`, so the address
   book revokes Sign in with Apple first. A refused name (`confirmation-mismatch`) or a failed revocation
-  (`apple-revocation-failed`) deletes nothing and says so; cancelling Apple's sheet sends nothing. After a deletion
+  (`apple-revocation-failed`) deletes nothing and says so; canceling Apple's sheet sends nothing. After a deletion
   the phone signs out as Sign out does, without trying to revoke push devices the deletion already removed.
 
 ## AI conversations
@@ -592,8 +592,10 @@ protocol, crypto and state tests run on the Mac. Do not restart the running daem
 `RuimteIntelligentUI` bundles the shared bounded interpreter for JavaScriptCore. `UiInterpreter`
 accepts a compiled block, local input values and daemon query readings as JSON arguments. It
 returns evaluated nodes with serializable bindings; model text is never executable source.
-`UiBlockModel` manages local input, once-only choices, opaque query read tickets and live reads
-while a block is visible and connected, at most once per ten seconds. `UiReplyParts` uses the
+`UiBlockModel` manages local input, Button actions, once-only choices, opaque query read tickets and
+live reads while a block is visible and connected, at most once per ten seconds. Changes run one at a
+time, each on the values the one before left, and a changed input reads again once it rested for
+300 ms. Queries read in the order the block's source declares them. `UiReplyParts` uses the
 daemon's UTF-16 positions to retain prose around the blocks. `ChatUiDelta` keeps streamed trees
 and query metadata without accepting a preview for an older text length.
 
@@ -605,16 +607,18 @@ copying from the image menu. File, diff, commit and node chips open the existing
 after the daemon resolves the link again. Local presentation state includes the machine in its
 cache key. `ImageSaveModel` checks the selected destination, browses only child folders and sends
 an exact checked revision only for explicit replacement. Name changes and cancellation discard
-late checks; a pending write blocks changes and closing. The image row opens Claude's native save
+late checks; a pending write blocks changes and closing. The image row opens the app's own save
 sheet through a per-chat `ImageSaveCoordinator`, so cell reuse preserves the destination and the
-original attachment identity. Cancelling or saving completes the caller once; a target read that
-arrives after leaving the screen cannot reopen its sheet.
+original attachment identity. Canceling or saving completes the caller once, and so do a canceled
+caller and a chat that stops; a target read that arrives after leaving the screen cannot reopen its
+sheet. The row keeps only a thumbnail and reads the bytes again for Open large, Share and Save.
 
 Regenerate the interpreter and parity fixtures with `bun run --cwd packages/contracts generate:swift`.
-`bun run check` checks these generated files too. Run the interpreter and controller tests on the Mac
-with `swift test --package-path apps/ios/Packages/RuimteIntelligentUI`; this does not open the app.
-The combined UI and visual session instruction measures 685 tokens with `o200k_base` and 693 with
-`cl100k_base`, using `js-tiktoken` 1.0.21. The temporary measurement dependency is outside the repository.
+`bun run check` checks these generated files too: the fixtures byte for byte, the bundle by a digest of
+its sources in its header, since minified output differs between Bun versions. The app's
+`intelligent-ui-presentation.json` holds the desktop's own table, chart and label results, which
+`IntelligentUIPresentationTests` holds the Swift port against. Run the interpreter and controller tests
+on the Mac with `swift test --package-path apps/ios/Packages/RuimteIntelligentUI`; this does not open the app.
 
 ```sh
 xcodebuild -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debug \
