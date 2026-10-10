@@ -12,7 +12,7 @@ import { closeWarning, sessionNodesOf } from '@/project/project-sessions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ProjectSettingsDialog, type ProjectSettingsSubject } from '@/shell/ProjectSettingsDialog';
 import { useDocument } from '@/state/document';
-import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
@@ -136,9 +136,6 @@ export function ProjectMenu() {
     const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
     const activeId = useEndpoints((s) => s.activeId);
     const connected = useOpenEndpoints();
-    const [settingsTarget, setSettingsTarget] = useState<ProjectMenuRow | null>(null);
-    /* Apart from the target, which outlives it: the dialog closes first and is emptied afterwards. */
-    const [settingsOpen, setSettingsOpen] = useState(false);
     const [closing, setClosing] = useState<{ row: ProjectMenuRow; name: string; sessions: number; otherClients: number } | null>(null);
     const currentKey = current !== null && currentEndpointId !== null ? `${currentEndpointId}:${current.projectId}` : null;
     const { open, recent } = useMemo(() => {
@@ -157,74 +154,7 @@ export function ProjectMenu() {
     const machineIcon = servers[machineId]?.icon ?? null;
 
     const isCurrent = (row: ProjectMenuRow): boolean => row.summary.projectId === current?.projectId && row.endpointId === currentEndpointId;
-    const settingsIsCurrent = settingsTarget !== null && isCurrent(settingsTarget);
-    const settingsProject =
-        settingsTarget === null
-            ? null
-            : settingsIsCurrent
-              ? current
-              : (rows.find((row) => row.endpointId === settingsTarget.endpointId && row.summary.projectId === settingsTarget.summary.projectId)?.summary ??
-                settingsTarget.summary);
-    const settingsEndpoint = settingsTarget === null ? null : (endpoints.find((endpoint) => endpoint.id === settingsTarget.endpointId) ?? null);
-    useMachineHold(settingsEndpoint);
-
-    const openSettings = (row: ProjectMenuRow): void => {
-        setSettingsTarget(row);
-        setSettingsOpen(true);
-    };
-
-    // The application menu asks for the settings of the project that is open.
-    useEffect(
-        () =>
-            useUi.subscribe((state) => {
-                if (!state.projectSettingsAsked) {
-                    return;
-                }
-                useUi.getState().askProjectSettings(false);
-                const { current: project, currentEndpointId: endpointId } = useProject.getState();
-                const row = useProjectList
-                    .getState()
-                    .projects.find((candidate) => candidate.endpointId === endpointId && candidate.summary.projectId === project?.projectId);
-                if (row) {
-                    setSettingsTarget({ endpointId: row.endpointId, machineLabel: '', connected: true, summary: row.summary });
-                    setSettingsOpen(true);
-                }
-            }),
-        []
-    );
-
-    const appearance = async (change: Partial<Pick<ActionInput<'project.setAppearance'>, 'name' | 'icon' | 'image'>>): Promise<void> => {
-        if (settingsTarget === null) {
-            return;
-        }
-        const done = await performAsPerson('project.setAppearance', {
-            endpointId: settingsTarget.endpointId,
-            projectId: settingsTarget.summary.projectId,
-            name: change.name ?? null,
-            icon: change.icon ?? null,
-            image: change.image ?? null
-        });
-        const row = useProjectList
-            .getState()
-            .projects.find((candidate) => candidate.endpointId === done.endpointId && candidate.summary.projectId === done.projectId);
-        setSettingsTarget((target) =>
-            target?.summary.projectId === done.projectId ? { ...target, endpointId: done.endpointId, summary: row?.summary ?? target.summary } : target
-        );
-    };
-
-    const settingsSubject: ProjectSettingsSubject | null =
-        settingsTarget === null || settingsProject === null
-            ? null
-            : {
-                  project: settingsProject,
-                  endpointId: settingsTarget.endpointId,
-                  actions: {
-                      rename: (name) => appearance({ name }),
-                      setChosenIcon: (icon) => appearance({ icon: icon.value }),
-                      uploadIcon: (mime, base64) => appearance({ image: { mime, base64 } }),
-                      useFolderIcon: () => appearance({ icon: 'folder' })
-                  }
-              };
+    const settings = useProjectSettings(endpoints, isCurrent);
 
     /* Only the project on screen has a document here to count; every other row is the machine's to answer. */
     const askClose = async (row: ProjectMenuRow): Promise<void> => {
@@ -269,7 +199,7 @@ export function ProjectMenu() {
                 row={row}
                 platform={servers[row.endpointId]?.platform ?? null}
                 current={isCurrent(row)}
-                onSettings={() => openSettings(row)}
+                onSettings={() => settings.openFor(row)}
                 onClose={() => void askClose(row)}
             />
         ),
@@ -316,10 +246,10 @@ export function ProjectMenu() {
             </ProjectSwitcher>
 
             <ProjectSettingsDialog
-                subject={settingsSubject}
-                open={settingsOpen}
-                onOpenChange={setSettingsOpen}
-                onOpenChangeComplete={(open) => !open && setSettingsTarget(null)}
+                subject={settings.subject}
+                open={settings.open}
+                onOpenChange={settings.setOpen}
+                onOpenChangeComplete={(open) => !open && settings.clear()}
             />
 
             <PromptDialog
@@ -334,4 +264,79 @@ export function ProjectMenu() {
             />
         </>
     );
+}
+
+/* The settings dialog of one row of the menu, or of the open project when the application menu asks for it. */
+function useProjectSettings(endpoints: readonly Endpoint[], isCurrent: (row: ProjectMenuRow) => boolean) {
+    const rows = useProjectList((s) => s.projects);
+    const current = useProject((s) => s.current);
+    const [target, setTarget] = useState<ProjectMenuRow | null>(null);
+    /* Apart from the target, which outlives it: the dialog closes first and is emptied afterwards. */
+    const [open, setOpen] = useState(false);
+    const project =
+        target === null
+            ? null
+            : isCurrent(target)
+              ? current
+              : (rows.find((row) => row.endpointId === target.endpointId && row.summary.projectId === target.summary.projectId)?.summary ?? target.summary);
+    useMachineHold(target === null ? null : (endpoints.find((endpoint) => endpoint.id === target.endpointId) ?? null));
+
+    const openFor = (row: ProjectMenuRow): void => {
+        setTarget(row);
+        setOpen(true);
+    };
+
+    // The application menu asks for the settings of the project that is open.
+    useEffect(
+        () =>
+            useUi.subscribe((state) => {
+                if (!state.projectSettingsAsked) {
+                    return;
+                }
+                useUi.getState().askProjectSettings(false);
+                const { current: shown, currentEndpointId: endpointId } = useProject.getState();
+                const row = useProjectList
+                    .getState()
+                    .projects.find((candidate) => candidate.endpointId === endpointId && candidate.summary.projectId === shown?.projectId);
+                if (row) {
+                    openFor({ endpointId: row.endpointId, machineLabel: '', connected: true, summary: row.summary });
+                }
+            }),
+        []
+    );
+
+    const appearance = async (change: Partial<Pick<ActionInput<'project.setAppearance'>, 'name' | 'icon' | 'image'>>): Promise<void> => {
+        if (target === null) {
+            return;
+        }
+        const done = await performAsPerson('project.setAppearance', {
+            endpointId: target.endpointId,
+            projectId: target.summary.projectId,
+            name: change.name ?? null,
+            icon: change.icon ?? null,
+            image: change.image ?? null
+        });
+        const row = useProjectList
+            .getState()
+            .projects.find((candidate) => candidate.endpointId === done.endpointId && candidate.summary.projectId === done.projectId);
+        setTarget((previous) =>
+            previous?.summary.projectId === done.projectId ? { ...previous, endpointId: done.endpointId, summary: row?.summary ?? previous.summary } : previous
+        );
+    };
+
+    const subject: ProjectSettingsSubject | null =
+        target === null || project === null
+            ? null
+            : {
+                  project,
+                  endpointId: target.endpointId,
+                  actions: {
+                      rename: (name) => appearance({ name }),
+                      setChosenIcon: (icon) => appearance({ icon: icon.value }),
+                      uploadIcon: (mime, base64) => appearance({ image: { mime, base64 } }),
+                      useFolderIcon: () => appearance({ icon: 'folder' })
+                  }
+              };
+
+    return { subject, open, setOpen, openFor, clear: () => setTarget(null) };
 }
