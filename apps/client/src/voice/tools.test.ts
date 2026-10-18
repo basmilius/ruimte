@@ -38,7 +38,7 @@ function canvasNode(id: string, title: string, kind: ProjectNode['kind'], x: num
 function toolArgs(tool: string, fields: Record<string, unknown>): string {
     const definition = voiceToolDefinitions().find((candidate) => candidate.name === tool)!;
     const nulls = Object.fromEntries(Object.keys(definition.parameters.properties).map((field) => [field, null]));
-    return JSON.stringify({ ...nulls, ...(tool === 'communicate' ? { notify_on_completion: false } : {}), ...fields });
+    return JSON.stringify({ ...nulls, ...fields });
 }
 
 function run(tool: string, fields: Record<string, unknown>) {
@@ -263,7 +263,7 @@ describe('Voice domain tools', () => {
         expect(saved.output).toMatchObject({ ok: false, needs_confirmation: true });
     });
 
-    test('sends a prompt and follows its completion when asked to', async () => {
+    test('sends a prompt and always follows its completion', async () => {
         const chatId = useDocument.getState().addStandaloneView({ kind: 'chat', name: 'Chat Test', node: {} });
         // A turn id only comes from a machine, so the send itself answers as one would.
         const send = spyOn(clientActions, 'execute').mockResolvedValue({
@@ -272,17 +272,37 @@ describe('Voice domain tools', () => {
             output: { chatId, chat: 'Chat Test', queued: false, turnId: 'turn-1' }
         });
         try {
-            const result = await run('communicate', { action: 'chat.send', chatId, prompt: 'Give a motivating quote', notify_on_completion: true });
+            const result = await run('communicate', { action: 'chat.send', chatId, prompt: 'Give a motivating quote' });
             expect(send).toHaveBeenCalledWith(
                 'chat.send',
                 { chatId, prompt: 'Give a motivating quote', delivery: null, mentions: null, skills: null, chats: null, quoteSource: null, attachments: null },
                 VOICE_ACTION_CALL
             );
-            expect(result.output).toMatchObject({ ok: true, message: 'Submitted the prompt in “Chat Test”.' });
+            expect(result.output).toMatchObject({
+                ok: true,
+                message: 'Submitted the prompt in “Chat Test”. Ruimte reports when it finishes or waits for the user.'
+            });
             expect(result.action).toMatchObject({ kind: 'chat', label: 'Prompted AI Chat', detail: 'Chat Test: Give a motivating quote' });
             expect(result.followUp).toMatchObject({ key: endpointKey(currentEndpointId(), chatId), chat: 'Chat Test', turnId: 'turn-1' });
         } finally {
             send.mockRestore();
+        }
+    });
+
+    test('follows a terminal agent it starts, and not a plain terminal', async () => {
+        const created = (nodeId: string) => ({
+            status: 'completed' as const,
+            action: 'node.create' as const,
+            output: { viewId: 'main', view: 'Main', nodeId, node: 'Claude', kind: 'terminal' as const }
+        });
+        const create = spyOn(clientActions, 'execute').mockResolvedValueOnce(created('agent')).mockResolvedValueOnce(created('shell'));
+        try {
+            const agent = await run('manage_canvas', { action: 'node.create', viewId: 'main', kind: 'terminal', provider: 'claude' });
+            const shell = await run('manage_canvas', { action: 'node.create', viewId: 'main', kind: 'terminal' });
+            expect(agent.watch).toEqual({ key: endpointKey(currentEndpointId(), 'agent'), kind: 'terminal', name: 'Claude', project: 'Untitled project' });
+            expect(shell.watch).toBeUndefined();
+        } finally {
+            create.mockRestore();
         }
     });
 

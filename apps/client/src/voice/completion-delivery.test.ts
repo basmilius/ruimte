@@ -53,6 +53,17 @@ describe('AI Chat completion delivery to GPT-Live', () => {
         expect(sent.filter((event) => event.type === 'session.commentary.append')).toHaveLength(1);
     });
 
+    test('a status report speaks its own commentary after its context, once per id', () => {
+        const { delivery, sent, drain } = setup();
+        delivery.report('local:agent:waits:1', 'local:agent', 'The terminal agent waits.', 'Tell the user it waits.');
+        delivery.report('local:agent:waits:1', 'local:agent', 'The terminal agent waits.', 'Tell the user it waits.');
+        drain();
+        expect(sent.map((event) => [event.type, event.content])).toEqual([
+            ['session.thinking.append', 'The terminal agent waits.'],
+            ['session.commentary.append', 'Tell the user it waits.']
+        ]);
+    });
+
     test('unrelated acknowledgments cannot announce a partially delivered result', () => {
         const { delivery, sent } = setup();
         delivery.enqueue(followUp, completion);

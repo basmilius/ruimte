@@ -8,9 +8,11 @@ import { voiceWorkspaceRevision } from '@/voice/workspace-context';
 import { claimMicrophone } from '@/audio/ownership';
 import { localTimeZone } from '@adecore/ui/format';
 import i18next from 'i18next';
-import { isCanvasView, isOpenableView } from '@ruimte/contracts';
+import { isCanvasView, isOpenableView, type AgentStatus } from '@ruimte/contracts';
 import { focusedCanvas } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state';
+import { subscribeChatStatuses } from '@/state/chats';
+import { sessionStatus, useSessions } from '@/state/sessions';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
@@ -24,6 +26,17 @@ import { addTranscriptDelta, nextVoiceTimelineOrder, useVoice, type VoiceAction,
 import { bypassesQueue, executeVoiceTool } from '@/voice/tools';
 import { currentVoiceDomains } from '@/voice/domains';
 import { finishVoiceDiagnostics, startVoiceDiagnostics, voiceDiagnosticsObserver } from '@/voice/diagnostics-log';
+import {
+    chatWaits,
+    settledPrompt,
+    SETTLED_COMMENTARY,
+    terminalWaits,
+    VoiceSessionWatch,
+    waitingPrompt,
+    WAITING_COMMENTARY,
+    type VoiceSessionChange,
+    type VoiceWatchedSession
+} from '@/voice/session-watch';
 
 let session: LiveSession | null = null;
 let releaseMicrophone: (() => void) | null = null;
@@ -38,6 +51,9 @@ let followUpTimer: number | null = null;
 const followUpReleases = new Map<string, () => void>();
 const readingFollowUps = new Set<string>();
 let unsubscribeChats: (() => void) | null = null;
+let unsubscribeStatuses: (() => void) | null = null;
+let sessionWatch: VoiceSessionWatch | null = null;
+let waits = 0;
 let contextTimer: number | null = null;
 let clockTimer: number | null = null;
 const undo = new Map<string, () => void>();
@@ -94,6 +110,48 @@ function reportCompletion(id: string, followUp: VoiceChatFollowUp, completion: N
     chatFollowUps.delete(id);
     followUpReleases.get(id)?.();
     followUpReleases.delete(id);
+    if (![...chatFollowUps.values()].some((other) => other.key === followUp.key)) {
+        sessionWatch?.forget(followUp.key);
+    }
+}
+
+function statusOf(session: VoiceWatchedSession): AgentStatus | undefined {
+    return session.kind === 'chat' ? useChats.getState().statusByKey[session.key]?.info.status : sessionStatus(useSessions.getState().byKey[session.key]);
+}
+
+/* A chat's answer comes with its turn's own completion, so here a chat only reports that it waits. */
+function reportChange(session: VoiceWatchedSession, change: VoiceSessionChange): void {
+    if (!completionDelivery) {
+        return;
+    }
+    if (change === 'needs-you') {
+        const asked =
+            session.kind === 'chat'
+                ? chatWaits(useChats.getState().byKey[session.key])
+                : terminalWaits(useSessions.getState().byKey[session.key]?.agent?.requests);
+        completionDelivery.report(`${session.key}:waits:${++waits}`, session.key, waitingPrompt(session, asked), WAITING_COMMENTARY);
+        return;
+    }
+    if (session.kind === 'terminal') {
+        completionDelivery.report(`${session.key}:${change}:${++waits}`, session.key, settledPrompt(session, change), SETTLED_COMMENTARY);
+    }
+}
+
+function observeSession(session: VoiceWatchedSession, status: AgentStatus | undefined): void {
+    const change = sessionWatch?.observe(session.key, status) ?? null;
+    if (change) {
+        reportChange(session, change);
+    }
+}
+
+function checkSessions(): void {
+    for (const session of sessionWatch?.sessions() ?? []) {
+        observeSession(session, statusOf(session));
+    }
+}
+
+function watchSession(session: VoiceWatchedSession): void {
+    sessionWatch?.watch(session, statusOf(session));
 }
 
 function flushChatFollowUps(): void {
@@ -123,6 +181,11 @@ function pollChatFollowUps(): void {
             .request('chat.list', {})
             .then(async ({ chats }) => {
                 const info = chats.find((chat) => chat.chatId === chatId);
+                // After a project switch this window has no status of the chat but this answer. While it has one,
+                // that is newer than a list that was asked for before it, and a stale list would tell a wait twice.
+                if (info && chatFollowUps.get(id) === followUp && !useChats.getState().statusByKey[followUp.key]) {
+                    observeSession({ key: followUp.key, kind: 'chat', name: followUp.chat, project: followUp.project }, info.status);
+                }
                 if (!info || info.activeTurnId === followUp.turnId || chatFollowUps.get(id) !== followUp) {
                     return;
                 }
@@ -142,6 +205,7 @@ function pollChatFollowUps(): void {
 }
 
 function cancelChatFollowUps(key: string): void {
+    sessionWatch?.forget(key);
     for (const [id, followUp] of chatFollowUps) {
         if (followUp.key === key) {
             chatFollowUps.delete(id);
@@ -160,6 +224,7 @@ function trackChatFollowUp(followUp: VoiceChatFollowUp): void {
         followUpReleases.set(id, pool.hold(endpoint));
     }
     chatFollowUps.set(id, followUp);
+    watchSession({ key: followUp.key, kind: 'chat', name: followUp.chat, project: followUp.project });
     flushChatFollowUps();
 }
 
@@ -246,6 +311,7 @@ export async function startVoice(): Promise<void> {
         }
     );
     completionDelivery = new VoiceCompletionDelivery((event) => next.send(event));
+    sessionWatch = new VoiceSessionWatch();
     const queue = new VoiceToolQueue(voiceWorkspaceRevision);
     toolQueue = queue;
     const execute = async (name: string, args: string): Promise<Record<string, unknown>> => {
@@ -261,6 +327,9 @@ export async function startVoice(): Promise<void> {
         }
         if (execution.followUp) {
             trackChatFollowUp(execution.followUp);
+        }
+        if (execution.watch) {
+            watchSession(execution.watch);
         }
         return execution.output;
     };
@@ -303,6 +372,12 @@ export async function startVoice(): Promise<void> {
             contextTimer = window.setTimeout(appendContext, 250);
         });
         unsubscribeChats = useChats.subscribe(flushChatFollowUps);
+        const offChatStatuses = subscribeChatStatuses(checkSessions);
+        const offSessions = useSessions.subscribe(checkSessions);
+        unsubscribeStatuses = () => {
+            offChatStatuses();
+            offSessions();
+        };
         followUpTimer = window.setInterval(pollChatFollowUps, 3000);
         unsubscribeProject = useProject.subscribe((state, previous) => {
             if (state.current?.projectId !== previous.current?.projectId || state.currentEndpointId !== previous.currentEndpointId) {
@@ -336,6 +411,8 @@ export function stopVoice(): void {
     unsubscribeDocument = null;
     unsubscribeChats?.();
     unsubscribeChats = null;
+    unsubscribeStatuses?.();
+    unsubscribeStatuses = null;
     unsubscribeProject?.();
     unsubscribeProject = null;
     if (followUpTimer !== null) {
@@ -371,6 +448,7 @@ function stopClock(): void {
 function endSessionParts(): void {
     completionDelivery?.clear();
     completionDelivery = null;
+    sessionWatch = null;
     toolQueue?.cancel();
     toolQueue = null;
     toolLoop?.reset();

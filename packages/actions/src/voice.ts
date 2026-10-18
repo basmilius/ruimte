@@ -71,17 +71,6 @@ const DOMAIN_TOOLS: Record<ActionDomain, { name: string; description: string }> 
     }
 };
 
-/* Fields only Voice's adapter reads; the action never sees them. */
-const VOICE_FIELDS: Partial<Record<ActionDomain, Record<string, JsonSchema>>> = {
-    communicate: {
-        notify_on_completion: {
-            type: 'boolean',
-            description:
-                'With chat.send: true when the user asks Voice to wait for the answer or report the result after the AI Chat finishes. This schedules an automatic spoken notification. False for every other action.'
-        }
-    }
-};
-
 const CONTROL_TOOL: VoiceToolDefinition = {
     type: 'function',
     name: VOICE_CONTROL_TOOL,
@@ -211,8 +200,7 @@ function toolOf(domain: ActionDomain, actions: readonly ActionName[]): VoiceTool
         action: { type: 'string', enum: [...actions] },
         ...Object.fromEntries(
             [...fields].map(([field, entry]) => [field, entry.nullable || entry.actions < actions.length ? nullable(entry.schema) : entry.schema])
-        ),
-        ...VOICE_FIELDS[domain]
+        )
     };
     const { name, description } = DOMAIN_TOOLS[domain];
     return {

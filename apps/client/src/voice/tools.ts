@@ -13,7 +13,9 @@ import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
+import { endpointOfNodeId } from '@/state/node-endpoint';
 import type { VoiceChatFollowUp } from '@/voice/chat-follow-up';
+import type { VoiceWatchedSession } from '@/voice/session-watch';
 import type { VoiceActionKind } from '@/voice/state';
 import { objectArguments } from '@/voice/tool-arguments';
 import { voiceWorkspaceRevision } from '@/voice/workspace-context';
@@ -34,6 +36,7 @@ export interface VoiceToolExecution {
     output: Record<string, unknown>;
     action?: ToolAction;
     followUp?: VoiceChatFollowUp;
+    watch?: VoiceWatchedSession;
     clearedChatKey?: string;
 }
 
@@ -376,12 +379,13 @@ async function executed(name: ActionName, input: Record<string, unknown>): Promi
     return clientActions.confirm(result.confirmationToken, true, VOICE_ACTION_CALL);
 }
 
-function sent(output: ActionOutput<'chat.send'>, prompt: string, notify: boolean, endpointId: string, project: string): VoiceToolExecution {
-    const cannotFollow = notify && output.turnId === undefined;
+/* Every prompt Voice sends is followed, since the speech model only asked for a report when a person happened to say so. */
+function sent(output: ActionOutput<'chat.send'>, prompt: string, endpointId: string, project: string): VoiceToolExecution {
+    const cannotFollow = output.turnId === undefined;
     const execution: VoiceToolExecution = {
         output: {
             ok: true,
-            message: `${output.queued ? 'Queued' : 'Submitted'} the prompt in “${output.chat}”.${cannotFollow ? ' Update Ruimte on this machine before asking for a completion notification.' : ''}`,
+            message: `${output.queued ? 'Queued' : 'Submitted'} the prompt in “${output.chat}”.${cannotFollow ? ' Ruimte cannot report when it finishes until Ruimte on this machine is updated.' : ' Ruimte reports when it finishes or waits for the user.'}`,
             ...output
         },
         action: {
@@ -390,10 +394,27 @@ function sent(output: ActionOutput<'chat.send'>, prompt: string, notify: boolean
             detail: `${output.chat}: ${prompt.slice(0, 120)}`
         }
     };
-    if (!notify || output.turnId === undefined) {
+    if (output.turnId === undefined) {
         return execution;
     }
     return { ...execution, followUp: { key: endpointKey(endpointId, output.chatId), project, chat: output.chat, turnId: output.turnId } };
+}
+
+function terminalWatch(nodeId: string, name: string, project: string): VoiceWatchedSession {
+    return { key: endpointKey(endpointOfNodeId(nodeId), nodeId), kind: 'terminal', name, project };
+}
+
+/* A terminal agent says nothing over the wire about its answer, but its status tells when it finished or waits. */
+function watchedTerminal(name: ActionName, input: Record<string, unknown>, output: Record<string, unknown>, project: string): VoiceWatchedSession | undefined {
+    if (name === 'node.create') {
+        const created = output as ActionOutput<'node.create'>;
+        return created.kind === 'terminal' && input.provider != null ? terminalWatch(created.nodeId, created.node, project) : undefined;
+    }
+    if (name === 'terminal.resumeAgent') {
+        const resumed = output as ActionOutput<'terminal.resumeAgent'>;
+        return terminalWatch(resumed.terminalId, resumed.terminal, project);
+    }
+    return undefined;
 }
 
 async function runAction(name: ActionName, args: Record<string, unknown>): Promise<VoiceToolExecution> {
@@ -405,9 +426,12 @@ async function runAction(name: ActionName, args: Record<string, unknown>): Promi
         return failureOf(result);
     }
     if (result.action === 'chat.send') {
-        return sent(result.output as ActionOutput<'chat.send'>, String(input.prompt), args.notify_on_completion === true, endpointId, project);
+        return sent(result.output as ActionOutput<'chat.send'>, String(input.prompt), endpointId, project);
     }
-    return completed(result.action, result.output as Record<string, unknown>, result.undoToken, endpointId);
+    const output = result.output as Record<string, unknown>;
+    const execution = completed(result.action, output, result.undoToken, endpointId);
+    const watch = watchedTerminal(result.action, input, output, project);
+    return watch ? { ...execution, watch } : execution;
 }
 
 async function controlAction(args: Record<string, unknown>): Promise<VoiceToolExecution> {
