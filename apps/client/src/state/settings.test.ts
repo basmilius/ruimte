@@ -10,9 +10,9 @@ test('project glow defaults to on while preserving an explicit opt-out', () => {
 });
 
 test("a fresh client keeps the theme's own grays and a gone preset falls back to them", () => {
-    expect(settingsFrom({}).palette).toBe('neutral');
-    expect(settingsFrom({ palette: 'night' }).palette).toBe('night');
-    expect(settingsFrom({ palette: 'sepia' as Settings['palette'] }).palette).toBe('neutral');
+    expect(settingsFrom({}).palette).toBe('default');
+    expect(settingsFrom({ palette: 'slate' }).palette).toBe('slate');
+    expect(settingsFrom({ palette: 'sepia' as Settings['palette'] }).palette).toBe('default');
 });
 
 describe('project navigation', () => {

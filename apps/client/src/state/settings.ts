@@ -145,7 +145,7 @@ export interface Settings {
     needsYouAllProjects: boolean;
     /* One of the node accents. Blue is the brand's own and the one a fresh client starts on. */
     accent: AccentId;
-    /* The tint of the grounds, surfaces and text on both sides; neutral keeps the theme's own grays. */
+    /* The tint of the grounds, surfaces and text on both sides; the default keeps the theme's own grays. */
     palette: PalettePreset;
     /* The glow at the top of the sidebar, and of the toolbar while the sidebar is closed, in the color of the project. */
     projectGlow: boolean;
@@ -290,7 +290,7 @@ const DEFAULT_SETTINGS: Settings = {
     projectNavigation: 'switcher',
     needsYouAllProjects: true,
     accent: 'blue',
-    palette: 'neutral',
+    palette: 'default',
     projectGlow: true,
     interfaceFont: 'system',
     font: 'system',

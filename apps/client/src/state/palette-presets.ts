@@ -1,23 +1,15 @@
 import type { PaletteSide, PaletteSideInput, PaletteToken } from '@/state/palette';
+import { TAILWIND_COLORS, TAILWIND_NEUTRALS, TAILWIND_STEPS, type TailwindPalette, type TailwindSteps } from '@/state/tailwind-palettes';
 
-/* The grounds a person can give the app. Neutral is the theme's own grays; every other one tints them. */
-export const PALETTE_PRESETS = ['neutral', 'night', 'paper', 'forest', 'plum'] as const;
+/* The grounds a person can give the app: the theme's own grays first, then every neutral and every
+   color of Tailwind's scale, in its order. */
+export const PALETTE_PRESETS = ['default', ...TAILWIND_NEUTRALS, ...TAILWIND_COLORS] as const;
 
 export type PalettePreset = (typeof PALETTE_PRESETS)[number];
 
-/* A tint as an OKLCH hue and the chroma the grounds get at most. Low on purpose: a ground that shows its
-   color loudly tires the eye over a working day and fights the accent. */
-interface Tint {
-    hue: number;
-    chroma: number;
-}
-
-const TINTS: Record<Exclude<PalettePreset, 'neutral'>, Tint> = {
-    night: { hue: 255, chroma: 0.035 },
-    paper: { hue: 75, chroma: 0.03 },
-    forest: { hue: 160, chroma: 0.03 },
-    plum: { hue: 315, chroma: 0.035 }
-};
+/* How much color a ground of a colored palette carries at most. Tailwind's own darkest steps are far
+   more saturated than a ground a person looks at all day should be; its neutrals stay as they are. */
+const COLOR_GROUND_CHROMA = 0.04;
 
 type NeutralToken = Exclude<PaletteToken, 'accent'>;
 
@@ -62,7 +54,7 @@ const LIGHTNESS: Record<PaletteSide, Record<NeutralToken, number>> = {
     }
 };
 
-/* Text reads best close to gray, so it carries only a trace of the tint the grounds have. */
+/* Text of a colored palette reads best close to gray, so it carries only a trace of the tint. */
 const CHROMA_SHARE: Partial<Record<NeutralToken, number>> = {
     text: 0.2,
     'text-muted': 0.45,
@@ -95,26 +87,49 @@ export function oklchHex(lightness: number, chroma: number, hue: number): string
         .join('')}`;
 }
 
-function tintedTokens(tint: Tint, side: PaletteSide): PaletteSideInput {
+/* The chroma and hue a Tailwind scale has at a lightness, between the two steps around it, or at the
+   end of the scale past either end. */
+function tintAt(steps: TailwindSteps, lightness: number): { chroma: number; hue: number } {
+    const lightest = steps[0]!;
+    const darkest = steps[steps.length - 1]!;
+    if (lightness >= lightest[0]) {
+        return { chroma: lightest[1], hue: lightest[2] };
+    }
+    if (lightness <= darkest[0]) {
+        return { chroma: darkest[1], hue: darkest[2] };
+    }
+    const upper = steps.findLastIndex((step) => step[0] >= lightness);
+    const [highLightness, highChroma, highHue] = steps[upper]!;
+    const [lowLightness, lowChroma, lowHue] = steps[upper + 1]!;
+    const share = (highLightness - lightness) / (highLightness - lowLightness);
+    // The short way round the wheel, so a scale that crosses zero does not sweep through every hue.
+    const turn = ((((lowHue - highHue) % 360) + 540) % 360) - 180;
+    return { chroma: highChroma + (lowChroma - highChroma) * share, hue: (highHue + turn * share + 360) % 360 };
+}
+
+function tintedTokens(palette: TailwindPalette | null, side: PaletteSide): PaletteSideInput {
     const lightness = LIGHTNESS[side];
+    const colored = palette !== null && (TAILWIND_COLORS as readonly string[]).includes(palette);
     const tokens: PaletteSideInput = {};
     for (const token of Object.keys(lightness) as NeutralToken[]) {
-        tokens[token] = oklchHex(lightness[token], tint.chroma * (CHROMA_SHARE[token] ?? 1), tint.hue);
+        const tint = palette === null ? { chroma: 0, hue: 0 } : tintAt(TAILWIND_STEPS[palette], lightness[token]);
+        const chroma = colored ? Math.min(tint.chroma, COLOR_GROUND_CHROMA) * (CHROMA_SHARE[token] ?? 1) : tint.chroma;
+        tokens[token] = oklchHex(lightness[token], chroma, tint.hue);
     }
     return tokens;
 }
 
-/* The tokens a preset sets on one side. Neutral sets none, so the theme's own values stay exactly. */
+/* The tokens a preset sets on one side. The default sets none, so the theme's own values stay exactly. */
 export function presetTokens(preset: PalettePreset, side: PaletteSide): PaletteSideInput {
-    return preset === 'neutral' ? {} : tintedTokens(TINTS[preset], side);
+    return preset === 'default' ? {} : tintedTokens(preset, side);
 }
 
-/* What a preset looks like, for a sample drawn while another one is in use. Neutral is drawn as the
-   grays it keeps, which no token on the page still holds once a tint is chosen. */
+/* What a preset looks like, for a sample drawn while another one is in use. The default is drawn as the
+   grays it keeps, which no token on the page still holds once another palette is chosen. */
 export function presetSample(preset: PalettePreset, side: PaletteSide): PaletteSideInput {
-    return tintedTokens(preset === 'neutral' ? { hue: 0, chroma: 0 } : TINTS[preset], side);
+    return tintedTokens(preset === 'default' ? null : preset, side);
 }
 
 export function palettePresetFrom(stored: unknown): PalettePreset {
-    return PALETTE_PRESETS.find((preset) => preset === stored) ?? 'neutral';
+    return PALETTE_PRESETS.find((preset) => preset === stored) ?? 'default';
 }

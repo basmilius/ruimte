@@ -15,14 +15,14 @@ function contrast(first: string, second: string): number {
 }
 
 describe('palette presets', () => {
-    test('neutral leaves every token to the theme', () => {
-        expect(presetTokens('neutral', 'light')).toEqual({});
-        expect(presetTokens('neutral', 'dark')).toEqual({});
+    test('the default leaves every token to the theme', () => {
+        expect(presetTokens('default', 'light')).toEqual({});
+        expect(presetTokens('default', 'dark')).toEqual({});
     });
 
     // WCAG's 4.5:1 for every text a person reads, the muted kind included, on every ground it sits on.
-    // Neutral is the theme's own values, which this file does not write.
-    for (const preset of PALETTE_PRESETS.filter((entry) => entry !== 'neutral')) {
+    // The default is the theme's own values, which this file does not write.
+    for (const preset of PALETTE_PRESETS.filter((entry) => entry !== 'default')) {
         for (const side of ['light', 'dark'] as const) {
             test(`${preset} on the ${side} side keeps text readable`, () => {
                 const tokens = presetTokens(preset, side);
@@ -43,9 +43,9 @@ describe('palette presets', () => {
         }
     });
 
-    test('a stored preset that is gone reads as neutral', () => {
-        expect(palettePresetFrom('paper')).toBe('paper');
-        expect(palettePresetFrom('sepia')).toBe('neutral');
-        expect(palettePresetFrom(undefined)).toBe('neutral');
+    test('a stored preset that is gone reads as the default', () => {
+        expect(palettePresetFrom('stone')).toBe('stone');
+        expect(palettePresetFrom('sepia')).toBe('default');
+        expect(palettePresetFrom(undefined)).toBe('default');
     });
 });

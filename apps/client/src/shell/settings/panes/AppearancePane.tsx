@@ -10,7 +10,8 @@ import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/language
 import { FontSection } from '@/shell/settings/panes/FontSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useSettings } from '@/state/settings';
-import { PALETTE_PRESETS, presetSample, type PalettePreset } from '@/state/palette-presets';
+import { presetSample, type PalettePreset } from '@/state/palette-presets';
+import { TAILWIND_COLORS, TAILWIND_NEUTRALS } from '@/state/tailwind-palettes';
 import { useTheme, type Theme } from '@/state/theme';
 
 /* A date with a weekday, a month and a clock, so every part a region writes differently is in it. */
@@ -81,7 +82,7 @@ function PaletteSample({ preset, side }: { preset: PalettePreset; side: 'light' 
     const tokens = presetSample(preset, side);
     const style = Object.fromEntries(Object.entries(tokens).map(([token, value]) => [`--${token}`, value])) as CSSProperties;
     return (
-        <span style={style} className="flex h-14 w-23 items-end bg-canvas-bg p-2">
+        <span style={style} className="flex h-12 w-19 items-end bg-canvas-bg p-1.5">
             <span className="flex w-full flex-col gap-1 rounded-sm bg-surface-raised p-1.5">
                 <span className="h-1 w-3/4 rounded-full bg-text-muted" />
                 <span className="h-1 w-1/2 rounded-full bg-text-faint" />
@@ -90,33 +91,44 @@ function PaletteSample({ preset, side }: { preset: PalettePreset; side: 'light' 
     );
 }
 
-/* The tint of the grounds, panels and text, beside the accent and apart from it. */
-function PalettePicker() {
+function PaletteOption({ preset, side }: { preset: PalettePreset; side: 'light' | 'dark' }) {
     const { t } = useTranslation('settings');
     const palette = useSettings((s) => s.palette);
     const update = useSettings((s) => s.update);
+    return (
+        <button
+            type="button"
+            role="radio"
+            aria-checked={palette === preset}
+            className="flex flex-col items-center gap-1.5 rounded-lg"
+            onClick={() => update({ palette: preset })}
+        >
+            <span
+                className={clsx(
+                    'flex overflow-hidden rounded-lg',
+                    palette === preset ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface' : 'ring-1 ring-border-strong'
+                )}
+            >
+                <PaletteSample preset={preset} side={side} />
+            </span>
+            <span className={clsx('text-xs', palette === preset ? 'text-text' : 'text-text-muted')}>{t(`appearance.palette.options.${preset}`)}</span>
+        </button>
+    );
+}
+
+/* The tint of the grounds, panels and text, beside the accent and apart from it: the grays on one line,
+   the colors on the next. */
+function PalettePicker() {
+    const { t } = useTranslation('settings');
     const side = useTheme((state) => state.resolved);
     return (
-        <div className="flex flex-wrap gap-3" role="radiogroup" aria-label={t('appearance.palette.label')}>
-            {PALETTE_PRESETS.map((preset) => (
-                <button
-                    key={preset}
-                    type="button"
-                    role="radio"
-                    aria-checked={palette === preset}
-                    className="flex flex-col items-center gap-2 rounded-lg"
-                    onClick={() => update({ palette: preset })}
-                >
-                    <span
-                        className={clsx(
-                            'flex overflow-hidden rounded-lg',
-                            palette === preset ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface' : 'ring-1 ring-border-strong'
-                        )}
-                    >
-                        <PaletteSample preset={preset} side={side} />
-                    </span>
-                    <span className={clsx('text-xs', palette === preset ? 'text-text' : 'text-text-muted')}>{t(`appearance.palette.options.${preset}`)}</span>
-                </button>
+        <div className="flex flex-col gap-3" role="radiogroup" aria-label={t('appearance.palette.label')}>
+            {[['default', ...TAILWIND_NEUTRALS] as const, TAILWIND_COLORS].map((group) => (
+                <div key={group[0]} className="flex flex-wrap gap-2.5">
+                    {group.map((preset) => (
+                        <PaletteOption key={preset} preset={preset} side={side} />
+                    ))}
+                </div>
             ))}
         </div>
     );
