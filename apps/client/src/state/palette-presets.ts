@@ -135,11 +135,13 @@ export function presetSample(preset: PalettePreset, side: PaletteSide): PaletteS
 
 /* A preset as one round swatch: its color and a lighter step of it, split on the diagonal. The grounds
    themselves are too close to gray to tell apart at this size, so the swatch shows the scale they come
-   from (500 and 300); the default shows the plain grays it keeps. */
+   from (500 and 300); the default shows the plain grays it keeps. The lighter half has a hairline edge,
+   an alpha over its own color like every border, so it stands off a light ground; the darker half
+   covers that edge on its side, since it stands off by itself. */
 export function presetSwatch(preset: PalettePreset): string {
     const steps = TAILWIND_STEPS[preset === 'default' ? 'neutral' : preset];
     const [lighter, color] = [steps[3]!, steps[5]!].map(([lightness, chroma, hue]) => oklchHex(lightness, chroma, hue));
-    return `linear-gradient(135deg, ${lighter} 50%, ${color} 50%)`;
+    return `linear-gradient(135deg, transparent 50%, ${color} 50%), radial-gradient(closest-side, transparent calc(100% - 1px), var(--border-strong) calc(100% - 1px)), ${lighter}`;
 }
 
 export function palettePresetFrom(stored: unknown): PalettePreset {
