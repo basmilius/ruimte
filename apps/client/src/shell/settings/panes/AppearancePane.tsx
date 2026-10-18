@@ -124,10 +124,10 @@ function PaletteRow() {
                 }
             }}
         >
-            <Popover.Trigger render={<Button variant="secondary" size="sm" />}>
+            <Popover.Trigger render={<Button variant="secondary" size="md" />}>
                 <span className="h-4 w-4 rounded-full" style={{ background: presetSwatch(palette) }} aria-hidden />
                 {t(`appearance.palette.options.${palette}`)}
-                <Icon icon={ChevronDown} size={12} />
+                <Icon icon={ChevronDown} size={14} />
             </Popover.Trigger>
             <Popover.Popup align="end" className="flex flex-col items-center gap-3 p-4">
                 <div
