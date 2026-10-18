@@ -21,6 +21,7 @@ import {
 import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING } from '@/state/code-folding';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
 import { storedJson } from '@/state/stored-json';
+import { applyPalette } from '@/state/palette';
 
 export const SETTINGS_STORAGE_KEY = 'ruimte.settings';
 
@@ -446,14 +447,8 @@ function read(): Settings {
     }
 }
 
-/* The accent as channels. A token that needs it with an alpha writes `rgb(var(--accent-rgb) / a)`,
-   which still computes to a literal color for the reader that wants one, the terminal above all. */
-function channelsOf(hex: string): string {
-    const value = Number.parseInt(hex.slice(1), 16);
-    return `${(value >> 16) & 255} ${(value >> 8) & 255} ${value & 255}`;
-}
-
-/* The few tokens a person may change are set on the root, over the theme's own values. */
+/* The few tokens a person may change are set over the theme's own values: the type on the root, the
+   colors in the palette's stylesheet, which knows the two sides apart. */
 function apply(settings: Settings): void {
     // The tokens are written on the document, and a test that reads this module for its defaults has none.
     if (typeof document === 'undefined') {
@@ -465,12 +460,7 @@ function apply(settings: Settings): void {
     root.setProperty('--code-font-size', `${settings.codeFontSize}px`);
     root.setProperty('--code-line-height', `${codeLineHeight(settings.codeFontSize, settings.codeLineHeight)}px`);
     const accent = accentColor(settings.accent);
-    if (accent) {
-        root.setProperty('--accent', accent);
-        root.setProperty('--accent-rgb', channelsOf(accent));
-        root.setProperty('--accent-soft', `color-mix(in srgb, ${accent} 16%, var(--surface))`);
-        root.setProperty('--term-cursor', accent);
-    }
+    applyPalette({ light: { accent }, dark: { accent } });
     const interfaceFont = INTERFACE_FONTS.find((entry) => entry.id === settings.interfaceFont);
     if (interfaceFont && interfaceFont.id !== 'system') {
         root.setProperty('--font-sans', interfaceFont.stack);

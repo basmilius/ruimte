@@ -39,6 +39,7 @@ import { startLastSeen } from '@/state/last-seen-watch';
 import { startSharedStorage } from '@/state/shared-storage';
 import { refuseStrayDrops } from '@/canvas/drop';
 import { useTheme } from '@/state/theme';
+import { usePalette } from '@/state/palette';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
 import { reloadOnStaleChunk } from '@/stale-chunks';
 import { reportCaught, startTelemetry } from '@/telemetry/report';
@@ -120,6 +121,8 @@ useTheme.subscribe((state, previous) => {
         reportTheme();
     }
 });
+// A palette that changes the ground changes it behind the page too.
+usePalette.subscribe(reportTheme);
 if (import.meta.env.DEV) {
     exposeTerminalTestHooks();
 }

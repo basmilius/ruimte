@@ -9,7 +9,7 @@ import { useDrawingMirror } from '@/drawing/mirror';
 import { applyCamera, paintElements, paintOptions } from '@/drawing/paint';
 import { showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
-import { useTheme } from '@/state/theme';
+import { usePaletteKey } from '@/state/theme';
 import { EmptyState } from '@adecore/ui';
 
 /* World units of air around a mirrored drawing, so nothing touches the frame. */
@@ -29,7 +29,7 @@ export function DrawingNode({ id }: { id: string }) {
     const boxRef = useRef<HTMLDivElement>(null);
     const [size, setSize] = useState({ w: 0, h: 0 });
     const [fontReady, setFontReady] = useState(false);
-    const theme = useTheme((s) => s.resolved);
+    const paletteKey = usePaletteKey();
     const elements = mirror?.snapshot ?? NO_ELEMENTS;
 
     useEffect(() => {
@@ -72,7 +72,7 @@ export function DrawingNode({ id }: { id: string }) {
         }
         applyCamera(ctx, camera, dpr);
         paintElements(ctx, elements, paintOptions());
-    }, [elements, size, theme, fontReady]);
+    }, [elements, size, paletteKey, fontReady]);
 
     return (
         <div ref={boxRef} className="h-full w-full" onDoubleClick={() => viewId && showView(viewId)}>

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { storedText } from '@/state/stored-json';
+import { usePalette } from '@/state/palette';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -58,3 +59,11 @@ export const useTheme = create<ThemeState>((set, get) => {
         }
     };
 });
+
+/* What paints the theme's colors where no style rule reaches (a canvas element, the window behind the
+   page) reads them again when this changes: the side, or a color a person put over it. */
+export function usePaletteKey(): string {
+    const resolved = useTheme((s) => s.resolved);
+    const revision = usePalette((s) => s.revision);
+    return `${resolved}:${revision}`;
+}

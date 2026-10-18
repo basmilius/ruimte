@@ -32,7 +32,7 @@ import { useDocument } from '@/state/document';
 import { nextId } from '@/state/canvas';
 import { isWritten, newSeed, useDrawing, useDrawingStore } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
-import { useTheme } from '@/state/theme';
+import { usePaletteKey } from '@/state/theme';
 import { isInFloatingLayer, Kbd, isModHeld, ContextMenu } from '@adecore/ui';
 import { isApplePlatform } from '@/desktop/bridge';
 
@@ -115,7 +115,7 @@ export function DrawingView({ id }: { id: string }) {
     const draftRef = useRef<HTMLCanvasElement>(null);
     const camera = useDrawing(useShallow((s) => s.camera));
     const tool = useDrawing((s) => s.tool);
-    const theme = useTheme((s) => s.resolved);
+    const paletteKey = usePaletteKey();
     const [fontReady, setFontReady] = useState(false);
     const [marquee, setMarquee] = useState<Rect | null>(null);
     const gesture = useRef<Gesture | null>(null);
@@ -211,8 +211,8 @@ export function DrawingView({ id }: { id: string }) {
                 cancelAnimationFrame(frame);
             }
         };
-        // The theme and the font change what the same elements look like, so both force a repaint.
-    }, [drawingStore, theme, fontReady, id]);
+        // The palette and the font change what the same elements look like, so both force a repaint.
+    }, [drawingStore, paletteKey, fontReady, id]);
 
     useWheelCamera(rootRef, drawingStore);
 
