@@ -30,6 +30,7 @@ import {
     isCanvasView,
     isOpenableView,
     type AgentKind,
+    type ChatItem,
     type ComputerApprovalChoice,
     type DeviceReference,
     type NodeAccent,
@@ -64,6 +65,8 @@ import type { CreatableNodeKind, CreatableViewKind } from '@/actions/action-reac
 export interface ClientActionMachine {
     sendChat(chatId: string, text: string, extras: ChatSendExtras): Promise<{ queued: boolean; turnId?: string }>;
     clearChat(chatId: string, force: boolean): Promise<void>;
+    /* The thread of a chat nobody in this window opened, read without attaching to it for good. */
+    inspectChat(chatId: string): Promise<{ items: ChatItem[] }>;
     clearTerminal(terminalId: string): void;
     /* The agent CLIs of the machine the project runs on. */
     providers(): readonly ProviderInfo[];
@@ -85,6 +88,7 @@ export interface ClientActionMachine {
 const LIVE_MACHINE: ClientActionMachine = {
     sendChat: (chatId, text, extras) => (chatClientFor(endpointOfNodeId(chatId)) ?? chatClient).send(chatId, text, extras),
     clearChat: (chatId, force) => (chatClientFor(endpointOfNodeId(chatId)) ?? chatClient).clear(chatId, force),
+    inspectChat: (chatId) => (chatClientFor(endpointOfNodeId(chatId)) ?? chatClient).inspect(chatId),
     clearTerminal: (terminalId) => (sessionClientFor(endpointOfNodeId(terminalId)) ?? sessionClient).clear(terminalId),
     providers: () => providersOf(currentEndpointId()).providers,
     copyViewContent: (kind, from, to) => void (kind === 'drawing' ? drawingClient.copy(from, to) : diagramClient.copy(from, to)),
@@ -105,6 +109,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
     const {
         sendChat,
         clearChat,
+        inspectChat,
         clearTerminal,
         providers,
         copyViewContent,
@@ -202,16 +207,33 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
             }
             return { output: { chatId, chat } };
         },
-        'chat.read': ({ chatId, limit }) => {
+        'chat.read': async ({ chatId, limit }) => {
             const chat = sessionTitle(document, chatId, 'chat');
             if (!chat) {
                 throw new ActionRefusal('unknown-chat', `No AI Chat with id “${chatId}” exists in this project.`);
             }
             const state = useChats.getState().byKey[endpointKey(endpointOfNodeId(chatId), chatId)];
-            if (!state) {
-                throw new ActionRefusal('chat-not-loaded', `Open “${chat}” before asking Voice to read it.`);
+            if (state) {
+                return { output: { chatId, chat, ...recentChatMessages(state.items, state.order, limit ?? 20) } };
             }
-            return { output: { chatId, chat, ...recentChatMessages(state.items, state.order, limit ?? 20) } };
+            // Voice says the rest of a long answer is a read away, also of a chat on a view nobody opened.
+            try {
+                const { items } = await inspectChat(chatId);
+                const byId = Object.fromEntries(items.map((item) => [item.id, item]));
+                return {
+                    output: {
+                        chatId,
+                        chat,
+                        ...recentChatMessages(
+                            byId,
+                            items.map((item) => item.id),
+                            limit ?? 20
+                        )
+                    }
+                };
+            } catch (error: unknown) {
+                throw asRefusal(error);
+            }
         }
     };
     return new ActionRegistry<void>(handlers, { checkRevision: checkClientRevision });

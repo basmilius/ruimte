@@ -1240,7 +1240,8 @@ export const ACTION_DEFINITIONS = {
     },
     'chat.read': {
         title: 'Read recent AI Chat messages',
-        description: 'Reads a limited recent excerpt of a loaded AI Chat without including reasoning or tool output. A null limit reads the last 20 messages.',
+        description:
+            'Reads a limited recent excerpt of an AI Chat of this project, also one nobody opened in this window, without including reasoning or tool output. A null limit reads the last 20 messages.',
         effect: 'read',
         domain: 'communicate',
         actors: CLIENT_ACTORS,
