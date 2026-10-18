@@ -452,6 +452,24 @@ function read(): Settings {
     }
 }
 
+function applyColors(palette: PalettePreset, accentId: AccentId): void {
+    const accent = accentColor(accentId);
+    applyPalette({
+        light: { ...presetTokens(palette, 'light'), accent },
+        dark: { ...presetTokens(palette, 'dark'), accent }
+    });
+}
+
+/* Shows the app in a palette a person is looking at before picking it, or with none back in the one they
+   picked. Nothing is stored, so another window and a reload still have the picked one. */
+export function previewPalette(palette: PalettePreset | null): void {
+    if (typeof document === 'undefined') {
+        return;
+    }
+    const settings = useSettings.getState();
+    applyColors(palette ?? settings.palette, settings.accent);
+}
+
 /* The few tokens a person may change are set over the theme's own values: the type on the root, the
    colors in the palette's stylesheet, which knows the two sides apart. */
 function apply(settings: Settings): void {
@@ -464,11 +482,7 @@ function apply(settings: Settings): void {
     root.setProperty('font-size', `${settings.interfaceFontSize}px`);
     root.setProperty('--code-font-size', `${settings.codeFontSize}px`);
     root.setProperty('--code-line-height', `${codeLineHeight(settings.codeFontSize, settings.codeLineHeight)}px`);
-    const accent = accentColor(settings.accent);
-    applyPalette({
-        light: { ...presetTokens(settings.palette, 'light'), accent },
-        dark: { ...presetTokens(settings.palette, 'dark'), accent }
-    });
+    applyColors(settings.palette, settings.accent);
     const interfaceFont = INTERFACE_FONTS.find((entry) => entry.id === settings.interfaceFont);
     if (interfaceFont && interfaceFont.id !== 'system') {
         root.setProperty('--font-sans', interfaceFont.stack);

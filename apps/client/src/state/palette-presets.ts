@@ -1,17 +1,14 @@
 import type { PaletteSide, PaletteSideInput, PaletteToken } from '@/state/palette';
 import { TAILWIND_COLORS, TAILWIND_NEUTRALS, TAILWIND_STEPS, type TailwindPalette, type TailwindSteps } from '@/state/tailwind-palettes';
 
-/* The grounds a person can give the app: the theme's own grays first, then every neutral and every
-   color of Tailwind's scale, in its order. Zinc is left out: the theme's own grays are zinc already. */
-export const PALETTE_PRESETS = ['default', ...TAILWIND_NEUTRALS.filter((name) => name !== 'zinc'), ...TAILWIND_COLORS] as Exclude<
-    'default' | TailwindPalette,
-    'zinc'
->[];
+/* Tailwind's neutrals but zinc: the theme's own grays are zinc already. */
+export const PALETTE_NEUTRALS = TAILWIND_NEUTRALS.filter((name) => name !== 'zinc') as Exclude<(typeof TAILWIND_NEUTRALS)[number], 'zinc'>[];
 
-/* The few a settings row shows in the open; the rest wait behind its overflow. */
-export const FEATURED_PALETTES: readonly PalettePreset[] = ['default', 'gray', 'stone', 'mauve', 'olive'];
+/* The grounds a person can give the app: the theme's own grays first, then the neutrals and every color of
+   Tailwind's scale, in its order. */
+export const PALETTE_PRESETS = ['default', ...PALETTE_NEUTRALS, ...TAILWIND_COLORS] as const;
 
-export type PalettePreset = Exclude<'default' | TailwindPalette, 'zinc'>;
+export type PalettePreset = (typeof PALETTE_PRESETS)[number];
 
 /* How much color a ground of a colored palette carries at most. Tailwind's own darkest steps are far
    more saturated than a ground a person looks at all day should be; its neutrals stay as they are. */
