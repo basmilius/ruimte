@@ -9,6 +9,12 @@ test('project glow defaults to on while preserving an explicit opt-out', () => {
     expect(settingsFrom({ projectGlow: true }).projectGlow).toBe(true);
 });
 
+test("a fresh client keeps the theme's own grays and a gone preset falls back to them", () => {
+    expect(settingsFrom({}).palette).toBe('neutral');
+    expect(settingsFrom({ palette: 'night' }).palette).toBe('night');
+    expect(settingsFrom({ palette: 'sepia' as Settings['palette'] }).palette).toBe('neutral');
+});
+
 describe('project navigation', () => {
     test('starts on the switcher and accepts only tabs besides it', () => {
         expect(settingsFrom({}).projectNavigation).toBe('switcher');

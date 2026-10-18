@@ -33,6 +33,7 @@ function hasOpenedMachine(): boolean {
  */
 export const SETTINGS_INDEX: readonly SearchEntry[] = [
     { id: 'appearance.theme', section: 'appearance', label: 'settings:appearance.theme.label', description: 'settings:appearance.theme.description' },
+    { id: 'appearance.palette', section: 'appearance', label: 'settings:appearance.palette.label', description: 'settings:appearance.palette.description' },
     { id: 'appearance.accent', section: 'appearance', label: 'settings:appearance.accent.label', description: 'settings:appearance.accent.description' },
     {
         id: 'appearance.interface.layout',

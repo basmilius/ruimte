@@ -9,11 +9,30 @@ import { create } from 'zustand';
 
 export type PaletteSide = 'light' | 'dark';
 
-/* What one side may set. A token the theme derives from these (the soft accent, the selection, the
-   terminal's cursor) follows by itself. */
-export interface PaletteSideInput {
-    accent?: string;
-}
+/* The tokens a palette may set, by their names without the dashes. A token the theme derives from
+   these (the soft accent, the selection, the terminal's cursor, the lines on a canvas) follows by itself. */
+export const PALETTE_TOKENS = [
+    'accent',
+    'bg',
+    'surface',
+    'surface-raised',
+    'surface-sunken',
+    'surface-hover',
+    'surface-active',
+    'separator',
+    'text',
+    'text-muted',
+    'text-faint',
+    'canvas-bg',
+    'canvas-dot',
+    'term-bg',
+    'term-fg'
+] as const;
+
+export type PaletteToken = (typeof PALETTE_TOKENS)[number];
+
+/* What one side sets. A token it leaves out keeps the theme's own value. */
+export type PaletteSideInput = Partial<Record<PaletteToken, string>>;
 
 export type PaletteInput = Record<PaletteSide, PaletteSideInput>;
 
@@ -31,8 +50,15 @@ export function channelsOf(hex: string): string {
 
 function declarationsOf(side: PaletteSideInput): string[] {
     const declarations: string[] = [];
-    if (side.accent !== undefined && HEX_COLOR.test(side.accent)) {
-        declarations.push(`--accent: ${side.accent};`, `--accent-rgb: ${channelsOf(side.accent)};`);
+    for (const token of PALETTE_TOKENS) {
+        const value = side[token];
+        if (value === undefined || !HEX_COLOR.test(value)) {
+            continue;
+        }
+        declarations.push(`--${token}: ${value};`);
+        if (token === 'accent') {
+            declarations.push(`--accent-rgb: ${channelsOf(value)};`);
+        }
     }
     return declarations;
 }

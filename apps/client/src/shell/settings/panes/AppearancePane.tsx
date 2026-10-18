@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel } from '@/canvas/accents';
 import { formatDayClock, useFormatLocale, formatMoney, FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@adecore/ui/format';
@@ -9,6 +10,7 @@ import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/language
 import { FontSection } from '@/shell/settings/panes/FontSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useSettings } from '@/state/settings';
+import { PALETTE_PRESETS, presetSample, type PalettePreset } from '@/state/palette-presets';
 import { useTheme, type Theme } from '@/state/theme';
 
 /* A date with a weekday, a month and a clock, so every part a region writes differently is in it. */
@@ -67,6 +69,53 @@ function ThemePicker() {
                         )}
                     </span>
                     <span className={clsx('text-xs', theme === id ? 'text-text' : 'text-text-muted')}>{t(`appearance.theme.options.${id}`)}</span>
+                </button>
+            ))}
+        </div>
+    );
+}
+
+/* A preset's ground in miniature on the side the app is in now: the canvas, a panel on it and its text.
+   Its tokens are set on the sample itself, since the page's own already carry the palette in use. */
+function PaletteSample({ preset, side }: { preset: PalettePreset; side: 'light' | 'dark' }) {
+    const tokens = presetSample(preset, side);
+    const style = Object.fromEntries(Object.entries(tokens).map(([token, value]) => [`--${token}`, value])) as CSSProperties;
+    return (
+        <span style={style} className="flex h-14 w-23 items-end bg-canvas-bg p-2">
+            <span className="flex w-full flex-col gap-1 rounded-sm bg-surface-raised p-1.5">
+                <span className="h-1 w-3/4 rounded-full bg-text-muted" />
+                <span className="h-1 w-1/2 rounded-full bg-text-faint" />
+            </span>
+        </span>
+    );
+}
+
+/* The tint of the grounds, panels and text, beside the accent and apart from it. */
+function PalettePicker() {
+    const { t } = useTranslation('settings');
+    const palette = useSettings((s) => s.palette);
+    const update = useSettings((s) => s.update);
+    const side = useTheme((state) => state.resolved);
+    return (
+        <div className="flex flex-wrap gap-3" role="radiogroup" aria-label={t('appearance.palette.label')}>
+            {PALETTE_PRESETS.map((preset) => (
+                <button
+                    key={preset}
+                    type="button"
+                    role="radio"
+                    aria-checked={palette === preset}
+                    className="flex flex-col items-center gap-2 rounded-lg"
+                    onClick={() => update({ palette: preset })}
+                >
+                    <span
+                        className={clsx(
+                            'flex overflow-hidden rounded-lg',
+                            palette === preset ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface' : 'ring-1 ring-border-strong'
+                        )}
+                    >
+                        <PaletteSample preset={preset} side={side} />
+                    </span>
+                    <span className={clsx('text-xs', palette === preset ? 'text-text' : 'text-text-muted')}>{t(`appearance.palette.options.${preset}`)}</span>
                 </button>
             ))}
         </div>
@@ -172,6 +221,9 @@ export function AppearancePane() {
             <SettingsSection title={t('appearance.theme.title')}>
                 <SettingsRow searchId="appearance.theme" label={t('appearance.theme.label')} description={t('appearance.theme.description')}>
                     <ThemePicker />
+                </SettingsRow>
+                <SettingsRow searchId="appearance.palette" label={t('appearance.palette.label')} description={t('appearance.palette.description')}>
+                    <PalettePicker />
                 </SettingsRow>
                 <SettingsRow
                     searchId="appearance.accent"

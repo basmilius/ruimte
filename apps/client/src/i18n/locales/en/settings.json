@@ -10,6 +10,17 @@
                 "dark": "Dark"
             }
         },
+        "palette": {
+            "label": "Palette",
+            "description": "The tint of the grounds, panels and text, on both light and dark.",
+            "options": {
+                "neutral": "Neutral",
+                "night": "Night",
+                "paper": "Paper",
+                "forest": "Forest",
+                "plum": "Plum"
+            }
+        },
         "accent": {
             "label": "Accent",
             "description": "Selection rings, focus and the terminal cursor."

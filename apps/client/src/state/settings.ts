@@ -22,6 +22,7 @@ import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING } from '@/state
 import { CODE_THEMES } from '@/shell/panels/code-themes';
 import { storedJson } from '@/state/stored-json';
 import { applyPalette } from '@/state/palette';
+import { palettePresetFrom, presetTokens, type PalettePreset } from '@/state/palette-presets';
 
 export const SETTINGS_STORAGE_KEY = 'ruimte.settings';
 
@@ -144,6 +145,8 @@ export interface Settings {
     needsYouAllProjects: boolean;
     /* One of the node accents. Blue is the brand's own and the one a fresh client starts on. */
     accent: AccentId;
+    /* The tint of the grounds, surfaces and text on both sides; neutral keeps the theme's own grays. */
+    palette: PalettePreset;
     /* The glow at the top of the sidebar, and of the toolbar while the sidebar is closed, in the color of the project. */
     projectGlow: boolean;
     interfaceFont: InterfaceFontId;
@@ -287,6 +290,7 @@ const DEFAULT_SETTINGS: Settings = {
     projectNavigation: 'switcher',
     needsYouAllProjects: true,
     accent: 'blue',
+    palette: 'neutral',
     projectGlow: true,
     interfaceFont: 'system',
     font: 'system',
@@ -396,6 +400,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         smartKeys: smartKeysFrom(stored.smartKeys),
         // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
         accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
+        palette: palettePresetFrom(stored.palette),
         projectGlow: stored.projectGlow !== false,
         // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
         agentsShowViews: stored.agentsShowViews === true,
@@ -460,7 +465,10 @@ function apply(settings: Settings): void {
     root.setProperty('--code-font-size', `${settings.codeFontSize}px`);
     root.setProperty('--code-line-height', `${codeLineHeight(settings.codeFontSize, settings.codeLineHeight)}px`);
     const accent = accentColor(settings.accent);
-    applyPalette({ light: { accent }, dark: { accent } });
+    applyPalette({
+        light: { ...presetTokens(settings.palette, 'light'), accent },
+        dark: { ...presetTokens(settings.palette, 'dark'), accent }
+    });
     const interfaceFont = INTERFACE_FONTS.find((entry) => entry.id === settings.interfaceFont);
     if (interfaceFont && interfaceFont.id !== 'system') {
         root.setProperty('--font-sans', interfaceFont.stack);
@@ -493,6 +501,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 projectNavigation,
                 needsYouAllProjects,
                 accent,
+                palette,
                 projectGlow,
                 interfaceFont,
                 font,
@@ -555,6 +564,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 projectNavigation,
                 needsYouAllProjects,
                 accent,
+                palette,
                 projectGlow,
                 interfaceFont,
                 font,

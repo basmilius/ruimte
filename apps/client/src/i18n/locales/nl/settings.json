@@ -10,6 +10,17 @@
                 "dark": "Donker"
             }
         },
+        "palette": {
+            "label": "Palet",
+            "description": "De tint van de achtergronden, panelen en tekst, in licht en donker.",
+            "options": {
+                "neutral": "Neutraal",
+                "night": "Nacht",
+                "paper": "Papier",
+                "forest": "Bos",
+                "plum": "Pruim"
+            }
+        },
         "accent": {
             "label": "Accentkleur",
             "description": "Selectieranden, focus en de cursor in een terminal."
