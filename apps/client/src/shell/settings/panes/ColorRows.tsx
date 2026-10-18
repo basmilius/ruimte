@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import { ColorWheelPicker } from '@adecore/ui';
 import { NODE_ACCENTS, accentColor, accentLabel, type AccentId } from '@/canvas/accents';
-import { WheelPicker } from '@/shell/settings/panes/WheelPicker';
 import { previewColors, useSettings } from '@/state/settings';
 import { PALETTE_NEUTRALS, presetSwatch, type PalettePreset } from '@/state/palette-presets';
 import { TAILWIND_COLORS } from '@/state/tailwind-palettes';
@@ -12,14 +12,15 @@ export function PaletteRow() {
     const palette = useSettings((s) => s.palette);
     const update = useSettings((s) => s.update);
     return (
-        <WheelPicker<PalettePreset>
+        <ColorWheelPicker<PalettePreset>
             value={palette}
             label={t('appearance.palette.label')}
             rings={[TAILWIND_COLORS, PALETTE_NEUTRALS]}
             center="default"
             colorOf={presetSwatch}
             labelOf={(id) => t(`appearance.palette.options.${id}`)}
-            onPreview={(id) => previewColors(id === null ? null : { palette: id })}
+            align="end"
+            onPreviewChange={(id) => previewColors(id === null ? null : { palette: id })}
             onValueChange={(id) => update({ palette: id })}
         />
     );
@@ -34,13 +35,14 @@ export function AccentRow() {
     const accent = useSettings((s) => s.accent);
     const update = useSettings((s) => s.update);
     return (
-        <WheelPicker<AccentId>
+        <ColorWheelPicker<AccentId>
             value={accent}
             label={t('appearance.accent.label')}
             rings={[ACCENT_IDS]}
             colorOf={(id) => accentColor(id) ?? ''}
             labelOf={accentLabel}
-            onPreview={(id) => previewColors(id === null ? null : { accent: id })}
+            align="end"
+            onPreviewChange={(id) => previewColors(id === null ? null : { accent: id })}
             onValueChange={(id) => update({ accent: id })}
         />
     );
