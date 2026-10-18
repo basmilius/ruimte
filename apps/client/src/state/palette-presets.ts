@@ -2,10 +2,16 @@ import type { PaletteSide, PaletteSideInput, PaletteToken } from '@/state/palett
 import { TAILWIND_COLORS, TAILWIND_NEUTRALS, TAILWIND_STEPS, type TailwindPalette, type TailwindSteps } from '@/state/tailwind-palettes';
 
 /* The grounds a person can give the app: the theme's own grays first, then every neutral and every
-   color of Tailwind's scale, in its order. */
-export const PALETTE_PRESETS = ['default', ...TAILWIND_NEUTRALS, ...TAILWIND_COLORS] as const;
+   color of Tailwind's scale, in its order. Zinc is left out: the theme's own grays are zinc already. */
+export const PALETTE_PRESETS = ['default', ...TAILWIND_NEUTRALS.filter((name) => name !== 'zinc'), ...TAILWIND_COLORS] as Exclude<
+    'default' | TailwindPalette,
+    'zinc'
+>[];
 
-export type PalettePreset = (typeof PALETTE_PRESETS)[number];
+/* The few a settings row shows in the open; the rest wait behind its overflow. */
+export const FEATURED_PALETTES: readonly PalettePreset[] = ['default', 'gray', 'stone', 'mauve', 'olive'];
+
+export type PalettePreset = Exclude<'default' | TailwindPalette, 'zinc'>;
 
 /* How much color a ground of a colored palette carries at most. Tailwind's own darkest steps are far
    more saturated than a ground a person looks at all day should be; its neutrals stay as they are. */
@@ -128,6 +134,15 @@ export function presetTokens(preset: PalettePreset, side: PaletteSide): PaletteS
    grays it keeps, which no token on the page still holds once another palette is chosen. */
 export function presetSample(preset: PalettePreset, side: PaletteSide): PaletteSideInput {
     return tintedTokens(preset === 'default' ? null : preset, side);
+}
+
+/* A preset as one round swatch: its color and a lighter step of it, split on the diagonal. The grounds
+   themselves are too close to gray to tell apart at this size, so the swatch shows the scale they come
+   from (500 and 300); the default shows the plain grays it keeps. */
+export function presetSwatch(preset: PalettePreset): string {
+    const steps = TAILWIND_STEPS[preset === 'default' ? 'neutral' : preset];
+    const [lighter, color] = [steps[3]!, steps[5]!].map(([lightness, chroma, hue]) => oklchHex(lightness, chroma, hue));
+    return `linear-gradient(135deg, ${lighter} 50%, ${color} 50%)`;
 }
 
 export function palettePresetFrom(stored: unknown): PalettePreset {
