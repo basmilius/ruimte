@@ -23,9 +23,13 @@ interface Entry {
 export class VoiceSessionWatch {
     readonly #entries = new Map<string, Entry>();
 
-    /* Watching a session again starts over: what it did before was reported then. */
-    watch(session: VoiceWatchedSession, status: AgentStatus | undefined): void {
+    /*
+     * Watching a session again starts over: what it did before was reported then. One that already waits
+     * says so at once, since no later change would: a prompt queued behind an approval sits there.
+     */
+    watch(session: VoiceWatchedSession, status: AgentStatus | undefined): VoiceSessionChange | null {
         this.#entries.set(session.key, { session, status, ran: status === 'running' });
+        return status === 'needs-you' ? 'needs-you' : null;
     }
 
     forget(key: string): void {
@@ -77,12 +81,24 @@ function bounded(lines: string[]): string[] {
     return kept;
 }
 
+/*
+ * An approval is named by its tool and the description the agent gave it, never by its input: the input
+ * is a command or a path, which may hold a secret and has no business going to OpenAI. A question is
+ * written for the person, so its text goes.
+ */
+function approvalLine(toolName: string, description: string | null | undefined): string {
+    return `approval for ${toolName}${description ? `: ${description}` : ''}`;
+}
+
 export function terminalWaits(requests: readonly AgentRequest[] | undefined): string[] {
     return bounded(
-        (requests ?? []).map((request) =>
-            request.kind === 'approval' ? `approval for ${request.title ?? request.toolName}: ${request.text}` : `question: ${request.text}`
-        )
+        (requests ?? []).map((request) => (request.kind === 'approval' ? approvalLine(request.toolName, request.title) : `question: ${request.text}`))
     );
+}
+
+function inputDescription(input: unknown): string | null {
+    const description = typeof input === 'object' && input !== null ? (input as { description?: unknown }).description : undefined;
+    return typeof description === 'string' && description.trim() !== '' ? description : null;
 }
 
 /* Only what this window holds of the thread; a chat nobody here opened says what it waits on through chat.inspect. */
@@ -94,7 +110,7 @@ export function chatWaits(chat: Pick<ChatState, 'items' | 'order'> | undefined):
         chat.order.flatMap((id) => {
             const item = chat.items[id];
             if (item?.kind === 'approval' && item.decision === 'pending') {
-                return [`approval for ${item.toolName}${item.description ? `: ${item.description}` : ''}`];
+                return [approvalLine(item.toolName, inputDescription(item.input))];
             }
             if (item?.kind === 'question' && item.state === 'pending') {
                 return item.questions.map((question) => `question: ${question.question}`);

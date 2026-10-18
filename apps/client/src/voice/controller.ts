@@ -151,7 +151,10 @@ function checkSessions(): void {
 }
 
 function watchSession(session: VoiceWatchedSession): void {
-    sessionWatch?.watch(session, statusOf(session));
+    const change = sessionWatch?.watch(session, statusOf(session)) ?? null;
+    if (change) {
+        reportChange(session, change);
+    }
 }
 
 function flushChatFollowUps(): void {

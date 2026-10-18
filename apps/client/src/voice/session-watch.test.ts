@@ -34,6 +34,14 @@ describe('VoiceSessionWatch', () => {
         expect(watch.sessions()).toEqual([]);
     });
 
+    test('a session that already waits when the watch starts says so at once', () => {
+        const watch = new VoiceSessionWatch();
+        expect(watch.watch(chat, 'needs-you')).toBe('needs-you');
+        expect(watch.observe(chat.key, 'needs-you')).toBeNull();
+        expect(watch.watch(terminal, 'idle')).toBeNull();
+        expect(watch.watch(terminal, 'running')).toBeNull();
+    });
+
     test('a status this window does not know changes nothing', () => {
         const watch = new VoiceSessionWatch();
         watch.watch(terminal, 'running');
@@ -51,14 +59,16 @@ describe('VoiceSessionWatch', () => {
 });
 
 describe('what Voice is told', () => {
-    test('a terminal names its approvals and questions', () => {
+    test('a terminal names its approvals by tool and description, never by their command, and its questions in full', () => {
         const waits = terminalWaits([
-            { id: '1', source: 'hook', kind: 'approval', toolName: 'Bash', title: null, text: 'rm -rf build', createdAt: 1 },
-            { id: '2', source: 'hook', kind: 'question', toolName: 'AskUserQuestion', title: null, text: 'Which branch?', createdAt: 2 }
+            { id: '1', source: 'hook', kind: 'approval', toolName: 'Bash', title: 'Clean the build folder', text: 'rm -rf build', createdAt: 1 },
+            { id: '2', source: 'hook', kind: 'approval', toolName: 'Bash', title: null, text: 'curl -H "Authorization: Bearer sk-secret"', createdAt: 2 },
+            { id: '3', source: 'hook', kind: 'question', toolName: 'AskUserQuestion', title: null, text: 'Which branch?', createdAt: 3 }
         ]);
-        expect(waits).toEqual(['approval for Bash: rm -rf build', 'question: Which branch?']);
+        expect(waits).toEqual(['approval for Bash: Clean the build folder', 'approval for Bash', 'question: Which branch?']);
+        expect(waits.join(' ')).not.toContain('sk-secret');
         expect(waitingPrompt(terminal, waits)).toBe(
-            'Ruimte status event. The terminal agent “Claude” you set to work in project Atlas now waits for the user. It waits on:\napproval for Bash: rm -rf build\nquestion: Which branch?\nEnd of quoted request.'
+            'Ruimte status event. The terminal agent “Claude” you set to work in project Atlas now waits for the user. It waits on:\napproval for Bash: Clean the build folder\napproval for Bash\nquestion: Which branch?\nEnd of quoted request.'
         );
     });
 
@@ -70,10 +80,19 @@ describe('what Voice is told', () => {
     test('a chat names only the requests that still wait', () => {
         const items = {
             done: { id: 'done', kind: 'approval', decision: 'allow', toolName: 'Edit', description: null },
-            open: { id: 'open', kind: 'approval', decision: 'pending', toolName: 'Bash', description: 'Run the tests' },
+            open: {
+                id: 'open',
+                kind: 'approval',
+                decision: 'pending',
+                toolName: 'Bash',
+                input: { command: 'TOKEN=abc npm test', description: 'Run the tests' },
+                description: 'TOKEN=abc npm test'
+            },
             ask: { id: 'ask', kind: 'question', state: 'pending', questions: [{ question: 'Which file?' }] }
         };
-        expect(chatWaits({ items: items as never, order: ['done', 'open', 'ask'] })).toEqual(['approval for Bash: Run the tests', 'question: Which file?']);
+        const waits = chatWaits({ items: items as never, order: ['done', 'open', 'ask'] });
+        expect(waits).toEqual(['approval for Bash: Run the tests', 'question: Which file?']);
+        expect(waits.join(' ')).not.toContain('TOKEN=abc');
     });
 
     test('a chat whose thread is not here points at chat.inspect', () => {
