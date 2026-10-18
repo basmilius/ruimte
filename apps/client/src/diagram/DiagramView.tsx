@@ -5,7 +5,7 @@ import { Bot, Braces, FileJson, MoreHorizontal, Pencil, RotateCcw, Sparkles } fr
 import { useShallow } from 'zustand/react/shallow';
 import type { ActionInput } from '@ruimte/actions';
 import { DEFAULT_NODE_TONE } from '@adecore/diagram';
-import { GRID, type Point } from '@/canvas/math';
+import { groundPlacement, type Point } from '@/canvas/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { DiagramDock } from '@/diagram/DiagramDock';
 import { DiagramScene } from '@/diagram/DiagramScene';
@@ -279,16 +279,14 @@ export function DiagramView({ id }: { id: string }) {
         }
     };
 
-    const gridStep = GRID * 3 * camera.zoom;
     // Nothing to say until the file has been read, or an empty diagram would flash before a full one.
     const empty = viewId === id && content.nodes.length === 0;
     return (
         <div
             ref={rootRef}
-            className="relative h-full w-full touch-none overflow-hidden bg-canvas-bg bg-[image:radial-gradient(circle,var(--canvas-dot)_1px,transparent_1px)]"
+            className="canvas-ground relative h-full w-full touch-none overflow-hidden"
             style={{
-                backgroundSize: `${gridStep}px ${gridStep}px`,
-                backgroundPosition: `${camera.x}px ${camera.y}px`,
+                ...groundPlacement(camera),
                 cursor: gesture === 'pan' ? 'grabbing' : gesture === 'drag' ? 'move' : 'grab'
             }}
             onPointerDown={onPointerDown}

@@ -14,7 +14,7 @@ import type { ProjectCanvasLine } from '@ruimte/contracts';
 import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
 import { gridTakesPath } from '@/shell/view-drag';
 import { finderPaths } from '@/canvas/finder-drop';
-import { GRID, snapToGrid, toWorld, type Camera, type Point, type Rect } from '@/canvas/math';
+import { groundPlacement, snapToGrid, toWorld, type Camera, type Point, type Rect } from '@/canvas/math';
 import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
 import type { NodeSide } from '@ruimte/contracts';
 import { boxScreenRect, boxWorldRect, startBoxSelection, type BoxSelection } from '@/canvas/box-selection';
@@ -249,9 +249,7 @@ export function Canvas() {
             if (!root || !world) {
                 return;
             }
-            const gridStep = GRID * 3 * camera.zoom;
-            root.style.backgroundSize = `${gridStep}px ${gridStep}px`;
-            root.style.backgroundPosition = `${camera.x}px ${camera.y}px`;
+            Object.assign(root.style, groundPlacement(camera));
             world.style.transform = `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`;
             const gesture = gestureRef.current;
             if (gesture?.kind === 'box') {
@@ -752,7 +750,7 @@ export function Canvas() {
             <ContextMenu.Trigger
                 render={<div />}
                 ref={rootRef}
-                className="relative h-full w-full touch-none overflow-hidden bg-canvas-bg bg-[image:radial-gradient(circle,var(--canvas-dot)_1px,transparent_1px)]"
+                className="canvas-ground relative h-full w-full touch-none overflow-hidden"
                 style={{
                     cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : spaceDown ? 'grab' : undefined
                 }}

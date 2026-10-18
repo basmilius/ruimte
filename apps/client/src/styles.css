@@ -294,6 +294,14 @@
 @layer components {
     /* ---------------------------------------------------------------- Canvas */
 
+    /* The ground of every view that pans (a canvas, a drawing, a diagram), written once, so what a
+       theme does to it reaches all three. Its dots are fixed to the world: the view sets their size
+       and position from its camera (`groundPlacement`). */
+    .canvas-ground {
+        background-color: var(--canvas-bg);
+        background-image: radial-gradient(circle, var(--canvas-dot) 1px, transparent 1px);
+    }
+
     /* The accent itself, not a wash of it: a selection ring has to read at a glance on a canvas full
        of surfaces. `--selection` stays what it is for a run of selected text. The frame's own focus
        ring has to lose to a selected node, which is a `:not()` and not a variant. */

@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import type { DrawingElement } from '@ruimte/contracts';
 import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, type Point, type Rect, type ResizeHandle } from '@adecore/drawing';
 import { isSpaceDown } from '@/canvas/space-pan';
-import { GRID, toWorld } from '@/canvas/math';
+import { groundPlacement, toWorld } from '@/canvas/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { DrawingDock } from '@/drawing/DrawingDock';
 import { DrawingMenuPopup } from '@/drawing/DrawingMenu';
@@ -520,14 +520,12 @@ export function DrawingView({ id }: { id: string }) {
         state.setEditingText(id);
     };
 
-    const gridStep = GRID * 3 * camera.zoom;
     return (
         <div
             ref={rootRef}
-            className="relative h-full w-full touch-none overflow-hidden bg-canvas-bg bg-[image:radial-gradient(circle,var(--canvas-dot)_1px,transparent_1px)]"
+            className="canvas-ground relative h-full w-full touch-none overflow-hidden"
             style={{
-                backgroundSize: `${gridStep}px ${gridStep}px`,
-                backgroundPosition: `${camera.x}px ${camera.y}px`,
+                ...groundPlacement(camera),
                 // Space is held in a ref so a key does not repaint the drawing; the cursor catches
                 // up on the next render, which the pointer move right after it always brings.
                 // oxlint-disable-next-line react/refs

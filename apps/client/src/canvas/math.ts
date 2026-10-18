@@ -18,6 +18,12 @@ const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
 export const GRID = CANVAS_GRID;
 
+/* Where the dots of the ground sit for a camera: three grid steps apart, and moving with the world. */
+export function groundPlacement(camera: Camera): { backgroundSize: string; backgroundPosition: string } {
+    const step = GRID * 3 * camera.zoom;
+    return { backgroundSize: `${step}px ${step}px`, backgroundPosition: `${camera.x}px ${camera.y}px` };
+}
+
 export function clampZoom(zoom: number): number {
     return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
 }
