@@ -1,5 +1,6 @@
 import type { ChatItem } from '@ruimte/contracts';
 import type { ChatState } from '@adecore/agents-react/state';
+import { splitKey } from '@/state/keys';
 
 export interface VoiceChatFollowUp {
     key: string;
@@ -14,6 +15,13 @@ export interface VoiceChatCompletion {
 }
 
 const MAX_ANSWER_CHARS = 12_000;
+
+/*
+ * What the voice gets of an answer. It summarizes in a sentence or two, so more only costs appends
+ * before it can speak; the rest stays in the chat, where chat.read reads it on request.
+ */
+const SPOKEN_ANSWER_CHARS = 1200;
+const BREAKS = ['\n\n', '. ', '! ', '? ', '.\n', '\n'];
 
 function answerOf(chat: ChatState, turnId: string): string {
     return chat.order
@@ -49,7 +57,19 @@ export function chatCompletion(chat: ChatState | undefined, turnId: string): Voi
     return state === null ? null : { state, answer: answerOf(chat, turnId) };
 }
 
+/* Cut where a sentence or a paragraph ends, unless that would leave less than half of what fits. */
+export function spokenExcerpt(answer: string): { text: string; cut: boolean } {
+    if (answer.length <= SPOKEN_ANSWER_CHARS) {
+        return { text: answer, cut: false };
+    }
+    const head = answer.slice(0, SPOKEN_ANSWER_CHARS);
+    const end = Math.max(...BREAKS.map((mark) => head.lastIndexOf(mark) + mark.trimEnd().length));
+    return { text: end >= SPOKEN_ANSWER_CHARS / 2 ? head.slice(0, end) : `${head}…`, cut: true };
+}
+
 export function completionPrompt(followUp: VoiceChatFollowUp, completion: VoiceChatCompletion): string {
-    const result = completion.answer || 'The AI Chat returned no final answer.';
-    return `Ruimte completion event. The user asked you to report when AI Chat “${followUp.chat}” finished. Project: ${followUp.project ?? 'the original project'}. Its tracked turn ${followUp.turnId} ended with state ${completion.state}. Final answer:\n${result}\nEnd of quoted AI Chat result.`;
+    const { text, cut } = spokenExcerpt(completion.answer);
+    const result = text || 'The AI Chat returned no final answer.';
+    const rest = cut ? `\nThis is only the start of a longer answer. chat.read on ${splitKey(followUp.key).id} reads the rest when the user asks.` : '';
+    return `Ruimte completion event. AI Chat “${followUp.chat}”, which you prompted, finished. Project: ${followUp.project ?? 'the original project'}. Its tracked turn ${followUp.turnId} ended with state ${completion.state}. Final answer:\n${result}\nEnd of quoted AI Chat result.${rest}`;
 }

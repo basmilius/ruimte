@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem } from '@ruimte/contracts';
 import { applyEvent, type ChatState } from '@adecore/agents-react/state';
-import { chatCompletion, completionPrompt } from '@/voice/chat-follow-up';
+import { chatCompletion, completionPrompt, spokenExcerpt } from '@/voice/chat-follow-up';
 
 function state(items: ChatItem[]): ChatState {
     const byId = Object.fromEntries(items.map((item) => [item.id, item]));
@@ -92,5 +92,22 @@ describe('voice AI Chat follow-up', () => {
         expect(prompt).toContain('I found the answer.');
         expect(prompt).toContain('ended with state done');
         expect(prompt).toContain('End of quoted AI Chat result.');
+        expect(prompt).not.toContain('only the start');
+    });
+
+    test('gives the voice only the start of a long answer, cut where a sentence ends', () => {
+        const answer = `${'The first finding is solid. '.repeat(30)}${'More detail follows here. '.repeat(100)}`;
+        const { text, cut } = spokenExcerpt(answer);
+        expect(cut).toBe(true);
+        expect(text.length).toBeLessThanOrEqual(1200);
+        expect(text.endsWith('.')).toBe(true);
+        const prompt = completionPrompt({ key: 'local:chat-1', chat: 'Research', turnId: 'turn-1' }, { state: 'done', answer });
+        expect(prompt).toContain('This is only the start of a longer answer. chat.read on chat-1 reads the rest when the user asks.');
+    });
+
+    test('cuts a long answer without a sentence end where it fits, and says so', () => {
+        const { text, cut } = spokenExcerpt('x'.repeat(5000));
+        expect(cut).toBe(true);
+        expect(text).toBe(`${'x'.repeat(1200)}…`);
     });
 });
