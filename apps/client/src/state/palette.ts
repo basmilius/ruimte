@@ -82,14 +82,33 @@ interface PaletteState {
     /* Counts every change of the palette's colors, so what paints with them (a drawing on a canvas
        element, the window behind the page) knows to read them again. */
     revision: number;
+    /* Whether the colors are a preview of ones not picked yet. The window behind the page keeps the picked
+       ones meanwhile: the desktop shell gives every window the ground one window reports. */
+    previewing: boolean;
 }
 
-export const usePalette = create<PaletteState>(() => ({ revision: 0 }));
+export const usePalette = create<PaletteState>(() => ({ revision: 0, previewing: false }));
 
 const STYLE_ID = 'ruimte-palette';
 
-/* Writes the palette over the theme. Nothing happens while the stylesheet already says the same. */
-export function applyPalette(input: PaletteInput): void {
+/* How long a preview has to stay before what paints outside the stylesheet (every terminal, every
+   drawing) follows it. A pointer that sweeps a wheel passes many swatches; only the one it rests on is
+   worth a repaint of all of them. */
+const PREVIEW_SETTLE_MS = 60;
+
+let settling: ReturnType<typeof setTimeout> | null = null;
+
+function nextRevision(previewing: boolean): void {
+    const revision = usePalette.getState().revision + 1;
+    // The terminal and a chat's visuals watch the root's attributes and not the stylesheets, so the root
+    // carries the revision too: the change of its `style` is what has them read the tokens again.
+    document.documentElement.style.setProperty('--palette-revision', String(revision));
+    usePalette.setState({ revision, previewing });
+}
+
+/* Writes the palette over the theme, as the picked colors or as a preview of others. Nothing changes
+   while the stylesheet already says the same. */
+export function applyPalette(input: PaletteInput, options: { preview?: boolean } = {}): void {
     // A test that reads the settings for their defaults has no document to write into.
     if (typeof document === 'undefined') {
         return;
@@ -101,13 +120,30 @@ export function applyPalette(input: PaletteInput): void {
         document.head.append(style);
     }
     const css = paletteCss(input);
-    if (style.textContent === css) {
+    const changed = style.textContent !== css;
+    if (changed) {
+        style.textContent = css;
+    }
+    if (settling !== null) {
+        clearTimeout(settling);
+        settling = null;
+    }
+    if (options.preview === true) {
+        if (!usePalette.getState().previewing) {
+            usePalette.setState({ previewing: true });
+        }
+        if (changed) {
+            settling = setTimeout(() => {
+                settling = null;
+                nextRevision(true);
+            }, PREVIEW_SETTLE_MS);
+        }
         return;
     }
-    style.textContent = css;
-    const revision = usePalette.getState().revision + 1;
-    // The terminal and a chat's visuals watch the root's attributes and not the stylesheets, so the root
-    // carries the revision too: the change of its `style` is what has them read the tokens again.
-    document.documentElement.style.setProperty('--palette-revision', String(revision));
-    usePalette.setState({ revision });
+    // The picked colors, or the end of a preview: everything follows at once.
+    if (changed) {
+        nextRevision(false);
+    } else if (usePalette.getState().previewing) {
+        usePalette.setState({ previewing: false });
+    }
 }

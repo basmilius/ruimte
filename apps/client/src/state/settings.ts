@@ -452,12 +452,15 @@ function read(): Settings {
     }
 }
 
-function applyColors(palette: PalettePreset, accentId: AccentId): void {
+function applyColors(palette: PalettePreset, accentId: AccentId, preview = false): void {
     const accent = accentColor(accentId);
-    applyPalette({
-        light: { ...presetTokens(palette, 'light'), accent },
-        dark: { ...presetTokens(palette, 'dark'), accent }
-    });
+    applyPalette(
+        {
+            light: { ...presetTokens(palette, 'light'), accent },
+            dark: { ...presetTokens(palette, 'dark'), accent }
+        },
+        { preview }
+    );
 }
 
 /* Shows the app in a palette or an accent a person is looking at before picking it, or with none back in
@@ -467,7 +470,7 @@ export function previewColors(preview: { palette?: PalettePreset; accent?: Accen
         return;
     }
     const settings = useSettings.getState();
-    applyColors(preview?.palette ?? settings.palette, preview?.accent ?? settings.accent);
+    applyColors(preview?.palette ?? settings.palette, preview?.accent ?? settings.accent, preview !== null);
 }
 
 /* The few tokens a person may change are set over the theme's own values: the type on the root, the

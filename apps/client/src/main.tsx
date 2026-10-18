@@ -121,8 +121,13 @@ useTheme.subscribe((state, previous) => {
         reportTheme();
     }
 });
-// A palette that changes the ground changes it behind the page too.
-usePalette.subscribe(reportTheme);
+// A palette that changes the ground changes it behind the page too, once it is picked: a preview stays in
+// this page, since the shell would give its ground to every window.
+usePalette.subscribe((state, previous) => {
+    if (state.revision !== previous.revision && !state.previewing) {
+        reportTheme();
+    }
+});
 if (import.meta.env.DEV) {
     exposeTerminalTestHooks();
 }
