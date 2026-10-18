@@ -25,7 +25,7 @@ import { chatCompletion, type VoiceChatFollowUp } from '@/voice/chat-follow-up';
 import { addTranscriptDelta, nextVoiceTimelineOrder, useVoice, type VoiceAction, type VoiceActionKind } from '@/voice/state';
 import { bypassesQueue, executeVoiceTool } from '@/voice/tools';
 import { currentVoiceDomains } from '@/voice/domains';
-import { finishVoiceDiagnostics, startVoiceDiagnostics, voiceDiagnosticsObserver } from '@/voice/diagnostics-log';
+import { finishVoiceDiagnostics, noteVoiceError, startVoiceDiagnostics, voiceDeliveryObserver, voiceDiagnosticsObserver } from '@/voice/diagnostics-log';
 import {
     chatWaits,
     settledPrompt,
@@ -271,6 +271,10 @@ function handleEvent(event: LiveEvent): void {
         toolLoop?.handle(event);
         return;
     }
+    if (event.type === 'error') {
+        noteVoiceError(event);
+        return;
+    }
     if (event.type === 'session.error') {
         stopVoice();
         useVoice.setState({ phase: 'error', error: i18next.t('voice:error.session') });
@@ -313,7 +317,10 @@ export async function startVoice(): Promise<void> {
             }
         }
     );
-    completionDelivery = new VoiceCompletionDelivery((event) => next.send(event), useSettings.getState().voiceLanguage);
+    completionDelivery = new VoiceCompletionDelivery((event) => next.send(event), {
+        language: useSettings.getState().voiceLanguage,
+        observer: voiceDeliveryObserver
+    });
     sessionWatch = new VoiceSessionWatch();
     const queue = new VoiceToolQueue(voiceWorkspaceRevision);
     toolQueue = queue;

@@ -40,6 +40,19 @@ const realTimer: VoiceDeliveryTimer = (run, ms) => {
     return () => clearTimeout(timer);
 };
 
+/* Sees what became of the reports, for the diagnostics; it never changes what the queue does. */
+export interface VoiceDeliveryObserver {
+    reportSpoken(): void;
+    appendTimedOut(): void;
+    reportDropped(code: unknown): void;
+}
+
+export interface VoiceDeliveryOptions {
+    language?: VoiceLanguage | null;
+    timer?: VoiceDeliveryTimer;
+    observer?: VoiceDeliveryObserver | null;
+}
+
 interface PendingCompletion {
     id: string;
     chatKey: string;
@@ -53,11 +66,13 @@ export class VoiceCompletionDelivery {
     private cancelTimeout: (() => void) | null = null;
     private readonly spoken: string;
     private readonly timer: VoiceDeliveryTimer;
+    private readonly observer: VoiceDeliveryObserver | null;
 
     /* The context of a report is English, so the line that makes the model speak names the language it speaks in. */
-    constructor(send: (event: LiveEvent) => boolean, language: VoiceLanguage | null = null, timer: VoiceDeliveryTimer = realTimer) {
+    constructor(send: (event: LiveEvent) => boolean, { language = null, timer = realTimer, observer = null }: VoiceDeliveryOptions = {}) {
         this.send = send;
         this.timer = timer;
+        this.observer = observer;
         const name = VOICE_LANGUAGES.find((entry) => entry.id === language)?.english;
         this.spoken = name ? ` Say it in natural ${name}, as a native ${name} speaker would.` : '';
     }
@@ -96,6 +111,7 @@ export class VoiceCompletionDelivery {
             this.pending = next;
             this.cancelTimeout = this.timer(() => {
                 if (this.pending === next) {
+                    this.observer?.appendTimedOut();
                     this.delivered();
                 }
             }, APPEND_TIMEOUT_MS);
@@ -107,7 +123,9 @@ export class VoiceCompletionDelivery {
             return;
         }
         // A refused append would be refused again, so the rest of its report goes with it rather than a half one being spoken.
-        if (event.type === 'error' && (event.error as { client_event_id?: unknown } | undefined)?.client_event_id === this.pending.event_id) {
+        const error = event.type === 'error' ? (event.error as { client_event_id?: unknown; code?: unknown } | undefined) : undefined;
+        if (error && error.client_event_id === this.pending.event_id) {
+            this.observer?.reportDropped(error.code);
             this.release();
             this.queue.shift();
             this.flush();
@@ -115,6 +133,9 @@ export class VoiceCompletionDelivery {
         }
         const expected = this.pending.type === 'session.thinking.append' ? 'session.thinking.appended' : 'session.commentary.appended';
         if (event.client_event_id === this.pending.event_id && event.type === expected) {
+            if (event.type === 'session.commentary.appended') {
+                this.observer?.reportSpoken();
+            }
             this.delivered();
         }
     }

@@ -2,6 +2,8 @@ import type { ActionDomain } from '@ruimte/actions';
 import { VoiceDiagnosticsRecorder } from '@/voice/diagnostics';
 import { summarizeVoiceSessions } from '@/voice/diagnostics-summary';
 import type { ToolLoopObserver } from '@/voice/response-tool-loop';
+import type { VoiceDeliveryObserver } from '@/voice/completion-delivery';
+import type { LiveEvent } from '@/voice/live-session';
 
 /* Measurements go to the developer console and nowhere else; nothing is kept once the window closes. */
 let recorder: VoiceDiagnosticsRecorder | null = null;
@@ -28,3 +30,20 @@ export const voiceDiagnosticsObserver: ToolLoopObserver = {
     callStarted: (delegationId, callId, tool, rawArguments) => recorder?.callStarted(delegationId, callId, tool, rawArguments),
     callFinished: (callId, output) => recorder?.callFinished(callId, output)
 };
+
+/* Only a code that looks like one is logged, so a message from the service, which may quote the user, never is. */
+function codeOf(value: unknown): string | null {
+    return typeof value === 'string' && /^[a-z][a-z0-9_-]{0,47}$/.test(value) ? value : null;
+}
+
+export const voiceDeliveryObserver: VoiceDeliveryObserver = {
+    reportSpoken: () => console.debug('[voice] report', 'spoken'),
+    appendTimedOut: () => console.debug('[voice] report', 'append timed out, moved on'),
+    reportDropped: (code) => console.debug('[voice] report', 'dropped after a refused append', codeOf(code))
+};
+
+/* A command error leaves the session running, so it is noted rather than ending Voice. */
+export function noteVoiceError(event: LiveEvent): void {
+    const error = event.error as { type?: unknown; code?: unknown } | undefined;
+    console.debug('[voice] error', codeOf(error?.type), codeOf(error?.code));
+}

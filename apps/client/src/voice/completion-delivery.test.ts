@@ -66,10 +66,13 @@ describe('AI Chat completion delivery to GPT-Live', () => {
 
     test('the commentary names the language the conversation is spoken in', () => {
         const sent: LiveEvent[] = [];
-        const delivery = new VoiceCompletionDelivery((event) => {
-            sent.push(event);
-            return true;
-        }, 'nl');
+        const delivery = new VoiceCompletionDelivery(
+            (event) => {
+                sent.push(event);
+                return true;
+            },
+            { language: 'nl' }
+        );
         delivery.report('local:agent:waits:1', 'local:agent', 'The terminal agent waits.', 'Tell the user it waits.');
         delivery.handle(ack(sent[0]!));
         expect(sent[1]!.content).toBe('Tell the user it waits. Say it in natural Dutch, as a native Dutch speaker would.');
@@ -90,8 +93,7 @@ describe('AI Chat completion delivery to GPT-Live', () => {
                 sent.push(event);
                 return true;
             },
-            null,
-            timer
+            { timer }
         );
         delivery.report('first', 'local:a', 'First context.', 'Tell the first.');
         delivery.report('second', 'local:b', 'Second context.', 'Tell the second.');
@@ -99,6 +101,35 @@ describe('AI Chat completion delivery to GPT-Live', () => {
         delivery.handle(ack(sent[1]!));
         expect(timeouts.map((entry) => entry.cancelled)).toEqual([true, true, false]);
         expect(sent.map((event) => event.content)).toEqual(['First context.', 'Tell the first.', 'Second context.']);
+    });
+
+    test('the observer hears what became of each report', () => {
+        const sent: LiveEvent[] = [];
+        const heard: string[] = [];
+        let timeOut = (): void => undefined;
+        const delivery = new VoiceCompletionDelivery(
+            (event) => {
+                sent.push(event);
+                return true;
+            },
+            {
+                timer: (run) => {
+                    timeOut = run;
+                    return () => undefined;
+                },
+                observer: {
+                    reportSpoken: () => heard.push('spoken'),
+                    appendTimedOut: () => heard.push('timed out'),
+                    reportDropped: (code) => heard.push(`dropped ${String(code)}`)
+                }
+            }
+        );
+        delivery.report('first', 'local:a', 'First context.', 'Tell the first.');
+        timeOut();
+        delivery.handle(ack(sent[1]!));
+        delivery.report('second', 'local:b', 'Second context.', 'Tell the second.');
+        delivery.handle({ type: 'error', error: { code: 'invalid_request_error', client_event_id: sent[2]!.event_id } });
+        expect(heard).toEqual(['timed out', 'spoken', 'dropped invalid_request_error']);
     });
 
     test('a refused append drops the rest of its report and the next one goes', () => {
