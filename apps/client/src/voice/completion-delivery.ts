@@ -26,6 +26,20 @@ function contextChunks(text: string): string[] {
     return chunks;
 }
 
+/*
+ * An append whose answer never comes would hold every later report back for the rest of the session.
+ * A refusal comes as an error naming the event, so silence this long is an answer that got lost.
+ */
+const APPEND_TIMEOUT_MS = 15_000;
+
+/* Runs `run` after `ms` and returns what cancels it; a test hands in its own clock. */
+export type VoiceDeliveryTimer = (run: () => void, ms: number) => () => void;
+
+const realTimer: VoiceDeliveryTimer = (run, ms) => {
+    const timer = setTimeout(run, ms);
+    return () => clearTimeout(timer);
+};
+
 interface PendingCompletion {
     id: string;
     chatKey: string;
@@ -36,11 +50,14 @@ export class VoiceCompletionDelivery {
     private readonly send: (event: LiveEvent) => boolean;
     private readonly queue: PendingCompletion[] = [];
     private pending: LiveEvent | null = null;
+    private cancelTimeout: (() => void) | null = null;
     private readonly spoken: string;
+    private readonly timer: VoiceDeliveryTimer;
 
     /* The context of a report is English, so the line that makes the model speak names the language it speaks in. */
-    constructor(send: (event: LiveEvent) => boolean, language: VoiceLanguage | null = null) {
+    constructor(send: (event: LiveEvent) => boolean, language: VoiceLanguage | null = null, timer: VoiceDeliveryTimer = realTimer) {
         this.send = send;
+        this.timer = timer;
         const name = VOICE_LANGUAGES.find((entry) => entry.id === language)?.english;
         this.spoken = name ? ` Say it in natural ${name}, as a native ${name} speaker would.` : '';
     }
@@ -77,18 +94,33 @@ export class VoiceCompletionDelivery {
         const next = this.queue[0]?.events[0];
         if (next && this.send(next)) {
             this.pending = next;
+            this.cancelTimeout = this.timer(() => {
+                if (this.pending === next) {
+                    this.delivered();
+                }
+            }, APPEND_TIMEOUT_MS);
         }
     }
 
     handle(event: LiveEvent): void {
-        if (!this.pending || event.client_event_id !== this.pending.event_id) {
+        if (!this.pending) {
+            return;
+        }
+        // A refused append would be refused again, so the rest of its report goes with it rather than a half one being spoken.
+        if (event.type === 'error' && (event.error as { client_event_id?: unknown } | undefined)?.client_event_id === this.pending.event_id) {
+            this.release();
+            this.queue.shift();
+            this.flush();
             return;
         }
         const expected = this.pending.type === 'session.thinking.append' ? 'session.thinking.appended' : 'session.commentary.appended';
-        if (event.type !== expected) {
-            return;
+        if (event.client_event_id === this.pending.event_id && event.type === expected) {
+            this.delivered();
         }
-        this.pending = null;
+    }
+
+    private delivered(): void {
+        this.release();
         this.queue[0]!.events.shift();
         if (this.queue[0]!.events.length === 0) {
             this.queue.shift();
@@ -96,9 +128,15 @@ export class VoiceCompletionDelivery {
         this.flush();
     }
 
+    private release(): void {
+        this.cancelTimeout?.();
+        this.cancelTimeout = null;
+        this.pending = null;
+    }
+
     cancelChat(chatKey: string): void {
         if (this.queue[0]?.chatKey === chatKey) {
-            this.pending = null;
+            this.release();
         }
         for (let index = this.queue.length - 1; index >= 0; index--) {
             if (this.queue[index]!.chatKey === chatKey) {
@@ -109,7 +147,7 @@ export class VoiceCompletionDelivery {
     }
 
     clear(): void {
-        this.pending = null;
+        this.release();
         this.queue.length = 0;
     }
 }
