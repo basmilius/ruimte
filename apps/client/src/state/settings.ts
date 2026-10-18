@@ -460,14 +460,14 @@ function applyColors(palette: PalettePreset, accentId: AccentId): void {
     });
 }
 
-/* Shows the app in a palette a person is looking at before picking it, or with none back in the one they
-   picked. Nothing is stored, so another window and a reload still have the picked one. */
-export function previewPalette(palette: PalettePreset | null): void {
+/* Shows the app in a palette or an accent a person is looking at before picking it, or with none back in
+   the ones they picked. Nothing is stored, so another window and a reload still have the picked ones. */
+export function previewColors(preview: { palette?: PalettePreset; accent?: AccentId } | null): void {
     if (typeof document === 'undefined') {
         return;
     }
     const settings = useSettings.getState();
-    applyColors(palette ?? settings.palette, settings.accent);
+    applyColors(preview?.palette ?? settings.palette, preview?.accent ?? settings.accent);
 }
 
 /* The few tokens a person may change are set over the theme's own values: the type on the root, the

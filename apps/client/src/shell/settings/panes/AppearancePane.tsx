@@ -1,15 +1,14 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel } from '@/canvas/accents';
 import { formatDayClock, useFormatLocale, formatMoney, FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@adecore/ui/format';
-import { AccentSwatches, Switch, Select } from '@adecore/ui';
+import { Switch, Select } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { chooseLanguage, chooseRegion } from '@/i18n';
 import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
 import { FontSection } from '@/shell/settings/panes/FontSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useSettings } from '@/state/settings';
-import { PaletteRow } from '@/shell/settings/panes/PaletteRow';
+import { AccentRow, PaletteRow } from '@/shell/settings/panes/ColorRows';
 import { useTheme, type Theme } from '@/state/theme';
 
 /* A date with a weekday, a month and a clock, so every part a region writes differently is in it. */
@@ -71,23 +70,6 @@ function ThemePicker() {
                 </button>
             ))}
         </div>
-    );
-}
-
-/* The accent of the whole app, from the same swatches an agent account picks its color from. */
-function AccentRow() {
-    const { t } = useTranslation('settings');
-    const accent = useSettings((s) => s.accent);
-    const update = useSettings((s) => s.update);
-    return (
-        <AccentSwatches
-            value={accent}
-            label={t('appearance.accent.label')}
-            accents={NODE_ACCENTS}
-            featured={FEATURED_ACCENTS}
-            labelOf={accentLabel}
-            onValueChange={(id) => update({ accent: id })}
-        />
     );
 }
 
