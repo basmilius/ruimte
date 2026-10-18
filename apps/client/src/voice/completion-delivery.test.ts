@@ -64,6 +64,17 @@ describe('AI Chat completion delivery to GPT-Live', () => {
         ]);
     });
 
+    test('the commentary names the language the conversation is spoken in', () => {
+        const sent: LiveEvent[] = [];
+        const delivery = new VoiceCompletionDelivery((event) => {
+            sent.push(event);
+            return true;
+        }, 'nl');
+        delivery.report('local:agent:waits:1', 'local:agent', 'The terminal agent waits.', 'Tell the user it waits.');
+        delivery.handle(ack(sent[0]!));
+        expect(sent[1]!.content).toBe('Tell the user it waits. Say it in natural Dutch, as a native Dutch speaker would.');
+    });
+
     test('unrelated acknowledgments cannot announce a partially delivered result', () => {
         const { delivery, sent } = setup();
         delivery.enqueue(followUp, completion);

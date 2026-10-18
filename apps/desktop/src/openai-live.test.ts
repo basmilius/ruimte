@@ -40,6 +40,24 @@ describe('createOpenAiLiveSession', () => {
         });
     });
 
+    test('puts the spoken language first and has the backend write in it', async () => {
+        let body: { session: { instructions: string; delegation: { responses: { instructions: string } } } } | null = null;
+        await createOpenAiLiveSession(
+            async (_input, init) => {
+                body = JSON.parse(String(init.body));
+                return Response.json({ session: { id: 'live-1' }, transport: { type: 'webrtc', sdp: 'answer' } });
+            },
+            'sk-private',
+            'offer',
+            { language: 'nl', voice: 'marin' }
+        );
+
+        expect(body!.session.instructions.startsWith('Conduct the entire conversation in Dutch.')).toBe(true);
+        expect(
+            body!.session.delegation.responses.instructions.startsWith('Write every reply that the voice will say to the user in natural, idiomatic Dutch')
+        ).toBe(true);
+    });
+
     test('turns authentication failures into a safe message', async () => {
         await expect(
             createOpenAiLiveSession(async () => new Response('secret details', { status: 401 }), 'sk-private', 'offer', {

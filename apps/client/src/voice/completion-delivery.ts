@@ -1,5 +1,6 @@
 import { completionPrompt, type VoiceChatCompletion, type VoiceChatFollowUp } from '@/voice/chat-follow-up';
 import type { LiveEvent } from '@/voice/live-session';
+import { VOICE_LANGUAGES, type VoiceLanguage } from '@ruimte/contracts';
 
 // Live appends allow 500 tokens. A UTF-8 byte bound stays below it without a tokenizer in the client.
 const MAX_APPEND_BYTES = 480;
@@ -35,9 +36,13 @@ export class VoiceCompletionDelivery {
     private readonly send: (event: LiveEvent) => boolean;
     private readonly queue: PendingCompletion[] = [];
     private pending: LiveEvent | null = null;
+    private readonly spoken: string;
 
-    constructor(send: (event: LiveEvent) => boolean) {
+    /* The context of a report is English, so the line that makes the model speak names the language it speaks in. */
+    constructor(send: (event: LiveEvent) => boolean, language: VoiceLanguage | null = null) {
         this.send = send;
+        const name = VOICE_LANGUAGES.find((entry) => entry.id === language)?.english;
+        this.spoken = name ? ` Say it in natural ${name}, as a native ${name} speaker would.` : '';
     }
 
     enqueue(followUp: VoiceChatFollowUp, completion: VoiceChatCompletion): void {
@@ -60,7 +65,7 @@ export class VoiceCompletionDelivery {
             delegation_id: null,
             content
         }));
-        events.push({ type: 'session.commentary.append', event_id: crypto.randomUUID(), delegation_id: null, content: commentary });
+        events.push({ type: 'session.commentary.append', event_id: crypto.randomUUID(), delegation_id: null, content: `${commentary}${this.spoken}` });
         this.queue.push({ id, chatKey, events });
         this.flush();
     }

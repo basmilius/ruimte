@@ -310,7 +310,7 @@ export async function startVoice(): Promise<void> {
             }
         }
     );
-    completionDelivery = new VoiceCompletionDelivery((event) => next.send(event));
+    completionDelivery = new VoiceCompletionDelivery((event) => next.send(event), useSettings.getState().voiceLanguage);
     sessionWatch = new VoiceSessionWatch();
     const queue = new VoiceToolQueue(voiceWorkspaceRevision);
     toolQueue = queue;
