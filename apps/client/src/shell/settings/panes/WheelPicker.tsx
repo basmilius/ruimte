@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Button, ColorSwatch, Icon, Popover } from '@adecore/ui';
 
@@ -44,10 +44,26 @@ export function WheelPicker<Id extends string>({ value, label, rings, center, co
     // The wheel opens with the focus on the one in use: the first swatch would take it otherwise, and a
     // swatch with the focus is one a person is looking at, so the app would put on its colors unasked.
     const pickedRef = useRef<HTMLButtonElement>(null);
+    // Read by the cleanup below, which runs after the state and the props of its render are gone.
+    const preview = useRef({ looking: false, onPreview });
+    useEffect(() => {
+        preview.current.onPreview = onPreview;
+    });
     const look = (id: Id | null): void => {
         setLooking(id);
+        preview.current.looking = id !== null;
         onPreview(id);
     };
+    // A wheel taken away while a color is previewed (its dialog closed under it) gets no close of its
+    // popover, so it ends the preview itself rather than leave the window in colors nobody picked.
+    useEffect(
+        () => () => {
+            if (preview.current.looking) {
+                preview.current.onPreview(null);
+            }
+        },
+        []
+    );
     const spots = [
         ...rings.flatMap((ring, depth) => ring.map((id, i) => ({ id, ...wheelSpot(i / ring.length, RING_RADII[depth] ?? 0) }))),
         ...(center === undefined ? [] : [{ id: center, ...wheelSpot(0, 0) }])

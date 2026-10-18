@@ -68,6 +68,16 @@ describe('Settings > Appearance > Palette', () => {
         expect(useSettings.getState().palette).toBe('default');
     });
 
+    test('a wheel taken away while it previews puts the picked colors back', async () => {
+        await openWheel();
+        await act(async () => swatch('Teal')?.focus());
+        expect(wearsTint()).toBe(true);
+        await page.unmount();
+        expect(wearsTint()).toBe(false);
+        // The shared cleanup unmounts again, which a root that is gone already ignores.
+        page = mount();
+    });
+
     test('a click picks the palette and keeps the app in it', async () => {
         await openWheel();
         await clickOn(swatch('Mauve'));
