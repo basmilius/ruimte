@@ -10,7 +10,7 @@
         "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
     },
     "dependencies": {
-        "@adecore/agents": "0.26.3",
+        "@adecore/agents": "0.27.1",
         "@ruimte/pulsar": "workspace:*",
         "zod": "^4.6.5"
     },
