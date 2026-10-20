@@ -61,6 +61,14 @@ struct MobileSettings: View {
                 NavigationLink("Notifications and Live Activities") {
                     NotificationsSettingsPage(coordinator: runtime.notifications, projects: projects)
                 }
+                if runtime.voice.declaresMicrophone {
+                    NavigationLink {
+                        VoiceSettingsPage(runtime: runtime)
+                    } label: {
+                        Label(String(localized: "Voice"), lucideIcon: "mic")
+                    }
+                    .accessibilityIdentifier("settings.voice")
+                }
                 ForEach(runtime.machines, id: \.id) { machine in
                     NavigationLink {
                         MachineAgentsPage(session: runtime.session(for: machine))

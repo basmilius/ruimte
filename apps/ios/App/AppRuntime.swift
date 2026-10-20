@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import RuimtePulsar
 import RuimteTransport
+import RuimteVoice
 import UIKit
 import WidgetKit
 
@@ -30,6 +31,9 @@ final class AppRuntime {
     private var authentication: WebAuthentication?
     private var appleAuthentication: NativeAppleAuthentication?
     @ObservationIgnored lazy var notifications = NotificationCoordinator(runtime: self)
+    /// Voice for the whole process: one session at a time, owned by the scene that started it.
+    @ObservationIgnored lazy var voice = VoiceCoordinator(
+        media: { VoiceMediaPeer() }, audio: { AudioSessionController.shared })
     private var sessions: [String: SharedMachineSession] = [:]
     private var initialized = false
     @ObservationIgnored private var notificationSyncTask: Task<Void, Never>?

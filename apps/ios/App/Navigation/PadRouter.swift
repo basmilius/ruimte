@@ -12,11 +12,12 @@ enum PadDetail: Hashable {
     case notification(NotificationDestination)
 }
 
-/// What stands in the inspector column beside the content: the project's files, its git, or a sub-agent of the chat
-/// in the content.
+/// What stands in the inspector column beside the content: the project's files, its git, a sub-agent of the chat
+/// in the content, or Voice's timeline, which stays beside whatever the content shows.
 enum PadInspector: Hashable {
     case files, git
     case subagent(PadSubagentPane)
+    case voice
 }
 
 /// Where the iPad stands. The sidebar lists Now, the machines and the open projects; a project opened from anywhere is
@@ -49,7 +50,7 @@ final class PadRouter {
         } else {
             navigation = WorkspaceNavigation(workspace: workspace)
             project = navigation
-            inspector = nil
+            leaveProjectInspector()
             file = nil
             subagent = nil
         }
@@ -78,7 +79,7 @@ final class PadRouter {
     /// Leaves the project, for the sidebar's back button, one that was closed or a machine that went.
     func closeProject() {
         project = nil
-        inspector = nil
+        leaveProjectInspector()
         file = nil
         subagent = nil
         if detail == .project { detail = .now }
@@ -131,9 +132,11 @@ final class PadRouter {
         return !project.workspace.isScratch
     }
 
-    /// The inspector only stands beside a project's content.
+    /// The inspector only stands beside a project's content, except for Voice, which runs on beside any page.
     var showsInspector: Bool {
-        guard detail == .project, let inspector else { return false }
+        guard let inspector else { return false }
+        if inspector == .voice { return true }
+        guard detail == .project else { return false }
         if case .subagent = inspector { return true }
         return offersFilesAndGit
     }
@@ -141,6 +144,11 @@ final class PadRouter {
     /// A sub-agent of the chat in the content, beside it in the inspector.
     func inspect(_ pane: PadSubagentPane) {
         inspector = .subagent(pane)
+    }
+
+    /// What belongs to the project leaves with it; Voice stays.
+    private func leaveProjectInspector() {
+        if inspector != .voice { inspector = nil }
     }
 
     /// A sub-agent belongs to the chat it ran in, so it leaves the inspector with that chat.

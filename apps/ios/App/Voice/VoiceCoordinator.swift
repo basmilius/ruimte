@@ -1,0 +1,402 @@
+import Foundation
+import Observation
+import RuimtePulsar
+import RuimteTransport
+import RuimteVoice
+
+/// Where Voice works: a project on a machine, and the canvas on screen when there is one.
+struct VoiceTarget: Equatable {
+    let machineID: String
+    let projectID: String
+    let projectName: String
+    var viewID: String?
+}
+
+/// The requests a machine names in `endpoint.info`. `MachineClient` reads them; a test machine says what it answers.
+@MainActor protocol MachineFeatures: AnyObject {
+    func answers(_ type: WireRequest) -> Bool
+}
+
+extension MachineClient: MachineFeatures {}
+
+/// A line of what Voice did on the machine, as `voice.activity` reports it.
+struct VoiceActivityLine: Identifiable, Equatable {
+    let id: String
+    let kind: String
+    let status: String
+    let label: String
+    let detail: String
+}
+
+/// Voice on this phone: one session per app process, owned by the scene that started it. The machine mints the
+/// session, runs every tool and reports; the phone carries the microphone, the reply and the captions over a peer of
+/// its own (`VoiceMedia`), and holds the app's one audio session (`VoiceAudio`) while it runs.
+///
+/// Every request after `voice.start` names the scene, and the events are taken only for the owner's scene and
+/// session, since the scenes of an iPad share one link. A second scene sees where Voice runs and does not take the
+/// microphone over. The owner going to the background, the screen locking, a call, the machine link or the media
+/// dropping all end the session: there is no resume.
+@MainActor @Observable
+final class VoiceCoordinator {
+    enum Phase: Equatable {
+        case idle
+        /// Asking for the microphone, making the offer and waiting for the machine to mint and attach.
+        case connecting
+        case active
+        case stopping
+    }
+
+    enum Problem: Equatable {
+        case microphoneDenied
+        case message(String)
+    }
+
+    /// How long the phone waits for `voice.start` before it cancels the start; the machine gives up after 20 s.
+    static let startDeadlineMs: Double = 60_000
+    static let keptActivity = 60
+    /// Events that come before the start answered, which name a session the phone does not know yet.
+    static let keptEarlyEvents = 32
+
+    private(set) var phase = Phase.idle
+    /// The scene that holds Voice, while a session starts or runs.
+    private(set) var owner: String?
+    /// The scene the last session ran in, which shows how it ended.
+    private(set) var lastScene: String?
+    private(set) var problem: Problem?
+    private(set) var target: VoiceTarget?
+    private(set) var sessionID: String?
+    private(set) var transcript = VoiceTranscript()
+    private(set) var activity: [VoiceActivityLine] = []
+    /// Where the reply plays, as iOS names the route.
+    private(set) var route: String?
+    /// Per machine, whether it holds an OpenAI key for Voice, as `voice.keyStatus` last said.
+    private(set) var keys: [String: Bool] = [:]
+
+    @ObservationIgnored private let makeMedia: @MainActor () -> any VoiceMedia
+    @ObservationIgnored private let makeAudio: @MainActor () -> any VoiceAudio
+    @ObservationIgnored private lazy var audio: any VoiceAudio = {
+        let audio = makeAudio()
+        audio.onChange = { [weak self] change in self?.audioChanged(change) }
+        return audio
+    }()
+    @ObservationIgnored private let scheduler: any TransportScheduling
+    @ObservationIgnored private let preferences: () -> VoicePreferences
+    @ObservationIgnored private let makeID: () -> String
+    @ObservationIgnored private let timeZone: () -> String
+    @ObservationIgnored let declaresMicrophone: Bool
+
+    @ObservationIgnored private var client: (any MachineRequesting)?
+    @ObservationIgnored private var media: (any VoiceMedia)?
+    @ObservationIgnored private var startID: String?
+    @ObservationIgnored private var seq = -1
+    @ObservationIgnored private var early: [JSONValue] = []
+    @ObservationIgnored private var subscriptions: [() -> Void] = []
+    @ObservationIgnored private var cancelDeadline: (() -> Void)?
+    /// Moves with every start and every end, so what a start awaited finds out it no longer counts.
+    @ObservationIgnored private var attempt = 0
+
+    init(
+        media: @escaping @MainActor () -> any VoiceMedia, audio: @escaping @MainActor () -> any VoiceAudio,
+        scheduler: any TransportScheduling = TaskTransportScheduler(),
+        preferences: @escaping () -> VoicePreferences = { VoicePreferences.current() },
+        makeID: @escaping () -> String = { UUID().uuidString },
+        timeZone: @escaping () -> String = { TimeZone.current.identifier },
+        declaresMicrophone: Bool = VoiceCoordinator.appDeclaresMicrophone
+    ) {
+        makeMedia = media
+        makeAudio = audio
+        self.scheduler = scheduler
+        self.preferences = preferences
+        self.makeID = makeID
+        self.timeZone = timeZone
+        self.declaresMicrophone = declaresMicrophone
+    }
+
+    /// Only a Debug build asks for the microphone until its use is decided, and asking without the declaration would
+    /// end the app, so a build without it never offers Voice.
+    static var appDeclaresMicrophone: Bool {
+        Bundle.main.object(forInfoDictionaryKey: "NSMicrophoneUsageDescription") != nil
+    }
+
+    // MARK: Whether Voice is offered
+
+    /// Whether the mic button shows for a project on this machine: the app may use the microphone, the machine
+    /// answers `voice.start`, which it names only with its experimental flag on, and it holds a key.
+    func offers(machineID: String, client: any MachineRequesting) -> Bool {
+        declaresMicrophone && (client as? MachineFeatures)?.answers(.voiceStart) == true && keys[machineID] == true
+    }
+
+    /// Asks the machine whether it holds a key, once it answers the request.
+    func refreshKey(machineID: String, client: any MachineRequesting) async {
+        guard declaresMicrophone, (client as? MachineFeatures)?.answers(.voiceKeyStatus) == true else {
+            keys[machineID] = nil
+            return
+        }
+        do {
+            let result = try WireRequest.voiceKeyStatus.validateResult(try await client.request(.voiceKeyStatus))
+            keys[machineID] = result["present"]?.boolValue == true
+        } catch {
+            keys[machineID] = nil
+        }
+    }
+
+    // MARK: Who holds it
+
+    func isOwner(_ scene: String) -> Bool { owner == scene }
+
+    /// Voice runs, in a scene other than this one.
+    func runsElsewhere(than scene: String) -> Bool { owner != nil && owner != scene }
+
+    /// What a scene shows of the last session that ran in it.
+    func problem(in scene: String) -> Problem? { lastScene == scene ? problem : nil }
+
+    func dismissProblem() { problem = nil }
+
+    // MARK: Starting and stopping
+
+    /// Starts Voice for `scene`. Nothing happens while Voice runs or starts, in this scene or another.
+    func start(scene: String, target: VoiceTarget, client: any MachineRequesting) async {
+        guard phase == .idle, owner == nil else { return }
+        attempt += 1
+        let current = attempt
+        owner = scene
+        lastScene = scene
+        self.target = target
+        self.client = client
+        problem = nil
+        route = nil
+        transcript.clear()
+        activity = []
+        phase = .connecting
+        if audio.permission == .undetermined {
+            _ = await audio.requestPermission()
+            guard current == attempt else { return }
+        }
+        guard audio.permission == .granted else {
+            end(.microphoneDenied, tellMachine: false)
+            return
+        }
+        let startID = makeID()
+        self.startID = startID
+        listen(to: client)
+        let media = makeMedia()
+        self.media = media
+        media.onEvent = { [weak self] event in self?.mediaEvent(event, attempt: current) }
+        cancelDeadline = scheduler.after(milliseconds: Self.startDeadlineMs) { [weak self] in
+            guard let self, current == attempt, sessionID == nil else { return }
+            end(.message(String(localized: "The machine did not start Voice in time.")), tellMachine: true)
+        }
+        do {
+            let offer = try await media.offer()
+            guard current == attempt else { return }
+            let chosen = preferences()
+            var payload: [String: JSONValue] = [
+                "startId": .string(startID), "sceneId": .string(scene), "projectId": .string(target.projectID),
+                "sdp": .string(offer), "language": .string(chosen.language), "voice": .string(chosen.voice),
+                "timeZone": .string(timeZone()),
+            ]
+            if let viewID = target.viewID { payload["viewId"] = .string(viewID) }
+            let result = try WireRequest.voiceStart.validateResult(
+                try await client.request(.voiceStart, payload: .object(payload)))
+            let sessionID = result.text("sessionId")
+            guard current == attempt else {
+                // Stopped while the machine started it: the stop by start id may have come too late for this one.
+                Self.stop(client: client, scene: scene, field: "sessionId", id: sessionID)
+                return
+            }
+            self.sessionID = sessionID
+            cancelDeadline?()
+            cancelDeadline = nil
+            if let status = result["status"] { apply(status: status) }
+            for event in early where event.text("sessionId") == sessionID { received(event) }
+            early = []
+            guard current == attempt else { return }
+            try await media.accept(answer: result.text("sdp"))
+            guard current == attempt else { return }
+            try audio.activate(owner: scene)
+            route = (audio as? AudioRouteNaming)?.route
+        } catch is CancellationError {
+            if current == attempt { end(nil, tellMachine: true) }
+        } catch {
+            guard current == attempt else { return }
+            end(.message(Self.describe(error)), tellMachine: true)
+        }
+    }
+
+    /// Stops the session `scene` started, or the start it has on its way.
+    func stop(scene: String) {
+        guard owner == scene else { return }
+        end(nil, tellMachine: true)
+    }
+
+    /// The scene went to the background, or came back. Only the owner going away ends Voice; another scene going away
+    /// does nothing, even while it held the machine link.
+    func scene(_ scene: String, background: Bool) {
+        guard background, owner == scene else { return }
+        end(.message(String(localized: "Voice stopped when Ruimte went to the background.")), tellMachine: true)
+    }
+
+    func sceneClosed(_ scene: String) {
+        guard owner == scene else { return }
+        end(nil, tellMachine: true)
+    }
+
+    /// The screen locked. A locked phone ends Voice; what Voice started on the machine goes on.
+    func deviceLocked() {
+        guard owner != nil else { return }
+        end(.message(String(localized: "Voice stopped when the screen locked.")), tellMachine: true)
+    }
+
+    /// The person's answer to an action that asked first.
+    func confirm(scene: String, token: String, decision: String) async -> Bool {
+        guard owner == scene, let sessionID, let client else { return false }
+        let payload: JSONValue = .object([
+            "sceneId": .string(scene), "sessionId": .string(sessionID), "token": .string(token),
+            "decision": .string(decision),
+        ])
+        guard let result = try? await client.request(.voiceConfirm, payload: payload),
+            let checked = try? WireRequest.voiceConfirm.validateResult(result)
+        else { return false }
+        return checked["accepted"]?.boolValue == true
+    }
+
+    // MARK: What comes in
+
+    private func listen(to client: any MachineRequesting) {
+        subscriptions = [
+            client.subscribe(.voiceStatus) { [weak self] in self?.received($0) },
+            client.subscribe(.voiceActivity) { [weak self] in self?.received($0) },
+            client.observeConnection { [weak self] connected in
+                guard let self, !connected, owner != nil else { return }
+                let message = String(localized: "The connection to the machine dropped, so Voice stopped.")
+                end(.message(message), tellMachine: false)
+            },
+        ]
+    }
+
+    /// A `voice.status` or `voice.activity` event, taken only for the owner's scene and session, in `seq` order.
+    private func received(_ event: JSONValue) {
+        guard let owner, event.text("sceneId") == owner else { return }
+        guard let sessionID else {
+            if early.count < Self.keptEarlyEvents { early.append(event) }
+            return
+        }
+        guard event.text("sessionId") == sessionID, let seq = event["seq"]?.numberValue.map(Int.init),
+            seq > self.seq
+        else { return }
+        if let entry = event["entry"] {
+            self.seq = seq
+            note(entry)
+        } else {
+            apply(status: event)
+        }
+    }
+
+    private func apply(status: JSONValue) {
+        guard let seq = status["seq"]?.numberValue.map(Int.init), seq > self.seq else { return }
+        self.seq = seq
+        switch status.text("phase") {
+        case "starting": phase = .connecting
+        case "active": phase = .active
+        case "stopping": phase = .stopping
+        case "closed": end(nil, tellMachine: false)
+        case "failed":
+            let said = status["error"]?.text("message") ?? ""
+            let message = said.isEmpty ? String(localized: "Voice stopped on the machine.") : said
+            end(.message(message), tellMachine: false)
+        default: break
+        }
+    }
+
+    private func note(_ entry: JSONValue) {
+        let line = VoiceActivityLine(
+            id: entry.text("id"), kind: entry.text("kind"), status: entry.text("status"), label: entry.text("label"),
+            detail: entry.text("detail"))
+        if let index = activity.firstIndex(where: { $0.id == line.id }) {
+            activity[index] = line
+            return
+        }
+        activity.append(line)
+        if activity.count > Self.keptActivity { activity.removeFirst(activity.count - Self.keptActivity) }
+    }
+
+    private func mediaEvent(_ event: VoiceMediaEvent, attempt current: Int) {
+        guard current == attempt else { return }
+        switch event {
+        case .caption(let caption): transcript.add(caption)
+        case .started: break
+        case .lost:
+            let message = String(localized: "The audio connection to OpenAI dropped, so Voice stopped.")
+            end(.message(message), tellMachine: true)
+        }
+    }
+
+    private func audioChanged(_ change: VoiceAudioChange) {
+        guard owner != nil else { return }
+        switch change {
+        case .interrupted:
+            let message = String(localized: "A call or another app took the audio, so Voice stopped.")
+            end(.message(message), tellMachine: true)
+        case .reset:
+            let message = String(localized: "The audio of this device restarted, so Voice stopped.")
+            end(.message(message), tellMachine: true)
+        case .route(let name):
+            route = name.isEmpty ? nil : name
+        }
+    }
+
+    // MARK: The end
+
+    /// Ends the session or start on this phone and, unless the machine ended it, asks the machine to stop it too.
+    private func end(_ problem: Problem?, tellMachine: Bool) {
+        guard let scene = owner else { return }
+        attempt += 1
+        if tellMachine, let client {
+            if let sessionID {
+                Self.stop(client: client, scene: scene, field: "sessionId", id: sessionID)
+            } else if let startID {
+                Self.stop(client: client, scene: scene, field: "startId", id: startID)
+            }
+        }
+        cancelDeadline?()
+        cancelDeadline = nil
+        for cancel in subscriptions { cancel() }
+        subscriptions = []
+        media?.onEvent = nil
+        media?.close()
+        media = nil
+        audio.deactivate(owner: scene)
+        owner = nil
+        client = nil
+        sessionID = nil
+        startID = nil
+        seq = -1
+        early = []
+        phase = .idle
+        self.problem = problem
+    }
+
+    private static func stop(client: any MachineRequesting, scene: String, field: String, id: String) {
+        guard !id.isEmpty else { return }
+        let payload: JSONValue = .object(["sceneId": .string(scene), field: .string(id)])
+        Task { _ = try? await client.request(.voiceStop, payload: payload) }
+    }
+
+    private static func describe(_ error: Error) -> String {
+        if let failure = error as? VoiceAudioFailure {
+            switch failure {
+            case .busy: return String(localized: "Voice runs in another window.")
+            case .microphoneDenied: return String(localized: "Ruimte may not use the microphone.")
+            case .unavailable(let message): return message
+            }
+        }
+        return error.localizedDescription
+    }
+}
+
+/// An audio session that can say where the reply plays.
+@MainActor protocol AudioRouteNaming {
+    var route: String? { get }
+}
+
+extension AudioSessionController: AudioRouteNaming {}

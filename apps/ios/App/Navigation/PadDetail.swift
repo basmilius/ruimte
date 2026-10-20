@@ -14,6 +14,7 @@ struct PadDetailColumn: View {
     @State private var diagnostics = false
     @State private var newChat = false
     @State private var launches = false
+    @Environment(\.voiceScene) private var voiceScene
 
     var body: some View {
         content
@@ -70,6 +71,9 @@ struct PadDetailColumn: View {
     /// and Git while a project folder is open.
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
+            if let voiceScene, runtime.showsVoice(in: voiceScene) {
+                VoiceMicButton(voice: runtime.voice, scene: voiceScene, target: voiceTarget)
+            }
             if !runtime.machines.isEmpty {
                 Button {
                     newChat = true
@@ -129,6 +133,16 @@ struct PadDetailColumn: View {
         }
     }
 
+    /// The project in the sidebar, which the mic talks about; without one it asks for a project.
+    private var voiceTarget: (VoiceTarget, SharedMachineSession)? {
+        guard let navigation = router.project, router.detail == .project else { return nil }
+        let workspace = navigation.workspace
+        guard runtime.voice.offers(machineID: workspace.session.machine.id, client: workspace.client) else {
+            return nil
+        }
+        return (VoiceTarget(workspace, shown: navigation.selectedViewID), workspace.session)
+    }
+
     /// Where the write button starts a chat: the open project, or with the Chats project open, Chats itself.
     private var chatProject: NowChatProject? {
         guard let workspace = router.project?.workspace, !workspace.isScratch else { return nil }
@@ -146,9 +160,15 @@ struct PadDetailColumn: View {
 /// column's navigation, so what it pushed took the content's place.
 struct PadInspectorPane: View {
     let router: PadRouter
+    var runtime: AppRuntime?
+    var now: NowModel?
+    var voiceScene: VoiceScene?
 
     var body: some View {
-        if case .subagent(let pane) = router.inspector {
+        if router.inspector == .voice, let runtime, let now, let voiceScene {
+            VoicePanel(runtime: runtime, now: now, scene: voiceScene) { router.inspector = nil }
+                .modifier(InspectorEdge())
+        } else if case .subagent(let pane) = router.inspector {
             SubagentInspector(
                 model: pane.model, crumb: pane.crumb, session: pane.session,
                 openAsView: {
@@ -169,7 +189,7 @@ struct PadInspectorPane: View {
                         openFile: { router.show(file: $0, line: $1) }, shownFile: router.file)
                 case .git:
                     GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
-                case .subagent, nil:
+                case .subagent, .voice, nil:
                     EmptyView()
                 }
             }

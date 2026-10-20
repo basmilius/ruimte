@@ -156,6 +156,12 @@ public enum WireSchema {
         return try JSONValue.decode(Data(contentsOf: url))
     }
 
+    /// The generated schema of `name`, for a choice the app offers from what the wire takes, such as the languages of
+    /// `voice.start`, so the two never drift apart.
+    public static func schema(_ name: String) -> JSONValue? {
+        try? schemas.get()[name]
+    }
+
     @discardableResult
     public static func validate(_ name: String, _ value: JSONValue) throws -> JSONValue {
         guard let schema = try schemas.get()[name] else { throw WireValidationError.invalid("Unknown schema: \(name)") }

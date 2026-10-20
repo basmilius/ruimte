@@ -23162,6 +23162,399 @@
           }
         }
       }
+    },
+    "Voice" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice"
+          }
+        }
+      }
+    },
+    "What Voice did" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wat Voice deed"
+          }
+        }
+      }
+    },
+    "Voice runs in another window" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice loopt in een ander venster"
+          }
+        }
+      }
+    },
+    "Stop it there to talk to Voice here." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop het daar om hier met Voice te praten."
+          }
+        }
+      }
+    },
+    "Open Settings" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Instellingen"
+          }
+        }
+      }
+    },
+    "Stop Voice" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice stoppen"
+          }
+        }
+      }
+    },
+    "Talk about %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Praat over %@"
+          }
+        }
+      },
+      "comment" : "%@ is the name of a project"
+    },
+    "Choose a project" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kies een project"
+          }
+        }
+      }
+    },
+    "Interrupted" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onderbroken"
+          }
+        }
+      }
+    },
+    "Talk about" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Praat over"
+          }
+        }
+      }
+    },
+    "No machine offers Voice" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geen machine biedt Voice aan"
+          }
+        }
+      }
+    },
+    "A machine offers Voice once it has an OpenAI key and Voice is turned on there." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een machine biedt Voice aan zodra hij een OpenAI-sleutel heeft en Voice daar aanstaat."
+          }
+        }
+      }
+    },
+    "Start Voice" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice starten"
+          }
+        }
+      }
+    },
+    "Voice listens" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice luistert"
+          }
+        }
+      }
+    },
+    "Show Voice" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice tonen"
+          }
+        }
+      }
+    },
+    "Ruimte may not use the microphone. Turn it on in Settings to talk to Voice." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruimte mag de microfoon niet gebruiken. Zet hem aan in Instellingen om met Voice te praten."
+          }
+        }
+      }
+    },
+    "Voice is off" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice staat uit"
+          }
+        }
+      }
+    },
+    "Connecting to Voice" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbinden met Voice"
+          }
+        }
+      }
+    },
+    "Listening" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luistert"
+          }
+        }
+      }
+    },
+    "Stopping Voice" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice stopt"
+          }
+        }
+      }
+    },
+    "Start or stop Voice" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice starten of stoppen"
+          }
+        }
+      }
+    },
+    "Language" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taal"
+          }
+        }
+      },
+      "comment" : "The language Voice speaks"
+    },
+    "Confirm deletions" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwijderen bevestigen"
+          }
+        }
+      }
+    },
+    "Ask before Voice deletes views or nodes. When off, spoken deletion requests run immediately." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vraag het voordat Voice weergaven of nodes verwijdert. Staat dit uit, dan worden gesproken verzoeken om iets te verwijderen meteen uitgevoerd."
+          }
+        }
+      }
+    },
+    "Changes apply when you start the next conversation. Only an active conversation sends microphone audio to OpenAI." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wijzigingen gelden vanaf het volgende gesprek. Alleen een lopend gesprek stuurt microfoonaudio naar OpenAI."
+          }
+        }
+      }
+    },
+    "OpenAI key" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenAI-sleutel"
+          }
+        }
+      }
+    },
+    "The key stays on the machine and never reaches this phone. Set it there with ruimte voice key set. Voice is an experiment a machine turns on before it offers it." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De sleutel blijft op de machine en komt nooit op deze telefoon. Stel hem daar in met ruimte voice key set. Voice is een experiment dat een machine eerst aanzet voordat hij het aanbiedt."
+          }
+        }
+      }
+    },
+    "Set" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingesteld"
+          }
+        }
+      },
+      "comment" : "An OpenAI key is set on a machine"
+    },
+    "Not set" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niet ingesteld"
+          }
+        }
+      }
+    },
+    "A call or another app took the audio, so Voice stopped." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een gesprek of een andere app nam de audio over, dus Voice is gestopt."
+          }
+        }
+      }
+    },
+    "The audio of this device restarted, so Voice stopped." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De audio van dit apparaat is opnieuw gestart, dus Voice is gestopt."
+          }
+        }
+      }
+    },
+    "The audio connection to OpenAI dropped, so Voice stopped." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De audioverbinding met OpenAI viel weg, dus Voice is gestopt."
+          }
+        }
+      }
+    },
+    "The machine did not start Voice in time." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine startte Voice niet op tijd."
+          }
+        }
+      }
+    },
+    "Voice stopped on the machine." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice is gestopt op de machine."
+          }
+        }
+      }
+    },
+    "Voice runs in another window." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice loopt in een ander venster."
+          }
+        }
+      }
+    },
+    "Ruimte may not use the microphone." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruimte mag de microfoon niet gebruiken."
+          }
+        }
+      }
+    },
+    "Voice stopped when Ruimte went to the background." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice is gestopt toen Ruimte naar de achtergrond ging."
+          }
+        }
+      }
+    },
+    "Voice stopped when the screen locked." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice is gestopt toen het scherm vergrendelde."
+          }
+        }
+      }
+    },
+    "The connection to the machine dropped, so Voice stopped." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De verbinding met de machine viel weg, dus Voice is gestopt."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

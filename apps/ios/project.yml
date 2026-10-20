@@ -25,6 +25,8 @@ packages:
     path: Packages/RuimteTransport
   RuimteIntelligentUI:
     path: Packages/RuimteIntelligentUI
+  RuimteVoice:
+    path: Packages/RuimteVoice
 configFiles:
   Debug: Configuration/Build.xcconfig
   Release: Configuration/Build.xcconfig
@@ -53,6 +55,7 @@ targets:
       - package: RuimtePulsar
       - package: RuimteTransport
       - package: RuimteIntelligentUI
+      - package: RuimteVoice
       - package: SwiftTerm
       - package: Highlightr
       - package: Sentry
@@ -174,6 +177,7 @@ targets:
       - package: LucideSwift
       - package: RuimtePulsar
       - package: RuimteTransport
+      - package: RuimteVoice
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.ruimte.mobile.tests

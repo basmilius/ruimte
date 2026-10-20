@@ -17,6 +17,7 @@ struct PhoneHome: View {
     let addMachine: () -> Void
     @State private var newChat = false
     @State private var gitLines = ProjectGitLines()
+    @Environment(\.voiceScene) private var voiceScene
 
     var body: some View {
         NavigationStack(path: $router.path) {
@@ -76,6 +77,12 @@ struct PhoneHome: View {
             if now.loaded { NeedsYouWidgetRecorder.record(board) }
         }
         .task(id: runtime.account?.id) { await AccountPictures.shared.load(for: runtime.account) }
+        .onAppear {
+            // ⌘⇧M on a keyboard talks about the project on top, or asks for one from a tab.
+            voiceScene?.openTarget = { [router] in
+                router.project.map { (VoiceTarget($0.workspace, shown: $0.openedViewID), $0.workspace.session) }
+            }
+        }
     }
 
     private var settingsLink: SettingsLink {
@@ -85,6 +92,11 @@ struct PhoneHome: View {
     }
 
     @ToolbarContentBuilder private var tabToolbar: some ToolbarContent {
+        if router.tab == .now, runtime.showsVoice(in: voiceScene), let voiceScene {
+            ToolbarItem(id: "now.voice", placement: .topBarTrailing) {
+                VoiceMicButton(voice: runtime.voice, scene: voiceScene)
+            }
+        }
         if router.tab == .now && !runtime.machines.isEmpty {
             ToolbarItem(id: "now.newChat", placement: .topBarTrailing) {
                 Button {

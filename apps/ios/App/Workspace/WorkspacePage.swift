@@ -27,6 +27,7 @@ struct WorkspacePage: View {
     @State private var openAfterSettings: String?
     @State private var afterSettings: AfterProjectSettings?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.voiceScene) private var voiceScene
 
     init(
         navigation: WorkspaceNavigation, sidebar: PadRouter? = nil, settingsLink: SettingsLink? = nil,
@@ -306,6 +307,13 @@ struct WorkspacePage: View {
     /// machine's own, so its menu holds New chat and Usage only. Its entries wait for the project, not the item, so the
     /// item stays the same through a push the project opens during.
     @ToolbarContentBuilder private var phoneToolbar: some ToolbarContent {
+        if let runtime, let voiceScene, showsVoice(runtime.voice, scene: voiceScene) {
+            ToolbarItem(id: "project.voice", placement: .topBarTrailing) {
+                VoiceMicButton(
+                    voice: runtime.voice, scene: voiceScene,
+                    target: (VoiceTarget(workspace, shown: navigation.openedViewID), workspace.session))
+            }
+        }
         ToolbarItem(id: "project.menu", placement: .topBarTrailing) {
             Menu {
                 Section {
@@ -348,6 +356,11 @@ struct WorkspacePage: View {
         if let settingsLink {
             SettingsToolbarItem(link: settingsLink)
         }
+    }
+
+    /// The mic stands in a project whose machine offers Voice, and stays to stop a session this scene runs.
+    private func showsVoice(_ voice: VoiceCoordinator, scene: VoiceScene) -> Bool {
+        voice.isOwner(scene.id) || voice.offers(machineID: workspace.session.machine.id, client: workspace.client)
     }
 
     @ViewBuilder private var openingStatus: some View {

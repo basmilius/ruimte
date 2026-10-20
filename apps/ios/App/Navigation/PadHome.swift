@@ -16,6 +16,7 @@ struct PadHome: View {
     @State private var sidebarVisibility = NavigationSplitViewVisibility.automatic
     /// What the palette asked for that is a sheet of its own, put up once the palette is gone.
     @State private var afterPalette: (() -> Void)?
+    @Environment(\.voiceScene) private var voiceScene
 
     var body: some View {
         NavigationSplitView(columnVisibility: $sidebarVisibility) {
@@ -32,7 +33,8 @@ struct PadHome: View {
         }
         .navigationSplitViewStyle(.balanced)
         .inspector(isPresented: inspectorShown) {
-            PadInspectorPane(router: router).inspectorColumnWidth(min: 300, ideal: 360, max: 520)
+            PadInspectorPane(router: router, runtime: runtime, now: now, voiceScene: voiceScene)
+                .inspectorColumnWidth(min: 300, ideal: 360, max: 520)
         }
         .overlayPreferenceValue(SidebarBounds.self) { anchor in
             GeometryReader { geometry in
@@ -71,6 +73,13 @@ struct PadHome: View {
             if now.loaded { NeedsYouWidgetRecorder.record(board) }
         }
         .task(id: runtime.account?.id) { await AccountPictures.shared.load(for: runtime.account) }
+        .onAppear {
+            // The panel stands beside the content, and ⌘⇧M talks about the project in the sidebar.
+            voiceScene?.presentPanel = { [router] in router.inspector = .voice }
+            voiceScene?.openTarget = { [router] in
+                router.project.map { (VoiceTarget($0.workspace, shown: $0.selectedViewID), $0.workspace.session) }
+            }
+        }
     }
 
     private var inspectorShown: Binding<Bool> {
