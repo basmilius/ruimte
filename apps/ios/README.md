@@ -238,13 +238,16 @@ ignored. `RuimteTransport` stays without audio.
   otherwise drop the speaker for the earpiece. A file that plays while Voice runs keeps Voice's category, and anything
   that sets another category ends Voice rather than leaving it without a microphone.
 - There is no background audio: the owner's scene going to the background, the screen locking, a call, the machine
-  link or the media dropping all end Voice. What it started on the machine goes on.
+  link or the media dropping all end Voice. What it started on the machine goes on. Background audio is outside
+  this version, so the app declares no `audio` background mode; keeping Voice past a lock is Bas's to decide.
 - The captions stand above every tab of the scene (`VoiceCaptionBar`); the timeline is a sheet on an iPhone and the
   inspector on an iPad (`VoicePanel`). Language and voice are in Settings, Voice. Voice on a machine deletes nothing yet, so
   there is no switch for asking before a deletion.
-- Until its use is decided, only a Debug build declares the microphone (`INFOPLIST_KEY_NSMicrophoneUsageDescription`
-  in the Debug configuration of `project.yml`). A build without the declaration never offers Voice, the build phase
-  "Release declares no microphone" fails a Release build that does, and `MicrophoneDeclarationTests` holds the spec.
+- Until Bas decides on the microphone and the privacy label that comes with it (audio data shared with OpenAI),
+  only a Debug build declares the microphone (`INFOPLIST_KEY_NSMicrophoneUsageDescription` in the Debug
+  configuration of `project.yml`). A build without the declaration never offers Voice, the build phase "Release
+  declares no microphone" fails a Release build that does, and `MicrophoneDeclarationTests` holds the spec. Nothing
+  with Voice goes to TestFlight or the App Store before then.
 
 Run the package's tests with `swift test --package-path apps/ios/Packages/RuimteVoice`.
 

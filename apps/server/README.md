@@ -118,7 +118,7 @@ A bare `ruimte` at a terminal prints the address it listens on and names the com
 
 `ruimte service install` copies `ruimte`, `ruimte-context` and `ruimte.build` to `$RUIMTE_HOME/bin`. It writes the LaunchAgent or systemd user unit the desktop app writes, pointing at that copy and never at the npx cache. The unit carries the flags after `install`, the PATH of the shell it ran in (without npx's own folders) and `RUIMTE_SERVICE=1`. Running it again with a newer version replaces the copy, and the daemon under the service moves to it once idle; different flags restart the service. It refuses to touch a service that runs another program, such as the desktop app's. On Linux it prints `loginctl enable-linger <user>` when lingering is off and leaves turning it on to you. `uninstall` stops the service and removes the definition and the copy, and leaves the rest of `$RUIMTE_HOME` alone. `status` exits 0 only when the service is installed and answers on `--port`.
 
-`ruimte voice key set` saves the OpenAI key Voice run by the daemon mints its sessions with, in `$RUIMTE_HOME/voice/openai.json` (0600 in a 0700 folder, `src/voice/key-store.ts`). It asks for the key without echo at a terminal and otherwise reads it from stdin (`pbpaste | bun src/main.ts voice key set`); a key given as an argument is refused, since a shell keeps it in its history. `status` says only whether a key is set and `clear` removes it. While Voice on the daemon is a spike the command writes only into a development home: it refuses `~/.ruimte` and a compiled daemon. The daemon reads the file at every start of a Voice session, so a running daemon needs no restart. Nothing copies the desktop app's key or reads a CLI's credentials.
+`ruimte voice key set` saves the OpenAI key Voice run by the daemon mints its sessions with, in `$RUIMTE_HOME/voice/openai.json` (0600 in a 0700 folder, `src/voice/key-store.ts`). It asks for the key without echo at a terminal and otherwise reads it from stdin (`pbpaste | RUIMTE_HOME=~/.ruimte-dev bun src/main.ts voice key set`); a key given as an argument is refused, since a shell keeps it in its history. `status` says only whether a key is set and `clear` removes it. While Voice on the daemon is a spike the command writes only into a development home: it refuses `~/.ruimte` and a compiled daemon. The daemon reads the file at every start of a Voice session, so a running daemon needs no restart. Nothing copies the desktop app's key or reads a CLI's credentials.
 
 `ruimte context` is the agent-side CLI behind the `ruimte-context` script (see "Context links").
 
@@ -411,6 +411,16 @@ An experimental route, on only with `RUIMTE_EXPERIMENTAL_VOICE=1` (`src/voice`, 
 - Over the sideband the model hears the project and the phone's time when the session starts, the time every minute and a new context 250 ms after the project changed, as quiet `session.thinking.append` events.
 - The sideband carries no audio the daemon keeps: echoed audio events are dropped before anything could log them. OpenAI documents no field that bounds what the phone's data channel may send, so a client event on the sideband that the daemon never sent ends the session (`voice-foreign-client`).
 - `setKey` and `clearKey` are the local secret's only, and like `ruimte voice key` they refuse `~/.ruimte` and a compiled daemon with `voice-dev-home-only` while Voice is a spike (`voiceKeyHomeProblem`). No `voice.*` request is on a peer's list.
+
+Two decisions are Bas's and hold the route back from a release: whether a daemon may hold an OpenAI key at all (until then only a development home takes one, by hand), and what Voice may do (until then prompting and starting chats stay behind `RUIMTE_EXPERIMENTAL_VOICE_WRITES=1`, off by default). The invariants of `src/voice` are in its `CLAUDE.md`. To try the route from a checkout:
+
+```sh
+RUIMTE_EXPERIMENTAL_VOICE=1 bun run --cwd apps/server dev             # reading only
+RUIMTE_EXPERIMENTAL_VOICE=1 RUIMTE_EXPERIMENTAL_VOICE_WRITES=1 bun run --cwd apps/server dev
+cd apps/server && RUIMTE_HOME=~/.ruimte-dev bun src/main.ts voice key set   # asks for the key without echo
+```
+
+The daemon says at start which of the two it runs (`Experimental Voice for phones is on, reading only`). The key goes into the home of the dev daemon, so the command names that `RUIMTE_HOME`; without it the CLI aims at `~/.ruimte` and refuses.
 
 ## Chats
 
