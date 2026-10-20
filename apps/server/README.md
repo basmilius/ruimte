@@ -400,6 +400,16 @@ The model catalogs are `claude-models.json` and `codex-models.json` in `@adecore
 
 The runtime mode (`supervised`, `auto-accept-edits`, `auto`, `full-access`) is one vocabulary for every provider. Each provider maps it to its own flags: `--permission-mode` for Claude Code and a Grok terminal (`default`, `acceptEdits`, `auto`, `bypassPermissions`), an approval policy plus a sandbox for Codex.
 
+## Voice for a phone
+
+An experimental route, on only with `RUIMTE_EXPERIMENTAL_VOICE=1` (`src/voice`, `src/wiring/voice.ts`, `src/handlers/voice.ts`). A phone opens its own WebRTC peer to OpenAI for audio and captions; the daemon mints the GPT-Live session with the key from `ruimte voice key`, attaches to its sideband (`wss://api.openai.com/v1/live/sessions/<id>/attach`) and runs every tool call itself. Without the variable no `voice.*` request is registered, so `endpoint.info` names none and a phone shows no Voice.
+
+- `voice.start` answers the phone's offer only once the sideband is attached, within 20 seconds. A `voice.stop` by `startId` cancels a start that has not answered, and the cancel is kept, so a mint that answers late is closed again and never becomes a session. One start is kept per connection, scene and start id; the same id with other fields is `voice-start-conflict`. A scene runs one session and the machine four.
+- A session belongs to the connection and the scene that started it: only they stop it, answer its questions and hear `voice.status` and `voice.activity`. A connection that goes ends its sessions; there is no resume. While it runs the session holds its project the way a client does, without starting its launches.
+- Tool calls go through the shared `serverActions` as the voice actor (`voiceActionCall` in `src/actions/context.ts`), behind the policy of `src/voice/action-policy.ts`, derived from `DAEMON_VOICE_ACTIONS` in `@ruimte/voice`. It checks the action and its fields before the registry sees a call and again before a confirmation. For now only `chat.read` has a daemon handler (`src/actions/voice-actions.ts`); `chat.send` and `agent.start` are offered only with `RUIMTE_EXPERIMENTAL_VOICE_WRITES=1` too.
+- The sideband carries no audio the daemon keeps: echoed audio events are dropped before anything could log them. OpenAI documents no field that bounds what the phone's data channel may send, so a client event on the sideband that the daemon never sent ends the session (`voice-foreign-client`).
+- `setKey` and `clearKey` are the local secret's only. No `voice.*` request is on a peer's list.
+
 ## Chats
 
 The chat lifecycle, the backends per CLI and the projector that builds the thread live in `@adecore/agents/chat`. `src/chat/chat-manager.ts` binds them to Ruimte, and `src/chat/CLAUDE.md` has the invariants of forks, plans, bookmarks and visuals. What the daemon owns on disk:

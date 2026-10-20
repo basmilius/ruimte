@@ -150,6 +150,28 @@ describe('connectionOpener', () => {
         expect(closed).toEqual([peer.client.id]);
     });
 
+    test("ends the Voice sessions of a person's channel when it closes, once", () => {
+        const ended: string[] = [];
+        const order: string[] = [];
+        const sources = Object.fromEntries(NAMES.map((name) => [name, new FakeSource(name, order)])) as Record<(typeof NAMES)[number], FakeSource>;
+        const sessions = Object.assign(sources.sessions, { get: () => undefined });
+        const open = connectionOpener({
+            ...sources,
+            sessions,
+            dispatcher: new Dispatcher(),
+            voice: { channelClosed: (clientId) => void ended.push(clientId) }
+        });
+        const personChannel = new FakeChannel();
+        const person = open(personChannel, { reachability: 'loopback', sessionId: null });
+        const peerChannel = new FakeChannel();
+        open(peerChannel, { reachability: 'lan', sessionId: 'peer-1', peer: { machineId: 'machine-a' } });
+        peerChannel.fireClose();
+        expect(ended).toEqual([]);
+        personChannel.fireClose();
+        personChannel.fireClose();
+        expect(ended).toEqual([person.client.id]);
+    });
+
     test('answers a request on the channel it came in on', async () => {
         const { open } = setup();
         const channel = new FakeChannel();

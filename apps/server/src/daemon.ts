@@ -33,6 +33,8 @@ import type { DaemonRuntime } from './wiring/runtime.ts';
 import { wireProcesses } from './wiring/processes.ts';
 import { wireUsage } from './wiring/usage.ts';
 import { wireUsageStats } from './wiring/usage-stats.ts';
+import { wireVoice } from './wiring/voice.ts';
+import { registerVoiceHandlers } from './handlers/voice.ts';
 
 /*
  * Runs the daemon until a signal ends the process. The wiring modules are called in boot order; a
@@ -133,6 +135,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     sessions.observe((event) => work.tasks.terminals.sessionEvent(event));
     chats.observe((event) => push.consume(event));
     processes.processes.observeAlerts((alerts) => push.processAlerts(alerts));
+    // Null unless RUIMTE_EXPERIMENTAL_VOICE=1; its tools run through the host the agents' verbs reach.
+    const voice = wireVoice({ config, projects: projects.store, canvasHost });
     const power = wirePower(home, identity, agents);
     sessions.observe((event) => computer.observe(event));
     chats.observe((event) => computer.observe(event));
@@ -165,6 +169,9 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         stats,
         later: { network: () => network, clients: () => clients }
     });
+    if (voice !== null) {
+        registerVoiceHandlers(dispatcher, voice);
+    }
     const language = await wireLanguage({
         home,
         compiled,
@@ -187,6 +194,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         peers: projects.store.peers,
         remote: remote.status,
         peerTasks: work.peerTasks,
+        ...(voice === null ? {} : { voice: voice.sessions }),
         sessions,
         chats,
         browsers: devices.browsers,
@@ -295,6 +303,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
                 console.error(`${what} on shutdown failed:`, errorText(e));
             }
         };
+        // Before the sessions go: a Voice session left open at OpenAI keeps costing.
+        await step('Ending Voice sessions', async () => voice?.sessions.stopAll());
         await step('Settling tasks', () => work.tasks.coordinator.settled());
         await step('Writing terminal snapshots', () => agents.snapshotSchedule.flush());
         await step('Writing chats', () => chats.shutdown());
