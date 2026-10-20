@@ -95,3 +95,28 @@ describe('liveTools', () => {
         expect(liveTools({ language: 'nl', voice: 'marin' })).toEqual(voiceToolDefinitions());
     });
 });
+
+/*
+ * The desktop's tools and mint body are held byte for byte, so a change to how Voice tools are built for
+ * the daemon never changes what the desktop offers without a reviewed snapshot update.
+ */
+describe('the desktop GPT-Live session', () => {
+    test('offers the same tools, byte for byte', () => {
+        expect(JSON.stringify(liveTools({ language: 'nl', voice: 'marin' }))).toMatchSnapshot();
+        expect(JSON.stringify(liveTools({ language: 'nl', voice: 'marin', domains: ['workspace', 'communicate', 'sessions'] }))).toMatchSnapshot();
+    });
+
+    test('mints with the same body, byte for byte', async () => {
+        let body = '';
+        await createOpenAiLiveSession(
+            async (_input, init) => {
+                body = String(init.body);
+                return Response.json({ session: { id: 'live-1' }, transport: { type: 'webrtc', sdp: 'answer' } });
+            },
+            'sk-private',
+            'offer',
+            { language: 'nl', voice: 'cedar', domains: ['workspace', 'agents'] }
+        );
+        expect(body).toMatchSnapshot();
+    });
+});
