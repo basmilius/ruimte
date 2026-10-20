@@ -3,6 +3,7 @@ import type { VoiceActionKind } from '@ruimte/voice';
 import { silentBands } from '@/audio/waveform';
 import { desktop, type OpenAiCredentialStatus } from '@/desktop/bridge';
 import { storedText } from '@/state/stored-json';
+import { voiceOnMachine } from '@/voice/route';
 
 export type VoicePhase = 'idle' | 'connecting' | 'listening' | 'closing' | 'error';
 export type { VoiceActionKind };
@@ -80,6 +81,12 @@ export const useVoice = create<VoiceState>((set) => ({
 }));
 
 export async function refreshVoiceCredential(): Promise<void> {
+    if (voiceOnMachine()) {
+        // Loaded only in the harness, so this module, which the toolbar loads, takes in no transport.
+        const { machineVoiceCredential } = await import('@/voice/live-session');
+        useVoice.setState({ credential: await machineVoiceCredential() });
+        return;
+    }
     const bridge = desktop()?.openAi;
     useVoice.setState({ credential: bridge ? await bridge.credentialStatus() : { configured: false, persistent: false } });
 }
