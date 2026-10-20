@@ -353,6 +353,9 @@ final class VoiceCoordinator {
         case .reset:
             let message = String(localized: "The audio of this device restarted, so Voice stopped.")
             end(.message(message), tellMachine: true)
+        case .taken:
+            let message = String(localized: "Something else in Ruimte took the audio, so Voice stopped.")
+            end(.message(message), tellMachine: true)
         case .route(let name):
             route = name.isEmpty ? nil : name
         }

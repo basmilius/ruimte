@@ -16,6 +16,9 @@ import Foundation
     private let listener = Listener()
 
     private init() {
+        // WebRTC's audio unit applies its own configuration once audio is on, which would leave out the speaker, so
+        // that configuration is this one.
+        RTCAudioSessionConfiguration.setWebRTC(Self.configuration)
         session.useManualAudio = true
         session.isAudioEnabled = false
         listener.changed = { [weak self] change in
@@ -46,9 +49,7 @@ import Foundation
         session.lockForConfiguration()
         defer { session.unlockForConfiguration() }
         do {
-            // The speaker rather than the earpiece, since a person talks to Voice with the phone away from the ear.
-            try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothHFP, .defaultToSpeaker])
-            try session.setActive(true)
+            try session.setConfiguration(Self.configuration, active: true)
         } catch {
             throw .unavailable(error.localizedDescription)
         }
@@ -63,6 +64,16 @@ import Foundation
         session.lockForConfiguration()
         defer { session.unlockForConfiguration() }
         try? session.setActive(false)
+    }
+
+    /// Voice chat on the speaker rather than the earpiece, since a person talks to Voice with the phone away from the
+    /// ear, and on a Bluetooth headset when one is there.
+    private static var configuration: RTCAudioSessionConfiguration {
+        let configuration = RTCAudioSessionConfiguration.webRTC()
+        configuration.category = AVAudioSession.Category.playAndRecord.rawValue
+        configuration.mode = AVAudioSession.Mode.voiceChat.rawValue
+        configuration.categoryOptions = [.allowBluetoothHFP, .defaultToSpeaker]
+        return configuration
     }
 
     /// The current output, as iOS names it, for the panel.
@@ -84,6 +95,11 @@ import Foundation
             _ session: RTCAudioSession, reason: AVAudioSession.RouteChangeReason,
             previousRoute: AVAudioSessionRouteDescription
         ) {
+            // Something in the process set another category, which turns the microphone off without a word.
+            if reason == .categoryChange, session.category != AVAudioSession.Category.playAndRecord.rawValue {
+                send(.taken)
+                return
+            }
             let moved: Set<AVAudioSession.RouteChangeReason> = [.newDeviceAvailable, .oldDeviceUnavailable, .override]
             guard moved.contains(reason) else { return }
             send(.route(session.currentRoute.outputs.first?.portName ?? ""))

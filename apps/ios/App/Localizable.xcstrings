@@ -23456,6 +23456,16 @@
         }
       }
     },
+    "Something else in Ruimte took the audio, so Voice stopped." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Iets anders in Ruimte nam de audio over, dus Voice is gestopt."
+          }
+        }
+      }
+    },
     "The audio connection to OpenAI dropped, so Voice stopped." : {
       "localizations" : {
         "nl" : {

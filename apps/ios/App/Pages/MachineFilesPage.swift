@@ -2,6 +2,7 @@ import AVKit
 import PDFKit
 import RuimtePulsar
 import RuimteTransport
+import RuimteVoice
 import SwiftUI
 import UniformTypeIdentifiers
 import WebKit
@@ -459,8 +460,11 @@ struct FileContentPage: View {
                     guard playerKey == key else { return }
                     audio = info
                 }
-                // Sound through the silent switch, as a video or a song does anywhere else on the phone.
-                try? AVAudioSession.sharedInstance().setCategory(.playback, mode: isAudio ? .default : .moviePlayback)
+                // Sound through the silent switch, as a video or a song does anywhere else on the phone. While Voice
+                // holds the audio the file plays in its session, since playback alone would turn its microphone off.
+                if AudioSessionController.shared.owner == nil {
+                    try? AVAudioSession.sharedInstance().setCategory(.playback, mode: isAudio ? .default : .moviePlayback)
+                }
                 player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             } else {
                 mediaProblem = String(localized: "This device cannot play this file.")

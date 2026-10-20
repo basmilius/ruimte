@@ -197,6 +197,16 @@ import Testing
         if case .message = setup.voice.problem(in: "A") {} else { Issue.record("An interruption says why Voice ended") }
     }
 
+    @Test func anotherCategorySetInTheAppEndsVoiceInsteadOfListeningDeaf() async {
+        let setup = Self.setup()
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        setup.audio.onChange?(.taken)
+        await Self.settle()
+        #expect(setup.voice.phase == .idle)
+        #expect(setup.machine.stops.last == .object(["sceneId": .string("A"), "sessionId": .string("session-1")]))
+        #expect(setup.voice.problem(in: "A") == .message("Something else in Ruimte took the audio, so Voice stopped."))
+    }
+
     @Test func aDroppedMachineLinkEndsVoiceWithoutAStop() async {
         let setup = Self.setup()
         await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)

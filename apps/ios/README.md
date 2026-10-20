@@ -231,9 +231,12 @@ ignored. `RuimteTransport` stays without audio.
 - One session per app process, owned by the scene that started it (`VoiceCoordinator`). Every request after
   `voice.start` names the scene, and the events count only for the owner's scene and session, since the scenes of an
   iPad share one link. Another scene shows where Voice runs and does not take the microphone over.
-- `AudioSessionController` holds the app's one audio session, `playAndRecord` in `voiceChat`, with WebRTC's manual
-  audio on, so the microphone and speaker start only while a session runs and the audio goes back to what played
-  before with `notifyOthersOnDeactivation`.
+- `AudioSessionController` holds the app's one audio session, `playAndRecord` in `voiceChat` on the speaker, with
+  WebRTC's manual audio on, so the microphone and speaker start only while a session runs and the audio goes back to
+  what played before with `notifyOthersOnDeactivation`. The same configuration is WebRTC's own
+  (`RTCAudioSessionConfiguration.setWebRTC`), since its audio unit applies that one when audio turns on and would
+  otherwise drop the speaker for the earpiece. A file that plays while Voice runs keeps Voice's category, and anything
+  that sets another category ends Voice rather than leaving it without a microphone.
 - There is no background audio: the owner's scene going to the background, the screen locking, a call, the machine
   link or the media dropping all end Voice. What it started on the machine goes on.
 - The captions stand above every tab of the scene (`VoiceCaptionBar`); the timeline is a sheet on an iPhone and the

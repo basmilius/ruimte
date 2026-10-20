@@ -35,6 +35,8 @@ public enum VoiceAudioChange: Sendable, Equatable {
     case route(String)
     /// The media services restarted and every audio object went with them.
     case reset
+    /// Something else in the app set the audio session to a category without the microphone.
+    case taken
 }
 
 public enum VoiceAudioFailure: Error, Sendable, Equatable {
