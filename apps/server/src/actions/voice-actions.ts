@@ -1,7 +1,8 @@
 import { MAX_PROMPT_LENGTH, type ActionHandlers, type ActionInput, type ActionOutput } from '@ruimte/actions';
-import type { AgentStatus, ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
+import type { ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
 import { matchName, resolveNames, type VoiceNameMatch } from '@ruimte/voice';
 import { VerbRefusal } from '../canvas/verb.ts';
+import { agentReading } from '../voice/agent-reading.ts';
 import { chatExcerpt } from '../voice/chat-excerpt.ts';
 import {
     nodeKindOf,
@@ -19,7 +20,6 @@ import type { ServerActionContext, VoiceCaller } from './context.ts';
 
 const DEFAULT_READ = 20;
 
-type AgentRead = AgentStatus | 'unknown';
 type Resolved = ActionOutput<'target.resolve'>;
 
 /* Only Voice reaches these handlers: an agent reads a chat through its lines, with the rules of `context.read`. */
@@ -58,32 +58,6 @@ async function chatOfSession(context: ServerActionContext, chatId: string): Prom
 
 async function chatInfoOf(context: ServerActionContext, chatId: string): Promise<ChatInfo | null> {
     return (await context.host.chatThreads?.info?.(chatId)) ?? null;
-}
-
-/*
- * What an agent does as the machine knows it. A chat nobody opened since a restart is idle on its record;
- * a terminal is an agent only while its hooks speak, and one the machine runs no session for is unknown.
- * Null for a plain shell, which is no agent at all.
- */
-async function agentRead(
-    context: ServerActionContext,
-    agent: VoiceAgentPlace
-): Promise<{ status: AgentRead; working: boolean | null; updatedAt: number | null } | null> {
-    if (agent.kind === 'chat') {
-        const info = await chatInfoOf(context, agent.id);
-        return info === null
-            ? { status: 'unknown', working: null, updatedAt: null }
-            : { status: info.status, working: info.activeTurnId !== null, updatedAt: null };
-    }
-    const session = context.host.terminals?.agentOf(agent.id);
-    if (session === null) {
-        return null;
-    }
-    if (session === undefined) {
-        return { status: 'unknown', working: null, updatedAt: null };
-    }
-    const status: AgentRead = session.live ? session.status : session.status === 'exited' ? 'exited' : 'unknown';
-    return { status, working: status === 'unknown' ? null : status === 'running', updatedAt: session.updatedAt };
 }
 
 function current(target: Resolved['target'], found: VoiceTarget[]): Resolved {
@@ -239,9 +213,7 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
             ? await Promise.all(
                   canvas.nodes.map(async (node) => {
                       const agent =
-                          node.kind === 'chat' || node.kind === 'terminal'
-                              ? await agentRead(context, { id: node.id, name: node.title, kind: node.kind, viewId: canvas.id, view: canvas.name })
-                              : null;
+                          node.kind === 'chat' || node.kind === 'terminal' ? await agentReading(context.host, { id: node.id, kind: node.kind }) : null;
                       return { id: node.id, title: node.title, kind: nodeKindOf(node), visible: false, ...(agent === null ? {} : { status: agent.status }) };
                   })
               )
@@ -303,7 +275,7 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
                 // A chat or a terminal on another machine has nothing here but the shell it left.
                 .filter((agent) => context.host.projects.machineOfNode(agent.id) === null)
                 .map(async (agent) => {
-                    const read = await agentRead(context, agent);
+                    const read = await agentReading(context.host, agent);
                     return read === null ? [] : [{ ...agent, ...read, selected: false, toolHistory: agent.kind === 'chat' }];
                 })
         );

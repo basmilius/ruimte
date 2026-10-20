@@ -9,7 +9,7 @@ import type {
     VoiceStartResult,
     VoiceStatusEvent
 } from '@ruimte/contracts';
-import { daemonVoiceTools, liveSessionBody, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
+import { contextChunks, daemonVoiceTools, liveSessionBody, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
 import { CodedError } from '@adecore/agents';
 import type { CanvasHost } from '../canvas/verb.ts';
 import { voiceActionCall, type ServerActionContext, type VoiceCaller } from '../actions/context.ts';
@@ -18,12 +18,17 @@ import { voicePolicy } from './action-policy.ts';
 import type { VoiceClock } from './clock.ts';
 import { LiveError, type OpenAiLive } from './openai-live.ts';
 import { phonePrompts } from './prompts.ts';
+import { projectContext, timeContext } from './session-context.ts';
 import type { LiveSideband } from './sideband.ts';
 import { VoiceToolExecutor, type VoiceActionRunner } from './tool-executor.ts';
 import { VoiceFollower, type VoiceFollowActivity, type VoiceFollowChats } from './voice-follower.ts';
 
 /* From the start request to the answer the phone connects with; past it the session runs on the person's audio alone. */
 export const VOICE_START_DEADLINE_MS = 20_000;
+/* How often the model hears the time on the phone, as the desktop's window tells it. */
+export const VOICE_CLOCK_MS = 60_000;
+/* A burst of changes to the project gives one new context, not one per write. */
+export const VOICE_CONTEXT_DEBOUNCE_MS = 250;
 
 /* What a session needs of the daemon, so a test hands in fakes for every part. */
 export interface VoiceSessionDeps {
@@ -31,8 +36,11 @@ export interface VoiceSessionDeps {
     /* The key from `$RUIMTE_HOME/voice`, read at every start; null when none is set. */
     key(): Promise<string | null>;
     clock: VoiceClock;
-    /* Keeps the project loaded while the session runs, as a hold that starts no launches, and lets go of it after. */
-    holds: { hold(holder: string, projectId: string): void; letGo(holder: string, projectId: string): void };
+    /*
+     * Keeps the project loaded while the session runs, as a hold that starts no launches, and lets go of it
+     * after. `changed` hears every change of the project's file meanwhile, the way a client holding it would.
+     */
+    holds: { hold(holder: string, projectId: string, changed: () => void): void; letGo(holder: string, projectId: string): void };
     runner: VoiceActionRunner<ServerActionContext>;
     host: CanvasHost;
     /* The daemon's chats, which the session follows once it prompted or started one. */
@@ -88,6 +96,9 @@ export class VoiceSession {
     #delivery: VoiceCompletionDelivery | null = null;
     #follower: VoiceFollower | null = null;
     #cancelDeadline: (() => void) | null = null;
+    #cancelClock: (() => void) | null = null;
+    #cancelContext: (() => void) | null = null;
+    #heardStart = false;
     #ending: Promise<void> | null = null;
     #settle!: () => void;
     /* Settles once the session is closed or failed, whatever ended it. */
@@ -126,7 +137,7 @@ export class VoiceSession {
     async start(): Promise<VoiceStartResult> {
         const { live, clock } = this.#deps;
         const { payload, writes } = this.#start;
-        this.#deps.holds.hold(this.#holder, this.#start.place.projectId);
+        this.#deps.holds.hold(this.#holder, this.#start.place.projectId, () => this.#projectChanged());
         this.#cancelDeadline = clock.after(VOICE_START_DEADLINE_MS, () => {
             void this.#end('failed', { code: 'voice-start-timeout', message: 'Voice did not start in time' });
         });
@@ -195,6 +206,9 @@ export class VoiceSession {
             this.#cancelDeadline();
             this.#cancelDeadline = null;
             this.#phaseTo('active');
+            // The session runs at OpenAI from the mint on, so what the model should know goes in at once.
+            void this.#sendContext();
+            this.#tick();
             return { sessionId: this.id, sdp: answer.transport.sdp, status: this.status };
         } catch (e) {
             if (this.#phase === 'starting') {
@@ -284,6 +298,11 @@ export class VoiceSession {
             void this.#end('closed');
             return;
         }
+        if (event.type === 'session.started' && !this.#heardStart) {
+            // As the desktop does once its peer is up; a sideband may hear it once the phone connects.
+            this.#heardStart = true;
+            void this.#sendContext();
+        }
         this.#delivery?.handle(event);
         this.#loop?.handle(event);
     }
@@ -312,6 +331,45 @@ export class VoiceSession {
                 label: definition.title,
                 detail: ''
             }
+        });
+    }
+
+    /* Quiet context in appends under the byte bound; never the commentary that makes the model speak. */
+    #append(text: string): void {
+        for (const content of contextChunks(text)) {
+            this.#sideband?.send({ type: 'session.thinking.append', event_id: crypto.randomUUID(), delegation_id: null, content });
+        }
+    }
+
+    async #sendContext(): Promise<void> {
+        try {
+            const context = await projectContext(this.#deps.host, this.#start.place, this.#deps.clock.now(), this.#start.payload.timeZone);
+            if (this.#phase === 'active') {
+                this.#append(context);
+            }
+        } catch {
+            // A project that cannot be read now is read again on its next change; the session goes on without.
+        }
+    }
+
+    #tick(): void {
+        this.#cancelClock = this.#deps.clock.after(VOICE_CLOCK_MS, () => {
+            if (this.#phase !== 'active') {
+                return;
+            }
+            this.#append(timeContext(this.#deps.clock.now(), this.#start.payload.timeZone));
+            this.#tick();
+        });
+    }
+
+    #projectChanged(): void {
+        if (this.#phase !== 'active') {
+            return;
+        }
+        this.#cancelContext?.();
+        this.#cancelContext = this.#deps.clock.after(VOICE_CONTEXT_DEBOUNCE_MS, () => {
+            this.#cancelContext = null;
+            void this.#sendContext();
         });
     }
 
@@ -344,6 +402,8 @@ export class VoiceSession {
             this.#phaseTo('stopping');
             this.#cancelDeadline?.();
             this.#cancelDeadline = null;
+            this.#cancelClock?.();
+            this.#cancelContext?.();
             this.#abort.abort();
             this.#loop?.reset();
             // What Voice started keeps running; only the telling of it ends with the session.

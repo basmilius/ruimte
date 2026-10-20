@@ -6,7 +6,7 @@ import type { ClientConnection } from '../dispatcher.ts';
 import { serverActions } from '../actions/server-actions.ts';
 import { LiveError } from './openai-live.ts';
 import { FakeChats, FakeClock, FakeLive, settle } from './voice-fakes.ts';
-import { VOICE_START_DEADLINE_MS } from './voice-session.ts';
+import { VOICE_CLOCK_MS, VOICE_CONTEXT_DEBOUNCE_MS, VOICE_START_DEADLINE_MS } from './voice-session.ts';
 import { MAX_VOICE_SESSIONS, VoiceSessions } from './voice-sessions.ts';
 
 const KEY = 'sk-test-voice-0123456789abcdef';
@@ -73,6 +73,7 @@ let threads: Map<string, ChatItem[]>;
 // What a read of a thread waits on, so a test can hold a tool call in flight.
 let threadGate: Promise<void>;
 let ids: number;
+let projectChanged: () => void;
 
 function sessions(writes = false): VoiceSessions {
     const host = {
@@ -93,7 +94,10 @@ function sessions(writes = false): VoiceSessions {
         key: async () => key,
         clock,
         holds: {
-            hold: (holder, projectId) => holds.push(`hold ${holder} ${projectId}`),
+            hold: (holder, projectId, changed) => {
+                holds.push(`hold ${holder} ${projectId}`);
+                projectChanged = changed;
+            },
             letGo: (holder, projectId) => holds.push(`letGo ${holder} ${projectId}`)
         },
         runner: serverActions,
@@ -154,7 +158,8 @@ describe('starting', () => {
             status: { sessionId: 'session-1', sceneId: 'scene-1', seq: 1, phase: 'active' }
         });
         expect(phases(owner)).toEqual(['active']);
-        expect(clock.pending).toBe(0);
+        // The deadline is gone; what is left is the minute the model hears the time on.
+        expect(clock.pending).toBe(1);
     });
 
     test('mints with the phone prompt and only the read tools without the writes grant', async () => {
@@ -438,5 +443,74 @@ describe('a running session', () => {
         second.attach.socket.receive({ type: 'session.closed' });
         await stopping;
         expect(voice.size).toBe(0);
+    });
+});
+
+describe('what the model knows', () => {
+    function thoughts(attach: { socket: { sentOf(type: string): LiveEvent[] } }): string[] {
+        return attach.socket.sentOf('session.thinking.append').map((event) => String(event.content));
+    }
+
+    test('hears the project and the time on the phone at once, in appends under the byte bound', async () => {
+        const voice = sessions();
+        const { attach } = await started(voice);
+        await settle();
+        const said = thoughts(attach).join('');
+        expect(said).toContain('IANA time zone: Europe/Amsterdam');
+        expect(said).toContain('Ruimte context.');
+        expect(said).toContain('Canvas actions land on: Main. Its nodes: Builder (chat).');
+        expect(said).toContain('AI Chats and terminal agents: Builder (chat in Main, unknown)');
+        for (const event of attach.socket.sentOf('session.thinking.append')) {
+            expect(new TextEncoder().encode(String(event.content)).length).toBeLessThanOrEqual(480);
+            expect(event.delegation_id).toBeNull();
+        }
+        // Its own appends are the daemon's, so hearing them back never reads as another client's.
+        attach.socket.receive(attach.socket.sentOf('session.thinking.append')[0]!);
+        await settle();
+        expect(voice.size).toBe(1);
+    });
+
+    test('hears the time every minute until the session ends', async () => {
+        const voice = sessions();
+        const { attach, owner, result } = await started(voice);
+        await settle();
+        const before = thoughts(attach).length;
+        clock.advance(VOICE_CLOCK_MS);
+        clock.advance(VOICE_CLOCK_MS);
+        const times = thoughts(attach).slice(before);
+        expect(times).toHaveLength(2);
+        expect(times[0]).toStartWith('User local date and time:');
+        const stopping = voice.stop(owner, { sceneId: 'scene-1', sessionId: result.sessionId });
+        attach.socket.receive({ type: 'session.closed' });
+        await stopping;
+        clock.advance(VOICE_CLOCK_MS);
+        expect(thoughts(attach).slice(before)).toHaveLength(2);
+        expect(clock.pending).toBe(0);
+    });
+
+    test('a burst of changes to the project gives one new context', async () => {
+        const { attach } = await started(sessions());
+        await settle();
+        const before = thoughts(attach).length;
+        projectChanged();
+        clock.advance(VOICE_CONTEXT_DEBOUNCE_MS - 1);
+        projectChanged();
+        clock.advance(VOICE_CONTEXT_DEBOUNCE_MS - 1);
+        await settle();
+        expect(thoughts(attach)).toHaveLength(before);
+        clock.advance(1);
+        await settle();
+        expect(thoughts(attach).slice(before).join('')).toContain('Ruimte context.');
+        expect(
+            thoughts(attach)
+                .slice(before)
+                .filter((text) => text.startsWith('User local date and time:'))
+        ).toHaveLength(1);
+    });
+
+    test('a time zone the machine does not know reads as UTC and says so', async () => {
+        const { attach } = await started(sessions(), client('client-1'), startPayload({ timeZone: 'Mars/Olympus' }));
+        await settle();
+        expect(thoughts(attach).join('')).toContain('IANA time zone: unknown (Mars/Olympus), shown in UTC');
     });
 });

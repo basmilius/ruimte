@@ -15,7 +15,7 @@ export interface VoiceBundle {
 
 export interface VoiceInput {
     config: Pick<ServerConfig, 'home' | 'experimentalVoice'>;
-    projects: Pick<ProjectStore, 'hold' | 'letGo' | 'index'>;
+    projects: Pick<ProjectStore, 'hold' | 'letGo' | 'index' | 'subscribe'>;
     canvasHost: CanvasHost;
     chats: Pick<ChatManager, 'observe' | 'get'>;
     /* Only a test hands in another, a fake GPT-Live on loopback. */
@@ -33,14 +33,30 @@ export function wireVoice(input: VoiceInput): VoiceBundle | null {
         return null;
     }
     const keys = new VoiceKeyStore(config.home);
+    const listening = new Map<string, () => void>();
     const sessions = new VoiceSessions({
         live: input.live ?? openAiLive(),
         key: () => keys.read(),
         clock: SYSTEM_CLOCK,
         // A hold of its own, so the project stays loaded while Voice works in it and no launch starts for it.
         holds: {
-            hold: (holder, projectId) => projects.hold(holder, projectId, { startsLaunches: false }),
-            letGo: (holder, projectId) => projects.letGo(holder, projectId)
+            hold: (holder, projectId, changed) => {
+                projects.hold(holder, projectId, { startsLaunches: false });
+                // Under the holder's own id, so it hears project.changed the way a client holding the project does.
+                listening.set(
+                    holder,
+                    projects.subscribe(holder, (event) => {
+                        if (event.event === 'project.changed' && event.payload.projectId === projectId) {
+                            changed();
+                        }
+                    })
+                );
+            },
+            letGo: (holder, projectId) => {
+                projects.letGo(holder, projectId);
+                listening.get(holder)?.();
+                listening.delete(holder);
+            }
         },
         runner: serverActions,
         host: canvasHost,
