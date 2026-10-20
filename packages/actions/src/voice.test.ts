@@ -1,11 +1,23 @@
 import { describe, expect, test } from 'bun:test';
-import { ACTION_DEFINITIONS, ACTION_DOMAINS, VOICE_CONTROL_TOOL, VOICE_TOOL_ACTIONS, voiceToolDefinitions, voiceToolsFor, type ActionName } from './index.ts';
+import {
+    ACTION_DEFINITIONS,
+    ACTION_DOMAINS,
+    DAEMON_VOICE_ONLY,
+    VOICE_CONTROL_TOOL,
+    VOICE_TOOL_ACTIONS,
+    voiceToolDefinitions,
+    voiceToolsFor,
+    voiceToolsForActions,
+    type ActionName
+} from './index.ts';
 
 const reached = [...VOICE_TOOL_ACTIONS.values()].flat();
 
 describe('Voice tools', () => {
     test('reach every action Voice may run, each through one tool', () => {
-        const voiceActions = (Object.keys(ACTION_DEFINITIONS) as ActionName[]).filter((name) => ACTION_DEFINITIONS[name].actors.includes('voice'));
+        const voiceActions = (Object.keys(ACTION_DEFINITIONS) as ActionName[]).filter(
+            (name) => ACTION_DEFINITIONS[name].actors.includes('voice') && !DAEMON_VOICE_ONLY.includes(name)
+        );
         expect([...reached].sort()).toEqual([...voiceActions].sort());
         expect(new Set(reached).size).toBe(reached.length);
     });
@@ -121,5 +133,53 @@ describe('Voice tools', () => {
         expect(Object.keys(projects.parameters.properties)).not.toContain('image');
         expect(projects.parameters.properties.action?.enum).not.toContain('project.delete');
         expect(voiceToolDefinitions().find((tool) => tool.name === 'inspect_machine')!.parameters.properties.action?.enum).not.toContain('process.signal');
+    });
+
+    test('a window never offers an action only the daemon runs', () => {
+        const offered = voiceToolsFor(ACTION_DOMAINS).flatMap((tool) => (tool.parameters.properties.action?.enum as string[] | undefined) ?? []);
+        for (const action of DAEMON_VOICE_ONLY) {
+            expect(offered).not.toContain(action);
+            expect(reached).not.toContain(action);
+        }
+    });
+});
+
+describe('Voice tools for a set of actions', () => {
+    const actionsOf = (tools: ReturnType<typeof voiceToolsForActions>) =>
+        Object.fromEntries(tools.filter((tool) => tool.name !== VOICE_CONTROL_TOOL).map((tool) => [tool.name, tool.parameters.properties.action?.enum]));
+
+    test('carry exactly the actions asked for, a tool per domain in catalog order', () => {
+        const tools = voiceToolsForActions(['chat.read', 'target.resolve', 'workspace.inspect', 'chat.inspect'], { control: false });
+        expect(tools.map((tool) => tool.name)).toEqual(['inspect_workspace', 'communicate', 'run_sessions']);
+        expect(actionsOf(tools)).toEqual({
+            inspect_workspace: ['workspace.inspect', 'target.resolve'],
+            communicate: ['chat.read'],
+            run_sessions: ['chat.inspect']
+        });
+    });
+
+    test('keep a tool to the fields of its actions, and stay as strict as the domain tools', () => {
+        const [communicate] = voiceToolsForActions(['chat.read'], { control: false });
+        expect(Object.keys(communicate!.parameters.properties)).toEqual(['action', 'chatId', 'limit']);
+        expect(communicate!.strict).toBe(true);
+        expect(communicate!.parameters.required).toEqual(Object.keys(communicate!.parameters.properties));
+        expect(communicate!.description).toContain('- chat.read(chatId, limit?)');
+        expect(communicate!.description).not.toContain('chat.clear');
+    });
+
+    test('offer the control tool only when asked', () => {
+        expect(voiceToolsForActions(['chat.read'], { control: false }).map((tool) => tool.name)).toEqual(['communicate']);
+        expect(voiceToolsForActions(['chat.read'], { control: true }).map((tool) => tool.name)).toEqual(['communicate', VOICE_CONTROL_TOOL]);
+        expect(voiceToolsForActions([], { control: false })).toEqual([]);
+    });
+
+    test('leave out an action Voice may not run', () => {
+        const personOnly = (Object.keys(ACTION_DEFINITIONS) as ActionName[]).find((name) => !ACTION_DEFINITIONS[name].actors.includes('voice'))!;
+        expect(voiceToolsForActions([personOnly], { control: false })).toEqual([]);
+    });
+
+    test('give the same tool as the domain tool when every action of the domain is asked for', () => {
+        const views = VOICE_TOOL_ACTIONS.get('manage_views')!;
+        expect(voiceToolsForActions(views, { control: false })).toEqual(voiceToolDefinitions().filter((tool) => tool.name === 'manage_views'));
     });
 });

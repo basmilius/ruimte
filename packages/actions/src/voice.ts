@@ -215,11 +215,20 @@ function toolOf(domain: ActionDomain, actions: readonly ActionName[]): VoiceTool
     };
 }
 
+/*
+ * Actions only the daemon's Voice runs. A window has no handler for them, so the tools a window offers
+ * leave them out, and a model in the desktop is never handed a tool that would only fail.
+ */
+export const DAEMON_VOICE_ONLY: readonly ActionName[] = ['agent.start'];
+
+function reachableByVoice(name: ActionName): boolean {
+    return ACTION_DEFINITIONS[name].actors.includes('voice');
+}
+
 function voiceActionsOf(domain: ActionDomain): ActionName[] {
-    return (Object.keys(ACTION_DEFINITIONS) as ActionName[]).filter((name) => {
-        const definition = ACTION_DEFINITIONS[name];
-        return definition.domain === domain && definition.actors.includes('voice');
-    });
+    return (Object.keys(ACTION_DEFINITIONS) as ActionName[]).filter(
+        (name) => ACTION_DEFINITIONS[name].domain === domain && reachableByVoice(name) && !DAEMON_VOICE_ONLY.includes(name)
+    );
 }
 
 const DOMAIN_ACTIONS = ACTION_DOMAINS.map((domain) => ({ domain, actions: voiceActionsOf(domain) })).filter(({ actions }) => actions.length > 0);
@@ -249,4 +258,25 @@ export function voiceToolsFor(domains: readonly ActionDomain[]): VoiceToolDefini
             .map(({ tool }) => tool),
         CONTROL_TOOL
     ];
+}
+
+export interface VoiceToolsForActionsOptions {
+    /* Offer the control tool, for a set in which an action asks the person before it runs. */
+    control: boolean;
+}
+
+/*
+ * The tools for exactly these actions, a tool per domain in catalog order, each listing only the actions
+ * asked for. An action Voice may not run is left out rather than offered: the registry would refuse it,
+ * so offering it only costs bytes on every response.
+ */
+export function voiceToolsForActions(actions: readonly ActionName[], { control }: VoiceToolsForActionsOptions): VoiceToolDefinition[] {
+    const wanted = new Set(actions);
+    const tools = ACTION_DOMAINS.flatMap((domain) => {
+        const reached = (Object.keys(ACTION_DEFINITIONS) as ActionName[]).filter(
+            (name) => wanted.has(name) && ACTION_DEFINITIONS[name].domain === domain && reachableByVoice(name)
+        );
+        return reached.length > 0 ? [toolOf(domain, reached)] : [];
+    });
+    return control ? [...tools, CONTROL_TOOL] : tools;
 }
