@@ -91,6 +91,8 @@ export class VoiceFollower implements VoiceFollowHost {
     readonly #followed = new Map<string, Followed>();
     #unsubscribe: (() => void) | null;
     #tickets = 0;
+    // A start or a send still running when the session ended binds its ticket late; it follows nothing then.
+    #stopped = false;
 
     constructor(deps: VoiceFollowerDeps) {
         this.#deps = deps;
@@ -101,7 +103,7 @@ export class VoiceFollower implements VoiceFollowHost {
         const entry = this.#follow({ chatId, named: chat, turnId: null, start: null, waits: 0, waiting: false });
         return {
             bind: (turnId) => {
-                if (this.#followed.get(chatId) !== entry) {
+                if (this.#stopped || this.#followed.get(chatId) !== entry) {
                     return;
                 }
                 entry.turnId = turnId;
@@ -116,7 +118,7 @@ export class VoiceFollower implements VoiceFollowHost {
         let dropped = false;
         return {
             bind: (chatId, chat) => {
-                if (dropped || entry !== null) {
+                if (this.#stopped || dropped || entry !== null) {
                     return;
                 }
                 const id = `start-${++this.#tickets}`;
@@ -143,6 +145,7 @@ export class VoiceFollower implements VoiceFollowHost {
 
     /* The session ended: nothing more is told, and what still runs keeps running. */
     stop(): void {
+        this.#stopped = true;
         this.#unsubscribe?.();
         this.#unsubscribe = null;
         for (const entry of this.#followed.values()) {
@@ -152,6 +155,9 @@ export class VoiceFollower implements VoiceFollowHost {
     }
 
     #follow(entry: Followed): Followed {
+        if (this.#stopped) {
+            return entry;
+        }
         const known = this.#followed.get(entry.chatId);
         if (known !== undefined) {
             // A newer prompt to the same chat is the one Voice waits on; the earlier turn was told when it was asked about.

@@ -199,6 +199,21 @@ describe('following a start', () => {
         expect(completions).toEqual([]);
     });
 
+    test('a start or a send that answers after the session ended follows nothing and sets no clock', () => {
+        const voice = follower();
+        chats.set('chat-new', [turn('t1', 'done'), said('t1', 'All green')], info('idle', null));
+        chats.set('chat-1', [turn('t2', 'done'), said('t2', 'Done')], info('idle', null));
+        const start = voice.expectStart();
+        const prompt = voice.expectPrompt('chat-1', NAMED);
+        voice.stop();
+        start.bind('chat-new', NAMED);
+        prompt.bind('t2');
+        // A ticket taken after the end is as empty.
+        voice.expectPrompt('chat-1', NAMED).bind('t2');
+        voice.expectStart().bind('chat-new', NAMED);
+        expect([voice.size, clock.pending, activity, completions, reports]).toEqual([0, 0, [], [], []]);
+    });
+
     test('a start that failed follows nothing and sets no clock', () => {
         const voice = follower();
         const ticket = voice.expectStart();
