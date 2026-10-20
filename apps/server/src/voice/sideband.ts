@@ -84,6 +84,8 @@ export class LiveSideband {
     #closing: Promise<void> | null = null;
     #closedWaiter: (() => void) | null = null;
     #gone = false;
+    // OpenAI said the session is closed, so a close of the daemon's own has nothing left to wait for.
+    #serviceClosed = false;
 
     constructor(socket: LiveSocket, clock: VoiceClock, handlers: SidebandHandlers) {
         this.#socket = socket;
@@ -141,7 +143,7 @@ export class LiveSideband {
     }
 
     async #close(): Promise<void> {
-        if (!this.#gone) {
+        if (!this.#gone && !this.#serviceClosed) {
             this.#socket.send(JSON.stringify({ type: 'session.close', event_id: crypto.randomUUID() }));
             await new Promise<void>((resolve) => {
                 const cancel = this.#clock.after(SIDEBAND_CLOSE_WAIT_MS, () => resolve());
@@ -164,6 +166,7 @@ export class LiveSideband {
             return;
         }
         if (event.type === 'session.closed') {
+            this.#serviceClosed = true;
             this.#closedWaiter?.();
         }
         this.#handlers.event(event);
