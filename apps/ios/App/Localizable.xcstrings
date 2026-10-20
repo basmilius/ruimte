@@ -23385,26 +23385,6 @@
       },
       "comment" : "The language Voice speaks"
     },
-    "Confirm deletions" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verwijderen bevestigen"
-          }
-        }
-      }
-    },
-    "Ask before Voice deletes views or nodes. When off, spoken deletion requests run immediately." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vraag het voordat Voice weergaven of nodes verwijdert. Staat dit uit, dan worden gesproken verzoeken om iets te verwijderen meteen uitgevoerd."
-          }
-        }
-      }
-    },
     "Changes apply when you start the next conversation. Only an active conversation sends microphone audio to OpenAI." : {
       "localizations" : {
         "nl" : {

@@ -8,13 +8,12 @@ import SwiftUI
 struct VoicePreferences: Equatable {
     static let languageKey = "ruimte.voice.language"
     static let voiceKey = "ruimte.voice.voice"
-    static let confirmDeletionsKey = "ruimte.voice.confirmDeletions"
     static let defaultVoice = "marin"
 
     var language: String
     var voice: String
-    /// Ask before Voice deletes. Voice on a machine deletes nothing yet, so this is kept for when it does.
-    var confirmDeletions: Bool
+    // No switch for asking before a deletion: Voice on a machine deletes nothing yet. When it does, the choice rides on
+    // `voice.start` and the machine's policy holds it, not this phone.
 
     static var languages: [String] { options("language") }
     static var voices: [String] { options("voice") }
@@ -47,19 +46,16 @@ struct VoicePreferences: Equatable {
     static func current(_ defaults: UserDefaults = .standard) -> VoicePreferences {
         let language = defaults.string(forKey: languageKey).flatMap { languages.contains($0) ? $0 : nil }
         let voice = defaults.string(forKey: voiceKey).flatMap { voices.contains($0) ? $0 : nil }
-        return VoicePreferences(
-            language: language ?? defaultLanguage(), voice: voice ?? defaultVoice,
-            confirmDeletions: defaults.object(forKey: confirmDeletionsKey) as? Bool ?? true)
+        return VoicePreferences(language: language ?? defaultLanguage(), voice: voice ?? defaultVoice)
     }
 }
 
-/// Voice in Settings: the language, the voice and whether deletions ask first, and per machine whether it holds the
-/// OpenAI key, which a person sets on the machine itself.
+/// Voice in Settings: the language and the voice, and per machine whether it holds the OpenAI key, which a person sets
+/// on the machine itself.
 struct VoiceSettingsPage: View {
     let runtime: AppRuntime
     @AppStorage(VoicePreferences.languageKey) private var language = VoicePreferences.defaultLanguage()
     @AppStorage(VoicePreferences.voiceKey) private var voice = VoicePreferences.defaultVoice
-    @AppStorage(VoicePreferences.confirmDeletionsKey) private var confirmDeletions = true
 
     var body: some View {
         MobileForm {
@@ -78,16 +74,6 @@ struct VoiceSettingsPage: View {
                 }
                 .pickerStyle(.menu)
                 .accessibilityIdentifier("settings.voice.voice")
-                Toggle(isOn: $confirmDeletions) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Confirm deletions")
-                        Text(
-                            "Ask before Voice deletes views or nodes. When off, spoken deletion requests run immediately."
-                        )
-                        .font(.caption).foregroundStyle(MobileStyle.muted)
-                    }
-                }
-                .accessibilityIdentifier("settings.voice.confirmDeletions")
             } header: {
                 Text("Conversation")
             } footer: {

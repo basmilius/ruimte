@@ -24,7 +24,7 @@ import Testing
         let scheduler = ManualScheduler()
         let voice = VoiceCoordinator(
             media: { media }, audio: { audio }, scheduler: scheduler,
-            preferences: { VoicePreferences(language: "nl", voice: "cedar", confirmDeletions: true) },
+            preferences: { VoicePreferences(language: "nl", voice: "cedar") },
             makeID: { "start-1" }, timeZone: { "Europe/Amsterdam" }, declaresMicrophone: declaresMicrophone)
         return Setup(voice: voice, machine: machine, media: media, audio: audio, scheduler: scheduler)
     }
@@ -380,7 +380,6 @@ import Testing
         let current = VoicePreferences.current(defaults)
         #expect(VoicePreferences.languages.contains(current.language))
         #expect(current.voice == "cedar")
-        #expect(current.confirmDeletions)
         #expect(VoicePreferences.languageName("nl") == "Nederlands")
     }
 }

@@ -237,7 +237,8 @@ ignored. `RuimteTransport` stays without audio.
 - There is no background audio: the owner's scene going to the background, the screen locking, a call, the machine
   link or the media dropping all end Voice. What it started on the machine goes on.
 - The captions stand above every tab of the scene (`VoiceCaptionBar`); the timeline is a sheet on an iPhone and the
-  inspector on an iPad (`VoicePanel`). Language, voice and whether deletions ask first are in Settings, Voice.
+  inspector on an iPad (`VoicePanel`). Language and voice are in Settings, Voice. Voice on a machine deletes nothing yet, so
+  there is no switch for asking before a deletion.
 - Until its use is decided, only a Debug build declares the microphone (`INFOPLIST_KEY_NSMicrophoneUsageDescription`
   in the Debug configuration of `project.yml`). A build without the declaration never offers Voice, the build phase
   "Release declares no microphone" fails a Release build that does, and `MicrophoneDeclarationTests` holds the spec.
