@@ -72,6 +72,24 @@
           }
         }
       }
+    },
+    "NSMicrophoneUsageDescription" : {
+      "comment" : "Shown when the app asks for the microphone, for Voice. Debug builds only.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ruimte uses the microphone while you talk to Voice. The audio goes to OpenAI only during the conversation."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruimte gebruikt de microfoon terwijl je met Voice praat. De audio gaat alleen tijdens het gesprek naar OpenAI."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

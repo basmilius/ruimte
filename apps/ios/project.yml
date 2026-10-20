@@ -72,8 +72,23 @@ targets:
       configs:
         Debug:
           PUSH_ENVIRONMENT: development
+          # Voice's microphone is in Debug builds only until its use is decided; Release declares none, which
+          # MicrophoneDeclarationTests and the build phase below hold.
+          INFOPLIST_KEY_NSMicrophoneUsageDescription: Ruimte uses the microphone while you talk to Voice. The audio goes to OpenAI only during the conversation.
         Release:
           PUSH_ENVIRONMENT: production
+    postBuildScripts:
+      - name: Release declares no microphone
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
+        outputFiles:
+          - $(DERIVED_FILE_DIR)/microphone-declaration.checked
+        script: |
+          if [ "$CONFIGURATION" = "Release" ] && /usr/libexec/PlistBuddy -c "Print :NSMicrophoneUsageDescription" "$TARGET_BUILD_DIR/$INFOPLIST_PATH" >/dev/null 2>&1; then
+              echo "error: This Release build declares the microphone. Voice's microphone stays in Debug builds until its use is decided."
+              exit 1
+          fi
+          touch "$DERIVED_FILE_DIR/microphone-declaration.checked"
     info:
       path: App/Info.plist
       properties:

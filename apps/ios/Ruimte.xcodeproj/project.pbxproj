@@ -65,6 +65,7 @@
 		290C515FDEC7C2A90EB7AA84 /* DrawingExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6D19F75A43457090EB0DC6E /* DrawingExport.swift */; };
 		298FBAAAC9C5415627EF3B6A /* GitSheetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B78104E0D8F687B72F55035 /* GitSheetTests.swift */; };
 		29A814716172F5B8F668D625 /* ProjectViewPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A5221AF91DEE568E2DF38A4 /* ProjectViewPage.swift */; };
+		2AA99893C73E6F4F8A6C3161 /* MicrophoneDeclarationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04EEA27232A73918E20DB947 /* MicrophoneDeclarationTests.swift */; };
 		2BBA3A08D2566FBC4229CC85 /* UnifiedProjectsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F056296AB12E6228D09966E2 /* UnifiedProjectsTests.swift */; };
 		2C04EFA7C3A1A3B5E170E0E2 /* ChatThought.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF47AFA583D2E9DC8ADE0C46 /* ChatThought.swift */; };
 		2DE00EFDF345E0985A7EC699 /* ProjectFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AFADC41B17244A033E05AD3 /* ProjectFiles.swift */; };
@@ -427,6 +428,7 @@
 		03DC65E136B10CDF5015742E /* PlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanSheet.swift; sourceTree = "<group>"; };
 		0416D221A1F144614E3E9A43 /* DocumentSceneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSceneTests.swift; sourceTree = "<group>"; };
 		0429B47664965B5818CEAE8E /* MarkdownBlocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownBlocks.swift; sourceTree = "<group>"; };
+		04EEA27232A73918E20DB947 /* MicrophoneDeclarationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrophoneDeclarationTests.swift; sourceTree = "<group>"; };
 		055B44926C3693450CF4C1FC /* MachineUsagePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineUsagePage.swift; sourceTree = "<group>"; };
 		070AB913E963308BAD40498B /* ChatModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModel.swift; sourceTree = "<group>"; };
 		073C4EC8E14E8D8910DEF111 /* DrawingEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingEditorTests.swift; sourceTree = "<group>"; };
@@ -1191,6 +1193,7 @@
 				7B02D669F665402B085C9E9C /* MachineIconTests.swift */,
 				A51F132752C92894717FD771 /* MachinePageTests.swift */,
 				ABE8B97161FC6E9CE587F95C /* MachineRemovalTests.swift */,
+				04EEA27232A73918E20DB947 /* MicrophoneDeclarationTests.swift */,
 				304CEEF36115BF171DA6E1FC /* MobileByteCountTests.swift */,
 				70C3D5EF84CEC4A665BE6F8A /* ModelComparisonTests.swift */,
 				EEB994628819F6232CF05AF3 /* ModelNameTests.swift */,
@@ -1499,6 +1502,7 @@
 				386668DA34C5229FC97DA5CC /* Resources */,
 				C5DB0FE44A0A1B2DBC94B326 /* Frameworks */,
 				0C60767BE4C316094BAA5C98 /* Embed Foundation Extensions */,
+				E4BA1A1EA5C46675EF60E1A1 /* Release declares no microphone */,
 			);
 			buildRules = (
 			);
@@ -1689,6 +1693,29 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		E4BA1A1EA5C46675EF60E1A1 /* Release declares no microphone */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+			);
+			name = "Release declares no microphone";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/microphone-declaration.checked",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"$CONFIGURATION\" = \"Release\" ] && /usr/libexec/PlistBuddy -c \"Print :NSMicrophoneUsageDescription\" \"$TARGET_BUILD_DIR/$INFOPLIST_PATH\" >/dev/null 2>&1; then\n    echo \"error: This Release build declares the microphone. Voice's microphone stays in Debug builds until its use is decided.\"\n    exit 1\nfi\ntouch \"$DERIVED_FILE_DIR/microphone-declaration.checked\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		10612AA9FFBC184EF33069B5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -1756,6 +1783,7 @@
 				EF671DDC2475C1E41165F98F /* MachineIconTests.swift in Sources */,
 				276FDD68935BC64F1AC25ED0 /* MachinePageTests.swift in Sources */,
 				C22613F143FD3C92F3C92D76 /* MachineRemovalTests.swift in Sources */,
+				2AA99893C73E6F4F8A6C3161 /* MicrophoneDeclarationTests.swift in Sources */,
 				A13E7F2E6DA2090C37CBF61C /* MobileByteCountTests.swift in Sources */,
 				EFD8EEA12C952C4276B210C2 /* ModelComparisonTests.swift in Sources */,
 				8FBF9616B86A2B2A55B482B8 /* ModelNameTests.swift in Sources */,
@@ -2105,6 +2133,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Ruimte;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Ruimte uses the microphone while you talk to Voice. The audio goes to OpenAI only during the conversation.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
