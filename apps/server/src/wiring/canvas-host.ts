@@ -83,6 +83,8 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
         browsers: devices.browserDriver,
         agents: agentStates({ outbox, lineage, chats, sessions }),
         requests: chatRequests(chats),
+        // A chat nobody opened since a restart is read from its record, which starts no CLI.
+        chatThreads: { items: async (chatId) => chats.get(chatId)?.thread.list() ?? (await chats.readChat(chatId))?.items ?? null },
         computer: devices.computer,
         devices: devices.deviceDriver,
         context: agents.context,

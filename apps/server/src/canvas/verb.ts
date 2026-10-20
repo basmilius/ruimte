@@ -6,6 +6,7 @@ import {
     type AgentStatus,
     type BrowserDriveAction,
     type ChatAttachment,
+    type ChatItem,
     type ChatForkResult,
     type ChatVisual,
     type GitDiffResult,
@@ -107,6 +108,8 @@ export interface CanvasHost {
     agents?: AgentStateHost;
     /* What the chats of agent nodes ask and wait on, which `answer` reaches. */
     requests?: ChatRequestHost;
+    /* The thread of a chat, loaded or only on disk, for a reader that does not attach and wakes nothing; absent on a host without chats. */
+    chatThreads?: ChatThreadHost;
     /* Forks a chat an agent opened into a child of that agent; absent on a host that forks none. */
     forks?: AgentForkHost;
     /* Operating the apps of this machine through its helper; absent on a host without one. */
@@ -135,6 +138,11 @@ export interface CanvasHost {
     untrusted?: Pick<UntrustedFolders, 'node' | 'inFolder' | 'fromPeer'>;
     /* When a person's snooze on a node ends, in epoch milliseconds; absent on a host without snoozes. */
     snoozes?: Pick<SnoozeStore, 'until'>;
+}
+
+/* A chat's items as they stand, whether its CLI runs or the chat is only a record; null for no chat of that id. */
+export interface ChatThreadHost {
+    items(chatId: string): Promise<ChatItem[] | null>;
 }
 
 /* The projects of this machine; every write of a verb goes through `mutate`, which refuses a document that moved past `expectedRev`. */
