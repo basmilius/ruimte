@@ -183,7 +183,13 @@ function signature(name: ActionName): string {
         .join(', ')})`;
 }
 
-function toolOf(domain: ActionDomain, actions: readonly ActionName[]): VoiceToolDefinition {
+/* What a tool says of itself and its actions where it runs apart from a window, as on a phone; absent keeps the catalog's words. */
+export interface VoiceToolWords {
+    domains?: Partial<Record<ActionDomain, string>>;
+    actions?: Partial<Record<ActionName, string>>;
+}
+
+function toolOf(domain: ActionDomain, actions: readonly ActionName[], words: VoiceToolWords = {}): VoiceToolDefinition {
     const fields = new Map<string, { schema: JsonSchema; nullable: boolean; actions: number }>();
     for (const action of actions) {
         for (const [field, entry] of inputFields(action)) {
@@ -202,13 +208,14 @@ function toolOf(domain: ActionDomain, actions: readonly ActionName[]): VoiceTool
             [...fields].map(([field, entry]) => [field, entry.nullable || entry.actions < actions.length ? nullable(entry.schema) : entry.schema])
         )
     };
-    const { name, description } = DOMAIN_TOOLS[domain];
+    const { name } = DOMAIN_TOOLS[domain];
+    const description = words.domains?.[domain] ?? DOMAIN_TOOLS[domain].description;
     return {
         type: 'function',
         name,
         description: [
             `${description} Actions take ids, never names. Pass null for every field the chosen action does not list; a field marked ? may be null.`,
-            ...actions.map((action) => `- ${signature(action)}: ${ACTION_DEFINITIONS[action].description}`)
+            ...actions.map((action) => `- ${signature(action)}: ${words.actions?.[action] ?? ACTION_DEFINITIONS[action].description}`)
         ].join('\n'),
         parameters: { type: 'object', properties, required: Object.keys(properties), additionalProperties: false },
         strict: true
@@ -263,6 +270,7 @@ export function voiceToolsFor(domains: readonly ActionDomain[]): VoiceToolDefini
 export interface VoiceToolsForActionsOptions {
     /* Offer the control tool, for a set in which an action asks the person before it runs. */
     control: boolean;
+    words?: VoiceToolWords;
 }
 
 /*
@@ -270,13 +278,13 @@ export interface VoiceToolsForActionsOptions {
  * asked for. An action Voice may not run is left out rather than offered: the registry would refuse it,
  * so offering it only costs bytes on every response.
  */
-export function voiceToolsForActions(actions: readonly ActionName[], { control }: VoiceToolsForActionsOptions): VoiceToolDefinition[] {
+export function voiceToolsForActions(actions: readonly ActionName[], { control, words }: VoiceToolsForActionsOptions): VoiceToolDefinition[] {
     const wanted = new Set(actions);
     const tools = ACTION_DOMAINS.flatMap((domain) => {
         const reached = (Object.keys(ACTION_DEFINITIONS) as ActionName[]).filter(
             (name) => wanted.has(name) && ACTION_DEFINITIONS[name].domain === domain && reachableByVoice(name)
         );
-        return reached.length > 0 ? [toolOf(domain, reached)] : [];
+        return reached.length > 0 ? [toolOf(domain, reached, words)] : [];
     });
     return control ? [...tools, CONTROL_TOOL] : tools;
 }

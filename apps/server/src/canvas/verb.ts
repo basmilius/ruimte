@@ -1,7 +1,9 @@
 import {
     isCanvasView,
     isHiddenCanvasView,
+    type AgentInfo,
     type AgentKind,
+    type ChatInfo,
     type ContextSource,
     type AgentStatus,
     type BrowserDriveAction,
@@ -110,6 +112,8 @@ export interface CanvasHost {
     requests?: ChatRequestHost;
     /* The thread of a chat, loaded or only on disk, for a reader that does not attach and wakes nothing; absent on a host without chats. */
     chatThreads?: ChatThreadHost;
+    /* What a terminal agent does, which Voice reads where a window would read its status. */
+    terminals?: TerminalAgentHost;
     /* Forks a chat an agent opened into a child of that agent; absent on a host that forks none. */
     forks?: AgentForkHost;
     /* Operating the apps of this machine through its helper; absent on a host without one. */
@@ -140,9 +144,15 @@ export interface CanvasHost {
     snoozes?: Pick<SnoozeStore, 'until'>;
 }
 
-/* A chat's items as they stand, whether its CLI runs or the chat is only a record; null for no chat of that id. */
+/* A chat's items and info as they stand, whether its CLI runs or the chat is only a record; null for no chat of that id. */
 export interface ChatThreadHost {
     items(chatId: string): Promise<ChatItem[] | null>;
+    info?(chatId: string): Promise<ChatInfo | null>;
+}
+
+/* The agent a terminal runs as its hooks last told it; null for a plain shell, undefined for no session of that id. */
+export interface TerminalAgentHost {
+    agentOf(sessionId: string): AgentInfo | null | undefined;
 }
 
 /* The projects of this machine; every write of a verb goes through `mutate`, which refuses a document that moved past `expectedRev`. */

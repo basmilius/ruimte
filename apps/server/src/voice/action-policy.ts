@@ -13,7 +13,8 @@ interface FieldRule {
 
 export const VOICE_FIELD_RULES: Readonly<Record<string, FieldRule>> = {
     'workspace.inspect': { fields: null },
-    'target.resolve': { fields: null },
+    // Voice reaches the one machine and project its session runs in, so it names no machine.
+    'target.resolve': { fields: ['target', 'names', 'nodeKind', 'scope'] },
     'chat.read': { fields: ['chatId', 'limit'] },
     'chat.inspect': { fields: null },
     'agents.inspect': { fields: null },

@@ -178,6 +178,15 @@ describe('Voice tools for a set of actions', () => {
         expect(voiceToolsForActions([personOnly], { control: false })).toEqual([]);
     });
 
+    test('say what the caller gives in place of the words of the catalog', () => {
+        const [communicate] = voiceToolsForActions(['chat.read'], {
+            control: false,
+            words: { domains: { communicate: 'Read an AI Chat.' }, actions: { 'chat.read': 'Reads the last messages.' } }
+        });
+        expect(communicate!.description).toStartWith('Read an AI Chat. Actions take ids');
+        expect(communicate!.description).toContain('- chat.read(chatId, limit?): Reads the last messages.');
+    });
+
     test('give the same tool as the domain tool when every action of the domain is asked for', () => {
         const views = VOICE_TOOL_ACTIONS.get('manage_views')!;
         expect(voiceToolsForActions(views, { control: false })).toEqual(voiceToolDefinitions().filter((tool) => tool.name === 'manage_views'));

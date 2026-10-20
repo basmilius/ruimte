@@ -43,7 +43,11 @@ const DAEMON_VOICE_REACH: Record<string, 'voice' | 'blocked'> = {
     'worktree.diff': 'blocked',
     'worktree.merge': 'blocked',
     'chat.read': 'voice',
-    'agent.start': 'voice'
+    'agent.start': 'voice',
+    'workspace.inspect': 'voice',
+    'target.resolve': 'voice',
+    'chat.inspect': 'voice',
+    'agents.inspect': 'voice'
 };
 
 function voiceCall() {

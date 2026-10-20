@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ACTION_DEFINITIONS, VOICE_CONTROL_TOOL, type ActionName } from '@ruimte/actions';
+import { ACTION_DEFINITIONS, VOICE_CONTROL_TOOL } from '@ruimte/actions';
 import { DAEMON_VOICE_ACTIONS, daemonVoiceActions, daemonVoiceTools } from './matrix.ts';
 
 /* What every response of a daemon Voice session carries; the whole domain set is about 48 KB. */
@@ -35,10 +35,22 @@ describe('the daemon Voice matrix', () => {
         expect(offered(false)).not.toContain('chat.send');
     });
 
-    test('with writes the tools carry chat.send too, and agent.start once the catalog opens it to Voice', () => {
+    test('with writes the tools carry chat.send and agent.start too', () => {
         expect(offered(true)).toContain('chat.send');
-        const start: ActionName = 'agent.start';
-        expect(offered(true).includes(start)).toBe(ACTION_DEFINITIONS[start].actors.includes('voice'));
+        expect(offered(true)).toContain('agent.start');
+    });
+
+    test('a tool on a phone never promises what only a window has', () => {
+        for (const writes of [false, true]) {
+            const said = daemonVoiceTools({ writes })
+                .map((tool) => tool.description)
+                .join('\n');
+            expect(said).not.toMatch(/the selection|split grid|cells of the grid|on screen|clear|terminal\.read/i);
+        }
+        const reads = daemonVoiceTools({ writes: false })
+            .map((tool) => tool.description)
+            .join('\n');
+        expect(reads).not.toContain('send it a prompt');
     });
 
     test('offer exactly the matrix actions Voice may run, and the control tool only when one asks first', () => {

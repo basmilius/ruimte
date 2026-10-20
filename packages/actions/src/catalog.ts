@@ -667,7 +667,9 @@ export const ACTION_DEFINITIONS = {
                             id: z.string().min(1),
                             title: z.string(),
                             kind: ActionCanvasNodeKindSchema,
-                            visible: z.boolean()
+                            visible: z.boolean(),
+                            // What a chat or terminal agent does, where the machine answers rather than a window.
+                            status: z.union([AgentStatusSchema, z.literal('unknown')]).optional()
                         })
                     ),
                     selected: z.array(
@@ -678,7 +680,12 @@ export const ACTION_DEFINITIONS = {
                         })
                     )
                 })
-                .nullable()
+                .nullable(),
+            /*
+             * What this answer cannot know, so an empty list there reads as unknown and never as empty: the
+             * machine answers for a phone, which has no split cells or selection and does not say what is in sight.
+             */
+            unknown: z.array(z.enum(['cells', 'selection', 'visible'])).optional()
         })
     },
     'target.resolve': {
