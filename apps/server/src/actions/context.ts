@@ -6,7 +6,26 @@ export interface ServerActionContext {
     host: CanvasHost;
     /* Where the caller stands, looked up by its id before the action runs: project, folder and canvas. */
     place: IndexedPlace;
+    /* Set only for the voice actor, so a handler open to Voice and an agent tells the two apart. */
+    voice?: VoiceCaller;
 }
+
+/*
+ * Who a Voice session run by the daemon acts for, as the daemon itself set it when the session started:
+ * a client never names an owner, a project or a right of its own, and nothing here comes from the model.
+ */
+export interface VoiceCaller {
+    sessionId: string;
+    /* The connection and the scene that started the session; only they stop it or answer its questions. */
+    owner: { clientId: string; sceneId: string };
+    projectId: string;
+    /* IANA, the clock of the person's phone. */
+    timeZone: string;
+    /* RUIMTE_EXPERIMENTAL_VOICE_WRITES: Voice may prompt and start chats too. */
+    writes: boolean;
+}
+
+export type VoiceActionContext = ServerActionContext & { voice: VoiceCaller };
 
 export type ServerActionCall = ActionCall<ServerActionContext>;
 
@@ -52,6 +71,22 @@ export function serverActionCall(host: CanvasHost, place: IndexedPlace | null, c
         context: contextOf(expectedRevision === undefined ? host : heldTo(host, expectedRevision), place),
         dryRun,
         ...(expectedRevision === undefined ? {} : { expectedRevision })
+    };
+}
+
+/* The actor id of a Voice session, apart from every node id, which is what a lineage or a claim is kept under. */
+export function voiceActorId(sessionId: string): string {
+    return `voice:${sessionId}`;
+}
+
+/*
+ * The call of a Voice session. Its place is the project the session started in, with the canvas on the
+ * phone's screen or else the project's first, so an action lands where an agent of that canvas would.
+ */
+export function voiceActionCall(host: CanvasHost, place: IndexedPlace, voice: VoiceCaller): ActionCall<VoiceActionContext> {
+    return {
+        actor: { kind: 'voice', id: voiceActorId(voice.sessionId) },
+        context: { host, place, voice }
     };
 }
 
