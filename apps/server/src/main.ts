@@ -114,6 +114,23 @@ if (config.command === 'context') {
     process.exit(await runContext(config.args));
 }
 
+if (config.command === 'voice') {
+    const { processKeyReader, runVoice } = await import('./cli/voice.ts');
+    const { COMPILED } = await import('./version.ts');
+    const { homedir } = await import('node:os');
+    const { join } = await import('node:path');
+    process.exit(
+        await runVoice({
+            args: config.args,
+            home: config.home,
+            installedHome: join(homedir(), '.ruimte'),
+            compiled: COMPILED,
+            interactive: process.stdin.isTTY === true,
+            readKey: processKeyReader(process.stdin, (text) => process.stderr.write(text))
+        })
+    );
+}
+
 // Only after the CLI commands: `ruimte context` runs inside a session and needs these to find it.
 forgetInheritedSession(process.env);
 // Read into the config already; a shell must not pass it on to a daemon started by hand inside a session.

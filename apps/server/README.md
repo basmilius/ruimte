@@ -104,6 +104,7 @@ npx ruimte service uninstall
 npx ruimte closed-lid install             # let keep awake hold a closed lid on a Mac (asks for sudo)
 npx ruimte closed-lid remove
 npx ruimte notify [--node <id>] <text>   # a notification from a script, which opens that node
+ruimte voice key set|clear|status         # the OpenAI key of Voice run by the daemon (a development spike)
 npx ruimte --version
 ```
 
@@ -116,6 +117,8 @@ A bare `ruimte` at a terminal prints the address it listens on and names the com
 `ruimte notify` raises a notification the way an agent's `ruimte-context alert` does: on every window of the app and as a push to the phones, under the node's title. It asks the daemon on the local secret (`POST /machine/notify`) and refuses without it, so only a process of the person whose `RUIMTE_HOME` that is may notify. The notification opens a node, so it always names one: `--node <id>`, or else the terminal of Ruimte the script runs in (`RUIMTE_SESSION_ID`). The text is at most 500 characters. It exits 0 once the daemon queued it, which does not say a device showed it, and 1 without a secret, a node, a daemon that answers, or a project that holds the node.
 
 `ruimte service install` copies `ruimte`, `ruimte-context` and `ruimte.build` to `$RUIMTE_HOME/bin`. It writes the LaunchAgent or systemd user unit the desktop app writes, pointing at that copy and never at the npx cache. The unit carries the flags after `install`, the PATH of the shell it ran in (without npx's own folders) and `RUIMTE_SERVICE=1`. Running it again with a newer version replaces the copy, and the daemon under the service moves to it once idle; different flags restart the service. It refuses to touch a service that runs another program, such as the desktop app's. On Linux it prints `loginctl enable-linger <user>` when lingering is off and leaves turning it on to you. `uninstall` stops the service and removes the definition and the copy, and leaves the rest of `$RUIMTE_HOME` alone. `status` exits 0 only when the service is installed and answers on `--port`.
+
+`ruimte voice key set` saves the OpenAI key Voice run by the daemon mints its sessions with, in `$RUIMTE_HOME/voice/openai.json` (0600 in a 0700 folder, `src/voice/key-store.ts`). It asks for the key without echo at a terminal and otherwise reads it from stdin (`pbpaste | bun src/main.ts voice key set`); a key given as an argument is refused, since a shell keeps it in its history. `status` says only whether a key is set and `clear` removes it. While Voice on the daemon is a spike the command writes only into a development home: it refuses `~/.ruimte` and a compiled daemon. The daemon reads the file at every start of a Voice session, so a running daemon needs no restart. Nothing copies the desktop app's key or reads a CLI's credentials.
 
 `ruimte context` is the agent-side CLI behind the `ruimte-context` script (see "Context links").
 
@@ -196,6 +199,7 @@ $RUIMTE_HOME/
   notices/<nodeId>.json            0700, messages left for a node until its agent picks them up
   database-access/<projectId>.json 0700, what agents may do with each connection (see "Databases")
   secrets/<hash>.json              0700 folder, 0600 files: the secrets of a project's launches (see "Launch secrets")
+  voice/openai.json                0700 folder, 0600 file: the OpenAI key of Voice run by the daemon (`ruimte voice key`)
   database-snapshots/<projectId>/<connectionId>/<database>.json
                                    schema snapshots the SQL language servers read
   chats/                           0700

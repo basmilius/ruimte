@@ -60,6 +60,9 @@ describe('parseServerArgs', () => {
         expect(() => parseServerArgs(['service'], {})).toThrow('Usage: ruimte service');
         expect(parseServerArgs(['closed-lid', 'install', '--port', '4211'], {})).toMatchObject({ command: 'closed-lid', args: ['install'], port: 4211 });
         expect(() => parseServerArgs(['closed-lid'], {})).toThrow('Usage: ruimte closed-lid');
+        expect(parseServerArgs(['voice', 'key', 'set'], {})).toMatchObject({ command: 'voice', args: ['key', 'set'] });
+        // A key given as an argument would stay in the shell's history, so the command refuses one without echoing it.
+        expect(() => parseServerArgs(['voice', 'key', 'set', 'sk-test-in-history'], {})).toThrow(/^Usage: ruimte voice key set\|clear\|status$/);
         expect(parseServerArgs(['notify', '--node', 'chat-1', 'Build', 'done'], {})).toMatchObject({
             command: 'notify',
             node: 'chat-1',
