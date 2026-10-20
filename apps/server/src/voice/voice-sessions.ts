@@ -54,6 +54,10 @@ export class VoiceSessions {
 
     /* Registered before its first await, so a stop that follows on the same link always finds it. */
     start(client: ClientConnection, payload: VoiceStartPayload): Promise<VoiceStartResult> {
+        if (client.closed === true) {
+            // Its channel's cleanup already ran, so nothing would end a session it started now.
+            return Promise.reject(new RequestError('voice-cancelled', 'The link that asked for Voice is gone'));
+        }
         const key = startKey(client.id, payload.sceneId, payload.startId);
         const fingerprint = fingerprintOf(payload);
         const known = this.#starts.get(key);

@@ -188,6 +188,13 @@ describe('starting', () => {
         expect(holds).toEqual(['hold voice:session-1 project-1', 'letGo voice:session-1 project-1']);
     });
 
+    test('a link that already went starts nothing', async () => {
+        const gone = client('client-1');
+        gone.closed = true;
+        await expect(sessions().start(gone, startPayload())).rejects.toMatchObject({ code: 'voice-cancelled' });
+        expect(holds).toEqual([]);
+    });
+
     test('an unknown project is refused before anything starts', async () => {
         await expect(sessions().start(client('client-1'), startPayload({ projectId: 'nowhere' }))).rejects.toMatchObject({ code: 'unknown-project' });
         expect(holds).toEqual([]);
