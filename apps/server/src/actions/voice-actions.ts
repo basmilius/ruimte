@@ -262,7 +262,8 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
                         ? [{ toolUseId: item.toolUseId, title: item.description || (item.subagentType ?? 'Sub-agent'), status: item.status, stoppable: false }]
                         : []
                 ),
-                tasks: (info.background ?? []).map((task) => ({ taskId: task.id, kind: task.kind, description: task.description, command: task.command })),
+                // A background task by its description, never its command, for the reason an approval leaves out its input.
+                tasks: (info.background ?? []).map((task) => ({ taskId: task.id, kind: task.kind, description: task.description, command: null })),
                 lastTurnId: lastSettledTurn(items),
                 forkOf: info.forkOf ? { chatId: info.forkOf.chatId, turnId: info.forkOf.turnId } : null
             }

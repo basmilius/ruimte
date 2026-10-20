@@ -309,10 +309,15 @@ describe('target.resolve for Voice', () => {
 });
 
 describe('chat.inspect for Voice', () => {
-    test('reads what a chat runs on and waits on, an approval by its tool and description only', async () => {
+    test('reads what a chat runs on and waits on, an approval and a background task by description only', async () => {
         infos.set(
             'chat-node',
-            info('chat-node', { status: 'needs-you', activeTurnId: 'turn-2', queue: [{ id: 'q1', turnId: 'turn-3', text: 'Then deploy', createdAt: 1 }] })
+            info('chat-node', {
+                status: 'needs-you',
+                activeTurnId: 'turn-2',
+                queue: [{ id: 'q1', turnId: 'turn-3', text: 'Then deploy', createdAt: 1 }],
+                background: [{ id: 'bg-1', kind: 'shell', description: 'Dev server', command: 'API_TOKEN=sk-background-secret bun dev', startedAt: 1 }]
+            })
         );
         loaded.set('chat-node', [
             { id: 'turn-1', kind: 'turn', createdAt: 1, turnId: 'turn-1', state: 'done', endedAt: 2, costUsd: 0 } as ChatItem,
@@ -341,10 +346,12 @@ describe('chat.inspect for Voice', () => {
                 open: true,
                 queue: [{ messageId: 'q1', text: 'Then deploy' }],
                 approvals: [{ requestId: 'r1', tool: 'Bash', description: 'Deploy the shop' }],
+                tasks: [{ taskId: 'bg-1', kind: 'shell', description: 'Dev server', command: null }],
                 lastTurnId: 'turn-1'
             }
         });
         expect(JSON.stringify(result)).not.toContain('sk-secret-value');
+        expect(JSON.stringify(result)).not.toContain('sk-background-secret');
     });
 
     test('a chat that never started has nothing to inspect, and one of another project is refused', async () => {

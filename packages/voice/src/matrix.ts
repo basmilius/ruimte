@@ -41,7 +41,7 @@ export const DAEMON_VOICE_ACTIONS: readonly DaemonVoiceAction[] = [
         writes: false,
         confirms: false,
         description:
-            'Reads what an AI Chat of this project runs on and what waits in it: CLI, model and options, permission mode, whether a turn runs, queued messages, questions and approvals waiting for the user (an approval by its tool and description only), sub-agents, background tasks, the last finished turn and where a fork came from.'
+            'Reads what an AI Chat of this project runs on and what waits in it: CLI, model and options, permission mode, whether a turn runs, queued messages, questions and approvals waiting for the user (an approval by its tool and description only), sub-agents, background tasks by their description, the last finished turn and where a fork came from.'
     },
     { name: 'agents.inspect', writes: false, confirms: false, description: 'Reads what every AI Chat and terminal agent of this project does now.' },
     {
