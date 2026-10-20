@@ -32,6 +32,8 @@ export interface ServerConfig {
     lanDoorOff: boolean;
     // Started by the background service (`RUIMTE_SERVICE=1` in its definition), which starts it again when it exits.
     underService: boolean;
+    // Voice run by the daemon for a phone, a spike behind environment variables only (`experimentalVoiceOf`).
+    experimentalVoice: ExperimentalVoice;
     // `login` puts it on an account with a code; `status` says how the running daemon is reached; `context` is the agent-side CLI (`ruimte-context`);
     // `service` installs, removes or reports the background service; `closed-lid` installs or removes the sudoers rule behind keep awake
     // with the lid closed; `notify` raises a notification; `version` prints the version.
@@ -53,6 +55,23 @@ export function forgetInheritedSession(env: Record<string, string | undefined>):
     for (const name of SESSION_VARIABLES) {
         delete env[name];
     }
+}
+
+/*
+ * Voice run by the daemon waits on decisions about the microphone, the key on the machine and what Voice
+ * may change, so until then it is on only where a developer turned it on, with no flag a service or a
+ * copied command carries along by accident.
+ */
+export interface ExperimentalVoice {
+    // `RUIMTE_EXPERIMENTAL_VOICE=1`: the `voice.*` requests are answered and named in `endpoint.info`.
+    enabled: boolean;
+    // `RUIMTE_EXPERIMENTAL_VOICE_WRITES=1` beside it: Voice also prompts and starts chats. Without it Voice only reads.
+    writes: boolean;
+}
+
+export function experimentalVoiceOf(env: Record<string, string | undefined>): ExperimentalVoice {
+    const enabled = env.RUIMTE_EXPERIMENTAL_VOICE === '1';
+    return { enabled, writes: enabled && env.RUIMTE_EXPERIMENTAL_VOICE_WRITES === '1' };
 }
 
 export const DEFAULT_HOST = '127.0.0.1';
@@ -183,6 +202,7 @@ export function parseServerArgs(argv: string[], env: Record<string, string | und
         lanPort,
         lanDoorOff: values['no-lan'],
         underService: env.RUIMTE_SERVICE === '1',
+        experimentalVoice: experimentalVoiceOf(env),
         command,
         args: cli || service ? argv.slice(1) : positionals.slice(1),
         ...(values.node === undefined ? {} : { node: values.node })

@@ -40,6 +40,8 @@ Other environment variables:
 | --- | --- |
 | `RUIMTE_HOME` | Where the daemon keeps its state (below). |
 | `RUIMTE_DEBUG=1` | Print the whole stack of an error instead of its message. |
+| `RUIMTE_EXPERIMENTAL_VOICE=1` | Answer the `voice.*` requests, Voice run by the daemon for a phone. A spike: off by default and on no flag. |
+| `RUIMTE_EXPERIMENTAL_VOICE_WRITES=1` | With the one above: Voice may also prompt and start chats (`chat.send`, `agent.start`). Without it Voice only reads. |
 | `RUIMTE_PULSAR_URL` | Another address book for `ruimte login`. |
 | `RUIMTE_DATABASE_HELPER` | The database helper binary (see "Databases"). |
 | `RUIMTE_PHP_LANGUAGE_SERVER_SOURCE`, `RUIMTE_SQL_LANGUAGE_SERVER_SOURCE` | A checkout of a native language server for a development daemon. |
