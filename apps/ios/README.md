@@ -216,6 +216,34 @@ plural variations. Names, paths, git refs, wire values, model and CLI names and 
 are. The Dutch follows the glossary in `apps/client/src/i18n/README.md`. `LocalizationTests` fails when a key has no
 Dutch or when its Dutch drops or adds a placeholder.
 
+## Voice
+
+Voice on a phone is run by the machine (`voice.start`, `voice.stop`, `voice.confirm`, and the `voice.status` and
+`voice.activity` events, in `packages/contracts/src/voice.ts`). The machine mints the GPT-Live session with an OpenAI
+key it holds itself, set there with `ruimte voice key set`, runs every tool and reports. The phone carries only the
+microphone, the reply and the captions, over a WebRTC peer of its own to OpenAI in `RuimteVoice` (`VoiceMediaPeer`,
+with a factory apart from the machine link's), and runs no tool: a function call on its `oai-events` channel is
+ignored. `RuimteTransport` stays without audio.
+
+- The mic shows on Now and in a project only where the machine answers `voice.start`, which it names only with
+  `RUIMTE_EXPERIMENTAL_VOICE=1`, and `voice.keyStatus` says it holds a key. From Now, or ⌘⇧M without a project, it
+  asks for a machine and a project first.
+- One session per app process, owned by the scene that started it (`VoiceCoordinator`). Every request after
+  `voice.start` names the scene, and the events count only for the owner's scene and session, since the scenes of an
+  iPad share one link. Another scene shows where Voice runs and does not take the microphone over.
+- `AudioSessionController` holds the app's one audio session, `playAndRecord` in `voiceChat`, with WebRTC's manual
+  audio on, so the microphone and speaker start only while a session runs and the audio goes back to what played
+  before with `notifyOthersOnDeactivation`.
+- There is no background audio: the owner's scene going to the background, the screen locking, a call, the machine
+  link or the media dropping all end Voice. What it started on the machine goes on.
+- The captions stand above every tab of the scene (`VoiceCaptionBar`); the timeline is a sheet on an iPhone and the
+  inspector on an iPad (`VoicePanel`). Language, voice and whether deletions ask first are in Settings, Voice.
+- Until its use is decided, only a Debug build declares the microphone (`INFOPLIST_KEY_NSMicrophoneUsageDescription`
+  in the Debug configuration of `project.yml`). A build without the declaration never offers Voice, the build phase
+  "Release declares no microphone" fails a Release build that does, and `MicrophoneDeclarationTests` holds the spec.
+
+Run the package's tests with `swift test --package-path apps/ios/Packages/RuimteVoice`.
+
 ## Native Apple sign-in
 
 Apple uses the system authorization sheet, with no browser callback. The app asks Pulsar for a one-time nonce and
@@ -245,8 +273,9 @@ web fallback when the native service is unavailable. `apps/pulsar-worker/README.
   pairing, bound to the machine ID and both public keys, so later attempts need no account request. A revoked
   pairing stays a refusal; the app does not regain access through another statement. The statement goes into the
   offer as the address book answered it, v2 fields included, and those fields stay out of the signed signal bytes.
-- `stasel/WebRTC` is pinned to `153.0.0`, commit `4266157cd08f92115de885ab12d87196a8db87e1`. The adapter exchanges
-  no audio or video and declares no microphone, camera or background-audio capability.
+- `stasel/WebRTC` is pinned to `153.0.0`, commit `4266157cd08f92115de885ab12d87196a8db87e1`, in `RuimteTransport` and
+  `RuimteVoice`. The machine link exchanges no audio or video and declares no microphone, camera or background-audio
+  capability; only Voice's own peer carries audio.
 - `packages/contracts/scripts/generate-swift.ts` generates the daemon API, JSON schemas, constants and fixtures, and
   the closed vocabularies of the agent, task, plan and chat schemas as Swift enums, so a switch stops compiling when
   a case is added. `AgentKind`, `RuntimeMode`, `AgentStatus` and icon names are open on the wire (`x-open-enum`), so
