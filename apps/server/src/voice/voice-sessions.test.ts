@@ -74,8 +74,9 @@ let threads: Map<string, ChatItem[]>;
 let threadGate: Promise<void>;
 let ids: number;
 let projectChanged: () => void;
+let placed: (string | null)[];
 
-function sessions(writes = false): VoiceSessions {
+function sessions(writes = false, views: ProjectContent['views'] = CONTENT.views): VoiceSessions {
     const host = {
         projects: {
             locate: (id: string) => (id === 'chat-1' ? { projectId: 'project-1', folder: '/work/app', canvasId: 'main' } : null),
@@ -100,12 +101,20 @@ function sessions(writes = false): VoiceSessions {
             },
             letGo: (holder, projectId) => holds.push(`letGo ${holder} ${projectId}`)
         },
-        runner: serverActions,
+        // The registry itself, seen on the way in, so a test reads the place each action lands on.
+        runner: {
+            execute: (name, input, call) => {
+                placed.push(call.context.place.canvasId);
+                return serverActions.execute(name, input, call);
+            },
+            confirm: (token, approved, call) => serverActions.confirm(token, approved, call),
+            forget: (actor) => serverActions.forget(actor)
+        },
         host,
         chats: new FakeChats(),
         index: {
             folderOf: (projectId) => (projectId === 'project-1' ? '/work/app' : null),
-            viewsOf: (projectId) => (projectId === 'project-1' ? CONTENT.views : null)
+            viewsOf: (projectId) => (projectId === 'project-1' ? views : null)
         },
         writes,
         newId: () => `session-${++ids}`
@@ -123,6 +132,15 @@ async function started(voice: VoiceSessions, owner = client('client-1'), payload
     return { owner, result, sessionId, attach };
 }
 
+/* Where the actions of a session started on that view land, read off the first call it runs. */
+async function canvasOf(voice: VoiceSessions, viewId: string | undefined): Promise<string | null> {
+    const { attach } = await started(voice, client(`client-${ids}`), startPayload({ startId: `start-${viewId}`, ...(viewId === undefined ? {} : { viewId }) }));
+    placed = [];
+    attach.socket.receive(functionCall('call-1', { action: 'chat.read', chatId: 'chat-1', limit: null }));
+    await settle();
+    return placed[0]!;
+}
+
 beforeEach(() => {
     clock = new FakeClock();
     live = new FakeLive(clock);
@@ -131,6 +149,7 @@ beforeEach(() => {
     threads = new Map();
     threadGate = Promise.resolve();
     ids = 0;
+    placed = [];
 });
 
 describe('starting', () => {
@@ -212,11 +231,17 @@ describe('starting', () => {
     });
 
     test('the canvas on the phone is where actions land, and else the first canvas', async () => {
-        const voice = sessions();
-        void voice.start(client('client-1'), startPayload({ viewId: 'second' }));
-        void voice.start(client('client-2'), startPayload({ viewId: 'gone' }));
-        await settle();
-        expect(live.mints).toHaveLength(2);
+        expect(await canvasOf(sessions(), 'second')).toBe('second');
+        expect(await canvasOf(sessions(), 'gone')).toBe('main');
+        expect(await canvasOf(sessions(), undefined)).toBe('main');
+    });
+
+    test('the canvas of another machine is never where actions land, even when the phone names it', async () => {
+        const peer = { id: 'peer-machine-b', kind: 'canvas', name: 'Machine B', hidden: true, nodes: [], edges: [] } as unknown as ProjectContent['views'][number];
+        // A project whose only canvas is another machine's has none here, so a chat Voice starts opens as a view of its own.
+        expect(await canvasOf(sessions(false, [peer]), undefined)).toBeNull();
+        expect(await canvasOf(sessions(false, [peer]), 'peer-machine-b')).toBeNull();
+        expect(await canvasOf(sessions(false, [peer, ...CONTENT.views]), 'peer-machine-b')).toBe('main');
     });
 
     test('the deadline fails a start that hangs and aborts what it waited on', async () => {

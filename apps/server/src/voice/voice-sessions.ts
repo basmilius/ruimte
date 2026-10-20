@@ -1,4 +1,4 @@
-import { isCanvasView, type VoiceConfirmPayload, type VoiceStartPayload, type VoiceStartResult, type VoiceStopPayload } from '@ruimte/contracts';
+import { isCanvasView, isHiddenCanvasView, type VoiceConfirmPayload, type VoiceStartPayload, type VoiceStartResult, type VoiceStopPayload } from '@ruimte/contracts';
 import { sendEvent, RequestError, type ClientConnection } from '../dispatcher.ts';
 import type { IndexedPlace, ProjectIndex } from '../projects/project-index.ts';
 import { VoiceSession, type VoiceSessionDeps } from './voice-session.ts';
@@ -171,7 +171,8 @@ export class VoiceSessions {
         if (folder === null) {
             throw new RequestError('unknown-project', 'This machine has no project of that id');
         }
-        const canvases = (this.#deps.index.viewsOf(payload.projectId) ?? []).filter(isCanvasView);
+        // The canvas another machine draws its nodes on is no place of this machine's, even when the phone names it.
+        const canvases = (this.#deps.index.viewsOf(payload.projectId) ?? []).filter(isCanvasView).filter((view): boolean => !isHiddenCanvasView(view));
         const canvas = canvases.find((view) => view.id === payload.viewId) ?? canvases[0] ?? null;
         return { projectId: payload.projectId, folder, canvasId: canvas?.id ?? null };
     }
