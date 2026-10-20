@@ -207,6 +207,22 @@ import Testing
         #expect(setup.media.closed)
     }
 
+    @Test func aLinkThatIsDownWhenTheStartListensEndsItAndLeavesNothingBehind() async {
+        let setup = Self.setup()
+        setup.machine.connected = false
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        #expect(setup.voice.phase == .idle)
+        #expect(setup.voice.owner == nil)
+        #expect(!setup.machine.sent("voice.start"), "No offer is made for a link that went")
+        #expect(setup.media.offers == 0, "No peer with a microphone track is made")
+        #expect(setup.machine.listeners == 0, "Every subscription is cancelled")
+        #expect(setup.scheduler.pending == 0, "No deadline is left")
+        #expect(setup.voice.problem(in: "A") == .message("The connection to the machine dropped, so Voice stopped."))
+        setup.machine.connected = true
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        #expect(setup.voice.sessionID == "session-1", "The next start runs as any other")
+    }
+
     @Test func droppedMediaEndsVoiceAndStopsTheSession() async {
         let setup = Self.setup()
         await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
@@ -361,6 +377,8 @@ import Testing
     var requests: [(String, JSONValue)] = []
     var keyPresent = true
     var holdStart = false
+    /// What `observeConnection` answers at once, as `MachineClient` does with where its link stands.
+    var connected = true
     private var heldStart: CheckedContinuation<JSONValue, Error>?
     private var heldScene = ""
     private var handlers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
@@ -412,7 +430,7 @@ import Testing
     func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void {
         let id = UUID()
         connection[id] = handler
-        handler(true)
+        handler(connected)
         return { [weak self] in self?.connection.removeValue(forKey: id) }
     }
 
@@ -423,14 +441,21 @@ import Testing
     func drop() {
         for handler in Array(connection.values) { handler(false) }
     }
+
+    /// Subscriptions still standing, events and the connection together.
+    var listeners: Int { handlers.values.reduce(0) { $0 + $1.count } + connection.count }
 }
 
 @MainActor private final class FakeMedia: VoiceMedia {
     var onEvent: (@MainActor (VoiceMediaEvent) -> Void)?
     var answer: String?
     var closed = false
+    var offers = 0
 
-    func offer() async throws -> String { "offer-sdp" }
+    func offer() async throws -> String {
+        offers += 1
+        return "offer-sdp"
+    }
     func accept(answer: String) async throws { self.answer = answer }
     func close() { closed = true }
 }
@@ -466,6 +491,8 @@ import Testing
         actions[id] = action
         return { [weak self] in self?.actions.removeValue(forKey: id) }
     }
+
+    var pending: Int { actions.count }
 
     func fire() {
         let due = Array(actions.values)

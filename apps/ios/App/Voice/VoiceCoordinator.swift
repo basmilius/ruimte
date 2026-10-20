@@ -159,6 +159,11 @@ final class VoiceCoordinator {
         guard phase == .idle, owner == nil else { return }
         attempt += 1
         let current = attempt
+        // An end leaves nothing behind, but a start never builds on what an earlier one might have.
+        for cancel in subscriptions { cancel() }
+        subscriptions = []
+        media?.close()
+        media = nil
         owner = scene
         lastScene = scene
         self.target = target
@@ -178,7 +183,9 @@ final class VoiceCoordinator {
         }
         let startID = makeID()
         self.startID = startID
-        listen(to: client)
+        listen(to: client, attempt: current)
+        // The link may be down already, which ends the start inside `listen`, before any peer or deadline is made.
+        guard current == attempt else { return }
         let media = makeMedia()
         self.media = media
         media.onEvent = { [weak self] event in self?.mediaEvent(event, attempt: current) }
@@ -262,16 +269,22 @@ final class VoiceCoordinator {
 
     // MARK: What comes in
 
-    private func listen(to client: any MachineRequesting) {
-        subscriptions = [
-            client.subscribe(.voiceStatus) { [weak self] in self?.received($0) },
-            client.subscribe(.voiceActivity) { [weak self] in self?.received($0) },
-            client.observeConnection { [weak self] connected in
-                guard let self, !connected, owner != nil else { return }
-                let message = String(localized: "The connection to the machine dropped, so Voice stopped.")
-                end(.message(message), tellMachine: false)
-            },
-        ]
+    /// `observeConnection` answers at once with where the link stands, so a link that is down ends the start inside
+    /// this call. Each subscription is kept as soon as it is made, so that end cancels it, and the one made after the
+    /// end is cancelled here.
+    private func listen(to client: any MachineRequesting, attempt current: Int) {
+        subscriptions.append(client.subscribe(.voiceStatus) { [weak self] in self?.received($0) })
+        subscriptions.append(client.subscribe(.voiceActivity) { [weak self] in self?.received($0) })
+        let connection = client.observeConnection { [weak self] connected in
+            guard let self, !connected, owner != nil else { return }
+            let message = String(localized: "The connection to the machine dropped, so Voice stopped.")
+            end(.message(message), tellMachine: false)
+        }
+        if current == attempt {
+            subscriptions.append(connection)
+        } else {
+            connection()
+        }
     }
 
     /// A `voice.status` or `voice.activity` event, taken only for the owner's scene and session, in `seq` order.
