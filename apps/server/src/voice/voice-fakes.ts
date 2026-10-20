@@ -1,7 +1,9 @@
+import type { ChatInfo, ChatItem } from '@ruimte/contracts';
 import type { LiveEvent, LiveSessionAnswer } from '@ruimte/voice';
 import type { VoiceClock } from './clock.ts';
 import { LiveError, type OpenAiLive } from './openai-live.ts';
 import { LiveSideband, type LiveSocket, type SidebandHandlers } from './sideband.ts';
+import type { VoiceChatEvent, VoiceFollowChats } from './voice-follower.ts';
 
 /* A clock a test moves by hand, so every deadline runs without waiting. */
 export class FakeClock implements VoiceClock {
@@ -184,5 +186,34 @@ export class FakeLive implements OpenAiLive {
 export async function settle(): Promise<void> {
     for (let i = 0; i < 10; i++) {
         await Promise.resolve();
+    }
+}
+
+/* The daemon's chats as the follower hears them: a test sets a chat's thread and says that it changed. */
+export class FakeChats implements VoiceFollowChats {
+    readonly #sinks = new Set<(event: VoiceChatEvent) => void>();
+    readonly #threads = new Map<string, { items: ChatItem[]; info: Pick<ChatInfo, 'status' | 'activeTurnId'> }>();
+
+    observe(sink: (event: VoiceChatEvent) => void): () => void {
+        this.#sinks.add(sink);
+        return () => {
+            this.#sinks.delete(sink);
+        };
+    }
+
+    thread(chatId: string): { items: readonly ChatItem[]; info: Pick<ChatInfo, 'status' | 'activeTurnId'> } | null {
+        return this.#threads.get(chatId) ?? null;
+    }
+
+    get listening(): number {
+        return this.#sinks.size;
+    }
+
+    /* Sets where a chat stands and tells every observer, as an item of that chat going out would. */
+    set(chatId: string, items: ChatItem[], info: Pick<ChatInfo, 'status' | 'activeTurnId'>, type: 'item' | 'info' | 'delta' = 'item'): void {
+        this.#threads.set(chatId, { items, info });
+        for (const sink of this.#sinks) {
+            sink({ event: 'chat.event', payload: { chatId, event: { type } } });
+        }
     }
 }

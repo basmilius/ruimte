@@ -10,6 +10,7 @@ import { registerVoiceHandlers } from '../handlers/voice.ts';
 import { SYSTEM_CLOCK } from './clock.ts';
 import { VoiceKeyStore } from './key-store.ts';
 import { openAiLive } from './openai-live.ts';
+import { FakeChats } from './voice-fakes.ts';
 import { VoiceSessions } from './voice-sessions.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -102,6 +103,7 @@ function daemon(home: string, openAiUrl: string, threads: Map<string, ChatItem[]
         },
         runner: serverActions,
         host,
+        chats: new FakeChats(),
         index: { folderOf: (projectId) => (projectId === 'project-1' ? '/work/app' : null), viewsOf: () => CONTENT.views },
         writes: false
     });

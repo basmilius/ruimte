@@ -1,6 +1,7 @@
 import type { ActionCall } from '@ruimte/actions';
 import { VerbRefusal, type CanvasHost, type ProjectHost, type VerbCall } from '../canvas/verb.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
+import type { VoiceFollowHost } from '../voice/voice-follower.ts';
 
 export interface ServerActionContext {
     host: CanvasHost;
@@ -23,6 +24,8 @@ export interface VoiceCaller {
     timeZone: string;
     /* RUIMTE_EXPERIMENTAL_VOICE_WRITES: Voice may prompt and start chats too. */
     writes: boolean;
+    /* Follows what a prompt or a start set going, so the session tells the person when it ends; absent in a test that follows nothing. */
+    follow?: VoiceFollowHost;
 }
 
 export type VoiceActionContext = ServerActionContext & { voice: VoiceCaller };

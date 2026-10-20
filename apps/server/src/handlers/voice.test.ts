@@ -113,7 +113,8 @@ describe('the voice requests', () => {
         const off = wireVoice({
             config: { home: root, experimentalVoice: { enabled: false, writes: false } },
             projects: {} as never,
-            canvasHost: {} as CanvasHost
+            canvasHost: {} as CanvasHost,
+            chats: { observe: () => () => undefined, get: () => undefined }
         });
         expect(off).toBeNull();
         const log = spyOn(console, 'log').mockImplementation(() => undefined);
@@ -121,7 +122,8 @@ describe('the voice requests', () => {
             const on = wireVoice({
                 config: { home: root, experimentalVoice: { enabled: true, writes: false } },
                 projects: { hold: () => undefined, letGo: () => undefined, index: { folderOf: () => null, viewsOf: () => null } } as never,
-                canvasHost: {} as CanvasHost
+                canvasHost: {} as CanvasHost,
+                chats: { observe: () => () => undefined, get: () => undefined }
             });
             expect(on).not.toBeNull();
             const dispatcher = new Dispatcher();

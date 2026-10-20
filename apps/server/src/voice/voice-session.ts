@@ -9,7 +9,7 @@ import type {
     VoiceStartResult,
     VoiceStatusEvent
 } from '@ruimte/contracts';
-import { daemonVoiceTools, liveSessionBody, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
+import { daemonVoiceTools, liveSessionBody, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
 import { CodedError } from '@adecore/agents';
 import type { CanvasHost } from '../canvas/verb.ts';
 import { voiceActionCall, type ServerActionContext, type VoiceCaller } from '../actions/context.ts';
@@ -20,6 +20,7 @@ import { LiveError, type OpenAiLive } from './openai-live.ts';
 import { phonePrompts } from './prompts.ts';
 import type { LiveSideband } from './sideband.ts';
 import { VoiceToolExecutor, type VoiceActionRunner } from './tool-executor.ts';
+import { VoiceFollower, type VoiceFollowActivity, type VoiceFollowChats } from './voice-follower.ts';
 
 /* From the start request to the answer the phone connects with; past it the session runs on the person's audio alone. */
 export const VOICE_START_DEADLINE_MS = 20_000;
@@ -34,6 +35,8 @@ export interface VoiceSessionDeps {
     holds: { hold(holder: string, projectId: string): void; letGo(holder: string, projectId: string): void };
     runner: VoiceActionRunner<ServerActionContext>;
     host: CanvasHost;
+    /* The daemon's chats, which the session follows once it prompted or started one. */
+    chats: VoiceFollowChats;
     /* Only to the connection and scene that started the session. */
     emit(event: 'voice.status', payload: VoiceStatusEvent): void;
     emit(event: 'voice.activity', payload: VoiceActivityEvent): void;
@@ -82,6 +85,8 @@ export class VoiceSession {
     #sideband: LiveSideband | null = null;
     #loop: VoiceToolLoop | null = null;
     #executor: VoiceToolExecutor<ServerActionContext> | null = null;
+    #delivery: VoiceCompletionDelivery | null = null;
+    #follower: VoiceFollower | null = null;
     #cancelDeadline: (() => void) | null = null;
     #ending: Promise<void> | null = null;
     #settle!: () => void;
@@ -156,6 +161,17 @@ export class VoiceSession {
             );
             const sideband = await this.#whileStarting(attaching);
             this.#sideband = sideband;
+            // The reports go one append at a time against their acks, the same queue the desktop's window uses.
+            this.#delivery = new VoiceCompletionDelivery((event) => this.#sideband?.send(event) ?? false, {
+                language: payload.language,
+                timer: (run, ms) => clock.after(ms, run)
+            });
+            this.#follower = new VoiceFollower({
+                chats: this.#deps.chats,
+                delivery: this.#delivery,
+                clock,
+                activity: (entry) => this.#followed(entry)
+            });
             this.#executor = new VoiceToolExecutor({
                 sessionId: this.id,
                 runner: this.#deps.runner,
@@ -238,7 +254,8 @@ export class VoiceSession {
             owner: this.owner,
             projectId: this.#start.place.projectId,
             timeZone: this.#start.payload.timeZone,
-            writes: this.#start.writes
+            writes: this.#start.writes,
+            ...(this.#follower === null ? {} : { follow: this.#follower })
         };
     }
 
@@ -267,6 +284,7 @@ export class VoiceSession {
             void this.#end('closed');
             return;
         }
+        this.#delivery?.handle(event);
         this.#loop?.handle(event);
     }
 
@@ -297,6 +315,20 @@ export class VoiceSession {
         });
     }
 
+    /* A step of a chat the session follows, in the phone's timeline. */
+    #followed(entry: VoiceFollowActivity): void {
+        if (this.#phase !== 'active') {
+            return;
+        }
+        this.#seq += 1;
+        this.#deps.emit('voice.activity', {
+            sessionId: this.id,
+            sceneId: this.owner.sceneId,
+            seq: this.#seq,
+            entry: { id: entry.id.slice(0, 128), at: this.#deps.clock.now(), kind: 'chat', status: entry.status, label: entry.label.slice(0, 200), detail: '' }
+        });
+    }
+
     #phaseTo(phase: VoicePhase): void {
         this.#phase = phase;
         this.#seq += 1;
@@ -314,6 +346,9 @@ export class VoiceSession {
             this.#cancelDeadline = null;
             this.#abort.abort();
             this.#loop?.reset();
+            // What Voice started keeps running; only the telling of it ends with the session.
+            this.#follower?.stop();
+            this.#delivery?.clear();
             const sideband = this.#sideband;
             this.#sideband = null;
             try {

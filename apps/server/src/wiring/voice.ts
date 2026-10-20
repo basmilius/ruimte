@@ -1,5 +1,6 @@
 import { serverActions } from '../actions/server-actions.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
+import type { ChatManager } from '../chat/chat-manager.ts';
 import type { ServerConfig } from '../config.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { SYSTEM_CLOCK } from '../voice/clock.ts';
@@ -16,6 +17,7 @@ export interface VoiceInput {
     config: Pick<ServerConfig, 'home' | 'experimentalVoice'>;
     projects: Pick<ProjectStore, 'hold' | 'letGo' | 'index'>;
     canvasHost: CanvasHost;
+    chats: Pick<ChatManager, 'observe' | 'get'>;
     /* Only a test hands in another, a fake GPT-Live on loopback. */
     live?: OpenAiLive;
 }
@@ -26,7 +28,7 @@ export interface VoiceInput {
  * it is wired, answered or named to a client.
  */
 export function wireVoice(input: VoiceInput): VoiceBundle | null {
-    const { config, projects, canvasHost } = input;
+    const { config, projects, canvasHost, chats } = input;
     if (!config.experimentalVoice.enabled) {
         return null;
     }
@@ -42,6 +44,13 @@ export function wireVoice(input: VoiceInput): VoiceBundle | null {
         },
         runner: serverActions,
         host: canvasHost,
+        chats: {
+            observe: (sink) => chats.observe(sink),
+            thread: (chatId) => {
+                const chat = chats.get(chatId);
+                return chat === undefined ? null : { items: chat.thread.list(), info: chat.info };
+            }
+        },
         index: projects.index,
         writes: config.experimentalVoice.writes
     });

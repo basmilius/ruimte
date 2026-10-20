@@ -5,7 +5,7 @@ import type { CanvasHost } from '../canvas/verb.ts';
 import type { ClientConnection } from '../dispatcher.ts';
 import { serverActions } from '../actions/server-actions.ts';
 import { LiveError } from './openai-live.ts';
-import { FakeClock, FakeLive, settle } from './voice-fakes.ts';
+import { FakeChats, FakeClock, FakeLive, settle } from './voice-fakes.ts';
 import { VOICE_START_DEADLINE_MS } from './voice-session.ts';
 import { MAX_VOICE_SESSIONS, VoiceSessions } from './voice-sessions.ts';
 
@@ -98,6 +98,7 @@ function sessions(writes = false): VoiceSessions {
         },
         runner: serverActions,
         host,
+        chats: new FakeChats(),
         index: {
             folderOf: (projectId) => (projectId === 'project-1' ? '/work/app' : null),
             viewsOf: (projectId) => (projectId === 'project-1' ? CONTENT.views : null)
