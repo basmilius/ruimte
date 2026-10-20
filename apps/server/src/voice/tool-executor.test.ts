@@ -4,6 +4,24 @@ import { daemonVoiceTools } from '@ruimte/voice';
 import { voicePolicy, type VoicePolicy } from './action-policy.ts';
 import { MAX_CALLS_PER_SESSION, VoiceToolExecutor, type VoiceActionRunner } from './tool-executor.ts';
 import { settle } from './voice-fakes.ts';
+import type { ProjectContent } from '@ruimte/contracts';
+import { voiceActionCall, type ServerActionContext, type VoiceCaller } from '../actions/context.ts';
+import { serverActions } from '../actions/server-actions.ts';
+import type { CanvasHost } from '../canvas/verb.ts';
+import type { IndexedPlace } from '../projects/project-index.ts';
+
+const PLACE: IndexedPlace = { projectId: 'project-1', folder: '/work/app', canvasId: 'main' };
+const CALLER: VoiceCaller = {
+    sessionId: 'session-1',
+    owner: { clientId: 'client-1', sceneId: 'scene-1' },
+    projectId: 'project-1',
+    timeZone: 'UTC',
+    writes: false
+};
+const SHOP = {
+    name: 'Shop',
+    views: [{ id: 'main', kind: 'canvas', name: 'Main', nodes: [{ id: 'chat-1', kind: 'chat', title: 'Builder', x: 0, y: 0, w: 1, h: 1 }], edges: [] }]
+} as unknown as ProjectContent;
 
 interface Ran {
     name: ActionName;
@@ -156,13 +174,18 @@ describe('VoiceToolExecutor', () => {
         );
         await settle();
         expect(runner.ran[0]!.input.requestId).toBe('voice:session-1:call-7');
+        runner.ran[0]!.resolve({ status: 'failed', action: 'agent.start', error: { code: 'not-installed', message: 'No such CLI' } });
+        // A spoken start never has to state these: the tool holds them for the whole domain, and null is fine.
+        void tool.execute('run_sessions', JSON.stringify({ action: 'agent.start', provider: 'claude', terminal: null, worktree: null }), 'call-9');
+        await settle();
+        expect(runner.ran[1]!.input).toMatchObject({ terminal: false, worktree: null, requestId: 'voice:session-1:call-9' });
         expect(
             await tool.execute('run_sessions', JSON.stringify({ action: 'agent.start', provider: 'claude', terminal: true, worktree: false }), 'call-8')
         ).toMatchObject({
             ok: false,
             code: 'voice-field'
         });
-        expect(runner.ran).toHaveLength(1);
+        expect(runner.ran).toHaveLength(2);
     });
 
     test('a confirmation is checked against the policy again, and one of another session is unknown', async () => {
@@ -282,6 +305,35 @@ describe('VoiceToolExecutor', () => {
         const output = await tool.execute('communicate', read('c1'), 'call-1');
         expect(output).toMatchObject({ ok: false, code: 'tool-error' });
         expect(JSON.stringify(output)).not.toContain('secret');
+    });
+
+    test('an error the real registry caught reaches the model without its message, and a coded refusal with its own', async () => {
+        const host = {
+            projects: {
+                locate: () => ({ projectId: 'project-1', folder: '/work/app', canvasId: 'main' }),
+                machineOfNode: () => null,
+                read: async () => SHOP
+            },
+            chatThreads: {
+                items: async () => {
+                    throw new Error('ENOENT: no such file, open /Users/someone/secret.txt');
+                }
+            }
+        } as unknown as CanvasHost;
+        const tool = new VoiceToolExecutor<ServerActionContext>({
+            sessionId: 'session-1',
+            runner: serverActions,
+            policy: voicePolicy({ writes: false }),
+            tools: daemonVoiceTools({ writes: false }),
+            call: () => voiceActionCall(host, PLACE, CALLER),
+            live: () => true
+        });
+        const output = await tool.execute('communicate', read('chat-1'), 'call-1');
+        expect(output).toEqual({ ok: false, code: 'tool-error', message: '“chat.read” failed on this machine.' });
+        expect(JSON.stringify(output)).not.toContain('secret');
+        expect(JSON.stringify(output)).not.toContain('ENOENT');
+        // A refusal the daemon coded says what to do instead, so it is heard as it was written.
+        expect(await tool.execute('communicate', read('elsewhere'), 'call-2')).toMatchObject({ ok: false, code: 'not-in-project' });
     });
 
     test('a session that loops is refused once it made too many calls', async () => {

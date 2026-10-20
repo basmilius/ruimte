@@ -45,6 +45,9 @@ const CALL_MEMORY = 256;
 // Confirmations this session handed out and may still be answered.
 const CONFIRMATION_MEMORY = 32;
 
+// What the registry calls a failure no handler coded: its message is that of whatever was thrown.
+const UNCODED_FAILURE = 'action-failed';
+
 /* The words of a reply only reach the model, so they stay English; the timeline takes its label from the catalog. */
 const REPLY_WORDS = { activity: () => '', machine: (endpointId: string) => endpointId };
 
@@ -208,6 +211,9 @@ export class VoiceToolExecutor<Context> {
         if (name === 'agent.start') {
             // The model's own id is never trusted: one per call, so a repeated call is the same start and a new call a new one.
             input.requestId = `voice:${this.#options.sessionId}:${callId}`;
+            // Voice starts an AI Chat in the folder of its session, so these are fixed and never the model's to state.
+            input.terminal = false;
+            input.worktree = null;
         }
         const action = name as ActionName;
         this.#options.observer?.started(callId, action);
@@ -264,8 +270,20 @@ export class VoiceToolExecutor<Context> {
                     confirmation: result.confirmation
                 };
             case 'failed':
-                return refused(result.error.code, result.error.message);
+                return this.#failedOutput(result.action, result.error);
         }
+    }
+
+    /*
+     * A refusal the daemon coded says what to do instead and is meant to be heard. The registry turns any
+     * other error into `action-failed` with that error's own message, which may quote a path or what it
+     * failed on, so the model hears only that it failed.
+     */
+    #failedOutput(action: ActionName | null, error: { code: string; message: string }): VoiceToolOutput {
+        if (error.code === UNCODED_FAILURE) {
+            return refused('tool-error', `“${action ?? 'The action'}” failed on this machine.`);
+        }
+        return refused(error.code, error.message);
     }
 
     #remember(token: string, name: ActionName, input: Record<string, unknown>, state: number | null): void {
