@@ -1,0 +1,224 @@
+import { describe, expect, test } from 'bun:test';
+import type { ActionCall, ActionName, ActionResult, VoiceToolDefinition } from '@ruimte/actions';
+import { daemonVoiceTools } from '@ruimte/voice';
+import { voicePolicy, type VoicePolicy } from './action-policy.ts';
+import { MAX_CALLS_PER_SESSION, VoiceToolExecutor, type VoiceActionRunner } from './tool-executor.ts';
+import { settle } from './voice-fakes.ts';
+
+interface Ran {
+    name: ActionName;
+    input: Record<string, unknown>;
+    actor: string;
+    resolve(result: ActionResult): void;
+}
+
+/* A registry that answers each call when the test says so. */
+class FakeRunner implements VoiceActionRunner<null> {
+    readonly ran: Ran[] = [];
+    readonly confirmed: { token: string; approved: boolean; actor: string }[] = [];
+
+    execute(name: ActionName, input: unknown, call: ActionCall<null>): Promise<ActionResult> {
+        return new Promise((resolve) => this.ran.push({ name, input: input as Record<string, unknown>, actor: call.actor.id, resolve }));
+    }
+
+    async confirm(token: string, approved: boolean, call: ActionCall<null>): Promise<ActionResult> {
+        this.confirmed.push({ token, approved, actor: call.actor.id });
+        return { status: 'completed', action: 'chat.send', output: { chatId: 'c1', chat: 'Builder', queued: false } };
+    }
+}
+
+function read(chatId: string): string {
+    return JSON.stringify({ action: 'chat.read', chatId, limit: null });
+}
+
+function send(chatId: string): string {
+    return JSON.stringify({ action: 'chat.send', chatId, prompt: 'Run the tests', delivery: null, limit: null });
+}
+
+function completedRead(chatId: string): ActionResult {
+    return { status: 'completed', action: 'chat.read', output: { chatId, chat: 'Builder', messages: [], truncated: false } };
+}
+
+function executor(options: { runner?: FakeRunner; policy?: VoicePolicy; tools?: VoiceToolDefinition[]; live?: () => boolean; sessionId?: string } = {}) {
+    const runner = options.runner ?? new FakeRunner();
+    const sessionId = options.sessionId ?? 'session-1';
+    const finished: string[] = [];
+    const tool = new VoiceToolExecutor<null>({
+        sessionId,
+        runner,
+        policy: options.policy ?? voicePolicy({ writes: true }),
+        tools: options.tools ?? daemonVoiceTools({ writes: true }),
+        call: () => ({ actor: { kind: 'voice', id: `voice:${sessionId}` }, context: null }),
+        live: options.live ?? (() => true),
+        observer: { started: () => undefined, finished: (callId, _name, ok) => finished.push(`${callId}:${ok}`) }
+    });
+    return { tool, runner, finished };
+}
+
+describe('VoiceToolExecutor', () => {
+    test('runs a call once per call id and gives a repeat the same answer', async () => {
+        const { tool, runner } = executor();
+        const first = tool.execute('communicate', read('c1'), 'call-1');
+        const again = tool.execute('communicate', read('c1'), 'call-1');
+        expect(again).toBe(first);
+        await settle();
+        expect(runner.ran).toHaveLength(1);
+        runner.ran[0]!.resolve(completedRead('c1'));
+        expect(await first).toMatchObject({ ok: true, chatId: 'c1', message: 'Read 0 recent messages from “Builder”.' });
+    });
+
+    test('gives the action only its own fields, as the voice actor of this session', async () => {
+        const { tool, runner } = executor();
+        void tool.execute('communicate', read('c1'), 'call-1');
+        await settle();
+        expect(runner.ran[0]).toMatchObject({ name: 'chat.read', input: { chatId: 'c1', limit: null }, actor: 'voice:session-1' });
+    });
+
+    test('changes run one at a time in order, reads overlap up to a bound', async () => {
+        const { tool, runner } = executor();
+        void tool.execute('communicate', send('c1'), 'send-1');
+        void tool.execute('communicate', send('c2'), 'send-2');
+        await settle();
+        expect(runner.ran.map((ran) => ran.input.chatId)).toEqual(['c1']);
+        runner.ran[0]!.resolve({ status: 'completed', action: 'chat.send', output: { chatId: 'c1', chat: 'A', queued: false } });
+        await settle();
+        expect(runner.ran.map((ran) => ran.input.chatId)).toEqual(['c1', 'c2']);
+
+        const reads = executor();
+        for (let i = 0; i < 6; i++) {
+            void reads.tool.execute('communicate', read(`r${i}`), `read-${i}`);
+        }
+        await settle();
+        expect(reads.runner.ran).toHaveLength(4);
+        reads.runner.ran[0]!.resolve(completedRead('r0'));
+        await settle();
+        expect(reads.runner.ran).toHaveLength(5);
+    });
+
+    test('refuses an action no tool offered, a write without its grant and arguments that are no object', async () => {
+        const { tool, runner } = executor({ tools: daemonVoiceTools({ writes: false }), policy: voicePolicy({ writes: false }) });
+        expect(await tool.execute('communicate', send('c1'), 'a')).toMatchObject({ ok: false, code: 'not-offered' });
+        expect(await tool.execute('manage_views', JSON.stringify({ action: 'view.delete', viewId: 'v' }), 'b')).toMatchObject({
+            ok: false,
+            code: 'not-offered'
+        });
+        expect(await tool.execute('communicate', '[1, 2]', 'c')).toMatchObject({ ok: false, code: 'invalid-arguments' });
+        const offeredAnyway = executor({ policy: voicePolicy({ writes: false }) });
+        expect(await offeredAnyway.tool.execute('communicate', send('c1'), 'd')).toMatchObject({ ok: false, code: 'voice-read-only' });
+        expect([...runner.ran, ...offeredAnyway.runner.ran]).toEqual([]);
+    });
+
+    test('a call that waited past the end of its session does nothing', async () => {
+        let live = true;
+        const { tool, runner } = executor({ live: () => live });
+        void tool.execute('communicate', send('c1'), 'send-1');
+        const waiting = tool.execute('communicate', send('c2'), 'send-2');
+        await settle();
+        live = false;
+        runner.ran[0]!.resolve({ status: 'completed', action: 'chat.send', output: { chatId: 'c1', chat: 'A', queued: false } });
+        expect(await waiting).toMatchObject({ ok: false, code: 'voice-ended' });
+        expect(runner.ran).toHaveLength(1);
+    });
+
+    test('a start gets its request id from the session and the call, never from the model', async () => {
+        const startTool: VoiceToolDefinition = {
+            type: 'function',
+            name: 'run_sessions',
+            description: '',
+            parameters: {
+                type: 'object',
+                properties: { action: { type: 'string', enum: ['agent.start'] } },
+                required: ['action'],
+                additionalProperties: false
+            },
+            strict: true
+        };
+        const { tool, runner } = executor({ tools: [startTool] });
+        void tool.execute(
+            'run_sessions',
+            JSON.stringify({ action: 'agent.start', provider: 'claude', terminal: false, worktree: false, requestId: 'mine' }),
+            'call-7'
+        );
+        await settle();
+        expect(runner.ran[0]!.input.requestId).toBe('voice:session-1:call-7');
+        expect(
+            await tool.execute('run_sessions', JSON.stringify({ action: 'agent.start', provider: 'claude', terminal: true, worktree: false }), 'call-8')
+        ).toMatchObject({
+            ok: false,
+            code: 'voice-field'
+        });
+        expect(runner.ran).toHaveLength(1);
+    });
+
+    test('a confirmation is checked against the policy again, and one of another session is unknown', async () => {
+        const runner = new FakeRunner();
+        let checks = 0;
+        let refuse = false;
+        const base = voicePolicy({ writes: true });
+        const policy: VoicePolicy = {
+            actions: base.actions,
+            check: (name, input) => {
+                checks += 1;
+                return refuse ? { code: 'voice-read-only', message: 'off' } : base.check(name, input);
+            }
+        };
+        const { tool } = executor({ runner, policy });
+        const asking = tool.execute('communicate', send('c1'), 'send-1');
+        await settle();
+        runner.ran[0]!.resolve({
+            status: 'needs_confirmation',
+            action: 'chat.send',
+            confirmationToken: 'token-1',
+            confirmation: { title: 'Send?', consequences: [] }
+        });
+        expect(await asking).toMatchObject({ ok: false, needs_confirmation: true, confirmation_token: 'token-1' });
+
+        const other = executor({ runner, sessionId: 'session-2' });
+        expect(await other.tool.confirm('token-1', true)).toMatchObject({ ok: false, code: 'unknown-confirmation' });
+
+        refuse = true;
+        const before = checks;
+        expect(await tool.execute('control_action', JSON.stringify({ action: 'confirm', confirmation_token: 'token-1' }), 'confirm-1')).toMatchObject({
+            ok: false,
+            code: 'voice-read-only'
+        });
+        expect(checks).toBe(before + 1);
+        expect(runner.confirmed).toEqual([]);
+        // Used once, so a second answer finds nothing.
+        expect(await tool.confirm('token-1', true)).toMatchObject({ code: 'unknown-confirmation' });
+    });
+
+    test('a confirmation the policy still allows goes to the registry as this session', async () => {
+        const { tool, runner } = executor();
+        const asking = tool.execute('communicate', send('c1'), 'send-1');
+        await settle();
+        runner.ran[0]!.resolve({
+            status: 'needs_confirmation',
+            action: 'chat.send',
+            confirmationToken: 'token-1',
+            confirmation: { title: 'Send?', consequences: [] }
+        });
+        await asking;
+        expect(await tool.confirm('token-1', true)).toMatchObject({ ok: true });
+        expect(runner.confirmed).toEqual([{ token: 'token-1', approved: true, actor: 'voice:session-1' }]);
+    });
+
+    test('an unexpected error reaches the model as a failure without its message', async () => {
+        const runner = new FakeRunner();
+        runner.execute = () => Promise.reject(new Error('ENOENT /Users/someone/secret.txt'));
+        const { tool } = executor({ runner });
+        const output = await tool.execute('communicate', read('c1'), 'call-1');
+        expect(output).toMatchObject({ ok: false, code: 'tool-error' });
+        expect(JSON.stringify(output)).not.toContain('secret');
+    });
+
+    test('a session that loops is refused once it made too many calls', async () => {
+        const runner = new FakeRunner();
+        runner.execute = async (_name, input) => completedRead((input as { chatId: string }).chatId);
+        const { tool } = executor({ runner });
+        for (let i = 0; i < MAX_CALLS_PER_SESSION; i++) {
+            await tool.execute('communicate', read('c1'), `call-${i}`);
+        }
+        expect(await tool.execute('communicate', read('c1'), 'one-more')).toMatchObject({ ok: false, code: 'voice-call-limit' });
+    });
+});
