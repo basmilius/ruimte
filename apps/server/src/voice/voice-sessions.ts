@@ -1,4 +1,11 @@
-import { isCanvasView, isHiddenCanvasView, type VoiceConfirmPayload, type VoiceStartPayload, type VoiceStartResult, type VoiceStopPayload } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    isHiddenCanvasView,
+    type VoiceConfirmPayload,
+    type VoiceStartPayload,
+    type VoiceStartResult,
+    type VoiceStopPayload
+} from '@ruimte/contracts';
 import { sendEvent, RequestError, type ClientConnection } from '../dispatcher.ts';
 import type { IndexedPlace, ProjectIndex } from '../projects/project-index.ts';
 import { VoiceSession, type VoiceSessionDeps } from './voice-session.ts';

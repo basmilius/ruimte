@@ -237,7 +237,14 @@ describe('starting', () => {
     });
 
     test('the canvas of another machine is never where actions land, even when the phone names it', async () => {
-        const peer = { id: 'peer-machine-b', kind: 'canvas', name: 'Machine B', hidden: true, nodes: [], edges: [] } as unknown as ProjectContent['views'][number];
+        const peer = {
+            id: 'peer-machine-b',
+            kind: 'canvas',
+            name: 'Machine B',
+            hidden: true,
+            nodes: [],
+            edges: []
+        } as unknown as ProjectContent['views'][number];
         // A project whose only canvas is another machine's has none here, so a chat Voice starts opens as a view of its own.
         expect(await canvasOf(sessions(false, [peer]), undefined)).toBeNull();
         expect(await canvasOf(sessions(false, [peer]), 'peer-machine-b')).toBeNull();

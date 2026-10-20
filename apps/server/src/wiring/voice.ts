@@ -82,6 +82,10 @@ export function wireVoice(input: VoiceInput): VoiceBundle | null {
             ? 'Experimental Voice for phones is on, and may prompt and start chats'
             : 'Experimental Voice for phones is on, reading only'
     );
-    const keyHomeProblem = voiceKeyHomeProblem({ home: config.home, installedHome: input.installedHome ?? join(homedir(), '.ruimte'), compiled: input.compiled });
+    const keyHomeProblem = voiceKeyHomeProblem({
+        home: config.home,
+        installedHome: input.installedHome ?? join(homedir(), '.ruimte'),
+        compiled: input.compiled
+    });
     return { keys, sessions, keyHomeProblem };
 }
