@@ -271,6 +271,66 @@ describe('Voice starts a chat on the daemon', () => {
         expect(daemon.enqueued.filter((work) => work.kind === 'start-agent')).toHaveLength(2);
     });
 
+    test('without the writes grant the handler itself starts nothing, whoever builds the call', async () => {
+        const place = { projectId, folder, canvasId: 'main' };
+        const caller = { sessionId: 'session-1', owner: { clientId: 'phone', sceneId: 'scene-1' }, projectId, timeZone: 'UTC', writes: false };
+        const full = { ...Object.fromEntries(Object.keys(ACTION_DEFINITIONS['agent.start'].input.shape).map((field) => [field, null])), ...START };
+        expect(await serverActions.execute('agent.start', full, voiceActionCall(daemon.host, place, caller))).toMatchObject({
+            status: 'failed',
+            error: { code: 'voice-read-only' }
+        });
+        await daemon.worker.settled();
+        expect(daemon.enqueued.filter((work) => work.kind === 'start-agent')).toEqual([]);
+    });
+
+    test('a start that made its chat answers with it, even when the name of the project cannot be read after', async () => {
+        const place = { projectId, folder, canvasId: 'main' };
+        const bound: string[] = [];
+        let dropped = 0;
+        const caller = {
+            sessionId: 'session-1',
+            owner: { clientId: 'phone', sceneId: 'scene-1' },
+            projectId,
+            timeZone: 'UTC',
+            writes: true,
+            follow: {
+                expectPrompt: () => ({ bind: () => undefined, drop: () => undefined }),
+                expectStart: () => ({ bind: (chatId: string, chat: { project: string }) => bound.push(`${chatId} in ${chat.project}`), drop: () => dropped++ })
+            }
+        };
+        const projects = daemon.host.projects;
+        let made = false;
+        const failing = new Proxy(projects, {
+            get: (target, property) => {
+                if (property === 'read' && made) {
+                    return async () => {
+                        throw new Error('the project file went');
+                    };
+                }
+                if (property === 'mutate') {
+                    return async (...args: Parameters<typeof projects.mutate>) => {
+                        const result = await projects.mutate(...args);
+                        made = true;
+                        return result;
+                    };
+                }
+                const value: unknown = Reflect.get(target, property);
+                return typeof value === 'function' ? value.bind(target) : value;
+            }
+        });
+        const full = { ...Object.fromEntries(Object.keys(ACTION_DEFINITIONS['agent.start'].input.shape).map((field) => [field, null])), ...START };
+        const result = await serverActions.execute(
+            'agent.start',
+            { ...full, requestId: 'voice:session-1:call-1' },
+            voiceActionCall({ ...daemon.host, projects: failing }, place, caller)
+        );
+        expect(result).toMatchObject({ status: 'running', output: { kind: 'chat' } });
+        const nodeId = (result as { output: { nodeId: string } }).output.nodeId;
+        // Followed under the id of the project, since its name could not be read; never dropped as a start that failed.
+        expect(bound).toEqual([`${nodeId} in ${projectId}`]);
+        expect(dropped).toBe(0);
+    });
+
     test('a folder made from the work of another machine starts no CLI that would load its configuration', async () => {
         await store.peers.untrustFolder(folder);
         const voice = voiceSessions();

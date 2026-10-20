@@ -377,19 +377,29 @@ const claimedStart: StartHandler = (input, call) => {
  */
 export const startActions: ActionHandlers<ServerActionContext> = {
     'agent.start': async (input, call) => {
+        // The policy keeps this off without the grant already; a handler that writes says so itself too, before any claim answers.
+        if (call.actor.kind === 'voice' && call.context.voice?.writes !== true) {
+            throw new VerbRefusal('voice-read-only', 'Voice on this machine only reads for now; starting a chat is off');
+        }
         // Voice follows what it starts from before the start, so the first turn of the chat is never missed.
         const ticket = call.dryRun === true ? undefined : call.context.voice?.follow?.expectStart();
+        let result: Awaited<ReturnType<StartHandler>>;
         try {
-            const result = await claimedStart(input, call);
-            if (ticket !== undefined && 'output' in result) {
-                const project = await call.context.host.projects.read(call.context.place.projectId);
-                ticket.bind(result.output.nodeId, { chat: input.title ?? nameOf(input.provider), project: project.name ?? call.context.place.projectId });
-            }
-            return result;
+            result = await claimedStart(input, call);
         } catch (e) {
             ticket?.drop();
             throw e;
         }
+        if (ticket !== undefined && 'output' in result) {
+            // The chat is made and its start owed: a name that cannot be read now must not turn that into a failure Voice would retry.
+            const projectId = call.context.place.projectId;
+            const name = await call.context.host.projects.read(projectId).then(
+                (project) => project.name ?? null,
+                () => null
+            );
+            ticket.bind(result.output.nodeId, { chat: input.title ?? nameOf(input.provider), project: name ?? projectId });
+        }
+        return result;
     },
     'team.start': async (input, call) => {
         const { context, dryRun = false } = call;
