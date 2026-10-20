@@ -1,7 +1,8 @@
 import { ACTION_DEFINITIONS, type ActionDomain, type ActionName, type ActionOutput } from '@ruimte/actions';
+import type { VoiceActivityKind } from '@ruimte/contracts';
 
-/* The kinds of entry the Voice timeline draws. */
-export type VoiceActionKind = 'focus' | 'rename' | 'note' | 'terminal' | 'chat' | 'node' | 'view' | 'delete' | 'git';
+/* The kinds of entry the Voice timeline draws, the same on the desktop as in `voice.activity`. */
+export type VoiceActionKind = VoiceActivityKind;
 
 export interface VoiceReplyEntry {
     kind: VoiceActionKind;

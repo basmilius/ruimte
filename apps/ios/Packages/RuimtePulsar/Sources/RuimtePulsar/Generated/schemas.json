@@ -54131,6 +54131,295 @@
       "accepted"
     ]
   },
+  "request.voice.keyStatus.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.voice.keyStatus.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "present": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "present"
+    ]
+  },
+  "request.voice.setKey.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "key": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+      }
+    },
+    "required": [
+      "key"
+    ]
+  },
+  "request.voice.setKey.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "present": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "present"
+    ]
+  },
+  "request.voice.clearKey.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.voice.clearKey.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "present": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "present"
+    ]
+  },
+  "request.voice.start.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "startId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      },
+      "sceneId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      },
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "sdp": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128000
+      },
+      "language": {
+        "type": "string",
+        "enum": [
+          "ar",
+          "ca",
+          "zh",
+          "cs",
+          "da",
+          "nl",
+          "en",
+          "fi",
+          "fr",
+          "de",
+          "el",
+          "he",
+          "hi",
+          "hu",
+          "id",
+          "it",
+          "ja",
+          "ko",
+          "no",
+          "pl",
+          "pt",
+          "ro",
+          "ru",
+          "es",
+          "sv",
+          "th",
+          "tr",
+          "uk",
+          "vi"
+        ]
+      },
+      "voice": {
+        "type": "string",
+        "enum": [
+          "marin",
+          "cedar"
+        ]
+      },
+      "timeZone": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "startId",
+      "sceneId",
+      "projectId",
+      "sdp",
+      "language",
+      "voice",
+      "timeZone"
+    ]
+  },
+  "request.voice.start.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      },
+      "sdp": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128000
+      },
+      "status": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+          },
+          "sceneId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+          },
+          "seq": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "phase": {
+            "type": "string",
+            "x-open-enum": [
+              "starting",
+              "active",
+              "stopping",
+              "closed",
+              "failed"
+            ]
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "sessionId",
+          "sceneId",
+          "seq",
+          "phase"
+        ]
+      }
+    },
+    "required": [
+      "sessionId",
+      "sdp",
+      "status"
+    ]
+  },
+  "request.voice.stop.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sceneId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      },
+      "sessionId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      },
+      "startId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      }
+    },
+    "required": [
+      "sceneId"
+    ]
+  },
+  "request.voice.stop.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "stopped": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "stopped"
+    ]
+  },
+  "request.voice.confirm.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sceneId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      },
+      "sessionId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      },
+      "token": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "decision": {
+        "type": "string",
+        "enum": [
+          "confirm",
+          "cancel"
+        ]
+      }
+    },
+    "required": [
+      "sceneId",
+      "sessionId",
+      "token",
+      "decision"
+    ]
+  },
+  "request.voice.confirm.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "accepted": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "accepted"
+    ]
+  },
   "request.endpoint.info.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -74396,6 +74685,133 @@
     },
     "required": [
       "requests"
+    ]
+  },
+  "event.voice.status": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      },
+      "sceneId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      },
+      "seq": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "phase": {
+        "type": "string",
+        "x-open-enum": [
+          "starting",
+          "active",
+          "stopping",
+          "closed",
+          "failed"
+        ]
+      },
+      "error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    },
+    "required": [
+      "sessionId",
+      "sceneId",
+      "seq",
+      "phase"
+    ]
+  },
+  "event.voice.activity": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      },
+      "sceneId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+      },
+      "seq": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "entry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "at": {
+            "type": "number"
+          },
+          "kind": {
+            "type": "string",
+            "x-open-enum": [
+              "focus",
+              "rename",
+              "note",
+              "terminal",
+              "chat",
+              "node",
+              "view",
+              "delete",
+              "git"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "x-open-enum": [
+              "running",
+              "completed",
+              "failed"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "detail": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "kind",
+          "status",
+          "label",
+          "detail"
+        ]
+      }
+    },
+    "required": [
+      "sessionId",
+      "sceneId",
+      "seq",
+      "entry"
     ]
   },
   "event.chat.proposals": {

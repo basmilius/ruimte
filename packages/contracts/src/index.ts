@@ -386,6 +386,18 @@ import {
     ComputerUseStatusSchema
 } from './computer.ts';
 import { SecretAnswerResultSchema, SecretDeclinePayloadSchema, SecretRequestsSchema, SecretSavePayloadSchema } from './secrets.ts';
+import {
+    VoiceActivityEventSchema,
+    VoiceConfirmPayloadSchema,
+    VoiceConfirmResultSchema,
+    VoiceKeyStatusSchema,
+    VoiceSetKeyPayloadSchema,
+    VoiceStartPayloadSchema,
+    VoiceStartResultSchema,
+    VoiceStatusEventSchema,
+    VoiceStopPayloadSchema,
+    VoiceStopResultSchema
+} from './voice.ts';
 
 export * from './agent.ts';
 export * from './agent-integrations.ts';
@@ -449,6 +461,7 @@ export * from './task.ts';
 export * from './text.ts';
 export * from './usage.ts';
 export * from './visual.ts';
+export * from './voice.ts';
 export * from './voice-languages.ts';
 
 // Every request the wire knows, with the schema of what goes in and what comes back.
@@ -729,6 +742,13 @@ export const REQUEST_SCHEMAS = {
     'secret.requests': { payload: EmptySchema, result: SecretRequestsSchema },
     'secret.save': { payload: SecretSavePayloadSchema, result: SecretAnswerResultSchema },
     'secret.decline': { payload: SecretDeclinePayloadSchema, result: SecretAnswerResultSchema },
+    // Voice run by the daemon, offered only while it runs with RUIMTE_EXPERIMENTAL_VOICE=1. Setting and clearing the key is the local secret's.
+    'voice.keyStatus': { payload: EmptySchema, result: VoiceKeyStatusSchema },
+    'voice.setKey': { payload: VoiceSetKeyPayloadSchema, result: VoiceKeyStatusSchema },
+    'voice.clearKey': { payload: EmptySchema, result: VoiceKeyStatusSchema },
+    'voice.start': { payload: VoiceStartPayloadSchema, result: VoiceStartResultSchema },
+    'voice.stop': { payload: VoiceStopPayloadSchema, result: VoiceStopResultSchema },
+    'voice.confirm': { payload: VoiceConfirmPayloadSchema, result: VoiceConfirmResultSchema },
     'endpoint.info': { payload: EndpointInfoPayloadSchema, result: EndpointInfoSchema },
     'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
     'endpoint.settings': { payload: EndpointSettingsSchema, result: EndpointInfoSchema },
@@ -838,6 +858,9 @@ export const EVENT_SCHEMAS = {
     'computer.approvals': ComputerApprovalsSchema,
     'computer.grants': ComputerAppGrantsSchema,
     'secret.requests': SecretRequestsSchema,
+    // To the connection that started the session only; the app routes them to the scene by `sceneId`.
+    'voice.status': VoiceStatusEventSchema,
+    'voice.activity': VoiceActivityEventSchema,
     // Every open suggestion of an agent in Chats, to every client, whenever the list changes.
     'chat.proposals': ProjectProposalsSchema,
     'task.changed': TaskChangedEventSchema,
