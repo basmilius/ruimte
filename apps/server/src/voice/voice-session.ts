@@ -190,6 +190,7 @@ export class VoiceSession {
                 tools,
                 call: () => voiceActionCall(this.#deps.host, this.#start.place, this.#caller()),
                 live: () => this.#phase === 'active',
+                stateOf: () => this.#deps.host.projects.revision(this.#start.place.projectId),
                 observer: {
                     started: (callId, name) => this.#activity(callId, name, 'running'),
                     finished: (callId, name, ok) => this.#activity(callId, name, ok ? 'completed' : 'failed')
@@ -259,7 +260,18 @@ export class VoiceSession {
             return false;
         }
         const output = await this.#executor.confirm(token, approved);
-        return output.code !== 'unknown-confirmation';
+        if (output.code === 'unknown-confirmation') {
+            return false;
+        }
+        // The answer came from the phone, past the model, so the model hears what became of it.
+        const said = typeof output.message === 'string' ? output.message : output.ok === true ? 'It was done.' : 'It was not done.';
+        this.#delivery?.report(
+            `confirm:${token}`,
+            'confirmations',
+            `Ruimte confirmation event. On the phone the user ${approved ? 'confirmed' : 'cancelled'} the action that asked first. Result: ${said}`,
+            'The confirmation event just supplied is the user’s answer from the phone. Tell the user briefly what became of the action. Do not wait for another user message.'
+        );
+        return true;
     }
 
     #caller(): VoiceCaller {
@@ -408,6 +420,8 @@ export class VoiceSession {
             this.#loop?.reset();
             // What Voice started keeps running; only the telling of it ends with the session.
             this.#follower?.stop();
+            // A token the session was given ends with it, so nobody answers a question Voice asked after it went.
+            this.#executor?.forget();
             this.#delivery?.clear();
             const sideband = this.#sideband;
             this.#sideband = null;

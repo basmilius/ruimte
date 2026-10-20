@@ -143,6 +143,28 @@ describe('ActionRegistry', () => {
         expect(name).toBe('Board');
     });
 
+    test('forgets what an actor that is gone was asked and could undo, and nothing of anyone else', async () => {
+        const registry = new ActionRegistry<Context>({
+            'view.rename': ({ viewId, name }, action) =>
+                action.confirmed
+                    ? { output: { viewId, kind: 'canvas', previousName: 'Board', name, changed: true }, undo: () => undefined }
+                    : { confirmation: { title: 'Rename?', consequences: [] } }
+        });
+        const asked = async (kind: 'person' | 'voice') => {
+            const result = await registry.execute('view.rename', { viewId: 'board', name: 'Plan' }, call(kind));
+            return result.status === 'needs_confirmation' ? result.confirmationToken : '';
+        };
+        const voiceToken = await asked('voice');
+        const personToken = await asked('person');
+        const done = await registry.confirm(await asked('voice'), true, call('voice'));
+        const undoToken = done.status === 'completed' ? done.undoToken! : '';
+
+        registry.forget(call('voice').actor);
+        expect(await registry.confirm(voiceToken, true, call('voice'))).toMatchObject({ error: { code: 'unknown-confirmation' } });
+        expect(await registry.undo(undoToken, call('voice'))).toMatchObject({ error: { code: 'unknown-undo' } });
+        expect(await registry.confirm(personToken, true, call())).toMatchObject({ status: 'completed' });
+    });
+
     test('a dry run reaches only an action listed under previews, and leaves nothing to undo', async () => {
         const seen: boolean[] = [];
         const registry = new ActionRegistry<Context>(

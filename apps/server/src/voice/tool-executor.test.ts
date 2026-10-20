@@ -16,6 +16,11 @@ interface Ran {
 class FakeRunner implements VoiceActionRunner<null> {
     readonly ran: Ran[] = [];
     readonly confirmed: { token: string; approved: boolean; actor: string }[] = [];
+    readonly forgotten: string[] = [];
+
+    forget(actor: { id: string }): void {
+        this.forgotten.push(actor.id);
+    }
 
     execute(name: ActionName, input: unknown, call: ActionCall<null>): Promise<ActionResult> {
         return new Promise((resolve) => this.ran.push({ name, input: input as Record<string, unknown>, actor: call.actor.id, resolve }));
@@ -39,7 +44,16 @@ function completedRead(chatId: string): ActionResult {
     return { status: 'completed', action: 'chat.read', output: { chatId, chat: 'Builder', messages: [], truncated: false } };
 }
 
-function executor(options: { runner?: FakeRunner; policy?: VoicePolicy; tools?: VoiceToolDefinition[]; live?: () => boolean; sessionId?: string } = {}) {
+function executor(
+    options: {
+        runner?: FakeRunner;
+        policy?: VoicePolicy;
+        tools?: VoiceToolDefinition[];
+        live?: () => boolean;
+        sessionId?: string;
+        stateOf?: () => Promise<number>;
+    } = {}
+) {
     const runner = options.runner ?? new FakeRunner();
     const sessionId = options.sessionId ?? 'session-1';
     const finished: string[] = [];
@@ -50,6 +64,7 @@ function executor(options: { runner?: FakeRunner; policy?: VoicePolicy; tools?: 
         tools: options.tools ?? daemonVoiceTools({ writes: true }),
         call: () => ({ actor: { kind: 'voice', id: `voice:${sessionId}` }, context: null }),
         live: options.live ?? (() => true),
+        ...(options.stateOf === undefined ? {} : { stateOf: options.stateOf }),
         observer: { started: () => undefined, finished: (callId, _name, ok) => finished.push(`${callId}:${ok}`) }
     });
     return { tool, runner, finished };
@@ -183,7 +198,8 @@ describe('VoiceToolExecutor', () => {
             code: 'voice-read-only'
         });
         expect(checks).toBe(before + 1);
-        expect(runner.confirmed).toEqual([]);
+        // Never confirmed; the token is taken back from the registry as a cancel.
+        expect(runner.confirmed).toEqual([{ token: 'token-1', approved: false, actor: 'voice:session-1' }]);
         // Used once, so a second answer finds nothing.
         expect(await tool.confirm('token-1', true)).toMatchObject({ code: 'unknown-confirmation' });
     });
@@ -201,6 +217,40 @@ describe('VoiceToolExecutor', () => {
         await asking;
         expect(await tool.confirm('token-1', true)).toMatchObject({ ok: true });
         expect(runner.confirmed).toEqual([{ token: 'token-1', approved: true, actor: 'voice:session-1' }]);
+    });
+
+    test('a confirmation whose project moved on since it was asked is void, and Voice asks anew', async () => {
+        let revision = 4;
+        const { tool, runner } = executor({ stateOf: async () => revision });
+        const asking = tool.execute('communicate', send('c1'), 'send-1');
+        await settle();
+        runner.ran[0]!.resolve({
+            status: 'needs_confirmation',
+            action: 'chat.send',
+            confirmationToken: 'token-1',
+            confirmation: { title: 'Send?', consequences: [] }
+        });
+        await asking;
+        revision = 5;
+        expect(await tool.confirm('token-1', true)).toMatchObject({ ok: false, code: 'confirmation-stale' });
+        expect(runner.confirmed).toEqual([{ token: 'token-1', approved: false, actor: 'voice:session-1' }]);
+        expect(await tool.confirm('token-1', true)).toMatchObject({ code: 'unknown-confirmation' });
+    });
+
+    test('a session that ends leaves nothing to confirm or undo, here or in the registry', async () => {
+        const { tool, runner } = executor();
+        const asking = tool.execute('communicate', send('c1'), 'send-1');
+        await settle();
+        runner.ran[0]!.resolve({
+            status: 'needs_confirmation',
+            action: 'chat.send',
+            confirmationToken: 'token-1',
+            confirmation: { title: 'Send?', consequences: [] }
+        });
+        await asking;
+        tool.forget();
+        expect(runner.forgotten).toEqual(['voice:session-1']);
+        expect(await tool.confirm('token-1', true)).toMatchObject({ code: 'unknown-confirmation' });
     });
 
     test('an unexpected error reaches the model as a failure without its message', async () => {

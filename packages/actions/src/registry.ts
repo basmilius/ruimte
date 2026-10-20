@@ -238,6 +238,20 @@ export class ActionRegistry<Context> {
         return this.#execute(pending.name, pending.input, { ...call, expectedRevision: pending.expectedRevision }, true);
     }
 
+    /*
+     * Drops every confirmation and undo this actor still holds, for an actor that is gone, such as a Voice
+     * session that ended: what it was asked can no longer be answered, by it or by anyone after it.
+     */
+    forget(actor: ActionActor): void {
+        for (const entries of [this.#pending, this.#undo] as Map<string, { actor: ActionActor }>[]) {
+            for (const [token, entry] of entries) {
+                if (sameActor(entry.actor, actor)) {
+                    entries.delete(token);
+                }
+            }
+        }
+    }
+
     async undo(token: string, call: ActionCall<Context>): Promise<ActionControlResult> {
         const undo = this.#undo.get(token);
         if (!undo || !sameActor(undo.actor, call.actor)) {

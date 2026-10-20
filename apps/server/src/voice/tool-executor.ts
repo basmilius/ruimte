@@ -8,6 +8,8 @@ export type VoiceToolOutput = Record<string, unknown>;
 export interface VoiceActionRunner<Context> {
     execute(name: ActionName, input: unknown, call: ActionCall<Context>): Promise<ActionResult>;
     confirm(token: string, approved: boolean, call: ActionCall<Context>): Promise<ActionResult>;
+    /* Drops what this actor was asked and could undo, once its session ended. */
+    forget?(actor: ActionCall<Context>['actor']): void;
 }
 
 /* Sees each call start and end, for the timeline the phone draws; never the arguments or the output. */
@@ -26,6 +28,11 @@ export interface VoiceToolExecutorOptions<Context> {
     call(): ActionCall<Context>;
     /* Whether the session still runs; a call that waited past its end does nothing. */
     live(): boolean;
+    /*
+     * Where what the actions act on stands, read when an action asks first and again when it is answered:
+     * the revision of the project. A token whose target moved on in between is void, and Voice asks anew.
+     */
+    stateOf?(): Promise<number>;
     observer?: VoiceToolObserver;
 }
 
@@ -104,7 +111,7 @@ export class VoiceToolExecutor<Context> {
     readonly #options: VoiceToolExecutorOptions<Context>;
     readonly #offered: Map<string, ReadonlySet<string>>;
     readonly #calls = new Map<string, Promise<VoiceToolOutput>>();
-    readonly #confirmations = new Map<string, { name: ActionName; input: Record<string, unknown> }>();
+    readonly #confirmations = new Map<string, { name: ActionName; input: Record<string, unknown>; state: number | null }>();
     readonly #reads = new Gate(PARALLEL_READS);
     #changes: Promise<unknown> = Promise.resolve();
     #count = 0;
@@ -140,10 +147,37 @@ export class VoiceToolExecutor<Context> {
         this.#confirmations.delete(token);
         const refusal = this.#options.policy.check(pending.name, pending.input);
         if (refusal !== null) {
+            this.#decline(token);
             return refused(refusal.code, refusal.message);
         }
-        const run = (): Promise<VoiceToolOutput> => this.#runner(pending.name, () => this.#options.runner.confirm(token, approved, this.#options.call()));
+        const run = async (): Promise<VoiceToolOutput> => {
+            // Checked in the queue, right before the answer runs, so no change Voice made in between slips by.
+            if (approved && pending.state !== null && (await this.#state()) !== pending.state) {
+                this.#decline(token);
+                return refused('confirmation-stale', 'The project changed since this was asked, so the question no longer holds; ask the user again.');
+            }
+            return this.#runner(pending.name, () => this.#options.runner.confirm(token, approved, this.#options.call()));
+        };
         return this.#queue(pending.name, run);
+    }
+
+    /* The session ended: nothing it was asked is left to answer, here or in the registry. */
+    forget(): void {
+        this.#confirmations.clear();
+        this.#options.runner.forget?.(this.#options.call().actor);
+    }
+
+    /* A token this session will never use is taken back from the registry too, as a cancel. */
+    #decline(token: string): void {
+        this.#options.runner.confirm(token, false, this.#options.call()).catch(() => undefined);
+    }
+
+    async #state(): Promise<number | null> {
+        try {
+            return (await this.#options.stateOf?.()) ?? null;
+        } catch {
+            return null;
+        }
     }
 
     async #run(tool: string, rawArguments: string, callId: string): Promise<VoiceToolOutput> {
@@ -181,7 +215,7 @@ export class VoiceToolExecutor<Context> {
             this.#runner(action, async () => {
                 const result = await this.#options.runner.execute(action, input, this.#options.call());
                 if (result.status === 'needs_confirmation') {
-                    this.#remember(result.confirmationToken, action, input);
+                    this.#remember(result.confirmationToken, action, input, await this.#state());
                 }
                 return result;
             })
@@ -234,13 +268,14 @@ export class VoiceToolExecutor<Context> {
         }
     }
 
-    #remember(token: string, name: ActionName, input: Record<string, unknown>): void {
+    #remember(token: string, name: ActionName, input: Record<string, unknown>, state: number | null): void {
         if (this.#confirmations.size >= CONFIRMATION_MEMORY) {
             const oldest = this.#confirmations.keys().next().value;
             if (oldest !== undefined) {
                 this.#confirmations.delete(oldest);
+                this.#decline(oldest);
             }
         }
-        this.#confirmations.set(token, { name, input });
+        this.#confirmations.set(token, { name, input, state });
     }
 }
