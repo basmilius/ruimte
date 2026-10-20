@@ -182,6 +182,8 @@ const PERSON_AND_VOICE: readonly ActionActorKind[] = ['person', 'voice'];
 /* What only a client runs: no agent reaches a client, so an agent is left out. */
 const CLIENT_ACTORS: readonly ActionActorKind[] = ['person', 'voice', 'automation'];
 const AGENT: readonly ActionActorKind[] = ['agent'];
+/* What an agent's verb starts and Voice on the daemon may start too, held to the fields Voice may give. */
+const AGENT_AND_VOICE: readonly ActionActorKind[] = ['agent', 'voice'];
 const PERSON: readonly ActionActorKind[] = ['person'];
 /* What a person's gesture and an agent's verb both do, and Voice has no words for yet. */
 const PERSON_AND_AGENT: readonly ActionActorKind[] = ['person', 'agent'];
@@ -2685,38 +2687,35 @@ export const ACTION_DEFINITIONS = {
         description: 'Starts an agent in this project',
         effect: 'external',
         domain: 'agents',
-        actors: AGENT,
+        // Voice starts a chat with the person's CLI and nothing more: what only an agent gives stays an agent field.
+        actors: AGENT_AND_VOICE,
         input: z.object({
             provider: AgentKindSchema.describe('The CLI the agent runs'),
             terminal: z.boolean().describe('Makes a terminal node instead of a chat node'),
-            prompt: z.string().nullable().describe('What the agent starts working on'),
-            promptFile: z.string().min(1).nullable().describe('The same prompt out of a file, for one with exact bytes'),
-            cwd: z.string().min(1).nullable().describe('The directory the agent starts in'),
-            reads: agentReads,
-            viewId: viewId.nullable().describe('The canvas to add to; null uses your canvas or keeps the agent hidden from a chat view'),
-            beside: nodeId.nullable().describe('Puts the node directly right of this node, top edges level'),
-            group: nodeId.nullable().describe('Puts the node inside this group node of that canvas'),
-            title: givenName.nullable().describe('The title; without one the node is called after the CLI, and the session may rename it'),
-            task: givenName.nullable().describe('Gives the new agent a task with this title, which the prompt describes and whose result wakes you'),
-            model: z.string().trim().min(1).nullable().describe("The model id for a chat agent, with that model's default options"),
-            mode: RuntimeModeSchema.nullable().describe(
+            prompt: z.string().nullish().describe('What the agent starts working on'),
+            promptFile: agentField(z.string().min(1)).describe('The same prompt out of a file, for one with exact bytes'),
+            cwd: agentField(z.string().min(1)).describe('The directory the agent starts in'),
+            reads: agentField(z.array(nodeId)).describe('Nodes the new agent can read from its first turn: a line is drawn from each of them into it'),
+            viewId: viewId.nullish().describe('The canvas to add to; null uses your canvas or keeps the agent hidden from a chat view'),
+            beside: nodeId.nullish().describe('Puts the node directly right of this node, top edges level'),
+            group: agentField(nodeId).describe('Puts the node inside this group node of that canvas'),
+            title: givenName.nullish().describe('The title; without one the node is called after the CLI, and the session may rename it'),
+            task: agentField(givenName).describe('Gives the new agent a task with this title, which the prompt describes and whose result wakes you'),
+            model: z.string().trim().min(1).nullish().describe("The model id for a chat agent, with that model's default options"),
+            mode: RuntimeModeSchema.nullish().describe(
                 'The permission mode the agent runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own'
             ),
-            worktree: z.boolean().describe('Starts the agent in a git worktree of its own on a new branch'),
-            branch: z.string().min(1).nullable().describe('The branch of that worktree instead of one named after the task or the title'),
+            worktree: agentField(z.boolean()).describe('Starts the agent in a git worktree of its own on a new branch'),
+            branch: agentField(z.string().min(1)).describe('The branch of that worktree instead of one named after the task or the title'),
             requestId: z
                 .string()
                 .regex(/^[A-Za-z0-9._:-]{1,128}$/)
-                .nullable()
-                .describe('An id of your choosing; a retry with the same id and the same input answers with what the first call made'),
-            base: z.string().min(1).nullish().describe('With a worktree: the branch, tag or commit a new branch starts at instead of HEAD'),
-            machine: z
-                .string()
-                .min(1)
                 .nullish()
-                .describe(
-                    'Runs the agent on another machine this project is linked to, named by its name or id; needs a task, and a worktree there is made from your checkout'
-                ),
+                .describe('An id of your choosing; a retry with the same id and the same input answers with what the first call made'),
+            base: agentField(z.string().min(1)).describe('With a worktree: the branch, tag or commit a new branch starts at instead of HEAD'),
+            machine: agentField(z.string().min(1)).describe(
+                'Runs the agent on another machine this project is linked to, named by its name or id; needs a task, and a worktree there is made from your checkout'
+            ),
             effort: z
                 .string()
                 .trim()

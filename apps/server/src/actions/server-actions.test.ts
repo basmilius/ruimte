@@ -363,27 +363,36 @@ describe('the daemon actions', () => {
         expect(notices).toEqual([]);
     });
 
-    test("agent.start and team.start are an agent's alone", async () => {
+    test("team.start is an agent's alone, and agent.start takes none of an agent's fields from Voice", async () => {
         const voice = { ...agent(), actor: { kind: 'voice' as const, id: 'voice' } };
         const start = {
             provider: 'claude' as const,
             terminal: false,
             prompt: null,
-            promptFile: null,
+            viewId: null,
+            beside: null,
+            title: null,
+            model: null,
+            mode: null,
+            requestId: null
+        };
+        const team = {
+            label: 'Release',
+            roles: [{ title: 'Tester', prompt: 'Test', provider: 'claude', model: null, terminal: false }],
             cwd: null,
             reads: null,
             viewId: null,
-            beside: null,
-            group: null,
-            title: null,
-            task: null,
-            model: null,
             mode: null,
             worktree: false,
-            branch: null,
-            requestId: null
+            task: false
         };
-        expect(await serverActions.execute('agent.start', start, voice)).toMatchObject({ status: 'failed', error: { code: 'forbidden-action' } });
+        expect(await serverActions.execute('team.start', team, voice)).toMatchObject({ status: 'failed', error: { code: 'forbidden-action' } });
+        for (const [field, value] of Object.entries({ task: 'Review', worktree: false, cwd: 'src', reads: ['n'], machine: 'machine-b' })) {
+            expect(await serverActions.execute('agent.start', { ...start, [field]: value }, voice)).toMatchObject({
+                status: 'failed',
+                error: { code: 'forbidden-field' }
+            });
+        }
         expect(await serverActions.execute('worktree.merge', { branch: 'lexer', strategy: 'merge', message: null }, voice)).toMatchObject({
             status: 'failed',
             error: { code: 'forbidden-action' }

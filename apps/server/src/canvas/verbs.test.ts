@@ -64,6 +64,9 @@ import { MAX_NOTICE_LENGTH, type NoticeDelivery } from '../context/notices.ts';
 import { MAX_TITLE_LENGTH, NEW_NODE, OPENING_OFF_CANVAS, type AgentStart, type CanvasHost, type Noun } from './verb.ts';
 import { VERBS } from './verbs.ts';
 import { StartClaims } from '../actions/start-claims.ts';
+import { serverActionCall, voiceActionCall, type VoiceCaller } from '../actions/context.ts';
+import { serverActions } from '../actions/server-actions.ts';
+import type { ActionOutput, ActionResult } from '@ruimte/actions';
 import { freeBranch } from '../git/worktrees.ts';
 import { MAX_TASK_PROMPT_LENGTH, nextLine, taskBrief } from './task-verbs.ts';
 
@@ -1671,6 +1674,129 @@ describe('agent', () => {
         expect((await post('agent', ['claude', '--reads', many])).lines[0]).toStartWith('refused\ttoo-many-links\t');
         expect((await post('agent', ['claude', '--reads', 'note-1,'])).lines[0]).toStartWith('refused\tbad-arguments\t');
         expect((await onDisk()).rev).toBe(1);
+    });
+});
+
+/* The fields of agent.start a caller may leave out, each of which reads as null when it does. */
+const NULLISH_START_FIELDS = [
+    'prompt',
+    'promptFile',
+    'cwd',
+    'reads',
+    'viewId',
+    'beside',
+    'group',
+    'title',
+    'task',
+    'model',
+    'mode',
+    'worktree',
+    'branch',
+    'requestId',
+    'base',
+    'machine',
+    'effort'
+] as const;
+
+/* What a start made, with the ids it minted taken out, so two starts of the same input read the same. */
+function startOutcome(result: ActionResult, before: number): unknown {
+    const made = started.slice(before).map(({ nodeId: _nodeId, ...start }) => start);
+    if (result.status === 'failed') {
+        return { failed: result.error.code, made };
+    }
+    const output = 'output' in result ? (result.output as ActionOutput<'agent.start'>) : null;
+    return { status: result.status, kind: output?.kind, viewId: output?.viewId, edge: output?.edge?.from ?? null, made };
+}
+
+describe('agent.start takes an absent field as null', () => {
+    for (const field of NULLISH_START_FIELDS) {
+        test(field, async () => {
+            const place = store.locate('term-1')!;
+            const base: Record<string, unknown> = {
+                ...Object.fromEntries(NULLISH_START_FIELDS.map((name) => [name, null])),
+                provider: 'claude',
+                terminal: false
+            };
+            const absent = Object.fromEntries(Object.entries(base).filter(([name]) => name !== field));
+            const before = started.length;
+            const given = startOutcome(await serverActions.execute('agent.start', base, serverActionCall(host(), place, 'term-1')), before);
+            const middle = started.length;
+            const left = startOutcome(await serverActions.execute('agent.start', absent, serverActionCall(host(), place, 'term-1')), middle);
+            expect(left).toEqual(given);
+            expect(given).toMatchObject({ status: 'running', kind: 'chat', viewId: 'main', edge: 'term-1' });
+        });
+    }
+});
+
+describe('agent.start from Voice', () => {
+    const VOICE: VoiceCaller = {
+        sessionId: 'session-1',
+        owner: { clientId: 'client-1', sceneId: 'scene-1' },
+        projectId: '',
+        timeZone: 'Europe/Amsterdam',
+        writes: true
+    };
+    const voiceStart = {
+        provider: 'claude',
+        terminal: false,
+        prompt: 'Run the tests',
+        viewId: null,
+        beside: null,
+        title: null,
+        model: null,
+        mode: null,
+        requestId: null,
+        effort: null
+    };
+
+    function voiceCall(canvasId: string | null = 'main', untrusted = false) {
+        const place = { projectId, folder, canvasId };
+        const withUntrusted: CanvasHost = {
+            ...host(),
+            untrusted: { node: () => false, inFolder: (path) => untrusted && path === folder, fromPeer: () => false }
+        };
+        return voiceActionCall(withUntrusted, place, { ...VOICE, projectId });
+    }
+
+    test('opens a supervised chat at depth 1 on the canvas of the phone, with no line from anyone', async () => {
+        const result = await serverActions.execute('agent.start', voiceStart, voiceCall());
+        expect(result).toMatchObject({ status: 'running', output: { kind: 'chat', viewId: 'main', edge: null, taskId: null } });
+        const nodeId = (result as { output: ActionOutput<'agent.start'> }).output.nodeId;
+        expect(started).toEqual([{ projectId, nodeId, openedBy: 'voice:session-1', node: 'chat', provider: 'claude', cwd: folder }]);
+        expect(held).toEqual([{ projectId, nodeId, prompt: 'Run the tests' }]);
+        expect([lineage.depthOf(nodeId), lineage.ceilingOf(nodeId), lineage.startedBy(nodeId)]).toEqual([1, 'supervised', 'voice:session-1']);
+        expect((await canvasOnDisk()).edges).toEqual([]);
+    });
+
+    test('never starts a terminal or a CLI without a chat, and never wider than supervised', async () => {
+        expect(await serverActions.execute('agent.start', { ...voiceStart, terminal: true }, voiceCall())).toMatchObject({
+            error: { code: 'voice-chat-only' }
+        });
+        expect(await serverActions.execute('agent.start', { ...voiceStart, provider: 'gemini' }, voiceCall())).toMatchObject({
+            error: { code: 'voice-chat-only' }
+        });
+        expect(await serverActions.execute('agent.start', { ...voiceStart, mode: 'auto' }, voiceCall())).toMatchObject({ error: { code: 'mode-above-voice' } });
+        expect(started).toEqual([]);
+    });
+
+    test('a folder made from the work of another machine starts nothing that would load its configuration', async () => {
+        const result = await serverActions.execute('agent.start', { ...voiceStart, provider: 'codex' }, voiceCall('main', true));
+        expect(result).toMatchObject({ status: 'failed', error: { code: 'untrusted-folder' } });
+        expect(started).toEqual([]);
+        // Claude Code is kept from that configuration, so it starts there as it would for an agent.
+        expect(await serverActions.execute('agent.start', voiceStart, voiceCall('main', true))).toMatchObject({ status: 'running' });
+    });
+
+    test('a project without a canvas gets a chat view of its own', async () => {
+        const result = await serverActions.execute('agent.start', { ...voiceStart, title: 'Tests' }, voiceCall(null));
+        expect(result).toMatchObject({ status: 'running', output: { kind: 'chat', viewId: null, edge: null } });
+        const nodeId = (result as { output: ActionOutput<'agent.start'> }).output.nodeId;
+        expect(await viewOnDisk(nodeId)).toMatchObject({ kind: 'chat', id: nodeId, name: 'Tests', node: { provider: 'claude', providerFixed: true } });
+        expect(started.map((start) => start.nodeId)).toEqual([nodeId]);
+        expect(store.locate(nodeId)).toMatchObject({ projectId, canvasId: null });
+        expect(await serverActions.execute('agent.start', { ...voiceStart, beside: 'term-1' }, voiceCall(null))).toMatchObject({
+            error: { code: 'no-canvas' }
+        });
     });
 });
 

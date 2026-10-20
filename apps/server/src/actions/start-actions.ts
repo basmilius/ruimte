@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
-import { type AgentKind, type ModelSelection, type ProjectEdge, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
-import { agentNode, groupLines, grownGroup, inheritedAccount, readsOf, requireInstalled, startPrompt, terminalMode } from '../canvas/agents.ts';
+import { withView, type AgentKind, type ModelSelection, type ProjectChatView, type ProjectEdge, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
+import { agentNode, groupLines, grownGroup, inheritedAccount, nameOf, readsOf, requireInstalled, startPrompt, terminalMode } from '../canvas/agents.ts';
 import { depthForOpening } from '../canvas/depth.ts';
 import { modeForOpening } from '../canvas/mode.ts';
 import { EFFORT_REFUSALS, selectionForOpening } from '../canvas/model.ts';
@@ -12,6 +12,7 @@ import { groupMembers, placeBeside, placeFree, placeInGroup, placeTeam } from '.
 import { checkCwd } from '../canvas/project-paths.ts';
 import { MAX_TASK_PROMPT_LENGTH, requireChatParent, taskBrief } from '../canvas/tasks.ts';
 import { NEW_NODE, OPENING_OFF_CANVAS, VerbRefusal, canvasFor, field, newNode } from '../canvas/verb.ts';
+import { MAX_PROJECT_VIEWS } from '../canvas/views.ts';
 import { branchSlug, makeWorktrees, requireRepository } from '../canvas/worktree.ts';
 import { untrustedStartProblem } from '../peering/untrusted.ts';
 import { providerFor } from '../providers/registry.ts';
@@ -33,10 +34,13 @@ function refuseUntrustedStart(
     host: ServerActionContext['host'],
     callerId: string,
     cwd: string | undefined,
-    agents: Array<{ provider: AgentKind; chat: boolean }>
+    agents: Array<{ provider: AgentKind; chat: boolean }>,
+    folder?: string
 ): void {
     const { untrusted } = host;
-    if (untrusted === undefined || !(untrusted.node(callerId) || (cwd !== undefined && untrusted.inFolder(cwd)))) {
+    // Voice is no node and gives no cwd, so the folder its session works in is what is judged for it.
+    const inUntrusted = (cwd !== undefined && untrusted?.inFolder(cwd) === true) || (folder !== undefined && untrusted?.inFolder(folder) === true);
+    if (untrusted === undefined || !(untrusted.node(callerId) || inUntrusted)) {
         return;
     }
     for (const agent of agents) {
@@ -48,6 +52,44 @@ function refuseUntrustedStart(
 }
 
 type StartHandler = NonNullable<ActionHandlers<ServerActionContext>['agent.start']>;
+type StartInput = Parameters<StartHandler>[0];
+
+/* The widest mode a chat Voice starts may run in, until a person decides Voice may give more. */
+const VOICE_CEILING: RuntimeMode = 'supervised';
+
+/*
+ * What Voice may start: an AI Chat under the person's own CLI, never a terminal, and no wider than
+ * supervised, which is also the ceiling a caller that is no node gets. The catalog keeps every other
+ * field an agent's, so these are the refusals left, worded for a voice and not for a command line.
+ */
+function refuseVoiceStart(input: StartInput): void {
+    if (input.terminal) {
+        throw new VerbRefusal('voice-chat-only', 'Voice starts an AI Chat, never a terminal');
+    }
+    if (!providerFor(input.provider).capabilities.chat) {
+        throw new VerbRefusal('voice-chat-only', `${nameOf(input.provider)} has no AI Chat, and Voice starts only AI Chats`);
+    }
+    if (input.mode != null && input.mode !== VOICE_CEILING) {
+        throw new VerbRefusal('mode-above-voice', `A chat Voice starts runs supervised at most, never ${input.mode}`);
+    }
+}
+
+/* A chat of its own in the sidebar, for an agent that has no canvas to stand on; the fields a node of it would carry ride on the view. */
+function looseChatView(node: ProjectNode, createdBy: string): ProjectChatView {
+    return {
+        kind: 'chat',
+        id: node.id,
+        name: node.title,
+        ...(node.titleSource === undefined ? {} : { titleSource: node.titleSource }),
+        node: {
+            ...(node.provider === undefined ? {} : { provider: node.provider }),
+            providerFixed: true,
+            ...(node.cwd === undefined ? {} : { cwd: node.cwd }),
+            ...(node.account === undefined ? {} : { account: node.account })
+        },
+        createdBy
+    };
+}
 
 /* The start itself; a retried one never gets here, since its claim answers first. */
 const startAgent: StartHandler = async (input, call) => {
@@ -55,14 +97,21 @@ const startAgent: StartHandler = async (input, call) => {
     const { host, place } = context;
     const caller = verbCallOf(call);
     const kind = input.provider;
-    const readIds = readsOf(input.reads);
-    const hidden = input.viewId === null && place.canvasId === null;
+    const voice = call.actor.kind === 'voice';
+    if (voice) {
+        refuseVoiceStart(input);
+    }
+    const readIds = readsOf(input.reads ?? null);
+    const offCanvas = input.viewId == null && place.canvasId === null;
+    // A chat view keeps an agent it opens off every canvas; Voice has no chat of its own, so its chat gets a view instead.
+    const loose = voice && offCanvas;
+    const hidden = offCanvas && !voice;
     // The machine is judged before the agent is: a name that is none, or a combination that means nothing there, makes nothing.
     const remote = input.machine == null ? null : resolveMachine(host, place.projectId, input.machine);
     if (remote !== null) {
         refuseRemoteStart({
-            cwd: input.cwd,
-            task: input.task !== null,
+            cwd: input.cwd ?? null,
+            task: input.task != null,
             model: input.model != null,
             effort: input.effort != null,
             base: input.base != null,
@@ -71,23 +120,27 @@ const startAgent: StartHandler = async (input, call) => {
         });
     }
     const depth = depthForOpening(caller, 'agent', 1);
-    const ceiling = modeForOpening(caller, input.mode ?? undefined);
+    // Voice is no node, so the daemon knows no mode of its own; what it starts is held to supervised, whatever the host says.
+    const ceiling = voice ? VOICE_CEILING : modeForOpening(caller, input.mode ?? undefined);
     const chat = !input.terminal && providerFor(kind).capabilities.chat;
     const selection = selectionForOpening(kind, chat, input.model ?? undefined, input.effort ?? undefined, host.starts.preferredSelection(kind));
-    if (input.branch !== null && !input.worktree) {
+    if (input.branch != null && !input.worktree) {
         throw new VerbRefusal('branch-needs-worktree', '--branch names the branch of a worktree; add --worktree');
     }
     if (input.base != null && !input.worktree) {
         throw new VerbRefusal('base-needs-worktree', '--base says where the branch of a worktree starts; add --worktree');
     }
-    if (input.worktree && input.cwd !== null) {
+    if (input.worktree && input.cwd != null) {
         throw new VerbRefusal('worktree-and-cwd', '--worktree and --cwd both say where the agent starts; give one of them');
     }
-    if (input.beside !== null && input.group !== null) {
+    if (input.beside != null && input.group != null) {
         throw new VerbRefusal('two-places', '--beside and --group both say where the node goes; give one of them');
     }
-    if (hidden && (input.beside !== null || input.group !== null || readIds.length > 0)) {
+    if (hidden && (input.beside != null || input.group != null || readIds.length > 0)) {
         throw new VerbRefusal('view-required', '--beside, --group and --reads place nodes or lines on a canvas; name one with --view');
+    }
+    if (loose && input.beside != null) {
+        throw new VerbRefusal('no-canvas', 'This project has no canvas, so the chat opens as a view of its own and stands beside nothing');
     }
     if (hidden && host.hiddenAgents === undefined) {
         throw new VerbRefusal('view-required', OPENING_OFF_CANVAS);
@@ -98,18 +151,18 @@ const startAgent: StartHandler = async (input, call) => {
     }
 
     // Everything that touches the disk or git runs before the lock, so a slow repository holds up no save.
-    const prompt = await startPrompt(input.prompt, input.promptFile, host, place.folder);
-    if (input.task !== null && prompt === null) {
+    const prompt = await startPrompt(input.prompt ?? null, input.promptFile ?? null, host, place.folder);
+    if (input.task != null && prompt === null) {
         throw new VerbRefusal('task-needs-prompt', '--task gives a task and the prompt is what it asks; add --prompt or --prompt-file');
     }
-    if (input.task !== null && prompt !== null && prompt.length > MAX_TASK_PROMPT_LENGTH) {
+    if (input.task != null && prompt !== null && prompt.length > MAX_TASK_PROMPT_LENGTH) {
         throw new VerbRefusal(
             'prompt-too-long',
             `The prompt is ${prompt.length} characters and a task takes at most ${MAX_TASK_PROMPT_LENGTH}, since the child is also told how to report back; put the rest in a file and tell the agent to read it`
         );
     }
-    let cwd = input.cwd === null ? undefined : await checkCwd(place.folder, input.cwd, (folder) => host.checkouts.paths(folder));
-    refuseUntrustedStart(host, caller.caller, cwd, [{ provider: kind, chat }]);
+    let cwd = input.cwd == null ? undefined : await checkCwd(place.folder, input.cwd, (folder) => host.checkouts.paths(folder));
+    refuseUntrustedStart(host, caller.caller, cwd, [{ provider: kind, chat }], voice ? place.folder : undefined);
     const runtimeMode = chat ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling);
     const account = inheritedAccount(caller, kind);
     let undoWorktrees = async (): Promise<void> => undefined;
@@ -120,7 +173,7 @@ const startAgent: StartHandler = async (input, call) => {
     } else if (input.worktree) {
         await requireRepository(caller, place.folder);
         if (!dryRun) {
-            const want = input.branch === null ? { fresh: branchSlug(input.task ?? input.title ?? kind) } : { branch: input.branch };
+            const want = input.branch == null ? { fresh: branchSlug(input.task ?? input.title ?? kind) } : { branch: input.branch };
             const based = input.base == null ? want : { ...want, base: input.base };
             const made = await makeWorktrees(caller, { folder: place.folder, projectId: place.projectId }, [based]);
             cwd = made.worktrees[0]!.path;
@@ -132,19 +185,22 @@ const startAgent: StartHandler = async (input, call) => {
         .mutate<{ output: ActionOutput<'agent.start'>; operation?: { id: string; status: 'running' } }>(place.projectId, async (content) => {
             // Counted again under the lock the last start wrote its node down in: a call at the same moment read the same count.
             depthForOpening(caller, 'agent', 1);
-            if (input.task !== null) {
+            if (input.task != null) {
                 requireChatParent(content, caller.caller, host.hiddenAgents?.get(caller.caller)?.node.kind);
             }
-            const canvas = hidden ? null : canvasFor(content, place, input.viewId ?? undefined, OPENING_OFF_CANVAS);
+            const canvas = hidden || loose ? null : canvasFor(content, place, input.viewId ?? undefined, OPENING_OFF_CANVAS);
+            if (loose && content.views.length + 1 > MAX_PROJECT_VIEWS) {
+                throw new VerbRefusal('too-many-views', `This project has ${content.views.length} views and a project holds at most ${MAX_PROJECT_VIEWS}`);
+            }
             if (canvas && canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
                 throw canvasFull(canvas, 1);
             }
-            const anchor = input.beside === null ? undefined : canvas?.nodes.find((node) => node.id === input.beside);
-            if (canvas && input.beside !== null && !anchor) {
+            const anchor = input.beside == null ? undefined : canvas?.nodes.find((node) => node.id === input.beside);
+            if (canvas && input.beside != null && !anchor) {
                 throw refuseMissingNodes(content, [input.beside], canvas.id, 'the agent this opens has nothing there to stand beside', nodeLines(canvas));
             }
-            const group = input.group === null ? undefined : canvas?.nodes.find((node) => node.id === input.group && node.kind === 'group');
-            if (canvas && input.group !== null && !group) {
+            const group = input.group == null ? undefined : canvas?.nodes.find((node) => node.id === input.group && node.kind === 'group');
+            if (canvas && input.group != null && !group) {
                 throw new VerbRefusal('unknown-group', `${input.group} is not a group on ${canvas.id}`, groupLines(canvas));
             }
             const read = canvas ? nodesNamed(content, canvas, readIds, { cannot: 'no line can run from it into the agent this opens' }) : [];
@@ -224,7 +280,7 @@ const startAgent: StartHandler = async (input, call) => {
                     await host.hiddenAgents!.put({ projectId: place.projectId, openedBy: caller.caller, node: { ...node, kind: kindName } });
                 }
                 await host.lineage.put({ projectId: place.projectId, nodeId: id, openedBy: caller.caller, depth, agent: true, ceiling });
-                if (remote !== null && input.task !== null && prompt !== null) {
+                if (remote !== null && input.task != null && prompt !== null) {
                     // The task first, then the entry that asks the machine to start it; the task is what the machine's answer settles.
                     const task = await host.tasks.open({
                         projectId: place.projectId,
@@ -253,7 +309,7 @@ const startAgent: StartHandler = async (input, call) => {
                     await host.checkouts.claim(place.folder, cwd, id);
                 }
                 // Before the agent starts, so a child that is done at once finds its task open.
-                if (input.task !== null && prompt !== null) {
+                if (input.task != null && prompt !== null) {
                     const task = await host.tasks.open({
                         projectId: place.projectId,
                         parentId: caller.caller,
@@ -264,7 +320,7 @@ const startAgent: StartHandler = async (input, call) => {
                     output.taskId = task.id;
                 }
                 if (prompt !== null) {
-                    await host.starts.holdPrompt(place.projectId, id, input.task === null ? prompt : `${prompt}${taskBrief(chat)}`);
+                    await host.starts.holdPrompt(place.projectId, id, input.task == null ? prompt : `${prompt}${taskBrief(chat)}`);
                 }
                 await host.starts.startAgent({
                     projectId: place.projectId,
@@ -290,7 +346,9 @@ const startAgent: StartHandler = async (input, call) => {
                               view.id === canvas.id ? { ...canvas, nodes, edges: [...canvas.edges, ...(edge ? [edge] : []), ...reading] } : view
                           )
                       }
-                    : null,
+                    : loose
+                      ? { ...content, views: withView(content.views, looseChatView(node, caller.caller)) }
+                      : null,
                 ...(remote === null ? {} : { bindMachines: new Map([[id, remote.machineId]]) }),
                 // Started is not done: the outbox starts the agent, and its task or its first turn says how it went.
                 result: { output, operation: { id: operationIdOf('agent.start', [id]), status: 'running' } }
@@ -310,7 +368,7 @@ const startAgent: StartHandler = async (input, call) => {
 export const startActions: ActionHandlers<ServerActionContext> = {
     'agent.start': (input, call) => {
         const claims = call.context.host.startClaims;
-        if (input.requestId === null || call.dryRun || claims === undefined) {
+        if (input.requestId == null || call.dryRun || claims === undefined) {
             return startAgent(input, call);
         }
         const claim = { actor: call.actor, requestId: input.requestId, inputHash: startInputHash(call.context.place.projectId, input) };

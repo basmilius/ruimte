@@ -1,26 +1,29 @@
 import { MAX_OPENED_PER_CALLER, MAX_PROMPT_LENGTH, MAX_TITLE_LENGTH, type ActionInput } from '../index.ts';
 import { describeWrites, without } from './harness.ts';
 
+// What every actor of agent.start may give; the fields only an agent gives are below, in restricted.
 const start: ActionInput<'agent.start'> = {
     provider: 'claude',
     terminal: false,
     prompt: 'Review the catalog tests',
     promptFile: null,
     cwd: null,
-    reads: ['note-1'],
+    reads: null,
     viewId: null,
     beside: null,
     group: null,
     title: 'Reviewer',
-    task: 'Review',
+    task: null,
     model: null,
     mode: 'auto-accept-edits',
-    worktree: true,
+    worktree: null,
     branch: null,
     requestId: 'start-1',
-    base: 'main',
+    base: null,
+    machine: null,
     effort: 'high'
 };
+const AGENT_ONLY = ['agent'] as const;
 const role = { title: 'Tester', prompt: 'Write the tests', provider: 'codex', model: null, terminal: false, effort: 'medium' } as const;
 const team: ActionInput<'team.start'> = { label: 'Release', roles: [role], cwd: null, reads: null, viewId: null, mode: null, worktree: false, task: true };
 
@@ -54,15 +57,26 @@ describeWrites('agents', {
         }
     },
     'agent.start': {
-        actors: ['agent'],
+        actors: ['agent', 'voice'],
         input: start,
         refused: {
             'a CLI that is no identifier': { ...start, provider: 'Cursor CLI' },
             'a mode it has not': { ...start, mode: 'root' },
             'a request id with a space': { ...start, requestId: 'start 1' },
             'a title past the title limit': { ...start, title: 'x'.repeat(MAX_TITLE_LENGTH + 1) },
-            'no answer to worktree': without(start, 'worktree'),
+            'no answer to terminal': without(start, 'terminal'),
             'a blank effort': { ...start, effort: ' ' }
+        },
+        restricted: {
+            promptFile: { value: 'prompts/review.md', actors: AGENT_ONLY },
+            cwd: { value: 'packages/actions', actors: AGENT_ONLY },
+            reads: { value: ['note-1'], actors: AGENT_ONLY },
+            group: { value: 'group-1', actors: AGENT_ONLY },
+            task: { value: 'Review', actors: AGENT_ONLY },
+            worktree: { value: true, actors: AGENT_ONLY },
+            branch: { value: 'review', actors: AGENT_ONLY },
+            base: { value: 'main', actors: AGENT_ONLY },
+            machine: { value: 'machine-b', actors: AGENT_ONLY }
         }
     },
     'team.start': {
