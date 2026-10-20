@@ -3,6 +3,7 @@ import {
     isHiddenCanvasView,
     type AgentInfo,
     type AgentKind,
+    type ChatDelivery,
     type ChatInfo,
     type ContextSource,
     type AgentStatus,
@@ -114,6 +115,8 @@ export interface CanvasHost {
     chatThreads?: ChatThreadHost;
     /* What a terminal agent does, which Voice reads where a window would read its status. */
     terminals?: TerminalAgentHost;
+    /* Prompting a chat, which only Voice does through an action; an agent sends through `notify`. */
+    chatPrompts?: ChatPromptHost;
     /* Forks a chat an agent opened into a child of that agent; absent on a host that forks none. */
     forks?: AgentForkHost;
     /* Operating the apps of this machine through its helper; absent on a host without one. */
@@ -148,6 +151,12 @@ export interface CanvasHost {
 export interface ChatThreadHost {
     items(chatId: string): Promise<ChatItem[] | null>;
     info?(chatId: string): Promise<ChatInfo | null>;
+}
+
+/* A prompt into a chat the machine runs, the way a person's composer sends one; Voice prompts no chat that is only a record. */
+export interface ChatPromptHost {
+    running(chatId: string): boolean;
+    send(chatId: string, text: string, delivery: ChatDelivery | undefined): Promise<{ queued: boolean; turnId: string }>;
 }
 
 /* The agent a terminal runs as its hooks last told it; null for a plain shell, undefined for no session of that id. */

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import type { AgentInfo, ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
+import type { VoiceFollowHost } from '../voice/voice-follower.ts';
 import { serverActionCall, voiceActionCall, type VoiceCaller } from './context.ts';
 import { serverActions } from './server-actions.ts';
 import type { ActionOutput } from '@ruimte/actions';
@@ -50,6 +51,10 @@ let places: Map<string, string>;
 let reads: string[];
 let infos: Map<string, ChatInfo>;
 let terminals: Map<string, AgentInfo | null>;
+let running: Set<string>;
+let sent: { chatId: string; text: string; delivery: string | undefined }[];
+let sendFails: boolean;
+let followed: string[];
 
 function item(id: string, kind: 'user' | 'assistant', text: string, extra: Record<string, unknown> = {}): ChatItem {
     return {
@@ -75,7 +80,17 @@ function host(): CanvasHost {
             revision: async () => 7
         } as Partial<CanvasHost['projects']> as CanvasHost['projects'],
         chatThreads: { items: async (chatId) => loaded.get(chatId) ?? stored.get(chatId) ?? null, info: async (chatId) => infos.get(chatId) ?? null },
-        terminals: { agentOf: (sessionId) => terminals.get(sessionId) }
+        terminals: { agentOf: (sessionId) => terminals.get(sessionId) },
+        chatPrompts: {
+            running: (chatId) => running.has(chatId),
+            send: async (chatId, text, delivery) => {
+                if (sendFails) {
+                    throw new Error('the CLI went');
+                }
+                sent.push({ chatId, text, delivery });
+                return { queued: delivery === 'queue', turnId: 'turn-9' };
+            }
+        }
     } as Partial<CanvasHost> as CanvasHost;
 }
 
@@ -96,7 +111,19 @@ beforeEach(() => {
     reads = [];
     infos = new Map();
     terminals = new Map();
+    running = new Set();
+    sent = [];
+    sendFails = false;
+    followed = [];
 });
+
+const FOLLOW: VoiceFollowHost = {
+    expectPrompt: (chatId, chat) => {
+        followed.push(`expect ${chatId} ${chat.chat} in ${chat.project}`);
+        return { bind: (turnId) => followed.push(`bind ${turnId}`), drop: () => followed.push('drop') };
+    },
+    expectStart: () => ({ bind: () => undefined, drop: () => undefined })
+};
 
 function info(chatId: string, fields: Partial<ChatInfo> = {}): ChatInfo {
     return {
@@ -357,5 +384,46 @@ describe('agents.inspect for Voice', () => {
         ] as const) {
             expect(await serverActions.execute(name, input, call)).toMatchObject({ status: 'failed', error: { code: 'forbidden-action' } });
         }
+    });
+});
+
+describe('chat.send for Voice', () => {
+    const writer: VoiceCaller = { ...VOICE, writes: true, follow: FOLLOW };
+
+    function send(chatId: string, prompt: string, delivery: string | null = null, voice = writer) {
+        return serverActions.execute('chat.send', { chatId, prompt, delivery }, voiceActionCall(host(), PLACE, voice));
+    }
+
+    test('sends the prompt to a chat that runs, and follows the turn the chat names for it', async () => {
+        running.add('chat-node');
+        expect(await send('chat-node', '  Run the tests  ', 'queue')).toMatchObject({
+            status: 'completed',
+            output: { chatId: 'chat-node', chat: 'Builder', queued: true, turnId: 'turn-9' }
+        });
+        expect(sent).toEqual([{ chatId: 'chat-node', text: 'Run the tests', delivery: 'queue' }]);
+        expect(followed).toEqual(['expect chat-node Builder in Shop', 'bind turn-9']);
+    });
+
+    test('a send that fails follows nothing', async () => {
+        running.add('chat-node');
+        sendFails = true;
+        expect(await send('chat-node', 'Run the tests')).toMatchObject({ status: 'failed' });
+        expect(followed).toEqual(['expect chat-node Builder in Shop', 'drop']);
+    });
+
+    test('a chat that does not run, an empty prompt and a chat elsewhere are refused before anything is sent', async () => {
+        expect(await send('chat-node', 'Run the tests')).toMatchObject({ status: 'failed', error: { code: 'chat-not-running' } });
+        running.add('chat-node');
+        expect(await send('chat-node', '   ')).toMatchObject({ status: 'failed', error: { code: 'empty-prompt' } });
+        bound.add('chat-node');
+        expect(await send('chat-node', 'Run the tests')).toMatchObject({ status: 'failed', error: { code: 'remote-target' } });
+        expect(await send('term-node', 'Run the tests')).toMatchObject({ status: 'failed', error: { code: 'not-in-project' } });
+        expect([sent, followed]).toEqual([[], []]);
+    });
+
+    test('without the writes grant the handler refuses as well', async () => {
+        running.add('chat-node');
+        expect(await send('chat-node', 'Run the tests', null, VOICE)).toMatchObject({ status: 'failed', error: { code: 'voice-read-only' } });
+        expect(sent).toEqual([]);
     });
 });

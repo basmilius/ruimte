@@ -1,4 +1,4 @@
-import type { ActionHandlers, ActionInput, ActionOutput } from '@ruimte/actions';
+import { MAX_PROMPT_LENGTH, type ActionHandlers, type ActionInput, type ActionOutput } from '@ruimte/actions';
 import type { AgentStatus, ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
 import { matchName, resolveNames, type VoiceNameMatch } from '@ruimte/voice';
 import { VerbRefusal } from '../canvas/verb.ts';
@@ -41,18 +41,19 @@ async function sessionProject(context: ServerActionContext): Promise<{ voice: Vo
  * Voice reaches only the project its session started in, whatever id the model names. The words are for
  * the model of a voice and name no `ruimte-context` flag.
  */
-async function chatOfSession(context: ServerActionContext, chatId: string): Promise<VoiceAgentPlace> {
+async function chatOfSession(context: ServerActionContext, chatId: string): Promise<VoiceAgentPlace & { project: string }> {
     const voice = voiceOf(context);
     const { host } = context;
     if (host.projects.machineOfNode(chatId) !== null) {
         throw new VerbRefusal('remote-target', 'That chat runs on another machine; Voice reaches only the chats of this one');
     }
     const place = host.projects.locate(chatId);
-    const chat = place?.projectId === voice.projectId ? projectChat(await host.projects.read(voice.projectId), chatId) : null;
-    if (chat === null) {
+    const content = place?.projectId === voice.projectId ? await host.projects.read(voice.projectId) : null;
+    const chat = content === null ? null : projectChat(content, chatId);
+    if (content === null || chat === null) {
         throw new VerbRefusal('not-in-project', 'That id is no AI Chat of this project; resolve the chat by its name first');
     }
-    return chat;
+    return { ...chat, project: content.name ?? voice.projectId };
 }
 
 async function chatInfoOf(context: ServerActionContext, chatId: string): Promise<ChatInfo | null> {
@@ -198,6 +199,38 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
             return { output: { chatId, chat: chat.name, messages: [], truncated: false } };
         }
         return { output: { chatId, chat: chat.name, ...chatExcerpt(items, limit ?? DEFAULT_READ) } };
+    },
+    'chat.send': async ({ chatId, prompt, delivery }, { context }) => {
+        const voice = voiceOf(context);
+        // The policy keeps this off without the grant already; a handler that writes says so itself too.
+        if (!voice.writes) {
+            throw new VerbRefusal('voice-read-only', 'Voice on this machine only reads for now; prompting a chat is off');
+        }
+        const chat = await chatOfSession(context, chatId);
+        const prompts = context.host.chatPrompts;
+        if (prompts === undefined || !prompts.running(chatId)) {
+            throw new VerbRefusal(
+                'chat-not-running',
+                `“${chat.name}” does not run on the machine now. Opening it in Ruimte starts it again, or agent.start starts a new AI Chat with this prompt`
+            );
+        }
+        const text = prompt.trim();
+        if (text === '') {
+            throw new VerbRefusal('empty-prompt', 'The prompt is empty');
+        }
+        if (text.length > MAX_PROMPT_LENGTH) {
+            throw new VerbRefusal('prompt-too-long', `The prompt is ${text.length} characters and Voice sends at most ${MAX_PROMPT_LENGTH}`);
+        }
+        // Taken before the prompt goes out, so even a turn that ends before the send answers is the one told.
+        const ticket = voice.follow?.expectPrompt(chatId, { chat: chat.name, project: chat.project });
+        try {
+            const sent = await prompts.send(chatId, text, delivery ?? undefined);
+            ticket?.bind(sent.turnId);
+            return { output: { chatId, chat: chat.name, queued: sent.queued, turnId: sent.turnId } };
+        } catch (e) {
+            ticket?.drop();
+            throw e;
+        }
     },
     'workspace.inspect': async (_input, { context }) => {
         const { voice, content } = await sessionProject(context);

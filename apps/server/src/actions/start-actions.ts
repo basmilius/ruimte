@@ -360,19 +360,36 @@ const startAgent: StartHandler = async (input, call) => {
         });
 };
 
+/* A start once per request id: a retry with the same id answers with what the first made. */
+const claimedStart: StartHandler = (input, call) => {
+    const claims = call.context.host.startClaims;
+    if (input.requestId == null || call.dryRun || claims === undefined) {
+        return startAgent(input, call);
+    }
+    const claim = { actor: call.actor, requestId: input.requestId, inputHash: startInputHash(call.context.place.projectId, input) };
+    return claims.run(claim, async () => await startAgent(input, call));
+};
+
 /*
  * Everything a start enforces lives here, whoever asks: the depth and the count of agents a caller
  * may open, a mode no wider than the caller's riding on every start, a directory inside the project
  * or its worktrees, and the task only a chat may give.
  */
 export const startActions: ActionHandlers<ServerActionContext> = {
-    'agent.start': (input, call) => {
-        const claims = call.context.host.startClaims;
-        if (input.requestId == null || call.dryRun || claims === undefined) {
-            return startAgent(input, call);
+    'agent.start': async (input, call) => {
+        // Voice follows what it starts from before the start, so the first turn of the chat is never missed.
+        const ticket = call.dryRun === true ? undefined : call.context.voice?.follow?.expectStart();
+        try {
+            const result = await claimedStart(input, call);
+            if (ticket !== undefined && 'output' in result) {
+                const project = await call.context.host.projects.read(call.context.place.projectId);
+                ticket.bind(result.output.nodeId, { chat: input.title ?? nameOf(input.provider), project: project.name ?? call.context.place.projectId });
+            }
+            return result;
+        } catch (e) {
+            ticket?.drop();
+            throw e;
         }
-        const claim = { actor: call.actor, requestId: input.requestId, inputHash: startInputHash(call.context.place.projectId, input) };
-        return claims.run(claim, async () => await startAgent(input, call));
     },
     'team.start': async (input, call) => {
         const { context, dryRun = false } = call;

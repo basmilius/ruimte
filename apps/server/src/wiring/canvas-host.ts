@@ -88,6 +88,10 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
             items: async (chatId) => chats.get(chatId)?.thread.list() ?? (await chats.readChat(chatId))?.items ?? null,
             info: async (chatId) => chats.get(chatId)?.info ?? (await chats.readChat(chatId))?.info ?? null
         },
+        chatPrompts: {
+            running: (chatId) => chats.get(chatId) !== undefined,
+            send: (chatId, text, delivery) => chats.send(chatId, text, delivery === undefined ? {} : { delivery })
+        },
         terminals: {
             agentOf: (sessionId) => {
                 const session = sessions.get(sessionId);
