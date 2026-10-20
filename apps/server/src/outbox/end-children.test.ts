@@ -11,6 +11,8 @@ import { ENDED_REASON, wireEndChildren } from './end-children.ts';
 import { OutboxStore } from './outbox.ts';
 import { ManualClock } from '@adecore/agents/testing';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
+import { voiceActionCall } from '../actions/context.ts';
+import { serverActions } from '../actions/server-actions.ts';
 
 function content(): ProjectContent {
     return {
@@ -459,4 +461,53 @@ test("an agent another machine's agent opened is not an orphan, since its opener
     wiring.places('project', new Set(['child']));
     await Promise.resolve();
     expect(owed).toEqual([]);
+});
+
+test('a chat Voice started is not an orphan, since its opener is a Voice session and never in this project', async () => {
+    const lineage = new AgentLineageStore(home);
+    await lineage.put({ projectId: 'project', nodeId: 'child', openedBy: 'voice:session-1', depth: 1, agent: true, ceiling: 'supervised' });
+    const owed: string[] = [];
+    const wiring = wireEndChildren({
+        lineage,
+        outbox: new OutboxStore(home),
+        tasks: new TaskStore(home),
+        chats: { get: () => undefined, stop: async () => undefined },
+        sessions: { get: () => undefined, end: async () => undefined },
+        enqueue: async (_projectId, target) => {
+            owed.push(target);
+        }
+    });
+    wiring.start();
+    wiring.places('project', new Set(['child']));
+    await Promise.resolve();
+    expect(owed).toEqual([]);
+});
+
+test('indexing the project again after Voice started a chat owes no end-children and leaves the chat running', async () => {
+    const daemon = await boot();
+    daemon.worker.start();
+    const place = store.locate('chat-lead')!;
+    const voice = voiceActionCall(daemon.host, place, {
+        sessionId: 'session-1',
+        owner: { clientId: 'client-1', sceneId: 'scene-1' },
+        projectId,
+        timeZone: 'UTC',
+        writes: true
+    });
+    const start = { provider: 'claude', terminal: false, prompt: 'slow', viewId: null, beside: null, title: null, model: null, mode: null, requestId: null };
+    const result = await serverActions.execute('agent.start', start, voice);
+    if (result.status !== 'running') {
+        throw new Error(`agent.start answered ${result.status}`);
+    }
+    const chat = result.output.nodeId;
+    await daemon.worker.settled();
+    await daemon.until(() => daemon.chats.get(chat)?.info.activeTurnId != null);
+
+    // Any write indexes the project again, which is when an opener the project no longer places is ended.
+    await store.mutate(projectId, (current) => ({ content: { ...current, name: 'renamed' }, result: null }));
+    await daemon.worker.settled();
+
+    expect(daemon.enqueued.filter((work) => work.kind === 'end-children')).toEqual([]);
+    expect(daemon.lineage.endedAt(chat)).toBeNull();
+    expect(daemon.chats.get(chat)?.info.activeTurnId).not.toBeNull();
 });

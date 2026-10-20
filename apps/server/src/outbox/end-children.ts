@@ -1,6 +1,7 @@
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { endChildren } from '@adecore/agents/coordination';
 import type { ChatManager } from '../chat/chat-manager.ts';
+import { isVoiceActor } from '../actions/context.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionManager } from '../sessions/manager.ts';
 import type { EndChildrenEntry, OutboxEntry, OutboxStore, OutboxWork } from './outbox.ts';
@@ -80,11 +81,13 @@ export function wireEndChildren({
             early.set(projectId, ids);
             return;
         }
-        // An agent another machine's agent opened has its opener there, never in this project.
+        /* An agent another machine's agent opened has its opener there, and a chat Voice started has a
+           Voice session for one: neither opener is ever in this project, and a Voice session that ends
+           leaves what it started running. */
         for (const openedBy of new Set(
             lineage
                 .orphans(projectId, ids)
-                .filter((orphan) => lineage.peerOf(orphan.nodeId) === null)
+                .filter((orphan) => lineage.peerOf(orphan.nodeId) === null && !isVoiceActor(orphan.openedBy))
                 .map((orphan) => orphan.openedBy)
         )) {
             void owe(openedBy).catch((e: unknown) => log(`Owing the end of the agents ${openedBy} opened failed: ${errorText(e)}`));

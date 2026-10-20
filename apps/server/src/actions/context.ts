@@ -74,9 +74,16 @@ export function serverActionCall(host: CanvasHost, place: IndexedPlace | null, c
     };
 }
 
+const VOICE_ACTOR_PREFIX = 'voice:';
+
 /* The actor id of a Voice session, apart from every node id, which is what a lineage or a claim is kept under. */
 export function voiceActorId(sessionId: string): string {
-    return `voice:${sessionId}`;
+    return `${VOICE_ACTOR_PREFIX}${sessionId}`;
+}
+
+/* Whether an opener in the lineage is a Voice session, which no project places. */
+export function isVoiceActor(id: string): boolean {
+    return id.startsWith(VOICE_ACTOR_PREFIX);
 }
 
 /*
