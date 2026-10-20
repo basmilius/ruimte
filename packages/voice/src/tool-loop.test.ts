@@ -22,8 +22,8 @@ describe('VoiceToolLoop', () => {
         const calls: unknown[] = [];
         const loop = new ResponseToolLoop(
             (event) => sent.push(event),
-            async (name, args) => {
-                calls.push({ name, args });
+            async (name, args, callId) => {
+                calls.push({ name, args, callId });
                 return { ok: true, message: 'Focused Chat Test' };
             }
         );
@@ -51,7 +51,8 @@ describe('VoiceToolLoop', () => {
         expect(calls).toEqual([
             {
                 name: 'manage_views',
-                args: '{"action":"view.focus","viewId":"chat-test"}'
+                args: '{"action":"view.focus","viewId":"chat-test"}',
+                callId: 'call-1'
             }
         ]);
         expect(sent[0]).toMatchObject({

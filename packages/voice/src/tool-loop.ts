@@ -10,7 +10,8 @@ export interface ToolLoopObserver {
 }
 
 export type VoiceToolSend = (event: LiveEvent) => void;
-export type VoiceToolExecute = (name: string, args: string) => Promise<Record<string, unknown>>;
+/* The call id is the service's: an executor that has to answer a retried call as the same one keys on it. */
+export type VoiceToolExecute = (name: string, args: string, callId: string) => Promise<Record<string, unknown>>;
 
 export interface VoiceToolLoopOptions {
     /* The tools the session offered; a call to any other is left alone. */
@@ -76,7 +77,7 @@ export class VoiceToolLoop {
     async #run(call: LiveFunctionCall): Promise<void> {
         let output: Record<string, unknown>;
         try {
-            output = await this.#execute(call.name, call.arguments);
+            output = await this.#execute(call.name, call.arguments, call.callId);
         } catch (error) {
             output = { ok: false, code: 'tool-error', message: error instanceof Error ? error.message : 'The Ruimte tool failed.' };
         }
