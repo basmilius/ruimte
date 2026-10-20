@@ -410,7 +410,7 @@ An experimental route, on only with `RUIMTE_EXPERIMENTAL_VOICE=1` (`src/voice`, 
 - A chat Voice started has the session (`voice:<sessionId>`) as its opener in the lineage, at depth 1 under a `supervised` ceiling, and keeps running when the session ends; in a project without a canvas it is a chat view of its own. `src/voice/voice-follower.ts` follows the turn a prompt or a start set going, by its turn id, and the session reports its end, a failure or a wait on the person over the sideband through `VoiceCompletionDelivery`.
 - Over the sideband the model hears the project and the phone's time when the session starts, the time every minute and a new context 250 ms after the project changed, as quiet `session.thinking.append` events.
 - The sideband carries no audio the daemon keeps: echoed audio events are dropped before anything could log them. OpenAI documents no field that bounds what the phone's data channel may send, so a client event on the sideband that the daemon never sent ends the session (`voice-foreign-client`).
-- `setKey` and `clearKey` are the local secret's only. No `voice.*` request is on a peer's list.
+- `setKey` and `clearKey` are the local secret's only, and like `ruimte voice key` they refuse `~/.ruimte` and a compiled daemon with `voice-dev-home-only` while Voice is a spike (`voiceKeyHomeProblem`). No `voice.*` request is on a peer's list.
 
 ## Chats
 

@@ -28,7 +28,7 @@ async function ask(dispatcher: Dispatcher, client: ClientConnection & { frames: 
     return client.frames.at(-1) as { ok: boolean; result?: unknown; error?: { code: string; message: string } };
 }
 
-function voiceDispatcher(): Dispatcher {
+function voiceDispatcher(keyHomeProblem: string | null = null): Dispatcher {
     const dispatcher = new Dispatcher();
     const sessions: VoiceHandlerDeps['sessions'] = {
         start: async (client, payload) => {
@@ -38,7 +38,7 @@ function voiceDispatcher(): Dispatcher {
         stop: async (client, payload) => ({ stopped: client.id === 'phone' && payload.sceneId === 'scene-1' }),
         confirm: async () => ({ accepted: false })
     };
-    registerVoiceHandlers(dispatcher, { keys, sessions });
+    registerVoiceHandlers(dispatcher, { keys, sessions, keyHomeProblem });
     return dispatcher;
 }
 
@@ -68,6 +68,31 @@ describe('the voice requests', () => {
         expect(await ask(dispatcher, phone, 'voice.clearKey', {})).toMatchObject({ ok: false, error: { code: 'forbidden' } });
         expect(await ask(dispatcher, owner, 'voice.clearKey', {})).toMatchObject({ ok: true, result: { present: false } });
         expect(await keys.has()).toBe(false);
+    });
+
+    test('an installed or compiled daemon takes no key from the local secret either, as the CLI takes none there', async () => {
+        await keys.write(KEY);
+        const dispatcher = voiceDispatcher('Voice on the machine is a development spike');
+        const owner = connection('owner', OWNER);
+        expect(await ask(dispatcher, owner, 'voice.setKey', { key: KEY })).toMatchObject({ ok: false, error: { code: 'voice-dev-home-only' } });
+        expect(await ask(dispatcher, owner, 'voice.clearKey', {})).toMatchObject({ ok: false, error: { code: 'voice-dev-home-only' } });
+        expect(await keys.has()).toBe(true);
+        expect(await ask(dispatcher, owner, 'voice.keyStatus', {})).toMatchObject({ ok: true, result: { present: true } });
+        const log = spyOn(console, 'log').mockImplementation(() => undefined);
+        try {
+            const wired = (fields: { compiled: boolean; installedHome: string }) =>
+                wireVoice({
+                    config: { home: root, experimentalVoice: { enabled: true, writes: false } },
+                    projects: { hold: () => undefined, letGo: () => undefined, index: { folderOf: () => null, viewsOf: () => null } } as never,
+                    canvasHost: {} as CanvasHost,
+                    chats: { observe: () => () => undefined, get: () => undefined },
+                    ...fields
+                });
+            expect(wired({ compiled: true, installedHome: join(root, '.ruimte') })!.keyHomeProblem).toContain('development spike');
+            expect(wired({ compiled: false, installedHome: root })!.keyHomeProblem).toContain('development spike');
+        } finally {
+            log.mockRestore();
+        }
     });
 
     test('a key that is refused is answered and logged without the key', async () => {
@@ -114,7 +139,8 @@ describe('the voice requests', () => {
             config: { home: root, experimentalVoice: { enabled: false, writes: false } },
             projects: {} as never,
             canvasHost: {} as CanvasHost,
-            chats: { observe: () => () => undefined, get: () => undefined }
+            chats: { observe: () => () => undefined, get: () => undefined },
+            compiled: false
         });
         expect(off).toBeNull();
         const log = spyOn(console, 'log').mockImplementation(() => undefined);
@@ -123,9 +149,12 @@ describe('the voice requests', () => {
                 config: { home: root, experimentalVoice: { enabled: true, writes: false } },
                 projects: { hold: () => undefined, letGo: () => undefined, index: { folderOf: () => null, viewsOf: () => null } } as never,
                 canvasHost: {} as CanvasHost,
-                chats: { observe: () => () => undefined, get: () => undefined }
+                chats: { observe: () => () => undefined, get: () => undefined },
+                compiled: false,
+                installedHome: join(root, '.ruimte')
             });
             expect(on).not.toBeNull();
+            expect(on!.keyHomeProblem).toBeNull();
             const dispatcher = new Dispatcher();
             registerVoiceHandlers(dispatcher, on!);
             expect(

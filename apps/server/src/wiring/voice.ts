@@ -1,16 +1,20 @@
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { serverActions } from '../actions/server-actions.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { ServerConfig } from '../config.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { SYSTEM_CLOCK } from '../voice/clock.ts';
-import { VoiceKeyStore } from '../voice/key-store.ts';
+import { VoiceKeyStore, voiceKeyHomeProblem } from '../voice/key-store.ts';
 import { openAiLive, type OpenAiLive } from '../voice/openai-live.ts';
 import { VoiceSessions } from '../voice/voice-sessions.ts';
 
 export interface VoiceBundle {
     keys: VoiceKeyStore;
     sessions: VoiceSessions;
+    /* Why the requests of the local secret set no key in this home, as `ruimte voice key` refuses it too. */
+    keyHomeProblem: string | null;
 }
 
 export interface VoiceInput {
@@ -18,6 +22,9 @@ export interface VoiceInput {
     projects: Pick<ProjectStore, 'hold' | 'letGo' | 'index' | 'subscribe'>;
     canvasHost: CanvasHost;
     chats: Pick<ChatManager, 'observe' | 'get'>;
+    compiled: boolean;
+    /* `~/.ruimte`, where an installed Ruimte keeps its state; a test names another. */
+    installedHome?: string;
     /* Only a test hands in another, a fake GPT-Live on loopback. */
     live?: OpenAiLive;
 }
@@ -75,5 +82,6 @@ export function wireVoice(input: VoiceInput): VoiceBundle | null {
             ? 'Experimental Voice for phones is on, and may prompt and start chats'
             : 'Experimental Voice for phones is on, reading only'
     );
-    return { keys, sessions };
+    const keyHomeProblem = voiceKeyHomeProblem({ home: config.home, installedHome: input.installedHome ?? join(homedir(), '.ruimte'), compiled: input.compiled });
+    return { keys, sessions, keyHomeProblem };
 }

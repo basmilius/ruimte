@@ -108,7 +108,7 @@ function daemon(home: string, openAiUrl: string, threads: Map<string, ChatItem[]
         writes: false
     });
     const dispatcher = new Dispatcher();
-    registerVoiceHandlers(dispatcher, { keys: new VoiceKeyStore(home), sessions });
+    registerVoiceHandlers(dispatcher, { keys: new VoiceKeyStore(home), sessions, keyHomeProblem: null });
     const services = {
         dispatcher,
         sessions: { ...source(), get: () => undefined },

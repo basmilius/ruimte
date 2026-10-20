@@ -1,4 +1,4 @@
-import { VoiceKeyStore } from '../voice/key-store.ts';
+import { VoiceKeyStore, voiceKeyHomeProblem } from '../voice/key-store.ts';
 
 export interface VoiceCliOptions {
     args: string[];
@@ -30,10 +30,9 @@ export async function runVoice(options: VoiceCliOptions): Promise<number> {
         err(USAGE);
         return 2;
     }
-    if (options.compiled || options.home === options.installedHome) {
-        err(
-            `Voice on the machine is a development spike: its key goes only into a development home, not ${options.home}. Set RUIMTE_HOME (bun dev uses ~/.ruimte-dev).`
-        );
+    const problem = voiceKeyHomeProblem(options);
+    if (problem !== null) {
+        err(problem);
         return 1;
     }
     const store = new VoiceKeyStore(options.home);

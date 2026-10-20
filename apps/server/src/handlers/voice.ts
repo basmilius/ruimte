@@ -5,21 +5,31 @@ import type { VoiceSessions } from '../voice/voice-sessions.ts';
 export interface VoiceHandlerDeps {
     keys: Pick<VoiceKeyStore, 'has' | 'write' | 'clear'>;
     sessions: Pick<VoiceSessions, 'start' | 'stop' | 'confirm'>;
+    /* Why this daemon's home takes no key (`voiceKeyHomeProblem`), or null when it does. */
+    keyHomeProblem: string | null;
 }
 
 /*
  * Voice run by the daemon. Registered only with RUIMTE_EXPERIMENTAL_VOICE=1, so `endpoint.info` names
  * these requests only then, and none is on a peer's list: another machine is refused before its payload
- * is read. Only the local secret sets or clears the key; whether one is set is every person's to know,
- * since the phone shows Voice only then. Owning a session is a matter of the connection and scene that
- * started it, which `VoiceSessions` checks; it is apart from owning the machine.
+ * is read. Only the local secret sets or clears the key, and only in a development home; whether one is
+ * set is every person's to know, since the phone shows Voice only then. Owning a session is a matter of
+ * the connection and scene that started it, which `VoiceSessions` checks; it is apart from owning the
+ * machine.
  */
 export function registerVoiceHandlers(dispatcher: Dispatcher, deps: VoiceHandlerDeps): void {
-    const { keys, sessions } = deps;
+    const { keys, sessions, keyHomeProblem } = deps;
+    // The same rule as `ruimte voice key`: an installed or compiled daemon keeps no key while Voice is a spike.
+    const refuseKeyHome = (): void => {
+        if (keyHomeProblem !== null) {
+            throw new RequestError('voice-dev-home-only', keyHomeProblem);
+        }
+    };
     dispatcher.register('voice.keyStatus', async () => ({ present: await keys.has() }));
     dispatcher.register(
         'voice.setKey',
         async ({ key }) => {
+            refuseKeyHome();
             try {
                 await keys.write(key);
             } catch (e) {
@@ -33,6 +43,7 @@ export function registerVoiceHandlers(dispatcher: Dispatcher, deps: VoiceHandler
     dispatcher.register(
         'voice.clearKey',
         async () => {
+            refuseKeyHome();
             await keys.clear();
             return { present: false };
         },
