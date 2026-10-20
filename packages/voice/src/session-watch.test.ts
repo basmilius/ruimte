@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { chatWaits, settledPrompt, terminalWaits, VoiceSessionWatch, waitingPrompt, type VoiceWatchedSession } from '@/voice/session-watch';
+import { chatWaits, settledPrompt, terminalWaits, VoiceSessionWatch, waitingPrompt, type VoiceWatchedSession } from './session-watch.ts';
 
 const terminal: VoiceWatchedSession = { key: 'local:agent', kind: 'terminal', name: 'Claude', project: 'Atlas' };
 const chat: VoiceWatchedSession = { key: 'local:chat', kind: 'chat', name: 'Research', project: 'Atlas' };
@@ -78,9 +78,9 @@ describe('what Voice is told', () => {
     });
 
     test('a chat names only the requests that still wait', () => {
-        const items = {
-            done: { id: 'done', kind: 'approval', decision: 'allow', toolName: 'Edit', description: null },
-            open: {
+        const items = [
+            { id: 'done', kind: 'approval', decision: 'allow', toolName: 'Edit', description: null },
+            {
                 id: 'open',
                 kind: 'approval',
                 decision: 'pending',
@@ -88,9 +88,9 @@ describe('what Voice is told', () => {
                 input: { command: 'TOKEN=abc npm test', description: 'Run the tests' },
                 description: 'TOKEN=abc npm test'
             },
-            ask: { id: 'ask', kind: 'question', state: 'pending', questions: [{ question: 'Which file?' }] }
-        };
-        const waits = chatWaits({ items: items as never, order: ['done', 'open', 'ask'] });
+            { id: 'ask', kind: 'question', state: 'pending', questions: [{ question: 'Which file?' }] }
+        ];
+        const waits = chatWaits(items as never);
         expect(waits).toEqual(['approval for Bash: Run the tests', 'question: Which file?']);
         expect(waits.join(' ')).not.toContain('TOKEN=abc');
     });

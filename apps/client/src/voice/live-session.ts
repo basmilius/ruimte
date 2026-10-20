@@ -1,10 +1,6 @@
 import i18next from 'i18next';
+import type { LiveEvent } from '@ruimte/voice';
 import { desktop, type OpenAiLivePreferences } from '@/desktop/bridge';
-
-export interface LiveEvent {
-    type: string;
-    [key: string]: unknown;
-}
 
 function gatheringComplete(peer: RTCPeerConnection): Promise<void> {
     if (peer.iceGatheringState === 'complete') {

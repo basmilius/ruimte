@@ -1,10 +1,11 @@
 import { create } from 'zustand';
+import type { VoiceActionKind } from '@ruimte/voice';
 import { silentBands } from '@/audio/waveform';
 import { desktop, type OpenAiCredentialStatus } from '@/desktop/bridge';
 import { storedText } from '@/state/stored-json';
 
 export type VoicePhase = 'idle' | 'connecting' | 'listening' | 'closing' | 'error';
-export type VoiceActionKind = 'focus' | 'rename' | 'note' | 'terminal' | 'chat' | 'node' | 'view' | 'delete' | 'git';
+export type { VoiceActionKind };
 export type VoiceActionStatus = 'running' | 'completed' | 'undone' | 'failed';
 
 export interface VoiceUtterance {

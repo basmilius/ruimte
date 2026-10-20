@@ -45,6 +45,7 @@
         "@ruimte/desktop-bridge": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/telemetry": "workspace:*",
+        "@ruimte/voice": "workspace:*",
         "@sentry/browser": "11.7.0",
         "@tanstack/react-virtual": "^3.14.13",
         "@xterm/addon-fit": "^0.11.0",
@@ -103,6 +104,7 @@
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/service": "workspace:*",
         "@ruimte/telemetry": "workspace:*",
+        "@ruimte/voice": "workspace:*",
         "zod": "^4.6.5",
       },
       "devDependencies": {
@@ -321,6 +323,18 @@
     "packages/telemetry": {
       "name": "@ruimte/telemetry",
       "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "^1.4.2",
+        "typescript": "^7.0.2",
+      },
+    },
+    "packages/voice": {
+      "name": "@ruimte/voice",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/actions": "workspace:*",
+        "@ruimte/contracts": "workspace:*",
+      },
       "devDependencies": {
         "@types/bun": "^1.4.2",
         "typescript": "^7.0.2",
@@ -1037,6 +1051,8 @@
     "@ruimte/stats-worker": ["@ruimte/stats-worker@workspace:apps/stats-worker"],
 
     "@ruimte/telemetry": ["@ruimte/telemetry@workspace:packages/telemetry"],
+
+    "@ruimte/voice": ["@ruimte/voice@workspace:packages/voice"],
 
     "@sentry/browser": ["@sentry/browser@11.7.0", "", { "dependencies": { "@sentry/browser-utils": "11.7.0", "@sentry/conventions": "^0.27.0", "@sentry/core": "11.7.0", "@sentry/feedback": "11.7.0", "@sentry/replay": "11.7.0", "@sentry/replay-canvas": "11.7.0" } }, "sha512-0GEmO+E+jeeDYgNd4Al9h3vNycEZo0mDJDfyEn/Mz/DEFYiRdYgnoysSp8vr1z/mFklUBbwDuHwcTu22tqyOxQ=="],
 

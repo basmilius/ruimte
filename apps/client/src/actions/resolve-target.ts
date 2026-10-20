@@ -1,5 +1,6 @@
 import { ActionRefusal, type ActionInput, type ActionOutput } from '@ruimte/actions';
 import { isCanvasView, isOpenableView, isUnknownNode, isUnknownView, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import { matchName, resolveNames, type VoiceNameMatch } from '@ruimte/voice';
 import type { StoreApi } from 'zustand';
 import { projectAgents } from '@/actions/inspection-actions';
 import { listedProjects } from '@/actions/project-actions';
@@ -11,52 +12,10 @@ import { activeViewOf, type DocumentState } from '@/state/document';
 type Resolved = ActionOutput<'target.resolve'>;
 type Target = Resolved['found'][number];
 type Scope = NonNullable<ActionInput<'target.resolve'>['scope']>;
-type Match = { status: 'found'; value: Target } | { status: 'missing' } | { status: 'ambiguous'; candidates: Target[] };
-
-function normalized(value: string): string {
-    return value
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLocaleLowerCase()
-        .replace(/[^a-z0-9]+/g, ' ')
-        .trim();
-}
-
-/* An exact name wins over a partial one, and more than one of either is the person's to choose. */
-function named(name: string, targets: readonly Target[], label: (target: Target) => string = (target) => target.name): Match {
-    const wanted = normalized(name);
-    const exact = targets.filter((target) => normalized(label(target)) === wanted);
-    if (exact.length === 1) {
-        return { status: 'found', value: exact[0]! };
-    }
-    if (exact.length > 1) {
-        return { status: 'ambiguous', candidates: exact };
-    }
-    if (wanted === '') {
-        return { status: 'missing' };
-    }
-    const partial = targets.filter((target) => normalized(label(target)).includes(wanted) || wanted.includes(normalized(label(target))));
-    if (partial.length === 1) {
-        return { status: 'found', value: partial[0]! };
-    }
-    return partial.length > 1 ? { status: 'ambiguous', candidates: partial } : { status: 'missing' };
-}
+type Match = VoiceNameMatch<Target>;
 
 function byName(target: Resolved['target'], names: readonly string[], match: (name: string) => Match): Resolved {
-    const found = new Map<string, Target>();
-    const ambiguous: Resolved['ambiguous'] = [];
-    const missing: string[] = [];
-    for (const name of names) {
-        const matched = match(name);
-        if (matched.status === 'found') {
-            found.set(matched.value.id, matched.value);
-        } else if (matched.status === 'ambiguous') {
-            ambiguous.push({ name, candidates: matched.candidates });
-        } else {
-            missing.push(name);
-        }
-    }
-    return { target, found: [...found.values()], ambiguous, missing };
+    return { target, ...resolveNames(names, match) };
 }
 
 function current(target: Resolved['target'], found: Target[]): Resolved {
@@ -109,7 +68,7 @@ export function resolveTarget(document: StoreApi<DocumentState>, input: ActionIn
             return current(target, active ? [viewTarget(active)] : []);
         }
         const views = state.views.filter(isOpenableView).map(viewTarget);
-        return byName(target, names, (name) => named(name, views));
+        return byName(target, names, (name) => matchName(name, views));
     }
     if (target === 'node') {
         if (!active || !canvas) {
@@ -118,7 +77,7 @@ export function resolveTarget(document: StoreApi<DocumentState>, input: ActionIn
         const nodes = nodesInScope(canvas, scope ?? (names === null ? 'selected' : 'all'))
             .filter((node) => nodeKind === null || node.kind === nodeKind)
             .map((node) => nodeTarget(node, active));
-        return names === null ? current(target, nodes) : byName(target, names, (name) => named(name, nodes));
+        return names === null ? current(target, nodes) : byName(target, names, (name) => matchName(name, nodes));
     }
     if (target === 'chat') {
         if (names === null) {
@@ -139,7 +98,7 @@ export function resolveTarget(document: StoreApi<DocumentState>, input: ActionIn
                 .filter((node) => node.kind === 'chat')
                 .map((node) => nodeTarget(node, view));
         });
-        return byName(target, names, (name) => named(name, chats));
+        return byName(target, names, (name) => matchName(name, chats));
     }
     if (target === 'agent') {
         const agents = projectAgents(document);
@@ -160,8 +119,8 @@ export function resolveTarget(document: StoreApi<DocumentState>, input: ActionIn
             if (exact) {
                 return { status: 'found', value: exact };
             }
-            const qualified = named(name, targets, (agent) => `${agent.name} (${agent.view})`);
-            return qualified.status === 'found' ? qualified : named(name, targets);
+            const qualified = matchName(name, targets, (agent) => `${agent.name} (${agent.view})`);
+            return qualified.status === 'found' ? qualified : matchName(name, targets);
         });
     }
     const projects = listedProjects();
@@ -169,8 +128,8 @@ export function resolveTarget(document: StoreApi<DocumentState>, input: ActionIn
         rows.map((row) => ({ id: row.projectId, name: row.name, kind: 'project', viewId: null, view: null, endpointId: row.endpointId, machine: row.machine }));
     // A project in use wins over one under Recent that shares its name.
     const inUseFirst = (rows: typeof projects) => (name: string) => {
-        const open = named(name, projectTargets(rows.filter((row) => !row.recent)));
-        return open.status === 'missing' ? named(name, projectTargets(rows)) : open;
+        const open = matchName(name, projectTargets(rows.filter((row) => !row.recent)));
+        return open.status === 'missing' ? matchName(name, projectTargets(rows)) : open;
     };
     if (names === null) {
         return current(target, projectTargets(projects.filter((row) => row.active)));
@@ -188,7 +147,7 @@ export function resolveTarget(document: StoreApi<DocumentState>, input: ActionIn
         machine: label
     }));
     const onMachine = machines.find((row) => row.id === machine) ?? null;
-    const matched: Match = onMachine ? { status: 'found', value: onMachine } : named(machine, machines);
+    const matched: Match = onMachine ? { status: 'found', value: onMachine } : matchName(machine, machines);
     if (matched.status !== 'found') {
         return {
             target,

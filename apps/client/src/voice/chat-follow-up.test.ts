@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem } from '@ruimte/contracts';
 import { applyEvent, type ChatState } from '@adecore/agents-react/state';
-import { chatCompletion, completionPrompt, spokenExcerpt } from '@/voice/chat-follow-up';
+import { chatCompletion, chatWaits } from '@/voice/chat-follow-up';
 
 function state(items: ChatItem[]): ChatState {
     const byId = Object.fromEntries(items.map((item) => [item.id, item]));
     return { info: {} as ChatInfo, items: byId, structure: byId, order: items.map((item) => item.id) };
 }
 
-describe('voice AI Chat follow-up', () => {
+describe('voice AI Chat follow-up in this window', () => {
     test('waits for the exact tracked turn to settle', () => {
         const chat = state([
             { id: 'old', kind: 'turn', createdAt: 1, turnId: 'old', state: 'done', endedAt: 2, costUsd: 0 },
@@ -82,32 +82,12 @@ describe('voice AI Chat follow-up', () => {
         expect(chatCompletion(chat, 'tracked')).toEqual({ state: 'error', answer: '' });
     });
 
-    test('turns a completion into a bounded instruction for Voice', () => {
-        const prompt = completionPrompt(
-            { key: 'local:chat', project: 'Original project', chat: 'Research', turnId: 'turn-1' },
-            { state: 'done', answer: 'I found the answer.' }
-        );
-        expect(prompt).toContain('AI Chat “Research”');
-        expect(prompt).toContain('Project: Original project');
-        expect(prompt).toContain('I found the answer.');
-        expect(prompt).toContain('ended with state done');
-        expect(prompt).toContain('End of quoted AI Chat result.');
-        expect(prompt).not.toContain('only the start');
-    });
-
-    test('gives the voice only the start of a long answer, cut where a sentence ends', () => {
-        const answer = `${'The first finding is solid. '.repeat(30)}${'More detail follows here. '.repeat(100)}`;
-        const { text, cut } = spokenExcerpt(answer);
-        expect(cut).toBe(true);
-        expect(text.length).toBeLessThanOrEqual(1200);
-        expect(text.endsWith('.')).toBe(true);
-        const prompt = completionPrompt({ key: 'local:chat-1', chat: 'Research', turnId: 'turn-1' }, { state: 'done', answer });
-        expect(prompt).toContain('This is only the start of a longer answer. chat.read on chat-1 reads the rest when the user asks.');
-    });
-
-    test('cuts a long answer without a sentence end where it fits, and says so', () => {
-        const { text, cut } = spokenExcerpt('x'.repeat(5000));
-        expect(cut).toBe(true);
-        expect(text).toBe(`${'x'.repeat(1200)}…`);
+    test('a chat names only the requests that still wait, in the order this window holds them', () => {
+        const chat = state([
+            { id: 'ask', kind: 'question', createdAt: 1, turnId: 't', state: 'pending', questions: [{ question: 'Which file?' }] } as never,
+            { id: 'done', kind: 'note', createdAt: 2, turnId: 't', level: 'info', text: 'Noted' }
+        ]);
+        expect(chatWaits(chat)).toEqual(['question: Which file?']);
+        expect(chatWaits(undefined)).toEqual([]);
     });
 });

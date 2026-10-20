@@ -33,6 +33,7 @@
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/service": "workspace:*",
         "@ruimte/telemetry": "workspace:*",
+        "@ruimte/voice": "workspace:*",
         "zod": "^4.6.5"
     },
     "devDependencies": {

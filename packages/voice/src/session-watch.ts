@@ -1,5 +1,4 @@
-import type { AgentRequest, AgentStatus } from '@ruimte/contracts';
-import type { ChatState } from '@adecore/agents-react/state';
+import type { AgentRequest, AgentStatus, ChatItem } from '@ruimte/contracts';
 
 /*
  * A chat or terminal agent Voice set to work. Voice follows it by itself, so a person never has to ask
@@ -41,8 +40,8 @@ export class VoiceSessionWatch {
     }
 
     /*
-     * The change a new status makes, if it is one to tell. An unknown status is a session this window
-     * cannot see right now, as after a project switch, and changes nothing. Idle before the first turn
+     * The change a new status makes, if it is one to tell. An unknown status is a session the caller
+     * cannot see right now, as after a project switch in a window, and changes nothing. Idle before the first turn
      * ran is an agent that has not started yet, not one that finished.
      */
     observe(key: string, status: AgentStatus | undefined): VoiceSessionChange | null {
@@ -101,18 +100,17 @@ function inputDescription(input: unknown): string | null {
     return typeof description === 'string' && description.trim() !== '' ? description : null;
 }
 
-/* Only what this window holds of the thread; a chat nobody here opened says what it waits on through chat.inspect. */
-export function chatWaits(chat: Pick<ChatState, 'items' | 'order'> | undefined): string[] {
-    if (!chat) {
+/* Only what the caller holds of the thread, in thread order; a chat whose thread is not held says what it waits on through chat.inspect. */
+export function chatWaits(items: readonly ChatItem[] | undefined): string[] {
+    if (!items) {
         return [];
     }
     return bounded(
-        chat.order.flatMap((id) => {
-            const item = chat.items[id];
-            if (item?.kind === 'approval' && item.decision === 'pending') {
+        items.flatMap((item) => {
+            if (item.kind === 'approval' && item.decision === 'pending') {
                 return [approvalLine(item.toolName, inputDescription(item.input))];
             }
-            if (item?.kind === 'question' && item.state === 'pending') {
+            if (item.kind === 'question' && item.state === 'pending') {
                 return item.questions.map((question) => `question: ${question.question}`);
             }
             return [];

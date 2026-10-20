@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { completionPrompt, type VoiceChatFollowUp } from '@/voice/chat-follow-up';
-import { VoiceCompletionDelivery, type VoiceDeliveryTimer } from '@/voice/completion-delivery';
-import type { LiveEvent } from '@/voice/live-session';
+import { VoiceCompletionDelivery, type VoiceDeliveryTimer } from './delivery.ts';
+import { completionPrompt, type VoiceChatFollowUp } from './follow-up.ts';
+import type { LiveEvent } from './live-event.ts';
 
-const followUp: VoiceChatFollowUp = { key: 'remote:chat', chat: 'Research', project: 'Atlas', turnId: 'turn-1' };
+const followUp: VoiceChatFollowUp = { key: 'remote:chat', chatId: 'chat', chat: 'Research', project: 'Atlas', turnId: 'turn-1' };
 const completion = { state: 'done' as const, answer: 'The report is ready.' };
 function ack(event: LiveEvent): LiveEvent {
     return {
