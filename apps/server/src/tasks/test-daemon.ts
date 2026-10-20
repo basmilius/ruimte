@@ -47,6 +47,7 @@ import type { PeerLinks } from '../peering/links.ts';
 import { UntrustedFolders } from '../peering/untrusted.ts';
 import { PeerTasks, type PeerTasksDeps } from '../peering/peer-tasks.ts';
 import { BundleStore } from '../git/bundles.ts';
+import { StartClaims } from '../actions/start-claims.ts';
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
@@ -331,9 +332,12 @@ export async function bootTestDaemon({
     tasks.onChange(() => queueMicrotask(recheck));
 
     const enqueue = (projectId: string, nodeId: string, work: OutboxWork): Promise<void> => outboxLink.enqueue(projectId, nodeId, work);
+    const startClaims = new StartClaims(home);
+    await startClaims.load();
     const host: CanvasHost = {
         projects: store,
         hiddenAgents: store.hiddenAgents,
+        startClaims,
         lineage,
         untrusted,
         starts: agentStartHost({
@@ -391,6 +395,21 @@ export async function bootTestDaemon({
         plans,
         agents: agentStates({ outbox, lineage, chats, sessions }),
         requests: chatRequests(chats),
+        // As `wireCanvasHost` has them, so Voice's reads and prompts run against the same chats here.
+        chatThreads: {
+            items: async (chatId) => chats.get(chatId)?.thread.list() ?? (await chats.readChat(chatId))?.items ?? null,
+            info: async (chatId) => chats.get(chatId)?.info ?? (await chats.readChat(chatId))?.info ?? null
+        },
+        chatPrompts: {
+            running: (chatId) => chats.get(chatId) !== undefined,
+            send: (chatId, text, delivery) => chats.send(chatId, text, delivery === undefined ? {} : { delivery })
+        },
+        terminals: {
+            agentOf: (sessionId) => {
+                const session = sessions.get(sessionId);
+                return session === undefined ? undefined : (session.agent ?? null);
+            }
+        },
         agentImages: { attach: (chatId, upload) => chats.attachAgentImage(chatId, upload) },
         visuals: { ...agentVisuals({ enabled: () => machine.visualReplies !== false, visuals, chats }), ...visualRender }
     };
