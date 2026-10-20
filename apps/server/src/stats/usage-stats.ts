@@ -85,12 +85,22 @@ export function countVerb(name: string): void {
     }
 }
 
+function chatCountersOf(provider: AgentKind): { chats: UsageCounterName; turns: UsageCounterName } | undefined {
+    return (USAGE_CHAT_COUNTERS as Partial<Record<AgentKind, { chats: UsageCounterName; turns: UsageCounterName }>>)[provider];
+}
+
 export function countChatStarted(provider: AgentKind): void {
-    countUsage(USAGE_CHAT_COUNTERS[provider].chats);
+    const counters = chatCountersOf(provider);
+    if (counters !== undefined) {
+        countUsage(counters.chats);
+    }
 }
 
 export function countTurn(provider: AgentKind): void {
-    countUsage(USAGE_CHAT_COUNTERS[provider].turns);
+    const counters = chatCountersOf(provider);
+    if (counters !== undefined) {
+        countUsage(counters.turns);
+    }
 }
 
 function isClientKind(kind: string): kind is UsageClientKind {

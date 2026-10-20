@@ -364,7 +364,11 @@
     "plan.list",
     "plan.apply",
     "provenance.read",
-    "provenance.review"
+    "provenance.review",
+    "nanogpt.status",
+    "nanogpt.configure",
+    "anthropic.status",
+    "anthropic.configure"
   ],
   "eventTypes": [
     "push.attention",

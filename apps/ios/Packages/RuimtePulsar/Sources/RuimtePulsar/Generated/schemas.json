@@ -948,6 +948,9 @@
                   "badge": {
                     "type": "string"
                   },
+                  "vendor": {
+                    "type": "string"
+                  },
                   "profile": {
                     "type": "string",
                     "minLength": 1
@@ -5963,7 +5966,9 @@
       "codex",
       "gemini",
       "copilot",
-      "apple"
+      "apple",
+      "nanogpt",
+      "anthropic-claude-api"
     ]
   },
   "AgentStatusSchema": {
@@ -6407,7 +6412,9 @@
                         "codex",
                         "gemini",
                         "copilot",
-                        "apple"
+                        "apple",
+                        "nanogpt",
+                        "anthropic-claude-api"
                       ]
                     },
                     "state": {
@@ -6651,7 +6658,9 @@
               "codex",
               "gemini",
               "copilot",
-              "apple"
+              "apple",
+              "nanogpt",
+              "anthropic-claude-api"
             ]
           },
           "runtimeMode": {
@@ -6741,7 +6750,9 @@
                   "codex",
                   "gemini",
                   "copilot",
-                  "apple"
+                  "apple",
+                  "nanogpt",
+                  "anthropic-claude-api"
                 ]
               },
               "agentSessionId": {
@@ -7399,7 +7410,9 @@
                 "codex",
                 "gemini",
                 "copilot",
-                "apple"
+                "apple",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "providerFixed": {
@@ -7578,7 +7591,9 @@
           "codex",
           "gemini",
           "copilot",
-          "apple"
+          "apple",
+          "nanogpt",
+          "anthropic-claude-api"
         ]
       },
       "terminal": {
@@ -8612,7 +8627,9 @@
                         "codex",
                         "gemini",
                         "copilot",
-                        "apple"
+                        "apple",
+                        "nanogpt",
+                        "anthropic-claude-api"
                       ]
                     },
                     "agentSessionId": {
@@ -8946,7 +8963,9 @@
           "codex",
           "gemini",
           "copilot",
-          "apple"
+          "apple",
+          "nanogpt",
+          "anthropic-claude-api"
         ]
       },
       "account": {
@@ -9025,7 +9044,9 @@
                   "codex",
                   "gemini",
                   "copilot",
-                  "apple"
+                  "apple",
+                  "nanogpt",
+                  "anthropic-claude-api"
                 ]
               },
               "agentSessionId": {
@@ -12540,7 +12561,9 @@
           "codex",
           "gemini",
           "copilot",
-          "apple"
+          "apple",
+          "nanogpt",
+          "anthropic-claude-api"
         ]
       },
       "account": {
@@ -12607,7 +12630,9 @@
           "codex",
           "gemini",
           "copilot",
-          "apple"
+          "apple",
+          "nanogpt",
+          "anthropic-claude-api"
         ]
       },
       "account": {
@@ -14963,7 +14988,9 @@
               "codex",
               "gemini",
               "copilot",
-              "apple"
+              "apple",
+              "nanogpt",
+              "anthropic-claude-api"
             ]
           },
           "account": {
@@ -20730,7 +20757,9 @@
                         "codex",
                         "gemini",
                         "copilot",
-                        "apple"
+                        "apple",
+                        "nanogpt",
+                        "anthropic-claude-api"
                       ]
                     },
                     "account": {
@@ -21386,7 +21415,9 @@
                         "codex",
                         "gemini",
                         "copilot",
-                        "apple"
+                        "apple",
+                        "nanogpt",
+                        "anthropic-claude-api"
                       ]
                     },
                     "account": {
@@ -24758,7 +24789,9 @@
           "codex",
           "gemini",
           "copilot",
-          "apple"
+          "apple",
+          "nanogpt",
+          "anthropic-claude-api"
         ]
       },
       "account": {
@@ -25418,7 +25451,9 @@
             "codex",
             "gemini",
             "copilot",
-            "apple"
+            "apple",
+            "nanogpt",
+            "anthropic-claude-api"
           ]
         },
         "additionalProperties": {
@@ -25456,7 +25491,9 @@
             "codex",
             "gemini",
             "copilot",
-            "apple"
+            "apple",
+            "nanogpt",
+            "anthropic-claude-api"
           ]
         },
         "additionalProperties": {
@@ -25650,7 +25687,9 @@
           "codex",
           "gemini",
           "copilot",
-          "apple"
+          "apple",
+          "nanogpt",
+          "anthropic-claude-api"
         ]
       },
       "selection": {
@@ -25706,7 +25745,9 @@
               "codex",
               "gemini",
               "copilot",
-              "apple"
+              "apple",
+              "nanogpt",
+              "anthropic-claude-api"
             ]
           },
           "account": {
@@ -26475,7 +26516,9 @@
                   "codex",
                   "gemini",
                   "copilot",
-                  "apple"
+                  "apple",
+                  "nanogpt",
+                  "anthropic-claude-api"
                 ]
               },
               "account": {
@@ -29108,7 +29151,9 @@
               "codex",
               "gemini",
               "copilot",
-              "apple"
+              "apple",
+              "nanogpt",
+              "anthropic-claude-api"
             ]
           },
           "cwd": {
@@ -29848,7 +29893,9 @@
                 "codex",
                 "gemini",
                 "copilot",
-                "apple"
+                "apple",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "account": {
@@ -29890,7 +29937,9 @@
                 "codex",
                 "gemini",
                 "copilot",
-                "apple"
+                "apple",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "reason": {
@@ -30672,7 +30721,9 @@
                 "codex",
                 "gemini",
                 "copilot",
-                "apple"
+                "apple",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "name": {
@@ -30700,6 +30751,9 @@
                     "type": "string"
                   },
                   "badge": {
+                    "type": "string"
+                  },
+                  "vendor": {
                     "type": "string"
                   },
                   "legacy": {
@@ -31074,7 +31128,9 @@
             "codex",
             "gemini",
             "copilot",
-            "apple"
+            "apple",
+            "nanogpt",
+            "anthropic-claude-api"
           ]
         },
         "additionalProperties": {
@@ -31308,7 +31364,9 @@
             "codex",
             "gemini",
             "copilot",
-            "apple"
+            "apple",
+            "nanogpt",
+            "anthropic-claude-api"
           ]
         },
         "additionalProperties": {
@@ -31476,7 +31534,9 @@
             "codex",
             "gemini",
             "copilot",
-            "apple"
+            "apple",
+            "nanogpt",
+            "anthropic-claude-api"
           ]
         },
         "additionalProperties": {
@@ -31500,7 +31560,9 @@
           "codex",
           "gemini",
           "copilot",
-          "apple"
+          "apple",
+          "nanogpt",
+          "anthropic-claude-api"
         ]
       },
       "label": {
@@ -31667,7 +31729,9 @@
             "codex",
             "gemini",
             "copilot",
-            "apple"
+            "apple",
+            "nanogpt",
+            "anthropic-claude-api"
           ]
         },
         "additionalProperties": {
@@ -32241,7 +32305,9 @@
                               "codex",
                               "gemini",
                               "copilot",
-                              "apple"
+                              "apple",
+                              "nanogpt",
+                              "anthropic-claude-api"
                             ]
                           },
                           {
@@ -32297,7 +32363,9 @@
                                     "codex",
                                     "gemini",
                                     "copilot",
-                                    "apple"
+                                    "apple",
+                                    "nanogpt",
+                                    "anthropic-claude-api"
                                   ]
                                 },
                                 {
@@ -32360,7 +32428,9 @@
                                       "codex",
                                       "gemini",
                                       "copilot",
-                                      "apple"
+                                      "apple",
+                                      "nanogpt",
+                                      "anthropic-claude-api"
                                     ]
                                   },
                                   {
@@ -33522,7 +33592,9 @@
                               "codex",
                               "gemini",
                               "copilot",
-                              "apple"
+                              "apple",
+                              "nanogpt",
+                              "anthropic-claude-api"
                             ]
                           },
                           "account": {
@@ -34232,7 +34304,9 @@
                             "codex",
                             "gemini",
                             "copilot",
-                            "apple"
+                            "apple",
+                            "nanogpt",
+                            "anthropic-claude-api"
                           ]
                         },
                         "account": {
@@ -34528,7 +34602,9 @@
                             "codex",
                             "gemini",
                             "copilot",
-                            "apple"
+                            "apple",
+                            "nanogpt",
+                            "anthropic-claude-api"
                           ]
                         },
                         "account": {
@@ -37145,7 +37221,9 @@
                               "codex",
                               "gemini",
                               "copilot",
-                              "apple"
+                              "apple",
+                              "nanogpt",
+                              "anthropic-claude-api"
                             ]
                           },
                           "account": {
@@ -37855,7 +37933,9 @@
                             "codex",
                             "gemini",
                             "copilot",
-                            "apple"
+                            "apple",
+                            "nanogpt",
+                            "anthropic-claude-api"
                           ]
                         },
                         "account": {
@@ -38151,7 +38231,9 @@
                             "codex",
                             "gemini",
                             "copilot",
-                            "apple"
+                            "apple",
+                            "nanogpt",
+                            "anthropic-claude-api"
                           ]
                         },
                         "account": {
@@ -41223,7 +41305,9 @@
           "codex",
           "gemini",
           "copilot",
-          "apple"
+          "apple",
+          "nanogpt",
+          "anthropic-claude-api"
         ]
       },
       "account": {
@@ -41546,7 +41630,9 @@
           "codex",
           "gemini",
           "copilot",
-          "apple"
+          "apple",
+          "nanogpt",
+          "anthropic-claude-api"
         ]
       },
       "model": {
@@ -50977,7 +51063,9 @@
           "codex",
           "gemini",
           "copilot",
-          "apple"
+          "apple",
+          "nanogpt",
+          "anthropic-claude-api"
         ]
       }
     },
@@ -51125,7 +51213,9 @@
               "codex",
               "gemini",
               "copilot",
-              "apple"
+              "apple",
+              "nanogpt",
+              "anthropic-claude-api"
             ]
           },
           {
@@ -51158,7 +51248,9 @@
           "codex",
           "gemini",
           "copilot",
-          "apple"
+          "apple",
+          "nanogpt",
+          "anthropic-claude-api"
         ]
       }
     },
@@ -51443,7 +51535,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "model": {
@@ -51537,7 +51631,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "model": {
@@ -51651,7 +51747,9 @@
                 "type": "string",
                 "enum": [
                   "claude",
-                  "codex"
+                  "codex",
+                  "nanogpt",
+                  "anthropic-claude-api"
                 ]
               },
               "additionalProperties": {
@@ -51846,7 +51944,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "path": {
@@ -51888,7 +51988,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "label": {
@@ -51959,7 +52061,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "account": {
@@ -52143,7 +52247,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "account": {
@@ -54303,7 +54409,9 @@
                     "codex",
                     "gemini",
                     "copilot",
-                    "apple"
+                    "apple",
+                    "nanogpt",
+                    "anthropic-claude-api"
                   ]
                 },
                 "state": {
@@ -55126,7 +55234,9 @@
                     "codex",
                     "gemini",
                     "copilot",
-                    "apple"
+                    "apple",
+                    "nanogpt",
+                    "anthropic-claude-api"
                   ]
                 },
                 "state": {
@@ -55736,7 +55846,9 @@
                     "codex",
                     "gemini",
                     "copilot",
-                    "apple"
+                    "apple",
+                    "nanogpt",
+                    "anthropic-claude-api"
                   ]
                 },
                 "state": {
@@ -56304,7 +56416,9 @@
                     "codex",
                     "gemini",
                     "copilot",
-                    "apple"
+                    "apple",
+                    "nanogpt",
+                    "anthropic-claude-api"
                   ]
                 },
                 "state": {
@@ -56405,7 +56519,9 @@
                     "codex",
                     "gemini",
                     "copilot",
-                    "apple"
+                    "apple",
+                    "nanogpt",
+                    "anthropic-claude-api"
                   ]
                 },
                 "state": {
@@ -56448,7 +56564,9 @@
                 "codex",
                 "gemini",
                 "copilot",
-                "apple"
+                "apple",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "path": {
@@ -56494,7 +56612,9 @@
           "codex",
           "gemini",
           "copilot",
-          "apple"
+          "apple",
+          "nanogpt",
+          "anthropic-claude-api"
         ]
       },
       "on": {
@@ -56525,7 +56645,9 @@
                     "codex",
                     "gemini",
                     "copilot",
-                    "apple"
+                    "apple",
+                    "nanogpt",
+                    "anthropic-claude-api"
                   ]
                 },
                 "state": {
@@ -57060,7 +57182,9 @@
                     "codex",
                     "gemini",
                     "copilot",
-                    "apple"
+                    "apple",
+                    "nanogpt",
+                    "anthropic-claude-api"
                   ]
                 },
                 "state": {
@@ -57815,7 +57939,9 @@
                 "codex",
                 "gemini",
                 "copilot",
-                "apple"
+                "apple",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "account": {
@@ -59385,7 +59511,9 @@
                 "codex",
                 "gemini",
                 "copilot",
-                "apple"
+                "apple",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "at": {
@@ -59495,6 +59623,253 @@
     },
     "required": [
       "updated"
+    ]
+  },
+  "request.nanogpt.status.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.nanogpt.status.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "configured": {
+        "type": "boolean"
+      },
+      "models": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "autoContinue": {
+            "type": "boolean"
+          },
+          "roundsPerRun": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 200
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "required": [
+          "autoContinue",
+          "roundsPerRun",
+          "runs"
+        ]
+      }
+    },
+    "required": [
+      "configured",
+      "models"
+    ]
+  },
+  "request.nanogpt.configure.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "apiKey": {
+        "type": "string",
+        "maxLength": 4096
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "autoContinue": {
+            "type": "boolean"
+          },
+          "roundsPerRun": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 200
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        }
+      }
+    }
+  },
+  "request.nanogpt.configure.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "configured": {
+        "type": "boolean"
+      },
+      "models": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "autoContinue": {
+            "type": "boolean"
+          },
+          "roundsPerRun": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 200
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "required": [
+          "autoContinue",
+          "roundsPerRun",
+          "runs"
+        ]
+      }
+    },
+    "required": [
+      "configured",
+      "models"
+    ]
+  },
+  "request.anthropic.status.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.anthropic.status.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "configured": {
+        "type": "boolean"
+      },
+      "models": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "autoContinue": {
+            "type": "boolean"
+          },
+          "roundsPerRun": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 200
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "maxOutputTokens": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 128000
+          }
+        },
+        "required": [
+          "autoContinue",
+          "roundsPerRun",
+          "runs",
+          "maxOutputTokens"
+        ]
+      }
+    },
+    "required": [
+      "configured",
+      "models"
+    ]
+  },
+  "request.anthropic.configure.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "apiKey": {
+        "type": "string",
+        "maxLength": 4096
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "autoContinue": {
+            "type": "boolean"
+          },
+          "roundsPerRun": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 200
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "maxOutputTokens": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 128000
+          }
+        }
+      }
+    }
+  },
+  "request.anthropic.configure.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "configured": {
+        "type": "boolean"
+      },
+      "models": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "autoContinue": {
+            "type": "boolean"
+          },
+          "roundsPerRun": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 200
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "maxOutputTokens": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 128000
+          }
+        },
+        "required": [
+          "autoContinue",
+          "roundsPerRun",
+          "runs",
+          "maxOutputTokens"
+        ]
+      }
+    },
+    "required": [
+      "configured",
+      "models"
     ]
   },
   "event.push.attention": {
@@ -59758,7 +60133,9 @@
                   "codex",
                   "gemini",
                   "copilot",
-                  "apple"
+                  "apple",
+                  "nanogpt",
+                  "anthropic-claude-api"
                 ]
               },
               "agentSessionId": {
@@ -62241,7 +62618,9 @@
                       "codex",
                       "gemini",
                       "copilot",
-                      "apple"
+                      "apple",
+                      "nanogpt",
+                      "anthropic-claude-api"
                     ]
                   },
                   "account": {
@@ -62897,7 +63276,9 @@
                       "codex",
                       "gemini",
                       "copilot",
-                      "apple"
+                      "apple",
+                      "nanogpt",
+                      "anthropic-claude-api"
                     ]
                   },
                   "account": {
@@ -65200,7 +65581,9 @@
               "codex",
               "gemini",
               "copilot",
-              "apple"
+              "apple",
+              "nanogpt",
+              "anthropic-claude-api"
             ]
           },
           "account": {
@@ -66327,7 +66710,9 @@
                     "codex",
                     "gemini",
                     "copilot",
-                    "apple"
+                    "apple",
+                    "nanogpt",
+                    "anthropic-claude-api"
                   ]
                 },
                 "state": {
@@ -67232,7 +67617,9 @@
                               "codex",
                               "gemini",
                               "copilot",
-                              "apple"
+                              "apple",
+                              "nanogpt",
+                              "anthropic-claude-api"
                             ]
                           },
                           "account": {
@@ -67942,7 +68329,9 @@
                             "codex",
                             "gemini",
                             "copilot",
-                            "apple"
+                            "apple",
+                            "nanogpt",
+                            "anthropic-claude-api"
                           ]
                         },
                         "account": {
@@ -68238,7 +68627,9 @@
                             "codex",
                             "gemini",
                             "copilot",
-                            "apple"
+                            "apple",
+                            "nanogpt",
+                            "anthropic-claude-api"
                           ]
                         },
                         "account": {
@@ -70482,7 +70873,9 @@
                     "codex",
                     "gemini",
                     "copilot",
-                    "apple"
+                    "apple",
+                    "nanogpt",
+                    "anthropic-claude-api"
                   ]
                 },
                 {
@@ -70538,7 +70931,9 @@
                           "codex",
                           "gemini",
                           "copilot",
-                          "apple"
+                          "apple",
+                          "nanogpt",
+                          "anthropic-claude-api"
                         ]
                       },
                       {
@@ -70601,7 +70996,9 @@
                             "codex",
                             "gemini",
                             "copilot",
-                            "apple"
+                            "apple",
+                            "nanogpt",
+                            "anthropic-claude-api"
                           ]
                         },
                         {
@@ -72948,7 +73345,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "anthropic-claude-api"
               ]
             },
             "account": {
@@ -73264,7 +73663,9 @@
             "codex",
             "gemini",
             "copilot",
-            "apple"
+            "apple",
+            "nanogpt",
+            "anthropic-claude-api"
           ]
         },
         "additionalProperties": {

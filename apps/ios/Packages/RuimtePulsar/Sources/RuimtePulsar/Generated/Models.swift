@@ -931,15 +931,17 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
     public let `slug`: String
     public let `name`: String
     public let `badge`: String?
+    public let `vendor`: String?
     public let `profile`: String
     public let `aliases`: [String]?
     public let `legacy`: Bool?
     public let `minCliVersion`: String?
 
-    public init(`slug`: String, `name`: String, `badge`: String? = nil, `profile`: String, `aliases`: [String]? = nil, `legacy`: Bool? = nil, `minCliVersion`: String? = nil) {
+    public init(`slug`: String, `name`: String, `badge`: String? = nil, `vendor`: String? = nil, `profile`: String, `aliases`: [String]? = nil, `legacy`: Bool? = nil, `minCliVersion`: String? = nil) {
         self.`slug` = `slug`
         self.`name` = `name`
         self.`badge` = `badge`
+        self.`vendor` = `vendor`
         self.`profile` = `profile`
         self.`aliases` = `aliases`
         self.`legacy` = `legacy`
@@ -951,6 +953,7 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
         `slug` = try container.decode(String.self, forKey: .`slug`)
         `name` = try container.decode(String.self, forKey: .`name`)
         `badge` = try container.decodeIfPresent(String.self, forKey: .`badge`)
+        `vendor` = try container.decodeIfPresent(String.self, forKey: .`vendor`)
         `profile` = try container.decode(String.self, forKey: .`profile`)
         `aliases` = try container.decodeIfPresent([String].self, forKey: .`aliases`)
         `legacy` = try container.decodeIfPresent(Bool.self, forKey: .`legacy`)
@@ -962,6 +965,7 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
         try container.encode(`slug`, forKey: .`slug`)
         try container.encode(`name`, forKey: .`name`)
         try container.encodeIfPresent(`badge`, forKey: .`badge`)
+        try container.encodeIfPresent(`vendor`, forKey: .`vendor`)
         try container.encode(`profile`, forKey: .`profile`)
         try container.encodeIfPresent(`aliases`, forKey: .`aliases`)
         try container.encodeIfPresent(`legacy`, forKey: .`legacy`)
@@ -972,6 +976,7 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
         case `slug` = "slug"
         case `name` = "name"
         case `badge` = "badge"
+        case `vendor` = "vendor"
         case `profile` = "profile"
         case `aliases` = "aliases"
         case `legacy` = "legacy"
@@ -3556,6 +3561,8 @@ public enum AgentKind: String, CaseIterable, Codable, Sendable, Equatable {
     case `gemini` = "gemini"
     case `copilot` = "copilot"
     case `apple` = "apple"
+    case `nanogpt` = "nanogpt"
+    case `anthropicClaudeApi` = "anthropic-claude-api"
 }
 
 public enum AgentStatus: String, CaseIterable, Codable, Sendable, Equatable {

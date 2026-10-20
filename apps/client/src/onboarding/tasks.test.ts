@@ -113,6 +113,16 @@ describe('the providers task', () => {
         expect(joinNames(['A', 'B', 'C'])).toBe('A, B and C');
     });
 
+    test('leaves out the providers that are an API with a key, set or not, since there is no CLI to install or log in to', () => {
+        const apis = [
+            provider('nanogpt', 'NanoGPT Subscription', false),
+            provider('anthropic-claude-api', 'Claude API', false),
+            provider('anthropic-claude-api', 'Claude API', true)
+        ];
+        expect(missingClisOf([...PROVIDERS, ...apis])).toEqual(['Gemini CLI', 'Copilot']);
+        expect(cliRowsOf([...PROVIDERS, ...apis], accounts({})).map((row) => row.provider.kind)).toEqual(['claude', 'codex']);
+    });
+
     test('counts a login only for a CLI that has one, and says who', () => {
         const gemini = cliRowsOf([provider('gemini', 'Gemini CLI', true)], {
             ...accounts({}),

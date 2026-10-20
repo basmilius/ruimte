@@ -139,13 +139,17 @@ export const USAGE_VIEW_COUNTERS = {
     database: 'viewsDatabase'
 } as const satisfies Record<string, UsageCounter>;
 
+/*
+ * The chats and turns a machine counts per provider. A provider without an entry is not counted: `work`
+ * holds nineteen of the twenty doubles a point may carry, so a new pair needs a point with room first.
+ */
 export const USAGE_CHAT_COUNTERS = {
     claude: { chats: 'chatsClaude', turns: 'turnsClaude' },
     codex: { chats: 'chatsCodex', turns: 'turnsCodex' },
     gemini: { chats: 'chatsGemini', turns: 'turnsGemini' },
     copilot: { chats: 'chatsCopilot', turns: 'turnsCopilot' },
     apple: { chats: 'chatsApple', turns: 'turnsApple' }
-} as const satisfies Record<AgentKind, { chats: UsageCounter; turns: UsageCounter }>;
+} as const satisfies Partial<Record<AgentKind, { chats: UsageCounter; turns: UsageCounter }>>;
 
 // Every `ruimte-context` verb in one group, since twenty doubles hold fewer than the verbs there are.
 export const USAGE_VERB_COUNTERS = {

@@ -54,7 +54,7 @@ enum ChatForking {
     static func forkable(_ kind: AgentKind) -> Bool {
         switch kind {
         case .claude, .codex: true
-        case .gemini, .copilot, .apple: false
+        case .gemini, .copilot, .apple, .nanogpt, .anthropicClaudeApi: false
         }
     }
 

@@ -1380,6 +1380,70 @@
             "unavailable": "Het lokale model is niet beschikbaar.",
             "saveFailed": "Apple Foundation Models kon niet worden gewijzigd",
             "requiresMac": "Vereist een Mac met Apple silicon."
+        },
+        "nanogpt": {
+            "description": "Chat met de modellen die je NanoGPT-abonnement bevat. Verzoeken gaan alleen naar de abonnements-API, nooit naar pay as you go.",
+            "footer": "De sleutel blijft op deze machine en wordt nooit meer getoond. Elke tool die een model vraagt, heeft jouw goedkeuring nodig.",
+            "key": "API-sleutel",
+            "keyDescription": "Een abonnements-API-sleutel van nano-gpt.com. Bij opslaan wordt hij gecontroleerd en worden de inbegrepen modellen opgehaald.",
+            "saved": "Opgeslagen",
+            "status": "Abonnement",
+            "save": "Opslaan",
+            "refresh": "Modellen vernieuwen",
+            "disconnect": "Ontkoppelen",
+            "loading": "Bezig met controleren bij NanoGPT…",
+            "unknown": "De machine heeft nog niet geantwoord.",
+            "ready_one": "Gekoppeld, {{count}} model inbegrepen.",
+            "ready_other": "Gekoppeld, {{count}} modellen inbegrepen.",
+            "disconnected": "Geen sleutel opgeslagen op deze machine.",
+            "unavailable": "Deze machine biedt NanoGPT nog niet aan. Werk Ruimte daar bij.",
+            "failed": "NanoGPT kon niet worden gewijzigd op deze machine.",
+            "continue": {
+                "label": "Automatisch doorgaan",
+                "description": "Als een chat zijn toolrondes voor één run bereikt, gaat hij zelf verder. Uit, dan stopt hij en wacht op jouw bericht."
+            },
+            "rounds": {
+                "label": "Toolrondes per run",
+                "description": "Hoeveel rondes tools een run neemt voordat hij wordt afgekapt, van 5 tot 200."
+            },
+            "runs": {
+                "label": "Runs voordat hij stopt",
+                "description": "Hoeveel runs een chat zelf neemt, van 1 tot 20. Elke call kost van je allowance, dus dit is de rem op een lus die nooit stopt."
+            }
+        },
+        "claudeApi": {
+            "description": "Chat met Claude via de API, met een eigen sleutel. Anthropic rekent elke call per token af, dus houd je uitgaven daar in de gaten.",
+            "footer": "De sleutel blijft op deze machine en wordt nooit meer getoond. Elke tool die een model vraagt, heeft jouw goedkeuring nodig, en een chat gaat niet zelf door tenzij je dat hieronder toestaat.",
+            "key": "API-sleutel",
+            "keyDescription": "Een sleutel van console.anthropic.com. Bij opslaan wordt hij gecontroleerd en worden de modellen opgehaald die hij mag gebruiken.",
+            "saved": "Opgeslagen",
+            "status": "API-sleutel",
+            "save": "Opslaan",
+            "refresh": "Modellen vernieuwen",
+            "disconnect": "Ontkoppelen",
+            "loading": "Bezig met controleren bij Anthropic…",
+            "unknown": "De machine heeft nog niet geantwoord.",
+            "ready_one": "Gekoppeld, {{count}} model beschikbaar.",
+            "ready_other": "Gekoppeld, {{count}} modellen beschikbaar.",
+            "disconnected": "Geen sleutel opgeslagen op deze machine.",
+            "unavailable": "Deze machine biedt de Claude API nog niet aan. Werk Ruimte daar bij.",
+            "failed": "De Claude API kon niet worden gewijzigd op deze machine.",
+            "continue": {
+                "label": "Automatisch doorgaan",
+                "description": "Als een chat zijn toolrondes voor één run bereikt, gaat hij zelf verder, en elke call kost geld. Uit, dan stopt hij en wacht op jouw bericht."
+            },
+            "rounds": {
+                "label": "Toolrondes per run",
+                "description": "Hoeveel rondes tools een run neemt voordat hij wordt afgekapt, van 5 tot 200."
+            },
+            "runs": {
+                "label": "Runs voordat hij stopt",
+                "description": "Hoeveel runs een chat zelf neemt, van 1 tot 20. Dit is de rem op een lus die nooit stopt."
+            },
+            "tokens": {
+                "label": "Outputtokens per antwoord",
+                "description": "Het meeste dat één antwoord mag gebruiken, van 1.024 tot 128.000, en nooit meer dan het model toestaat. Denken telt mee."
+            }
         }
     }
 }

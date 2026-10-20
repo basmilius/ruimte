@@ -31,9 +31,9 @@ export interface OnboardingFacts {
     computer: ComputerSetupPhase;
 }
 
-/* Apple's on-device model is a provider with no CLI to install or log in to. */
+/* Apple's on-device model and the APIs a person gives a key to (NanoGPT, Claude) are providers with no CLI to install or log in to. */
 function isCli(provider: ProviderInfo): boolean {
-    return provider.kind !== 'apple';
+    return provider.kind !== 'apple' && provider.kind !== 'nanogpt' && provider.kind !== 'anthropic-claude-api';
 }
 
 export function cliRowsOf(providers: readonly ProviderInfo[], accounts: ProviderAccounts | null): CliRow[] {

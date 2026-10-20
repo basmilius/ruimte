@@ -273,6 +273,10 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `planApply` = "plan.apply"
     case `provenanceRead` = "provenance.read"
     case `provenanceReview` = "provenance.review"
+    case `nanogptStatus` = "nanogpt.status"
+    case `nanogptConfigure` = "nanogpt.configure"
+    case `anthropicStatus` = "anthropic.status"
+    case `anthropicConfigure` = "anthropic.configure"
 
     public func validatePayload(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\(rawValue).payload", value) }
     public func validateResult(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\(rawValue).result", value) }
