@@ -12,6 +12,7 @@ final class LocalizationTests: XCTestCase {
         "Extensions/NotificationService/InfoPlist.xcstrings",
         "Packages/RuimtePulsar/Sources/RuimtePulsar/Localizable.xcstrings",
         "Packages/RuimteTransport/Sources/RuimteTransport/Localizable.xcstrings",
+        "Packages/RuimteVoice/Sources/RuimteVoice/Localizable.xcstrings",
     ]
 
     func testEveryStringHasADutchTranslation() throws {

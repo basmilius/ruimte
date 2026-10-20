@@ -1,0 +1,66 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "The Voice connection closed." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De verbinding van Voice is gesloten."
+          }
+        }
+      }
+    },
+    "Voice already has a connection." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice heeft al een verbinding."
+          }
+        }
+      }
+    },
+    "WebRTC could not add the microphone." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WebRTC kon de microfoon niet toevoegen."
+          }
+        }
+      }
+    },
+    "WebRTC could not create the Voice connection." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WebRTC kon de verbinding voor Voice niet maken."
+          }
+        }
+      }
+    },
+    "WebRTC could not open the captions channel." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WebRTC kon het kanaal voor de ondertitels niet openen."
+          }
+        }
+      }
+    },
+    "WebRTC made no offer for Voice." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WebRTC maakte geen aanbod voor Voice."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
