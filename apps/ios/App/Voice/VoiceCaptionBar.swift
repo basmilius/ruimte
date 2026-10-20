@@ -1,3 +1,4 @@
+import RuimtePulsar
 import RuimteVoice
 import SwiftUI
 import UIKit
@@ -5,10 +6,18 @@ import UIKit
 extension VoiceTarget {
     /// A project's page as Voice works in it, with the canvas on screen when the page shows one.
     @MainActor init(_ workspace: MobileWorkspace, shown: String?) {
-        let canvas = shown.flatMap { workspace.item($0) }.flatMap { $0.text("kind") == "canvas" ? $0.stableID : nil }
         self.init(
             machineID: workspace.session.machine.id, projectID: workspace.projectID, projectName: workspace.title,
-            viewID: canvas)
+            viewID: Self.canvas(shown: shown, views: workspace.views))
+    }
+
+    /// The canvas a shown id stands for: a canvas itself, or the canvas of a node opened on its own, which is what both
+    /// the iPhone and the iPad name as shown then.
+    static func canvas(shown: String?, views: [JSONValue]) -> String? {
+        guard let shown else { return nil }
+        let canvases = views.filter { $0.text("kind") == "canvas" }
+        if let canvas = canvases.first(where: { $0.stableID == shown }) { return canvas.stableID }
+        return canvases.first { $0.list("nodes").contains { $0.stableID == shown } }?.stableID
     }
 }
 

@@ -341,6 +341,19 @@ import Testing
         #expect(router.inspector == .voice)
     }
 
+    @Test func aNodeOpenedOnItsOwnNamesTheCanvasItStandsOn() {
+        let node: (String) -> JSONValue = { .object(["id": .string($0), "kind": .string("chat")]) }
+        let views: [JSONValue] = [
+            .object(["id": .string("first"), "kind": .string("canvas"), "nodes": .array([node("a")])]),
+            .object(["id": .string("second"), "kind": .string("canvas"), "nodes": .array([node("b")])]),
+            .object(["id": .string("notes"), "kind": .string("chat")]),
+        ]
+        #expect(VoiceTarget.canvas(shown: "second", views: views) == "second")
+        #expect(VoiceTarget.canvas(shown: "b", views: views) == "second", "Not the first canvas of the project")
+        #expect(VoiceTarget.canvas(shown: "notes", views: views) == nil, "A chat view stands on no canvas")
+        #expect(VoiceTarget.canvas(shown: nil, views: views) == nil)
+    }
+
     // MARK: Preferences
 
     @Test func theLanguagesAndVoicesAreTheOnesTheRequestTakes() {
