@@ -463,7 +463,8 @@ struct FileContentPage: View {
                 // Sound through the silent switch, as a video or a song does anywhere else on the phone. While Voice
                 // holds the audio the file plays in its session, since playback alone would turn its microphone off.
                 if AudioSessionController.shared.owner == nil {
-                    try? AVAudioSession.sharedInstance().setCategory(.playback, mode: isAudio ? .default : .moviePlayback)
+                    try? AVAudioSession.sharedInstance()
+                        .setCategory(.playback, mode: isAudio ? .default : .moviePlayback)
                 }
                 player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             } else {
