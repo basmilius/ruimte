@@ -75,6 +75,22 @@ describe('a terminal agent under an account', () => {
     });
 });
 
+describe('a terminal agent under a turned-off default account', () => {
+    // Needs the daemon of ADE CORE to refuse a named default account that is off (`envFor`).
+    test('refuses to start when it names that account and starts no shell, while one that names none still starts', async () => {
+        const { accounts: map } = accounts.snapshot();
+        await accounts.save({ ...map, claude: { ...map.claude, kind: 'claude', enabled: false } });
+        await expect(create('terminal-named-default', 'claude')).rejects.toMatchObject({
+            code: 'account-unavailable',
+            message: expect.stringContaining('it is turned off')
+        });
+        expect(harness.adapter.spawned.some((pty) => pty.options.env.RUIMTE_SESSION_ID === 'terminal-named-default')).toBe(false);
+
+        await create('terminal-default');
+        expect(harness.adapter.forSession('terminal-default').options.env.CLAUDE_CONFIG_DIR).toBeUndefined();
+    });
+});
+
 describe('a terminal agent that names no account', () => {
     test('starts under the account a person picked for new agents', async () => {
         preferred = 'claude_personal';

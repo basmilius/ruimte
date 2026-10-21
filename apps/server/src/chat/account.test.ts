@@ -318,6 +318,96 @@ describe('going on under another account after a limit', () => {
     });
 });
 
+describe('a turned-off default account', () => {
+    // The manual clock starts at 1 000 000 ms, so the fakes are told a reset ten minutes on, in seconds.
+    const RESET_AT = 1_600_000;
+
+    // The way Providers turns it off: the whole list saved again, the default account with `enabled: false`.
+    const turnOffDefault = async (): Promise<void> => {
+        const { accounts: map } = accounts.snapshot();
+        await accounts.save({ ...map, claude: { ...map.claude, kind: 'claude', enabled: false } });
+    };
+
+    // A transcript for the fake's one turn, in the folder of the default account, so a fork can copy it.
+    const transcriptOf = async (chatId: string): Promise<ChatTurnItem> => {
+        const sessionId = daemon.chats.get(chatId)!.info.agentSessionId!;
+        const [turn] = turnsOf(chatId);
+        const dir = join(daemon.chats.claudeProjectsDir, claudeProjectSlug(folder));
+        await mkdir(dir, { recursive: true });
+        const lines = [
+            { type: 'user', uuid: 'prompt-0', isSidechain: false, sessionId, message: { role: 'user', content: 'alpha' } },
+            { type: 'assistant', uuid: turn!.native!.lastUuid, isSidechain: false, sessionId, message: { content: [{ type: 'text', text: 'echo' }] } }
+        ];
+        await writeFile(join(dir, `${sessionId}.jsonl`), lines.map((line) => JSON.stringify(line)).join('\n'));
+        return turn!;
+    };
+
+    test('is handed to the accounts as named by a continue-on and a fork, not as the stored none', async () => {
+        const named: Array<string | undefined> = [];
+        const envFor = accounts.envFor.bind(accounts);
+        accounts.envFor = (kind, id, baseEnv) => {
+            named.push(id);
+            return envFor(kind, id, baseEnv);
+        };
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        await say('chat-lead', 'alpha');
+        const turn = await transcriptOf('chat-lead');
+        named.length = 0;
+        expect(await daemon.request('chat.fork', { chatId: 'chat-lead', turnId: turn.id, account: 'claude' })).toMatchObject({ ok: true });
+        expect(named).toContain('claude');
+
+        await daemon.chats.create({ chatId: 'chat-limited', provider: 'claude', cwd: folder, account: 'claude_personal' });
+        await say('chat-limited', `limit:${RESET_AT / 1000}`);
+        named.length = 0;
+        await daemon.request('chat.continueOn', { chatId: 'chat-limited', account: 'claude' });
+        expect(named[0]).toBe('claude');
+    });
+
+    // Needs the daemon of ADE CORE to refuse a named default account that is off (`envFor`, `ChatCore.createNow`).
+    test('refuses a new chat that names it, and still starts one that names no account', async () => {
+        await turnOffDefault();
+        const refused = await daemon.request('chat.create', { chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude' });
+        expect(refused).toMatchObject({ ok: false, error: { code: 'account-unavailable', message: expect.stringContaining('it is turned off') } });
+        expect(daemon.chats.get('chat-lead')).toBeUndefined();
+
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        expect(daemon.chats.get('chat-lead')!.info.account).toBeUndefined();
+    });
+
+    // Needs the daemon of ADE CORE to refuse a named default account that is off (`envFor`).
+    test('is refused for going on after a limit, and the chat stays where it was', async () => {
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude_personal' });
+        await say('chat-lead', `limit:${RESET_AT / 1000}`);
+        await turnOffDefault();
+        expect(await daemon.request('chat.continueOn', { chatId: 'chat-lead', account: 'claude' })).toMatchObject({
+            ok: false,
+            error: { code: 'account-unavailable', message: expect.stringContaining('it is turned off') }
+        });
+        expect(daemon.chats.get('chat-lead')!.info.account).toBe('claude_personal');
+        expect(turnsOf('chat-lead')).toHaveLength(1);
+    });
+
+    // Needs the daemon of ADE CORE to refuse a named default account that is off (`envFor`).
+    test('is refused for a fork that names it, also from a chat on it, while a fork that names none stays on it', async () => {
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        await say('chat-lead', 'alpha');
+        const turn = await transcriptOf('chat-lead');
+        await turnOffDefault();
+        const forks = async (): Promise<number> => ((await store.read(projectId)).views[0] as ProjectCanvasView).nodes.length;
+        const before = await forks();
+
+        expect(await daemon.request('chat.fork', { chatId: 'chat-lead', turnId: turn.id, account: 'claude' })).toMatchObject({
+            ok: false,
+            error: { code: 'account-unavailable', message: expect.stringContaining('it is turned off') }
+        });
+        expect(await forks()).toBe(before);
+
+        const inherited = await daemon.request('chat.fork', { chatId: 'chat-lead', turnId: turn.id });
+        expect(inherited).toMatchObject({ ok: true });
+        expect((inherited as { result: { info: ChatInfo } }).result.info.account).toBeUndefined();
+    });
+});
+
 describe('a child an agent opens', () => {
     const open = async (argv: string[]): Promise<string> => {
         const [line] = await runVerb(daemon, 'chat-lead', 'agent', argv);

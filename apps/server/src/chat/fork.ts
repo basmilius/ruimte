@@ -380,12 +380,11 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     }
     const provider = payload.provider ?? info.provider;
     const switching = provider !== info.provider;
+    // Checked as named, before the default account becomes none: a turned-off default account is refused, also from a chat on it.
+    requireAccount(deps, provider, payload.account);
     // The original's account while the fork stays with its CLI; another CLI starts on its own default one.
     const account = storedAccount(provider, payload.account ?? (switching ? undefined : info.account));
     const sameAccount = !switching && account === info.account;
-    if (!sameAccount) {
-        requireAccount(deps, provider, account);
-    }
     // Another CLI, or an account that cannot read the original's transcripts, reads the conversation as text instead.
     const handoff = switching || (!sameAccount && deps.accounts?.canContinue(provider, info.account, account) !== true);
     if (!CHAT_CLIS.has(info.provider) || !CHAT_CLIS.has(provider)) {
@@ -632,10 +631,14 @@ function requireAccount(deps: ChatForkDeps, kind: AgentKind, account: string | u
     if (account === undefined) {
         return;
     }
-    if (!deps.accounts) {
+    if (deps.accounts) {
+        deps.accounts.require(kind, account);
+        return;
+    }
+    // Without accounts the default one still starts, named or not.
+    if (storedAccount(kind, account) !== undefined) {
         throw new AccountError('account-unavailable', `The account '${account}' is not available on this machine: it keeps no accounts.`);
     }
-    deps.accounts.require(kind, account);
 }
 
 /*
