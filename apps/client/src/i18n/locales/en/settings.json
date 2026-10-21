@@ -885,17 +885,18 @@
         },
         "integrations": {
             "title": "Agent status in terminals",
-            "description": "Ruimte learns whether Claude Code or Codex in a terminal is working, done or waiting for you from hooks in that CLI's own settings. These settings are global: they apply to every run of the CLI on this computer, also outside Ruimte, where the hook does nothing.",
+            "description": "Ruimte learns whether a coding tool in a terminal is working, done or waiting for you from hooks in that tool's own settings. These settings are global: they apply to every run of the tool on this computer, also outside Ruimte, where the hook does nothing.",
             "dialog": {
                 "title": "Let Ruimte change your CLI settings?",
                 "description": "Ruimte would like to add a few settings to your coding tools. They apply to each tool everywhere on this computer, also outside Ruimte.",
                 "status": "Shows when a terminal is working, done or needs you.",
                 "statusAndTool": "Shows when a terminal is working, done or needs you. Also lets Ruimte's own tool run without asking.",
-                "tool": "Lets Ruimte's own tool run without asking."
+                "tool": "Lets Ruimte's own tool run without asking.",
+                "doneAndTool": "Shows when a terminal is done. Also lets Ruimte's own tool run without asking."
             },
             "off": "Without them, terminals running {{provider}} show no status and never ask for your attention. Chats are not affected; they get their status another way.",
             "codexRule": "For Codex this choice also covers the rule that lets ruimte-context run outside Codex's sandbox. Without it, Codex in a sandboxed mode cannot reach Ruimte: ruimte-context fails or asks for your approval each time, in terminals and chats.",
-            "antigravityRule": "For Antigravity this choice only covers the rule that lets ruimte-context run without asking, also outside its sandbox. Without it, Antigravity in a terminal asks for your approval each time it uses ruimte-context.",
+            "antigravityRule": "For Antigravity this choice also covers the rule that lets ruimte-context run without asking, also outside its sandbox. Without it, Antigravity in a terminal asks for your approval each time it uses ruimte-context.",
             "files": "Ruimte writes to:",
             "allow": "Allow",
             "deny": "Don't allow",
@@ -904,7 +905,7 @@
             "notNow": "Not now",
             "migrated": "Ruimte already added these to {{provider}}. Keep them, or remove them now.",
             "fixed": "This machine was started with --no-hooks, so Ruimte writes nothing into the CLIs' settings.",
-            "search": "hooks, status, Claude, Codex, Antigravity, settings.json",
+            "search": "hooks, status, Claude, Codex, Antigravity, Copilot, Grok, settings.json",
             "state": {
                 "on": "Allowed",
                 "off": "Not allowed"
@@ -1384,7 +1385,39 @@
             "ready": "The local model is ready.",
             "unavailable": "The local model is not available.",
             "saveFailed": "Could not change Apple Foundation Models",
-            "requiresMac": "Requires a Mac with Apple silicon."
+            "requiresMac": "Requires a Mac with Apple silicon.",
+            "off": "Off"
+        },
+        "nanogpt": {
+            "description": "Chat with the models your NanoGPT subscription includes. Requests go only to the subscription API, never to pay as you go.",
+            "footer": "The key stays on this machine and is never shown again. Every tool a model asks for needs your approval.",
+            "key": "API key",
+            "keyDescription": "A subscription API key from nano-gpt.com. Saving checks it and fetches the included models.",
+            "saved": "Saved",
+            "status": "Subscription",
+            "save": "Save",
+            "refresh": "Refresh models",
+            "disconnect": "Disconnect",
+            "loading": "Checking with NanoGPT…",
+            "unknown": "The machine has not answered yet.",
+            "ready_one": "Connected, {{count}} model included.",
+            "ready_other": "Connected, {{count}} models included.",
+            "disconnected": "No key saved on this machine.",
+            "unavailable": "This machine does not offer NanoGPT yet. Update Ruimte on it.",
+            "failed": "Could not change NanoGPT on this machine.",
+            "noKey": "No key",
+            "continue": {
+                "label": "Continue automatically",
+                "description": "When a chat reaches its tool rounds for one run, it goes on by itself. Off, it stops and waits for your message."
+            },
+            "rounds": {
+                "label": "Tool rounds per run",
+                "description": "How many rounds of tools a run takes before it is cut, from 5 to 200."
+            },
+            "runs": {
+                "label": "Runs before it stops",
+                "description": "How many runs a chat takes by itself, from 1 to 20. Every call spends your allowance, so this is the limit on a loop that never ends."
+            }
         },
         "acpServer": {
             "title": "{{name}} chat server",

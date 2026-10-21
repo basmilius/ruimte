@@ -118,6 +118,7 @@ function buildMachine(endpoint: Endpoint): Machine {
     const stopSnoozes = watchSnoozes(endpoint.id, transport);
     const stopPrWatches = watchPrWatches(endpoint.id, transport);
     const stopAccounts = watchProviderAccounts(endpoint.id, transport);
+    const stopProviderList = transport.on('provider.changed', ({ providers }) => providerSinkFor(endpoint.id).setProviders(providers));
     const stopFresh = transport.subscribeStatus((status) => {
         if (status === 'open') {
             clearedRows.delete(endpoint.id);
@@ -143,6 +144,7 @@ function buildMachine(endpoint: Endpoint): Machine {
             stopSnoozes();
             stopPrWatches();
             stopAccounts();
+            stopProviderList();
             stopFresh();
             clearedRows.delete(endpoint.id);
             plans.dispose();

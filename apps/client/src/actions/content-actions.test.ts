@@ -152,32 +152,70 @@ describe('notes', () => {
     });
 });
 
-describe('note colors', () => {
-    test('Voice gives a note another paper, undo brings the old one back, and a terminal has none', async () => {
-        const { registry } = fakes();
-        const colored = completed(await registry.execute('note.setColor', { viewId: 'main', nodeId: 'memo', color: 'blue' }, VOICE_ACTION_CALL));
-        expect(colored.output).toEqual({ viewId: 'main', nodeId: 'memo', color: 'blue', previousColor: 'yellow', changed: true });
-        expect(canvas().nodes.memo?.color).toBe('blue');
-        expect(await registry.undo(colored.undoToken!, VOICE_ACTION_CALL)).toMatchObject({ status: 'completed' });
-        expect(canvas().nodes.memo?.color).toBeUndefined();
+describe('node colors', () => {
+    function legacyNote(patch: { color?: string; accent?: string }): void {
+        const store = defaultCanvases.of('main');
+        const memo = store.getState().nodes.memo!;
+        store.setState({ nodes: { ...store.getState().nodes, memo: { ...memo, ...patch } } });
+    }
 
-        const same = completed(await registry.execute('note.setColor', { viewId: 'main', nodeId: 'memo', color: 'yellow' }, PERSON_ACTION_CALL));
-        expect(same.output.changed).toBe(false);
-        expect(same.undoToken).toBeUndefined();
-        expect(await registry.execute('note.setColor', { viewId: 'main', nodeId: 'shell', color: 'blue' }, PERSON_ACTION_CALL)).toMatchObject({
-            error: { code: 'not-a-note' }
-        });
-        expect(await registry.execute('note.setColor', { viewId: 'main', nodeId: 'memo', color: 'teal' }, PERSON_ACTION_CALL)).toMatchObject({
+    test('Voice gives a note a color it paints its paper with, and undo brings the note back as it was', async () => {
+        const { registry } = fakes();
+        const colored = completed(await registry.execute('node.setColor', { viewId: 'main', nodeId: 'memo', color: 'teal' }, VOICE_ACTION_CALL));
+        expect(colored.output).toEqual({ viewId: 'main', nodeId: 'memo', kind: 'note', color: 'teal', previousColor: null, changed: true });
+        expect(canvas().nodes.memo?.accent).toBe('teal');
+        expect(await registry.undo(colored.undoToken!, VOICE_ACTION_CALL)).toMatchObject({ status: 'completed' });
+        expect(canvas().nodes.memo?.accent).toBeUndefined();
+    });
+
+    test('a pick takes the old paper off a note, and undo puts both fields back', async () => {
+        const { registry } = fakes();
+        legacyNote({ color: 'green', accent: 'red' });
+        const colored = completed(await registry.execute('node.setColor', { viewId: 'main', nodeId: 'memo', color: 'red' }, PERSON_ACTION_CALL));
+        expect(colored.output).toMatchObject({ previousColor: 'green', changed: true });
+        expect(canvas().nodes.memo).toMatchObject({ accent: 'red', color: undefined });
+        expect(await registry.undo(colored.undoToken!, PERSON_ACTION_CALL)).toMatchObject({ status: 'completed' });
+        expect(canvas().nodes.memo).toMatchObject({ accent: 'red', color: 'green' });
+    });
+
+    test('the color an old note already shows still writes, so the file says what the note shows', async () => {
+        const { registry } = fakes();
+        legacyNote({ color: 'green' });
+        const same = completed(await registry.execute('node.setColor', { viewId: 'main', nodeId: 'memo', color: 'green' }, PERSON_ACTION_CALL));
+        expect(same.output).toMatchObject({ previousColor: 'green', changed: true });
+        expect(canvas().nodes.memo).toMatchObject({ accent: 'green', color: undefined });
+        const again = completed(await registry.execute('node.setColor', { viewId: 'main', nodeId: 'memo', color: 'green' }, PERSON_ACTION_CALL));
+        expect(again.output.changed).toBe(false);
+        expect(again.undoToken).toBeUndefined();
+    });
+
+    test('none gives an old note the default paper, not its old one', async () => {
+        const { registry } = fakes();
+        legacyNote({ color: 'gray' });
+        const cleared = completed(await registry.execute('node.setColor', { viewId: 'main', nodeId: 'memo', color: null }, VOICE_ACTION_CALL));
+        expect(cleared.output).toMatchObject({ color: null, previousColor: 'neutral', changed: true });
+        expect(canvas().nodes.memo).toMatchObject({ accent: undefined, color: undefined });
+    });
+
+    test('any node takes a color, and a name off the set or a node that is not there is refused', async () => {
+        const { registry } = fakes();
+        const colored = completed(await registry.execute('node.setColor', { viewId: 'main', nodeId: 'shell', color: 'violet' }, PERSON_ACTION_CALL));
+        expect(colored.output).toMatchObject({ kind: 'terminal', color: 'violet', previousColor: null, changed: true });
+        expect(canvas().nodes.shell?.accent).toBe('violet');
+        expect(await registry.execute('node.setColor', { viewId: 'main', nodeId: 'memo', color: 'gray' }, PERSON_ACTION_CALL)).toMatchObject({
             error: { code: 'invalid-input' }
+        });
+        expect(await registry.execute('node.setColor', { viewId: 'main', nodeId: 'gone', color: 'teal' }, PERSON_ACTION_CALL)).toMatchObject({
+            error: { code: 'unknown-node' }
         });
     });
 
     test('an undo after the canvas moved on is refused and keeps the color', async () => {
         const { registry } = fakes();
-        const colored = completed(await registry.execute('note.setColor', { viewId: 'main', nodeId: 'memo', color: 'pink' }, VOICE_ACTION_CALL));
+        const colored = completed(await registry.execute('node.setColor', { viewId: 'main', nodeId: 'memo', color: 'pink' }, VOICE_ACTION_CALL));
         canvas().updateNode('memo', { body: 'Later' }, true);
         expect(await registry.undo(colored.undoToken!, VOICE_ACTION_CALL)).toMatchObject({ error: { code: 'stale-undo' } });
-        expect(canvas().nodes.memo?.color).toBe('pink');
+        expect(canvas().nodes.memo?.accent).toBe('pink');
     });
 });
 

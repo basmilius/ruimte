@@ -67,9 +67,7 @@ export function IntegrationDetails({
                     </ul>
                 </div>
             )}
-            {consequence && entry.provider !== 'antigravity' && (
-                <p>{t('agents.integrations.off', { provider: INTEGRATION_NAMES[entry.provider] ?? entry.provider })}</p>
-            )}
+            {consequence && <p>{t('agents.integrations.off', { provider: INTEGRATION_NAMES[entry.provider] ?? entry.provider })}</p>}
             {entry.provider === 'codex' && <p>{t('agents.integrations.codexRule')}</p>}
             {entry.provider === 'antigravity' && <p>{t('agents.integrations.antigravityRule')}</p>}
         </div>
@@ -79,7 +77,7 @@ export function IntegrationDetails({
 // What a person gets from allowing each CLI, in one line; the files and the details live in the settings.
 const DIALOG_GAINS: Partial<Record<AgentKind, string>> = {
     codex: 'settings:agents.integrations.dialog.statusAndTool',
-    antigravity: 'settings:agents.integrations.dialog.tool'
+    antigravity: 'settings:agents.integrations.dialog.doneAndTool'
 };
 
 /*

@@ -16,7 +16,7 @@ import { askDeleteView, newFileViewsAfter, promoteLooseDatabase, promoteLooseFil
 import { useChats } from '@adecore/agents-react/state';
 import { useDocument } from '@/state/document';
 import { isDatabaseTab, isPromotableTab, useFiles } from '@/state/files';
-import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
+import { nodeProvider, nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { useUi } from '@/state/ui';
 import { useEndpointId, endpointOfNode } from '@/state/keys';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
@@ -142,7 +142,7 @@ export function Sidebar() {
                         title: node.title,
                         titleSource: node.titleSource,
                         kind: node.kind,
-                        provider: node.provider ?? null,
+                        provider: nodeProvider(node, chats, endpointId) ?? null,
                         status: nodeStatus(node, sessions, chats, endpointId) ?? null,
                         work: nodeWork(node, sessions, chats, endpointId),
                         draft: node.kind === 'chat' && drafts.includes(node.id),

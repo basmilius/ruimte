@@ -11,9 +11,9 @@ import {
     codexRulesPathIn,
     hasAntigravityRules,
     defaultConfigFolder,
+    holdsOurHook,
     hookPathIn,
     installInFolder,
-    isOurs,
     isRecord,
     type FolderInstall
 } from './install.ts';
@@ -22,7 +22,7 @@ import { revokeAntigravityRules, revokeCodexRules, revokeHooks, type LedgerEntry
 export const AGENT_INTEGRATIONS_FILE = 'agent-integrations.json';
 
 /* The CLIs whose global settings the daemon can wire. */
-export const INTEGRATION_KINDS = ['claude', 'codex', 'antigravity'] as const satisfies readonly AgentKind[];
+export const INTEGRATION_KINDS = ['claude', 'codex', 'antigravity', 'copilot', 'grok'] as const satisfies readonly AgentKind[];
 
 export function isIntegrationKind(kind: string): kind is (typeof INTEGRATION_KINDS)[number] {
     return (INTEGRATION_KINDS as readonly string[]).includes(kind);
@@ -79,15 +79,6 @@ async function jsonOrNull(path: string): Promise<unknown> {
     } catch {
         return null;
     }
-}
-
-function hasOurHook(config: unknown): boolean {
-    if (!isRecord(config) || !isRecord(config.hooks)) {
-        return false;
-    }
-    return Object.values(config.hooks).some(
-        (groups) => Array.isArray(groups) && groups.some((group) => isRecord(group) && Array.isArray(group.hooks) && group.hooks.some(isOurs))
-    );
 }
 
 async function hasOurRules(kind: AgentKind, path: string): Promise<boolean> {
@@ -275,7 +266,8 @@ export class AgentIntegrations {
                         () => true,
                         () => false
                     );
-                    const ours = present && (target.kind === 'rules' ? await hasOurRules(kind, target.path) : hasOurHook(await jsonOrNull(target.path)));
+                    const ours =
+                        present && (target.kind === 'rules' ? await hasOurRules(kind, target.path) : holdsOurHook(await jsonOrNull(target.path), kind));
                     files.push({ provider: kind, path: target.path, kind: target.kind, present, ours });
                 }
             }
@@ -300,14 +292,12 @@ export class AgentIntegrations {
     }
 
     private targetsIn(kind: AgentKind, folder: string): { path: string; kind: 'hooks' | 'rules' }[] {
-        if (kind === 'antigravity') {
-            return [{ path: antigravitySettingsPathIn(folder), kind: 'rules' }];
-        }
         const hooks = hookPathIn(kind, folder);
-        if (hooks === null) {
-            return [];
-        }
-        return [{ path: hooks, kind: 'hooks' }, ...(kind === 'codex' ? [{ path: codexRulesPathIn(folder), kind: 'rules' as const }] : [])];
+        return [
+            ...(kind === 'antigravity' ? [{ path: antigravitySettingsPathIn(folder), kind: 'rules' as const }] : []),
+            ...(hooks === null ? [] : [{ path: hooks, kind: 'hooks' as const }]),
+            ...(kind === 'codex' ? [{ path: codexRulesPathIn(folder), kind: 'rules' as const }] : [])
+        ];
     }
 
     /* Whether the CLI's default folder already holds something of Ruimte's, which is how an earlier release left it. */
@@ -317,7 +307,7 @@ export class AgentIntegrations {
             return false;
         }
         const hooks = hookPathIn(kind, folder);
-        if (hooks !== null && hasOurHook(await jsonOrNull(hooks))) {
+        if (hooks !== null && holdsOurHook(await jsonOrNull(hooks), kind)) {
             return true;
         }
         if (kind === 'antigravity') {
@@ -386,10 +376,10 @@ export class AgentIntegrations {
     }
 
     private revokeTarget(kind: AgentKind, target: { path: string; kind: 'hooks' | 'rules' }, entry: LedgerEntry): Promise<AgentIntegrationReport> {
-        if (kind === 'antigravity') {
-            return revokeAntigravityRules(target.path, entry);
+        if (target.kind === 'hooks') {
+            return revokeHooks(target.path, kind, entry);
         }
-        return target.kind === 'rules' ? revokeCodexRules(target.path) : revokeHooks(target.path, kind, entry);
+        return kind === 'antigravity' ? revokeAntigravityRules(target.path, entry) : revokeCodexRules(target.path);
     }
 
     private async persist(): Promise<void> {

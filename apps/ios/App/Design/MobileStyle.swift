@@ -46,6 +46,16 @@ enum MobileStyle {
     static let chart5 = Color(uiColor: adaptive(RuimteColors.chart5))
     static let chart6 = Color(uiColor: adaptive(RuimteColors.chart6))
 
+    /// The paper a note is drawn on, from its accent or the paper it had before.
+    static func notePaperColor(accent: String, color: String) -> UIColor {
+        adaptive(RuimteColors.notePaperToken(accent: accent, color: color))
+    }
+
+    /// Nil for no accent, so the caller keeps its own color.
+    static func nodeAccentColor(_ id: String) -> UIColor? {
+        RuimteColors.nodeAccents[id].map { adaptive(RuimteColorToken(light: $0, dark: $0)) }
+    }
+
     private static func adaptive(_ token: RuimteColorToken) -> UIColor {
         UIColor { traits in
             let hex = traits.userInterfaceStyle == .dark ? token.dark : token.light

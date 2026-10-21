@@ -936,8 +936,9 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
     public let `aliases`: [String]?
     public let `legacy`: Bool?
     public let `minCliVersion`: String?
+    public let `tools`: Bool?
 
-    public init(`slug`: String, `name`: String, `badge`: String? = nil, `vendor`: String? = nil, `profile`: String, `aliases`: [String]? = nil, `legacy`: Bool? = nil, `minCliVersion`: String? = nil) {
+    public init(`slug`: String, `name`: String, `badge`: String? = nil, `vendor`: String? = nil, `profile`: String, `aliases`: [String]? = nil, `legacy`: Bool? = nil, `minCliVersion`: String? = nil, `tools`: Bool? = nil) {
         self.`slug` = `slug`
         self.`name` = `name`
         self.`badge` = `badge`
@@ -946,6 +947,7 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
         self.`aliases` = `aliases`
         self.`legacy` = `legacy`
         self.`minCliVersion` = `minCliVersion`
+        self.`tools` = `tools`
     }
 
     public init(from decoder: Decoder) throws {
@@ -958,6 +960,7 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
         `aliases` = try container.decodeIfPresent([String].self, forKey: .`aliases`)
         `legacy` = try container.decodeIfPresent(Bool.self, forKey: .`legacy`)
         `minCliVersion` = try container.decodeIfPresent(String.self, forKey: .`minCliVersion`)
+        `tools` = try container.decodeIfPresent(Bool.self, forKey: .`tools`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -970,6 +973,7 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
         try container.encodeIfPresent(`aliases`, forKey: .`aliases`)
         try container.encodeIfPresent(`legacy`, forKey: .`legacy`)
         try container.encodeIfPresent(`minCliVersion`, forKey: .`minCliVersion`)
+        try container.encodeIfPresent(`tools`, forKey: .`tools`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -981,6 +985,7 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
         case `aliases` = "aliases"
         case `legacy` = "legacy"
         case `minCliVersion` = "minCliVersion"
+        case `tools` = "tools"
     }
 }
 

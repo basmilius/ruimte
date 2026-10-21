@@ -75,7 +75,6 @@ describe('installing the server', () => {
     test('nothing runs before a person installs it', () => {
         const install = server(sha256(ARCHIVE));
         expect(install.launch()).toBeNull();
-        expect(install.detection()).toEqual({ installed: false, version: null });
         expect(install.status()).toEqual({ provider: 'antigravity', state: 'missing', version: '1.4.1', installed: null });
         expect(fetched).toEqual([]);
     });
@@ -85,7 +84,6 @@ describe('installing the server', () => {
         expect(await install.install()).toEqual({ provider: 'antigravity', state: 'installed', version: '1.4.1', installed: '1.4.1' });
         const folder = join(home, 'agent-servers', 'antigravity');
         expect(install.launch()).toEqual([join(folder, '1.4.1', 'agy_acp_server.par'), '--uid=']);
-        expect(install.detection()).toEqual({ installed: true, version: '1.4.1' });
         if (process.platform !== 'win32') {
             expect((await stat(join(folder, '1.4.1', 'agy_acp_server.par'))).mode & 0o111).not.toBe(0);
             expect((await stat(join(folder, '1.4.1', 'localharness_external'))).mode & 0o111).not.toBe(0);

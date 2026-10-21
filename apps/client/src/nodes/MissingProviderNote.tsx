@@ -18,7 +18,10 @@ export function MissingProviderNote({ endpointId, kind }: { endpointId: string; 
         <NodeNotice
             action={
                 missing.installable
-                    ? { label: t('missingProvider.install'), onClick: () => useUi.getState().setSettings({ open: true, section: 'providers' }) }
+                    ? {
+                          label: t('missingProvider.install'),
+                          onClick: () => useUi.getState().setSettings({ open: true, section: 'providers', target: `providers.install.${kind}` })
+                      }
                     : undefined
             }
         >

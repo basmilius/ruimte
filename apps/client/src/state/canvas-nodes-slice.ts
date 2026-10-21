@@ -1,4 +1,4 @@
-import { DEFAULT_TITLES, groupFrame, isUnknownNode } from '@ruimte/contracts';
+import { DEFAULT_TITLES, groupFrame, isUnknownNode, nodeColorPatch } from '@ruimte/contracts';
 import { arrangeGroupMembers } from '@/canvas/arrange-group';
 import { snapToGrid } from '@/canvas/math';
 import type { CanvasState } from '@/state/canvas';
@@ -11,7 +11,7 @@ export function createCanvasNodesSlice(
     get: CanvasGet
 ): Pick<
     CanvasState,
-    | 'setNodeAccent'
+    | 'setNodeColor'
     | 'renameNode'
     | 'updateNode'
     | 'duplicateNode'
@@ -24,10 +24,16 @@ export function createCanvasNodesSlice(
     | 'setGroupWorktree'
 > {
     return {
-        /* A node of an unknown kind is written back as it was read, apart from its frame, so an accent,
+        /* A node of an unknown kind is written back as it was read, apart from its frame, so a color,
        a title or a patch on it would be an edit that never reaches the file. */
-        setNodeAccent(id, accent) {
-            set((s) => (s.nodes[id] && !isUnknownNode(s.nodes[id]) ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], accent: accent ?? undefined } } } : {}));
+        setNodeColor(id, accent) {
+            set((s) => {
+                const node = s.nodes[id];
+                if (!node || isUnknownNode(node)) {
+                    return {};
+                }
+                return { nodes: { ...s.nodes, [id]: { ...node, ...nodeColorPatch(node, accent) } }, ...remember(s) };
+            });
         },
         renameNode(id, title, source = 'user') {
             set((s) => {

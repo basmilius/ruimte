@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
+import type { AgentInfo, AgentKind, AgentStatus } from '@ruimte/contracts';
 import type { CanvasNode } from '@/state/canvas';
 import type { ChatStatuses } from '@adecore/agents-react/state';
 import { dropEndpoint, endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
@@ -154,4 +154,16 @@ export function nodeStatus(node: StatusOf, sessions: SessionsByKey, chats: ChatS
         return chats[endpointKey(machine, node.id)]?.info.status;
     }
     return node.status;
+}
+
+/* A chat opened for no CLI in particular stores none, so the CLI it runs on is its thread's. */
+export function nodeProvider(
+    node: { id: string; kind: string; machine?: string; provider?: AgentKind },
+    chats: ChatStatuses,
+    endpointId: string
+): AgentKind | undefined {
+    if (node.provider !== undefined || node.kind !== 'chat') {
+        return node.provider;
+    }
+    return chats[endpointKey(endpointOfNode(node, endpointId), node.id)]?.info.provider;
 }

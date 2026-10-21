@@ -6,7 +6,13 @@ import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 
 /* The CLIs' own names, which no language translates. */
-export const INTEGRATION_NAMES: Partial<Record<AgentKind, string>> = { claude: 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' };
+export const INTEGRATION_NAMES: Partial<Record<AgentKind, string>> = {
+    claude: 'Claude Code',
+    codex: 'Codex',
+    antigravity: 'Antigravity',
+    copilot: 'GitHub Copilot',
+    grok: 'Grok'
+};
 
 /*
  * Whether a person still has something to decide: a provider never asked about, or one that was

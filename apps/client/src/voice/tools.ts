@@ -9,6 +9,7 @@ import {
     type ActionResult
 } from '@ruimte/actions';
 import { clientActions, VOICE_ACTION_CALL } from '@/actions/client-actions';
+import { accentLabel } from '@/canvas/accents';
 import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -263,9 +264,18 @@ const REPLIES: Replies = {
         message: `Started “${output.terminal}” again in a new session.`,
         entry: { kind: 'terminal', label: activity('restartedTerminal'), detail: output.terminal }
     }),
-    'note.setColor': (output) => ({
-        message: output.changed ? `Made the note ${output.color}.` : `The note was already ${output.color}.`,
-        entry: { kind: 'note', label: activity('changedNoteColor'), detail: output.color }
+    'node.setColor': (output) => ({
+        message:
+            output.color === null
+                ? `Took the color off the ${NODE_LABELS[output.kind]}.`
+                : output.changed
+                  ? `Made the ${NODE_LABELS[output.kind]} ${output.color}.`
+                  : `The ${NODE_LABELS[output.kind]} was already ${output.color}.`,
+        entry: {
+            kind: 'node',
+            label: activity('changedNodeColor'),
+            detail: output.color === null ? i18next.t('canvas:menu.noAccent') : accentLabel(output.color)
+        }
     })
 };
 

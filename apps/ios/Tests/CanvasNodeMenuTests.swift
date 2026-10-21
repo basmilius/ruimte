@@ -17,15 +17,39 @@ import Testing
     @Test func theMenuOffersWhatEachKindCanDo() {
         #expect(
             CanvasNodeAction.actions(for: node("c", "chat")) == [
-                .openAsView, .linkAsContext, .groupSelection, .rename, .snooze, .delete,
+                .openAsView, .linkAsContext, .groupSelection, .rename, .color, .snooze, .delete,
             ])
         #expect(
             CanvasNodeAction.actions(for: node("d", "device")) == [
-                .openAsView, .linkAsContext, .groupSelection, .rename, .delete,
+                .openAsView, .linkAsContext, .groupSelection, .rename, .color, .delete,
             ])
-        #expect(CanvasNodeAction.actions(for: node("n", "note")) == [.linkAsContext, .groupSelection, .rename, .delete])
-        #expect(CanvasNodeAction.actions(for: node("g", "group")) == [.linkAsContext, .rename, .delete])
+        #expect(
+            CanvasNodeAction.actions(for: node("n", "note")) == [
+                .linkAsContext, .groupSelection, .rename, .color, .delete,
+            ])
+        #expect(CanvasNodeAction.actions(for: node("g", "group")) == [.linkAsContext, .rename, .color, .delete])
         #expect(CanvasNodeAction.actions(for: node("u", "hologram")) == [.delete])
+    }
+
+    @Test func aColorTakesTheOldPaperOffANoteAndLeavesEveryOtherKeyAlone() throws {
+        let old = node("n", "note").setting("color", .string("green")).setting("accent", .string("red"))
+        let canvas: JSONValue = .object([
+            "nodes": .array([old, node("t", "terminal"), node("u", "hologram").setting("accent", .string("red"))])
+        ])
+        let teal = CanvasEditing.coloring(canvas, id: "n", accent: "teal")
+        let note = try #require(teal.list("nodes").first)
+        #expect(note["accent"] == .string("teal"))
+        #expect(note["color"] == nil)
+        #expect(note["title"] == .string("N"))
+        let none = try #require(CanvasEditing.coloring(canvas, id: "n", accent: nil).list("nodes").first)
+        #expect(none["accent"] == nil)
+        #expect(none["color"] == nil)
+        let terminal = CanvasEditing.coloring(canvas, id: "t", accent: "violet").list("nodes")[1]
+        #expect(terminal["accent"] == .string("violet"))
+        // A name off the set takes the color off rather than writing what no client paints.
+        #expect(CanvasEditing.coloring(canvas, id: "t", accent: "gray").list("nodes")[1]["accent"] == nil)
+        // A kind this version does not know is written back as it was read.
+        #expect(CanvasEditing.coloring(canvas, id: "u", accent: "teal").list("nodes")[2] == canvas.list("nodes")[2])
     }
 
     @Test func aGroupFramesItsMembersOnTheGridWithRoomForItsTitle() throws {

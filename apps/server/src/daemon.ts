@@ -210,6 +210,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         usage: usage.usage,
         limits: usage.limits,
         providerAccounts: providers.accounts,
+        providerList: providers.feed,
         processes: processes.processes,
         tasks: stores.tasks,
         worktrees: git.worktrees,

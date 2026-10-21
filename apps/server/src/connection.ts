@@ -79,6 +79,8 @@ export interface ConnectionServices {
     usage: Subscribable;
     limits: Subscribable;
     providerAccounts?: Subscribable;
+    /* The provider list, which every client hears again when an agent reported something new about itself. */
+    providerList?: Subscribable;
     processes: Subscribable;
     tasks?: Subscribable;
     worktrees?: Subscribable;
@@ -181,6 +183,7 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
                       services.usage.subscribe(clientId, sink),
                       services.limits.subscribe(clientId, sink),
                       services.providerAccounts?.subscribe(clientId, sink) ?? (() => undefined),
+                      services.providerList?.subscribe(clientId, sink) ?? (() => undefined),
                       services.processes.subscribe(clientId, sink),
                       services.tasks?.subscribe(clientId, sink) ?? (() => undefined),
                       services.worktrees?.subscribe(clientId, sink) ?? (() => undefined),

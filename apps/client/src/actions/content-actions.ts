@@ -16,7 +16,6 @@ import type { StoreApi } from 'zustand';
 import { z } from 'zod';
 import { clipboardOrRefuse, copyTextOrRefuse } from '@/actions/clipboard';
 import { asksFirst } from '@/actions/developer-actions';
-import { DEFAULT_NOTE_COLOR } from '@/canvas/note-colors';
 import { lineElement, noteElement, shapeElement, textElement } from '@/drawing/gestures';
 import { fitTextBox } from '@/drawing/measure';
 import { locateView } from '@/shell/split';
@@ -288,30 +287,6 @@ export function contentActions(document: StoreApi<DocumentState>, overrides: Par
                     const current: CanvasState | null = liveCanvas(viewId);
                     if (current === null || current.past.length !== depth + 1 || current.nodes[nodeId]?.body !== next) {
                         throw new ActionRefusal('stale-undo', 'The note changed after this was written, so it cannot be safely undone here.');
-                    }
-                    current.undo();
-                }
-            };
-        },
-        'note.setColor': ({ viewId, nodeId, color }) => {
-            const { view } = noteOf(viewId, nodeId);
-            const canvas = isOnScreen(document.getState(), viewId) ? liveCanvas(viewId) : null;
-            if (canvas === null) {
-                throw new ActionRefusal('inactive-canvas', `Open “${view.name}” before coloring its notes.`);
-            }
-            const previousColor = canvas.nodes[nodeId]?.color ?? DEFAULT_NOTE_COLOR;
-            const output = { viewId, nodeId, color, previousColor, changed: color !== previousColor };
-            if (!output.changed) {
-                return { output };
-            }
-            const depth = canvas.past.length;
-            canvas.updateNode(nodeId, { color }, true);
-            return {
-                output,
-                undo: () => {
-                    const current: CanvasState | null = liveCanvas(viewId);
-                    if (current === null || current.past.length !== depth + 1 || current.nodes[nodeId]?.color !== color) {
-                        throw new ActionRefusal('stale-undo', 'The canvas changed after the note was colored, so it cannot be safely undone here.');
                     }
                     current.undo();
                 }

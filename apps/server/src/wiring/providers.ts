@@ -9,12 +9,18 @@ import type { AgentServers } from '../handlers/agent-servers.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { terminalExecutable } from '../providers/launch.ts';
 import { ModelCatalogFeed } from '../providers/model-catalogs.ts';
+import { ProviderFeed } from '../providers/provider-feed.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import type { ServerConfig } from '../config.ts';
+import { nanoGptService } from '../providers/nanogpt-provider.ts';
+import type { NanoGptService } from '../providers/nanogpt-service.ts';
 
 /* The agent CLIs of this machine, their accounts and what a person allowed in their settings. */
 export interface ProvidersBundle {
+    nanogpt: NanoGptService;
     providers: ProviderRegistry;
+    // The provider list again, to every client, when an agent reported something new about itself.
+    feed: ProviderFeed;
     modelCatalogs: ModelCatalogFeed;
     integrations: AgentIntegrations;
     accounts: ProviderAccountsService;
@@ -33,10 +39,13 @@ export async function wireProviders(
     alongside: () => Promise<void>,
     fetched: () => void = () => undefined
 ): Promise<ProvidersBundle> {
+    const nanogpt = nanoGptService;
+    await nanogpt.load(config.home);
     const antigravityServer = new AcpServerInstall({ provider: 'antigravity', home: config.home, release: ANTIGRAVITY_ACP_RELEASE });
     const providers = new ProviderRegistry({
         appleEnabled: () => identity.appleFoundationEnabled,
         antigravityServer,
+        home: config.home,
         onList: () => {
             void integrations.refreshInstalled();
             void modelCatalogs.refresh();
@@ -80,5 +89,16 @@ export async function wireProviders(
             void integrations.refreshInstalled();
         }
     };
-    return { providers, modelCatalogs, integrations, accounts, servers, nameOfCli: (kind) => providers.get(kind).name };
+    // Before the feed listens, so the list it sends reads the new key instead of the cached detection.
+    nanogpt.onChange(() => providers.invalidate('nanogpt'));
+    return {
+        nanogpt,
+        providers,
+        feed: new ProviderFeed(providers),
+        modelCatalogs,
+        integrations,
+        accounts,
+        servers,
+        nameOfCli: (kind) => providers.get(kind).name
+    };
 }

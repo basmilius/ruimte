@@ -64,6 +64,33 @@ async function endShell(sessionId: string, exitCode = 0): Promise<void> {
 }
 
 describe('agent status via hooks', () => {
+    test("a Claude hook Grok runs from Claude Code's settings leaves the status to Grok's own", async () => {
+        await createAgent('grok-terminal', { kind: 'grok' });
+        const token = harness.manager.get('grok-terminal')!.hookToken;
+        const grokHook = (event: string) => ({ hookEventName: event.toLowerCase(), ...hook(event, { session_id: 'grok-1' }) });
+        expect(await harness.manager.applyHook('claude', token, grokHook('UserPromptSubmit'))).toBe('ignored');
+        expect(harness.manager.list()[0]?.agent ?? null).toBeNull();
+        await harness.manager.applyHook('grok', token, grokHook('UserPromptSubmit'));
+        expect(harness.manager.list()[0]?.agent).toMatchObject({ kind: 'grok', agentSessionId: 'grok-1', status: 'running' });
+    });
+
+    test("once Copilot reported a session, a Claude hook in it is Copilot's and changes nothing", async () => {
+        await createAgent('copilot-terminal', { kind: 'copilot' });
+        const token = harness.manager.get('copilot-terminal')!.hookToken;
+        await harness.manager.applyHook('copilot', token, hook('UserPromptSubmit', { session_id: 'copilot-1' }));
+        expect(await harness.manager.applyHook('claude', token, hook('Stop', { session_id: 'copilot-1' }))).toBe('ignored');
+        expect(harness.manager.list()[0]?.agent).toMatchObject({ kind: 'copilot', status: 'running' });
+    });
+
+    test("a Grok subagent's own session keeps the conversation the person has", async () => {
+        await createAgent('grok-subagent', { kind: 'grok' });
+        const token = harness.manager.get('grok-subagent')!.hookToken;
+        await harness.manager.applyHook('grok', token, hook('UserPromptSubmit', { session_id: 'grok-1' }));
+        await harness.manager.applyHook('grok', token, hook('PreToolUse', { session_id: 'child', subagentType: 'explore', tool_name: 'Read' }));
+        await harness.manager.applyHook('grok', token, hook('SessionEnd', { session_id: 'child', subagentType: 'explore' }));
+        expect(harness.manager.list()[0]?.agent).toMatchObject({ kind: 'grok', agentSessionId: 'grok-1', status: 'running' });
+    });
+
     test('a terminal permission keeps the actual request until its tool settles', async () => {
         await createAgent('permission-terminal', { kind: 'codex' });
         const token = harness.manager.get('permission-terminal')!.hookToken;

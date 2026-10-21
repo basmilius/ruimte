@@ -65,7 +65,6 @@ import {
     ModelSelectionSchema,
     NodeKindSchema,
     NODE_ACCENT_NAMES,
-    NOTE_COLOR_NAMES,
     PROJECT_PROPOSAL_LIMITS,
     PROJECT_VIEW_KINDS,
     PlanChecksSchema,
@@ -814,6 +813,28 @@ export const ACTION_DEFINITIONS = {
             changed: z.boolean()
         })
     },
+    'node.setColor': {
+        title: 'Color canvas node',
+        description: 'Gives a node on a canvas one of the colors, or takes its color off with null. A note takes its paper from it.',
+        agentDescription: 'Colors one node you made or have a line with; a note takes its paper from the color.',
+        effect: 'shared',
+        domain: 'canvas',
+        actors: PERSON_VOICE_AND_AGENT,
+        input: z.object({
+            viewId,
+            nodeId: nodeId.describe('The node, by id'),
+            color: z.enum(NODE_ACCENT_NAMES).nullable().describe('The color; null takes it off')
+        }),
+        output: z.object({
+            viewId,
+            nodeId,
+            kind: ActionCanvasNodeKindSchema,
+            color: z.enum(NODE_ACCENT_NAMES).nullable(),
+            // What the node showed before: a note's paper, which may be the neutral one of an old gray note.
+            previousColor: z.string().nullable(),
+            changed: z.boolean()
+        })
+    },
     'node.create': {
         title: 'Create canvas node',
         description:
@@ -846,7 +867,8 @@ export const ACTION_DEFINITIONS = {
             resume: resumedSession,
             issue: forActors(PERSON, z.object({ repo: z.string().min(1), number: z.number().int().positive(), url: z.string().min(1) })).describe(
                 'The GitHub issue an agent node is started on, which the node shows as a pill'
-            )
+            ),
+            color: agentField(z.enum(NODE_ACCENT_NAMES)).describe('The color of the node; a note takes its paper from it')
         }),
         output: z.object({
             viewId,
@@ -1671,15 +1693,6 @@ export const ACTION_DEFINITIONS = {
             color: flagColor.nullable(),
             changed: z.boolean()
         })
-    },
-    'note.setColor': {
-        title: 'Color a note',
-        description: 'Gives a note on a canvas on screen another paper color.',
-        effect: 'shared',
-        domain: 'content',
-        actors: PERSON_AND_VOICE,
-        input: z.object({ viewId, nodeId: nodeId.describe('The note, by id'), color: z.enum(NOTE_COLOR_NAMES) }),
-        output: z.object({ viewId, nodeId, color: z.enum(NOTE_COLOR_NAMES), previousColor: z.string(), changed: z.boolean() })
     },
     'node.arrange': {
         title: 'Arrange canvas nodes',

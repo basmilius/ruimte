@@ -54,7 +54,7 @@ struct CanvasStatus: Equatable {
 
 /// What a long press on a node offers, in the order of the design's node menu.
 enum CanvasNodeAction: Equatable {
-    case openAsView, linkAsContext, groupSelection, rename, snooze, delete
+    case openAsView, linkAsContext, groupSelection, rename, color, snooze, delete
 
     static func actions(for node: JSONValue) -> [CanvasNodeAction] {
         let kind = node.text("kind")
@@ -65,6 +65,7 @@ enum CanvasNodeAction: Equatable {
         actions.append(.linkAsContext)
         if kind != "group" { actions.append(.groupSelection) }
         actions.append(.rename)
+        actions.append(.color)
         if CanvasEditing.isAgent(kind) { actions.append(.snooze) }
         actions.append(.delete)
         return actions
@@ -137,6 +138,20 @@ enum CanvasEditing {
     /// Whether a line may run from one node to another: never to itself and never twice the same way.
     static func canLink(_ edges: [JSONValue], from: String, to: String) -> Bool {
         from != to && !edges.contains { $0.text("from") == from && $0.text("to") == to }
+    }
+
+    /// Gives a node one of the accents, or none. A note takes its paper from it and loses the paper it had before
+    /// Color covered notes, none too, as `nodeColorPatch` in `packages/contracts` writes it on the desktop.
+    static func coloring(_ canvas: JSONValue, id: String, accent: String?) -> JSONValue {
+        let value: JSONValue? = accent.flatMap { RuimteColors.nodeAccents[$0] == nil ? nil : .string($0) }
+        return canvas.setting(
+            "nodes",
+            .array(
+                canvas.list("nodes").map { node in
+                    guard node.stableID == id, knownKinds.contains(node.text("kind")) else { return node }
+                    let colored = node.setting("accent", value)
+                    return node.text("kind") == "note" ? colored.setting("color", nil) : colored
+                }))
     }
 
     /// Lets `target` read `source`. A line into an agent is labeled context; between two agents it runs both ways,

@@ -21,7 +21,20 @@ const CLAUDE = {
 } as unknown as ProviderInfo;
 
 const CHAT: ProjectNode = { id: 'fresh-chat', kind: 'chat', provider: 'claude', x: 0, y: 0, w: 480, h: 520 } as ProjectNode;
-const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [CHAT], texts: [], edges: [], layouts: [] };
+// A note from before Color covered notes: its old blue paper over an accent nothing painted.
+const OLD_NOTE: ProjectNode = {
+    id: 'old-note',
+    kind: 'note',
+    title: 'Old note',
+    x: 600,
+    y: 0,
+    w: 240,
+    h: 160,
+    body: 'Buy milk',
+    color: 'blue',
+    accent: 'red'
+} as ProjectNode;
+const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [CHAT, OLD_NOTE], texts: [], edges: [], layouts: [] };
 const OTHER: ProjectCanvasView = { ...MAIN, id: 'other', name: 'Other', nodes: [{ ...CHAT, id: 'other-chat', title: 'Other chat' }] };
 
 let machine: FakeMachine;
@@ -40,12 +53,25 @@ function menuItem(text: string): HTMLElement | null {
     return ([...document.querySelectorAll('[role="menu"] [role^="menuitem"]')] as HTMLElement[]).find((item) => item.textContent?.includes(text)) ?? null;
 }
 
-function savedChat(): ProjectNode | undefined {
+function savedNode(id: string): ProjectNode | undefined {
     const view = machine
         .requests('project.save')
         .at(-1)
         ?.content.views.find((candidate) => candidate.id === MAIN.id);
-    return view?.kind === 'canvas' ? view.nodes?.find((node) => node.id === CHAT.id) : undefined;
+    return view?.kind === 'canvas' ? view.nodes?.find((node) => node.id === id) : undefined;
+}
+
+/* What crosses the wire, where a key set to undefined is gone. */
+function sentNode(id: string): Record<string, unknown> {
+    return JSON.parse(JSON.stringify(savedNode(id) ?? null)) as Record<string, unknown>;
+}
+
+function savedChat(): ProjectNode | undefined {
+    return savedNode(CHAT.id);
+}
+
+function frameOf(id: string): HTMLElement {
+    return page.host.querySelector(`[data-node-id="${id}"]`)!;
 }
 
 beforeEach(async () => {
@@ -118,5 +144,41 @@ describe('the menu of a chat node', () => {
         await clickOn(menuItem('Teal'));
         await act(async () => windowWorkspace()!.connection.projects.flush());
         expect(savedChat()?.accent).toBe('teal');
+    });
+});
+
+describe('the menu of a note', () => {
+    test('offers one Color, checked on the paper an old note shows, and no Note color', async () => {
+        expect(frameOf(OLD_NOTE.id).className).toContain('bg-paper-blue');
+        await openNodeMenu(OLD_NOTE.id);
+
+        expect(menuItem('Note color')).toBeNull();
+        await openSubmenu('Color');
+        // A checked row draws its tick; the dot of a color is no icon.
+        expect(menuItem('Blue')?.querySelector('svg')).not.toBeNull();
+        expect(menuItem('Red')?.querySelector('svg')).toBeNull();
+    });
+
+    test('picking a color paints the paper with it and saves the accent without the old paper', async () => {
+        await openNodeMenu(OLD_NOTE.id);
+        await openSubmenu('Color');
+        await clickOn(menuItem('Teal'));
+
+        await until(() => frameOf(OLD_NOTE.id).className.includes('bg-paper-teal'));
+        await act(async () => windowWorkspace()!.connection.projects.flush());
+        expect(sentNode(OLD_NOTE.id)).toMatchObject({ accent: 'teal', body: 'Buy milk' });
+        expect(sentNode(OLD_NOTE.id)).not.toHaveProperty('color');
+    });
+
+    test('None gives the note the default paper, not its old one', async () => {
+        await openNodeMenu(OLD_NOTE.id);
+        await openSubmenu('Color');
+        await clickOn(menuItem('None'));
+
+        await until(() => frameOf(OLD_NOTE.id).className.includes('bg-paper-yellow'));
+        await act(async () => windowWorkspace()!.connection.projects.flush());
+        expect(sentNode(OLD_NOTE.id)).toMatchObject({ id: OLD_NOTE.id, body: 'Buy milk' });
+        expect(sentNode(OLD_NOTE.id)).not.toHaveProperty('accent');
+        expect(sentNode(OLD_NOTE.id)).not.toHaveProperty('color');
     });
 });

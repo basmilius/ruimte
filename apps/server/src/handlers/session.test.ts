@@ -105,6 +105,45 @@ describe('a login for a client that goes', () => {
     });
 });
 
+describe('a shell that ends with its client', () => {
+    test('ends when its client leaves, and leaves every other shell running', async () => {
+        const created = await request('desktop', 'session.create', { sessionId: 'provider-1', cols: 80, rows: 24, shell: '/bin/sh', endsWithClient: true });
+        expect(created).toMatchObject({ ok: true });
+        expect(harness.manager.labelOf('provider-1')).toBe('Shell');
+
+        harness.manager.detachAll('phone');
+        expect(harness.manager.get('provider-1')?.exited).toBe(false);
+        harness.manager.detachAll('desktop');
+        await harness.adapter.forSession('provider-1').exited;
+        expect(harness.manager.get('provider-1')).toBeUndefined();
+        expect(harness.manager.get('terminal')).toBeDefined();
+    });
+
+    test('is none when its client closed while it started', async () => {
+        const frames: ServerFrame[] = [];
+        const client = { id: 'desktop', closed: false, send: (frame: ServerFrame) => frames.push(frame) };
+        const payload = { sessionId: 'provider-2', cols: 80, rows: 24, shell: '/bin/sh', endsWithClient: true };
+        const handled = dispatcher.handle(client, JSON.stringify({ id: 'create', type: 'session.create', payload }));
+        client.closed = true;
+        harness.manager.detachAll('desktop');
+        await handled;
+
+        expect(harness.manager.get('provider-2')).toBeUndefined();
+    });
+
+    test('carries no command past an approval', async () => {
+        const refused = await request('desktop', 'session.create', {
+            sessionId: 'provider-3',
+            cols: 80,
+            rows: 24,
+            command: 'make deploy',
+            endsWithClient: true
+        });
+        expect(refused).toMatchObject({ ok: false, error: { code: 'client-shell-command' } });
+        expect(harness.manager.get('provider-3')).toBeUndefined();
+    });
+});
+
 describe('a node that runs on another machine', () => {
     async function ask(type: string, payload: unknown): Promise<ServerFrame> {
         const guarded = new Dispatcher();

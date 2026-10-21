@@ -470,14 +470,14 @@ describe('the tree', () => {
         }
         // A kind where the action goes, or a flag, is not an action either: node <kind> and a bare link are gone.
         expect((await post('node', ['note', '--text', 'x'])).lines[0]).toBe(
-            'refused\tunknown-action\tnode needs one of list, new, edit, rename, delete, group, arrange, and note is not one'
+            'refused\tunknown-action\tnode needs one of list, new, edit, rename, color, delete, group, arrange, and note is not one'
         );
         expect((await post('link', ['--to', 'note-1'])).lines[0]).toBe('refused\tunknown-action\tlink needs one of list, new, delete, and --to is not one');
     });
 
     test('the nouns hold the actions the grammar names, in that order', () => {
         const words = (noun: string): string[] => nounNamed(noun).actions.map((action) => action.word);
-        expect(words('node')).toEqual(['list', 'new', 'edit', 'rename', 'delete', 'group', 'arrange']);
+        expect(words('node')).toEqual(['list', 'new', 'edit', 'rename', 'color', 'delete', 'group', 'arrange']);
         expect(words('link')).toEqual(['list', 'new', 'delete']);
         expect(words('view')).toEqual(['list', 'new', 'rename', 'icon', 'move', 'delete', 'open', 'diagram']);
         expect(words('task')).toEqual(['list', 'new']);
@@ -527,12 +527,12 @@ describe('help', () => {
         ]);
         expect(lines[2]).toBe('verb\tread\t<id> [--tail N] [--subagent T] [--view V]\tPrints one linked source, whole or its last lines.');
         expect(lines).toContain(
-            'noun\tnode\tlist|new|edit|rename|delete|group|arrange\tLists, adds, writes in, renames, removes, frames and lays out the nodes of a canvas'
+            'noun\tnode\tlist|new|edit|rename|color|delete|group|arrange\tLists, adds, writes in, renames, colors, removes, frames and lays out the nodes of a canvas'
         );
         expect(lines.at(-7)).toStartWith('scope\tlist and read are what a person linked into this session;');
         expect(lines.at(-6)).toBe('ids\tIds in this output are for your commands. When you talk to the person, name things by their title, never by id');
         expect(lines.at(-5)).toBe(
-            'dry run\t--dry-run\tnode new, agent, plan new, team\tsame checks, nothing made; a refused call makes nothing either, so it is only a preview and never needed for safety; every other verb refuses the flag'
+            'dry run\t--dry-run\tnode new, agent, node color, plan new, team\tsame checks, nothing made; a refused call makes nothing either, so it is only a preview and never needed for safety; every other verb refuses the flag'
         );
         expect(lines.slice(-4, -1)).toEqual([
             'detail\truimte-context help <noun>\tthe signature of every action of a noun',
@@ -805,7 +805,7 @@ describe('refusals', () => {
                 verb: 'node new',
                 argv: ['note', '--cmd', 'ls'],
                 code: 'unknown-flag',
-                message: '--cmd is not one of --title, --text, --url, --path, --source, --device, --cwd, --view, --beside, --revision, --dry-run'
+                message: '--cmd is not one of --title, --text, --url, --path, --source, --device, --cwd, --view, --beside, --color, --revision, --dry-run'
             },
             { verb: 'view list', argv: ['--view', 'main'], code: 'unknown-flag', message: '--view is not a flag here; this verb takes none' },
             {
@@ -2243,6 +2243,7 @@ describe('--dry-run', () => {
             'refused\tno-dry-run\tnode list takes no --dry-run; only the verbs that make something do',
             'verb\tnode new\ttakes --dry-run',
             'verb\tagent\ttakes --dry-run',
+            'verb\tnode color\ttakes --dry-run',
             'verb\tplan new\ttakes --dry-run',
             'verb\tteam\ttakes --dry-run'
         ]);
@@ -3185,6 +3186,80 @@ describe('node rename', () => {
             'refused\tbad-arguments\tnode rename takes one node id and nothing else; the title goes in --title'
         );
         expect((await onDisk()).rev).toBe(1);
+    });
+});
+
+describe('node color', () => {
+    test("colors the caller's own node, and none takes the color off", async () => {
+        expect((await post('node', ['color', 'term-1', '--color', 'teal'])).lines).toEqual(['colored\tterm-1\tterminal\tteal']);
+        expect((await nodeOnDisk('term-1'))?.accent).toBe('teal');
+        expect((await post('node', ['color', 'term-1', '--color', 'none'])).lines).toEqual(['colored\tterm-1\tterminal\t-']);
+        expect(await nodeOnDisk('term-1')).not.toHaveProperty('accent');
+    });
+
+    test('a note takes its paper from the color and loses the paper it had before', async () => {
+        await seed(box('old', 400, 400, { color: 'green', accent: 'red' }));
+        await post('link', ['new', '--to', 'old']);
+        expect((await post('node', ['color', 'old', '--color', 'violet'])).lines).toEqual(['colored\told\tnote\tviolet']);
+        const old = await nodeOnDisk('old');
+        expect(old?.accent).toBe('violet');
+        expect(old).not.toHaveProperty('color');
+    });
+
+    test('a node the caller did not make takes a line, whichever way it runs, and a chat view names its canvas', async () => {
+        const refused = await post('node', ['color', 'note-1', '--color', 'teal']);
+        expect(refused.status).toBe(422);
+        expect(refused.lines[0]).toBe(
+            'refused\tnot-linked\tnote-1 is a node you did not make and no line joins you to it: draw that line and you can color it'
+        );
+        expect(refused.lines).toContain('node\tterm-1\tterminal\tshell');
+        expect(refused.lines).toContain('see\truimte-context link new --to note-1\tdraws the line this needs');
+        expect((await onDisk()).rev).toBe(1);
+        await post('link', ['new', '--from', 'note-1', '--to', 'term-1']);
+        expect((await post('node', ['color', 'note-1', '--color', 'teal'])).status).toBe(200);
+        expect((await post('node', ['color', 'term-1', '--color', 'red'], 'chat')).lines[0]).toStartWith('refused\tview-required\t');
+        expect((await post('node', ['color', 'term-1', '--color', 'red', '--view', 'main'], 'chat')).lines).toEqual(['colored\tterm-1\tterminal\tred']);
+    });
+
+    test('only the colors of the set, one node per call, and --dry-run writes nothing', async () => {
+        const off = await post('node', ['color', 'term-1', '--color', 'gray']);
+        expect(off.lines[0]).toBe('refused\tunknown-color\tgray is not one of the 17 colors a node takes, nor none');
+        expect(off.lines).toContain(['colors', ...NODE_ACCENT_NAMES].join('\t'));
+        expect((await post('node', ['color', 'term-1'])).lines[0]).toBe('refused\tbad-arguments\t--color needs one of the colors, or none');
+        expect((await post('node', ['color', 'term-1', 'note-1', '--color', 'red'])).lines[0]).toBe(
+            'refused\tbad-arguments\tnode color takes one node id and nothing else; the color goes in --color'
+        );
+        expect((await post('node', ['color', 'ghost', '--color', 'red'])).lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
+        expect((await post('node', ['color', 'term-1', '--color', 'red', '--dry-run'])).lines).toEqual(['dry-run\tterm-1\tterminal\tred']);
+        expect((await onDisk()).rev).toBe(1);
+    });
+
+    test('a node of a kind a newer Ruimte made is refused by name and stays as it was read', async () => {
+        const hologram = { kind: 'hologram', id: 'holo', title: 'Hologram', x: 900, y: 0, w: 480, h: 360, beam: { lumens: [1, 2] } };
+        const file = await onDisk();
+        const main = file.views[0] as ProjectCanvasView;
+        await setPrivateViews(folder, [{ ...main, nodes: [...main.nodes, hologram] }, ...file.views.slice(1)]);
+        const chatView = await post('node', ['color', 'holo', '--color', 'teal', '--view', 'main'], 'chat');
+        expect(chatView.lines[0]).toBe('refused\tunknown-node\tholo is a node of a kind this machine does not know, so it cannot color it');
+        const raw = (await rawPrivateViews(folder)) as unknown as Array<{ nodes?: Array<{ id: string }> }>;
+        expect(JSON.stringify(raw[0]!.nodes!.find((node) => node.id === 'holo'))).toBe(JSON.stringify(hologram));
+    });
+
+    test('the color it already has writes nothing', async () => {
+        await post('node', ['color', 'term-1', '--color', 'amber']);
+        const rev = (await onDisk()).rev;
+        expect((await post('node', ['color', 'term-1', '--color', 'amber'])).lines).toEqual(['colored\tterm-1\tterminal\tamber']);
+        expect((await onDisk()).rev).toBe(rev);
+    });
+
+    test('node new --color gives the new node its color in the same write', async () => {
+        const rev = (await onDisk()).rev;
+        const id = (await post('node', ['new', 'note', '--text', 'hi', '--color', 'teal'])).lines[0]!.split('\t')[0]!;
+        expect(await nodeOnDisk(id)).toMatchObject({ kind: 'note', body: 'hi', accent: 'teal' });
+        expect((await onDisk()).rev).toBe(rev + 1);
+        expect((await post('node', ['new', 'note', '--color', 'paper'])).lines[0]).toBe(
+            'refused\tunknown-color\tpaper is not one of the 17 colors a node takes'
+        );
     });
 });
 

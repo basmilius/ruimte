@@ -34,7 +34,6 @@ import {
     type ComputerApprovalChoice,
     type DeviceReference,
     type NodeAccent,
-    type NoteColor,
     type ProjectIconChoice,
     type ProviderInfo
 } from '@ruimte/contracts';
@@ -425,9 +424,9 @@ export function renameNodeAction(viewId: string | null, nodeId: string, name: st
     }
 }
 
-export function colorNoteAction(viewId: string | null, nodeId: string, color: NoteColor): void {
+export function colorNodeAction(viewId: string | null, nodeId: string, color: NodeAccent | null): void {
     if (viewId !== null) {
-        void perform('note.setColor', { viewId, nodeId, color }).catch(ignoreRefusal);
+        void perform('node.setColor', { viewId, nodeId, color }).catch(ignoreRefusal);
     }
 }
 

@@ -711,7 +711,9 @@ describe('auth handlers', () => {
                     fixed: false,
                     providers: [
                         { provider: 'claude', state: 'unset' },
-                        { provider: 'codex', state: 'unset' }
+                        { provider: 'codex', state: 'unset' },
+                        { provider: 'copilot', state: 'unset' },
+                        { provider: 'grok', state: 'unset' }
                     ]
                 }
             }
@@ -732,7 +734,9 @@ describe('auth handlers', () => {
                 summary: {
                     providers: [
                         { provider: 'claude', state: 'on', reviewed: true },
-                        { provider: 'codex', state: 'unset', reviewed: false }
+                        { provider: 'codex', state: 'unset', reviewed: false },
+                        { provider: 'copilot', state: 'unset', reviewed: false },
+                        { provider: 'grok', state: 'unset', reviewed: false }
                     ]
                 }
             }
@@ -744,7 +748,7 @@ describe('auth handlers', () => {
     });
 
     test('a provider whose settings Ruimte does not write is unknown', async () => {
-        expect(await ask(LOCAL, 'endpoint.setAgentIntegration', { provider: 'grok', on: true })).toMatchObject({
+        expect(await ask(LOCAL, 'endpoint.setAgentIntegration', { provider: 'apple', on: true })).toMatchObject({
             ok: false,
             error: { code: 'unknown-provider' }
         });

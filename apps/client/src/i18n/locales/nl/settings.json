@@ -885,17 +885,18 @@
         },
         "integrations": {
             "title": "Agentstatus in terminals",
-            "description": "Via hooks in de instellingen van Claude Code en Codex ziet Ruimte of de CLI in een terminal werkt, klaar is of op je wacht. Die instellingen gelden overal: voor elke keer dat de CLI op deze computer draait, ook buiten Ruimte, waar de hook niets doet.",
+            "description": "Via hooks in de instellingen van een codeertool ziet Ruimte of die tool in een terminal werkt, klaar is of op je wacht. Die instellingen gelden overal: voor elke keer dat de tool op deze computer draait, ook buiten Ruimte, waar de hook niets doet.",
             "dialog": {
                 "title": "Mag Ruimte je CLI-instellingen aanpassen?",
                 "description": "Ruimte wil een paar instellingen toevoegen aan je codeertools. Die gelden overal op deze computer, ook buiten Ruimte.",
                 "status": "Laat zien wanneer een terminal bezig is, klaar is of je nodig heeft.",
                 "statusAndTool": "Laat zien wanneer een terminal bezig is, klaar is of je nodig heeft. Laat ook de eigen tool van Ruimte draaien zonder te vragen.",
-                "tool": "Laat de eigen tool van Ruimte draaien zonder te vragen."
+                "tool": "Laat de eigen tool van Ruimte draaien zonder te vragen.",
+                "doneAndTool": "Laat zien wanneer een terminal klaar is. Laat ook de eigen tool van Ruimte draaien zonder te vragen."
             },
             "off": "Zonder deze hooks tonen terminals met {{provider}} geen status en vragen ze nooit om je aandacht. Chats merken hier niets van; die krijgen hun status langs een andere weg.",
             "codexRule": "Voor Codex geldt deze keuze ook voor de regel waarmee ruimte-context buiten de sandbox van Codex mag draaien. Zonder die regel kan Codex in een sandboxmodus Ruimte niet bereiken: ruimte-context mislukt of vraagt elke keer om je toestemming, in terminals en in chats.",
-            "antigravityRule": "Voor Antigravity geldt deze keuze alleen voor de regel waarmee ruimte-context zonder vragen mag draaien, ook buiten de sandbox. Zonder die regel vraagt Antigravity in een terminal elke keer om je toestemming als het ruimte-context gebruikt.",
+            "antigravityRule": "Voor Antigravity geldt deze keuze ook voor de regel waarmee ruimte-context zonder vragen mag draaien, ook buiten de sandbox. Zonder die regel vraagt Antigravity in een terminal elke keer om je toestemming als het ruimte-context gebruikt.",
             "files": "Ruimte schrijft in:",
             "allow": "Toestaan",
             "deny": "Niet toestaan",
@@ -904,7 +905,7 @@
             "notNow": "Niet nu",
             "migrated": "Ruimte heeft deze al aan {{provider}} toegevoegd. Behoud ze of verwijder ze nu.",
             "fixed": "Deze machine is gestart met --no-hooks, dus Ruimte schrijft niets in de instellingen van de CLI's.",
-            "search": "hooks, status, Claude, Codex, Antigravity, settings.json",
+            "search": "hooks, status, Claude, Codex, Antigravity, Copilot, Grok, settings.json",
             "state": {
                 "on": "Toegestaan",
                 "off": "Niet toegestaan"
@@ -1384,7 +1385,39 @@
             "ready": "Het lokale model is beschikbaar.",
             "unavailable": "Het lokale model is niet beschikbaar.",
             "saveFailed": "Apple Foundation Models kon niet worden gewijzigd",
-            "requiresMac": "Vereist een Mac met Apple silicon."
+            "requiresMac": "Vereist een Mac met Apple silicon.",
+            "off": "Uit"
+        },
+        "nanogpt": {
+            "description": "Chat met de modellen die je NanoGPT-abonnement bevat. Verzoeken gaan alleen naar de abonnements-API, nooit naar pay as you go.",
+            "footer": "De sleutel blijft op deze machine en wordt nooit meer getoond. Elke tool die een model vraagt, heeft jouw goedkeuring nodig.",
+            "key": "API-sleutel",
+            "keyDescription": "Een abonnements-API-sleutel van nano-gpt.com. Bij opslaan wordt hij gecontroleerd en worden de inbegrepen modellen opgehaald.",
+            "saved": "Opgeslagen",
+            "status": "Abonnement",
+            "save": "Opslaan",
+            "refresh": "Modellen vernieuwen",
+            "disconnect": "Ontkoppelen",
+            "loading": "Bezig met controleren bij NanoGPT…",
+            "unknown": "De machine heeft nog niet geantwoord.",
+            "ready_one": "Gekoppeld, {{count}} model inbegrepen.",
+            "ready_other": "Gekoppeld, {{count}} modellen inbegrepen.",
+            "disconnected": "Geen sleutel opgeslagen op deze machine.",
+            "unavailable": "Deze machine biedt NanoGPT nog niet aan. Werk Ruimte daar bij.",
+            "failed": "NanoGPT kon niet worden gewijzigd op deze machine.",
+            "noKey": "Geen sleutel",
+            "continue": {
+                "label": "Automatisch doorgaan",
+                "description": "Als een chat zijn toolrondes voor één run bereikt, gaat hij zelf verder. Uit, dan stopt hij en wacht op jouw bericht."
+            },
+            "rounds": {
+                "label": "Toolrondes per run",
+                "description": "Hoeveel rondes tools een run neemt voordat hij wordt afgekapt, van 5 tot 200."
+            },
+            "runs": {
+                "label": "Runs voordat hij stopt",
+                "description": "Hoeveel runs een chat zelf neemt, van 1 tot 20. Elke call kost van je allowance, dus dit is de rem op een lus die nooit stopt."
+            }
         },
         "acpServer": {
             "title": "Chatserver van {{name}}",

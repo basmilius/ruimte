@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { z } from 'zod';
 import type { AgentKind, AgentServerStatus } from '@ruimte/contracts';
-import type { CliDetection } from '@adecore/agents/providers';
 import { extractZipFile } from '../language/archive.ts';
 
 const AssetSchema = z.object({
@@ -54,7 +53,6 @@ type Installed = z.infer<typeof InstalledSchema>;
 /* What a provider asks of its server: the line that starts it, once a verified copy is in place. */
 export interface AcpServerLaunch {
     launch(): string[] | null;
-    detection(): CliDetection;
 }
 
 export interface AcpServerInstallOptions {
@@ -94,11 +92,6 @@ export class AcpServerInstall implements AcpServerLaunch {
     launch(): string[] | null {
         const installed = this.installed();
         return installed === null ? null : [join(this.folder, installed.version, installed.executable), ...installed.args];
-    }
-
-    detection(): CliDetection {
-        const installed = this.installed();
-        return { installed: installed !== null, version: installed?.version ?? null };
     }
 
     status(): AgentServerStatus {

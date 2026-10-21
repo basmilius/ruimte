@@ -52,7 +52,10 @@ export const SessionCreatePayloadSchema = z.object({
     // a person on this machine approved it for this node; until then it is held (`heldCommand`).
     command: z.string().optional(),
     // An agent CLI to start instead; the daemon builds its command line and types that.
-    agent: AgentLaunchSchema.optional()
+    agent: AgentLaunchSchema.optional(),
+    // A plain shell no node stands for, which ends when the client that asked for it leaves. A machine
+    // before this field ignores it and keeps the shell until it is killed.
+    endsWithClient: z.boolean().optional()
 });
 export type SessionCreatePayload = z.infer<typeof SessionCreatePayloadSchema>;
 

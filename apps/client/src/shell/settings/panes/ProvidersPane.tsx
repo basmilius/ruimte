@@ -4,7 +4,9 @@ import { ProvidersPane as Pane } from '@adecore/agents-react/providers';
 import { AcpServerSection, AcpServerStepBody } from '@/shell/settings/providers/AcpServerSection';
 import { useAcpServer } from '@/shell/settings/providers/use-acp-server';
 import { AppleFoundationSection } from '@/shell/settings/providers/AppleFoundationSection';
+import { NanoGptSection } from '@/shell/settings/providers/NanoGptSection';
 import { useEndpointId } from '@/state/keys';
+import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { useDetectProviders } from '@/transport/provider-detection';
 
@@ -14,8 +16,12 @@ export function ProvidersPane() {
     const endpointId = useEndpointId();
     const target = useUi((s) => s.settings.target);
     const antigravity = useAcpServer(endpointId, 'antigravity');
+    const machine = useServers((s) => s.byEndpoint[endpointId]);
     useDetectProviders();
     const detailOf = (provider: ProviderInfo) => {
+        if (provider.kind === 'nanogpt') {
+            return <NanoGptSection key={endpointId} endpointId={endpointId} />;
+        }
         if (provider.kind === 'apple') {
             return <AppleFoundationSection endpointId={endpointId} provider={provider} />;
         }
@@ -33,5 +39,16 @@ export function ProvidersPane() {
                   done: antigravity.server.state === 'installed',
                   body: <AcpServerStepBody acp={antigravity} server={antigravity.server} />
               };
-    return <Pane target={target} detailOf={detailOf} installStepOf={installStepOf} />;
+    // Off is a choice only a Mac offers; elsewhere the detail says why the model is not there.
+    const setupStatusOf = (provider: ProviderInfo) => {
+        if (provider.kind === 'apple' && machine?.platform === 'darwin' && !machine.appleFoundationEnabled) {
+            return { text: t('providers.apple.off'), tone: 'muted' as const };
+        }
+        // The machine reports NanoGPT installed once a saved key brought it models.
+        if (provider.kind === 'nanogpt' && !provider.installed) {
+            return { text: t('providers.nanogpt.noKey'), tone: 'warning' as const };
+        }
+        return null;
+    };
+    return <Pane target={target} detailOf={detailOf} installStepOf={installStepOf} setupStatusOf={setupStatusOf} />;
 }

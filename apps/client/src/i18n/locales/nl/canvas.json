@@ -18,13 +18,6 @@
         "pink": "Roze",
         "rose": "Rozerood"
     },
-    "noteColors": {
-        "yellow": "Geel",
-        "green": "Groen",
-        "blue": "Blauw",
-        "pink": "Roze",
-        "gray": "Grijs"
-    },
     "locks": {
         "pan": {
             "label": "Verschuiven",
@@ -103,7 +96,6 @@
         "openAsView": "Als weergave openen",
         "openAsViewHint": "De sessie blijft behouden",
         "startAgentFromNote": "Agent starten vanuit de notitie",
-        "noteColor": "Kleur van de notitie",
         "color": "Kleur",
         "noAccent": "Geen",
         "stopPrWatch": "Pull request niet meer volgen",

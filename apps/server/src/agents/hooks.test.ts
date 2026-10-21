@@ -1,6 +1,6 @@
 import type { AgentStatus } from '@ruimte/contracts';
 import { describe, expect, test } from 'bun:test';
-import { modeOfHook, normalizeHook, requestOfHook, settleWaiting } from './hooks.ts';
+import { borrowedHook, modeOfHook, normalizeHook, requestOfHook, settleWaiting } from './hooks.ts';
 
 function hook(event: string, extra: Record<string, unknown> = {}) {
     return {
@@ -131,5 +131,54 @@ describe('settleWaiting', () => {
 
     test('the end of the main turn leaves a subagent that still waits', () => {
         expect(settle(['', 'a1'], 'Stop')).toEqual({ waiting: ['a1'], status: 'needs-you' });
+    });
+});
+
+describe('the hooks of Grok, Copilot and Antigravity', () => {
+    // Grok 1.0.62 sends its own camelCase keys beside Claude's snake_case ones (`~/.grok/docs/user-guide/10-hooks.md`).
+    function grok(event: string, extra: Record<string, unknown> = {}) {
+        return { hookEventName: event.toLowerCase(), sessionId: 'grok-1', ...hook(event, { session_id: 'grok-1', ...extra }) };
+    }
+
+    test("Grok's turn that was cancelled leaves it idle, and a permission prompt waits on the person", () => {
+        expect(normalizeHook(grok('StopCancelled'), 'grok')?.status).toBe('idle');
+        expect(normalizeHook(grok('Notification', { notification_type: 'permission_prompt' }), 'grok')?.status).toBe('needs-you');
+        expect(normalizeHook(grok('Notification', { notification_type: 'idle_prompt' }), 'grok')?.status).toBe('idle');
+    });
+
+    test("a Grok subagent's session that ends leaves the agent running, and names the subagent", () => {
+        const ended = normalizeHook(grok('SessionEnd', { session_id: 'child', subagentType: 'explore' }), 'grok');
+        expect(ended).toMatchObject({ status: 'unchanged', subagentId: 'explore' });
+        expect(normalizeHook(grok('SessionEnd'), 'grok')?.status).toBeNull();
+    });
+
+    test("Copilot's idle notification is idle", () => {
+        expect(normalizeHook(hook('Notification', { notification_type: 'agent_idle' }), 'copilot')?.status).toBe('idle');
+    });
+
+    test("Antigravity's Stop names its conversation, which is what agy resumes", () => {
+        const body = { conversationId: 'conv-1', transcriptPath: '/tmp/t.jsonl', executionNum: 1, terminationReason: 'done', fullyIdle: true };
+        expect(normalizeHook(body, 'antigravity')).toEqual({
+            agentSessionId: 'conv-1',
+            transcriptPath: '/tmp/t.jsonl',
+            status: 'idle',
+            permissionMode: null,
+            event: 'Stop',
+            subagentId: null
+        });
+        expect(normalizeHook({ transcriptPath: '/tmp/t.jsonl' }, 'antigravity')).toBeNull();
+    });
+
+    test("a Claude hook that Grok runs from Claude Code's settings never speaks for Claude Code", () => {
+        expect(borrowedHook('claude', grok('Stop'), null)).toBe(true);
+        expect(borrowedHook('grok', grok('Stop'), null)).toBe(false);
+        expect(borrowedHook('claude', hook('Stop'), null)).toBe(false);
+    });
+
+    test('a Claude hook in a session another CLI already reported for is that CLI speaking', () => {
+        const copilot = { kind: 'copilot', agentSessionId: 'abc' } as const;
+        expect(borrowedHook('claude', hook('Stop'), copilot)).toBe(true);
+        expect(borrowedHook('claude', hook('Stop', { session_id: 'other' }), copilot)).toBe(false);
+        expect(borrowedHook('claude', hook('Stop'), { kind: 'claude', agentSessionId: 'abc' })).toBe(false);
     });
 });

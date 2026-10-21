@@ -1,5 +1,5 @@
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
-import type { CanvasNodeKind } from '@ruimte/contracts';
+import { notePaperOf, type CanvasNodeKind } from '@ruimte/contracts';
 import { memo, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -56,7 +56,7 @@ import { useNodeStatus, useNodeWork } from '@/state/chats';
 import { ProcessAlertMark } from '@/processes/ProcessAlertMark';
 import { useNodeAlerts } from '@/processes/use-node-alerts';
 import { useHasContextLinks } from '@/context/sources';
-import { accentColor } from '@/canvas/accents';
+import { accentColor, notePaperClass } from '@/canvas/accents';
 import { DeviceOperatedStrip } from '@/devices/DeviceOperatedStrip';
 import { ComputerIndicator } from '@/computer/ComputerIndicator';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
@@ -83,7 +83,6 @@ import { DiagramNode, DiagramPlate } from '@/canvas/nodes/DiagramNode';
 import { DrawingNode } from '@/canvas/nodes/DrawingNode';
 import { FileNode, FilePlate } from '@/canvas/nodes/FileNode';
 import { UnknownNodePlate } from '@/canvas/nodes/UnknownNode';
-import { noteColorClass } from '@/canvas/note-colors';
 import { Favicon } from '@/browser/Favicon';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
@@ -432,7 +431,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     isGroup
                         ? GROUP_FRAME
                         : isNote
-                          ? clsx(!maximized && 'shadow-node', noteColorClass(node.color))
+                          ? clsx(!maximized && 'shadow-node', notePaperClass(notePaperOf(node)))
                           : clsx('bg-surface', !maximized && 'shadow-node'),
                     (selected || linkTarget) && !maximized && 'node-selected',
                     /* Never transparent: a surface clips to its padding box, so that would show a line of

@@ -66,10 +66,10 @@ describe('handleHookRequest', () => {
     });
 
     test('turns away a CLI whose hooks the daemon has no normalizer for', async () => {
-        const antigravity = target('applied');
-        expect((await handleHookRequest(post('/hooks/antigravity', '{}', 'x'), '/hooks/antigravity', antigravity)).status).toBe(404);
-        expect((await handleHookRequest(post('/hooks/copilot', '{}', 'x'), '/hooks/copilot', antigravity)).status).toBe(404);
-        expect(antigravity.calls).toEqual([]);
+        const apple = target('applied');
+        expect((await handleHookRequest(post('/hooks/apple', '{}', 'x'), '/hooks/apple', apple)).status).toBe(404);
+        expect((await handleHookRequest(post('/hooks/gemini', '{}', 'x'), '/hooks/gemini', apple)).status).toBe(404);
+        expect(apple.calls).toEqual([]);
     });
 
     test('answers a Claude prompt hook with the context hint as additionalContext', async () => {

@@ -367,7 +367,9 @@
     "plan.list",
     "plan.apply",
     "provenance.read",
-    "provenance.review"
+    "provenance.review",
+    "nanogpt.status",
+    "nanogpt.configure"
   ],
   "eventTypes": [
     "push.attention",
@@ -421,6 +423,7 @@
     "usage.changed",
     "usage.limitsChanged",
     "accounts.changed",
+    "provider.changed",
     "processes.sample",
     "processes.alerts",
     "computer.status",

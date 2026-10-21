@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { NODE_ACCENT_NAMES, type NodeAccent } from '@ruimte/contracts';
+import { NODE_ACCENT_NAMES, type NodeAccent, type NotePaper } from '@ruimte/contracts';
 
 export type AccentId = NodeAccent;
 
@@ -44,4 +44,31 @@ export const FEATURED_ACCENTS: readonly AccentId[] = ['blue', 'orange', 'lime', 
 
 export function accentColor(id: string | null | undefined): string | undefined {
     return NODE_ACCENTS.find((entry) => entry.id === id)?.color;
+}
+
+/* Spelled out whole so Tailwind sees every class; each is a token in styles.css with a light and a dark value. */
+const PAPER_CLASSES: Record<NotePaper, string> = {
+    red: 'bg-paper-red',
+    orange: 'bg-paper-orange',
+    amber: 'bg-paper-amber',
+    yellow: 'bg-paper-yellow',
+    lime: 'bg-paper-lime',
+    green: 'bg-paper-green',
+    emerald: 'bg-paper-emerald',
+    teal: 'bg-paper-teal',
+    cyan: 'bg-paper-cyan',
+    sky: 'bg-paper-sky',
+    blue: 'bg-paper-blue',
+    indigo: 'bg-paper-indigo',
+    violet: 'bg-paper-violet',
+    purple: 'bg-paper-purple',
+    fuchsia: 'bg-paper-fuchsia',
+    pink: 'bg-paper-pink',
+    rose: 'bg-paper-rose',
+    neutral: 'bg-paper-neutral'
+};
+
+/* A note without a color keeps the yellow sheet every note had before it could take one. */
+export function notePaperClass(paper: NotePaper | null): string {
+    return PAPER_CLASSES[paper ?? 'yellow'];
 }

@@ -147,7 +147,7 @@
         "replacedDiagram": "Replaced diagram",
         "resumedAgent": "Resumed terminal agent",
         "restartedTerminal": "Restarted terminal",
-        "changedNoteColor": "Changed note color",
+        "changedNodeColor": "Changed color",
         "queuedPrompt": "Queued AI Chat prompt",
         "prompted": "Prompted AI Chat"
     }

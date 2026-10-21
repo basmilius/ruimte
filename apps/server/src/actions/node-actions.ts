@@ -5,6 +5,8 @@ import {
     NODE_ACCENT_NAMES,
     flagOf,
     groupFrame,
+    nodeColorOf,
+    nodeColorPatch,
     isCanvasView,
     isDiagramView,
     isDrawingView,
@@ -58,11 +60,12 @@ function deletableLines(content: ProjectContent, place: IndexedPlace, call: Verb
 }
 
 /*
- * Who may write in a note: not the maker alone, so two agents can keep one between them. A line a
- * person drew grants it, in either direction, since a note holds no agent. A chat view has no lines
- * and writes in any note of the canvas it names, as a person arranging that canvas would.
+ * Who may write in a note or color a node: not the maker alone, so two agents can keep one between
+ * them. A line a person drew grants it, in either direction, since a note holds no agent and a color
+ * is no way into what a session runs. A chat view has no lines and touches any node of the canvas
+ * it names, as a person arranging that canvas would.
  */
-function mayWrite(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, chatView: boolean): boolean {
+function mayTouch(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, chatView: boolean): boolean {
     return (
         chatView ||
         call.host.lineage.madeBy(node.id) === call.caller ||
@@ -70,10 +73,23 @@ function mayWrite(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, 
     );
 }
 
+/* Its own node too: how a session's node looks is that session's to say. */
+function mayColor(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, chatView: boolean): boolean {
+    return node.id === call.caller || mayTouch(canvas, node, call, chatView);
+}
+
+/* What a refusal may offer instead: only the nodes this same call would really color. */
+function colorableLines(canvas: ProjectCanvasView, call: VerbCall, chatView: boolean): string[] {
+    return nodeLines(canvas, {
+        takes: (node) => !isUnknownNode(node) && mayColor(canvas, node, call, chatView),
+        empty: `${canvas.id} has no node you may color; ruimte-context node new adds one of your own`
+    });
+}
+
 /* What a refusal may offer instead: only the notes this same call would really write in. */
 function writableLines(canvas: ProjectCanvasView, call: VerbCall, chatView: boolean): string[] {
     return nodeLines(canvas, {
-        takes: (node) => node.kind === 'note' && mayWrite(canvas, node, call, chatView),
+        takes: (node) => node.kind === 'note' && mayTouch(canvas, node, call, chatView),
         empty: `${canvas.id} has no note you may write in; ruimte-context node new note --text B adds one of your own`
     });
 }
@@ -231,6 +247,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                 // A title the agent chose is not one the session may rename, the rule a person's typing follows.
                 ...(input.title === null ? {} : { titleSource: 'user' as const }),
                 ...rect,
+                ...(input.color == null ? {} : { accent: input.color }),
                 ...(input.content === null ? {} : { body: input.content }),
                 ...(url === undefined ? {} : { url }),
                 ...(path === undefined ? {} : { path: isInside(place.folder, path) ? storedPathOf(place.folder, path) : path }),
@@ -382,7 +399,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                     writableLines(canvas, caller, chatView)
                 );
             }
-            if (!mayWrite(canvas, node, caller, chatView)) {
+            if (!mayTouch(canvas, node, caller, chatView)) {
                 throw new VerbRefusal(
                     'not-linked',
                     `${nodeId} is a note you did not make and no line joins you to it: draw that line and you can write in it`,
@@ -401,6 +418,42 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                 return { content: null, result: { output } };
             }
             const nodes = canvas.nodes.map((candidate) => (candidate.id === nodeId ? { ...candidate, body: next } : candidate));
+            return { content: withCanvas(content, { ...canvas, nodes }), result: { output } };
+        });
+    },
+    'node.setColor': async ({ viewId, nodeId, color }, call) => {
+        const { host, place } = call.context;
+        const caller = verbCallOf(call);
+        return host.projects.mutate(place.projectId, (content) => {
+            const canvas = canvasNamed(content, viewId);
+            const chatView = isChatView(content, caller.caller);
+            const node = canvas.nodes.find((candidate) => candidate.id === nodeId);
+            if (!node) {
+                throw refuseMissingNodes(content, [nodeId], canvas.id, 'there is no node to color', colorableLines(canvas, caller, chatView));
+            }
+            // A newer Ruimte's node is written back as it was read, so a color on it would never reach the file.
+            if (isUnknownNode(node)) {
+                throw new VerbRefusal(
+                    'unknown-node',
+                    `${nodeId} is a node of a kind this machine does not know, so it cannot color it`,
+                    colorableLines(canvas, caller, chatView)
+                );
+            }
+            refuseOtherMachine(host, nodeId);
+            if (!mayColor(canvas, node, caller, chatView)) {
+                throw new VerbRefusal('not-linked', `${nodeId} is a node you did not make and no line joins you to it: draw that line and you can color it`, [
+                    ...colorableLines(canvas, caller, chatView),
+                    `see\truimte-context link new --to ${nodeId}\tdraws the line this needs`
+                ]);
+            }
+            const patch = nodeColorPatch(node, color);
+            // A note that already shows the color still changes when an old paper goes, so the file says what it shows.
+            const changed = node.accent !== patch.accent || ('color' in patch && node.color !== undefined);
+            const output = { viewId: canvas.id, nodeId, kind: node.kind, color, previousColor: nodeColorOf(node), changed };
+            if (!changed || call.dryRun === true) {
+                return { content: null, result: { output } };
+            }
+            const nodes = canvas.nodes.map((candidate) => (candidate.id === nodeId ? { ...candidate, ...patch } : candidate));
             return { content: withCanvas(content, { ...canvas, nodes }), result: { output } };
         });
     },

@@ -19,6 +19,9 @@ import { Favicon } from '@/browser/Favicon';
 import { projectIconGlyphOf } from '@/project/project-icons';
 import { FileIcon, Icon } from '@adecore/ui';
 import { AgentIcon } from '@adecore/agents-react/providers';
+import { useChats } from '@adecore/agents-react/state';
+import { nodeProvider } from '@/state/sessions';
+import { useEndpointId } from '@/state/keys';
 
 /* The default mark for a view, when nobody picked an icon. */
 const VIEW_KIND_GLYPHS: Record<ProjectViewKind, LucideIcon> = {
@@ -41,7 +44,7 @@ interface ViewGlyphProps {
     kind: ProjectViewKind;
     /* A picked icon, which outranks everything below it. */
     icon?: ProjectIconChoice | null;
-    /* The CLI a chat or terminal view runs, whose mark it wears instead of its kind's. */
+    /* The CLI a chat or terminal view stores, whose mark it wears instead of its kind's. A chat without one wears its thread's. */
     provider?: AgentKind | null;
     /* The file a file view reads, which wears the mark of its own name. */
     path?: string | null;
@@ -54,7 +57,9 @@ interface ViewGlyphProps {
  * least: what a person picked, then what a browser's own page says, then the CLI behind a session,
  * and the kind itself as the floor.
  */
-export function ViewGlyph({ id, kind, icon = null, provider = null, path = null, size = 14, className }: ViewGlyphProps) {
+export function ViewGlyph({ id, kind, icon = null, provider: stored = null, path = null, size = 14, className }: ViewGlyphProps) {
+    const endpointId = useEndpointId();
+    const provider = useChats((s) => nodeProvider({ id, kind, provider: stored ?? undefined }, s.statusByKey, endpointId));
     const picked = icon?.kind === 'lucide' ? projectIconGlyphOf(icon.value) : null;
     if (picked) {
         return <Icon icon={picked} size={size} className={clsx('shrink-0', className)} />;

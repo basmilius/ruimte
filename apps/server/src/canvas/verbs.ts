@@ -15,6 +15,7 @@ import { DEVICE_ACTIONS, DEVICE_DETAIL, DEVICE_SUMMARY } from './device-verb.ts'
 import { diagramAction } from './diagram-verb.ts';
 import { flagVerb } from './flag-verb.ts';
 import { forkVerb } from './fork-verb.ts';
+import { nodeColorAction } from './color-verb.ts';
 import { nodeEditAction } from './edit-verb.ts';
 import { groupAction } from './group-verb.ts';
 import { LANGUAGE_ACTIONS, LANGUAGE_DETAIL, LANGUAGE_SUMMARY } from './language-verb.ts';
@@ -104,12 +105,12 @@ const readVerb: ContextVerb = {
 
 const nodeNoun = defineNoun({
     name: 'node',
-    summary: 'Lists, adds, writes in, renames, removes, frames and lays out the nodes of a canvas',
+    summary: 'Lists, adds, writes in, renames, colors, removes, frames and lays out the nodes of a canvas',
     detail: [
         'note\tA node is a note, a browser, a drawing, a diagram, a file, a terminal, a chat or a group on a canvas; agent and team add agent nodes that start working',
         SCOPE_LINE
     ],
-    actions: [nodeListAction, nodeNewAction, nodeEditAction, renameAction, nodeDeleteAction, groupAction, arrangeAction]
+    actions: [nodeListAction, nodeNewAction, nodeEditAction, renameAction, nodeColorAction, nodeDeleteAction, groupAction, arrangeAction]
 });
 
 const linkNoun = defineNoun({

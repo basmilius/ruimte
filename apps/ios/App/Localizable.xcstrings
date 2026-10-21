@@ -113,6 +113,16 @@
         }
       }
     },
+    "A note takes its paper from its color." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een notitie neemt haar papier uit haar kleur."
+          }
+        }
+      }
+    },
     "5 hours %@ used" : {
       "comment" : "A CLI account's session window",
       "localizations" : {
@@ -152,6 +162,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Na"
+          }
+        }
+      }
+    },
+    "Amber" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Amber"
           }
         }
       }
@@ -328,6 +348,16 @@
         }
       }
     },
+    "Cyan" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cyaan"
+          }
+        }
+      }
+    },
     "Danger" : {
       "localizations" : {
         "nl" : {
@@ -364,6 +394,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Scherm"
+          }
+        }
+      }
+    },
+    "Emerald" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smaragd"
           }
         }
       }
@@ -448,6 +488,16 @@
         }
       }
     },
+    "Fuchsia" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fuchsia"
+          }
+        }
+      }
+    },
     "Grant" : {
       "localizations" : {
         "nl" : {
@@ -498,12 +548,32 @@
         }
       }
     },
+    "Indigo" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indigo"
+          }
+        }
+      }
+    },
     "Large" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Groot"
+          }
+        }
+      }
+    },
+    "Lime" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limoen"
           }
         }
       }
@@ -816,6 +886,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Camera herstellen"
+          }
+        }
+      }
+    },
+    "Rose" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozerood"
           }
         }
       }
@@ -1220,6 +1300,16 @@
         }
       }
     },
+    "Sky" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hemelsblauw"
+          }
+        }
+      }
+    },
     "Small" : {
       "localizations" : {
         "nl" : {
@@ -1246,6 +1336,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gelukt"
+          }
+        }
+      }
+    },
+    "Teal" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blauwgroen"
           }
         }
       }
@@ -1338,6 +1438,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Via broker"
+          }
+        }
+      }
+    },
+    "Violet" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Violet"
           }
         }
       }

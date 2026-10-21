@@ -292,12 +292,38 @@ describe('notes', () => {
         expect(store.getState().nodes[id]?.body).toBe('Typed first. Dictated sentence.');
     });
 
-    test('a note starts empty with the default title and keeps its body and color through updateNode', () => {
+    test('a note starts empty with the default title and keeps its body through updateNode and its color through setNodeColor', () => {
         focusedCanvas().setState({ nodes: {}, texts: {}, order: [], edges: [], selection: [], viewId: 'main' });
         const id = canvas().addNode('note', { x: 0, y: 0 })!;
         expect(canvas().nodes[id]).toMatchObject({ kind: 'note', title: 'Note' });
-        canvas().updateNode(id, { body: '# Hello', color: 'blue' });
-        expect(canvas().exportContent().nodes[0]).toMatchObject({ id, body: '# Hello', color: 'blue' });
+        canvas().updateNode(id, { body: '# Hello' });
+        canvas().setNodeColor(id, 'blue');
+        expect(canvas().exportContent().nodes[0]).toMatchObject({ id, body: '# Hello', accent: 'blue' });
+        expect(canvas().exportContent().nodes[0]?.color).toBeUndefined();
+        canvas().undo();
+        expect(canvas().nodes[id]?.accent).toBeUndefined();
+    });
+
+    test('an old note keeps its paper and any accent in the file until a person picks a color', () => {
+        const view = ProjectCanvasViewSchema.parse({
+            kind: 'canvas',
+            id: 'view',
+            name: 'Canvas',
+            nodes: [
+                { ...node('gray', 0, 0, 'note'), body: 'Old', color: 'gray' },
+                { ...node('both', 300, 0, 'note'), body: 'Old', color: 'green', accent: 'red' }
+            ],
+            texts: [],
+            edges: [],
+            layouts: []
+        });
+        const store = createCanvasStore();
+        store.getState().loadView(view, null);
+        store.getState().updateNode('gray', { body: 'Still old' });
+        expect(store.getState().exportContent().nodes).toMatchObject([
+            { id: 'gray', color: 'gray', body: 'Still old' },
+            { id: 'both', color: 'green', accent: 'red' }
+        ]);
     });
 });
 

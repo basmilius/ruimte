@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { NODE_ACCENT_NAMES } from '@ruimte/contracts';
 import { ACTION_DEFINITIONS, ACTION_DOMAINS, VOICE_CONTROL_TOOL, VOICE_TOOL_ACTIONS, voiceToolDefinitions, voiceToolsFor, type ActionName } from './index.ts';
 
 const reached = [...VOICE_TOOL_ACTIONS.values()].flat();
@@ -43,9 +44,17 @@ describe('Voice tools', () => {
         expect(canvas?.parameters.properties.viewId).toEqual({ type: 'string' });
     });
 
+    test('color a node from the canvas tool, with the accents or none, and no longer from content', () => {
+        const canvas = voiceToolDefinitions().find((tool) => tool.name === 'manage_canvas')!;
+        expect(canvas.parameters.properties.color?.enum).toEqual([...NODE_ACCENT_NAMES, null]);
+        expect(canvas.parameters.properties.action?.enum).toContain('node.setColor');
+        const content = voiceToolDefinitions().find((tool) => tool.name === 'edit_content')!;
+        expect(JSON.stringify(content)).not.toContain('setColor');
+    });
+
     test('leave out what only an agent may give', () => {
         const canvas = voiceToolDefinitions().find((tool) => tool.name === 'manage_canvas')!;
-        for (const field of ['source', 'cwd', 'beside', 'label', 'color', 'resume']) {
+        for (const field of ['source', 'cwd', 'beside', 'label', 'resume']) {
             expect(canvas.parameters.properties).not.toHaveProperty(field);
         }
         expect(canvas.parameters.properties.kind?.enum).not.toContain('drawing');
