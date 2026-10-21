@@ -4,19 +4,39 @@ import RuimtePulsar
 import RuimteTransport
 import WidgetKit
 
+/// The machine's accounts as the limit rows know them: not asked yet, the list it gave, or a list it could not give,
+/// which says nothing about which accounts are there.
+enum UsageAccounts: Equatable {
+    case unknown
+    case loaded(ProviderAccountList)
+    case failed
+}
+
 /// Keeps the usage widgets' snapshot of one machine current while the app holds a connection to it. The machines list
-/// draws its limits from the same snapshot.
+/// draws its limits from the same reading, with the machine's accounts beside it.
 @MainActor @Observable
 final class UsageWidgetRecorder {
     private static let costLifetime: TimeInterval = 5 * 60
     /// The limits per account as last read, also from an earlier launch while the machine is away.
     private(set) var providers: [UsageWidgetSnapshot.Provider]
+    /// The `usage.limits` reading as it came, newest first: an event is taken at once, also while a load still waits on
+    /// the day's cost. Held for this connection only; the widgets keep their snapshot.
+    private(set) var limits: JSONValue?
+    private(set) var accounts: UsageAccounts = .unknown
     @ObservationIgnored private let machineID: String
     @ObservationIgnored private let client: any MachineRequesting
     @ObservationIgnored private var unsubscribe: (() -> Void)?
+    @ObservationIgnored private var unsubscribeAccounts: (() -> Void)?
     @ObservationIgnored private var unobserve: (() -> Void)?
     @ObservationIgnored private var running: Task<Void, Never>?
     @ObservationIgnored private var revision = 0
+    /// Limits that came while a load ran, which the snapshot takes once that load is done.
+    @ObservationIgnored private var pending: JSONValue?
+    /// Counts every reading of the limits and of the accounts taken, so an answer asked for before a newer event leaves
+    /// that event standing.
+    @ObservationIgnored private var limitsRevision = 0
+    @ObservationIgnored private var accountsRevision = 0
+    @ObservationIgnored private var listing: Task<Void, Never>?
 
     init(machineID: String, client: any MachineRequesting) {
         self.machineID = machineID
@@ -28,20 +48,35 @@ final class UsageWidgetRecorder {
         guard unobserve == nil else { return }
         unsubscribe = client.subscribe(WireEvent.usageLimitsChanged.rawValue) { [weak self] value in
             guard let self, let limits = try? WireEvent.usageLimitsChanged.validatePayload(value) else { return }
-            begin(limits: limits)
+            take(limits)
+            if running == nil { begin(limits: limits) } else { pending = limits }
+        }
+        unsubscribeAccounts = client.subscribe(WireEvent.accountsChanged.rawValue) { [weak self] value in
+            guard let self else { return }
+            accountsRevision += 1
+            accounts = .loaded(ProviderAccountList(value))
         }
         unobserve = client.observeConnection { [weak self] connected in
             guard let self else { return }
-            if connected { begin() } else { cancel() }
+            if connected {
+                begin()
+                listAccounts()
+            } else {
+                cancel()
+            }
         }
     }
 
     func stop() {
         cancel()
         unsubscribe?()
+        unsubscribeAccounts?()
         unobserve?()
         unsubscribe = nil
+        unsubscribeAccounts = nil
         unobserve = nil
+        limits = nil
+        accounts = .unknown
     }
 
     func refresh() async { await begin().value }
@@ -52,7 +87,12 @@ final class UsageWidgetRecorder {
         let operation = revision
         let task = Task { [weak self] in
             await self?.load(limits: limits)
-            if self?.revision == operation { self?.running = nil }
+            guard let self, revision == operation else { return }
+            running = nil
+            if let next = pending {
+                pending = nil
+                begin(limits: next)
+            }
         }
         running = task
         return task
@@ -62,19 +102,48 @@ final class UsageWidgetRecorder {
         revision += 1
         running?.cancel()
         running = nil
+        pending = nil
+        listing?.cancel()
+        listing = nil
+    }
+
+    private func take(_ limits: JSONValue) {
+        limitsRevision += 1
+        self.limits = limits
+    }
+
+    /// The accounts once per connection; after that `accounts.changed` keeps them, also while this answer is on its
+    /// way.
+    private func listAccounts() {
+        listing?.cancel()
+        let seen = accountsRevision
+        listing = Task { [weak self] in
+            guard let client = self?.client else { return }
+            let next: UsageAccounts
+            do {
+                next = .loaded(ProviderAccountList(try await client.request(WireRequest.accountsList.rawValue)))
+            } catch {
+                next = .failed
+            }
+            guard !Task.isCancelled, let self, accountsRevision == seen else { return }
+            accounts = next
+        }
     }
 
     private func load(limits known: JSONValue?) async {
-        let limits: JSONValue
+        var limits: JSONValue
         if let known {
             limits = known
         } else {
+            let seen = limitsRevision
             do {
                 limits = try await client.request(WireRequest.usageLimits.rawValue, payload: .object([:]))
             } catch {
                 // An unreachable machine leaves its last snapshot standing; that is what the widget shows offline.
                 return
             }
+            guard !Task.isCancelled else { return }
+            if limitsRevision == seen { take(limits) } else if let newer = self.limits { limits = newer }
         }
         let now = Date.now
         var snapshot = UsageWidgetStore.snapshot(machineID: machineID) ?? UsageWidgetSnapshot()
@@ -117,7 +186,7 @@ final class UsageWidgetRecorder {
         return Dictionary(models.map { ($0.text("account"), $0.number("costUsd")) }, uniquingKeysWith: +)
     }
 
-    private static func providers(_ limits: JSONValue) -> [UsageWidgetSnapshot.Provider] {
+    static func providers(_ limits: JSONValue) -> [UsageWidgetSnapshot.Provider] {
         limits.list("providers").map { provider in
             UsageWidgetSnapshot.Provider(
                 kind: provider.text("kind"),

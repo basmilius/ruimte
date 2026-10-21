@@ -420,6 +420,7 @@ struct LimitBar: View {
 struct ShareBar: View {
     let fraction: Double
     let color: Color
+    var height: CGFloat = 5
 
     var body: some View {
         GeometryReader { proxy in
@@ -428,7 +429,7 @@ struct ShareBar: View {
                 Capsule().fill(color).frame(width: proxy.size.width * min(1, max(0, fraction)))
             }
         }
-        .frame(height: 5)
+        .frame(height: height)
         .accessibilityHidden(true)
     }
 }

@@ -113,6 +113,39 @@
         }
       }
     },
+    "5 hours %@ used" : {
+      "comment" : "A CLI account's session window",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 uur %@ verbruikt"
+          }
+        }
+      }
+    },
+    "5 hours %@ used, week %@ used" : {
+      "comment" : "A CLI account's two limit windows as VoiceOver reads them",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 uur %1$@ verbruikt, week %2$@ verbruikt"
+          }
+        }
+      }
+    },
+    "Account status unavailable" : {
+      "comment" : "Under a machine's limits when it could not list its accounts",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accountstatus niet beschikbaar"
+          }
+        }
+      }
+    },
     "After" : {
       "localizations" : {
         "nl" : {
@@ -615,6 +648,17 @@
         }
       }
     },
+    "n/a" : {
+      "comment" : "In place of a limit window the CLI does not have",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "n.v.t."
+          }
+        }
+      }
+    },
     "No match" : {
       "localizations" : {
         "nl" : {
@@ -641,6 +685,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Niet op de kaart"
+          }
+        }
+      }
+    },
+    "Not read yet" : {
+      "comment" : "An account whose limits the machine has not read",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nog niet gelezen"
           }
         }
       }
@@ -1265,6 +1320,17 @@
         }
       }
     },
+    "Top: 5 hours · Bottom: week · percent used" : {
+      "comment" : "Explains the two bars of each account on a machine card",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boven: 5 uur · Onder: week · procent verbruikt"
+          }
+        }
+      }
+    },
     "Via broker" : {
       "comment" : "A machine reached through the broker",
       "localizations" : {
@@ -1282,6 +1348,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Visuele antwoorden"
+          }
+        }
+      }
+    },
+    "Week %@ used" : {
+      "comment" : "A CLI account's weekly window",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Week %@ verbruikt"
           }
         }
       }

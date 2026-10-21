@@ -323,26 +323,243 @@ final class MachinePageTests: XCTestCase {
         endpoint.stop()
     }
 
-    func testTheRowsShowTheSessionWindowOfEachDefaultAccount() {
+    private func window(_ kind: String, _ label: String, _ used: Double, resetsAt: Double? = nil) -> JSONValue {
+        .object([
+            "id": .string(label.lowercased()), "kind": .string(kind), "label": .string(label), "used": .number(used),
+            "resetsAt": resetsAt.map(JSONValue.number) ?? .null, "durationMs": .null,
+        ])
+    }
+
+    private func reading(
+        _ kind: String, account: String? = nil, label: String? = nil, windows: [JSONValue] = [], checkedAt: Double = 1,
+        unavailable: String? = nil
+    ) -> JSONValue {
+        var value: [String: JSONValue] = [
+            "kind": .string(kind), "plan": .null, "checkedAt": .number(checkedAt), "source": .string("probe"),
+            "windows": .array(windows), "cost": .null,
+            "unavailable": unavailable.map { .object(["reason": .string($0), "message": .null]) } ?? .null,
+        ]
+        if let account {
+            value["account"] = .object([
+                "id": .string(account), "label": label.map(JSONValue.string) ?? .string(account),
+            ])
+        }
+        return .object(value)
+    }
+
+    private func limits(_ readings: [JSONValue]) -> JSONValue { .object(["providers": .array(readings)]) }
+
+    /// An `accounts.list` answer: every account with its kind, label, whether it is on and its state.
+    private func accountList(_ accounts: [(id: String, kind: String, label: String?, enabled: Bool, state: String)])
+        -> JSONValue
+    {
+        .object([
+            "accounts": .object(
+                Dictionary(
+                    uniqueKeysWithValues: accounts.map { account in
+                        var value: [String: JSONValue] = [
+                            "kind": .string(account.kind), "enabled": .bool(account.enabled),
+                        ]
+                        if let label = account.label { value["label"] = .string(label) }
+                        return (account.id, JSONValue.object(value))
+                    })),
+            "statuses": .array(
+                accounts.map { .object(["id": .string($0.id), "state": .string($0.state)]) }),
+        ])
+    }
+
+    private func loaded(_ value: JSONValue) -> UsageAccounts { .loaded(ProviderAccountList(value)) }
+
+    @MainActor func testEveryAccountOfACLIGetsARowWithBothWindowsInTheOrderOfItsAccounts() {
+        let card = MachineLimits.of(
+            limits: limits([
+                reading(
+                    "claude",
+                    windows: [
+                        window("weekly", "Weekly", 0.71), window("session", "Session", 0.12),
+                        window("weekly", "Weekly · Opus", 1),
+                    ]),
+                reading("claude", account: "work", label: "Work", windows: [window("session", "Session", 0.88)]),
+                reading("codex", windows: [window("weekly", "Weekly", 0.17)]),
+            ]),
+            accounts: loaded(
+                accountList([
+                    ("claude", "claude", nil, true, "ready"), ("personal", "claude", "Personal", true, "ready"),
+                    ("work", "claude", "Work", true, "ready"), ("codex", "codex", nil, true, "ready"),
+                ])))
+        XCTAssertEqual(card.lines.map(\.id), ["claude:claude", "claude:personal", "claude:work", "codex:codex"])
+        XCTAssertEqual(card.lines.map(\.name), ["Claude", "Personal", "Work", "Codex"])
+        XCTAssertEqual(card.lines.map(\.named), [true, true, true, false])
+        XCTAssertEqual(
+            card.lines.map(\.content),
+            [
+                .bars(session: .init(label: "Session", used: 0.12), week: .init(label: "Weekly", used: 0.71)),
+                .status("Not read yet"),
+                .bars(session: .init(label: "Session", used: 0.88), week: nil),
+                .bars(session: nil, week: .init(label: "Weekly", used: 0.17)),
+            ])
+        XCTAssertFalse(card.accountsUnavailable)
+    }
+
+    @MainActor func testOneAccountOfACLIShowsItsOwnLabelOrElseTheCLIsName() {
+        let card = MachineLimits.of(
+            limits: limits([
+                reading(
+                    "claude", account: "personal", label: "Personal", windows: [window("session", "Session", 0.01)]),
+                reading("codex", windows: [window("session", "Session", 0.05)]),
+            ]),
+            accounts: .unknown)
+        XCTAssertEqual(card.lines.map(\.name), ["Personal", "Codex"])
+        XCTAssertEqual(card.lines.map(\.named), [false, false])
+    }
+
+    @MainActor func testEveryAccountGetsARowHoweverManyThereAre() {
+        let ids = ["claude", "a", "b", "c", "d"]
+        let card = MachineLimits.of(
+            limits: limits(
+                ids.map { id in
+                    reading("claude", account: id == "claude" ? nil : id, windows: [window("session", "Session", 0.4)])
+                }),
+            accounts: .unknown)
+        XCTAssertEqual(card.lines.map(\.accountID), ids)
+    }
+
+    @MainActor func testAWindowPastItsResetReadsAsUnused() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let card = MachineLimits.of(
+            limits: limits([
+                reading(
+                    "claude",
+                    windows: [
+                        window("session", "Session", 0.9, resetsAt: 500_000),
+                        window("weekly", "Weekly", 0.5, resetsAt: 2_000_000),
+                    ])
+            ]),
+            accounts: .unknown, now: now)
+        XCTAssertEqual(
+            card.lines.first?.content,
+            .bars(session: .init(label: "Session", used: 0), week: .init(label: "Weekly", used: 0.5)))
+    }
+
+    @MainActor func testWhichAccountsShowIsDecidedBeforeTheirStateStandsInForOldNumbers() {
+        let card = MachineLimits.of(
+            limits: limits([
+                reading("claude", windows: [window("session", "Session", 0.3)]),
+                reading("claude", account: "old", label: "Old", windows: [window("session", "Session", 0.6)]),
+                reading("claude", account: "off", label: "Off", windows: [window("session", "Session", 0.6)]),
+                reading("claude", account: "broken", label: "Broken", unavailable: "failed"),
+                reading("codex", unavailable: "no-subscription"),
+                reading("gemini", unavailable: "not-installed"),
+            ]),
+            accounts: loaded(
+                accountList([
+                    ("claude", "claude", nil, true, "ready"), ("old", "claude", "Old", true, "signed-out"),
+                    ("off", "claude", "Off", false, "ready"), ("broken", "claude", "Broken", true, "ready"),
+                    ("gone", "claude", "Gone", true, "not-found"), ("codex", "codex", nil, true, "ready"),
+                ])))
+        XCTAssertEqual(card.lines.map(\.accountID), ["claude", "old", "broken"])
+        XCTAssertEqual(card.lines.dropFirst().map(\.content), [.status("Signed out"), .status("Unavailable")])
+    }
+
+    @MainActor func testTheAccountListDecidesWhichAccountsThereAre() {
+        let card = MachineLimits.of(
+            limits: limits([
+                reading("claude", windows: [window("session", "Session", 0.3)]),
+                reading("claude", account: "removed", label: "Removed", windows: [window("session", "Session", 0.6)]),
+            ]),
+            accounts: loaded(
+                accountList([("claude", "claude", nil, true, "ready"), ("codex", "codex", nil, true, "ready")])))
+        XCTAssertEqual(card.lines.map(\.id), ["claude:claude", "codex:codex"])
+        XCTAssertEqual(card.lines.last?.content, .status("Not read yet"))
+    }
+
+    @MainActor func testAnAccountListThatFailedKeepsTheNumbersAndSaysSo() {
+        let reading = limits([reading("claude", windows: [window("session", "Session", 0.3)])])
+        let failed = MachineLimits.of(limits: reading, accounts: .failed)
+        XCTAssertEqual(failed.lines.map(\.id), ["claude:claude"])
+        XCTAssertTrue(failed.accountsUnavailable)
+        XCTAssertFalse(MachineLimits.of(limits: reading, accounts: loaded(accountList([]))).accountsUnavailable)
+    }
+
+    @MainActor func testTwoAccountsOfOneNameAreToldApartByTheirID() {
+        let card = MachineLimits.of(
+            limits: limits([
+                reading("claude", account: "work", label: "Work", windows: [window("session", "Session", 0.1)]),
+                reading("claude", account: "work-2", label: "Work", windows: [window("session", "Session", 0.2)]),
+            ]),
+            accounts: .unknown)
+        XCTAssertEqual(card.lines.map(\.name), ["Work (work)", "Work (work-2)"])
+    }
+
+    @MainActor func testBeforeAReadingTheSnapshotShowsItsAccountsAsTheListHasThem() {
         let providers = [
             UsageWidgetSnapshot.Provider(
-                kind: "claude",
-                windows: [
-                    .init(kind: "weekly", label: "This week", used: 0.31, resetsAt: nil),
-                    .init(kind: "session", label: "5 hours", used: 0.62, resetsAt: nil),
-                ]),
+                kind: "claude", windows: [.init(kind: "session", label: "Session", used: 0.62, resetsAt: nil)]),
             UsageWidgetSnapshot.Provider(
                 kind: "claude", account: .init(id: "work", label: "Work"),
-                windows: [.init(kind: "session", label: "5 hours", used: 0.9, resetsAt: nil)]),
+                windows: [.init(kind: "weekly", label: "Weekly", used: 0.9, resetsAt: nil)]),
             UsageWidgetSnapshot.Provider(
-                kind: "codex", windows: [.init(kind: "weekly", label: "This week", used: 0.88, resetsAt: nil)]),
+                kind: "claude", account: .init(id: "off", label: "Off"),
+                windows: [.init(kind: "weekly", label: "Weekly", used: 0.9, resetsAt: nil)]),
         ]
-        XCTAssertEqual(
-            MachineLimitLine.lines(providers),
-            [
-                MachineLimitLine(kind: "claude", label: "5 hours", used: 0.62),
-                MachineLimitLine(kind: "codex", label: "This week", used: 0.88),
-            ])
+        let unlisted = MachineLimits.of(providers: providers, accounts: .unknown)
+        XCTAssertEqual(unlisted.lines.map(\.accountID), ["claude", "work", "off"])
+        let listed = MachineLimits.of(
+            providers: providers,
+            accounts: loaded(
+                accountList([
+                    ("claude", "claude", nil, true, "ready"), ("work", "claude", "Work", true, "ready"),
+                    ("off", "claude", "Off", false, "ready"), ("new", "claude", "New", true, "ready"),
+                ])))
+        XCTAssertEqual(listed.lines.map(\.accountID), ["claude", "work", "new"])
+        XCTAssertEqual(listed.lines.last?.content, .status("Not read yet"))
+    }
+
+    @MainActor func testTheRecorderListsTheAccountsOncePerConnectionAndFollowsThem() async {
+        let machine = FakeMachine()
+        machine.answers["usage.limits"] = { _ in self.limits([]) }
+        machine.answers["accounts.list"] = { _ in self.accountList([("claude", "claude", nil, true, "ready")]) }
+        let recorder = UsageWidgetRecorder(machineID: "recorder-\(UUID().uuidString)", client: machine)
+        recorder.start()
+        await settle()
+        XCTAssertEqual(recorder.accounts, loaded(accountList([("claude", "claude", nil, true, "ready")])))
+        machine.emit("usage.limitsChanged", limits([reading("claude", windows: [window("session", "Session", 0.4)])]))
+        let changed = accountList([("claude", "claude", nil, true, "ready"), ("work", "claude", "Work", true, "ready")])
+        machine.emit("accounts.changed", changed)
+        await settle()
+        XCTAssertEqual(recorder.accounts, loaded(changed))
+        XCTAssertEqual(machine.sent.filter { $0.0 == "accounts.list" }.count, 1)
+        recorder.stop()
+        XCTAssertNil(recorder.limits)
+        XCTAssertEqual(recorder.accounts, .unknown)
+    }
+
+    @MainActor func testAnAccountListTheMachineCouldNotGiveIsNotAnEmptyOne() async {
+        let machine = FakeMachine()
+        machine.refusals["accounts.list"] = "failed"
+        let recorder = UsageWidgetRecorder(machineID: "recorder-\(UUID().uuidString)", client: machine)
+        recorder.start()
+        await settle()
+        XCTAssertEqual(recorder.accounts, .failed)
+        recorder.stop()
+    }
+
+    @MainActor func testLimitsThatChangeWhileALoadWaitsAreNotLostOrOverwritten() async {
+        let machine = FakeMachine()
+        let old = limits([reading("claude", windows: [window("session", "Session", 0.1)])])
+        let newer = limits([reading("claude", windows: [window("session", "Session", 0.7)])])
+        machine.answers["usage.limits"] = { _ in old }
+        machine.delays["usage.limits"] = 5
+        let recorder = UsageWidgetRecorder(machineID: "recorder-\(UUID().uuidString)", client: machine)
+        recorder.start()
+        for _ in 0..<2 { await Task.yield() }
+        machine.emit("usage.limitsChanged", newer)
+        XCTAssertEqual(recorder.limits, newer)
+        await settle()
+        await settle()
+        XCTAssertEqual(recorder.limits, newer)
+        XCTAssertEqual(recorder.providers.first?.windows.first?.used, 0.7)
+        recorder.stop()
     }
 
     private func device(
@@ -526,6 +743,8 @@ final class MachinePageTests: XCTestCase {
 @MainActor private final class FakeMachine: MachineRequesting {
     var answers: [String: (JSONValue) -> JSONValue] = [:]
     var refusals: [String: String] = [:]
+    /// How many turns a request waits before it answers, so an event can come while it is on its way.
+    var delays: [String: Int] = [:]
     var sent: [(String, JSONValue)] = []
     private var handlers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
     private var connections: [UUID: @MainActor @Sendable (Bool) -> Void] = [:]
@@ -533,6 +752,7 @@ final class MachinePageTests: XCTestCase {
 
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
+        for _ in 0..<(delays[type] ?? 0) { await Task.yield() }
         if let code = refusals[type] { throw MachineClientError.server(code: code, message: code) }
         return answers[type]?(payload) ?? .object([:])
     }

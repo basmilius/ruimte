@@ -206,9 +206,7 @@ struct MachinePage: View {
         } label: {
             VStack(alignment: .leading, spacing: 8) {
                 MachineLinkLabel(title: String(localized: "Usage"), icon: "chart-no-axes-column")
-                ForEach(MachineLimitLine.lines(session.usageWidget.providers)) { line in
-                    MachineLimitRow(line: line)
-                }
+                MachineLimitList(limits: .card(session.usageWidget))
             }
         }
         .foregroundStyle(MobileStyle.text)
@@ -306,24 +304,143 @@ struct MachineLinkLabel: View {
     }
 }
 
-/// A CLI's limit as one short bar, amber once it comes close.
-struct MachineLimitRow: View {
-    let line: MachineLimitLine
+/// The limits of a machine, an account to a row, and a line when the machine could not say which accounts it has.
+struct MachineLimitList: View {
+    let limits: MachineLimits
 
     var body: some View {
-        let close = line.used >= 0.8
-        HStack(spacing: 8) {
-            Text(usageProviderName(line.kind)).frame(width: 52, alignment: .leading)
-            ShareBar(fraction: line.used, color: close ? MobileStyle.statusNeedsYou : MobileStyle.text)
-            Text(Format.percent((line.used * 100).rounded()))
-                .foregroundStyle(close ? MobileStyle.statusNeedsYou : MobileStyle.muted)
-                .frame(width: 40, alignment: .trailing)
+        VStack(alignment: .leading, spacing: 9) {
+            ForEach(limits.lines) { MachineLimitRow(line: $0) }
+            if limits.accountsUnavailable {
+                Text(
+                    "Account status unavailable",
+                    comment: "Under a machine's limits when it could not list its accounts"
+                )
+                .font(.caption).foregroundStyle(MobileStyle.faint)
+            }
+        }
+    }
+}
+
+/// One account: its CLI's mark, its dot when the CLI has more than one, its name, and its five hour window above its
+/// week, each with what it used and amber once it comes close. At the largest text sizes the bars go under the name.
+struct MachineLimitRow: View {
+    let line: MachineLimitLine
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @ScaledMetric(relativeTo: .caption) private var nameWidth: CGFloat = 104
+    @ScaledMetric(relativeTo: .caption) private var markSize: CGFloat = 12
+    @ScaledMetric(relativeTo: .caption2) private var percentWidth: CGFloat = 34
+
+    var body: some View {
+        Group {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 6) {
+                    name
+                    value
+                }
+            } else {
+                HStack(spacing: 10) {
+                    name.frame(width: nameWidth, alignment: .leading)
+                    value
+                }
+            }
         }
         .font(.caption)
-        .monospacedDigit()
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(usageProviderName(line.kind)), \(line.label)")
-        .accessibilityValue(Format.percent((line.used * 100).rounded()))
+        .accessibilityLabel(spokenName)
+        .accessibilityValue(spokenValue)
+    }
+
+    private var name: some View {
+        HStack(spacing: 6) {
+            ChatProviderMark(provider: line.kind, size: markSize).foregroundStyle(MobileStyle.muted)
+            if line.named { AccountDot(color: line.color, size: 7) }
+            Text(line.name).lineLimit(1).truncationMode(.tail)
+        }
+    }
+
+    @ViewBuilder private var value: some View {
+        switch line.content {
+        case .bars(let session, let week):
+            HStack(spacing: 8) {
+                VStack(spacing: 4) {
+                    bar(session, color: MobileStyle.text)
+                    bar(week, color: MobileStyle.muted)
+                }
+                VStack(alignment: .trailing, spacing: 0) {
+                    percent(session, color: MobileStyle.text)
+                    percent(week, color: MobileStyle.muted)
+                }
+                .frame(width: percentWidth, alignment: .trailing)
+            }
+        case .status(let status):
+            Text(status).foregroundStyle(MobileStyle.faint).lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder private func bar(_ bar: MachineLimitLine.Bar?, color: Color) -> some View {
+        if let bar {
+            ShareBar(fraction: bar.used, color: bar.used >= 0.8 ? MobileStyle.statusNeedsYou : color, height: 4)
+        } else {
+            Color.clear.frame(height: 4)
+        }
+    }
+
+    private func percent(_ bar: MachineLimitLine.Bar?, color: Color) -> some View {
+        let close = (bar?.used ?? 0) >= 0.8
+        return Text(
+            bar.map { Format.percent(($0.used * 100).rounded()) }
+                ?? String(localized: "n/a", comment: "In place of a limit window the CLI does not have")
+        )
+        .font(.caption2)
+        .monospacedDigit()
+        .foregroundStyle(bar == nil ? MobileStyle.faint : close ? MobileStyle.statusNeedsYou : color)
+        .lineLimit(1)
+    }
+
+    private var spokenName: String {
+        let provider = usageProviderName(line.kind)
+        return line.name == provider ? provider : "\(provider), \(line.name)"
+    }
+
+    private var spokenValue: String {
+        switch line.content {
+        case .status(let status):
+            return status
+        case .bars(let session, let week):
+            let used = { (bar: MachineLimitLine.Bar) in Format.percent((bar.used * 100).rounded()) }
+            switch (session, week) {
+            case (let session?, let week?):
+                return String(
+                    localized: "5 hours \(used(session)) used, week \(used(week)) used",
+                    comment: "A CLI account's two limit windows as VoiceOver reads them")
+            case (let session?, nil):
+                return String(localized: "5 hours \(used(session)) used", comment: "A CLI account's session window")
+            case (nil, let week?):
+                return String(localized: "Week \(used(week)) used", comment: "A CLI account's weekly window")
+            case (nil, nil):
+                return ""
+            }
+        }
+    }
+}
+
+/// Says once, above the machines, which bar is which.
+struct MachineLimitLegend: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            VStack(spacing: 2) {
+                Capsule().fill(MobileStyle.text).frame(width: 14, height: 3)
+                Capsule().fill(MobileStyle.muted).frame(width: 14, height: 3)
+            }
+            Text(
+                "Top: 5 hours · Bottom: week · percent used",
+                comment: "Explains the two bars of each account on a machine card")
+        }
+        .font(.caption)
+        .foregroundStyle(MobileStyle.muted)
+        .accessibilityHidden(true)
     }
 }
 

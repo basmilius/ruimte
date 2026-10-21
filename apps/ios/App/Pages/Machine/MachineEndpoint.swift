@@ -451,19 +451,148 @@ enum MachineReach {
     }
 }
 
-/// One bar of a machine's row: the window of a CLI's default account that runs out first.
+/// One account of a CLI on a machine's card: its five hour window above its week, or why it has no numbers.
 struct MachineLimitLine: Identifiable, Equatable {
+    struct Bar: Equatable {
+        let label: String
+        let used: Double
+    }
+
+    enum Content: Equatable {
+        /// The session window a person hits within a day and the week the account has; either is nil when the CLI
+        /// reports none.
+        case bars(session: Bar?, week: Bar?)
+        /// What the machine says about an account it cannot read, in place of numbers that may be old.
+        case status(String)
+    }
+
     let kind: String
-    let label: String
-    let used: Double
+    let accountID: String
+    let name: String
+    /// Whether the CLI has more than one account on the card, which is when a row wears the account's dot.
+    let named: Bool
+    let color: String?
+    let content: Content
 
-    var id: String { kind }
+    var id: String { "\(kind):\(accountID)" }
+}
 
-    /// The session window where a CLI has one, since that is the limit a person hits within a day.
-    static func lines(_ providers: [UsageWidgetSnapshot.Provider]) -> [MachineLimitLine] {
-        providers.filter { $0.accountID == $0.kind }.compactMap { provider in
-            let window = provider.windows.first { $0.kind == "session" } ?? provider.windows.first
-            return window.map { MachineLimitLine(kind: provider.kind, label: $0.label, used: $0.used) }
+/// The rows of a machine's card, and whether the machine could not say which accounts it has, in which case the
+/// numbers stand without the state of their accounts.
+struct MachineLimits: Equatable {
+    var lines: [MachineLimitLine] = []
+    var accountsUnavailable = false
+
+    /// States in which an account's numbers no longer say anything, so the state stands in their place.
+    private static let quiet: Set<String> = ["signed-out", "failed", "folder-missing", "unavailable"]
+
+    /// What the card of a machine shows: the reading of this connection, or the saved snapshot before there is one.
+    @MainActor static func card(_ recorder: UsageWidgetRecorder, now: Date = .now) -> MachineLimits {
+        if let limits = recorder.limits {
+            return of(limits: limits, accounts: recorder.accounts, now: now)
         }
+        return of(providers: recorder.providers, accounts: recorder.accounts, now: now)
+    }
+
+    /// Every account the machine reads and every one that is on, per CLI in the machine's order, the default account
+    /// first and the rest as the account list has them. An account that is off, not installed or without a
+    /// subscription has no row, as on the usage page.
+    @MainActor static func of(limits: JSONValue, accounts: UsageAccounts, now: Date = .now) -> MachineLimits {
+        let entries = limits.list("providers")
+        let readings = zip(UsageWidgetRecorder.providers(limits), entries).map { provider, entry in
+            Reading(
+                provider: provider, checkedAt: entry["checkedAt"]?.numberValue,
+                unavailable: entry["unavailable"]?["reason"]?.stringValue)
+        }
+        return of(readings, accounts: accounts, now: now)
+    }
+
+    /// The saved snapshot, before this connection read the limits. It knows the windows only, so an account without
+    /// any has no row unless the account list names it.
+    @MainActor static func of(
+        providers: [UsageWidgetSnapshot.Provider], accounts: UsageAccounts, now: Date = .now
+    ) -> MachineLimits {
+        of(providers.map { Reading(provider: $0, checkedAt: nil, unavailable: nil) }, accounts: accounts, now: now)
+    }
+
+    private struct Reading {
+        let provider: UsageWidgetSnapshot.Provider
+        /// When the machine read it; nil for a snapshot, which keeps only what it read.
+        let checkedAt: Double?
+        let unavailable: String?
+    }
+
+    @MainActor private static func of(_ readings: [Reading], accounts: UsageAccounts, now: Date) -> MachineLimits {
+        let list: ProviderAccountList? = if case .loaded(let loaded) = accounts { loaded } else { nil }
+        var kinds: [String] = []
+        for kind in readings.map(\.provider.kind) + (list?.entries.map(\.kind) ?? []) where !kinds.contains(kind) {
+            kinds.append(kind)
+        }
+        let lines = kinds.flatMap { kind in
+            lines(kind: kind, readings: readings.filter { $0.provider.kind == kind }, list: list, now: now)
+        }
+        return MachineLimits(lines: lines, accountsUnavailable: accounts == .failed && !lines.isEmpty)
+    }
+
+    @MainActor private static func lines(
+        kind: String, readings: [Reading], list: ProviderAccountList?, now: Date
+    ) -> [MachineLimitLine] {
+        let provider = usageProviderName(kind)
+        let known = list?.accounts(of: kind) ?? []
+        let read = readings.filter { $0.provider.accountID == kind } + readings.filter { $0.provider.accountID != kind }
+        // A loaded list is the truth about which accounts there are; a reading of an account it no longer has is old.
+        // The default account stays, for a machine whose list leaves it out.
+        let ids =
+            list == nil
+            ? read.map(\.provider.accountID)
+            : known.map(\.id) + read.map(\.provider.accountID).filter { $0 == kind && !known.map(\.id).contains($0) }
+        typealias Row = (id: String, name: String, color: String?, content: MachineLimitLine.Content)
+        let rows: [Row] = ids.compactMap { id in
+            let account = known.first { $0.id == id }
+            let reading = read.first { $0.provider.accountID == id }
+            if account?.enabled == false || account?.state == "disabled" || account?.state == "not-found" { return nil }
+            if ["not-installed", "no-subscription"].contains(reading?.unavailable) { return nil }
+            guard let content = content(account: account, reading: reading, now: now) else { return nil }
+            let name =
+                account?.name(provider: provider) ?? reading?.provider.account?.label ?? (id == kind ? provider : id)
+            return (id, name, account?.color ?? reading?.provider.account?.color, content)
+        }
+        let names = rows.map(\.name)
+        return rows.map { row in
+            // Two accounts by one name are told apart by their id.
+            let twin = names.filter { $0 == row.name }.count > 1
+            return MachineLimitLine(
+                kind: kind, accountID: row.id, name: twin ? "\(row.name) (\(row.id))" : row.name,
+                named: rows.count > 1, color: row.color, content: row.content)
+        }
+    }
+
+    @MainActor private static func content(
+        account: ProviderAccountEntry?, reading: Reading?, now: Date
+    ) -> MachineLimitLine.Content? {
+        if let state = account?.state, quiet.contains(state) {
+            let status = account?.message.map { JSONValue.object(["message": .string($0)]) }
+            return .status(MachineAgentsModel.detail(state: state, status: status))
+        }
+        let windows = reading?.provider.windows ?? []
+        let session = windows.first { $0.kind == "session" }
+        // The week of the whole account; a week of one model ("Weekly · Opus") stays on the usage page.
+        let week = windows.first { $0.kind == "weekly" && !$0.label.contains(" · ") }
+        if session != nil || week != nil {
+            return .bars(session: session.map { bar($0, now: now) }, week: week.map { bar($0, now: now) })
+        }
+        if reading?.unavailable == "failed" { return .status(String(localized: "Unavailable")) }
+        if account?.state == "checking" { return .status(MachineAgentsModel.detail(state: "checking", status: nil)) }
+        if reading == nil || (reading?.checkedAt ?? 1) <= 0 {
+            return .status(
+                String(localized: "Not read yet", comment: "An account whose limits the machine has not read"))
+        }
+        return nil
+    }
+
+    /// Past its reset a window starts over, which the app has not heard yet, so it reads as unused, as in the widget.
+    private static func bar(_ window: UsageWidgetSnapshot.Window, now: Date) -> MachineLimitLine.Bar {
+        let reset = window.resetsAt.map { $0 <= now } ?? false
+        return MachineLimitLine.Bar(label: window.label, used: reset ? 0 : window.used)
     }
 }

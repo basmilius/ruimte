@@ -14,6 +14,13 @@ struct MachinesPage: View {
 
     var body: some View {
         MobileForm {
+            if showsLegend {
+                Section {
+                    MachineLimitLegend()
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+                }
+            }
             ForEach(runtime.machines, id: \.id) { machine in
                 Section {
                     MachineCard(session: runtime.session(for: machine)) { open(machine.id) }
@@ -32,6 +39,14 @@ struct MachinesPage: View {
         .navigationTitle("Machines")
         .navigationBarTitleDisplayMode(UIDevice.current.userInterfaceIdiom == .pad ? .inline : .automatic)
     }
+
+    /// The legend shows once some card has limits to read.
+    private var showsLegend: Bool {
+        runtime.machines.contains { machine in
+            let session = runtime.session(for: machine)
+            return session.connected && !MachineLimits.card(session.usageWidget).lines.isEmpty
+        }
+    }
 }
 
 private struct MachineCard: View {
@@ -39,7 +54,7 @@ private struct MachineCard: View {
     let open: () -> Void
 
     var body: some View {
-        let lines = MachineLimitLine.lines(session.usageWidget.providers)
+        let limits = MachineLimits.card(session.usageWidget)
         Button(action: open) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 11) {
@@ -71,10 +86,8 @@ private struct MachineCard: View {
                             .accessibilityHidden(true)
                     }
                 }
-                if session.connected && !lines.isEmpty {
-                    VStack(spacing: 6) {
-                        ForEach(lines) { MachineLimitRow(line: $0) }
-                    }
+                if session.connected && !limits.lines.isEmpty {
+                    MachineLimitList(limits: limits)
                 }
             }
             .padding(.vertical, 4)
