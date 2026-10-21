@@ -81,6 +81,8 @@ interface NodeMenuProps {
     viewId?: string;
     onRename(): void;
     snooze?: ReactNode;
+    /* False when a pick moved the keyboard somewhere the menu must not take it back from, such as a rename field. */
+    finalFocus?: () => boolean;
 }
 
 /* A closed canvas is read from the document; only an action that needs its editor opens it. */
@@ -98,7 +100,7 @@ export function NodeMenuPopup(props: NodeMenuProps) {
     );
 }
 
-function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze }: NodeMenuProps & { node: CanvasNode | undefined }) {
+function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, finalFocus }: NodeMenuProps & { node: CanvasNode | undefined }) {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const endpointId = useEndpointId();
@@ -234,7 +236,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze }: N
     const conversation = node.kind === 'chat' && (offersFork || bookmarked || Boolean(chatSession) || prWatch !== null);
 
     return (
-        <ContextMenu.Popup>
+        <ContextMenu.Popup {...(finalFocus === undefined ? {} : { finalFocus })}>
             {snooze}
             <ContextMenu.Item onClick={onRename}>
                 <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <ContextMenu.Hint>{t('menu.doubleClick')}</ContextMenu.Hint>
