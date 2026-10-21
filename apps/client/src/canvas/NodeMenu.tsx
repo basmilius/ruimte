@@ -27,11 +27,11 @@ import {
     Terminal,
     Trash
 } from 'lucide-react';
-import type { NoteColor, ProviderInfo, Task } from '@ruimte/contracts';
+import { nodeColorOf, type NodeAccent, type ProviderInfo, type Task } from '@ruimte/contracts';
 import {
     arrangeGroupAction,
     clearTerminalAction,
-    colorNoteAction,
+    colorNodeAction,
     createNodeAction,
     duplicateNodeAction,
     focusNodeAction,
@@ -45,7 +45,6 @@ import { askBeforeClearingChat, askBeforeStoppingTask } from '@/agents/end-child
 import { FlagSubmenu } from '@/project/FlagSubmenu';
 import { askOpenAsView, canOpenAsView, showView } from '@/project/views';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
-import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
 import { EMPTY_DRAFT, writeDraft } from '@adecore/agents-react/chat';
 import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
 import { ForkMenuItem } from '@/chat/ForkMenuItem';
@@ -378,11 +377,8 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze }: N
                 />
             )}
             <ContextMenu.Separator />
-            <AccentSubmenu picked={node.accent} onPick={(accent) => canvas().getState().setNodeAccent(id, accent)} />
+            <AccentSubmenu picked={nodeColorOf(node) ?? undefined} onPick={(accent) => colorNodeAction(canvas().getState().viewId, id, accent)} />
             <FlagSubmenu id={id} />
-            {node.kind === 'note' && (
-                <NoteColorSubmenu picked={node.color ?? DEFAULT_NOTE_COLOR} onPick={(color) => colorNoteAction(canvas().getState().viewId, id, color)} />
-            )}
             {place && <ContextMenu.Separator />}
             {canOpenAsView(node.kind) && (
                 <ContextMenu.Item
@@ -428,26 +424,7 @@ function WorktreeItems({ folder, paths }: { folder: string; paths: string[] }) {
     );
 }
 
-function NoteColorSubmenu({ picked, onPick }: { picked: string; onPick(color: NoteColor): void }) {
-    const { t } = useTranslation('canvas');
-    return (
-        <ContextMenu.SubmenuRoot>
-            <ContextMenu.SubmenuTrigger>
-                <Icon icon={Palette} size={14} /> {t('menu.noteColor')}
-            </ContextMenu.SubmenuTrigger>
-            <ContextMenu.Popup className="min-w-40">
-                {NOTE_COLORS.map((color) => (
-                    <ContextMenu.Item key={color.id} onClick={() => onPick(color.id)}>
-                        <ContextMenu.Check kind="radio" checked={picked === color.id} />
-                        <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} /> {t(`noteColors.${color.id}`)}
-                    </ContextMenu.Item>
-                ))}
-            </ContextMenu.Popup>
-        </ContextMenu.SubmenuRoot>
-    );
-}
-
-function AccentSubmenu({ picked, onPick }: { picked: string | undefined; onPick(accent: string | null): void }) {
+function AccentSubmenu({ picked, onPick }: { picked: string | undefined; onPick(accent: NodeAccent | null): void }) {
     const { t } = useTranslation('canvas');
     return (
         <ContextMenu.SubmenuRoot>

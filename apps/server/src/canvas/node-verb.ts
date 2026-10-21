@@ -1,4 +1,5 @@
-import { isCanvasView } from '@ruimte/contracts';
+import { NODE_ACCENT_NAMES, isCanvasView, isNodeAccent } from '@ruimte/contracts';
+import { COLOR_LINES } from '../actions/node-actions.ts';
 import { z } from 'zod';
 import { canvasIdFor, defineActionVerb, runAction } from './action-verb.ts';
 import { EVERY_KIND_LINE, NODE_VERB_KINDS, REQUIRED_FLAG, kindLine, kindsFor } from './node-kinds.ts';
@@ -12,6 +13,7 @@ import {
     SCOPE_LINE,
     SNOOZE_LINE,
     TITLE_LINE,
+    VerbRefusal,
     field,
     placeOf,
     titleField
@@ -32,7 +34,7 @@ const LISTED = 'ruimte-context view list lists them';
 export const nodeNewAction = defineActionVerb('node', {
     name: 'new',
     action: 'node.create',
-    usage: `<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--device D] [--cwd P] [--view V] [--beside N] [--dry-run]`,
+    usage: `<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--device D] [--cwd P] [--color C] [--view V] [--beside N] [--dry-run]`,
     note: REQUIRED_NOTE,
     dryRun: true,
     params: [
@@ -45,6 +47,13 @@ export const nodeNewAction = defineActionVerb('node', {
         },
         { syntax: '--view V', need: 'every kind', field: 'viewId', text: 'The canvas to add to, by view id', more: LISTED },
         { syntax: '--beside N', need: 'every kind', field: 'beside' },
+        {
+            syntax: '--color C',
+            need: 'every kind',
+            field: 'color',
+            text: `One of the ${NODE_ACCENT_NAMES.length} colors; a note takes its paper from it`,
+            more: 'ruimte-context help node color lists them'
+        },
         {
             syntax: '--dry-run',
             need: 'no value',
@@ -92,9 +101,13 @@ export const nodeNewAction = defineActionVerb('node', {
         device: z.string().min(1, '--device needs the id of a device of this machine').optional(),
         cwd: z.string().min(1, '--cwd needs the path of a directory').optional(),
         view: z.string().min(1, '--view needs the id of a canvas').optional(),
-        beside: z.string().min(1, '--beside needs the id of a node on that canvas').optional()
+        beside: z.string().min(1, '--beside needs the id of a node on that canvas').optional(),
+        color: z.string().min(1, '--color needs one of the colors').optional()
     }),
     async run({ positionals: [kind], flags, dryRun }, call) {
+        if (flags.color !== undefined && !isNodeAccent(flags.color)) {
+            throw new VerbRefusal('unknown-color', `${flags.color} is not one of the ${NODE_ACCENT_NAMES.length} colors a node takes`, [...COLOR_LINES]);
+        }
         const viewId = await canvasIdFor(call, placeOf(call), flags.view, OPENING_OFF_CANVAS);
         const made = await runAction(
             call,
@@ -112,7 +125,8 @@ export const nodeNewAction = defineActionVerb('node', {
                 source: flags.source ?? null,
                 device: flags.device ?? null,
                 cwd: flags.cwd ?? null,
-                beside: flags.beside ?? null
+                beside: flags.beside ?? null,
+                color: flags.color ?? null
             },
             dryRun
         );

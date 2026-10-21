@@ -578,7 +578,7 @@ describe('what a newer Ruimte wrote', () => {
     test('a person may move or delete an unknown node, and nothing else about it changes', () => {
         const canvas = focusedCanvas().getState();
         canvas.renameNode('holo', 'Other');
-        canvas.setNodeAccent('holo', 'red');
+        canvas.setNodeColor('holo', 'red');
         canvas.duplicateNode('holo');
         expect(focusedCanvas().getState().nodes.holo).toEqual(hologram);
         expect(focusedCanvas().getState().order).toEqual(['n1', 'holo']);

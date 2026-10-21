@@ -1,5 +1,5 @@
 import { NodeKindSchema, type NodeKind } from './project.ts';
-export { NODE_ACCENT_NAMES, type NodeAccent } from './node-accents.ts';
+export { NODE_ACCENT_NAMES, type NodeAccent, type NotePaper, isNodeAccent, notePaperOf, nodeColorOf, nodeColorPatch } from './node-accents.ts';
 
 export interface NodeSize {
     w: number;
@@ -201,14 +201,6 @@ export function arrangeRects(rects: readonly NodeRect[], layout: ArrangeLayout, 
         h: rect.h
     }));
 }
-
-/*
- * The paper a note can take, its default first. Shared for the same reason as the accents: the
- * client paints them and an action refuses any other. A note in the file keeps whatever it names.
- */
-export const NOTE_COLOR_NAMES = ['yellow', 'green', 'blue', 'pink', 'gray'] as const;
-
-export type NoteColor = (typeof NOTE_COLOR_NAMES)[number];
 
 /* What a node of each kind is called before anything names it. */
 export const DEFAULT_TITLES: Record<NodeKind, string> = {

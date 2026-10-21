@@ -147,7 +147,7 @@
         "replacedDiagram": "Diagram vervangen",
         "resumedAgent": "Terminal-agent hervat",
         "restartedTerminal": "Terminal opnieuw gestart",
-        "changedNoteColor": "Kleur van notitie gewijzigd",
+        "changedNodeColor": "Kleur gewijzigd",
         "queuedPrompt": "Prompt voor AI Chat in de wachtrij",
         "prompted": "AI Chat geprompt"
     }

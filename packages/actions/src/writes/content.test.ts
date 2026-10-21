@@ -27,11 +27,6 @@ describeWrites('content', {
             'an empty note': { viewId: 'board', nodeId: '', text: 'Hi', append: false }
         }
     },
-    'note.setColor': {
-        actors: ['person', 'voice'],
-        input: { viewId: 'board', nodeId: 'note-1', color: 'green' },
-        refused: { 'a paper a note has not': { viewId: 'board', nodeId: 'note-1', color: 'teal' } }
-    },
     'diagram.replaceContent': {
         actors: ['person', 'voice', 'agent'],
         input: { viewId: 'flow', document: '{"meta":{},"nodes":[],"groups":[],"edges":[]}' },

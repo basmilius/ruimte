@@ -18,13 +18,6 @@
         "pink": "Pink",
         "rose": "Rose"
     },
-    "noteColors": {
-        "yellow": "Yellow",
-        "green": "Green",
-        "blue": "Blue",
-        "pink": "Pink",
-        "gray": "Gray"
-    },
     "locks": {
         "pan": {
             "label": "Pan",
@@ -103,7 +96,6 @@
         "openAsView": "Open as view",
         "openAsViewHint": "Keeps its session",
         "startAgentFromNote": "Start agent from note",
-        "noteColor": "Note color",
         "color": "Color",
         "noAccent": "None",
         "stopPrWatch": "Stop watching pull request",

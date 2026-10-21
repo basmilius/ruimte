@@ -12,7 +12,7 @@ interface Held {
 
 /* The writes of this window whose document is the project file; a drawing and a diagram keep a file and a rev of their own. */
 const PROJECT_DOMAINS: ReadonlySet<string> = new Set(['views', 'canvas', 'layout']);
-const PROJECT_ACTIONS: ReadonlySet<ActionName> = new Set<ActionName>(['node.update', 'note.setColor', 'browser.navigate']);
+const PROJECT_ACTIONS: ReadonlySet<ActionName> = new Set<ActionName>(['node.update', 'browser.navigate']);
 
 function heldTo(document: string, expected: number, { rev, dirty }: Held): void {
     if (rev !== expected) {

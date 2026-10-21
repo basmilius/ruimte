@@ -146,7 +146,7 @@ export const ProjectNodeSchema = keepingUnknown(
         worktree: z.object({ path: z.string(), branch: z.string() }).optional(),
         // Chat and terminal: the GitHub issue the agent was started on, which the node shows as a pill.
         issue: z.object({ repo: z.string(), number: z.number().int().positive(), url: z.string() }).optional(),
-        // Note only: its markdown and one of the note colors; without a color it takes the default.
+        // Note only: its markdown, and the paper it had before Color covered notes, read as an accent by `notePaperOf` until a person picks a Color, which removes it.
         body: z.string().optional(),
         color: z.string().optional(),
         // Drawing and diagram only: the view of that kind this node mirrors, which lives in the same project.
