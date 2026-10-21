@@ -24,6 +24,7 @@
     "menu": {
         "none": "Geen agent-CLI gevonden",
         "connecting": "Verbinden",
+        "onAccount": "{{provider}} ({{account}})",
         "newChat": "Nieuwe chat",
         "setup": "Agents instellen",
         "defaultModel": "Standaardmodel"
