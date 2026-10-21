@@ -362,7 +362,8 @@ private struct CanvasColorSheet: View {
                             Label {
                                 Text(CanvasColorSheet.name(accent)).foregroundStyle(MobileStyle.text)
                             } icon: {
-                                Circle().fill(RuimteColors.nodeAccent(accent) ?? MobileStyle.accent).frame(width: 14, height: 14)
+                                Circle().fill(RuimteColors.nodeAccent(accent) ?? MobileStyle.accent).frame(
+                                    width: 14, height: 14)
                             }
                         }
                     }

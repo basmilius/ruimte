@@ -105,7 +105,9 @@ extension RuimteColors {
     ]
 
     /// The papers a note had in `color` before Color covered notes; four are accents by the same name.
-    private static let legacyNotePapers = ["yellow": "yellow", "green": "green", "blue": "blue", "pink": "pink", "gray": "neutral"]
+    private static let legacyNotePapers = [
+        "yellow": "yellow", "green": "green", "blue": "blue", "pink": "pink", "gray": "neutral",
+    ]
 
     /// The paper a note shows, nil for the default, by the rule of `notePaperOf` in `packages/contracts`: an old paper
     /// wins over an accent, so a project looks as it did, and a name this version does not know counts for nothing.

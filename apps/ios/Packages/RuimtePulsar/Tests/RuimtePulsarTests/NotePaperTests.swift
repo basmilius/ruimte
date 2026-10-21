@@ -3,9 +3,10 @@ import Testing
 @testable import RuimtePulsar
 
 @Test func aNoteReadsItsOldPaperBeforeItsAccentAndTheDefaultWithoutEither() {
-    #expect(["yellow", "green", "blue", "pink", "gray"].map { RuimteColors.notePaper(accent: nil, color: $0) } == [
-        "yellow", "green", "blue", "pink", "neutral",
-    ])
+    #expect(
+        ["yellow", "green", "blue", "pink", "gray"].map { RuimteColors.notePaper(accent: nil, color: $0) } == [
+            "yellow", "green", "blue", "pink", "neutral",
+        ])
     #expect(RuimteColors.notePaper(accent: "red", color: "green") == "green")
     #expect(RuimteColors.notePaper(accent: "teal", color: "chartreuse") == "teal")
     #expect(RuimteColors.notePaper(accent: "#ff0000", color: nil) == nil)

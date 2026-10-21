@@ -3234,6 +3234,17 @@ describe('node color', () => {
         expect((await onDisk()).rev).toBe(1);
     });
 
+    test('a node of a kind a newer Ruimte made is refused by name and stays as it was read', async () => {
+        const hologram = { kind: 'hologram', id: 'holo', title: 'Hologram', x: 900, y: 0, w: 480, h: 360, beam: { lumens: [1, 2] } };
+        const file = await onDisk();
+        const main = file.views[0] as ProjectCanvasView;
+        await setPrivateViews(folder, [{ ...main, nodes: [...main.nodes, hologram] }, ...file.views.slice(1)]);
+        const chatView = await post('node', ['color', 'holo', '--color', 'teal', '--view', 'main'], 'chat');
+        expect(chatView.lines[0]).toBe('refused\tunknown-node\tholo is a node of a kind this machine does not know, so it cannot color it');
+        const raw = (await rawPrivateViews(folder)) as unknown as Array<{ nodes?: Array<{ id: string }> }>;
+        expect(JSON.stringify(raw[0]!.nodes!.find((node) => node.id === 'holo'))).toBe(JSON.stringify(hologram));
+    });
+
     test('the color it already has writes nothing', async () => {
         await post('node', ['color', 'term-1', '--color', 'amber']);
         const rev = (await onDisk()).rev;

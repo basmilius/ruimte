@@ -24,7 +24,9 @@ import Testing
                 .openAsView, .linkAsContext, .groupSelection, .rename, .color, .delete,
             ])
         #expect(
-            CanvasNodeAction.actions(for: node("n", "note")) == [.linkAsContext, .groupSelection, .rename, .color, .delete])
+            CanvasNodeAction.actions(for: node("n", "note")) == [
+                .linkAsContext, .groupSelection, .rename, .color, .delete,
+            ])
         #expect(CanvasNodeAction.actions(for: node("g", "group")) == [.linkAsContext, .rename, .color, .delete])
         #expect(CanvasNodeAction.actions(for: node("u", "hologram")) == [.delete])
     }

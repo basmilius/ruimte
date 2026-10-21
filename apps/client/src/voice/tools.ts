@@ -272,7 +272,7 @@ const REPLIES: Replies = {
                   ? `Made the ${NODE_LABELS[output.kind]} ${output.color}.`
                   : `The ${NODE_LABELS[output.kind]} was already ${output.color}.`,
         entry: {
-            kind: 'note',
+            kind: 'node',
             label: activity('changedNodeColor'),
             detail: output.color === null ? i18next.t('canvas:menu.noAccent') : accentLabel(output.color)
         }

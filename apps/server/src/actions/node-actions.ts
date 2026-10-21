@@ -428,8 +428,16 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             const canvas = canvasNamed(content, viewId);
             const chatView = isChatView(content, caller.caller);
             const node = canvas.nodes.find((candidate) => candidate.id === nodeId);
-            if (!node || isUnknownNode(node)) {
+            if (!node) {
                 throw refuseMissingNodes(content, [nodeId], canvas.id, 'there is no node to color', colorableLines(canvas, caller, chatView));
+            }
+            // A newer Ruimte's node is written back as it was read, so a color on it would never reach the file.
+            if (isUnknownNode(node)) {
+                throw new VerbRefusal(
+                    'unknown-node',
+                    `${nodeId} is a node of a kind this machine does not know, so it cannot color it`,
+                    colorableLines(canvas, caller, chatView)
+                );
             }
             refuseOtherMachine(host, nodeId);
             if (!mayColor(canvas, node, caller, chatView)) {
