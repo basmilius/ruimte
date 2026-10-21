@@ -18,7 +18,7 @@ import type { EndpointIdentity, IdentityFlags } from '../endpoint-id.ts';
 import { checkWorktreeRoot } from '../git/worktree-root.ts';
 import type { BrokerDescription } from '../pulsar/broker-switch.ts';
 import type { InstallVerdict } from '../power/machine-update.ts';
-import { IntegrationsFixed, isIntegrationKind } from '../agents/integrations.ts';
+import { INTEGRATION_KINDS, IntegrationsFixed, isIntegrationKind } from '../agents/integrations.ts';
 import { DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
 import { countClient, recordStartup } from '../stats/usage-stats.ts';
 
@@ -54,7 +54,7 @@ interface EndpointHost {
     agentIntegrations?: {
         summary(): AgentIntegrationsResult['summary'];
         files(): Promise<AgentIntegrationsResult['files']>;
-        set(kind: 'claude' | 'codex', on: boolean): Promise<AgentIntegrationReport[]>;
+        set(kind: (typeof INTEGRATION_KINDS)[number], on: boolean): Promise<AgentIntegrationReport[]>;
     };
     // The update of the desktop app on this machine, and what installing it would end right now.
     updates?: {
@@ -267,7 +267,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         async (payload) => {
             const current = integrations();
             if (!isIntegrationKind(payload.provider)) {
-                throw new RequestError('unknown-provider', `Ruimte has no status hooks for ${payload.provider}`);
+                throw new RequestError('unknown-provider', `Ruimte writes no settings for ${payload.provider}`);
             }
             const report = await current.set(payload.provider, payload.on).catch((e: unknown) => {
                 if (e instanceof IntegrationsFixed) {

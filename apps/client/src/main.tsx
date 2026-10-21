@@ -33,6 +33,7 @@ import { startAutoRegistration } from '@/pulsar/auto-register-watch';
 import { startRemovalWatch } from '@/pulsar/removal-watch';
 import { pool } from '@/transport';
 import { startWakeReconnect } from '@/transport/wake';
+import { startProviderDetection } from '@/transport/provider-detection';
 import { desktop } from '@/desktop/bridge';
 import { startKeepAwake, startKeepAwakeMove } from '@/state/keep-awake';
 import { startLastSeen } from '@/state/last-seen-watch';
@@ -104,6 +105,7 @@ startRemovalWatch();
 startOnboarding();
 startAgentIntegrationsPrompt();
 startWakeReconnect(pool);
+startProviderDetection();
 startLastSeen();
 refuseStrayDrops(document);
 /* The background travels with the theme, so `styles.css` stays the only place the token is written down. */

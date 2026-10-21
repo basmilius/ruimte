@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport } from '@ruimte/contracts';
+import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport, AgentKind } from '@ruimte/contracts';
 import { CliMark } from '@adecore/agents-react/providers';
 import { useLocalTilde } from '@/format/home-path';
-import { INTEGRATION_NAMES, loadIntegrationFiles, pendingReview, providersToKeep, setAgentIntegration, useAgentIntegrations } from '@/state/agent-integrations';
+import { INTEGRATION_NAMES, pendingReview, providersToKeep, setAgentIntegration, useAgentIntegrations } from '@/state/agent-integrations';
 import { useUi } from '@/state/ui';
 import { Button, Dialog, FormError, Skeleton } from '@adecore/ui';
 
@@ -67,11 +67,20 @@ export function IntegrationDetails({
                     </ul>
                 </div>
             )}
-            {consequence && <p>{t('agents.integrations.off', { provider: INTEGRATION_NAMES[entry.provider] ?? entry.provider })}</p>}
+            {consequence && entry.provider !== 'antigravity' && (
+                <p>{t('agents.integrations.off', { provider: INTEGRATION_NAMES[entry.provider] ?? entry.provider })}</p>
+            )}
             {entry.provider === 'codex' && <p>{t('agents.integrations.codexRule')}</p>}
+            {entry.provider === 'antigravity' && <p>{t('agents.integrations.antigravityRule')}</p>}
         </div>
     );
 }
+
+// What a person gets from allowing each CLI, in one line; the files and the details live in the settings.
+const DIALOG_GAINS: Partial<Record<AgentKind, string>> = {
+    codex: 'settings:agents.integrations.dialog.statusAndTool',
+    antigravity: 'settings:agents.integrations.dialog.tool'
+};
 
 /*
  * Asks once, per CLI, whether Ruimte may write its status hooks into that CLI's global settings. A
@@ -82,7 +91,6 @@ export function AgentIntegrationsDialog() {
     const { t } = useTranslation(['settings', 'common']);
     const open = useUi((s) => s.agentIntegrations);
     const summary = useAgentIntegrations();
-    const [files, setFiles] = useState<AgentIntegrationFile[] | null>(null);
     const [reports, setReports] = useState<Record<string, AgentIntegrationReport[]>>({});
     const [busy, setBusy] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -91,14 +99,6 @@ export function AgentIntegrationsDialog() {
     const firstAsked = (summary?.providers ?? []).find(
         (entry) => reports[entry.provider] === undefined && (entry.state === 'unset' || (entry.state === 'on' && !entry.reviewed))
     );
-
-    useEffect(() => {
-        if (open) {
-            void loadIntegrationFiles()
-                .then(setFiles)
-                .catch(() => setFiles([]));
-        }
-    }, [open]);
 
     // Answered in another window: nothing is left to ask here, unless this window shows the report of its own answer.
     useEffect(() => {
@@ -113,7 +113,6 @@ export function AgentIntegrationsDialog() {
         try {
             const report = await setAgentIntegration(provider, on);
             setReports((current) => ({ ...current, [provider]: report }));
-            setFiles(await loadIntegrationFiles().catch(() => files ?? []));
         } catch (e) {
             setError(e instanceof Error ? e.message : String(e));
         } finally {
@@ -140,10 +139,12 @@ export function AgentIntegrationsDialog() {
         >
             <Dialog.Popup className="flex w-[560px] flex-col p-5">
                 <Dialog.Title>{t('settings:agents.integrations.dialog.title')}</Dialog.Title>
-                <Dialog.Description className="mt-1">{t('settings:agents.integrations.description')}</Dialog.Description>
+                <Dialog.Description className="mt-1">{t('settings:agents.integrations.dialog.description')}</Dialog.Description>
                 <div className="mt-4 -mx-1 flex min-h-0 flex-col gap-3 overflow-y-auto px-1">
                     {(summary?.providers ?? []).map((entry) => {
                         const own = reports[entry.provider];
+                        // After a choice the card shows its state; only a file that went wrong is named.
+                        const failed = own?.filter((report) => report.outcome === 'failed' || report.outcome === 'refused') ?? [];
                         const migrated = entry.state === 'on' && !entry.reviewed;
                         return (
                             <section key={entry.provider} className="rounded-lg border border-border bg-surface bg-clip-padding p-3.5">
@@ -156,10 +157,12 @@ export function AgentIntegrationsDialog() {
                                         {t('settings:agents.integrations.migrated', { provider: INTEGRATION_NAMES[entry.provider] ?? entry.provider })}
                                     </p>
                                 )}
-                                <IntegrationDetails entry={entry} files={files} consequence />
-                                {own !== undefined ? (
-                                    <IntegrationReports reports={own} />
-                                ) : entry.state === 'unset' || migrated ? (
+                                <p className="mt-1 text-sm text-text-muted">
+                                    {t(DIALOG_GAINS[entry.provider] ?? 'settings:agents.integrations.dialog.status')}
+                                </p>
+                                {failed.length > 0 ? (
+                                    <IntegrationReports reports={failed} />
+                                ) : own === undefined && (entry.state === 'unset' || migrated) ? (
                                     <div className="mt-3 flex items-center gap-2">
                                         <Button
                                             variant="primary"

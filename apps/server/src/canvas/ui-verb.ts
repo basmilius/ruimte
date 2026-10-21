@@ -40,8 +40,9 @@ function componentNames(group: UiGroupName): string[] {
         .map((line) => line.split(':')[0] ?? line);
 }
 
-/* What only this host can say about a group, added to the catalog's own rules. */
+/* Host guidance supplements the catalog's group rules. */
 const HOST_RULES: Partial<Record<UiGroupName, string>> = {
+    data: 'Stat value and previous take numbers, e.g. value={42}; unit is a suffix. Use EntityList with Entry children for formatted text such as "21 min 38 sec".',
     content:
         'To show an image or model file of your own, attach it with ruimte-context chat attach --file <path>, which prints the id for attachment="<id>" on Image, Gallery and Compare, or on Model for a binary glTF, USDZ or STL',
     places: 'Ruimte does not look up addresses, so give lat and lon for every Place; an address may still be given as text, but a Place with only an address is not placed on the map'
@@ -54,7 +55,10 @@ function groupDetail(group: UiGroupName): string[] {
     return [
         `rules\t${host === undefined ? rules : `${rules} ${host}`}`,
         'prints\tcomponent\tname\tprops\tdescription\tone row per component; a prop that ends in ? is optional, - is none',
-        ...components.map(componentLine)
+        ...components.map(componentLine),
+        ...(group === 'data'
+            ? ['example\t<EntityList><Entry label="ci">21 min 38 sec</Entry><Entry label="far-future-clock">16 min 46 sec</Entry></EntityList>']
+            : [])
     ];
 }
 

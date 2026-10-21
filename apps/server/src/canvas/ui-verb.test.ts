@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { UI_GROUPS } from '@adecore/intelligent-ui';
+import { compileUiBlock, evaluateUiBlock, UI_GROUPS } from '@adecore/intelligent-ui';
 import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 import type { CanvasHost, Verb } from './verb.ts';
 import { verbNamed } from './verbs.ts';
@@ -46,6 +46,21 @@ test('ui <group> prints what help ui <group> details', async () => {
     for (const line of printed) {
         expect(detail).toContain(line);
     }
+});
+
+test('the data reference shows formatted durations in entries that compile and evaluate', async () => {
+    const lines = await run('help', 'ui', 'data');
+    expect(lines.find((line) => line.startsWith('rules\t'))).toContain('Stat value and previous take numbers');
+    const example = lines.find((line) => line.startsWith('example\t'))?.slice('example\t'.length);
+    expect(example).toBeDefined();
+    const block = compileUiBlock(example!, { id: 'duration-example', final: true, now: () => 0 });
+    expect(block.diagnostics).toEqual([]);
+    const result = evaluateUiBlock(block, undefined, { milliseconds: Number.MAX_SAFE_INTEGER });
+    expect(result.diagnostics).toEqual([]);
+    expect(result.nodes[0]?.type).toBe('EntityList');
+    expect(result.nodes[0]?.children.map((node) => node.type)).toEqual(['Entry', 'Entry']);
+    expect(block.fallback).toContain('ci: 21 min 38 sec');
+    expect(block.fallback).toContain('far-future-clock: 16 min 46 sec');
 });
 
 test('every group prints a rule and at least one component with a description', async () => {

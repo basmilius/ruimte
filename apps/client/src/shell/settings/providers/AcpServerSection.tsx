@@ -1,96 +1,57 @@
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AgentServerStatus, ProviderInfo } from '@ruimte/contracts';
-import { useProvidersStore } from '@adecore/agents-react/state';
 import { Button, Spinner } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
-import { transportFor } from '@/transport';
-import { useMachineAnswers } from '@/transport/features';
+import type { AcpServer } from '@/shell/settings/providers/use-acp-server';
 
-function messageOf(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
-}
-
-/*
- * The chat server of a CLI that ships one apart (Antigravity's), which a person installs on this machine.
- * Only the app on the machine itself may install it, since that downloads a program and makes it runnable there.
- */
-export function AcpServerSection({ endpointId, provider }: { endpointId: string; provider: ProviderInfo }) {
+function useServerWords(acp: AcpServer, server: AgentServerStatus) {
     const { t } = useTranslation('settings');
-    const answers = useMachineAnswers(endpointId, 'provider.server');
-    const [server, setServer] = useState<AgentServerStatus | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const local = endpointId === LOCAL_ENDPOINT_ID;
-
-    useEffect(() => {
-        const link = transportFor(endpointId);
-        if (!link || !answers) {
-            return;
-        }
-        let live = true;
-        link.request('provider.server', { provider: provider.kind }).then(
-            (result) => {
-                if (live) {
-                    setServer(result.server);
-                }
-            },
-            (e: unknown) => {
-                if (live) {
-                    setError(messageOf(e));
-                }
-            }
-        );
-        return () => {
-            live = false;
-        };
-    }, [endpointId, answers, provider.kind]);
-
-    async function install(): Promise<void> {
-        const link = transportFor(endpointId);
-        if (!link || server === null) {
-            return;
-        }
-        setError(null);
-        setServer({ ...server, state: 'installing' });
-        try {
-            setServer((await link.request('provider.installServer', { provider: provider.kind })).server);
-            const { providers } = await link.request('provider.list', {});
-            useProvidersStore.getState().setProviders(endpointId, providers);
-        } catch (e) {
-            setError(messageOf(e));
-            setServer((await link.request('provider.server', { provider: provider.kind }).catch(() => null))?.server ?? server);
-        }
-    }
-
-    if (!answers || server === null) {
-        return null;
-    }
-    const installing = server.state === 'installing';
     const description =
-        error ??
+        acp.error ??
         (server.state === 'failed' ? (server.error ?? '') : t(`providers.acpServer.state.${server.state}`, { version: server.installed ?? server.version }));
     const offersInstall = server.state === 'missing' || server.state === 'failed' || (server.state === 'installed' && server.installed !== server.version);
+    const action = server.installed === null ? t('providers.acpServer.install') : t('providers.acpServer.update', { version: server.version });
+    return { description: acp.local ? description : t('providers.acpServer.localOnly'), offersInstall, action };
+}
 
+function InstallButton({ acp, label, variant }: { acp: AcpServer; label: string; variant: 'primary' | 'secondary' }) {
+    return (
+        <Button size="sm" variant={variant} disabled={!acp.local} onClick={() => void acp.install()}>
+            {label}
+        </Button>
+    );
+}
+
+/* The server of an installed CLI, where a newer pinned version is offered as an update. */
+export function AcpServerSection({ provider, acp, server }: { provider: ProviderInfo; acp: AcpServer; server: AgentServerStatus }) {
+    const { t } = useTranslation('settings');
+    const { description, offersInstall, action } = useServerWords(acp, server);
     return (
         <SettingsSection title={t('providers.acpServer.title', { name: provider.name })} description={t('providers.acpServer.description')} scope="machine">
             <SettingsRow
                 searchId="providers.acpServer"
                 label={t('providers.acpServer.label', { version: server.version })}
-                description={local ? description : t('providers.acpServer.localOnly')}
+                description={description}
                 control={
-                    installing ? (
-                        <Spinner size={12} />
-                    ) : (
-                        offersInstall && (
-                            <Button size="sm" variant="secondary" disabled={!local} onClick={() => void install()}>
-                                {server.installed === null ? t('providers.acpServer.install') : t('providers.acpServer.update', { version: server.version })}
-                            </Button>
-                        )
-                    )
+                    server.state === 'installing' ? <Spinner size={12} /> : offersInstall && <InstallButton acp={acp} label={action} variant="secondary" />
                 }
             />
         </SettingsSection>
+    );
+}
+
+/* The server as the step after the CLI on a provider's install page. */
+export function AcpServerStepBody({ acp, server }: { acp: AcpServer; server: AgentServerStatus }) {
+    const { t } = useTranslation('settings');
+    const { description, offersInstall, action } = useServerWords(acp, server);
+    return (
+        <>
+            <p className="text-xs text-text-muted">{t('providers.acpServer.description')}</p>
+            <div className="flex min-w-0 items-center gap-3">
+                {server.state === 'installing' ? <Spinner size={12} /> : offersInstall && <InstallButton acp={acp} label={action} variant="primary" />}
+                <span className="min-w-0 text-xs text-text-muted">{description}</span>
+            </div>
+        </>
     );
 }

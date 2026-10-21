@@ -341,5 +341,10 @@
         "reverse": "Richting omdraaien",
         "drawHint": "Sleep om te tekenen. Houd Shift ingedrukt voor rechte of diagonale lijnen. Escape annuleert.",
         "defaultColor": "Standaardlijnkleur"
+    },
+    "missingProvider": {
+        "notInstalled": "{{name}} is niet geïnstalleerd op deze machine.",
+        "notOffered": "{{name}} is niet beschikbaar op deze machine.",
+        "install": "Installeren"
     }
 }

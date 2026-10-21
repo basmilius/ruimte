@@ -37,7 +37,7 @@ import { NewViewItems } from '@/shell/NewViewMenu';
 import { newChatOn } from '@/project/new-chat';
 import { useUnsavedStoredPath } from '@/shell/panels/use-unsaved';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
-import { AgentMark } from '@/agents/AgentMark';
+import { AgentIcon } from '@adecore/agents-react/providers';
 
 const ROW = 'w-full gap-2 text-left text-sm';
 
@@ -65,7 +65,7 @@ function RowIcon({ id, kind, provider, className }: { id: string; kind: CanvasNo
         return <Favicon id={id} />;
     }
     if (provider && (kind === 'chat' || kind === 'terminal')) {
-        return <AgentMark kind={provider} size={14} className={className} />;
+        return <AgentIcon kind={provider} size={14} className={className} />;
     }
     return <Icon icon={NODE_KIND_ICONS[kind]} size={14} className={className} />;
 }

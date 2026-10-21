@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Copy, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { copyText, Icon, IconButton, TextMenu, ContextMenu } from '@adecore/ui';
+import { Button, copyText, Icon, IconButton, TextMenu, ContextMenu } from '@adecore/ui';
 
 interface NodeNoticeProps {
     tone?: 'muted' | 'error';
@@ -11,24 +11,31 @@ interface NodeNoticeProps {
     onRetry?: () => void;
     /* Overrides the button's name where a retry is something more precise than trying again. */
     retryLabel?: string;
+    /* A way out the reader takes elsewhere, such as the settings that fix what the notice says. */
+    action?: { label: string; onClick(): void };
 }
 
 /* The card a node floats over its own content when it cannot show that content: connecting,
    failed to start, the page did not load. One shape for all three, so a terminal, a chat and a
    browser report trouble the same way. */
-export function NodeNotice({ tone = 'muted', children, onRetry, retryLabel }: NodeNoticeProps) {
+export function NodeNotice({ tone = 'muted', children, onRetry, retryLabel, action }: NodeNoticeProps) {
     const { t } = useTranslation('canvas');
     const message = useRef<HTMLSpanElement>(null);
     const className = clsx(
         'absolute inset-x-3 top-3 z-10 flex items-center gap-3 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-sm',
         tone === 'error' ? 'text-status-error' : 'text-text-muted',
-        !onRetry && 'pointer-events-none'
+        !onRetry && !action && 'pointer-events-none'
     );
     const content = (
         <>
             <span ref={message} className="grow select-text">
                 {children}
             </span>
+            {action && (
+                <Button size="sm" variant="secondary" onClick={action.onClick}>
+                    {action.label}
+                </Button>
+            )}
             {onRetry && <IconButton icon={RotateCw} size="sm" label={retryLabel ?? t('common:action.retry')} onClick={onRetry} />}
         </>
     );

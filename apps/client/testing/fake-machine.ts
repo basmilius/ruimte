@@ -127,7 +127,8 @@ export class FakeMachine implements PooledTransport {
             throw new TransportError('not-connected', 'The fake machine is down');
         }
         this.sent.push({ type, payload });
-        const answer = this.answers.get(type);
+        // The same list after a fresh look, so a test that tells the machine its providers tells it once.
+        const answer = this.answers.get(type) ?? (type === 'provider.detect' ? this.answers.get('provider.list') : undefined);
         if (answer !== undefined) {
             return (await answer(payload)) as RequestMap[T]['result'];
         }

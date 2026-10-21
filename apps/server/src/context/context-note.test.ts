@@ -76,6 +76,7 @@ describe('verbsNote', () => {
         expect(VISUAL_NOTE).toContain('`ruimte-context chat attach --file <path>` and `Image attachment=<id>`');
         expect(VISUAL_NOTE).toContain('a model file (STL, binary glTF, USDZ) with `Model attachment=<id>` only when the person asks to see it');
         expect(VISUAL_NOTE).toContain('Stat in Stats');
+        expect(VISUAL_NOTE).toContain('Stat takes numbers; Entry holds text.');
         expect(VISUAL_NOTE).toContain('@Query("database.query"');
         expect(VISUAL_NOTE).not.toContain('query --show');
         expect(VISUAL_NOTE).not.toContain('  ');

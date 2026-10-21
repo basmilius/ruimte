@@ -8,14 +8,14 @@ import { menuIconOf } from '@/shell/menu/icons';
 import { menuModel } from '@/shell/menu/model';
 import { Brand } from '@/ui/Brand';
 import { Icon, IconButton, Menu, Tooltip } from '@adecore/ui';
-import { AgentMark } from '@/agents/AgentMark';
+import { AgentIcon } from '@adecore/agents-react/providers';
 
 /* A fixed box in front of every row, the empty one included, so every label starts on the same line. */
 function RowIcon({ id }: { id: string }) {
     const icon = menuIconOf(id);
     return (
         <span className="grid w-4 shrink-0 place-items-center text-text-muted">
-            {icon !== null && ('agent' in icon ? <AgentMark kind={icon.agent} size={14} /> : <Icon icon={icon.icon} size={14} />)}
+            {icon !== null && ('agent' in icon ? <AgentIcon kind={icon.agent} size={14} /> : <Icon icon={icon.icon} size={14} />)}
         </span>
     );
 }

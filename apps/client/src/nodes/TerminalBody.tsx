@@ -32,9 +32,10 @@ import { bindTerminalKeys, fittedGrid } from '@/terminal/xterm';
 import { sessionClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
 import { isApplePlatform } from '@/desktop/bridge';
+import { MissingProviderNote } from '@/nodes/MissingProviderNote';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { useMountCount } from '@/measure/mounts';
-import { closeHost, readNodeHost, useSuggestedTitle } from '@/nodes/node-host';
+import { closeHost, readNodeHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
 import { Button, copyText, readClipboardText, Icon, ContextMenu, ErrorBoundary, Kbd, prefetcher, EDIT_SHORTCUTS } from '@adecore/ui';
 
 // A terminal loads the WebGL addon on its first context; prefetched, it is there by then.
@@ -88,6 +89,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const attached = useSessionRow(id, (row) => row?.attached);
     const agentRecord = useSessionRow(id, (row) => row?.agent);
     const heldCommand = useSessionRow(id, (row) => row?.heldCommand);
+    const provider = useNodeHost(id)?.provider;
     const find = useFind(surfaceRef, failure === null);
     const terminalFind = useTerminalFind(find, viewRef, builds);
     // Claude Code and Codex write a name down; the daemon sends none for the other CLIs.
@@ -190,6 +192,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                             onFailure={setFailure}
                         />
                         {status !== 'open' && <NodeNotice>{status === 'closed' ? t('notice.reconnecting') : t('notice.connecting')}</NodeNotice>}
+                        {status === 'open' && !failure && exited === undefined && <MissingProviderNote endpointId={endpointId} kind={provider} />}
                         {failure && (
                             <NodeNotice tone="error" onRetry={rebuild}>
                                 {failure}

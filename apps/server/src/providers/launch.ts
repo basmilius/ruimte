@@ -1,4 +1,5 @@
 import { resumeCommandFor, type AgentKind, type AgentLaunch, type RuntimeMode } from '@ruimte/contracts';
+import { COPILOT_ALLOW_CONTEXT, GROK_ALLOW_CONTEXT } from './acp-providers.ts';
 import { CLAUDE_ALLOW_CONTEXT } from './claude-provider.ts';
 import { BUILT_IN_KINDS } from './kinds.ts';
 import { providerFor } from './registry.ts';
@@ -54,6 +55,11 @@ export function offersKind(kind: AgentKind): boolean {
 
 // The executable a terminal of a CLI starts where its provider's command is a chat server instead.
 const TERMINAL_EXECUTABLES: Partial<Record<AgentKind, string>> = { antigravity: 'agy' };
+
+/* The executable a terminal of this kind starts. */
+export function terminalExecutable(kind: AgentKind): string {
+    return TERMINAL_EXECUTABLES[kind] ?? providerFor(kind).command[0]!;
+}
 
 // The flag that names a model, for the CLIs whose catalog the client can pick from.
 const MODEL_FLAG: Partial<Record<AgentKind, string>> = {
@@ -111,10 +117,18 @@ export async function probeCodexNoDaemon(
     }
 }
 
+// The flag that lets `ruimte-context` run without a prompt, for the CLIs that take one on the line.
+const ALLOW_CONTEXT: Partial<Record<AgentKind, string>> = {
+    claude: CLAUDE_ALLOW_CONTEXT,
+    copilot: COPILOT_ALLOW_CONTEXT,
+    grok: GROK_ALLOW_CONTEXT
+};
+
 // What a CLI gets on every line, fresh or resumed, whatever the mode.
 function alwaysFlags(kind: AgentKind): string[] {
-    if (kind === 'claude') {
-        return [quote(CLAUDE_ALLOW_CONTEXT)];
+    const allow = ALLOW_CONTEXT[kind];
+    if (allow !== undefined) {
+        return [quote(allow)];
     }
     return kind === 'codex' && codexNoDaemon ? ['--no-daemon'] : [];
 }
@@ -162,7 +176,7 @@ export function terminalCommand(launch: AgentLaunch, firstPrompt?: string, note?
         return resumeCommand(launch, launch.resume);
     }
     // Only the executable: the arguments on a provider are the ones its chat backend needs.
-    const parts = [TERMINAL_EXECUTABLES[launch.kind] ?? provider.command[0]!, ...launchFlags(launch, launch.runtimeMode ?? DEFAULT_RUNTIME_MODE)];
+    const parts = [terminalExecutable(launch.kind), ...launchFlags(launch, launch.runtimeMode ?? DEFAULT_RUNTIME_MODE)];
     const noteFlags = NOTE_FLAGS[launch.kind];
     if (note && noteFlags) {
         parts.push(...noteFlags(note));

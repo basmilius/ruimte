@@ -57,13 +57,19 @@ export function sameEntry(hook: unknown, wanted: HookEntry): boolean {
     return isRecord(hook) && hook.type === wanted.type && hook.command === wanted.command && hook.timeout === wanted.timeout;
 }
 
+export interface SettingsMerge {
+    config: Record<string, unknown>;
+    changed: boolean;
+    refused: boolean;
+}
+
 /*
  * Puts one Ruimte hook under every event the daemon listens for and leaves everything else in
  * the config alone: other tools' hooks, other keys, unknown fields on our own group. Answers the
  * new config and whether anything changed, so an unchanged file is never rewritten. A config whose
  * top level, `hooks` or an event is not the shape the CLI reads is refused, never rebuilt.
  */
-export function mergeHooks(config: unknown, kind: AgentKind): { config: Record<string, unknown>; changed: boolean; refused: boolean } {
+export function mergeHooks(config: unknown, kind: AgentKind): SettingsMerge {
     const shapeKept = isRecord(config) && (config.hooks === undefined || (isRecord(config.hooks) && Object.values(config.hooks).every(Array.isArray)));
     if (!shapeKept) {
         return { config: {}, changed: false, refused: true };
@@ -160,7 +166,12 @@ export async function textOrNull(path: string): Promise<string | null> {
 }
 
 /* Idempotent: the second run on the same file is a no-op. A file that is not JSON, or not an object, is left alone (throws). */
-export async function installHooks(link: string, kind: AgentKind): Promise<HooksInstall> {
+export function installHooks(link: string, kind: AgentKind): Promise<HooksInstall> {
+    return mergeIntoSettings(link, 'hooks', (config) => mergeHooks(config, kind), 'is not a settings object with hooks in the shape the CLI reads');
+}
+
+/* Merges into a JSON settings file of a CLI, written only when the merge changed something; `key` is the one top-level key Ruimte writes under. */
+async function mergeIntoSettings(link: string, key: string, merge: (config: unknown) => SettingsMerge, refusal: string): Promise<HooksInstall> {
     // Written where a symlink points, since a rename over the link itself would cut a dotfiles checkout loose.
     const path = await realpath(link).catch(() => link);
     return await editingHookFile(path, async () => {
@@ -174,11 +185,11 @@ export async function installHooks(link: string, kind: AgentKind): Promise<Hooks
                     throw new Error(`Cannot read ${path}: ${errorText(e)}`);
                 }
             }
-            const { config, changed, refused } = mergeHooks(existing, kind);
+            const { config, changed, refused } = merge(existing);
             if (refused) {
-                throw new HookFileRefused(`${path} is not a settings object with hooks in the shape the CLI reads, so Ruimte leaves it alone`);
+                throw new HookFileRefused(`${path} ${refusal}, so Ruimte leaves it alone`);
             }
-            const created = { createdFile: text === null, createdHooksKey: !isRecord(existing) || existing.hooks === undefined };
+            const created = { createdFile: text === null, createdHooksKey: !isRecord(existing) || existing[key] === undefined };
             if (!changed) {
                 return { result: 'unchanged', ...created };
             }
@@ -217,6 +228,9 @@ export function defaultConfigFolder(kind: AgentKind, env: Record<string, string 
     if (kind === 'codex') {
         return defaultCodexHome(env);
     }
+    if (kind === 'antigravity') {
+        return env.GEMINI_HOME ?? join(env.HOME ?? homedir(), '.gemini');
+    }
     return null;
 }
 
@@ -237,16 +251,89 @@ export function defaultCodexRulesPath(env: Record<string, string | undefined> = 
     return codexRulesPathIn(defaultCodexHome(env));
 }
 
+/*
+ * Lets Antigravity's `agy` run `ruimte-context` without asking, and outside its sandbox, which keeps it from the daemon.
+ * Rule syntax and file: https://antigravity.google/docs/permissions ("CLI fine-grained permissions").
+ */
+export const ANTIGRAVITY_RULES: readonly string[] = ['command(ruimte-context)', 'unsandboxed(ruimte-context)'];
+
+export function antigravitySettingsPathIn(folder: string): string {
+    return join(folder, 'antigravity-cli', 'settings.json');
+}
+
+function antigravityAllow(config: unknown): { permissions: Record<string, unknown>; allow: unknown[] } | null {
+    if (!isRecord(config) || (config.permissions !== undefined && !isRecord(config.permissions))) {
+        return null;
+    }
+    const permissions = isRecord(config.permissions) ? config.permissions : {};
+    if (permissions.allow !== undefined && !Array.isArray(permissions.allow)) {
+        return null;
+    }
+    return { permissions, allow: Array.isArray(permissions.allow) ? permissions.allow : [] };
+}
+
+/* Adds Ruimte's rules to `permissions.allow` and leaves every other entry and key where it was. */
+export function mergeAntigravityRules(config: unknown): SettingsMerge {
+    const found = antigravityAllow(config);
+    if (found === null) {
+        return { config: {}, changed: false, refused: true };
+    }
+    const missing = ANTIGRAVITY_RULES.filter((rule) => !found.allow.includes(rule));
+    if (missing.length === 0) {
+        return { config: config as Record<string, unknown>, changed: false, refused: false };
+    }
+    return {
+        config: { ...(config as Record<string, unknown>), permissions: { ...found.permissions, allow: [...found.allow, ...missing] } },
+        changed: true,
+        refused: false
+    };
+}
+
+/* Takes exactly Ruimte's rules out; a `permissions` key Ruimte created goes with them once nothing else is in it. */
+export function removeAntigravityRules(config: unknown, createdKey: boolean): SettingsMerge & { removed: number } {
+    const found = antigravityAllow(config);
+    if (found === null) {
+        return { config: {}, changed: false, refused: true, removed: 0 };
+    }
+    const allow = found.allow.filter((rule) => typeof rule !== 'string' || !ANTIGRAVITY_RULES.includes(rule));
+    const removed = found.allow.length - allow.length;
+    if (removed === 0) {
+        return { config: config as Record<string, unknown>, changed: false, refused: false, removed };
+    }
+    const root: Record<string, unknown> = { ...(config as Record<string, unknown>) };
+    const permissions: Record<string, unknown> = { ...found.permissions, allow };
+    if (createdKey && allow.length === 0 && Object.keys(permissions).length === 1) {
+        delete root.permissions;
+    } else {
+        root.permissions = permissions;
+    }
+    return { config: root, changed: true, refused: false, removed };
+}
+
+export function hasAntigravityRules(config: unknown): boolean {
+    const found = antigravityAllow(config);
+    return found !== null && found.allow.some((rule) => typeof rule === 'string' && ANTIGRAVITY_RULES.includes(rule));
+}
+
+export function installAntigravityRules(link: string): Promise<HooksInstall> {
+    return mergeIntoSettings(link, 'permissions', mergeAntigravityRules, 'is not a settings object with permissions in the shape agy reads');
+}
+
 export interface FolderInstall extends HooksInstall {
     path: string;
     kind: 'hooks' | 'rules';
 }
 
 /*
- * Everything the daemon puts in one config folder of a CLI: its hooks, and for Codex the rule that
- * lets `ruimte-context` out of the sandbox. Answers what was written where, so the caller can say so.
+ * Everything the daemon puts in one config folder of a CLI: its hooks, for Codex the rule that lets
+ * `ruimte-context` out of the sandbox, and for Antigravity only that rule, since `agy` has no hooks Ruimte
+ * reads. Answers what was written where, so the caller can say so.
  */
 export async function installInFolder(kind: AgentKind, folder: string): Promise<FolderInstall[]> {
+    if (kind === 'antigravity') {
+        const path = antigravitySettingsPathIn(folder);
+        return [{ path, kind: 'rules', ...(await installAntigravityRules(path)) }];
+    }
     const hookPath = hookPathIn(kind, folder);
     if (hookPath === null) {
         return [];

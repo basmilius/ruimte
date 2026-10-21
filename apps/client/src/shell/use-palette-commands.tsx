@@ -39,7 +39,7 @@ import { refreshPrRepos, useCurrentPrRepos } from '@/state/pr-repos';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useOpenEndpoints } from '@/transport/status';
-import { AgentMark } from '@/agents/AgentMark';
+import { AgentIcon } from '@adecore/agents-react/providers';
 
 const KIND_ICON: Record<CanvasNodeKind, React.ReactNode> = {
     terminal: <Icon icon={Terminal} size={14} />,
@@ -152,7 +152,7 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
         const commands = appCommands(prRepos);
         const asEntry = (command: Command, section: Entry['section']): Entry => ({
             ...command,
-            icon: command.agent ? <AgentMark kind={command.agent} /> : <Icon icon={Zap} size={14} />,
+            icon: command.agent ? <AgentIcon kind={command.agent} /> : <Icon icon={Zap} size={14} />,
             section
         });
         if (query === '') {

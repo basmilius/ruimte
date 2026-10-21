@@ -3,7 +3,18 @@ import { dirname } from 'node:path';
 import type { AgentIntegrationReport, AgentKind } from '@ruimte/contracts';
 import { isNotFound, writeAtomic } from '@adecore/agents';
 import { errorText } from '../error-text.ts';
-import { CODEX_RULES, HOOK_FILE_RETRIES, editingHookFile, hookEntry, isOurs, isRecord, sameEntry, textOrNull } from './install.ts';
+import {
+    CODEX_RULES,
+    HOOK_FILE_RETRIES,
+    editingHookFile,
+    hookEntry,
+    isOurs,
+    isRecord,
+    removeAntigravityRules,
+    sameEntry,
+    textOrNull,
+    type SettingsMerge
+} from './install.ts';
 
 /* What the ledger remembers of a file Ruimte wrote into. */
 export interface LedgerEntry {
@@ -80,11 +91,28 @@ export function removeHooks(config: unknown, kind: AgentKind, ledger: Pick<Ledge
 }
 
 /* Takes Ruimte's hooks out of one settings file, with the same queue and re-read check as the install. */
-export async function revokeHooks(link: string, kind: AgentKind, entry: LedgerEntry): Promise<AgentIntegrationReport> {
+export function revokeHooks(link: string, kind: AgentKind, entry: LedgerEntry): Promise<AgentIntegrationReport> {
+    return removeFromSettings(link, 'hooks', entry, (config) => {
+        const removal = removeHooks(config, kind, entry);
+        return { ...removal, changed: removal.removed > 0 };
+    });
+}
+
+/* Takes Ruimte's rules out of `agy`'s settings; a rule a person added themselves reads the same and goes too. */
+export function revokeAntigravityRules(link: string, entry: LedgerEntry): Promise<AgentIntegrationReport> {
+    return removeFromSettings(link, 'rules', entry, (config) => ({ ...removeAntigravityRules(config, entry.createdHooksKey), keptEdited: 0 }));
+}
+
+async function removeFromSettings(
+    link: string,
+    kind: AgentIntegrationReport['kind'],
+    entry: LedgerEntry,
+    remove: (config: unknown) => SettingsMerge & { keptEdited: number }
+): Promise<AgentIntegrationReport> {
     const path = await realpath(link).catch(() => link);
     const report = (outcome: AgentIntegrationReport['outcome'], message?: string): AgentIntegrationReport => ({
         path: link,
-        kind: 'hooks',
+        kind,
         outcome,
         ...(message === undefined ? {} : { message })
     });
@@ -101,11 +129,11 @@ export async function revokeHooks(link: string, kind: AgentKind, entry: LedgerEn
                 } catch {
                     return report('refused');
                 }
-                const removal = removeHooks(parsed, kind, entry);
+                const removal = remove(parsed);
                 if (removal.refused) {
                     return report('refused');
                 }
-                if (removal.removed === 0) {
+                if (!removal.changed) {
                     return removal.keptEdited > 0 ? report('kept-edited') : report('none');
                 }
                 if ((await textOrNull(path)) !== text) {

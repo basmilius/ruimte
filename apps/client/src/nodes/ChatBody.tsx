@@ -20,6 +20,7 @@ import { useProject } from '@/state/project';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { chatClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
+import { MissingProviderNote } from '@/nodes/MissingProviderNote';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { useMountCount } from '@/measure/mounts';
 import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
@@ -36,7 +37,8 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
     useMountCount('chat');
     const { t } = useTranslation('canvas');
     const info = useChatRow(id, (row) => row?.info);
-    const providerFixed = useNodeHost(id)?.providerFixed === true;
+    const nodeHost = useNodeHost(id);
+    const providerFixed = nodeHost?.providerFixed === true;
     useSuggestedTitle(id, info?.suggestedTitle);
     const status = useTransportStatus();
     const endpointId = useEndpointId();
@@ -114,6 +116,7 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
     return (
         <div className="relative flex h-full flex-col bg-surface">
             {status !== 'open' && <NodeNotice>{status === 'closed' ? t('notice.reconnecting') : t('notice.connecting')}</NodeNotice>}
+            {status === 'open' && !failure && <MissingProviderNote endpointId={endpointId} kind={info?.provider ?? nodeHost?.provider} />}
             {failure && (
                 <NodeNotice
                     tone="error"

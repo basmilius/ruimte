@@ -38,6 +38,7 @@
     "login": {
         "title": "Inloggen bij {{account}}",
         "description": "{{cli}} draait zijn eigen login in deze terminal. Die sluit vanzelf zodra je bent ingelogd.",
+        "descriptionSilent": "{{cli}} draait zijn eigen login in deze terminal. Sluit dit venster zodra je bent ingelogd.",
         "landed": "Ingelogd",
         "landedAs": "Ingelogd als {{email}}",
         "ended": "De login is gestopt.",
@@ -85,5 +86,11 @@
         "used_other": "{{count}} keer Ruimte {{name}} gebruikt",
         "usedAny_one": "1 keer Ruimte gebruikt",
         "usedAny_other": "{{count}} keer Ruimte gebruikt"
+    },
+    "providerCommand": {
+        "description": "Druk op Enter om het commando uit te voeren.",
+        "ended": "De terminal is gestopt.",
+        "dropped": "De verbinding met de machine viel weg, waardoor de terminal stopte.",
+        "failed": "De terminal kon niet starten: {{reason}}"
     }
 }

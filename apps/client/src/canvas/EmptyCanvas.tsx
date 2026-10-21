@@ -14,7 +14,7 @@ import { useProviders } from '@adecore/agents-react/state';
 import { useUi } from '@/state/ui';
 import { Icon, Kbd, SectionLabel, Tile } from '@adecore/ui';
 import type { Shortcut } from '@adecore/ui';
-import { AgentMark } from '@/agents/AgentMark';
+import { AgentIcon } from '@adecore/agents-react/providers';
 
 interface TileLook {
     icon: ReactNode;
@@ -55,7 +55,7 @@ export function EmptyCanvas() {
         switch (tile.kind) {
             case 'agent': {
                 return {
-                    icon: <AgentMark kind={tile.provider} size={16} />,
+                    icon: <AgentIcon kind={tile.provider} size={16} />,
                     title: tile.name,
                     description: t('empty.agent.terminal'),
                     run: () => void createNodeAction(tile.target, { provider: tile.provider })

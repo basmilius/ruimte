@@ -54,6 +54,12 @@ const LoginDialog = lazyDialog(
     useUi,
     (s) => s.login !== null
 );
+const ProviderCommandDialog = lazyDialog(
+    () => import('@/chat/ProviderCommandDialog'),
+    'ProviderCommandDialog',
+    useUi,
+    (s) => s.providerCommand !== null
+);
 const OnboardingDialog = lazyDialog(
     () => import('@/onboarding/OnboardingDialog'),
     'OnboardingDialog',
@@ -177,6 +183,9 @@ export function App() {
                     </ErrorBoundary>
                     <ErrorBoundary label={failed('login')} compact className={FLOATING_FAILURE}>
                         <LoginDialog />
+                    </ErrorBoundary>
+                    <ErrorBoundary label={failed('providerCommand')} compact className={FLOATING_FAILURE}>
+                        <ProviderCommandDialog />
                     </ErrorBoundary>
                     <ErrorBoundary label={failed('shortcutHints')} compact className={FLOATING_FAILURE}>
                         <ShortcutHints />

@@ -584,6 +584,8 @@ export const REQUEST_SCHEMAS = {
     'chat.proposalDecline': { payload: ProjectProposalDeclinePayloadSchema, result: ProjectProposalDeclineResultSchema },
     'skills.list': AGENT_REQUEST_SCHEMAS['skills.list'],
     'provider.list': AGENT_REQUEST_SCHEMAS['provider.list'],
+    // The same list after the machine looked for its CLIs again, at most once every ten seconds; what a person coming back asks.
+    'provider.detect': AGENT_REQUEST_SCHEMAS['provider.list'],
     // The chat server of a CLI that ships one apart (Antigravity), and a person's Install of it; the daemon never installs one itself.
     'provider.server': { payload: AgentServerPayloadSchema, result: AgentServerResultSchema },
     'provider.installServer': { payload: AgentServerPayloadSchema, result: AgentServerResultSchema },

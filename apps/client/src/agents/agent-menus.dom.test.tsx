@@ -50,7 +50,9 @@ async function openAgentChatMenu(): Promise<void> {
 beforeEach(async () => {
     machine = new FakeMachine();
     machine.answer('project.save', ({ baseRev }) => ({ rev: baseRev + 1 }) as never);
-    machine.answer('provider.list', () => ({ providers: [providerOf('claude', 'Claude Code'), providerOf('codex', 'Codex')] }));
+    machine.answer('provider.list', () => ({
+        providers: [providerOf('claude', 'Claude Code'), providerOf('codex', 'Codex'), { ...providerOf('grok', 'Grok'), installed: false, version: null }]
+    }));
     machine.answer('accounts.list', () => ({
         accounts: {
             claude: { kind: 'claude', label: 'Personal' },
@@ -81,6 +83,12 @@ describe('the agent submenu', () => {
         expect(labels).not.toContain('Claude Code');
         const groups = [...document.querySelectorAll('[role="menu"] [role="group"]')].map((group) => group.textContent);
         expect(groups.some((text) => text?.startsWith('Claude Code'))).toBe(true);
+    });
+
+    test('a CLI that is not installed is not offered', async () => {
+        await openAgentChatMenu();
+        await until(() => menuItem('Codex') !== null);
+        expect(menuItems().map((item) => item.textContent?.trim())).not.toContain('Grok');
     });
 
     test('picking an account starts the chat on it', async () => {

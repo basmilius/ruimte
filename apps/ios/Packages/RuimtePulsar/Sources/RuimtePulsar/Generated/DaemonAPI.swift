@@ -109,6 +109,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `chatProposalDecline` = "chat.proposalDecline"
     case `skillsList` = "skills.list"
     case `providerList` = "provider.list"
+    case `providerDetect` = "provider.detect"
     case `providerServer` = "provider.server"
     case `providerInstallServer` = "provider.installServer"
     case `accountsList` = "accounts.list"

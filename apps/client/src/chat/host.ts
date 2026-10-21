@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import i18next from 'i18next';
 import { codeHighlighter } from '@/code-highlighter';
 import DiffSyntaxWorker from '@/chat/diff-syntax.worker?worker';
-import { configureChatStorage, type ChatActions, type ChatHost, setLazyPrefetch } from '@adecore/agents-react';
+import { type AgentMark, configureAgentMarks, configureChatStorage, type ChatActions, type ChatHost, setLazyPrefetch } from '@adecore/agents-react';
 import { useChats } from '@adecore/agents-react/state';
 import { perform, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
@@ -11,6 +11,7 @@ import { searchFiles } from '@/chat/file-search';
 import { RUIMTE_COMMAND_LOOKS } from '@/chat/ruimte-command-look';
 import { openLogin } from '@/chat/login';
 import { openForkDialog } from '@/chat/open-fork';
+import { useMachinePlatform } from '@/chat/machine-platform';
 import { gitStatusConcernsChat } from '@/chat/ui-refresh';
 import { useMapSource } from '@/chat/use-map-source';
 import { visualHostFor } from '@/chat/visuals';
@@ -33,7 +34,7 @@ import { readResource } from '@/transport/byte-transfer';
 import { readPiece } from '@/transport/piece';
 import { useMachineUrl } from '@/transport/machine-url';
 import { prefetcher } from '@adecore/ui';
-import { CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
+import { type AgentKind, CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
 
 /* Every action goes through the registry as the person who clicked, the same door Voice uses. */
 const PERSON_CHAT_ACTIONS: ChatActions = {
@@ -79,9 +80,26 @@ function requireTransport(endpointId: string): Transport {
     return transport;
 }
 
+/*
+ * The marks of the CLIs the shared `AgentIcon` has none for. Grok's is the xAI logo. Antigravity's is the one
+ * Google lists in the ACP registry (agentclientprotocol/registry, `antigravity-acp/icon.svg`).
+ */
+const AGENT_MARKS: Partial<Record<AgentKind, AgentMark>> = {
+    antigravity: {
+        title: 'Antigravity',
+        viewBox: '0 0 16 16',
+        path: 'M14.1452 14.6818C14.9937 15.3182 16.2664 14.894 15.0997 13.7273C11.5998 10.3333 12.3421 1 7.99366 1C3.64518 1 4.3876 10.3333 0.887603 13.7273C-0.385123 15 0.993664 15.3182 1.84215 14.6818C5.13002 12.4545 4.9179 8.5303 7.99366 8.5303C11.0694 8.5303 10.8573 12.4545 14.1452 14.6818Z'
+    },
+    grok: {
+        title: 'Grok',
+        path: 'M6.469 8.776 16.512 23h-4.464L2.005 8.776H6.47Zm-.004 7.9 2.233 3.164L6.467 23H2l4.465-6.324ZM22 2.582V23h-3.659V7.764L22 2.582ZM22 1l-9.952 14.095-2.233-3.163L17.533 1H22Z'
+    }
+};
+
 /* The stores every chat view shares, set up before the first render. */
 export function configureChat(): void {
     configureChatStorage({ namespace: 'ruimte' });
+    configureAgentMarks(AGENT_MARKS);
     setLazyPrefetch((load) => prefetcher.register(load));
 }
 
@@ -228,6 +246,10 @@ export const CHAT_HOST: Partial<ChatHost> = {
     fork: openForkDialog,
     openSettings: (section) => useUi.getState().setSettings({ open: true, section }),
     useMachineLabel: (endpointId) => useEndpoints((s) => s.endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? null),
+    // A shell of its own over the settings, so it works with no project open; the command waits for the person's Enter.
+    runProviderCommand: (endpointId, kind, command) => useUi.getState().setProviderCommand({ endpointId, kind, command }),
+    useMachinePlatform,
+    providerKeyNote: () => i18next.t('settings:providers.keyNote'),
     useResumeAtReset: (endpointId) => useServers((s) => s.byEndpoint[endpointId]?.resumeAtReset === true),
     // A chat on screen belongs to the project the window shows, and the Chats project shows none of its folders.
     useHidesFolder: () => useProject((s) => isScratchProject(s.current)),

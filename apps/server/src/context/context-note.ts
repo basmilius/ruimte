@@ -89,6 +89,7 @@ function uiNote(databases: boolean): string {
         [
             'Write a block when the answer has structure a person scans or acts on (numbers to compare, rows, steps, a status, shortcuts after finished work); what a sentence or a short list says stays prose.',
             'Children sit in their parent: Stat in Stats, Column in Table, Option in Segmented or Select, Item in Checklist, Choice in Choices, Step in Steps, Event in Timeline, Place in Map, Image in Gallery, Entry in EntityList, Tab in Tabs, Section in Sections, Source in Sources.',
+            'Stat takes numbers; Entry holds text.',
             'Show an image file of your own with `ruimte-context chat attach --file <path>` and `Image attachment=<id>`, a model file (STL, binary glTF, USDZ) with `Model attachment=<id>` only when the person asks to see it.',
             'Each items={$rows} as="row" names each item, read without $ as {row.name}. Chart data rows are {label: "Core", passed: 32, failed: 1}. File and Diff paths are relative to your working folder; a Node id is one ruimte-context printed.',
             `Live data: $name = @Query("source", {args}), with these sources and arguments: ${sources}. git.status gives the branch, ahead, behind, counts per state and the first files.${databases ? ' database.query rows are records for Table and Chart.' : ''} Sources are literal; arguments may reference local inputs. Queries only read, never start work or run writes.`

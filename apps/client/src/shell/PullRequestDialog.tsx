@@ -14,7 +14,7 @@ import { usePrWatches } from '@/state/pr-watches';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { AgentMark } from '@/agents/AgentMark';
+import { AgentIcon } from '@adecore/agents-react/providers';
 
 /*
  * A pull request read-only: its checks, how it stands to merge and its review threads. A thread can be
@@ -186,7 +186,7 @@ function PullRequestWatch({ cwd, pr }: { cwd: string; pr: PullRequest }) {
                 <Menu.Popup align="end">
                     {chats.map((chat) => (
                         <Menu.Item key={chat.id} onClick={() => start(chat.id)}>
-                            {chat.provider !== null && <AgentMark kind={chat.provider} />}
+                            {chat.provider !== null && <AgentIcon kind={chat.provider} />}
                             <span className="min-w-0 truncate">{chat.title}</span>
                         </Menu.Item>
                     ))}
@@ -397,7 +397,7 @@ function ThreadCard({ pr, thread }: { pr: PullRequest; thread: GitPrThread }) {
                     <Menu.Popup align="end">
                         {chats.map((chat) => (
                             <Menu.Item key={chat.id} onClick={() => sendToChat(chat.id, threadBlock(pr, thread))}>
-                                {chat.provider !== null && <AgentMark kind={chat.provider} />}
+                                {chat.provider !== null && <AgentIcon kind={chat.provider} />}
                                 <span className="min-w-0 truncate">{chat.title}</span>
                             </Menu.Item>
                         ))}

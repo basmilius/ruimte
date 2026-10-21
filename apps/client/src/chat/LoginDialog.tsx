@@ -78,6 +78,7 @@ function LoginTerminal({ request, onRetry }: { request: LoginRequest; onRetry():
     const connected = useEndpointConnection(endpointId).status === 'open';
     const status = useProviderAccountsStore((s) => s.byScope[endpointId]?.accounts?.statuses.find((entry) => entry.id === accountId) ?? null);
     const cli = useProvidersStore((s) => s.byScope[endpointId]?.providers.find((provider) => provider.kind === kind)?.name ?? kind);
+    const silent = useProviderAccountsStore((s) => s.byScope[endpointId]?.accounts?.silentLogins?.includes(kind) === true);
     const fontSize = useSettings((s) => s.fontSize);
     const lineHeight = useSettings((s) => s.terminalLineHeight);
     const [phase, setPhase] = useState<Phase>({ kind: 'starting' });
@@ -190,7 +191,7 @@ function LoginTerminal({ request, onRetry }: { request: LoginRequest; onRetry():
                 </span>
                 <div className="min-w-0 grow">
                     <Dialog.Title className="truncate">{t('login.title', { account: name })}</Dialog.Title>
-                    <Dialog.Description size="xs">{t('login.description', { cli })}</Dialog.Description>
+                    <Dialog.Description size="xs">{t(silent ? 'login.descriptionSilent' : 'login.description', { cli })}</Dialog.Description>
                 </div>
                 <CloseButton label={t('common:action.close')} dialog />
             </div>

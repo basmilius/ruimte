@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'bun:test';
+import { COPILOT_ALLOW_CONTEXT, GROK_ALLOW_CONTEXT } from './acp-providers.ts';
 import { CLAUDE_ALLOW_CONTEXT } from './claude-provider.ts';
 import { freshCommand, probeCodexNoDaemon, resumeCommand, resumeOrFreshCommand, takesNoteOnLine, terminalCommand } from './launch.ts';
 
 // How the launch line quotes the flag that lets ruimte-context through.
 const ALLOW = `'${CLAUDE_ALLOW_CONTEXT}'`;
+const GROK_ALLOW = `'${GROK_ALLOW_CONTEXT}'`;
+const COPILOT_ALLOW = `'${COPILOT_ALLOW_CONTEXT}'`;
 
 describe('terminalCommand', () => {
     test('a chat-only provider cannot launch its helper in a terminal, with or without a prompt or resume id', () => {
@@ -22,7 +25,7 @@ describe('terminalCommand', () => {
         expect(terminalCommand({ kind: 'antigravity', runtimeMode: 'auto-accept-edits' })).toBe('agy --mode=accept-edits');
         expect(terminalCommand({ kind: 'antigravity', runtimeMode: 'auto' })).toBe('agy --mode=accept-edits');
         expect(terminalCommand({ kind: 'antigravity', runtimeMode: 'full-access' })).toBe('agy --dangerously-skip-permissions');
-        expect(terminalCommand({ kind: 'copilot', runtimeMode: 'full-access' })).toBe('copilot');
+        expect(terminalCommand({ kind: 'copilot', runtimeMode: 'full-access' })).toBe(`copilot ${COPILOT_ALLOW}`);
     });
 
     test('full access is what a launch without a mode gets', () => {
@@ -40,15 +43,24 @@ describe('terminalCommand', () => {
             "codex --ask-for-approval on-request --sandbox workspace-write 'it'\\''s here'"
         );
         expect(terminalCommand({ kind: 'antigravity', runtimeMode: 'supervised' }, 'go')).toBe("agy '-i' 'go'");
-        expect(terminalCommand({ kind: 'copilot', runtimeMode: 'supervised' }, 'go')).toBe("copilot '-i' 'go'");
-        expect(terminalCommand({ kind: 'grok', runtimeMode: 'supervised' }, 'go')).toBe("grok --permission-mode default 'go'");
+        expect(terminalCommand({ kind: 'copilot', runtimeMode: 'supervised' }, 'go')).toBe(`copilot ${COPILOT_ALLOW} '-i' 'go'`);
+        expect(terminalCommand({ kind: 'grok', runtimeMode: 'supervised' }, 'go')).toBe(`grok ${GROK_ALLOW} --permission-mode default 'go'`);
+    });
+
+    test('a Grok or Copilot terminal lets ruimte-context through in every mode, fresh or resumed', () => {
+        expect(GROK_ALLOW).toBe("'--allow=Bash(ruimte-context *)'");
+        expect(COPILOT_ALLOW).toBe("'--allow-tool=shell(ruimte-context:*)'");
+        expect(terminalCommand({ kind: 'grok', runtimeMode: 'supervised' })).toBe(`grok ${GROK_ALLOW} --permission-mode default`);
+        expect(terminalCommand({ kind: 'copilot', runtimeMode: 'supervised' })).toBe(`copilot ${COPILOT_ALLOW}`);
+        expect(resumeCommand({ kind: 'grok' }, 'abc')).toBe(`grok ${GROK_ALLOW} --resume 'abc'`);
+        expect(resumeCommand({ kind: 'copilot' }, 'abc')).toBe(`copilot ${COPILOT_ALLOW} --resume='abc'`);
     });
 
     test('a Grok terminal starts in the permission mode of its runtime mode, and resumes in it', () => {
-        expect(terminalCommand({ kind: 'grok', runtimeMode: 'auto-accept-edits' })).toBe('grok --permission-mode acceptEdits');
-        expect(terminalCommand({ kind: 'grok', runtimeMode: 'auto' })).toBe('grok --permission-mode auto');
-        expect(terminalCommand({ kind: 'grok' })).toBe('grok --permission-mode bypassPermissions');
-        expect(terminalCommand({ kind: 'grok', runtimeMode: 'supervised', resume: 'abc' })).toBe("grok --permission-mode default --resume 'abc'");
+        expect(terminalCommand({ kind: 'grok', runtimeMode: 'auto-accept-edits' })).toBe(`grok ${GROK_ALLOW} --permission-mode acceptEdits`);
+        expect(terminalCommand({ kind: 'grok', runtimeMode: 'auto' })).toBe(`grok ${GROK_ALLOW} --permission-mode auto`);
+        expect(terminalCommand({ kind: 'grok' })).toBe(`grok ${GROK_ALLOW} --permission-mode bypassPermissions`);
+        expect(terminalCommand({ kind: 'grok', runtimeMode: 'supervised', resume: 'abc' })).toBe(`grok ${GROK_ALLOW} --permission-mode default --resume 'abc'`);
     });
 
     test('a kind this daemon does not offer starts nothing', () => {
@@ -123,7 +135,7 @@ describe('terminalCommand', () => {
         expect(terminalCommand({ kind: 'codex', runtimeMode: 'full-access', resume: 'abc-123' })).toBe(
             "codex resume --ask-for-approval never --sandbox danger-full-access 'abc-123'"
         );
-        expect(terminalCommand({ kind: 'copilot', resume: 'abc-123' })).toBe("copilot --resume='abc-123'");
+        expect(terminalCommand({ kind: 'copilot', resume: 'abc-123' })).toBe(`copilot ${COPILOT_ALLOW} --resume='abc-123'`);
     });
 });
 

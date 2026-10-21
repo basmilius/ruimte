@@ -887,10 +887,15 @@
             "title": "Agentstatus in terminals",
             "description": "Via hooks in de instellingen van Claude Code en Codex ziet Ruimte of de CLI in een terminal werkt, klaar is of op je wacht. Die instellingen gelden overal: voor elke keer dat de CLI op deze computer draait, ook buiten Ruimte, waar de hook niets doet.",
             "dialog": {
-                "title": "Mag Ruimte je CLI-instellingen aanpassen?"
+                "title": "Mag Ruimte je CLI-instellingen aanpassen?",
+                "description": "Ruimte wil een paar instellingen toevoegen aan je codeertools. Die gelden overal op deze computer, ook buiten Ruimte.",
+                "status": "Laat zien wanneer een terminal bezig is, klaar is of je nodig heeft.",
+                "statusAndTool": "Laat zien wanneer een terminal bezig is, klaar is of je nodig heeft. Laat ook de eigen tool van Ruimte draaien zonder te vragen.",
+                "tool": "Laat de eigen tool van Ruimte draaien zonder te vragen."
             },
             "off": "Zonder deze hooks tonen terminals met {{provider}} geen status en vragen ze nooit om je aandacht. Chats merken hier niets van; die krijgen hun status langs een andere weg.",
             "codexRule": "Voor Codex geldt deze keuze ook voor de regel waarmee ruimte-context buiten de sandbox van Codex mag draaien. Zonder die regel kan Codex in een sandboxmodus Ruimte niet bereiken: ruimte-context mislukt of vraagt elke keer om je toestemming, in terminals en in chats.",
+            "antigravityRule": "Voor Antigravity geldt deze keuze alleen voor de regel waarmee ruimte-context zonder vragen mag draaien, ook buiten de sandbox. Zonder die regel vraagt Antigravity in een terminal elke keer om je toestemming als het ruimte-context gebruikt.",
             "files": "Ruimte schrijft in:",
             "allow": "Toestaan",
             "deny": "Niet toestaan",
@@ -899,7 +904,7 @@
             "notNow": "Niet nu",
             "migrated": "Ruimte heeft deze al aan {{provider}} toegevoegd. Behoud ze of verwijder ze nu.",
             "fixed": "Deze machine is gestart met --no-hooks, dus Ruimte schrijft niets in de instellingen van de CLI's.",
-            "search": "hooks, status, Claude, Codex, settings.json",
+            "search": "hooks, status, Claude, Codex, Antigravity, settings.json",
             "state": {
                 "on": "Toegestaan",
                 "off": "Niet toegestaan"
@@ -1383,19 +1388,21 @@
         },
         "acpServer": {
             "title": "Chatserver van {{name}}",
-            "description": "Chats met Antigravity draaien op de ACP-server van Google, die Ruimte bij Google downloadt, tegen de vastgelegde checksum controleert en op deze machine bewaart. Je logt in vanuit de eerste chat, in de browser die die opent.",
-            "label": "ACP-server {{version}}",
+            "description": "Chats met Antigravity hebben de chatserver van Google nodig op deze machine. Je logt in vanuit je eerste chat.",
+            "label": "Chatserver {{version}}",
             "install": "Installeren",
             "update": "Bijwerken naar {{version}}",
             "localOnly": "Installeer hem in de Ruimte-app op die machine.",
             "state": {
                 "missing": "Niet geïnstalleerd.",
-                "installing": "Downloaden en controleren…",
+                "installing": "Installeren…",
                 "installed": "Versie {{version}} is geïnstalleerd.",
                 "failed": "De installatie is mislukt.",
-                "unsupported": "Er is geen build van de server voor deze machine."
+                "unsupported": "De chatserver is niet beschikbaar voor deze machine."
             },
-            "searchLabel": "Chatserver van Antigravity"
-        }
+            "searchLabel": "Chatserver van Antigravity",
+            "step": "Installeer de chatserver"
+        },
+        "keyNote": "Ruimte leest deze sleutel nooit."
     }
 }

@@ -887,10 +887,15 @@
             "title": "Agent status in terminals",
             "description": "Ruimte learns whether Claude Code or Codex in a terminal is working, done or waiting for you from hooks in that CLI's own settings. These settings are global: they apply to every run of the CLI on this computer, also outside Ruimte, where the hook does nothing.",
             "dialog": {
-                "title": "Let Ruimte change your CLI settings?"
+                "title": "Let Ruimte change your CLI settings?",
+                "description": "Ruimte would like to add a few settings to your coding tools. They apply to each tool everywhere on this computer, also outside Ruimte.",
+                "status": "Shows when a terminal is working, done or needs you.",
+                "statusAndTool": "Shows when a terminal is working, done or needs you. Also lets Ruimte's own tool run without asking.",
+                "tool": "Lets Ruimte's own tool run without asking."
             },
             "off": "Without them, terminals running {{provider}} show no status and never ask for your attention. Chats are not affected; they get their status another way.",
             "codexRule": "For Codex this choice also covers the rule that lets ruimte-context run outside Codex's sandbox. Without it, Codex in a sandboxed mode cannot reach Ruimte: ruimte-context fails or asks for your approval each time, in terminals and chats.",
+            "antigravityRule": "For Antigravity this choice only covers the rule that lets ruimte-context run without asking, also outside its sandbox. Without it, Antigravity in a terminal asks for your approval each time it uses ruimte-context.",
             "files": "Ruimte writes to:",
             "allow": "Allow",
             "deny": "Don't allow",
@@ -899,7 +904,7 @@
             "notNow": "Not now",
             "migrated": "Ruimte already added these to {{provider}}. Keep them, or remove them now.",
             "fixed": "This machine was started with --no-hooks, so Ruimte writes nothing into the CLIs' settings.",
-            "search": "hooks, status, Claude, Codex, settings.json",
+            "search": "hooks, status, Claude, Codex, Antigravity, settings.json",
             "state": {
                 "on": "Allowed",
                 "off": "Not allowed"
@@ -1383,19 +1388,21 @@
         },
         "acpServer": {
             "title": "{{name}} chat server",
-            "description": "Chats with Antigravity run on Google's ACP server, which Ruimte downloads from Google, checks against its pinned checksum and keeps on this machine. You sign in from the first chat, in the browser it opens.",
-            "label": "ACP server {{version}}",
+            "description": "Chats with Antigravity need Google's chat server on this machine. You sign in from your first chat.",
+            "label": "Chat server {{version}}",
             "install": "Install",
             "update": "Update to {{version}}",
             "localOnly": "Install it in the Ruimte app on that machine.",
             "state": {
                 "missing": "Not installed.",
-                "installing": "Downloading and checking…",
+                "installing": "Installing…",
                 "installed": "Version {{version}} is installed.",
                 "failed": "The install failed.",
-                "unsupported": "There is no build of the server for this machine."
+                "unsupported": "The chat server is not available for this machine."
             },
-            "searchLabel": "Antigravity chat server"
-        }
+            "searchLabel": "Antigravity chat server",
+            "step": "Install the chat server"
+        },
+        "keyNote": "Ruimte never reads this key."
     }
 }

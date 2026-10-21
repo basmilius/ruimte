@@ -45,6 +45,7 @@
             "shortcutHints": "De sneltoetshints konden niet worden getekend",
             "deviceTools": "De apparaattools konden niet worden getekend",
             "login": "De terminal voor het inloggen kon niet worden getekend",
+            "providerCommand": "De terminal voor een providercommando kon niet worden getekend",
             "onboarding": "Het instellen van Ruimte kon niet worden getekend",
             "agentIntegrations": "De vraag over de CLI-instellingen kon niet worden getekend",
             "firstRun": "De eerste start kon niet worden getoond."

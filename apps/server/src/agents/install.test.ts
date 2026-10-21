@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { HOOK_EVENTS } from './hooks.ts';
 import {
+    ANTIGRAVITY_RULES,
     CODEX_RULES,
     HOOK_MARKER,
     HookFileRefused,
@@ -224,7 +225,15 @@ describe('installInFolder', () => {
         expect(await readFile(join(dir, 'rules', 'ruimte.rules'), 'utf8')).toBe(CODEX_RULES);
     });
 
-    test('writes nothing for a CLI whose hooks the daemon cannot read', async () => {
-        expect(await installInFolder('antigravity', dir)).toEqual([]);
+    test('gives an Antigravity folder only the rule, in the settings of agy', async () => {
+        const settings = join(dir, 'antigravity-cli', 'settings.json');
+        expect(await installInFolder('antigravity', dir)).toEqual([
+            { path: settings, kind: 'rules', result: 'written', createdFile: true, createdHooksKey: true }
+        ]);
+        expect(JSON.parse(await readFile(settings, 'utf8'))).toEqual({ permissions: { allow: [...ANTIGRAVITY_RULES] } });
+    });
+
+    test('writes nothing for a CLI whose settings the daemon cannot wire', async () => {
+        expect(await installInFolder('grok', dir)).toEqual([]);
     });
 });

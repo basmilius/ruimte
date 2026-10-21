@@ -30968,6 +30968,348 @@
             },
             "resumeCommand": {
               "type": "string"
+            },
+            "install": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "commands": {
+                  "type": "object",
+                  "properties": {
+                    "darwin": {
+                      "type": "string"
+                    },
+                    "linux": {
+                      "type": "string"
+                    },
+                    "win32": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "guideUrl": {
+                  "type": "string"
+                },
+                "signIn": {
+                  "type": "array",
+                  "items": {}
+                }
+              },
+              "required": [
+                "description",
+                "commands",
+                "signIn"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "name",
+            "installed",
+            "version",
+            "models",
+            "defaultModel",
+            "capabilities",
+            "resumeCommand"
+          ]
+        }
+      }
+    },
+    "required": [
+      "providers"
+    ]
+  },
+  "request.provider.detect.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.provider.detect.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "providers": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "x-open-enum": [
+                "claude",
+                "codex",
+                "gemini",
+                "copilot",
+                "apple"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "installed": {
+              "type": "boolean"
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "models": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "badge": {
+                    "type": "string"
+                  },
+                  "vendor": {
+                    "type": "string"
+                  },
+                  "legacy": {
+                    "type": "boolean"
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "select"
+                            },
+                            "choices": {
+                              "minItems": 1,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "description": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "label"
+                                ]
+                              }
+                            },
+                            "defaultChoice": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "label",
+                            "type",
+                            "choices",
+                            "defaultChoice"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "boolean"
+                            },
+                            "defaultValue": {
+                              "type": "boolean"
+                            },
+                            "description": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "label",
+                            "type",
+                            "defaultValue"
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "minCliVersion": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "slug",
+                  "name",
+                  "legacy",
+                  "isDefault",
+                  "options"
+                ]
+              }
+            },
+            "defaultModel": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "capabilities": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "boolean"
+                },
+                "terminal": {
+                  "type": "boolean"
+                },
+                "hooks": {
+                  "type": "boolean"
+                },
+                "streamsToolOutput": {
+                  "type": "boolean"
+                },
+                "diffs": {
+                  "type": "string",
+                  "enum": [
+                    "unified",
+                    "before-after",
+                    "none"
+                  ]
+                },
+                "attachments": {
+                  "type": "boolean"
+                },
+                "mentions": {
+                  "type": "boolean"
+                },
+                "denyReason": {
+                  "type": "boolean"
+                },
+                "allowAlways": {
+                  "type": "boolean"
+                },
+                "asyncQuestions": {
+                  "type": "boolean"
+                },
+                "steer": {
+                  "type": "boolean"
+                },
+                "compaction": {
+                  "type": "string",
+                  "enum": [
+                    "native",
+                    "prompt",
+                    "none"
+                  ]
+                },
+                "reportsCost": {
+                  "type": "boolean"
+                },
+                "reportsContextWindow": {
+                  "type": "boolean"
+                },
+                "reportsThinking": {
+                  "type": "boolean"
+                },
+                "slashCommands": {
+                  "type": "boolean"
+                },
+                "goals": {
+                  "type": "string",
+                  "enum": [
+                    "native",
+                    "command"
+                  ]
+                }
+              },
+              "required": [
+                "chat",
+                "terminal",
+                "hooks",
+                "streamsToolOutput",
+                "diffs",
+                "attachments",
+                "mentions",
+                "denyReason",
+                "allowAlways",
+                "asyncQuestions",
+                "compaction",
+                "reportsCost",
+                "reportsContextWindow",
+                "reportsThinking",
+                "slashCommands"
+              ]
+            },
+            "resumeCommand": {
+              "type": "string"
+            },
+            "install": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "commands": {
+                  "type": "object",
+                  "properties": {
+                    "darwin": {
+                      "type": "string"
+                    },
+                    "linux": {
+                      "type": "string"
+                    },
+                    "win32": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "guideUrl": {
+                  "type": "string"
+                },
+                "signIn": {
+                  "type": "array",
+                  "items": {}
+                }
+              },
+              "required": [
+                "description",
+                "commands",
+                "signIn"
+              ]
             }
           },
           "required": [
@@ -31305,6 +31647,38 @@
         "additionalProperties": {
           "type": "string"
         }
+      },
+      "chatLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
       }
     },
     "required": [
@@ -31542,6 +31916,38 @@
         "additionalProperties": {
           "type": "string"
         }
+      },
+      "chatLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
       }
     },
     "required": [
@@ -31712,6 +32118,38 @@
         },
         "additionalProperties": {
           "type": "string"
+        }
+      },
+      "chatLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
         }
       }
     },
@@ -31909,6 +32347,38 @@
         },
         "additionalProperties": {
           "type": "string"
+        }
+      },
+      "chatLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
         }
       },
       "id": {
@@ -51722,7 +52192,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "grok"
               ]
             },
             "model": {
@@ -51816,7 +52288,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "grok"
               ]
             },
             "model": {
@@ -51930,7 +52404,9 @@
                 "type": "string",
                 "enum": [
                   "claude",
-                  "codex"
+                  "codex",
+                  "nanogpt",
+                  "grok"
                 ]
               },
               "additionalProperties": {
@@ -52125,7 +52601,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "grok"
               ]
             },
             "path": {
@@ -52167,7 +52645,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "grok"
               ]
             },
             "label": {
@@ -52238,7 +52718,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "grok"
               ]
             },
             "account": {
@@ -52422,7 +52904,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "grok"
               ]
             },
             "account": {
@@ -73582,7 +74066,9 @@
               "type": "string",
               "enum": [
                 "claude",
-                "codex"
+                "codex",
+                "nanogpt",
+                "grok"
               ]
             },
             "account": {
@@ -73906,6 +74392,38 @@
         },
         "additionalProperties": {
           "type": "string"
+        }
+      },
+      "chatLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
         }
       }
     },

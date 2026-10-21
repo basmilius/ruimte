@@ -38,6 +38,7 @@
     "login": {
         "title": "Log in to {{account}}",
         "description": "{{cli}} runs its own login in this terminal. It closes by itself once you are logged in.",
+        "descriptionSilent": "{{cli}} runs its own login in this terminal. Close this window once you are logged in.",
         "landed": "Logged in",
         "landedAs": "Logged in as {{email}}",
         "ended": "The login ended.",
@@ -85,5 +86,11 @@
         "used_other": "Used Ruimte {{name}} {{count}} times",
         "usedAny_one": "Used Ruimte once",
         "usedAny_other": "Used Ruimte {{count}} times"
+    },
+    "providerCommand": {
+        "description": "Press Enter to run the command.",
+        "ended": "The terminal ended.",
+        "dropped": "The connection to the machine dropped, which ended the terminal.",
+        "failed": "The terminal could not start: {{reason}}"
     }
 }

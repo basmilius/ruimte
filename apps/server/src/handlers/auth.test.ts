@@ -81,9 +81,11 @@ beforeEach(async () => {
         home,
         fixed: false,
         env: { HOME: join(home, 'user'), CLAUDE_CONFIG_DIR: join(home, 'claude'), CODEX_HOME: join(home, 'codex') },
-        accountHomes: () => []
+        accountHomes: () => [],
+        installed: async (kind) => kind !== 'antigravity'
     });
     await integrations.load();
+    await integrations.refreshInstalled();
     peerKey = new PeerKey(home);
     registerAuthHandlers(dispatcher, store, {
         identity,
@@ -741,8 +743,8 @@ describe('auth handlers', () => {
         });
     });
 
-    test('a provider without hooks is unknown', async () => {
-        expect(await ask(LOCAL, 'endpoint.setAgentIntegration', { provider: 'antigravity', on: true })).toMatchObject({
+    test('a provider whose settings Ruimte does not write is unknown', async () => {
+        expect(await ask(LOCAL, 'endpoint.setAgentIntegration', { provider: 'grok', on: true })).toMatchObject({
             ok: false,
             error: { code: 'unknown-provider' }
         });

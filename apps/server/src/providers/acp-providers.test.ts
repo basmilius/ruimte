@@ -1,14 +1,19 @@
 import { describe, expect, test } from 'bun:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { BackendEvent, BackendLaunch } from '@adecore/agents/chat';
-import type { ChatProvider } from '@adecore/agents/providers';
+import { ProviderAccountsService, ProviderRegistry, type ChatProvider } from '@adecore/agents/providers';
 import { fakeAcpWith, inProcess, type FakeAcpOptions } from '@adecore/agents/testing';
 import {
     AGENT_DEFAULT_MODEL,
     ANTIGRAVITY_MODES,
     COPILOT_MODES,
     GROK_MODES,
+    allowsContextCommand,
     copilotProvider,
     createAntigravityProvider,
+    createGrokProvider,
     grokAuthMethod,
     grokProvider
 } from './acp-providers.ts';
@@ -96,6 +101,15 @@ describe('Grok', () => {
         await backend.dispose();
     });
 
+    test('the models a chat reports fill the catalog, with the current one as the default', async () => {
+        const provider = createGrokProvider();
+        const { backend } = run(provider, { authMethod: 'cached_token', modes: GROK_SESSION_MODES });
+        await backend.start();
+        expect(provider.catalog.list().map((model) => model.slug)).toEqual(['fake-small', 'fake-large']);
+        expect(provider.catalog.defaultModel).toBe('fake-small');
+        await backend.dispose();
+    });
+
     test('a full-access chat stays in the default session mode', async () => {
         const { backend, methods } = run(grokProvider, { modes: GROK_SESSION_MODES }, { runtimeMode: 'full-access' });
         await backend.start();
@@ -106,7 +120,7 @@ describe('Grok', () => {
 
 describe('Copilot', () => {
     test('runs its ACP server over stdio beside its terminal', () => {
-        expect(copilotProvider.command).toEqual(['copilot', '--acp', '--stdio', '--no-auto-update']);
+        expect(copilotProvider.command).toEqual(['copilot', '--acp', '--stdio', '--no-auto-update', '--allow-tool=shell(ruimte-context:*)']);
         expect(copilotProvider.capabilities.chat).toBe(true);
         expect(copilotProvider.capabilities.terminal).toBe(true);
         expect(copilotProvider.firstPromptArgs('go')).toEqual(['-i', 'go']);
@@ -148,6 +162,30 @@ describe('Antigravity', () => {
         expect(() => provider.createBackend({} as BackendLaunch, { onEvent: () => undefined })).toThrow('Install the Antigravity server');
     });
 
+    test('offers a second account, signed in from its chat, in a GEMINI_HOME of its own', async () => {
+        const home = await mkdtemp(join(tmpdir(), 'ruimte-antigravity-'));
+        try {
+            const accounts = new ProviderAccountsService({
+                home,
+                providers: new ProviderRegistry({
+                    providers: [grokProvider, createAntigravityProvider(installed)],
+                    detect: async () => ({ installed: true, version: null })
+                }),
+                env: { HOME: home },
+                secrets: null,
+                folderExists: () => true
+            });
+            await accounts.load();
+            expect(accounts.snapshot()).toMatchObject({ loginCommands: { grok: 'grok login' }, chatLogins: ['antigravity'] });
+            const created = await accounts.create({ kind: 'antigravity', label: 'Work' });
+            const folder = join(home, 'accounts', created.id);
+            expect(created.accounts[created.id]).toEqual({ kind: 'antigravity', label: 'Work', home: folder });
+            expect(accounts.envFor('antigravity', created.id, { HOME: home }).GEMINI_HOME).toBe(folder);
+        } finally {
+            await rm(home, { recursive: true, force: true });
+        }
+    });
+
     test("each runtime mode names the server's own mode, the two between sharing auto_edit", () => {
         expect(ANTIGRAVITY_MODES).toEqual({ supervised: ['default'], 'auto-accept-edits': ['auto_edit'], auto: ['auto_edit'], 'full-access': ['yolo'] });
     });
@@ -174,5 +212,31 @@ describe('Antigravity', () => {
             expect(events).toContainEqual(expect.objectContaining({ type: 'permissions', permissionMode: mode, effectiveRuntimeMode: runtimeMode }));
             await backend.dispose();
         }
+    });
+});
+
+describe('allowsContextCommand', () => {
+    const request = (...commands: string[]) => ({ kind: 'execute', title: 'Run a command', commands });
+
+    test('allows ruimte-context, also joined with echo the way an agent labels its parts', () => {
+        expect(allowsContextCommand(request('ruimte-context help'))).toBe(true);
+        expect(
+            allowsContextCommand(
+                request('ruimte-context help && echo "--- AGENT ---" && ruimte-context help agent && echo "--- TEAM ---" && ruimte-context help team')
+            )
+        ).toBe(true);
+    });
+
+    test('asks for a command that is not only ruimte-context', () => {
+        expect(allowsContextCommand(request('echo hi'))).toBe(false);
+        expect(allowsContextCommand(request('ruimte-context x | sh'))).toBe(false);
+        expect(allowsContextCommand(request('ruimte-context x; rm -rf ~'))).toBe(false);
+        expect(allowsContextCommand(request('ruimte-context help', 'Run ruimte-context help to read the verbs'))).toBe(false);
+    });
+
+    test('asks for anything that is not a command request', () => {
+        expect(allowsContextCommand({ kind: 'edit', title: 'Edit a file', commands: ['ruimte-context help'] })).toBe(false);
+        expect(allowsContextCommand({ kind: null, title: null, commands: ['ruimte-context help'] })).toBe(false);
+        expect(allowsContextCommand(request())).toBe(false);
     });
 });

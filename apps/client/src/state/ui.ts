@@ -201,12 +201,20 @@ export interface ConflictRequest {
     path?: string;
 }
 
+/* A provider's install or sign-in command, typed into a shell of its own for the person to run. */
+export interface ProviderCommandRequest {
+    endpointId: string;
+    kind: AgentKind;
+    command: string;
+}
+
 interface UiStore {
     paletteOpen: boolean;
     paletteMode: PaletteMode;
     usageOpen: boolean;
     modelsOpen: boolean;
     login: LoginRequest | null;
+    providerCommand: ProviderCommandRequest | null;
     onboarding: OnboardingStep | null;
     /* The consent for the CLIs' global settings is up (`state/agent-integrations.ts`). */
     agentIntegrations: boolean;
@@ -271,6 +279,7 @@ interface UiStore {
     setUsageOpen(open: boolean): void;
     setModelsOpen(open: boolean): void;
     setLogin(login: LoginRequest | null): void;
+    setProviderCommand(request: ProviderCommandRequest | null): void;
     setOnboarding(step: OnboardingStep | null): void;
     setAgentIntegrations(open: boolean): void;
     askProjectSettings(asked: boolean): void;
@@ -321,6 +330,7 @@ export const useUi = create<UiStore>((set, get) => ({
     usageOpen: false,
     modelsOpen: false,
     login: null,
+    providerCommand: null,
     onboarding: null,
     agentIntegrations: false,
     paletteSeed: '',
@@ -369,6 +379,9 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setLogin(login) {
         set({ login });
+    },
+    setProviderCommand(request) {
+        set({ providerCommand: request });
     },
     setOnboarding(step) {
         set({ onboarding: step });

@@ -6,7 +6,8 @@ import { ContextMenu, Kbd } from '@adecore/ui';
 import { availableAgents } from '@/agents/creation';
 import { useChatChooser, useChooserSections, type ChooserChat } from '@/chat/chat-chooser';
 import { linkedChatsOfNode, sendToChat, startLinkedChatOrTell, type SelectionOffer } from '@/chat/selection-to-chat';
-import { AgentMark } from '@/agents/AgentMark';
+import { AgentIcon } from '@adecore/agents-react/providers';
+import { useDetectProviders } from '@/transport/provider-detection';
 
 function ChatRows({
     chats,
@@ -21,7 +22,7 @@ function ChatRows({
         <>
             {chats.map((chat) => (
                 <ContextMenu.Item key={chat.id} onClick={() => onPick(chat.id)}>
-                    {chat.provider !== null && <AgentMark kind={chat.provider} />}
+                    {chat.provider !== null && <AgentIcon kind={chat.provider} />}
                     <span className="min-w-0 truncate">{chat.title}</span>
                     <ContextMenu.Hint>{providerName(chat.provider)}</ContextMenu.Hint>
                 </ContextMenu.Item>
@@ -42,6 +43,7 @@ function ChooserMenu({ offer, x, y }: { offer: SelectionOffer; x: number; y: num
     const linkedIds = useMemo(() => ('nodeId' in offer.source ? linkedChatsOfNode(offer.source.nodeId) : []), [offer]);
     const sections = useChooserSections(linkedIds);
     const agents = availableAgents(providers, 'chat');
+    useDetectProviders();
     const providerName = (kind: ChooserChat['provider']): string | null =>
         kind === null ? null : (providers.find((entry) => entry.kind === kind)?.name ?? null);
     const groups = [

@@ -9,7 +9,7 @@ import { highlightCode } from '@/shell/panels/highlight';
 import { useCodeTheme } from '@/state/code-theme';
 import { useAskAgents } from './ask-agents';
 import type { EditorLanguage } from './ruimte-editor-language';
-import { AgentMark } from '@/agents/AgentMark';
+import { AgentIcon } from '@adecore/agents-react/providers';
 
 function HoverActions({ language, view }: { language: EditorLanguage; view: HoverView }) {
     const { t } = useTranslation('panels');
@@ -51,7 +51,7 @@ function HoverActions({ language, view }: { language: EditorLanguage; view: Hove
                                     language.selectionChat.askAboutProblem(problem, agent.kind);
                                 }}
                             >
-                                <AgentMark kind={agent.kind} size={12} /> {chat('selection.ask', { provider: agent.name })}
+                                <AgentIcon kind={agent.kind} size={12} /> {chat('selection.ask', { provider: agent.name })}
                             </Button>
                         ))
                     )}
@@ -76,7 +76,7 @@ function MenuActions({ language }: { language: EditorLanguage }) {
             {agents.length === 1 &&
                 agents.map((agent) => (
                     <ContextMenu.Item key={agent.kind} onClick={() => language.selectionChat.askAbout(agent.kind)}>
-                        <AgentMark kind={agent.kind} /> {chat('selection.ask', { provider: agent.name })}
+                        <AgentIcon kind={agent.kind} /> {chat('selection.ask', { provider: agent.name })}
                     </ContextMenu.Item>
                 ))}
             {agents.length > 1 && (
@@ -87,7 +87,7 @@ function MenuActions({ language }: { language: EditorLanguage }) {
                     <ContextMenu.Popup>
                         {agents.map((agent) => (
                             <ContextMenu.Item key={agent.kind} onClick={() => language.selectionChat.askAbout(agent.kind)}>
-                                <AgentMark kind={agent.kind} /> {agent.name}
+                                <AgentIcon kind={agent.kind} /> {agent.name}
                             </ContextMenu.Item>
                         ))}
                     </ContextMenu.Popup>
