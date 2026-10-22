@@ -256,8 +256,9 @@ its `oai-events` channel is ignored. `RuimteTransport` stays without audio.
   eased every frame, the idle patterns while Voice does not listen, still under Reduce Motion. While Voice listens the
   band is measured as the desktop's `WaveformMonitor` measures it (`VoiceWaveformMeter`, held to `timeDomainBands` and
   `easeBands` of `apps/client/src/audio/waveform.ts` by a fixture): every 32 ms while the sheet shows, the newest 256
-  samples of each side, in 40 slices. The peer takes the microphone after WebRTC's processing, as the model hears it,
-  from the processing module's capture post-processing delegate, and the reply from a renderer on its track; only the
+  samples of each side, in 40 slices. The peer takes the microphone after Apple's voice processing, as the model hears
+  it, from a tap on the node that feeds WebRTC in LiveKit's audio engine, and the reply from a renderer on its track; the
+  engine hands its tap about 100 ms at a time, so the person's half moves a little slower than on the desktop. Only the
   newest 256 samples of each stay in memory (`VoiceSampleWindow`), and nothing is kept or logged. Voice on a machine
   deletes nothing yet, so there is no switch for asking before a deletion.
 - The mic in the bar stands out in Voice's color while a session runs; outside the app the Live Activity shows it
@@ -311,10 +312,11 @@ web fallback when the native service is unavailable. `apps/pulsar-worker/README.
   only Voice's own peer carries audio.
 - `RuimteVoice` uses LiveKit's build of WebRTC instead (`livekit/webrtc-xcframework`, MIT, pinned to `150.7871.03`,
   commit `a41df9e9bcc7ab1d62131fda75c123ea391e5188`), since only it hands an app the samples of both sides: a renderer
-  on an audio track and a capture post-processing delegate on the audio processing module. Its classes carry an `LK`
-  prefix (`LKRTCPeerConnectionFactory`), so the two frameworks live side by side, each with its own audio session
-  object; the app ships both, about 12 MB each for an arm64 device. The factory keeps the platform's
-  voice-processing audio unit, as the plain factory has it.
+  on an audio track, and its AVAudioEngine device (`.audioEngine`), whose observer wires the engine's nodes and may tap
+  the microphone. The platform device hands the microphone to no processing delegate or track sink while Apple's voice
+  processing runs, which was tried on a device. Its classes carry an `LK` prefix (`LKRTCPeerConnectionFactory`), so the
+  two frameworks live side by side, each with its own audio session object; the app ships both, about 12 MB each for
+  an arm64 device. The engine keeps Apple's voice processing.
 - `packages/contracts/scripts/generate-swift.ts` generates the daemon API, JSON schemas, constants and fixtures, and
   the closed vocabularies of the agent, task, plan and chat schemas as Swift enums, so a switch stops compiling when
   a case is added. `AgentKind`, `RuntimeMode`, `AgentStatus` and icon names are open on the wire (`x-open-enum`), so

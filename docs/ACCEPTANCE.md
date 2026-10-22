@@ -217,11 +217,11 @@ Features, in a disposable project where something writes:
   worktree and start a chat in it on the desktop. Stop a rebase halfway and finish it from the Changes segment.
 - [ ] VoiceOver and larger text on the main pages, the chat and the composer.
 - [ ] Voice in a Debug build, against a machine with an OpenAI key: the reply plays on the
-  speaker with the phone away from the ear, and moves to a Bluetooth headset and back. A call, a locked screen, the
-  owner's scene in the background and a refused microphone each end it with a reason. Playing an audio or video file
-  while it runs keeps it listening, and it never shows Listening once it cannot hear. On LiveKit's WebRTC build:
-  Voice does not hear its own reply from the speaker (echo cancellation), the band moves with the person's voice above
-  the line and the reply below it, a muted microphone flattens the top half, and Voice goes on in the background.
+  speaker with the phone away from the ear, and moves to a Bluetooth headset and back. A call and a refused microphone
+  each end it with a reason; a locked screen and the background keep it going under its Live Activity, whose Mute and
+  Stop work. Playing an audio or video file while it runs keeps it listening, and it never shows Listening once it
+  cannot hear. On LiveKit's audio engine: Voice does not hear its own reply from the speaker (echo cancellation), the
+  reply moves the band below the line, and a muted microphone flattens the top half.
 - [ ] Visual replies in both themes, links opening in Safari, and the machine's off switch; the same on the desktop
   and the station.
 - [ ] The appearance review of every Intelligent UI element against the desktop, in light, dark, narrow and with

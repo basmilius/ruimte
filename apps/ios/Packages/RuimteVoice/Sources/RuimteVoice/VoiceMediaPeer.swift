@@ -18,19 +18,22 @@ public enum VoiceMediaFailure: Error, LocalizedError, Sendable, Equatable {
 /// reply through the audio session `AudioSessionController` turns on. A function call on the channel is the daemon's
 /// to run, so the peer reads only captions and whether the session started or failed.
 ///
-/// The band reads the last samples of both sides: the microphone after WebRTC's processing, as the model hears it,
-/// and the reply as it plays. They stay in a `VoiceSampleWindow` and go nowhere else.
+/// The band reads the last samples of both sides: the microphone after Apple's voice processing, as the model hears
+/// it, and the reply as it plays. They stay in a `VoiceSampleWindow` and go nowhere else.
 @MainActor public final class VoiceMediaPeer: NSObject, VoiceMedia {
     private static let microphoneSamples = VoiceSampleWindow()
-    /// Held here, since the processing module keeps its delegate weakly.
-    private static let microphoneTap = MicrophoneTap(window: microphoneSamples)
-    /// The platform's voice-processing audio unit, as the plain factory has it, with a processing module that hands
-    /// the microphone to `microphoneTap` once WebRTC processed it.
-    private static let factory = LKRTCPeerConnectionFactory(
-        audioDeviceModuleType: .platformDefault, bypassVoiceProcessing: false,
-        encoderFactory: LKRTCDefaultVideoEncoderFactory(), decoderFactory: LKRTCDefaultVideoDecoderFactory(),
-        audioProcessingModule: LKRTCDefaultAudioProcessingModule(
-            config: nil, capturePostProcessingDelegate: microphoneTap, renderPreProcessingDelegate: nil))
+    /// Held here, since the audio device module keeps its observer weakly.
+    private static let engineObserver = EngineObserver(window: microphoneSamples)
+    /// LiveKit's AVAudioEngine device with Apple's voice processing. The platform device hands the microphone to no
+    /// processing delegate or track sink while that processing runs, so the band taps the engine's input instead.
+    private static let factory: LKRTCPeerConnectionFactory = {
+        let factory = LKRTCPeerConnectionFactory(
+            audioDeviceModuleType: .audioEngine, bypassVoiceProcessing: false,
+            encoderFactory: LKRTCDefaultVideoEncoderFactory(), decoderFactory: LKRTCDefaultVideoDecoderFactory(),
+            audioProcessingModule: nil)
+        factory.audioDeviceModule.observer = engineObserver
+        return factory
+    }()
     /// Past this the offer goes with the candidates it has; OpenAI's side answers a host candidate as well.
     private static let gatherLimit: Duration = .seconds(5)
 
@@ -206,26 +209,92 @@ extension VoiceMediaPeer: LKRTCPeerConnectionDelegate, LKRTCDataChannelDelegate 
     nonisolated public func peerConnection(_ peerConnection: LKRTCPeerConnection, didOpen dataChannel: LKRTCDataChannel) {}
 }
 
-/// Takes the microphone after WebRTC's processing, on its audio thread, every 10 ms. The samples are 16-bit values as
-/// floats, one plane per channel, and the channels are averaged as Web Audio downmixes them.
-private final class MicrophoneTap: NSObject, LKRTCAudioCustomProcessingDelegate, Sendable {
+/// Wires LiveKit's audio engine the way it does without an observer, and taps the node that carries the microphone
+/// into WebRTC. The tap runs on an audio thread; the samples are floats, averaged over the channels as Web Audio
+/// downmixes them.
+private final class EngineObserver: NSObject, LKRTCAudioDeviceModuleDelegate, @unchecked Sendable {
     private let window: VoiceSampleWindow
+    private let lock = NSLock()
+    /// The node the tap sits on, so a new configuration or a released engine takes it off again.
+    private var tapped: AVAudioNode?
 
     init(window: VoiceSampleWindow) {
         self.window = window
     }
 
-    func audioProcessingInitialize(sampleRate: Int, channels: Int) {}
-
-    func audioProcessingProcess(audioBuffer: LKRTCAudioBuffer) {
-        let channels = audioBuffer.channels
-        guard channels > 0 else { return }
-        let first = audioBuffer.rawBuffer(forChannel: 0)
-        let second = channels > 1 ? audioBuffer.rawBuffer(forChannel: 1) : first
-        window.write(frames: audioBuffer.frames) { frame in (first[frame] + second[frame]) / 2 / 32_768 }
+    func audioDeviceModule(
+        _ audioDeviceModule: LKRTCAudioDeviceModule, engine: AVAudioEngine, configureInputFromSource source: AVAudioNode?,
+        toDestination destination: AVAudioNode, format: AVAudioFormat, context: [AnyHashable: Any]
+    ) -> Int {
+        guard let source else { return 0 }
+        engine.connect(source, to: destination, format: format)
+        removeTap()
+        source.installTap(onBus: 0, bufferSize: 256, format: format) { [weak self] buffer, _ in
+            self?.take(buffer)
+        }
+        lock.withLock { tapped = source }
+        return 0
     }
 
-    func audioProcessingRelease() {}
+    func audioDeviceModule(
+        _ audioDeviceModule: LKRTCAudioDeviceModule, engine: AVAudioEngine, configureOutputFromSource source: AVAudioNode,
+        toDestination destination: AVAudioNode?, format: AVAudioFormat, context: [AnyHashable: Any]
+    ) -> Int {
+        guard let destination else { return 0 }
+        engine.connect(source, to: destination, format: format)
+        return 0
+    }
+
+    func audioDeviceModule(_ audioDeviceModule: LKRTCAudioDeviceModule, didStopEngine engine: AVAudioEngine, isPlayoutEnabled: Bool, isRecordingEnabled: Bool) -> Int {
+        window.clear()
+        return 0
+    }
+
+    func audioDeviceModule(_ audioDeviceModule: LKRTCAudioDeviceModule, didDisableEngine engine: AVAudioEngine, isPlayoutEnabled: Bool, isRecordingEnabled: Bool) -> Int {
+        removeTap()
+        return 0
+    }
+
+    func audioDeviceModule(_ audioDeviceModule: LKRTCAudioDeviceModule, willReleaseEngine engine: AVAudioEngine) -> Int {
+        removeTap()
+        return 0
+    }
+
+    func audioDeviceModule(_ audioDeviceModule: LKRTCAudioDeviceModule, didCreateEngine engine: AVAudioEngine) -> Int { 0 }
+
+    func audioDeviceModule(_ audioDeviceModule: LKRTCAudioDeviceModule, willStartEngine engine: AVAudioEngine, isPlayoutEnabled: Bool, isRecordingEnabled: Bool) -> Int { 0 }
+
+    func audioDeviceModule(_ audioDeviceModule: LKRTCAudioDeviceModule, didReceiveSpeechActivityEvent speechActivityEvent: LKRTCSpeechActivityEvent) {}
+
+    func audioDeviceModuleDidUpdateDevices(_ audioDeviceModule: LKRTCAudioDeviceModule) {}
+
+    private func removeTap() {
+        lock.withLock {
+            tapped?.removeTap(onBus: 0)
+            tapped = nil
+        }
+        window.clear()
+    }
+
+    private func take(_ buffer: AVAudioPCMBuffer) {
+        guard let data = buffer.floatChannelData else { return }
+        let channels = Int(buffer.format.channelCount)
+        guard channels > 0 else { return }
+        let frames = Int(buffer.frameLength)
+        if buffer.format.isInterleaved {
+            window.write(frames: frames) { frame in
+                var sum: Float = 0
+                for channel in 0..<channels { sum += data[0][frame * channels + channel] }
+                return sum / Float(channels)
+            }
+        } else {
+            window.write(frames: frames) { frame in
+                var sum: Float = 0
+                for channel in 0..<channels { sum += data[channel][frame] }
+                return sum / Float(channels)
+            }
+        }
+    }
 }
 
 /// Takes the reply as it plays, on WebRTC's playout thread: interleaved 16-bit samples, averaged over the channels.
