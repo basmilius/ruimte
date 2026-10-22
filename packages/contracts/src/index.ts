@@ -411,6 +411,8 @@ import {
     VoiceConfirmPayloadSchema,
     VoiceConfirmResultSchema,
     VoiceKeyStatusSchema,
+    VoicePreferencesSchema,
+    VoicePreferencesStateSchema,
     VoiceSetKeyPayloadSchema,
     VoiceStartPayloadSchema,
     VoiceStartResultSchema,
@@ -785,6 +787,9 @@ export const REQUEST_SCHEMAS = {
     'voice.start': { payload: VoiceStartPayloadSchema, result: VoiceStartResultSchema },
     'voice.stop': { payload: VoiceStopPayloadSchema, result: VoiceStopResultSchema },
     'voice.confirm': { payload: VoiceConfirmPayloadSchema, result: VoiceConfirmResultSchema },
+    // How Voice on this machine talks, which any client but another machine reads and sets.
+    'voice.preferences': { payload: EmptySchema, result: VoicePreferencesStateSchema },
+    'voice.setPreferences': { payload: VoicePreferencesSchema, result: VoicePreferencesStateSchema },
     'endpoint.info': { payload: EndpointInfoPayloadSchema, result: EndpointInfoSchema },
     'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
     'endpoint.settings': { payload: EndpointSettingsSchema, result: EndpointInfoSchema },
@@ -902,6 +907,8 @@ export const EVENT_SCHEMAS = {
     // To the connection that started the session only; the app routes them to the scene by `sceneId`.
     'voice.status': VoiceStatusEventSchema,
     'voice.activity': VoiceActivityEventSchema,
+    // To every client of the machine, whenever a client sets them.
+    'voice.preferences': VoicePreferencesStateSchema,
     // Every open suggestion of an agent in Chats, to every client, whenever the list changes.
     'chat.proposals': ProjectProposalsSchema,
     'task.changed': TaskChangedEventSchema,

@@ -24,6 +24,7 @@ import { chatCompletion, chatWaits } from '@/voice/chat-follow-up';
 import { addTranscriptDelta, nextVoiceTimelineOrder, useVoice, type VoiceAction, type VoiceActionKind } from '@/voice/state';
 import { bypassesQueue, executeVoiceTool } from '@/voice/tools';
 import { currentVoiceDomains } from '@/voice/domains';
+import { voicePreferencesForStart } from '@/voice/machine-preferences';
 import { finishVoiceDiagnostics, noteVoiceError, startVoiceDiagnostics, voiceDeliveryObserver, voiceDiagnosticsObserver } from '@/voice/diagnostics-log';
 import {
     settledPrompt,
@@ -318,10 +319,6 @@ export async function startVoice(): Promise<void> {
             }
         }
     );
-    completionDelivery = new VoiceCompletionDelivery((event) => next.send(event), {
-        language: useSettings.getState().voiceLanguage,
-        observer: voiceDeliveryObserver
-    });
     sessionWatch = new VoiceSessionWatch();
     const queue = new VoiceToolQueue(voiceWorkspaceRevision);
     toolQueue = queue;
@@ -357,14 +354,14 @@ export async function startVoice(): Promise<void> {
             stream.getTracks().forEach((track) => track.stop());
             return;
         }
-        const { voiceLanguage, liveVoice } = useSettings.getState();
-        const domains = await currentVoiceDomains();
+        const [{ language, voice }, domains] = await Promise.all([voicePreferencesForStart(), currentVoiceDomains()]);
         if (session !== next) {
             next.close();
             return;
         }
+        completionDelivery = new VoiceCompletionDelivery((event) => next.send(event), { language, observer: voiceDeliveryObserver });
         startVoiceDiagnostics(domains);
-        await next.start(stream, { language: voiceLanguage, voice: liveVoice, domains });
+        await next.start(stream, { language, voice, domains });
         if (session !== next) {
             next.close();
             return;

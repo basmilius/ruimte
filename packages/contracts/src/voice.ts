@@ -43,6 +43,20 @@ export const VoiceSetKeyPayloadSchema = z.object({
 });
 export type VoiceSetKeyPayload = z.infer<typeof VoiceSetKeyPayloadSchema>;
 
+/* How Voice on this machine talks, the machine's own and the same for every client that starts it. */
+export const VoicePreferencesSchema = z.object({
+    language: VoiceLanguageSchema,
+    voice: LiveVoiceSchema
+});
+export type VoicePreferences = z.infer<typeof VoicePreferencesSchema>;
+
+/* The answer to `voice.preferences` and `voice.setPreferences`, and the `voice.preferences` event every client hears on a change. */
+export const VoicePreferencesStateSchema = z.object({
+    // Null while the machine stores none, so a client may offer its own first choice.
+    preferences: VoicePreferencesSchema.nullable()
+});
+export type VoicePreferencesState = z.infer<typeof VoicePreferencesStateSchema>;
+
 /* The project a session works in now; Voice moves between the projects of its machine. */
 export const VoiceProjectSchema = z.object({
     id: z.string().min(1),
@@ -92,8 +106,9 @@ export const VoiceStartPayloadSchema = z.object({
     sceneId: id,
     projectId: z.string().min(1).optional(),
     sdp: z.string().min(1).max(VOICE_SDP_MAX_CHARS),
-    language: VoiceLanguageSchema,
-    voice: LiveVoiceSchema,
+    // The machine's stored preferences come first; these count only while it stores none, and English and marin after them.
+    language: VoiceLanguageSchema.optional(),
+    voice: LiveVoiceSchema.optional(),
     // IANA, for the clock the daemon gives the model.
     timeZone: z.string().min(1).max(64),
     viewId: z.string().min(1).optional()

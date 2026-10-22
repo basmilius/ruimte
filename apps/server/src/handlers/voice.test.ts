@@ -4,8 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
 import type { CanvasHost } from '../canvas/verb.ts';
+import { connectionOpener, type ClientChannel, type ConnectionServices } from '../connection.ts';
 import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
 import { VoiceKeyStore } from '../voice/key-store.ts';
+import { VoicePreferencesStore } from '../voice/preferences-store.ts';
 import { wireVoice } from '../wiring/voice.ts';
 import { registerVoiceHandlers, type VoiceHandlerDeps } from './voice.ts';
 
@@ -16,6 +18,7 @@ const PEER: ClientAccess = { reachability: 'public', sessionId: 'peer-session', 
 
 let root: string;
 let keys: VoiceKeyStore;
+let preferences: VoicePreferencesStore;
 let started: string[];
 
 function connection(id: string, access: ClientAccess): ClientConnection & { frames: ServerFrame[] } {
@@ -38,8 +41,28 @@ function voiceDispatcher(): Dispatcher {
         stop: async (client, payload) => ({ stopped: client.id === 'phone' && payload.sceneId === 'scene-1' }),
         confirm: async () => ({ accepted: false })
     };
-    registerVoiceHandlers(dispatcher, { keys, sessions });
+    registerVoiceHandlers(dispatcher, { keys, preferences, sessions });
     return dispatcher;
+}
+
+/* A channel the opener sends whole frames into, for a test of what each client hears. */
+function channel(): ClientChannel & { frames: ServerFrame[] } {
+    const frames: ServerFrame[] = [];
+    return {
+        frames,
+        send: (data) => {
+            frames.push(JSON.parse(String(data)) as ServerFrame);
+            return 1;
+        },
+        bufferedAmount: () => 0,
+        close: () => undefined,
+        onClose: () => undefined,
+        onDrain: () => undefined
+    };
+}
+
+function heard(frames: ServerFrame[], event: string): unknown[] {
+    return frames.flatMap((frame) => ('type' in frame && frame.type === 'event' && frame.event === event ? [frame.payload] : []));
 }
 
 const START = { startId: 'start-1', sceneId: 'scene-1', projectId: 'project-1', sdp: 'v=0', language: 'en', voice: 'marin', timeZone: 'UTC' };
@@ -47,6 +70,7 @@ const START = { startId: 'start-1', sceneId: 'scene-1', projectId: 'project-1', 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-voice-handlers-'));
     keys = new VoiceKeyStore(root);
+    preferences = new VoicePreferencesStore(root);
     started = [];
 });
 
@@ -144,10 +168,79 @@ describe('the voice requests', () => {
                     .types()
                     .filter((type) => type.startsWith('voice.'))
                     .sort()
-            ).toEqual(['voice.clearKey', 'voice.confirm', 'voice.keyStatus', 'voice.setKey', 'voice.start', 'voice.stop']);
+            ).toEqual([
+                'voice.clearKey',
+                'voice.confirm',
+                'voice.keyStatus',
+                'voice.preferences',
+                'voice.setKey',
+                'voice.setPreferences',
+                'voice.start',
+                'voice.stop'
+            ]);
             expect(dispatcher.peerTypes().filter((type) => type.startsWith('voice.'))).toEqual([]);
         } finally {
             log.mockRestore();
         }
+    });
+});
+
+describe('the preferences of Voice', () => {
+    test('any client but another machine reads and sets them, and only what the lists hold', async () => {
+        const dispatcher = voiceDispatcher();
+        const phone = connection('phone', PHONE);
+        const peer = connection('peer', PEER);
+        expect(await ask(dispatcher, phone, 'voice.preferences', {})).toMatchObject({ ok: true, result: { preferences: null } });
+        expect(await ask(dispatcher, phone, 'voice.setPreferences', { language: 'nl', voice: 'cedar' })).toMatchObject({
+            ok: true,
+            result: { preferences: { language: 'nl', voice: 'cedar' } }
+        });
+        expect(await ask(dispatcher, phone, 'voice.setPreferences', { language: 'klingon', voice: 'cedar' })).toMatchObject({
+            ok: false,
+            error: { code: 'bad-request' }
+        });
+        expect(await ask(dispatcher, phone, 'voice.setPreferences', { language: 'nl' })).toMatchObject({ ok: false, error: { code: 'bad-request' } });
+        for (const [type, payload] of [
+            ['voice.preferences', {}],
+            ['voice.setPreferences', { language: 'de', voice: 'marin' }]
+        ] as const) {
+            expect(await ask(dispatcher, peer, type, payload)).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        }
+        expect(await ask(dispatcher, phone, 'voice.preferences', {})).toMatchObject({ result: { preferences: { language: 'nl', voice: 'cedar' } } });
+        expect(new VoicePreferencesStore(root).get()).toEqual({ language: 'nl', voice: 'cedar' });
+    });
+
+    test('a change goes to every client of the machine, and to no other machine', async () => {
+        const dispatcher = voiceDispatcher();
+        const source = () => ({ subscribe: () => () => undefined, detachAll: () => undefined });
+        const open = connectionOpener({
+            dispatcher,
+            sessions: { ...source(), get: () => undefined },
+            chats: source(),
+            identity: source(),
+            projects: source(),
+            drawings: source(),
+            diagrams: source(),
+            folders: source(),
+            statuses: source(),
+            usage: source(),
+            limits: source(),
+            processes: source(),
+            voicePreferences: preferences
+        } as unknown as ConnectionServices);
+        const phone = channel();
+        const desktop = channel();
+        const peer = channel();
+        const asking = open(phone, PHONE);
+        open(desktop, OWNER);
+        open(peer, PEER);
+        asking.receive(JSON.stringify({ id: 'set', type: 'voice.setPreferences', payload: { language: 'ja', voice: 'marin' } }));
+        for (let i = 0; i < 100 && !phone.frames.some((frame) => 'id' in frame && frame.id === 'set'); i++) {
+            await Promise.resolve();
+        }
+        const change = { preferences: { language: 'ja', voice: 'marin' } };
+        expect(heard(phone.frames, 'voice.preferences')).toEqual([change]);
+        expect(heard(desktop.frames, 'voice.preferences')).toEqual([change]);
+        expect(heard(peer.frames, 'voice.preferences')).toEqual([]);
     });
 });

@@ -1004,7 +1004,8 @@
             "saved": "OpenAI API key saved",
             "saveFailed": "Could not save API key",
             "removed": "OpenAI API key removed",
-            "removeFailed": "Could not remove API key"
+            "removeFailed": "Could not remove API key",
+            "preferencesFailed": "Could not save Voice settings"
         },
         "microphone": {
             "systemDefault": "System default",
@@ -1026,6 +1027,12 @@
                 "description": "Some languages work only in Voice Control.",
                 "selectLabel": "Speech language"
             },
+            "machineLanguage": {
+                "label": "Conversation language",
+                "description": "Kept on the machine, so Voice Control speaks it on every device.",
+                "selectLabel": "Conversation language"
+            },
+            "preferencesFailure": "The machine did not save the choice.",
             "voice": {
                 "label": "Voice",
                 "description": "OpenAI's built-in Live voices. Marin and Cedar are recommended.",
@@ -1041,7 +1048,7 @@
         },
         "input": {
             "title": "Microphone and language",
-            "description": "Shared by Speech to Text and Voice Control. Changes apply to the next recording."
+            "description": "Speech to Text listens in this language; the microphone serves Voice Control too. Changes apply to the next recording."
         }
     },
     "computer": {

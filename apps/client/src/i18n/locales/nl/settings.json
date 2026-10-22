@@ -1004,7 +1004,8 @@
             "saved": "OpenAI API key opgeslagen",
             "saveFailed": "Kon API key niet opslaan",
             "removed": "OpenAI API key verwijderd",
-            "removeFailed": "Kon API key niet verwijderen"
+            "removeFailed": "Kon API key niet verwijderen",
+            "preferencesFailed": "Kon de instellingen van Voice niet opslaan"
         },
         "microphone": {
             "systemDefault": "Systeemstandaard",
@@ -1026,6 +1027,12 @@
                 "description": "Sommige talen werken alleen in Voice Control.",
                 "selectLabel": "Spraaktaal"
             },
+            "machineLanguage": {
+                "label": "Gesprekstaal",
+                "description": "Bewaard op de machine, zodat Voice Control hem op elk apparaat spreekt.",
+                "selectLabel": "Gesprekstaal"
+            },
+            "preferencesFailure": "De machine heeft de keuze niet opgeslagen.",
             "voice": {
                 "label": "Stem",
                 "description": "De ingebouwde Live-stemmen van OpenAI. Marin en Cedar worden aangeraden.",
@@ -1041,7 +1048,7 @@
         },
         "input": {
             "title": "Microfoon en taal",
-            "description": "Gedeeld door Speech to Text en Voice Control. Wijzigingen gelden voor de volgende opname."
+            "description": "Speech to Text luistert in deze taal; de microfoon geldt ook voor Voice Control. Wijzigingen gelden voor de volgende opname."
         }
     },
     "computer": {

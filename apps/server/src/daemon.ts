@@ -194,6 +194,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         remote: remote.status,
         peerTasks: work.peerTasks,
         voice: voice.sessions,
+        voicePreferences: voice.preferences,
         sessions,
         chats,
         browsers: devices.browsers,

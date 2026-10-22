@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { ChatItem, ProjectContent, ProjectSummary, ServerFrame, VoiceStartPayload } from '@ruimte/contracts';
+import type { ChatItem, ProjectContent, ProjectSummary, ServerFrame, VoicePreferences, VoiceStartPayload } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
 import type { CanvasHost } from '../canvas/verb.ts';
 import type { ClientConnection } from '../dispatcher.ts';
@@ -91,6 +91,7 @@ function functionCall(callId: string, args: Record<string, unknown>, delegation 
 let clock: FakeClock;
 let live: FakeLive;
 let key: string | null;
+let stored: VoicePreferences | null;
 let holds: string[];
 let threads: Map<string, ChatItem[]>;
 // What a read of a thread waits on, so a test can hold a tool call in flight.
@@ -122,6 +123,7 @@ function sessions(views: ProjectContent['views'] = CONTENT.views): VoiceSessions
     return new VoiceSessions({
         live,
         key: async () => key,
+        preferences: () => stored,
         clock,
         holds: {
             hold: (holder, projectId, changed) => {
@@ -175,6 +177,7 @@ beforeEach(() => {
     clock = new FakeClock();
     live = new FakeLive(clock);
     key = KEY;
+    stored = null;
     holds = [];
     threads = new Map();
     threadGate = Promise.resolve();
@@ -210,6 +213,27 @@ describe('starting', () => {
         expect(phases(owner)).toEqual(['active']);
         // The deadline is gone; what is left is the minute the model hears the time on.
         expect(clock.pending).toBe(1);
+    });
+
+    test('speaks as the machine stores first, then as the start says, then English with marin', async () => {
+        const minted = async (payload: VoiceStartPayload): Promise<{ instructions: string; voice: unknown }> => {
+            live = new FakeLive(clock);
+            void sessions().start(client(`client-${++ids}`), payload);
+            await settle();
+            const body = live.mints[0]!.body as { session: { instructions: string; audio: { output: { voice: unknown } } } };
+            return { instructions: body.session.instructions, voice: body.session.audio.output.voice };
+        };
+        const { language: _language, voice: _voice, ...bare } = startPayload();
+        expect(await minted(bare as VoiceStartPayload)).toMatchObject({ instructions: expect.stringContaining('in English'), voice: 'marin' });
+        expect(await minted(startPayload({ language: 'nl', voice: 'cedar' }))).toMatchObject({
+            instructions: expect.stringContaining('in Dutch'),
+            voice: 'cedar'
+        });
+        stored = { language: 'de', voice: 'marin' };
+        expect(await minted(startPayload({ language: 'nl', voice: 'cedar' }))).toMatchObject({
+            instructions: expect.stringContaining('in German'),
+            voice: 'marin'
+        });
     });
 
     test('mints with the phone prompt and the tools of the matrix, prompting and starting chats too', async () => {

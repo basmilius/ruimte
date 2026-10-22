@@ -16,11 +16,30 @@ const status = { sessionId: 'voice-1', sceneId: 'scene-1', seq: 0, phase: 'start
 
 describe('the Voice wire', () => {
     test('is in the request and event tables', () => {
-        for (const name of ['voice.keyStatus', 'voice.setKey', 'voice.clearKey', 'voice.start', 'voice.stop', 'voice.confirm']) {
+        for (const name of [
+            'voice.keyStatus',
+            'voice.setKey',
+            'voice.clearKey',
+            'voice.preferences',
+            'voice.setPreferences',
+            'voice.start',
+            'voice.stop',
+            'voice.confirm'
+        ]) {
             expect(Object.hasOwn(REQUEST_SCHEMAS, name)).toBe(true);
         }
-        expect(Object.hasOwn(EVENT_SCHEMAS, 'voice.status')).toBe(true);
-        expect(Object.hasOwn(EVENT_SCHEMAS, 'voice.activity')).toBe(true);
+        for (const name of ['voice.status', 'voice.activity', 'voice.preferences']) {
+            expect(Object.hasOwn(EVENT_SCHEMAS, name)).toBe(true);
+        }
+    });
+
+    test('the preferences take both fields from the lists, and none stored reads as null', () => {
+        const set = REQUEST_SCHEMAS['voice.setPreferences'].payload;
+        expect(set.parse({ language: 'nl', voice: 'cedar' })).toEqual({ language: 'nl', voice: 'cedar' });
+        expect(set.safeParse({ language: 'nl' }).success).toBe(false);
+        expect(set.safeParse({ language: 'klingon', voice: 'cedar' }).success).toBe(false);
+        expect(REQUEST_SCHEMAS['voice.preferences'].result.parse({ preferences: null })).toEqual({ preferences: null });
+        expect(EVENT_SCHEMAS['voice.preferences'].safeParse({ preferences: { language: 'en', voice: 'marin' } }).success).toBe(true);
     });
 
     test('a start names its scene and takes the languages and voices the desktop takes', () => {
@@ -34,6 +53,8 @@ describe('the Voice wire', () => {
             expect(payload.safeParse({ ...start, voice }).success).toBe(true);
         }
         expect(payload.safeParse({ ...start, language: 'klingon' }).success).toBe(false);
+        // The machine's own preferences come first, so a start may name neither.
+        expect(payload.safeParse({ ...start, language: undefined, voice: undefined }).success).toBe(true);
         expect(payload.safeParse({ ...start, sceneId: undefined }).success).toBe(false);
         expect(payload.safeParse({ ...start, startId: 'with space' }).success).toBe(false);
         expect(payload.safeParse({ ...start, sdp: 'x'.repeat(128_001) }).success).toBe(false);

@@ -398,6 +398,12 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     { id: 'voice.dictation', section: 'voice', label: 'voice:dictation.enable', description: 'voice:dictation.description' },
     { id: 'voice.key', section: 'voice', label: 'settings:voice.key.label', description: 'settings:voice.key.sectionDescription' },
+    {
+        id: 'voice.conversationLanguage',
+        section: 'voice',
+        label: 'settings:voice.conversation.machineLanguage.label',
+        description: 'settings:voice.conversation.machineLanguage.description'
+    },
     { id: 'voice.voice', section: 'voice', label: 'settings:voice.conversation.voice.label', description: 'settings:voice.conversation.voice.description' },
     {
         id: 'voice.confirm',

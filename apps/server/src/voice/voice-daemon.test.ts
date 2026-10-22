@@ -90,6 +90,7 @@ function voiceSessions(): VoiceSessions {
     return new VoiceSessions({
         live,
         key: async () => 'sk-test-voice-0123456789abcdef',
+        preferences: () => null,
         clock: voiceClock,
         holds: {
             hold: (holder, held) => store.hold(holder, held, { startsLaunches: false }),

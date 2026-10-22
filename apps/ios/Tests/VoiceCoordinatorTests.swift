@@ -24,7 +24,7 @@ import Testing
         let scheduler = ManualScheduler()
         let voice = VoiceCoordinator(
             media: { media }, audio: { audio }, scheduler: scheduler,
-            preferences: { VoicePreferences(language: "nl", voice: "cedar") },
+            deviceLanguage: { "nl" },
             makeID: { "start-1" }, timeZone: { "Europe/Amsterdam" }, declaresMicrophone: declaresMicrophone)
         return Setup(voice: voice, machine: machine, media: media, audio: audio, scheduler: scheduler)
     }
@@ -60,6 +60,8 @@ import Testing
 
     @Test func aStartSendsTheOfferWithItsSceneAndPlaysTheAnswer() async {
         let setup = Self.setup()
+        setup.machine.preferences = .object(["language": .string("nl"), "voice": .string("cedar")])
+        await setup.voice.refreshPreferences(machineID: "machine", client: setup.machine)
         var target = Self.target
         target.viewID = "canvas-1"
         await setup.voice.start(scene: "A", target: target, client: setup.machine)
@@ -418,32 +420,82 @@ import Testing
         #expect(VoicePreferences.languages.count == 29)
         #expect(VoicePreferences.voices == ["marin", "cedar"])
         for language in VoicePreferences.languages {
-            let payload: JSONValue = .object([
+            let start: JSONValue = .object([
                 "startId": .string("s"), "sceneId": .string("A"), "projectId": .string("p"), "sdp": .string("v=0"),
                 "language": .string(language), "voice": .string("marin"), "timeZone": .string("UTC"),
             ])
-            #expect(throws: Never.self) { try WireRequest.voiceStart.validatePayload(payload) }
+            #expect(throws: Never.self) { try WireRequest.voiceStart.validatePayload(start) }
+            let set: JSONValue = .object(["language": .string(language), "voice": .string("cedar")])
+            #expect(throws: Never.self) { try WireRequest.voiceSetPreferences.validatePayload(set) }
         }
     }
 
-    @Test func theLanguageFollowsTheDeviceWhereVoiceSpeaksIt() throws {
+    @Test func theLanguageFollowsTheDeviceWhereVoiceSpeaksIt() {
         #expect(VoicePreferences.defaultLanguage(preferred: ["nl-NL", "en-US"]) == "nl")
         #expect(VoicePreferences.defaultLanguage(preferred: ["tlh"]) == "en")
-        let defaults = try #require(UserDefaults(suiteName: "voice-preferences-test"))
-        defaults.removePersistentDomain(forName: "voice-preferences-test")
-        defaults.set("xx", forKey: VoicePreferences.languageKey)
-        defaults.set("cedar", forKey: VoicePreferences.voiceKey)
-        let current = VoicePreferences.current(defaults)
-        #expect(VoicePreferences.languages.contains(current.language))
-        #expect(current.voice == "cedar")
         #expect(VoicePreferences.languageName("nl") == "Nederlands")
+    }
+
+    @Test func aMachineThatStoresNoneOffersTheDeviceLanguageAndStartsWithIt() async {
+        let setup = Self.setup()
+        await setup.voice.refreshPreferences(machineID: "machine", client: setup.machine)
+        #expect(setup.machine.sent("voice.preferences"))
+        #expect(setup.voice.preferences(machineID: "machine") == VoicePreferences(language: "nl", voice: "marin"))
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        let start = setup.machine.requests.first { $0.0 == "voice.start" }?.1
+        #expect(start?["language"] == .string("nl"))
+        #expect(start?["voice"] == .string("marin"))
+    }
+
+    @Test func eachMachineKeepsItsOwnPreferencesAndTheyFollowItsEvent() async {
+        let setup = Self.setup()
+        setup.machine.preferences = .object(["language": .string("de"), "voice": .string("cedar")])
+        await setup.voice.refreshPreferences(machineID: "machine", client: setup.machine)
+        #expect(setup.voice.preferences(machineID: "machine") == VoicePreferences(language: "de", voice: "cedar"))
+        #expect(
+            setup.voice.preferences(machineID: "other") == VoicePreferences(language: "nl", voice: "marin"),
+            "Another machine stores nothing yet")
+        setup.machine.emit(
+            "voice.preferences",
+            .object(["preferences": .object(["language": .string("ja"), "voice": .string("marin")])]))
+        #expect(setup.voice.preferences(machineID: "machine") == VoicePreferences(language: "ja", voice: "marin"))
+        await setup.voice.refreshPreferences(machineID: "machine", client: setup.machine)
+        #expect(setup.machine.listeners == 1, "A second read follows the event once, not twice")
+    }
+
+    @Test func aChoiceIsStoredOnTheMachineAndTakenBackWhenItRefuses() async {
+        let setup = Self.setup()
+        let chosen = VoicePreferences(language: "fr", voice: "cedar")
+        await setup.voice.setPreferences(chosen, machineID: "machine", client: setup.machine)
+        #expect(
+            setup.machine.requests.last?.1 == .object(["language": .string("fr"), "voice": .string("cedar")]))
+        #expect(setup.voice.preferences(machineID: "machine") == chosen)
+        setup.machine.refuseSet = true
+        await setup.voice.setPreferences(
+            VoicePreferences(language: "es", voice: "marin"), machineID: "machine", client: setup.machine)
+        #expect(setup.voice.preferences(machineID: "machine") == chosen)
+    }
+
+    @Test func aMachineThatKeepsNoPreferencesIsNeverAskedForThem() async {
+        let setup = Self.setup()
+        setup.machine.features.remove(.voicePreferences)
+        await setup.voice.refreshPreferences(machineID: "machine", client: setup.machine)
+        #expect(!setup.voice.keepsPreferences(client: setup.machine))
+        #expect(setup.machine.requests.isEmpty)
+        #expect(setup.machine.listeners == 0)
+        #expect(setup.voice.preferences(machineID: "machine") == VoicePreferences(language: "nl", voice: "marin"))
     }
 }
 
 @MainActor private final class VoiceMachine: MachineRequesting, MachineFeatures {
-    var features: Set<WireRequest> = [.voiceStart, .voiceStop, .voiceConfirm, .voiceKeyStatus]
+    var features: Set<WireRequest> = [
+        .voiceStart, .voiceStop, .voiceConfirm, .voiceKeyStatus, .voicePreferences, .voiceSetPreferences,
+    ]
     var requests: [(String, JSONValue)] = []
     var keyPresent = true
+    /// What the machine stores of how Voice talks; null for none.
+    var preferences: JSONValue = .null
+    var refuseSet = false
     var holdStart = false
     /// What `observeConnection` answers at once, as `MachineClient` does with where its link stands.
     var connected = true
@@ -469,6 +521,11 @@ import Testing
             return try await withCheckedThrowingContinuation { heldStart = $0 }
         case "voice.stop": return .object(["stopped": .bool(true)])
         case "voice.confirm": return .object(["accepted": .bool(true)])
+        case "voice.preferences": return .object(["preferences": preferences])
+        case "voice.setPreferences":
+            guard !refuseSet else { throw MachineClientError.invalid(type) }
+            preferences = payload
+            return .object(["preferences": payload])
         default: throw MachineClientError.invalid(type)
         }
     }

@@ -244,8 +244,12 @@ its `oai-events` channel is ignored. `RuimteTransport` stays without audio.
   link or the media dropping all end Voice. What it started on the machine goes on. Background audio is outside
   this version, so the app declares no `audio` background mode; keeping Voice past a lock is Bas's to decide.
 - The captions stand above every tab of the scene (`VoiceCaptionBar`); the timeline is a sheet on an iPhone and the
-  inspector on an iPad (`VoicePanel`). Language and voice are in Settings, Voice. Voice on a machine deletes nothing yet, so
-  there is no switch for asking before a deletion.
+  inspector on an iPad (`VoicePanel`). Voice on a machine deletes nothing yet, so there is no switch for asking before
+  a deletion.
+- Language and voice are the machine's (`voice.preferences`, `voice.setPreferences` and the `voice.preferences` event
+  every client of the machine hears), shown per machine in Settings, Voice beside its key. A machine that stores none
+  shows the device's language with marin, which a start then sends; the machine's stored choice always comes first.
+  The phone keeps no copy of its own.
 - For now only a Debug build declares the microphone (`INFOPLIST_KEY_NSMicrophoneUsageDescription` in the Debug
   configuration of `project.yml`), until a release carries the privacy label that comes with it (audio data shared
   with OpenAI). A build without the declaration never offers Voice, the build phase "Release declares no microphone"

@@ -179,6 +179,8 @@ exports[`every reply and event field keeps its vocabulary 1`] = `
   "event usage.limitsChanged #/properties/providers/items/properties/windows/items/properties/kind = ["monthly", "other", "session", "weekly"]",
   "event voice.activity #/properties/entry/properties/kind = ["chat", "delete", "focus", "git", "node", "note", "rename", "terminal", "view"]",
   "event voice.activity #/properties/entry/properties/status = ["completed", "failed", "running"]",
+  "event voice.preferences #/properties/preferences/anyOf/0/properties/language = ["ar", "ca", "cs", "da", "de", "el", "en", "es", "fi", "fr", "he", "hi", "hu", "id", "it", "ja", "ko", "nl", "no", "pl", "pt", "ro", "ru", "sv", "th", "tr", "uk", "vi", "zh"]",
+  "event voice.preferences #/properties/preferences/anyOf/0/properties/voice = ["cedar", "marin"]",
   "event voice.status #/properties/phase = ["active", "closed", "failed", "starting", "stopping"]",
   "reply accounts.create #/properties/statuses/items/properties/state = ["checking", "disabled", "failed", "folder-missing", "not-found", "ready", "signed-out", "unavailable"]",
   "reply accounts.list #/properties/statuses/items/properties/state = ["checking", "disabled", "failed", "folder-missing", "not-found", "ready", "signed-out", "unavailable"]",
@@ -638,6 +640,10 @@ exports[`every reply and event field keeps its vocabulary 1`] = `
   "reply usage.summary #/properties/resolution = ["day", "hour"]",
   "reply usage.summary #/properties/roots/items/properties/provider = ["claude", "codex", "copilot", "grok", "nanogpt"]",
   "reply usage.summary #/properties/roots/items/properties/status = ["failed", "missing", "ok"]",
+  "reply voice.preferences #/properties/preferences/anyOf/0/properties/language = ["ar", "ca", "cs", "da", "de", "el", "en", "es", "fi", "fr", "he", "hi", "hu", "id", "it", "ja", "ko", "nl", "no", "pl", "pt", "ro", "ru", "sv", "th", "tr", "uk", "vi", "zh"]",
+  "reply voice.preferences #/properties/preferences/anyOf/0/properties/voice = ["cedar", "marin"]",
+  "reply voice.setPreferences #/properties/preferences/anyOf/0/properties/language = ["ar", "ca", "cs", "da", "de", "el", "en", "es", "fi", "fr", "he", "hi", "hu", "id", "it", "ja", "ko", "nl", "no", "pl", "pt", "ro", "ru", "sv", "th", "tr", "uk", "vi", "zh"]",
+  "reply voice.setPreferences #/properties/preferences/anyOf/0/properties/voice = ["cedar", "marin"]",
   "reply voice.start #/properties/status/properties/phase = ["active", "closed", "failed", "starting", "stopping"]",
 ]
 `;

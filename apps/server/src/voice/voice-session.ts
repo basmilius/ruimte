@@ -6,6 +6,7 @@ import type {
     VoiceActivityKind,
     VoiceError,
     VoicePhase,
+    VoicePreferences,
     VoiceProject,
     VoiceStartPayload,
     VoiceStartResult,
@@ -20,6 +21,7 @@ import { voicePolicy } from './action-policy.ts';
 import type { VoiceClock } from './clock.ts';
 import { LiveError, type OpenAiLive } from './openai-live.ts';
 import { openProjects } from './project-reading.ts';
+import { voicePreferencesFor } from './preferences-store.ts';
 import { phonePrompts } from './prompts.ts';
 import { sessionContext, timeContext } from './session-context.ts';
 import type { LiveSideband } from './sideband.ts';
@@ -38,6 +40,8 @@ export interface VoiceSessionDeps {
     live: OpenAiLive;
     /* The key from `$RUIMTE_HOME/voice`, read at every start; null when none is set. */
     key(): Promise<string | null>;
+    /* How Voice on this machine talks, read at every start; null while no client set it. */
+    preferences(): VoicePreferences | null;
     clock: VoiceClock;
     /*
      * Keeps the current project loaded while the session works in it, as a hold that starts no launches,
@@ -169,7 +173,8 @@ export class VoiceSession {
                 throw new LiveError('voice-no-key', 'No OpenAI key for Voice is set on this machine');
             }
             const tools = daemonVoiceTools();
-            const body = liveSessionBody({ language: payload.language, voice: payload.voice, ...phonePrompts(), tools, sdp: payload.sdp });
+            const { language, voice } = voicePreferencesFor(this.#deps.preferences(), payload);
+            const body = liveSessionBody({ language, voice, ...phonePrompts(), tools, sdp: payload.sdp });
             const minting = live.mint(key, body, signal);
             // A mint that answers once the start ended would stay open at OpenAI, so it is closed again.
             minting.then(
@@ -195,7 +200,7 @@ export class VoiceSession {
             this.#sideband = sideband;
             // The reports go one append at a time against their acks, the same queue the desktop's window uses.
             this.#delivery = new VoiceCompletionDelivery((event) => this.#sideband?.send(event) ?? false, {
-                language: payload.language,
+                language,
                 timer: (run, ms) => clock.after(ms, run)
             });
             this.#follower = new VoiceFollower({

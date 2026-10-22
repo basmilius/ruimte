@@ -221,6 +221,7 @@ export interface Settings {
        sends the deltas either way. */
     chatStreaming: ChatStreamingMode;
     chatSteerByDefault: boolean;
+    /* Speech to Text's own; Voice speaks these two only on a machine that keeps no preferences of its own (`voice.preferences`). */
     voiceLanguage: VoiceLanguage;
     liveVoice: LiveVoice;
     voiceInputDeviceId: string;

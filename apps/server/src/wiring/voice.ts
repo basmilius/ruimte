@@ -6,10 +6,12 @@ import type { ProjectStore } from '../projects/project-store.ts';
 import { SYSTEM_CLOCK } from '../voice/clock.ts';
 import { VoiceKeyStore } from '../voice/key-store.ts';
 import { openAiLive, type OpenAiLive } from '../voice/openai-live.ts';
+import { VoicePreferencesStore } from '../voice/preferences-store.ts';
 import { VoiceSessions } from '../voice/voice-sessions.ts';
 
 export interface VoiceBundle {
     keys: VoiceKeyStore;
+    preferences: VoicePreferencesStore;
     sessions: VoiceSessions;
 }
 
@@ -31,10 +33,12 @@ export interface VoiceInput {
 export function wireVoice(input: VoiceInput): VoiceBundle {
     const { config, projects, canvasHost, chats } = input;
     const keys = new VoiceKeyStore(config.home);
+    const preferences = new VoicePreferencesStore(config.home);
     const listening = new Map<string, () => void>();
     const sessions = new VoiceSessions({
         live: input.live ?? openAiLive(),
         key: () => keys.read(),
+        preferences: () => preferences.get(),
         clock: SYSTEM_CLOCK,
         // A hold of its own, so the project stays loaded while Voice works in it and no launch starts for it.
         holds: {
@@ -69,5 +73,5 @@ export function wireVoice(input: VoiceInput): VoiceBundle {
         projects,
         machine: input.machine
     });
-    return { keys, sessions };
+    return { keys, preferences, sessions };
 }

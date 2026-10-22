@@ -10,6 +10,7 @@ import { registerVoiceHandlers } from '../handlers/voice.ts';
 import { SYSTEM_CLOCK } from './clock.ts';
 import { VoiceKeyStore } from './key-store.ts';
 import { openAiLive } from './openai-live.ts';
+import { VoicePreferencesStore } from './preferences-store.ts';
 import { FakeChats } from './voice-fakes.ts';
 import { VoiceSessions } from './voice-sessions.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -93,9 +94,11 @@ function daemon(home: string, openAiUrl: string, threads: Map<string, ChatItem[]
         },
         chatThreads: { items: async (chatId: string) => threads.get(chatId) ?? null }
     } as unknown as CanvasHost;
+    const preferences = new VoicePreferencesStore(home);
     const sessions = new VoiceSessions({
         live: openAiLive({ baseUrl: openAiUrl }),
         key: () => new VoiceKeyStore(home).read(),
+        preferences: () => preferences.get(),
         clock: SYSTEM_CLOCK,
         holds: {
             hold: (holder, projectId) => holds.push(`hold ${holder} ${projectId}`),
@@ -123,7 +126,7 @@ function daemon(home: string, openAiUrl: string, threads: Map<string, ChatItem[]
         machine: { id: 'machine-1', label: 'Studio' }
     });
     const dispatcher = new Dispatcher();
-    registerVoiceHandlers(dispatcher, { keys: new VoiceKeyStore(home), sessions });
+    registerVoiceHandlers(dispatcher, { keys: new VoiceKeyStore(home), preferences, sessions });
     const services = {
         dispatcher,
         sessions: { ...source(), get: () => undefined },
@@ -137,7 +140,8 @@ function daemon(home: string, openAiUrl: string, threads: Map<string, ChatItem[]
         usage: source(),
         limits: source(),
         processes: source(),
-        voice: sessions
+        voice: sessions,
+        voicePreferences: preferences
     } as unknown as ConnectionServices;
     const open = connectionOpener(services);
     const sockets = new Map<ServerWebSocket<ClientAccess>, { channel: SocketChannel; connection: OpenConnection }>();

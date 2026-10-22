@@ -12,7 +12,7 @@ describe('settings in the palette', () => {
     });
 
     test('a pane opens without a target and hints with its description', () => {
-        const entry = settingsEntries(searchSettings('voice')).find((candidate) => candidate.id === 'setting-voice-pane');
+        const entry = settingsEntries(searchSettings('dictation')).find((candidate) => candidate.id === 'setting-voice-pane');
         expect(entry?.hint).not.toBe('Voice');
         entry!.run();
         expect(useUi.getState().settings).toMatchObject({ open: true, section: 'voice', target: null });

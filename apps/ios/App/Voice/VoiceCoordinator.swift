@@ -73,6 +73,8 @@ final class VoiceCoordinator {
     private(set) var route: String?
     /// Per machine, whether it holds an OpenAI key for Voice, as `voice.keyStatus` last said.
     private(set) var keys: [String: Bool] = [:]
+    /// Per machine, how Voice talks there as the machine last said; absent while it stores none or was not read.
+    private(set) var stored: [String: VoicePreferences] = [:]
 
     @ObservationIgnored private let makeMedia: @MainActor () -> any VoiceMedia
     @ObservationIgnored private let makeAudio: @MainActor () -> any VoiceAudio
@@ -82,7 +84,7 @@ final class VoiceCoordinator {
         return audio
     }()
     @ObservationIgnored private let scheduler: any TransportScheduling
-    @ObservationIgnored private let preferences: () -> VoicePreferences
+    @ObservationIgnored private let deviceLanguage: () -> String
     @ObservationIgnored private let makeID: () -> String
     @ObservationIgnored private let timeZone: () -> String
     @ObservationIgnored let declaresMicrophone: Bool
@@ -94,13 +96,15 @@ final class VoiceCoordinator {
     @ObservationIgnored private var early: [JSONValue] = []
     @ObservationIgnored private var subscriptions: [() -> Void] = []
     @ObservationIgnored private var cancelDeadline: (() -> Void)?
+    /// Per machine, the `voice.preferences` event this phone follows.
+    @ObservationIgnored private var preferenceWatches: [String: () -> Void] = [:]
     /// Moves with every start and every end, so what a start awaited finds out it no longer counts.
     @ObservationIgnored private var attempt = 0
 
     init(
         media: @escaping @MainActor () -> any VoiceMedia, audio: @escaping @MainActor () -> any VoiceAudio,
         scheduler: any TransportScheduling = TaskTransportScheduler(),
-        preferences: @escaping () -> VoicePreferences = { VoicePreferences.current() },
+        deviceLanguage: @escaping () -> String = { VoicePreferences.defaultLanguage() },
         makeID: @escaping () -> String = { UUID().uuidString },
         timeZone: @escaping () -> String = { TimeZone.current.identifier },
         declaresMicrophone: Bool = VoiceCoordinator.appDeclaresMicrophone
@@ -108,7 +112,7 @@ final class VoiceCoordinator {
         makeMedia = media
         makeAudio = audio
         self.scheduler = scheduler
-        self.preferences = preferences
+        self.deviceLanguage = deviceLanguage
         self.makeID = makeID
         self.timeZone = timeZone
         self.declaresMicrophone = declaresMicrophone
@@ -140,6 +144,60 @@ final class VoiceCoordinator {
         } catch {
             keys[machineID] = nil
         }
+    }
+
+    // MARK: How Voice talks
+
+    /// How Voice talks on a machine: what it stores, else the device's language with the default voice, which the
+    /// next start then sends.
+    func preferences(machineID: String) -> VoicePreferences {
+        stored[machineID] ?? VoicePreferences(language: deviceLanguage(), voice: VoicePreferences.defaultVoice)
+    }
+
+    /// Whether the machine keeps how Voice talks, so the phone can show and change it there.
+    func keepsPreferences(client: any MachineRequesting) -> Bool {
+        (client as? MachineFeatures)?.answers(.voicePreferences) == true
+    }
+
+    /// Reads what the machine stores and follows every change any client makes, once it answers the request.
+    func refreshPreferences(machineID: String, client: any MachineRequesting) async {
+        preferenceWatches.removeValue(forKey: machineID)?()
+        guard keepsPreferences(client: client) else {
+            stored[machineID] = nil
+            return
+        }
+        preferenceWatches[machineID] = client.subscribe(.voicePreferences) { [weak self] state in
+            self?.adopt(state, machineID: machineID)
+        }
+        do {
+            adopt(try WireRequest.voicePreferences.validateResult(try await client.request(.voicePreferences)), machineID: machineID)
+        } catch {
+            // What the machine stores stays unknown until the next read or event.
+        }
+    }
+
+    /// Stores a choice on the machine, shown at once and taken back when the machine refuses it.
+    func setPreferences(_ chosen: VoicePreferences, machineID: String, client: any MachineRequesting) async {
+        let before = stored[machineID]
+        stored[machineID] = chosen
+        let payload: JSONValue = .object(["language": .string(chosen.language), "voice": .string(chosen.voice)])
+        do {
+            adopt(
+                try WireRequest.voiceSetPreferences.validateResult(
+                    try await client.request(.voiceSetPreferences, payload: payload)), machineID: machineID)
+        } catch {
+            stored[machineID] = before
+        }
+    }
+
+    private func adopt(_ state: JSONValue, machineID: String) {
+        guard let language = state["preferences"]?["language"]?.stringValue,
+            let voice = state["preferences"]?["voice"]?.stringValue
+        else {
+            stored[machineID] = nil
+            return
+        }
+        stored[machineID] = VoicePreferences(language: language, voice: voice)
     }
 
     // MARK: Who holds it
@@ -198,7 +256,7 @@ final class VoiceCoordinator {
         do {
             let offer = try await media.offer()
             guard current == attempt else { return }
-            let chosen = preferences()
+            let chosen = preferences(machineID: target.machineID)
             var payload: [String: JSONValue] = [
                 "startId": .string(startID), "sceneId": .string(scene), "sdp": .string(offer),
                 "language": .string(chosen.language), "voice": .string(chosen.voice), "timeZone": .string(timeZone()),

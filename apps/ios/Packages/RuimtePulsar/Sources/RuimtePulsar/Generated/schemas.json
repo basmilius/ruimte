@@ -55719,8 +55719,6 @@
       "startId",
       "sceneId",
       "sdp",
-      "language",
-      "voice",
       "timeZone"
     ]
   },
@@ -55892,6 +55890,194 @@
     },
     "required": [
       "accepted"
+    ]
+  },
+  "request.voice.preferences.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.voice.preferences.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "preferences": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "language": {
+                "type": "string",
+                "enum": [
+                  "ar",
+                  "ca",
+                  "zh",
+                  "cs",
+                  "da",
+                  "nl",
+                  "en",
+                  "fi",
+                  "fr",
+                  "de",
+                  "el",
+                  "he",
+                  "hi",
+                  "hu",
+                  "id",
+                  "it",
+                  "ja",
+                  "ko",
+                  "no",
+                  "pl",
+                  "pt",
+                  "ro",
+                  "ru",
+                  "es",
+                  "sv",
+                  "th",
+                  "tr",
+                  "uk",
+                  "vi"
+                ]
+              },
+              "voice": {
+                "type": "string",
+                "enum": [
+                  "marin",
+                  "cedar"
+                ]
+              }
+            },
+            "required": [
+              "language",
+              "voice"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "preferences"
+    ]
+  },
+  "request.voice.setPreferences.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "language": {
+        "type": "string",
+        "enum": [
+          "ar",
+          "ca",
+          "zh",
+          "cs",
+          "da",
+          "nl",
+          "en",
+          "fi",
+          "fr",
+          "de",
+          "el",
+          "he",
+          "hi",
+          "hu",
+          "id",
+          "it",
+          "ja",
+          "ko",
+          "no",
+          "pl",
+          "pt",
+          "ro",
+          "ru",
+          "es",
+          "sv",
+          "th",
+          "tr",
+          "uk",
+          "vi"
+        ]
+      },
+      "voice": {
+        "type": "string",
+        "enum": [
+          "marin",
+          "cedar"
+        ]
+      }
+    },
+    "required": [
+      "language",
+      "voice"
+    ]
+  },
+  "request.voice.setPreferences.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "preferences": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "language": {
+                "type": "string",
+                "enum": [
+                  "ar",
+                  "ca",
+                  "zh",
+                  "cs",
+                  "da",
+                  "nl",
+                  "en",
+                  "fi",
+                  "fr",
+                  "de",
+                  "el",
+                  "he",
+                  "hi",
+                  "hu",
+                  "id",
+                  "it",
+                  "ja",
+                  "ko",
+                  "no",
+                  "pl",
+                  "pt",
+                  "ro",
+                  "ru",
+                  "es",
+                  "sv",
+                  "th",
+                  "tr",
+                  "uk",
+                  "vi"
+                ]
+              },
+              "voice": {
+                "type": "string",
+                "enum": [
+                  "marin",
+                  "cedar"
+                ]
+              }
+            },
+            "required": [
+              "language",
+              "voice"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "preferences"
     ]
   },
   "request.endpoint.info.payload": {
@@ -76964,6 +77150,72 @@
       "sceneId",
       "seq",
       "entry"
+    ]
+  },
+  "event.voice.preferences": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "preferences": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "language": {
+                "type": "string",
+                "enum": [
+                  "ar",
+                  "ca",
+                  "zh",
+                  "cs",
+                  "da",
+                  "nl",
+                  "en",
+                  "fi",
+                  "fr",
+                  "de",
+                  "el",
+                  "he",
+                  "hi",
+                  "hu",
+                  "id",
+                  "it",
+                  "ja",
+                  "ko",
+                  "no",
+                  "pl",
+                  "pt",
+                  "ro",
+                  "ru",
+                  "es",
+                  "sv",
+                  "th",
+                  "tr",
+                  "uk",
+                  "vi"
+                ]
+              },
+              "voice": {
+                "type": "string",
+                "enum": [
+                  "marin",
+                  "cedar"
+                ]
+              }
+            },
+            "required": [
+              "language",
+              "voice"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "preferences"
     ]
   },
   "event.chat.proposals": {

@@ -210,7 +210,8 @@ struct VoiceMicButton: View {
     }
 }
 
-/// Reads per machine whether it holds the key, whenever its link comes back, so the mic button knows where it shows.
+/// Reads per machine whether it holds the key and how Voice talks there, whenever its link comes back, so the mic
+/// button knows where it shows and a start sends what the machine keeps.
 struct VoiceKeyWatch: View {
     let runtime: AppRuntime
 
@@ -222,6 +223,7 @@ struct VoiceKeyWatch: View {
                     Color.clear.task(id: "\(machine.id):\(session.generation):\(session.connected)") {
                         guard session.connected else { return }
                         await runtime.voice.refreshKey(machineID: machine.id, client: session.rpc)
+                        await runtime.voice.refreshPreferences(machineID: machine.id, client: session.rpc)
                     }
                 }
             }

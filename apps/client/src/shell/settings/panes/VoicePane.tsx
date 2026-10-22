@@ -1,4 +1,4 @@
-import { LIVE_VOICES } from '@ruimte/contracts';
+import { LIVE_VOICES, VOICE_LANGUAGES, type LiveVoice } from '@ruimte/contracts';
 import { useEffect, useState, type FormEvent } from 'react';
 import i18next from 'i18next';
 import { Trash2 } from 'lucide-react';
@@ -9,6 +9,7 @@ import { desktop, type OpenAiCredentialStatus } from '@/desktop/bridge';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
+import { useMachineVoicePreferences, useWindowEndpointId } from '@/voice/machine-preferences';
 import { useVoice } from '@/voice/state';
 import { closeVoicePanel, stopVoice } from '@/voice/controller';
 import { DictationSection } from './DictationSection';
@@ -38,9 +39,21 @@ export function VoicePane() {
     const bridge = desktop()?.openAi;
     const sharedStatus = useVoice((state) => state.credential);
     const displayStatus = sharedStatus ?? status;
-    const voice = useSettings((state) => state.liveVoice);
+    const localVoice = useSettings((state) => state.liveVoice);
+    const localLanguage = useSettings((state) => state.voiceLanguage);
     const confirmDestructiveActions = useSettings((state) => state.voiceConfirmDestructiveActions);
     const updateSettings = useSettings((state) => state.update);
+    const machine = useMachineVoicePreferences(useWindowEndpointId());
+    // A machine that stores none yet shows what this app used, and a pick stores both there.
+    const shown = machine.preferences ?? { language: localLanguage, voice: localVoice };
+
+    const chooseVoice = (voice: LiveVoice): void => {
+        if (machine.kept) {
+            machine.set({ ...shown, voice });
+        } else {
+            updateSettings({ liveVoice: voice });
+        }
+    };
 
     useEffect(() => {
         let current = true;
@@ -178,13 +191,29 @@ export function VoicePane() {
                     </form>
                 </SettingsRow>
 
+                {machine.kept && (
+                    <SettingsRow
+                        searchId="voice.conversationLanguage"
+                        label={t('voice.conversation.machineLanguage.label')}
+                        description={t('voice.conversation.machineLanguage.description')}
+                        control={
+                            <Select
+                                value={shown.language}
+                                items={VOICE_LANGUAGES.map((item) => ({ value: item.id, label: item.label }))}
+                                label={t('voice.conversation.machineLanguage.selectLabel')}
+                                align="end"
+                                onValueChange={(language) => machine.set({ ...shown, language })}
+                            />
+                        }
+                    />
+                )}
                 <SettingsRow
                     searchId="voice.voice"
                     label={t('voice.conversation.voice.label')}
                     description={t('voice.conversation.voice.description')}
                     control={
                         <Select
-                            value={voice}
+                            value={shown.voice}
                             items={LIVE_VOICES.map((item) => ({
                                 value: item,
                                 label: titleCase(item),
@@ -197,7 +226,7 @@ export function VoicePane() {
                             }))}
                             label={t('voice.conversation.voice.selectLabel')}
                             align="end"
-                            onValueChange={(liveVoice) => updateSettings({ liveVoice })}
+                            onValueChange={chooseVoice}
                         />
                     }
                 />
