@@ -8,13 +8,28 @@ import type { AppIpc } from './ipc';
 
 const { app, net, safeStorage } = electron;
 
+export interface InstalledSecrets {
+    /* Gives the saved OpenAI key to the app's own daemon, for the Voice it runs for a phone. */
+    handOverVoiceKey(): Promise<void>;
+}
+
 /* The OpenAI API key and the database passwords, which stay in the shell, encrypted with the OS keychain. */
-export function installSecrets(ipc: AppIpc): void {
+export function installSecrets(ipc: AppIpc, handVoiceKey: ((key: string) => Promise<boolean>) | null): InstalledSecrets {
     let openAiKeyStore: SecretStore | null = null;
 
     const openAiKeys = (): SecretStore => {
         openAiKeyStore ??= fileSecretStore(join(app.getPath('userData'), 'openai-api-key.bin'), safeStorage);
         return openAiKeyStore;
+    };
+
+    const handOverVoiceKey = async (): Promise<void> => {
+        if (handVoiceKey === null) {
+            return;
+        }
+        const key = await openAiKeys().read();
+        if (key !== null) {
+            await handVoiceKey(key);
+        }
     };
 
     const openAiCredentialStatus = async (): Promise<OpenAiCredentialStatus> => {
@@ -52,6 +67,7 @@ export function installSecrets(ipc: AppIpc): void {
             throw new Error('Enter an API key');
         }
         await openAiKeys().write(apiKey.trim());
+        await handOverVoiceKey();
         return openAiCredentialStatus();
     });
 
@@ -74,4 +90,6 @@ export function installSecrets(ipc: AppIpc): void {
         }
         return createOpenAiLiveSession((input, init) => net.fetch(input, init), apiKey, sdp, requested);
     });
+
+    return { handOverVoiceKey };
 }

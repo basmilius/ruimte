@@ -5,6 +5,7 @@ import {
     MACHINE_PROOF_PATH,
     MACHINE_STATUS_CHECK_QUERY,
     MACHINE_STATUS_PATH,
+    MACHINE_VOICE_KEY_PATH,
     MACHINE_WORK_PATH,
     PROTOCOL_PARAM,
     PROTOCOL_REFUSED_CLOSE_CODE,
@@ -45,6 +46,7 @@ import type { PowerBundle } from './power.ts';
 import type { ProjectsBundle } from './projects.ts';
 import type { DaemonRuntime } from './runtime.ts';
 import type { ProcessesBundle } from './processes.ts';
+import type { VoiceBundle } from './voice.ts';
 
 // What `ruimte login` has the machine sign; local secret only, like the work.
 const MACHINE_LINK_PATH = '/machine/link-request';
@@ -54,6 +56,7 @@ const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
 // Where a client of before account-only paired and signed for a ticket over HTTP; each answers that pairing links are gone.
 const LEGACY_PAIRING_PATHS = ['/auth/pair', '/auth/pairing-token', '/auth/challenge', '/auth/ticket'];
 const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });
+const VoiceKeyRequestSchema = z.object({ key: z.string() });
 
 // Past anything a hook or a verb sends, a visual of 16 MiB with its JSON escaping included, and what any other request may declare.
 const MAX_REQUEST_BODY_BYTES = 24 * 1024 * 1024;
@@ -74,11 +77,12 @@ export interface HttpInput {
     network: NetworkBundle;
     clients: ClientsBundle;
     canvasHost: CanvasHost;
+    voice: VoiceBundle | null;
 }
 
 /* Every HTTP route and the upgrade, before the cross-origin headers the desktop app's page needs. */
 function daemonRoutes(input: HttpInput): Route<SocketData>[] {
-    const { runtime, machine, stores, agents, projects, devices, processes, power, network, clients, canvasHost } = input;
+    const { runtime, machine, stores, agents, projects, devices, processes, power, network, clients, canvasHost, voice } = input;
     const { config } = runtime;
     const { identity, auth, handshake, access, machineHome } = machine;
     const { sessions, chats, context } = agents;
@@ -112,6 +116,32 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
             exact: [MACHINE_WORK_PATH],
             // The desktop app asks before it restarts the service, and nobody else needs to know.
             handle: async ({ request, remote }) => (await refuseUnlessOwner(request, remote, 'GET')) ?? Response.json(processes.machineWork())
+        },
+        {
+            exact: [MACHINE_VOICE_KEY_PATH],
+            handle: async ({ request, remote }) => {
+                const refused = await refuseUnlessOwner(request, remote, 'POST');
+                if (refused) {
+                    return refused;
+                }
+                if (voice === null) {
+                    return new Response('Voice is off', { status: 404 });
+                }
+                if (voice.keyHomeProblem !== null) {
+                    return new Response(voice.keyHomeProblem, { status: 409 });
+                }
+                const parsed = VoiceKeyRequestSchema.safeParse(await request.json().catch(() => null));
+                if (!parsed.success) {
+                    return new Response('Expected a key', { status: 400 });
+                }
+                try {
+                    await voice.keys.write(parsed.data.key);
+                } catch (e) {
+                    // The store says what is wrong without quoting the key.
+                    return new Response(e instanceof Error ? e.message : 'The key could not be saved', { status: 400 });
+                }
+                return new Response(null, { status: 204 });
+            }
         },
         {
             exact: [MACHINE_LEAVE_ACCOUNT_PATH],

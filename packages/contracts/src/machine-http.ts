@@ -20,6 +20,8 @@ export const MACHINE_HEALTH_PATH = '/health';
 export const DESKTOP_APP_SCHEME = 'app';
 export const DESKTOP_APP_ORIGIN = `${DESKTOP_APP_SCHEME}://ruimte`;
 export const MACHINE_WORK_PATH = '/machine/work';
+/* Where the desktop app hands the OpenAI key from its settings to the daemon's Voice, local secret only. */
+export const MACHINE_VOICE_KEY_PATH = '/machine/voice-key';
 
 export const HealthResultSchema = z.object({
     /*

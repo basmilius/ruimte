@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { localProofOf, MACHINE_PROOF_PATH, MachineProofRequestSchema, MACHINE_WORK_PATH } from '@ruimte/contracts';
-import { askDaemonWork, proveDaemon, type DaemonPort } from './daemon-proof';
+import { localProofOf, MACHINE_PROOF_PATH, MachineProofRequestSchema, MACHINE_VOICE_KEY_PATH, MACHINE_WORK_PATH } from '@ruimte/contracts';
+import { askDaemonWork, handVoiceKey, proveDaemon, type DaemonPort } from './daemon-proof';
 
 const SECRET = 'the-local-secret';
 
@@ -12,6 +12,7 @@ interface Asked {
 /* Whatever holds the port: it answers the proof as `prove` says and the work to anyone who asks. */
 function holder(prove: (nonce: string) => Promise<string | null>) {
     const asked: Asked[] = [];
+    const handed: string[] = [];
     const daemon: DaemonPort = {
         port: 4210,
         readSecret: async () => SECRET,
@@ -27,10 +28,14 @@ function holder(prove: (nonce: string) => Promise<string | null>) {
             if (path === MACHINE_WORK_PATH) {
                 return Response.json({ terminals: 1, agents: 2 });
             }
+            if (path === MACHINE_VOICE_KEY_PATH) {
+                handed.push(JSON.parse(String(init.body)).key);
+                return new Response(null, { status: 204 });
+            }
             return new Response('Not found', { status: 404 });
         }
     };
-    return { daemon, asked };
+    return { daemon, asked, handed };
 }
 
 describe('proveDaemon', () => {
@@ -62,5 +67,21 @@ describe('askDaemonWork', () => {
         const { daemon, asked } = holder((nonce) => localProofOf(SECRET, 4210, nonce));
         expect(await askDaemonWork(daemon)).toEqual({ terminals: 1, agents: 2 });
         expect(asked.at(-1)).toEqual({ path: MACHINE_WORK_PATH, authorization: `Bearer ${SECRET}` });
+    });
+});
+
+describe('handVoiceKey', () => {
+    test('the key reaches only a daemon that proved the secret', async () => {
+        const { daemon, asked, handed } = holder(async () => 'made-up');
+        expect(await handVoiceKey(daemon, 'sk-test')).toBe(false);
+        expect(asked.map((entry) => entry.path)).toEqual([MACHINE_PROOF_PATH]);
+        expect(handed).toEqual([]);
+    });
+
+    test('a daemon that proved the secret takes the key with it', async () => {
+        const { daemon, asked, handed } = holder((nonce) => localProofOf(SECRET, 4210, nonce));
+        expect(await handVoiceKey(daemon, 'sk-test')).toBe(true);
+        expect(asked.at(-1)).toEqual({ path: MACHINE_VOICE_KEY_PATH, authorization: `Bearer ${SECRET}` });
+        expect(handed).toEqual(['sk-test']);
     });
 });

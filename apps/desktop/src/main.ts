@@ -15,7 +15,7 @@ import { isWindowKey, isWindowState, isWindowView, tabStripOf, totalActivity, wi
 import { createTabDrag } from './tab-drag';
 import { editFrameOf, runGuestEdit } from './guest-edit';
 import { contextMenuPayload, editableMenuTemplate, PREVIEW_ACTIONS, type BrowserContextAction, type GuestKind } from './guest-menu';
-import { askDaemonWork } from './daemon-proof';
+import { askDaemonWork, handVoiceKey } from './daemon-proof';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from './keep-awake';
 import { installDialogs } from './main/dialogs';
 import { electron } from './main/electron';
@@ -575,7 +575,7 @@ ipc.handle('browser:capture', async (_event, id: number) => {
     return image.toPNG();
 });
 
-installSecrets(ipc);
+const secrets = installSecrets(ipc, localMachine ? (key) => handVoiceKey(machine.daemonPort, key) : null);
 installSpeech(ipc, { ruimteHome, repoRoot, send: (channel, payload) => windows.send(channel, payload), windows: () => windows.all() });
 installLogin(ipc);
 if (localMachine && process.platform === 'darwin') {
@@ -844,7 +844,10 @@ if (!app.requestSingleInstanceLock()) {
                 devUrl ? Promise.resolve(() => undefined) : moveLegacyStorage(port, join(app.getPath('userData'), 'storage-moved-to-app-scheme')),
             restoreWindows: () => windows.restore(),
             startUpdater: () => updater.start(),
-            machineReady: () => machine.ready(),
+            machineReady: () => {
+                machine.ready();
+                void secrets.handOverVoiceKey();
+            },
             fail: (message) => {
                 reportShellProblem({ kind: 'daemon-start-failed', reason: message });
                 dialog.showErrorBox('Ruimte', message);

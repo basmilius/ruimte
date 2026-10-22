@@ -1,4 +1,4 @@
-import { isLocalProof, MACHINE_PROOF_PATH, MACHINE_WORK_PATH, machineWorkOf, type MachineWork } from '@ruimte/contracts';
+import { isLocalProof, MACHINE_PROOF_PATH, MACHINE_VOICE_KEY_PATH, MACHINE_WORK_PATH, machineWorkOf, type MachineWork } from '@ruimte/contracts';
 
 /* The port the app's daemon is on, and what the shell needs to ask it. */
 export interface DaemonPort {
@@ -51,5 +51,24 @@ export async function askDaemonWork(daemon: DaemonPort): Promise<MachineWork | n
         return response.ok ? machineWorkOf(await response.json()) : null;
     } catch {
         return null;
+    }
+}
+
+/* False when the daemon proved nothing, runs without Voice or keeps no key in its home; the key then stays the shell's alone. */
+export async function handVoiceKey(daemon: DaemonPort, key: string): Promise<boolean> {
+    const secret = await provenSecret(daemon);
+    if (secret === null) {
+        return false;
+    }
+    try {
+        const response = await daemon.fetch(`http://127.0.0.1:${daemon.port}${MACHINE_VOICE_KEY_PATH}`, {
+            method: 'POST',
+            headers: { authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
+            body: JSON.stringify({ key }),
+            signal: AbortSignal.timeout(2000)
+        });
+        return response.ok;
+    } catch {
+        return false;
     }
 }
