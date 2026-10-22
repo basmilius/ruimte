@@ -29,10 +29,26 @@ struct VoiceActivityLine: Identifiable, Equatable {
     let status: String
     let label: String
     let detail: String
+    /// What Voice asks before the action runs, while it waits on the person's answer.
+    var question: VoiceQuestion?
     /// The transcript line that was the last one when the phone first heard of this entry, which places it in the
     /// timeline. The entry's own `at` is on the machine's clock and the captions on this phone's, so arrival orders
     /// them instead.
     var after: Int?
+}
+
+/// The question of an action that asks first, answered with `voice.confirm` and its token.
+struct VoiceQuestion: Equatable {
+    let token: String
+    let title: String
+    let consequences: [String]
+
+    init?(_ value: JSONValue?) {
+        guard let value, let token = value["token"]?.stringValue, !token.isEmpty else { return nil }
+        self.token = token
+        title = value.text("title")
+        consequences = value["consequences"]?.arrayValue?.compactMap(\.stringValue) ?? []
+    }
 }
 
 /// Shows Voice's Live Activity. The coordinator says what it shows; the presenter starts, updates and ends it.
@@ -86,6 +102,8 @@ final class VoiceCoordinator {
     private(set) var sessionID: String?
     private(set) var transcript = VoiceTranscript()
     private(set) var activity: [VoiceActivityLine] = []
+    /// The tokens of questions whose answer is on its way to the machine.
+    private(set) var answering: Set<String> = []
     /// The last conversation of `lastScene` ended, and its timeline stays until the next start.
     private(set) var ended = false
     /// The microphone is off while the session goes on.
@@ -277,6 +295,7 @@ final class VoiceCoordinator {
         route = nil
         transcript.clear()
         activity = []
+        answering = []
         ended = false
         muted = false
         speaking = false
@@ -382,6 +401,18 @@ final class VoiceCoordinator {
         bands = VoiceWaveformBands(input: personMeter.bands, output: voiceMeter.bands)
     }
 
+    /// The person's answer from the timeline. The machine's next line of that action says what became of it; a question
+    /// the machine no longer holds (answered through Voice already, or void) leaves the timeline at once.
+    func answer(_ question: VoiceQuestion, confirm: Bool, scene: String) async {
+        guard !answering.contains(question.token) else { return }
+        answering.insert(question.token)
+        let accepted = await self.confirm(scene: scene, token: question.token, decision: confirm ? "confirm" : "cancel")
+        answering.remove(question.token)
+        if !accepted, let index = activity.firstIndex(where: { $0.question?.token == question.token }) {
+            activity[index].question = nil
+        }
+    }
+
     /// The person's answer to an action that asked first.
     func confirm(scene: String, token: String, decision: String) async -> Bool {
         guard owner == scene, let sessionID, let client else { return false }
@@ -473,7 +504,8 @@ final class VoiceCoordinator {
     private func note(_ entry: JSONValue) {
         var line = VoiceActivityLine(
             id: entry.text("id"), kind: entry.text("kind"), status: entry.text("status"), label: entry.text("label"),
-            detail: entry.text("detail"), after: transcript.lines.last?.id)
+            detail: entry.text("detail"), question: VoiceQuestion(entry["confirmation"]),
+            after: transcript.lines.last?.id)
         if let index = activity.firstIndex(where: { $0.id == line.id }) {
             line.after = activity[index].after
             activity[index] = line

@@ -501,6 +501,49 @@ import Testing
         #expect(!(await setup.voice.confirm(scene: "B", token: "token-1", decision: "confirm")))
     }
 
+    private static func question(_ id: String, token: String, seq: Int) -> JSONValue {
+        let event = Self.activity(id, status: "running", seq: seq, label: "Clear AI Chat")
+        let confirmation: JSONValue = .object([
+            "token": .string(token), "title": .string("Clear AI Chat “Builder”?"),
+            "consequences": .array([.string("The conversation history will be deleted.")]),
+        ])
+        return event.setting("entry", event["entry"]?.setting("confirmation", confirmation))
+    }
+
+    @Test func aLineThatAsksFirstCarriesItsQuestionUntilTheMachineAnswers() async {
+        let setup = Self.setup()
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        setup.machine.emit("voice.status", Self.status("active", seq: 1))
+        setup.machine.emit("voice.activity", Self.question("call-1", token: "token-1", seq: 2))
+        let question = setup.voice.activity.first?.question
+        #expect(question?.title == "Clear AI Chat “Builder”?")
+        #expect(question?.consequences == ["The conversation history will be deleted."])
+        await setup.voice.answer(question!, confirm: true, scene: "A")
+        #expect(
+            setup.machine.requests.last?.1
+                == .object([
+                    "sceneId": .string("A"), "sessionId": .string("session-1"), "token": .string("token-1"),
+                    "decision": .string("confirm"),
+                ]))
+        #expect(setup.voice.answering.isEmpty)
+        #expect(setup.voice.activity.first?.question != nil, "The machine's next line says what became of it")
+        setup.machine.emit(
+            "voice.activity", Self.activity("call-1", status: "completed", seq: 3, label: "Clear AI Chat"))
+        #expect(setup.voice.activity.map(\.id) == ["call-1"])
+        #expect(setup.voice.activity.first?.question == nil)
+    }
+
+    @Test func aQuestionTheMachineNoLongerHoldsLeavesTheTimeline() async {
+        let setup = Self.setup()
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        setup.machine.emit("voice.status", Self.status("active", seq: 1))
+        setup.machine.emit("voice.activity", Self.question("call-1", token: "token-1", seq: 2))
+        setup.machine.acceptConfirm = false
+        await setup.voice.answer(setup.voice.activity.first!.question!, confirm: false, scene: "A")
+        #expect(setup.machine.requests.last?.1.text("decision") == "cancel")
+        #expect(setup.voice.activity.first?.question == nil)
+    }
+
     // MARK: Whether the mic shows
 
     @Test func theMicShowsOnlyWithTheRequestAndAKey() async {

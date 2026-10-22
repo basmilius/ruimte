@@ -7895,6 +7895,16 @@
         }
       }
     },
+    "Confirm" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bevestigen"
+          }
+        }
+      }
+    },
     "Conflict" : {
       "localizations" : {
         "nl" : {

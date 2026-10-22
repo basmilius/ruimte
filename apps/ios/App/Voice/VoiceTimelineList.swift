@@ -27,7 +27,16 @@ struct VoiceTimelineList: View {
         case .line(let line):
             VoiceLineRow(line: line, streaming: line.speaker == .model && line.id == voice.transcript.current?.id
                 && voice.speaking)
-        case .action(let action): VoiceActionRow(action: action, followed: voice.owner != nil)
+        case .action(let action):
+            if let question = action.question, let scene = voice.owner {
+                VoiceQuestionCard(
+                    action: action, question: question, answering: voice.answering.contains(question.token)
+                ) { confirm in
+                    Task { await voice.answer(question, confirm: confirm, scene: scene) }
+                }
+            } else {
+                VoiceActionRow(action: action, followed: voice.owner != nil)
+            }
         case .ended: VoiceEndedRow(problem: problem)
         }
     }
@@ -136,6 +145,56 @@ private struct VoiceActionRow: View {
         case "git": "git-branch"
         default: "circle-dot"
         }
+    }
+}
+
+/// An action that waits on the person: what Voice wants to do, answered here or by telling Voice.
+private struct VoiceQuestionCard: View {
+    let action: VoiceActivityLine
+    let question: VoiceQuestion
+    /// The answer is on its way to the machine.
+    let answering: Bool
+    let answer: (_ confirm: Bool) -> Void
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Image(lucide: VoiceActionRow.icon(action.kind), size: 16).foregroundStyle(MobileStyle.muted)
+                Text(question.title.isEmpty ? action.label : question.title).font(.callout.weight(.semibold))
+                    .foregroundStyle(MobileStyle.text).frame(maxWidth: .infinity, alignment: .leading)
+            }
+            ForEach(Array(question.consequences.enumerated()), id: \.offset) { _, line in
+                Text(line).font(.footnote).foregroundStyle(MobileStyle.muted).padding(.leading, 28)
+            }
+            buttons.padding(.top, 2)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
+        .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 14))
+        .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(VoiceStyle.voice.opacity(0.7), lineWidth: 1) }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var buttons: some View {
+        let layout =
+            dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 16))
+        return layout {
+            if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
+            Button("Cancel") { answer(false) }
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("voice.question.cancel")
+            Button(role: .destructive) {
+                answer(true)
+            } label: {
+                Text("Confirm").fontWeight(.semibold)
+            }
+            .frame(minHeight: 44)
+            .accessibilityIdentifier("voice.question.confirm")
+        }
+        .font(.subheadline)
+        .disabled(answering)
     }
 }
 

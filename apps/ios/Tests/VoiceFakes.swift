@@ -14,6 +14,8 @@ import RuimteVoice
     /// What the machine stores of how Voice talks; null for none.
     var preferences: JSONValue = .null
     var refuseSet = false
+    /// False for a confirmation the machine no longer holds.
+    var acceptConfirm = true
     var holdStart = false
     /// What `observeConnection` answers at once, as `MachineClient` does with where its link stands.
     var connected = true
@@ -38,7 +40,7 @@ import RuimteVoice
             heldScene = scene
             return try await withCheckedThrowingContinuation { heldStart = $0 }
         case "voice.stop": return .object(["stopped": .bool(true)])
-        case "voice.confirm": return .object(["accepted": .bool(true)])
+        case "voice.confirm": return .object(["accepted": .bool(acceptConfirm)])
         case "voice.preferences": return .object(["preferences": preferences])
         case "voice.setPreferences":
             guard !refuseSet else { throw MachineClientError.invalid(type) }
