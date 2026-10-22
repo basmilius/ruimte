@@ -115,6 +115,32 @@ import UIKit
         try await Self.render(sheet(elsewhere.voice, scene: "B"), name: "11-runs-in-another-window")
     }
 
+    /// The band alone at the sheet's width, still, so a frame compares with the desktop's at the same moment.
+    @Test(.enabled(if: folder != nil)) func theBandFrames() async throws {
+        var history = VoiceLevelHistory()
+        for index in 0..<VoiceLevelHistory.kept {
+            let step = Double(index)
+            let person = index < 22 ? 0.01 + 0.18 * abs(sin(step * 0.7)) : 0.002
+            let voice = index > 20 ? 0.02 + 0.1 * abs(sin(step * 0.9)) : 0
+            history.add(VoiceLevels(person: person, voice: voice))
+        }
+        let frames: [(String, VoiceWaveformBands)] = [
+            ("15-band-idle-19s", .idle(atMs: 19_000)),
+            ("16-band-live", VoiceWaveformBands(input: history.person, output: history.voice)),
+        ]
+        for (name, bands) in frames {
+            for dark in [true, false] {
+                let band = Canvas { context, size in VoiceWaveform.draw(bands, in: &context, size: size) }
+                    .frame(width: 362, height: 56)
+                    .padding(20)
+                    .background(MobileStyle.canvas)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(MobileStyle.canvas)
+                try await Self.render(band, name: "\(name)-\(dark ? "dark" : "light")", dark: dark, presented: false)
+            }
+        }
+    }
+
     @Test(.enabled(if: folder != nil)) func theLiveActivityLockScreenCard() async throws {
         let started = Date().addingTimeInterval(-134)
         let states: [(String, VoiceLiveContent)] = [

@@ -100,32 +100,22 @@ struct VoiceSheet: View {
 
     // MARK: Band
 
-    @ViewBuilder private var band: some View {
-        if running {
-            VStack(spacing: 10) {
-                HStack {
-                    Text(voice.muted ? VoiceText.mutedLabel : String(localized: "You"))
-                        .foregroundStyle(voice.muted ? MobileStyle.statusError : MobileStyle.muted)
-                    Spacer()
-                    Text(VoiceText.bandState(voice)).foregroundStyle(VoiceStyle.voice)
-                }
-                .font(.caption.weight(.semibold)).textCase(.uppercase).kerning(0.6)
-                .accessibilityElement(children: .combine)
-                if voice.phase == .active {
-                    VoiceBand(levels: voice.levels).frame(height: 56)
-                } else {
-                    VoiceBreathing().frame(height: 56)
-                }
+    /// Until the phone has the audio itself, a column is a moment of WebRTC's `audioLevel`, the newest on the right, and
+    /// the labels read the newest moment.
+    private var band: some View {
+        let listening = running && voice.phase == .active
+        let levels = voice.levels
+        return VoiceWaveform(
+            listening: listening, live: VoiceWaveformBands(input: levels.person, output: levels.voice),
+            inputSpeaks: VoiceWaveformBands.inputSpeaks([levels.person.last ?? 0]),
+            outputSpeaks: VoiceWaveformBands.outputSpeaks([levels.voice.last ?? 0]), muted: running && voice.muted
+        )
+        .task(id: listening) {
+            guard listening else { return }
+            while !Task.isCancelled {
+                await voice.sampleLevels()
+                try? await Task.sleep(for: .milliseconds(80))
             }
-            .task(id: voice.phase == .active) {
-                guard voice.phase == .active else { return }
-                while !Task.isCancelled {
-                    await voice.sampleLevels()
-                    try? await Task.sleep(for: .milliseconds(80))
-                }
-            }
-        } else {
-            VoiceBreathing().frame(height: 24)
         }
     }
 
@@ -267,30 +257,12 @@ enum VoiceStyle {
             "Ask what runs in your projects and chats, have a chat pick up a task, start a new chat or move to another project."
     )
 
-    static let mutedLabel = String(localized: "You · Muted")
-
     static func phase(_ phase: VoiceCoordinator.Phase) -> String {
         switch phase {
         case .idle: String(localized: "Voice is off")
         case .connecting: String(localized: "Connecting to Voice")
         case .active: String(localized: "Listening")
         case .stopping: String(localized: "Stopping Voice")
-        }
-    }
-
-    /// What Voice does now, beside its half of the band.
-    static func bandState(_ voice: VoiceCoordinator) -> String {
-        switch voice.phase {
-        case .idle, .connecting: String(localized: "Voice · Connecting")
-        case .stopping: String(localized: "Voice · Stopping")
-        case .active:
-            if voice.activity.contains(where: { $0.status == "running" }) {
-                String(localized: "Voice · Working")
-            } else if voice.speaking {
-                String(localized: "Voice · Speaking")
-            } else {
-                String(localized: "Voice · Listening")
-            }
         }
     }
 

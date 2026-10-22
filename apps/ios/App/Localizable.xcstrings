@@ -1574,52 +1574,32 @@
         }
       }
     },
-    "Voice · Connecting" : {
+    "Voice · idle" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voice · Verbinden"
+            "value" : "Voice · stil"
           }
         }
       }
     },
-    "Voice · Listening" : {
+    "Voice · listening" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voice · Luistert"
+            "value" : "Voice · luistert"
           }
         }
       }
     },
-    "Voice · Speaking" : {
+    "Voice · speaking" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voice · Spreekt"
-          }
-        }
-      }
-    },
-    "Voice · Stopping" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voice · Stopt"
-          }
-        }
-      }
-    },
-    "Voice · Working" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voice · Bezig"
+            "value" : "Voice · spreekt"
           }
         }
       }
@@ -22167,12 +22147,42 @@
         }
       }
     },
-    "You · Muted" : {
+    "You · idle" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jij · Gedempt"
+            "value" : "Jij · stil"
+          }
+        }
+      }
+    },
+    "You · listening" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jij · luistert"
+          }
+        }
+      }
+    },
+    "You · muted" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jij · gedempt"
+          }
+        }
+      }
+    },
+    "You · speaking" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jij · spreekt"
           }
         }
       }

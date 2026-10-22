@@ -24,10 +24,9 @@ public struct VoiceLevels: Sendable, Equatable {
     }
 }
 
-/// The last levels the band drew, oldest first, so it scrolls along with the conversation. Each value is already the
-/// height a bar takes, from 0 to 1.
+/// The last levels, oldest first, a column of the band each. Each value is already the height a bar takes, from 0 to 1.
 public struct VoiceLevelHistory: Sendable, Equatable {
-    public static let kept = 48
+    public static let kept = VoiceWaveformBands.count
 
     public private(set) var person: [Double] = Array(repeating: 0, count: kept)
     public private(set) var voice: [Double] = Array(repeating: 0, count: kept)

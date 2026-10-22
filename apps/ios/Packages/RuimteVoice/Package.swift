@@ -17,6 +17,6 @@ let package = Package(
             name: "RuimteVoice",
             dependencies: ["RuimtePulsar", .product(name: "WebRTC", package: "WebRTC", condition: .when(platforms: [.iOS]))],
             resources: [.process("Localizable.xcstrings")]),
-        .testTarget(name: "RuimteVoiceTests", dependencies: ["RuimteVoice"]),
+        .testTarget(name: "RuimteVoiceTests", dependencies: ["RuimteVoice"], resources: [.copy("Fixtures")]),
     ]
 )

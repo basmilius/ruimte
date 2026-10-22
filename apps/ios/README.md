@@ -250,8 +250,12 @@ its `oai-events` channel is ignored. `RuimteTransport` stays without audio.
 - The sheet has one timeline: what was said, and each action under the Voice line that was the last line when the
   phone first heard of it, or under Voice's answer when the person spoke last (`VoiceTimeline`). The entry's `at` is
   on the machine's clock and the captions on the phone's, so arrival orders them. An ended conversation stays, with a
-  marker and why it ended, until the next start. The band reads WebRTC's `audioLevel` of the microphone's media source
-  and of the inbound reply (`VoiceLevels`) while the sheet shows. Voice on a machine deletes nothing yet, so there is
+  marker and why it ended, until the next start. The band is the desktop's (`VoiceWaveform`, with the math of
+  `VoiceWaveformBands` held to `idle-waveform.ts` by a fixture): 40 columns, the person above the line and Voice below,
+  eased every frame, the idle patterns while Voice does not listen, still under Reduce Motion. WebRTC 153.0.0 hands
+  the phone no audio samples, so while Voice listens a column is a moment of its `audioLevel` of the microphone's
+  media source and of the inbound reply (`VoiceLevels`), read every 80 ms while the sheet shows, where the desktop
+  splits the current samples. Voice on a machine deletes nothing yet, so there is
   no switch for asking before a deletion.
 - The mic in the bar stands out in Voice's color while a session runs; outside the app the Live Activity shows it
   (`VoiceLiveActivities`, local only, no push). It starts once the session is active, follows the phase (listening,
