@@ -78,7 +78,7 @@ struct PhoneHome: View {
         }
         .task(id: runtime.account?.id) { await AccountPictures.shared.load(for: runtime.account) }
         .onAppear {
-            // ⌘⇧M on a keyboard talks about the project on top, or asks for one from a tab.
+            // ⌘⇧M on a keyboard starts in the project on top, else on the machine of the project opened last.
             voiceScene?.openTarget = { [router] in
                 router.project.map { (VoiceTarget($0.workspace, shown: $0.openedViewID), $0.workspace.session) }
             }
@@ -94,7 +94,7 @@ struct PhoneHome: View {
     @ToolbarContentBuilder private var tabToolbar: some ToolbarContent {
         if router.tab == .now, runtime.showsVoice(in: voiceScene), let voiceScene {
             ToolbarItem(id: "now.voice", placement: .topBarTrailing) {
-                VoiceMicButton(voice: runtime.voice, scene: voiceScene)
+                VoiceMicButton(voice: runtime.voice, scene: voiceScene, target: runtime.voiceStartingPoint(now: now))
             }
         }
         if router.tab == .now && !runtime.machines.isEmpty {

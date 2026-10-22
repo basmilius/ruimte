@@ -23364,16 +23364,6 @@
       },
       "comment" : "%@ is the name of a project"
     },
-    "Choose a project" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kies een project"
-          }
-        }
-      }
-    },
     "Interrupted" : {
       "localizations" : {
         "nl" : {

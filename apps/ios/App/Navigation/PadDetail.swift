@@ -72,7 +72,9 @@ struct PadDetailColumn: View {
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
             if let voiceScene, runtime.showsVoice(in: voiceScene) {
-                VoiceMicButton(voice: runtime.voice, scene: voiceScene, target: voiceTarget)
+                VoiceMicButton(
+                    voice: runtime.voice, scene: voiceScene,
+                    target: voiceTarget ?? runtime.voiceStartingPoint(now: now))
             }
             if !runtime.machines.isEmpty {
                 Button {

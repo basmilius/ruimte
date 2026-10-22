@@ -81,8 +81,11 @@ struct VoiceCaptionBar: View {
         }
     }
 
+    /// What is said now, else where Voice stands and the project it works in, which follows the machine.
     private var line: String {
-        voice.transcript.current?.text ?? VoiceText.phase(voice.phase)
+        voice.transcript.current?.text
+            ?? [VoiceText.phase(voice.phase), voice.target?.projectName ?? ""].filter { !$0.isEmpty }
+            .joined(separator: " · ")
     }
 }
 

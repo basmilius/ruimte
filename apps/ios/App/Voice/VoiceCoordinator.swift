@@ -4,11 +4,13 @@ import RuimtePulsar
 import RuimteTransport
 import RuimteVoice
 
-/// Where Voice works: a project on a machine, and the canvas on screen when there is one.
+/// Where Voice works: a machine, the project on it Voice works in now, and the canvas on screen when there is one.
+/// A start names the project on screen, or none to let the machine choose; from then on the project is what
+/// `voice.status` names, since Voice moves between the projects of its machine.
 struct VoiceTarget: Equatable {
     let machineID: String
-    let projectID: String
-    let projectName: String
+    var projectID: String?
+    var projectName: String?
     var viewID: String?
 }
 
@@ -198,10 +200,10 @@ final class VoiceCoordinator {
             guard current == attempt else { return }
             let chosen = preferences()
             var payload: [String: JSONValue] = [
-                "startId": .string(startID), "sceneId": .string(scene), "projectId": .string(target.projectID),
-                "sdp": .string(offer), "language": .string(chosen.language), "voice": .string(chosen.voice),
-                "timeZone": .string(timeZone()),
+                "startId": .string(startID), "sceneId": .string(scene), "sdp": .string(offer),
+                "language": .string(chosen.language), "voice": .string(chosen.voice), "timeZone": .string(timeZone()),
             ]
+            if let projectID = target.projectID { payload["projectId"] = .string(projectID) }
             if let viewID = target.viewID { payload["viewId"] = .string(viewID) }
             let result = try WireRequest.voiceStart.validateResult(
                 try await client.request(.voiceStart, payload: .object(payload)))
@@ -308,6 +310,7 @@ final class VoiceCoordinator {
     private func apply(status: JSONValue) {
         guard let seq = status["seq"]?.numberValue.map(Int.init), seq > self.seq else { return }
         self.seq = seq
+        if let project = status["project"] { follow(project) }
         switch status.text("phase") {
         case "starting": phase = .connecting
         case "active": phase = .active
@@ -318,6 +321,19 @@ final class VoiceCoordinator {
             let message = said.isEmpty ? String(localized: "Voice stopped on the machine.") : said
             end(.message(message), tellMachine: false)
         default: break
+        }
+    }
+
+    /// The project the machine says Voice works in now; null for none. The canvas on screen belongs to the project
+    /// the start named, so it goes once Voice moves on.
+    private func follow(_ project: JSONValue) {
+        guard let target else { return }
+        let projectID = project["id"]?.stringValue
+        let name = project["name"]?.stringValue
+        if target.projectID == projectID {
+            self.target?.projectName = name
+        } else {
+            self.target = VoiceTarget(machineID: target.machineID, projectID: projectID, projectName: name)
         }
     }
 

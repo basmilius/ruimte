@@ -226,8 +226,11 @@ with a factory apart from the machine link's), and runs no tool: a function call
 ignored. `RuimteTransport` stays without audio.
 
 - The mic shows on Now and in a project only where the machine answers `voice.start`, which it names only with
-  `RUIMTE_EXPERIMENTAL_VOICE=1`, and `voice.keyStatus` says it holds a key. From Now, or ⌘⇧M without a project, it
-  asks for a machine and a project first.
+  `RUIMTE_EXPERIMENTAL_VOICE=1`, and `voice.keyStatus` says it holds a key. The mic starts at once. In a project it
+  names that project as the starting point; on Now, or ⌘⇧M without a project, it starts on the machine of the project
+  opened last (else the first machine that offers Voice) without one, and the machine starts in its project opened
+  last. A session talks about every project in use on its machine and moves between them; the place the caption bar
+  and the panel name follows `project` in `voice.status`. No machine that offers Voice, no mic.
 - One session per app process, owned by the scene that started it (`VoiceCoordinator`). Every request after
   `voice.start` names the scene, and the events count only for the owner's scene and session, since the scenes of an
   iPad share one link. Another scene shows where Voice runs and does not take the microphone over.

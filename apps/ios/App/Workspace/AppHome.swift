@@ -64,8 +64,8 @@ struct AppHome: View {
         .mobileSheet(isPresented: voicePanel) {
             VoicePanel(runtime: runtime, now: now, scene: voiceScene) { voiceScene.showsPanel = false }
         }
-        .mobileSheet(isPresented: voicePicker) { VoiceStartSheet(runtime: runtime, now: now, scene: voiceScene) }
         .background { VoiceKeyWatch(runtime: runtime) }
+        .onAppear { voiceScene.startingPoint = { [runtime, now] in runtime.voiceStartingPoint(now: now) } }
         .onChange(of: window) { _, window in
             guard let window, runtime.voice.declaresMicrophone else { return }
             VoiceKeyCommand.install(in: window, scene: voiceScene, voice: runtime.voice)
@@ -126,9 +126,6 @@ struct AppHome: View {
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     private var voicePanel: Binding<Bool> {
         Binding(get: { voiceScene.showsPanel }, set: { voiceScene.showsPanel = $0 })
-    }
-    private var voicePicker: Binding<Bool> {
-        Binding(get: { voiceScene.picking }, set: { voiceScene.picking = $0 })
     }
     private var usesSidebar: Bool { isPad && hasWorkspace }
 

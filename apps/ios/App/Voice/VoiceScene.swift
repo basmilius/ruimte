@@ -3,16 +3,17 @@ import SwiftUI
 import UIKit
 
 /// What Voice is in one scene: its id on the wire, whether its panel shows, and the project it has open, which a
-/// start from the keyboard or the caption bar works in. Without a project the scene asks for one first.
+/// start from the keyboard or the caption bar starts in. Without a project Voice starts on a machine of its own
+/// choosing, and the machine picks the project.
 @MainActor @Observable
 final class VoiceScene {
     let id: String
     /// The iPhone's sheet with the timeline.
     var showsPanel = false
-    /// The sheet that picks a machine and a project, for a start from Now.
-    var picking = false
     /// The project this scene shows, set by its home.
     @ObservationIgnored var openTarget: () -> (VoiceTarget, SharedMachineSession)? = { nil }
+    /// Where a start without a project on screen goes, set by the app's home.
+    @ObservationIgnored var startingPoint: () -> (VoiceTarget, SharedMachineSession)? = { nil }
     /// The iPad puts the panel in its inspector instead of a sheet.
     @ObservationIgnored var presentPanel: (() -> Void)?
 
@@ -22,7 +23,8 @@ final class VoiceScene {
         if let presentPanel { presentPanel() } else { showsPanel = true }
     }
 
-    /// The mic button and ⌘⇧M: stop Voice here, or start it in what the scene shows, or ask where.
+    /// The mic button and ⌘⇧M: stop Voice here, or start it in what the scene shows, or else where `startingPoint`
+    /// says. With no machine that offers Voice it only shows the panel.
     func toggle(_ voice: VoiceCoordinator) {
         if voice.isOwner(id) {
             voice.stop(scene: id)
@@ -32,11 +34,12 @@ final class VoiceScene {
             showPanel()
             return
         }
-        guard let open = openTarget(), voice.offers(machineID: open.0.machineID, client: open.1.rpc) else {
-            picking = true
+        let open = openTarget().flatMap { voice.offers(machineID: $0.0.machineID, client: $0.1.rpc) ? $0 : nil }
+        guard let start = open ?? startingPoint() else {
+            showPanel()
             return
         }
-        start(voice, target: open.0, session: open.1)
+        self.start(voice, target: start.0, session: start.1)
     }
 
     func start(_ voice: VoiceCoordinator, target: VoiceTarget, session: SharedMachineSession) {

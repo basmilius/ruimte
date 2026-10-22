@@ -33,13 +33,19 @@ import Testing
         for _ in 0..<20 { await Task.yield() }
     }
 
-    private static func status(_ phase: String, seq: Int, scene: String = "A", session: String = "session-1")
-        -> JSONValue
-    {
-        .object([
+    private static func status(
+        _ phase: String, seq: Int, scene: String = "A", session: String = "session-1", project: JSONValue? = nil
+    ) -> JSONValue {
+        var fields: [String: JSONValue] = [
             "sessionId": .string(session), "sceneId": .string(scene), "seq": .number(Double(seq)),
             "phase": .string(phase),
-        ])
+        ]
+        if let project { fields["project"] = project }
+        return .object(fields)
+    }
+
+    private static func project(_ id: String, _ name: String) -> JSONValue {
+        .object(["id": .string(id), "name": .string(name)])
     }
 
     private static func activity(_ id: String, status: String, seq: Int, scene: String = "A") -> JSONValue {
@@ -71,6 +77,36 @@ import Testing
         #expect(setup.voice.phase == .connecting)
         #expect(setup.voice.isOwner("A"))
         setup.machine.emit("voice.status", Self.status("active", seq: 1))
+        #expect(setup.voice.phase == .active)
+    }
+
+    @Test func aStartWithoutAProjectLetsTheMachineChooseOne() async throws {
+        let setup = Self.setup()
+        await setup.voice.start(scene: "A", target: VoiceTarget(machineID: "machine"), client: setup.machine)
+        let start = try #require(setup.machine.requests.first { $0.0 == "voice.start" }?.1)
+        #expect(start["projectId"] == nil)
+        #expect(start["viewId"] == nil)
+        #expect(throws: Never.self) { try WireRequest.voiceStart.validatePayload(start) }
+        #expect(setup.voice.sessionID == "session-1")
+    }
+
+    @Test func thePlaceFollowsTheProjectTheMachineNames() async {
+        let setup = Self.setup()
+        var target = Self.target
+        target.viewID = "canvas-1"
+        await setup.voice.start(scene: "A", target: target, client: setup.machine)
+        setup.machine.emit("voice.status", Self.status("active", seq: 1, project: Self.project("project", "Ruimte")))
+        #expect(setup.voice.target == target, "The project it started in keeps the canvas on screen")
+        setup.machine.emit("voice.status", Self.status("active", seq: 2, project: Self.project("site", "Site")))
+        #expect(setup.voice.target == VoiceTarget(machineID: "machine", projectID: "site", projectName: "Site"))
+        let elsewhere = Self.status("active", seq: 3, scene: "B", project: Self.project("old", "Old"))
+        setup.machine.emit("voice.status", elsewhere)
+        #expect(setup.voice.target?.projectID == "site", "Another scene's session moves nothing here")
+        setup.machine.emit("voice.status", Self.status("active", seq: 4, project: .null))
+        #expect(setup.voice.target == VoiceTarget(machineID: "machine"))
+        setup.machine.emit("voice.status", Self.status("active", seq: 5, project: Self.project("site", "Site")))
+        setup.machine.emit("voice.status", Self.status("active", seq: 6))
+        #expect(setup.voice.target?.projectName == "Site", "A status without the field leaves the place as it was")
         #expect(setup.voice.phase == .active)
     }
 
@@ -327,11 +363,13 @@ import Testing
 
     // MARK: A scene
 
-    @Test func aSceneWithoutAProjectAsksForOneAndTheOwnerStops() async {
+    @Test func aSceneWithNowhereToStartOnlyShowsThePanelAndTheOwnerStops() async {
         let setup = Self.setup()
         let scene = VoiceScene(id: "A")
         scene.toggle(setup.voice)
-        #expect(scene.picking)
+        #expect(scene.showsPanel, "No machine offers Voice, so nothing starts")
+        #expect(setup.voice.phase == .idle)
+        #expect(setup.machine.requests.isEmpty)
         await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
         scene.toggle(setup.voice)
         #expect(setup.voice.phase == .idle)
@@ -339,7 +377,6 @@ import Testing
         await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
         other.toggle(setup.voice)
         #expect(other.showsPanel, "Another scene shows where Voice runs")
-        #expect(!other.picking)
         #expect(setup.voice.isOwner("A"))
     }
 

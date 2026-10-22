@@ -32,12 +32,6 @@ struct VoicePanel: View {
             .safeAreaInset(edge: .bottom, spacing: 0) { action.padding(16).background(.bar) }
             .navigationTitle("Voice")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(isPresented: $choosing) {
-                VoiceProjectPicker(runtime: runtime, now: now) { target, session in
-                    choosing = false
-                    scene.start(voice, target: target, session: session)
-                }
-            }
             .toolbar {
                 if let close {
                     ToolbarItem(placement: .confirmationAction) { Button(role: .close, action: close) }
@@ -45,8 +39,6 @@ struct VoicePanel: View {
             }
         }
     }
-
-    @State private var choosing = false
 
     @ViewBuilder private var status: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -82,15 +74,11 @@ struct VoicePanel: View {
             }
             .buttonStyle(.glassProminent)
             .accessibilityIdentifier("voice.panel.stop")
-        } else if !voice.runsElsewhere(than: scene.id) {
+        } else if !voice.runsElsewhere(than: scene.id), let start = startAgain ?? runtime.voiceStartingPoint(now: now) {
             Button {
-                if let again = startAgain {
-                    scene.start(voice, target: again.0, session: again.1)
-                } else {
-                    choosing = true
-                }
+                scene.start(voice, target: start.0, session: start.1)
             } label: {
-                Label(startTitle, lucideIcon: "mic").frame(maxWidth: .infinity)
+                Label(startTitle(start.0), lucideIcon: "mic").frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)
             .accessibilityIdentifier("voice.panel.start")
@@ -105,13 +93,13 @@ struct VoicePanel: View {
         return voice.offers(machineID: machine.id, client: session.rpc) ? (target, session) : nil
     }
 
-    private var startTitle: String {
-        startAgain.map { String(localized: "Talk about \($0.0.projectName)") } ?? String(localized: "Choose a project")
+    private func startTitle(_ target: VoiceTarget) -> String {
+        target.projectName.map { String(localized: "Talk about \($0)") } ?? String(localized: "Start Voice")
     }
 
     private func placeLine(_ target: VoiceTarget) -> String {
         let machine = runtime.machines.first { $0.id == target.machineID }?.name ?? ""
-        return machine.isEmpty ? target.projectName : "\(target.projectName) · \(machine)"
+        return [target.projectName ?? "", machine].filter { !$0.isEmpty }.joined(separator: " · ")
     }
 }
 
@@ -155,7 +143,8 @@ private struct VoiceActivityRow: View {
     }
 }
 
-/// Where a start from Now talks: an open project of a machine that offers Voice.
+/// An open project of a machine that offers Voice, as the starting point of a session, which then moves between the
+/// projects of that machine.
 struct VoiceProjectPicker: View {
     let runtime: AppRuntime
     let now: NowModel
@@ -195,26 +184,6 @@ struct VoiceProjectPicker: View {
         }
         .navigationTitle("Talk about")
         .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-/// The sheet a start from Now puts up when the scene has no project open.
-struct VoiceStartSheet: View {
-    let runtime: AppRuntime
-    let now: NowModel
-    let scene: VoiceScene
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            VoiceProjectPicker(runtime: runtime, now: now) { target, session in
-                dismiss()
-                scene.start(runtime.voice, target: target, session: session)
-            }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            }
-        }
     }
 }
 
@@ -262,7 +231,27 @@ struct VoiceKeyWatch: View {
     }
 }
 
+extension NowModel {
+    /// When a project of this machine was opened last, as its feed says; 0 for a machine without one.
+    func lastOpened(on machineID: String) -> Double {
+        (feeds[machineID]?.projects ?? []).compactMap { project in
+            project["summary"].flatMap { NewChat.isChats($0) ? nil : $0.number("lastOpenedAt") }
+        }.max() ?? 0
+    }
+}
+
 extension AppRuntime {
+    /// Where Voice starts without a project on screen: the machine of the project opened last among the machines that
+    /// offer Voice, else the first that offers it. No project goes with it, so the machine starts in the one opened
+    /// last there.
+    func voiceStartingPoint(now: NowModel) -> (VoiceTarget, SharedMachineSession)? {
+        let offering = machines.filter { voice.offers(machineID: $0.id, client: session(for: $0).rpc) }
+        guard let machine = offering.max(by: { now.lastOpened(on: $0.id) < now.lastOpened(on: $1.id) }) else {
+            return nil
+        }
+        return (VoiceTarget(machineID: machine.id), session(for: machine))
+    }
+
     /// Whether a bar shows the mic: a machine offers Voice, or Voice runs in this scene and the mic stops it.
     func showsVoice(in scene: VoiceScene?) -> Bool {
         guard let scene else { return false }
