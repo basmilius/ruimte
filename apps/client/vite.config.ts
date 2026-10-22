@@ -226,7 +226,7 @@ export default defineConfig(({ mode }) => ({
         // Those packages are served as modules, so the first start bundles what they import with the app's own instead of reloading the page for each dependency it finds late.
         entries: ['index.html', ...reactCompiledSources],
         // Imported only once a chat draws code or a diagram, which the scan of the entries does not follow.
-        include: ['@base-ui/react/menu', '@base-ui/react/dialog', 'lucide-react', 'clsx', 'shiki/bundle/web', '@adecore/agents-react > mermaid'],
+        include: ['@base-ui/react/menu', '@base-ui/react/dialog', 'lucide-react', 'clsx', 'shiki/bundle/web', '@adecore/agents-react > pele/lazy'],
         exclude: REACT_COMPILED_PACKAGES
     },
     server: {
