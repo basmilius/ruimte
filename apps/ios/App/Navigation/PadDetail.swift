@@ -135,8 +135,8 @@ struct PadDetailColumn: View {
         }
     }
 
-    /// The project in the sidebar, which the mic talks about; without one it asks for a project.
-    private var voiceTarget: (VoiceTarget, SharedMachineSession)? {
+    /// The project in the sidebar, which the mic proposes to talk about.
+    private var voiceTarget: VoiceScene.Place? {
         guard let navigation = router.project, router.detail == .project else { return nil }
         let workspace = navigation.workspace
         guard runtime.voice.offers(machineID: workspace.session.machine.id, client: workspace.client) else {
@@ -162,15 +162,9 @@ struct PadDetailColumn: View {
 /// column's navigation, so what it pushed took the content's place.
 struct PadInspectorPane: View {
     let router: PadRouter
-    var runtime: AppRuntime?
-    var now: NowModel?
-    var voiceScene: VoiceScene?
 
     var body: some View {
-        if router.inspector == .voice, let runtime, let now, let voiceScene {
-            VoicePanel(runtime: runtime, now: now, scene: voiceScene) { router.inspector = nil }
-                .modifier(InspectorEdge())
-        } else if case .subagent(let pane) = router.inspector {
+        if case .subagent(let pane) = router.inspector {
             SubagentInspector(
                 model: pane.model, crumb: pane.crumb, session: pane.session,
                 openAsView: {
@@ -191,7 +185,7 @@ struct PadInspectorPane: View {
                         openFile: { router.show(file: $0, line: $1) }, shownFile: router.file)
                 case .git:
                     GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
-                case .subagent, .voice, nil:
+                case .subagent, nil:
                     EmptyView()
                 }
             }

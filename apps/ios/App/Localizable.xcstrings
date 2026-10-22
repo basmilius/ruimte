@@ -1,6 +1,17 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ · audio goes to OpenAI via %@" : {
+      "comment" : "The first %@ is where the sound plays, as iOS names it; the second is the name of a machine",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · audio gaat via %2$@ naar OpenAI"
+          }
+        }
+      }
+    },
     "%@ already exists" : {
       "comment" : "%@ is a file name",
       "localizations" : {
@@ -186,6 +197,27 @@
         }
       }
     },
+    "Ask what runs in your projects and chats, have a chat pick up a task, start a new chat or move to another project." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vraag wat er draait in je projecten en chats, laat een chat een taak oppakken, start een nieuwe chat of ga naar een ander project."
+          }
+        }
+      }
+    },
+    "Audio goes to OpenAI via %@" : {
+      "comment" : "%@ is the name of a machine",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audio gaat via %@ naar OpenAI"
+          }
+        }
+      }
+    },
     "Battery" : {
       "localizations" : {
         "nl" : {
@@ -277,6 +309,16 @@
         }
       }
     },
+    "Choose another project" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kies een ander project"
+          }
+        }
+      }
+    },
     "Clean" : {
       "localizations" : {
         "nl" : {
@@ -334,6 +376,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Contacten"
+          }
+        }
+      }
+    },
+    "Conversation ended" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesprek beëindigd"
           }
         }
       }
@@ -648,6 +700,36 @@
         }
       }
     },
+    "Microphone muted" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Microfoon gedempt"
+          }
+        }
+      }
+    },
+    "Mute" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dempen"
+          }
+        }
+      }
+    },
+    "Mute or unmute the microphone" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Microfoon dempen of weer aanzetten"
+          }
+        }
+      }
+    },
     "No map tiles offline. The places stay listed." : {
       "localizations" : {
         "nl" : {
@@ -900,12 +982,42 @@
         }
       }
     },
+    "Ruimte may not use the microphone" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruimte mag de microfoon niet gebruiken"
+          }
+        }
+      }
+    },
     "Save image to project" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Afbeelding opslaan in project"
+          }
+        }
+      }
+    },
+    "Talk to your workspace" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Praat met je werkruimte"
+          }
+        }
+      }
+    },
+    "The project opened last" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het laatst geopende project"
           }
         }
       }
@@ -1442,6 +1554,26 @@
         }
       }
     },
+    "Turn on the microphone for Ruimte in Settings to talk to Voice." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zet de microfoon voor Ruimte aan in Instellingen om met Voice te praten."
+          }
+        }
+      }
+    },
+    "Unmute" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dempen opheffen"
+          }
+        }
+      }
+    },
     "Violet" : {
       "localizations" : {
         "nl" : {
@@ -1458,6 +1590,116 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Visuele antwoorden"
+          }
+        }
+      }
+    },
+    "Voice · Connecting" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice · Verbinden"
+          }
+        }
+      }
+    },
+    "Voice · Listening" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice · Luistert"
+          }
+        }
+      }
+    },
+    "Voice · Speaking" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice · Spreekt"
+          }
+        }
+      }
+    },
+    "Voice · Stopping" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice · Stopt"
+          }
+        }
+      }
+    },
+    "Voice · Working" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice · Bezig"
+          }
+        }
+      }
+    },
+    "Voice ended" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice beëindigd"
+          }
+        }
+      }
+    },
+    "Voice is listening" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice luistert"
+          }
+        }
+      }
+    },
+    "Voice is on" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice staat aan"
+          }
+        }
+      }
+    },
+    "Voice is speaking" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice spreekt"
+          }
+        }
+      }
+    },
+    "Voice is working" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice is bezig"
+          }
+        }
+      }
+    },
+    "Voice stopped" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice gestopt"
           }
         }
       }
@@ -21945,6 +22187,16 @@
         }
       }
     },
+    "You · Muted" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jij · Gedempt"
+          }
+        }
+      }
+    },
     "You stopped after %@" : {
       "localizations" : {
         "nl" : {
@@ -22029,6 +22281,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Je bewerkingen staan er nog. Sla je op over een bestand dat intussen veranderde, dan gaat die wijziging verloren."
+          }
+        }
+      }
+    },
+    "your machine" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "je machine"
           }
         }
       }
@@ -23303,16 +23565,6 @@
         }
       }
     },
-    "What Voice did" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wat Voice deed"
-          }
-        }
-      }
-    },
     "Voice runs in another window" : {
       "localizations" : {
         "nl" : {
@@ -23352,17 +23604,6 @@
           }
         }
       }
-    },
-    "Talk about %@" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Praat over %@"
-          }
-        }
-      },
-      "comment" : "%@ is the name of a project"
     },
     "Interrupted" : {
       "localizations" : {
@@ -23410,16 +23651,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Voice starten"
-          }
-        }
-      }
-    },
-    "Voice listens" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voice luistert"
           }
         }
       }
@@ -23480,16 +23711,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Voice stopt"
-          }
-        }
-      }
-    },
-    "Start or stop Voice" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voice starten of stoppen"
           }
         }
       }
@@ -23632,26 +23853,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ruimte mag de microfoon niet gebruiken."
-          }
-        }
-      }
-    },
-    "Voice stopped when Ruimte went to the background." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voice is gestopt toen Ruimte naar de achtergrond ging."
-          }
-        }
-      }
-    },
-    "Voice stopped when the screen locked." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voice is gestopt toen het scherm vergrendelde."
           }
         }
       }

@@ -33,7 +33,7 @@ struct PadHome: View {
         }
         .navigationSplitViewStyle(.balanced)
         .inspector(isPresented: inspectorShown) {
-            PadInspectorPane(router: router, runtime: runtime, now: now, voiceScene: voiceScene)
+            PadInspectorPane(router: router)
                 .inspectorColumnWidth(min: 300, ideal: 360, max: 520)
         }
         .overlayPreferenceValue(SidebarBounds.self) { anchor in
@@ -74,8 +74,6 @@ struct PadHome: View {
         }
         .task(id: runtime.account?.id) { await AccountPictures.shared.load(for: runtime.account) }
         .onAppear {
-            // The panel stands beside the content, and ⌘⇧M talks about the project in the sidebar.
-            voiceScene?.presentPanel = { [router] in router.inspector = .voice }
             voiceScene?.openTarget = { [router] in
                 router.project.map { (VoiceTarget($0.workspace, shown: $0.selectedViewID), $0.workspace.session) }
             }

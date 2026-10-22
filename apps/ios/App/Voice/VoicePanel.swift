@@ -1,263 +1,362 @@
+import LucideSwift
+import RuimtePulsar
 import RuimteVoice
 import SwiftUI
+import UIKit
 
-/// Voice's timeline: where it works, what was said and what it did on the machine, and Start or Stop. A sheet on an
-/// iPhone, the inspector on an iPad. The phone runs no tool; every line of what Voice did comes from the machine.
+/// The Voice sheet of a scene, the same on an iPhone and an iPad: the sheet itself, and the project picker it pushes
+/// for the place to talk about.
 struct VoicePanel: View {
     let runtime: AppRuntime
     let now: NowModel
     let scene: VoiceScene
-    var close: (() -> Void)?
-
-    private var voice: VoiceCoordinator { runtime.voice }
+    @State private var picking = false
 
     var body: some View {
         NavigationStack {
-            List {
-                Section { status }
-                if !voice.transcript.lines.isEmpty {
-                    Section("Conversation") {
-                        ForEach(voice.transcript.lines) { line in VoiceUtteranceRow(line: line) }
-                    }
-                }
-                if !voice.activity.isEmpty {
-                    Section("What Voice did") {
-                        ForEach(voice.activity) { line in VoiceActivityRow(line: line) }
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
-            .background(MobileStyle.canvas)
-            .safeAreaInset(edge: .bottom, spacing: 0) { action.padding(16).background(.bar) }
-            .navigationTitle("Voice")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if let close {
-                    ToolbarItem(placement: .confirmationAction) { Button(role: .close, action: close) }
+            VoiceSheet(
+                voice: runtime.voice, scene: scene.id, place: scene.place(runtime.voice)?.target,
+                start: {
+                    guard let place = scene.place(runtime.voice) else { return }
+                    scene.start(runtime.voice, at: place)
+                },
+                pickPlace: { picking = true }, close: { scene.showsPanel = false }
+            )
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $picking) {
+                VoiceProjectPicker(runtime: runtime, now: now) { place in
+                    scene.picked = place
+                    picking = false
                 }
             }
         }
-    }
-
-    @ViewBuilder private var status: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if voice.runsElsewhere(than: scene.id) {
-                Text("Voice runs in another window").font(.callout.weight(.semibold))
-                Text("Stop it there to talk to Voice here.").font(.footnote).foregroundStyle(MobileStyle.muted)
-            } else {
-                Text(VoiceText.phase(voice.isOwner(scene.id) ? voice.phase : .idle)).font(.callout.weight(.semibold))
-                if let target = voice.target {
-                    Text(placeLine(target)).font(.footnote).foregroundStyle(MobileStyle.muted)
-                }
-                if voice.isOwner(scene.id), let route = voice.route {
-                    Label(route, lucideIcon: "speaker").font(.footnote).foregroundStyle(MobileStyle.muted)
-                }
-            }
-            if let problem = voice.problem(in: scene.id) {
-                Text(VoiceText.problem(problem)).font(.footnote).foregroundStyle(MobileStyle.statusError)
-                if problem == .microphoneDenied {
-                    Button("Open Settings") { VoiceText.openSettings() }.font(.footnote)
-                }
-            }
-        }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-    }
-
-    @ViewBuilder private var action: some View {
-        if voice.isOwner(scene.id) {
-            Button(role: .destructive) {
-                voice.stop(scene: scene.id)
-            } label: {
-                Label(String(localized: "Stop Voice"), lucideIcon: "square").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.glassProminent)
-            .accessibilityIdentifier("voice.panel.stop")
-        } else if !voice.runsElsewhere(than: scene.id), let start = startAgain ?? runtime.voiceStartingPoint(now: now) {
-            Button {
-                scene.start(voice, target: start.0, session: start.1)
-            } label: {
-                Label(startTitle(start.0), lucideIcon: "mic").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.glassProminent)
-            .accessibilityIdentifier("voice.panel.start")
-        }
-    }
-
-    /// The project the last session worked in, while its machine still offers Voice.
-    private var startAgain: (VoiceTarget, SharedMachineSession)? {
-        guard let target = voice.target, let machine = runtime.machines.first(where: { $0.id == target.machineID })
-        else { return nil }
-        let session = runtime.session(for: machine)
-        return voice.offers(machineID: machine.id, client: session.rpc) ? (target, session) : nil
-    }
-
-    private func startTitle(_ target: VoiceTarget) -> String {
-        target.projectName.map { String(localized: "Talk about \($0)") } ?? String(localized: "Start Voice")
-    }
-
-    private func placeLine(_ target: VoiceTarget) -> String {
-        let machine = runtime.machines.first { $0.id == target.machineID }?.name ?? ""
-        return [target.projectName ?? "", machine].filter { !$0.isEmpty }.joined(separator: " · ")
+        .modifier(VoiceSheetSurface())
     }
 }
 
-private struct VoiceUtteranceRow: View {
-    let line: VoiceUtterance
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(line.speaker == .person ? String(localized: "You") : String(localized: "Voice"))
-                .font(.caption.weight(.semibold)).foregroundStyle(MobileStyle.muted)
-            Text(line.text).font(.callout).textSelection(.enabled)
-            if line.interrupted {
-                Text("Interrupted").font(.caption).foregroundStyle(MobileStyle.faint)
-            }
-        }
-        .accessibilityElement(children: .combine)
+/// The sheet's ground is the canvas and its rows the panel, as in a form, so a row stands out in light and dark alike.
+struct VoiceSheetSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .foregroundStyle(MobileStyle.text)
+            .tint(MobileStyle.accent)
+            .background(MobileStyle.canvas.ignoresSafeArea())
+            .containerBackground(MobileStyle.canvas, for: .navigation)
+            .presentationBackground(MobileStyle.canvas)
+            .presentationDragIndicator(.visible)
+            .presentationSizing(.form)
     }
 }
 
-private struct VoiceActivityRow: View {
-    let line: VoiceActivityLine
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Group {
-                switch line.status {
-                case "running": Spinner(size: 14, label: String(localized: "Running"))
-                case "failed": Image(lucide: "circle-x", size: 16).foregroundStyle(MobileStyle.statusError)
-                default: Image(lucide: "check", size: 16).foregroundStyle(MobileStyle.positive)
-                }
-            }
-            .frame(width: 18, height: 18)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(line.label).font(.callout)
-                if !line.detail.isEmpty {
-                    Text(line.detail).font(.caption).foregroundStyle(MobileStyle.muted)
-                }
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// An open project of a machine that offers Voice, as the starting point of a session, which then moves between the
-/// projects of that machine.
-struct VoiceProjectPicker: View {
-    let runtime: AppRuntime
-    let now: NowModel
-    let picked: (VoiceTarget, SharedMachineSession) -> Void
-
-    private var voice: VoiceCoordinator { runtime.voice }
-
-    var body: some View {
-        MobileForm {
-            let offering = runtime.machines.filter {
-                voice.offers(machineID: $0.id, client: runtime.session(for: $0).rpc)
-            }
-            if offering.isEmpty {
-                ContentUnavailableView(
-                    String(localized: "No machine offers Voice"), lucideIcon: "mic-off",
-                    description: Text("A machine offers Voice once it has an OpenAI key."))
-            }
-            ForEach(offering, id: \.id) { machine in
-                Section(machine.name) {
-                    let projects = now.chatProjects(on: machine.id)
-                    if projects.isEmpty {
-                        Text("No open projects").foregroundStyle(MobileStyle.muted)
-                    }
-                    ForEach(projects) { project in
-                        Button {
-                            picked(
-                                VoiceTarget(
-                                    machineID: machine.id, projectID: project.projectID, projectName: project.name),
-                                runtime.session(for: machine))
-                        } label: {
-                            Label(project.name, lucideIcon: "folder")
-                        }
-                        .accessibilityIdentifier("voice.project.\(project.projectID)")
-                    }
-                }
-            }
-        }
-        .navigationTitle("Talk about")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-/// The mic in a bar: Voice on in this scene, in `target` or else in what the scene shows, or off again. It shows
-/// only where Voice is offered, so a machine without the request or the key, and a build without the microphone,
-/// never show it.
-struct VoiceMicButton: View {
+/// What the sheet shows: Voice's band, the timeline of the conversation, and Start or Mute and Stop. While no session
+/// runs it explains Voice and names the place a start talks about.
+struct VoiceSheet: View {
     let voice: VoiceCoordinator
-    let scene: VoiceScene
-    var target: (VoiceTarget, SharedMachineSession)?
+    let scene: String
+    /// Where Start Voice goes; nil while no machine offers Voice.
+    let place: VoiceTarget?
+    let start: () -> Void
+    let pickPlace: () -> Void
+    let close: () -> Void
+
+    private var running: Bool { voice.isOwner(scene) }
+    private var elsewhere: Bool { voice.runsElsewhere(than: scene) }
 
     var body: some View {
-        let on = voice.isOwner(scene.id)
-        Button {
-            if !on, let target, !voice.runsElsewhere(than: scene.id) {
-                scene.start(voice, target: target.0, session: target.1)
-            } else {
-                scene.toggle(voice)
-            }
-        } label: {
-            Image(lucide: on ? "mic-off" : "mic").accessibilityLabel(on ? "Stop Voice" : "Start Voice")
-        }
-        .accessibilityIdentifier("voice.toggle")
-    }
-}
-
-/// Reads per machine whether it holds the key and how Voice talks there, whenever its link comes back, so the mic
-/// button knows where it shows and a start sends what the machine keeps.
-struct VoiceKeyWatch: View {
-    let runtime: AppRuntime
-
-    var body: some View {
-        if runtime.voice.declaresMicrophone {
-            ZStack {
-                ForEach(runtime.machines, id: \.id) { machine in
-                    let session = runtime.session(for: machine)
-                    Color.clear.task(id: "\(machine.id):\(session.generation):\(session.connected)") {
-                        guard session.connected else { return }
-                        await runtime.voice.refreshKey(machineID: machine.id, client: session.rpc)
-                        await runtime.voice.refreshPreferences(machineID: machine.id, client: session.rpc)
-                    }
+        let items = elsewhere ? [] : voice.timeline(in: scene)
+        VStack(spacing: 0) {
+            header.padding(.horizontal, 20).padding(.top, 18)
+            band.padding(.horizontal, 20).padding(.top, 14)
+            Group {
+                if !items.isEmpty {
+                    VoiceTimelineList(items: items, voice: voice, problem: voice.problem(in: scene))
+                } else {
+                    middle.padding(.horizontal, 32).frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .frame(width: 0, height: 0)
-            .accessibilityHidden(true)
+            .frame(maxHeight: .infinity)
+            footer.padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 12)
         }
+    }
+
+    // MARK: Header
+
+    private var header: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Voice").font(.title2.weight(.semibold))
+                if running, let target = voice.target {
+                    HStack(spacing: 0) {
+                        Text(VoiceText.place(target)).lineLimit(1).truncationMode(.middle)
+                        if let startedAt = voice.startedAt {
+                            Text(verbatim: " · ")
+                            Text(timerInterval: startedAt...Date.distantFuture, countsDown: false).monospacedDigit()
+                                .fixedSize()
+                        }
+                    }
+                    .font(.subheadline).foregroundStyle(MobileStyle.muted)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            Button(action: close) {
+                Image(lucide: "x", size: 18).frame(width: 32, height: 32)
+            }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .accessibilityLabel("Close")
+            .accessibilityIdentifier("voice.panel.close")
+        }
+    }
+
+    // MARK: Band
+
+    @ViewBuilder private var band: some View {
+        if running {
+            VStack(spacing: 10) {
+                HStack {
+                    Text(voice.muted ? VoiceText.mutedLabel : String(localized: "You"))
+                        .foregroundStyle(voice.muted ? MobileStyle.statusError : MobileStyle.muted)
+                    Spacer()
+                    Text(VoiceText.bandState(voice)).foregroundStyle(VoiceStyle.voice)
+                }
+                .font(.caption.weight(.semibold)).textCase(.uppercase).kerning(0.6)
+                .accessibilityElement(children: .combine)
+                if voice.phase == .active {
+                    VoiceBand(levels: voice.levels).frame(height: 56)
+                } else {
+                    VoiceBreathing().frame(height: 56)
+                }
+            }
+            .task(id: voice.phase == .active) {
+                guard voice.phase == .active else { return }
+                while !Task.isCancelled {
+                    await voice.sampleLevels()
+                    try? await Task.sleep(for: .milliseconds(80))
+                }
+            }
+        } else {
+            VoiceBreathing().frame(height: 24)
+        }
+    }
+
+    // MARK: Middle
+
+    @ViewBuilder private var middle: some View {
+        if elsewhere {
+            VoiceHero(
+                title: String(localized: "Voice runs in another window"),
+                message: String(localized: "Stop it there to talk to Voice here."))
+        } else if running {
+            switch voice.phase {
+            case .active:
+                VoiceHero(title: String(localized: "Voice is listening"), message: VoiceText.explanation)
+            default:
+                VStack(spacing: 12) {
+                    Spinner(size: 20)
+                    Text(VoiceText.phase(voice.phase)).font(.callout).foregroundStyle(MobileStyle.muted)
+                }
+            }
+        } else if let problem = voice.problem(in: scene) {
+            VoiceHero(
+                title: problem == .microphoneDenied
+                    ? String(localized: "Ruimte may not use the microphone") : String(localized: "Voice stopped"),
+                message: problem == .microphoneDenied
+                    ? String(localized: "Turn on the microphone for Ruimte in Settings to talk to Voice.")
+                    : VoiceText.problem(problem)
+            ) {
+                if problem == .microphoneDenied {
+                    Button("Open Settings") { VoiceText.openSettings() }.font(.callout.weight(.semibold))
+                }
+            }
+        } else if place == nil {
+            VoiceHero(
+                title: String(localized: "No machine offers Voice"),
+                message: String(localized: "A machine offers Voice once it has an OpenAI key."))
+        } else {
+            VoiceHero(title: String(localized: "Talk to your workspace"), message: VoiceText.explanation)
+        }
+    }
+
+    // MARK: Footer
+
+    @ViewBuilder private var footer: some View {
+        if running {
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    muteButton
+                    stopButton
+                }
+                Text(VoiceText.route(voice.route, machine: voice.target?.machineName))
+                    .font(.footnote).foregroundStyle(MobileStyle.muted).multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+        } else if !elsewhere, let place {
+            VStack(spacing: 12) {
+                Button(action: pickPlace) { VoicePlaceRow(place: place) }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("voice.panel.place")
+                Button(action: start) {
+                    Label(String(localized: "Start Voice"), lucideIcon: "mic")
+                }
+                .buttonStyle(SolidCapsuleButtonStyle())
+                .accessibilityIdentifier("voice.panel.start")
+            }
+        }
+    }
+
+    private var muteButton: some View {
+        let muted = voice.muted
+        return Button {
+            voice.setMuted(!muted, scene: scene)
+        } label: {
+            Image(lucide: muted ? "mic-off" : "mic", size: 22)
+                .foregroundStyle(muted ? MobileStyle.canvas : MobileStyle.text)
+                .frame(width: 56, height: 56)
+                .background(muted ? MobileStyle.text : MobileStyle.panel, in: .circle)
+                .contentShape(.circle)
+        }
+        .buttonStyle(.plain)
+        .disabled(voice.phase == .stopping)
+        .accessibilityLabel(muted ? Text("Unmute") : Text("Mute"))
+        .accessibilityIdentifier("voice.panel.mute")
+    }
+
+    private var stopButton: some View {
+        Button {
+            voice.stop(scene: scene)
+        } label: {
+            Label {
+                Text("Stop Voice")
+            } icon: {
+                LucideSwift.LucideIcon(.square, style: .filled, size: 14)
+            }
+            .font(.body.weight(.semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .background(MobileStyle.statusError, in: .capsule)
+            .contentShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        .disabled(voice.phase == .stopping)
+        .accessibilityIdentifier("voice.panel.stop")
     }
 }
 
-extension NowModel {
-    /// When a project of this machine was opened last, as its feed says; 0 for a machine without one.
-    func lastOpened(on machineID: String) -> Double {
-        (feeds[machineID]?.projects ?? []).compactMap { project in
-            project["summary"].flatMap { NewChat.isChats($0) ? nil : $0.number("lastOpenedAt") }
-        }.max() ?? 0
+/// A title and a sentence in the middle of the sheet, for every state without a timeline.
+private struct VoiceHero<Actions: View>: View {
+    let title: String
+    let message: String
+    @ViewBuilder var actions: Actions
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text(title).font(.title2.weight(.semibold))
+            Text(message).font(.body).foregroundStyle(MobileStyle.muted)
+            actions.padding(.top, 6)
+        }
+        .multilineTextAlignment(.center)
     }
 }
 
-extension AppRuntime {
-    /// Where Voice starts without a project on screen: the machine of the project opened last among the machines that
-    /// offer Voice, else the first that offers it. No project goes with it, so the machine starts in the one opened
-    /// last there.
-    func voiceStartingPoint(now: NowModel) -> (VoiceTarget, SharedMachineSession)? {
-        let offering = machines.filter { voice.offers(machineID: $0.id, client: session(for: $0).rpc) }
-        guard let machine = offering.max(by: { now.lastOpened(on: $0.id) < now.lastOpened(on: $1.id) }) else {
-            return nil
+extension VoiceHero where Actions == EmptyView {
+    init(title: String, message: String) {
+        self.init(title: title, message: message) { EmptyView() }
+    }
+}
+
+/// The place a start talks about, which opens the picker.
+private struct VoicePlaceRow: View {
+    let place: VoiceTarget
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(lucide: "folder", size: 20).foregroundStyle(MobileStyle.muted)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Talk about").font(.footnote).foregroundStyle(MobileStyle.muted)
+                Text(line).font(.body).lineLimit(1).truncationMode(.middle)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Image(lucide: "chevrons-up-down", size: 16).foregroundStyle(MobileStyle.muted)
         }
-        return (VoiceTarget(machineID: machine.id), session(for: machine))
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 16))
+        .contentShape(RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Choose another project")
     }
 
-    /// Whether a bar shows the mic: a machine offers Voice, or Voice runs in this scene and the mic stops it.
-    func showsVoice(in scene: VoiceScene?) -> Bool {
-        guard let scene else { return false }
-        return voice.isOwner(scene.id)
-            || machines.contains { voice.offers(machineID: $0.id, client: session(for: $0).rpc) }
+    /// The project in the text color and its machine muted beside it.
+    private var line: AttributedString {
+        var project = AttributedString(place.projectName ?? String(localized: "The project opened last"))
+        project.foregroundColor = MobileStyle.text
+        guard let machine = place.machineName, !machine.isEmpty else { return project }
+        var rest = AttributedString(" · \(machine)")
+        rest.foregroundColor = MobileStyle.muted
+        return project + rest
+    }
+}
+
+/// Voice's own color: its half of the band, its name in the timeline and an action that runs.
+enum VoiceStyle {
+    static let voice = MobileStyle.statusRunning
+}
+
+/// The sentences Voice shows in more than one place.
+@MainActor enum VoiceText {
+    static let explanation = String(
+        localized:
+            "Ask what runs in your projects and chats, have a chat pick up a task, start a new chat or move to another project."
+    )
+
+    static let mutedLabel = String(localized: "You · Muted")
+
+    static func phase(_ phase: VoiceCoordinator.Phase) -> String {
+        switch phase {
+        case .idle: String(localized: "Voice is off")
+        case .connecting: String(localized: "Connecting to Voice")
+        case .active: String(localized: "Listening")
+        case .stopping: String(localized: "Stopping Voice")
+        }
+    }
+
+    /// What Voice does now, beside its half of the band.
+    static func bandState(_ voice: VoiceCoordinator) -> String {
+        switch voice.phase {
+        case .idle, .connecting: String(localized: "Voice · Connecting")
+        case .stopping: String(localized: "Voice · Stopping")
+        case .active:
+            if voice.activity.contains(where: { $0.status == "running" }) {
+                String(localized: "Voice · Working")
+            } else if voice.speaking {
+                String(localized: "Voice · Speaking")
+            } else {
+                String(localized: "Voice · Listening")
+            }
+        }
+    }
+
+    static func place(_ target: VoiceTarget) -> String {
+        [target.projectName ?? "", target.machineName ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    /// Where the reply plays and where the audio goes.
+    static func route(_ route: String?, machine: String?) -> String {
+        let machine = machine.flatMap { $0.isEmpty ? nil : $0 } ?? String(localized: "your machine")
+        guard let route, !route.isEmpty else { return String(localized: "Audio goes to OpenAI via \(machine)") }
+        return String(localized: "\(route) · audio goes to OpenAI via \(machine)")
+    }
+
+    static func problem(_ problem: VoiceCoordinator.Problem) -> String {
+        switch problem {
+        case .microphoneDenied:
+            String(localized: "Ruimte may not use the microphone. Turn it on in Settings to talk to Voice.")
+        case .message(let message): message
+        }
+    }
+
+    static func openSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 }

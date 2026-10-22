@@ -226,11 +226,12 @@ phone carries only the microphone, the reply and the captions, over a WebRTC pee
 its `oai-events` channel is ignored. `RuimteTransport` stays without audio.
 
 - The mic shows on Now and in a project only where the machine answers `voice.start` and `voice.keyStatus` says it
-  holds a key; a machine without a key offers no mic. The mic starts at once. In a project it
-  names that project as the starting point; on Now, or ⌘⇧M without a project, it starts on the machine of the project
-  opened last (else the first machine that offers Voice) without one, and the machine starts in its project opened
-  last. A session talks about every project in use on its machine and moves between them; the place the caption bar
-  and the panel name follows `project` in `voice.status`. No machine that offers Voice, no mic.
+  holds a key; a machine without a key offers no mic. The mic and ⌘⇧M open the Voice sheet (`VoicePanel`), the same
+  on an iPhone and an iPad, and Start Voice there starts. In a project the sheet proposes that project as the starting
+  point; on Now, or ⌘⇧M without a project, the machine of the project opened last (else the first machine that offers
+  Voice) without one, and the machine starts in its project opened last. Talk about opens `VoiceProjectPicker` for
+  another place. A session talks about every project in use on its machine and moves between them; the place the sheet
+  and the Live Activity name follows `project` in `voice.status`. No machine that offers Voice, no mic.
 - One session per app process, owned by the scene that started it (`VoiceCoordinator`). Every request after
   `voice.start` names the scene, and the events count only for the owner's scene and session, since the scenes of an
   iPad share one link. Another scene shows where Voice runs and does not take the microphone over.
@@ -240,12 +241,23 @@ its `oai-events` channel is ignored. `RuimteTransport` stays without audio.
   (`RTCAudioSessionConfiguration.setWebRTC`), since its audio unit applies that one when audio turns on and would
   otherwise drop the speaker for the earpiece. A file that plays while Voice runs keeps Voice's category, and anything
   that sets another category ends Voice rather than leaving it without a microphone.
-- There is no background audio: the owner's scene going to the background, the screen locking, a call, the machine
-  link or the media dropping all end Voice. What it started on the machine goes on. Background audio is outside
-  this version, so the app declares no `audio` background mode; keeping Voice past a lock is Bas's to decide.
-- The captions stand above every tab of the scene (`VoiceCaptionBar`); the timeline is a sheet on an iPhone and the
-  inspector on an iPad (`VoicePanel`). Voice on a machine deletes nothing yet, so there is no switch for asking before
-  a deletion.
+- Voice goes on in the background and on a locked screen: the app declares the `audio` background mode, and while a
+  session runs the coordinator holds the machine links open as a scene of its own (`VoiceCoordinator.linkScene`), so
+  they stay up with every scene in the background. A call or another app taking the audio, the machine link or the
+  media dropping end Voice. What it started on the machine goes on.
+- Mute turns the microphone track off (`VoiceMedia.muted`) and keeps the session, the reply and the audio session.
+- The sheet has one timeline: what was said, and each action under the Voice line that was the last line when the
+  phone first heard of it, or under Voice's answer when the person spoke last (`VoiceTimeline`). The entry's `at` is
+  on the machine's clock and the captions on the phone's, so arrival orders them. An ended conversation stays, with a
+  marker and why it ended, until the next start. The band reads WebRTC's `audioLevel` of the microphone's media source
+  and of the inbound reply (`VoiceLevels`) while the sheet shows. Voice on a machine deletes nothing yet, so there is
+  no switch for asking before a deletion.
+- The mic in the bar stands out in Voice's color while a session runs; outside the app the Live Activity shows it
+  (`VoiceLiveActivities`, local only, no push). It starts once the session is active, follows the phase (listening,
+  speaking, an action with its label, stopping), whether the microphone is muted, the project and the time, and ends
+  with a short final state when Voice ends. Its Mute and Stop are `LiveActivityIntent`s in `Shared/VoiceLive`, which
+  the app and the widget extension both compile; they run in the app's process. A tap opens the sheet
+  (`ruimte://voice`). `VoiceLiveAttributes` lives in `RuimtePulsar` beside `RuimteActivityAttributes`.
 - Language and voice are the machine's (`voice.preferences`, `voice.setPreferences` and the `voice.preferences` event
   every client of the machine hears), shown per machine in Settings, Voice beside its key. A machine that stores none
   shows the device's language with marin, which a start then sends; the machine's stored choice always comes first.
@@ -307,7 +319,7 @@ exchange. `/v1/providers` decides which sign-in options show.
 - One ed25519 key serves the account session and machine access. There is no separate trusted shell process, so no
   second key as in the desktop app.
 - A visible iPad scene keeps held links alive when another scene backgrounds. Once every scene is in the background,
-  connections close. No background audio, VoIP or other workaround keeps them.
+  connections close, unless Voice runs. No VoIP or other workaround keeps them.
 - `NWPathMonitor` reports path changes only; it does not observe libwebrtc's own sockets.
 - Push alerts use AES-256-GCM because Bun offers no ChaCha20-Poly1305 through `node:crypto`.
 - The app validates `chat.attach` and `chat.history` whole, so a chat item kind or enum value it does not know rejects

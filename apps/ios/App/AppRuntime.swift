@@ -32,8 +32,14 @@ final class AppRuntime {
     private var appleAuthentication: NativeAppleAuthentication?
     @ObservationIgnored lazy var notifications = NotificationCoordinator(runtime: self)
     /// Voice for the whole process: one session at a time, owned by the scene that started it.
-    @ObservationIgnored lazy var voice = VoiceCoordinator(
-        media: { VoiceMediaPeer() }, audio: { AudioSessionController.shared })
+    @ObservationIgnored lazy var voice: VoiceCoordinator = {
+        let connections = connections
+        let voice = VoiceCoordinator(
+            media: { VoiceMediaPeer() }, audio: { AudioSessionController.shared }, live: VoiceLiveActivities(),
+            holdLinks: { connections.setScene(VoiceCoordinator.linkScene, foreground: $0) })
+        VoiceLiveCommands.handler = { [weak voice] in voice?.perform($0) }
+        return voice
+    }()
     private var sessions: [String: SharedMachineSession] = [:]
     private var initialized = false
     @ObservationIgnored private var notificationSyncTask: Task<Void, Never>?

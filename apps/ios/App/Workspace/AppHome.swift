@@ -57,22 +57,15 @@ struct AppHome: View {
                 .containerBackground(MobileStyle.surface, for: .navigation)
             }
         }
-        // Above every tab and page of the scene, since Voice goes on when a person leaves the page it started on.
-        .safeAreaInset(edge: .top, spacing: 0) { VoiceCaptionBar(voice: runtime.voice, scene: voiceScene) }
         .environment(\.openMobileWorkspace, OpenMobileWorkspaceAction(id: sceneID, action: openWorkspace))
         .environment(\.voiceScene, voiceScene)
-        .mobileSheet(isPresented: voicePanel) {
-            VoicePanel(runtime: runtime, now: now, scene: voiceScene) { voiceScene.showsPanel = false }
-        }
+        .sheet(isPresented: voicePanel) { VoicePanel(runtime: runtime, now: now, scene: voiceScene) }
         .background { VoiceKeyWatch(runtime: runtime) }
         .onAppear { voiceScene.startingPoint = { [runtime, now] in runtime.voiceStartingPoint(now: now) } }
         .onChange(of: window) { _, window in
             guard let window, runtime.voice.declaresMicrophone else { return }
-            VoiceKeyCommand.install(in: window, scene: voiceScene, voice: runtime.voice)
+            VoiceKeyCommand.install(in: window, scene: voiceScene)
         }
-        .onReceive(
-            NotificationCenter.default.publisher(for: UIApplication.protectedDataWillBecomeUnavailableNotification)
-        ) { _ in runtime.voice.deviceLocked() }
         .mobileSheet(isPresented: $addingMachine) { AddMachineSheet(runtime: runtime) }
         .mobileSheet(isPresented: $settings) { MobileSettings(runtime: runtime, projects: projects) }
         .id(runtime.account?.id ?? "signed-out")
@@ -89,7 +82,13 @@ struct AppHome: View {
             if now.loaded { ProjectWidgetRecorder.record(entries) }
         }
         .task(id: runtime.attentionKeys) { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) }
-        .onOpenURL { runtime.notifications.openActivityURL($0) }
+        .onOpenURL { url in
+            if url == VoiceLiveAttributes.url {
+                voiceScene.showPanel()
+            } else {
+                runtime.notifications.openActivityURL(url)
+            }
+        }
         .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
         .onChange(of: runtime.account?.id) { _, _ in
             router = PhoneRouter()
@@ -111,7 +110,6 @@ struct AppHome: View {
         }
         .onChange(of: phase, initial: true) { _, current in
             runtime.connections.setScene(sceneID, foreground: current != .background)
-            runtime.voice.scene(sceneID, background: current == .background)
             if current == .active { Task { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) } }
             if current == .background, !runtime.machines.isEmpty { UsageWidgetRefresh.schedule() }
         }

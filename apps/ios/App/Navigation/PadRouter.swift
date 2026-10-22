@@ -12,12 +12,11 @@ enum PadDetail: Hashable {
     case notification(NotificationDestination)
 }
 
-/// What stands in the inspector column beside the content: the project's files, its git, a sub-agent of the chat
-/// in the content, or Voice's timeline, which stays beside whatever the content shows.
+/// What stands in the inspector column beside the content: the project's files, its git, or a sub-agent of the chat
+/// in the content.
 enum PadInspector: Hashable {
     case files, git
     case subagent(PadSubagentPane)
-    case voice
 }
 
 /// Where the iPad stands. The sidebar lists Now, the machines and the open projects; a project opened from anywhere is
@@ -132,10 +131,9 @@ final class PadRouter {
         return !project.workspace.isScratch
     }
 
-    /// The inspector only stands beside a project's content, except for Voice, which runs on beside any page.
+    /// The inspector only stands beside a project's content.
     var showsInspector: Bool {
         guard let inspector else { return false }
-        if inspector == .voice { return true }
         guard detail == .project else { return false }
         if case .subagent = inspector { return true }
         return offersFilesAndGit
@@ -146,9 +144,9 @@ final class PadRouter {
         inspector = .subagent(pane)
     }
 
-    /// What belongs to the project leaves with it; Voice stays.
+    /// What belongs to the project leaves with it.
     private func leaveProjectInspector() {
-        if inspector != .voice { inspector = nil }
+        inspector = nil
     }
 
     /// A sub-agent belongs to the chat it ran in, so it leaves the inspector with that chat.

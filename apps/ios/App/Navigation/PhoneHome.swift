@@ -78,7 +78,6 @@ struct PhoneHome: View {
         }
         .task(id: runtime.account?.id) { await AccountPictures.shared.load(for: runtime.account) }
         .onAppear {
-            // ⌘⇧M on a keyboard starts in the project on top, else on the machine of the project opened last.
             voiceScene?.openTarget = { [router] in
                 router.project.map { (VoiceTarget($0.workspace, shown: $0.openedViewID), $0.workspace.session) }
             }

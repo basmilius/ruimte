@@ -9,12 +9,16 @@ import Testing
 @Suite @MainActor struct VoiceCoordinatorTests {
     private static let target = VoiceTarget(machineID: "machine", projectID: "project", projectName: "Ruimte")
 
+    private static let clock = Date(timeIntervalSince1970: 1_800_000_000)
+
     private struct Setup {
         let voice: VoiceCoordinator
         let machine: VoiceMachine
         let media: FakeMedia
         let audio: FakeAudio
         let scheduler: ManualScheduler
+        let live: FakeLive
+        let links: LinkHolds
     }
 
     private static func setup(declaresMicrophone: Bool = true) -> Setup {
@@ -22,11 +26,19 @@ import Testing
         let media = FakeMedia()
         let audio = FakeAudio()
         let scheduler = ManualScheduler()
+        let live = FakeLive()
+        let links = LinkHolds()
         let voice = VoiceCoordinator(
             media: { media }, audio: { audio }, scheduler: scheduler,
             deviceLanguage: { "nl" },
-            makeID: { "start-1" }, timeZone: { "Europe/Amsterdam" }, declaresMicrophone: declaresMicrophone)
-        return Setup(voice: voice, machine: machine, media: media, audio: audio, scheduler: scheduler)
+            makeID: { "start-1" }, timeZone: { "Europe/Amsterdam" }, now: { Self.clock }, live: live,
+            holdLinks: { links.holds.append($0) }, declaresMicrophone: declaresMicrophone)
+        return Setup(
+            voice: voice, machine: machine, media: media, audio: audio, scheduler: scheduler, live: live, links: links)
+    }
+
+    private static func caption(_ speaker: VoiceSpeaker, _ text: String) -> VoiceMediaEvent {
+        .caption(LiveCaption(speaker: speaker, delta: text, startMs: 0, endMs: 0))
     }
 
     private static func settle() async {
@@ -48,12 +60,14 @@ import Testing
         .object(["id": .string(id), "name": .string(name)])
     }
 
-    private static func activity(_ id: String, status: String, seq: Int, scene: String = "A") -> JSONValue {
+    private static func activity(
+        _ id: String, status: String, seq: Int, scene: String = "A", label: String = "Read the chat"
+    ) -> JSONValue {
         .object([
             "sessionId": .string("session-1"), "sceneId": .string(scene), "seq": .number(Double(seq)),
             "entry": .object([
                 "id": .string(id), "at": .number(1), "kind": .string("chat"), "status": .string(status),
-                "label": .string("Read the chat"), "detail": .string("Release notes"),
+                "label": .string(label), "detail": .string("Release notes"),
             ]),
         ])
     }
@@ -184,31 +198,186 @@ import Testing
         #expect(setup.voice.runsElsewhere(than: "B"))
         #expect(!setup.voice.runsElsewhere(than: "A"))
         setup.voice.stop(scene: "B")
-        setup.voice.scene("B", background: true)
+        setup.voice.setMuted(true, scene: "B")
         setup.voice.sceneClosed("B")
         #expect(setup.voice.isOwner("A"))
+        #expect(!setup.voice.muted)
     }
 
-    @Test func theOwnerGoingToTheBackgroundStopsVoice() async {
+    @Test func voiceHoldsTheMachineLinksWhileItRunsSoTheBackgroundKeepsIt() async {
         let setup = Self.setup()
         await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
-        setup.voice.scene("A", background: false)
+        setup.machine.emit("voice.status", Self.status("active", seq: 1))
+        #expect(setup.links.holds == [true], "The links stay open with every scene in the background")
+        #expect(setup.voice.problem(in: "A") == nil)
+        setup.voice.stop(scene: "A")
+        #expect(setup.links.holds == [true, false])
+    }
+
+    @Test func aSceneThatClosesEndsWhatItStarted() async {
+        let setup = Self.setup()
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        setup.voice.sceneClosed("A")
+        await Self.settle()
+        #expect(setup.voice.phase == .idle)
+        #expect(setup.machine.sent("voice.stop"))
+        #expect(setup.voice.problem(in: "A") == nil)
+    }
+
+    @Test func muteSilencesTheMicrophoneAndKeepsTheSession() async {
+        let setup = Self.setup()
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        setup.machine.emit("voice.status", Self.status("active", seq: 1))
+        setup.voice.setMuted(true, scene: "A")
+        #expect(setup.media.muted)
+        #expect(setup.voice.muted)
+        #expect(setup.voice.phase == .active)
         #expect(setup.voice.isOwner("A"))
-        setup.voice.scene("A", background: true)
-        await Self.settle()
-        #expect(setup.voice.phase == .idle)
-        #expect(setup.machine.sent("voice.stop"))
-        #expect(setup.voice.problem(in: "A") != nil)
-        #expect(setup.voice.problem(in: "B") == nil, "Only the scene it ran in says why it ended")
+        #expect(!setup.machine.sent("voice.stop"))
+        #expect(setup.audio.owner == "A", "The audio session stays, so the reply keeps playing")
+        setup.voice.perform(.toggleMute)
+        #expect(!setup.media.muted, "The Live Activity's button turns it on again")
+        setup.voice.setMuted(true, scene: "A")
+        setup.voice.stop(scene: "A")
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        #expect(!setup.voice.muted, "A new session starts with the microphone on")
+        #expect(!setup.media.muted)
     }
 
-    @Test func aLockedScreenEndsVoice() async {
+    @Test func theBandReadsTheLevelsOfTheMediaAndAMutedMicrophoneIsSilent() async throws {
         let setup = Self.setup()
         await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
-        setup.voice.deviceLocked()
+        setup.media.reading = VoiceLevels(person: 0.25, voice: 0.09)
+        await setup.voice.sampleLevels()
+        #expect(try #require(setup.voice.levels.person.last) > 0)
+        #expect(try #require(setup.voice.levels.voice.last) > 0)
+        setup.voice.setMuted(true, scene: "A")
+        await setup.voice.sampleLevels()
+        #expect(setup.voice.levels.person.last == 0)
+        #expect(try #require(setup.voice.levels.voice.last) > 0, "The reply still plays")
+        setup.voice.stop(scene: "A")
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        #expect(setup.voice.levels == VoiceLevelHistory(), "A new session starts with a quiet band")
+    }
+
+    // MARK: The Live Activity
+
+    @Test func theLiveActivityStartsOnceVoiceIsActiveAndFollowsItsPhase() async {
+        let setup = Self.setup()
+        var target = Self.target
+        target.machineName = "MacBook Pro"
+        await setup.voice.start(scene: "A", target: target, client: setup.machine)
+        #expect(setup.live.shown.isEmpty, "Nothing shows while it connects")
+        setup.machine.emit("voice.status", Self.status("active", seq: 1))
+        let listening = VoiceLiveContent(phase: .listening, project: "Ruimte", startedAt: Self.clock)
+        #expect(setup.live.shown.last == listening)
+        #expect(setup.live.machine == "MacBook Pro")
+        setup.media.onEvent?(Self.caption(.model, "Here is"))
+        setup.media.onEvent?(Self.caption(.model, " the build."))
+        #expect(setup.live.shown.last?.phase == .speaking)
+        #expect(setup.live.shown.count == 2, "Every caption of one reply is one update")
+        setup.scheduler.fire()
+        #expect(setup.live.shown.last?.phase == .listening, "A reply that went quiet is done speaking")
+        setup.machine.emit("voice.activity", Self.activity("line-1", status: "running", seq: 2, label: "Prompting"))
+        #expect(setup.live.shown.last?.phase == .acting)
+        #expect(setup.live.shown.last?.action == "Prompting")
+        setup.machine.emit("voice.activity", Self.activity("line-1", status: "completed", seq: 3))
+        #expect(setup.live.shown.last == listening)
+        setup.voice.setMuted(true, scene: "A")
+        #expect(setup.live.shown.last?.muted == true)
+        setup.machine.emit("voice.status", Self.status("active", seq: 4, project: Self.project("site", "Site")))
+        #expect(setup.live.shown.last?.project == "Site")
+        setup.machine.emit("voice.status", Self.status("stopping", seq: 5))
+        #expect(setup.live.shown.last?.phase == .stopping)
+        setup.machine.emit("voice.status", Self.status("closed", seq: 6))
+        #expect(
+            setup.live.ended
+                == [VoiceLiveContent(phase: .ended, project: "Site", startedAt: Self.clock)])
+    }
+
+    @Test func aLiveActivityEndsSayingWhyVoiceStopped() async {
+        let setup = Self.setup()
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        setup.machine.emit("voice.status", Self.status("active", seq: 1))
+        setup.media.onEvent?(.lost)
+        #expect(setup.live.ended.last?.phase == .ended)
+        #expect(setup.live.ended.last?.problem == "The audio connection to OpenAI dropped, so Voice stopped.")
+    }
+
+    @Test func aStartThatNeverWentActiveLeavesNoLiveActivity() async {
+        let setup = Self.setup()
+        setup.machine.connected = false
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        setup.machine.connected = true
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        setup.voice.stop(scene: "A")
+        #expect(setup.live.shown.isEmpty)
+        #expect(setup.live.ended.isEmpty)
+    }
+
+    @Test func theStopOfTheLiveActivityStopsTheSession() async {
+        let setup = Self.setup()
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        setup.machine.emit("voice.status", Self.status("active", seq: 1))
+        setup.voice.perform(.stop)
         await Self.settle()
         #expect(setup.voice.phase == .idle)
-        #expect(setup.machine.sent("voice.stop"))
+        #expect(setup.machine.stops == [.object(["sceneId": .string("A"), "sessionId": .string("session-1")])])
+        #expect(setup.live.ended.count == 1)
+        setup.voice.perform(.stop)
+        #expect(setup.machine.stops.count == 1, "Without a session the button does nothing")
+    }
+
+    // MARK: The timeline
+
+    @Test func anActionStandsUnderTheVoiceSentenceThatLedToIt() async {
+        let setup = Self.setup()
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        setup.media.onEvent?(Self.caption(.person, "Read the release chat"))
+        setup.machine.emit("voice.activity", Self.activity("read", status: "running", seq: 1))
+        setup.media.onEvent?(Self.caption(.model, "It shipped yesterday."))
+        setup.media.onEvent?(Self.caption(.person, "Start a chat for the notes"))
+        setup.media.onEvent?(Self.caption(.model, "Starting one."))
+        setup.machine.emit("voice.activity", Self.activity("start", status: "running", seq: 2))
+        setup.machine.emit("voice.activity", Self.activity("read", status: "completed", seq: 3))
+        let rows = setup.voice.timeline(in: "A").map(\.id)
+        #expect(
+            rows == ["line:0", "line:1", "action:read", "line:2", "line:3", "action:start"],
+            "An action that came after the person's line stands under Voice's answer")
+        #expect(setup.voice.activity.first { $0.id == "read" }?.status == "completed")
+        #expect(setup.voice.timeline(in: "B").isEmpty, "Another scene shows no timeline of this one")
+    }
+
+    @Test func aConversationThatEndedKeepsItsTimelineWithAnEndMarkerUntilTheNextStart() async {
+        let setup = Self.setup()
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        setup.machine.emit("voice.status", Self.status("active", seq: 1))
+        setup.media.onEvent?(Self.caption(.model, "Hello."))
+        #expect(setup.voice.timeline(in: "A").last?.id == "line:0")
+        setup.audio.onChange?(.interrupted)
+        #expect(setup.voice.ended)
+        #expect(setup.voice.timeline(in: "A").map(\.id) == ["line:0", "ended"])
+        #expect(setup.voice.problem(in: "A") == .message("A call or another app took the audio, so Voice stopped."))
+        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
+        #expect(!setup.voice.ended)
+        #expect(setup.voice.timeline(in: "A").isEmpty)
+    }
+
+    @Test func anActionWithoutAVoiceLineStandsAtTheTopOrUnderTheLineNobodyAnswered() {
+        let action: (String, Int?) -> VoiceActivityLine = {
+            VoiceActivityLine(id: $0, kind: "chat", status: "completed", label: "Read", detail: "", after: $1)
+        }
+        #expect(
+            VoiceTimeline.items(lines: [], activity: [action("early", nil)], ended: true).map(\.id)
+                == ["action:early", "ended"])
+        var transcript = VoiceTranscript()
+        transcript.add(LiveCaption(speaker: .person, delta: "Read it", startMs: 0, endMs: 0))
+        let items = VoiceTimeline.items(
+            lines: transcript.lines, activity: [action("early", nil), action("asked", 0), action("trimmed", -5)],
+            ended: false)
+        #expect(
+            items.map(\.id) == ["action:early", "action:trimmed", "line:0", "action:asked"],
+            "An action whose line is no longer kept stands at the top")
     }
 
     @Test func aRefusedMicrophoneAsksTheMachineNothing() async {
@@ -220,6 +389,8 @@ import Testing
         #expect(setup.voice.phase == .idle)
         #expect(setup.machine.requests.isEmpty)
         #expect(setup.voice.owner == nil)
+        #expect(!setup.voice.ended, "No conversation ran, so there is no timeline to keep")
+        #expect(setup.links.holds == [true, false])
     }
 
     @Test func aCallEndsVoiceAndARouteChangeOnlyRenamesTheOutput() async {
@@ -374,29 +545,19 @@ import Testing
 
     // MARK: A scene
 
-    @Test func aSceneWithNowhereToStartOnlyShowsThePanelAndTheOwnerStops() async {
+    @Test func theKeyboardOpensAndClosesTheSheetAndStartsNothing() async {
         let setup = Self.setup()
         let scene = VoiceScene(id: "A")
-        scene.toggle(setup.voice)
-        #expect(scene.showsPanel, "No machine offers Voice, so nothing starts")
-        #expect(setup.voice.phase == .idle)
+        scene.toggleSheet()
+        #expect(scene.showsPanel)
+        #expect(scene.proposal == nil)
+        #expect(scene.place(setup.voice) == nil, "No machine offers Voice, so the sheet offers no start")
         #expect(setup.machine.requests.isEmpty)
+        scene.toggleSheet()
+        #expect(!scene.showsPanel)
         await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
-        scene.toggle(setup.voice)
-        #expect(setup.voice.phase == .idle)
-        let other = VoiceScene(id: "B")
-        await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
-        other.toggle(setup.voice)
-        #expect(other.showsPanel, "Another scene shows where Voice runs")
-        #expect(setup.voice.isOwner("A"))
-    }
-
-    @Test func theIPadKeepsVoiceInTheInspectorBesideAnyPage() {
-        let router = PadRouter()
-        router.inspector = .voice
-        #expect(router.showsInspector, "Voice stands beside Now too")
-        router.closeProject()
-        #expect(router.inspector == .voice)
+        scene.toggleSheet()
+        #expect(setup.voice.isOwner("A"), "Opening the sheet stops nothing")
     }
 
     @Test func aNodeOpenedOnItsOwnNamesTheCanvasItStandsOn() {
@@ -484,144 +645,5 @@ import Testing
         #expect(setup.machine.requests.isEmpty)
         #expect(setup.machine.listeners == 0)
         #expect(setup.voice.preferences(machineID: "machine") == VoicePreferences(language: "nl", voice: "marin"))
-    }
-}
-
-@MainActor private final class VoiceMachine: MachineRequesting, MachineFeatures {
-    var features: Set<WireRequest> = [
-        .voiceStart, .voiceStop, .voiceConfirm, .voiceKeyStatus, .voicePreferences, .voiceSetPreferences,
-    ]
-    var requests: [(String, JSONValue)] = []
-    var keyPresent = true
-    /// What the machine stores of how Voice talks; null for none.
-    var preferences: JSONValue = .null
-    var refuseSet = false
-    var holdStart = false
-    /// What `observeConnection` answers at once, as `MachineClient` does with where its link stands.
-    var connected = true
-    private var heldStart: CheckedContinuation<JSONValue, Error>?
-    private var heldScene = ""
-    private var handlers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
-    private var connection: [UUID: @MainActor @Sendable (Bool) -> Void] = [:]
-
-    var stops: [JSONValue] { requests.filter { $0.0 == "voice.stop" }.map(\.1) }
-
-    func sent(_ type: String) -> Bool { requests.contains { $0.0 == type } }
-
-    func answers(_ type: WireRequest) -> Bool { features.contains(type) }
-
-    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
-        requests.append((type, payload))
-        switch type {
-        case "voice.keyStatus": return .object(["present": .bool(keyPresent)])
-        case "voice.start":
-            let scene = payload.text("sceneId")
-            guard holdStart else { return Self.answer(scene: scene) }
-            heldScene = scene
-            return try await withCheckedThrowingContinuation { heldStart = $0 }
-        case "voice.stop": return .object(["stopped": .bool(true)])
-        case "voice.confirm": return .object(["accepted": .bool(true)])
-        case "voice.preferences": return .object(["preferences": preferences])
-        case "voice.setPreferences":
-            guard !refuseSet else { throw MachineClientError.invalid(type) }
-            preferences = payload
-            return .object(["preferences": payload])
-        default: throw MachineClientError.invalid(type)
-        }
-    }
-
-    func answerStart() {
-        let held = heldStart
-        heldStart = nil
-        held?.resume(returning: Self.answer(scene: heldScene))
-    }
-
-    private static func answer(scene: String) -> JSONValue {
-        .object([
-            "sessionId": .string("session-1"), "sdp": .string("answer-sdp"),
-            "status": .object([
-                "sessionId": .string("session-1"), "sceneId": .string(scene), "seq": .number(0),
-                "phase": .string("starting"),
-            ]),
-        ])
-    }
-
-    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
-        let id = UUID()
-        handlers[event, default: [:]][id] = handler
-        return { [weak self] in self?.handlers[event]?.removeValue(forKey: id) }
-    }
-
-    func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void {
-        let id = UUID()
-        connection[id] = handler
-        handler(connected)
-        return { [weak self] in self?.connection.removeValue(forKey: id) }
-    }
-
-    func emit(_ event: String, _ payload: JSONValue) {
-        for handler in Array(handlers[event]?.values ?? [:].values) { handler(payload) }
-    }
-
-    func drop() {
-        for handler in Array(connection.values) { handler(false) }
-    }
-
-    /// Subscriptions still standing, events and the connection together.
-    var listeners: Int { handlers.values.reduce(0) { $0 + $1.count } + connection.count }
-}
-
-@MainActor private final class FakeMedia: VoiceMedia {
-    var onEvent: (@MainActor (VoiceMediaEvent) -> Void)?
-    var answer: String?
-    var closed = false
-    var offers = 0
-
-    func offer() async throws -> String {
-        offers += 1
-        return "offer-sdp"
-    }
-    func accept(answer: String) async throws { self.answer = answer }
-    func close() { closed = true }
-}
-
-@MainActor private final class FakeAudio: VoiceAudio {
-    var permission = MicrophonePermission.granted
-    var onChange: (@MainActor (VoiceAudioChange) -> Void)?
-    var owner: String?
-    var grants = true
-    var activations: [String] = []
-
-    func requestPermission() async -> Bool {
-        permission = grants ? .granted : .denied
-        return grants
-    }
-
-    func activate(owner: String) throws(VoiceAudioFailure) {
-        if let current = self.owner, current != owner { throw .busy }
-        self.owner = owner
-        activations.append(owner)
-    }
-
-    func deactivate(owner: String) {
-        if self.owner == owner { self.owner = nil }
-    }
-}
-
-@MainActor private final class ManualScheduler: TransportScheduling {
-    private var actions: [UUID: @MainActor () -> Void] = [:]
-
-    func after(milliseconds: Double, _ action: @escaping @MainActor () -> Void) -> () -> Void {
-        let id = UUID()
-        actions[id] = action
-        return { [weak self] in self?.actions.removeValue(forKey: id) }
-    }
-
-    var pending: Int { actions.count }
-
-    func fire() {
-        let due = Array(actions.values)
-        actions.removeAll()
-        for action in due { action() }
     }
 }

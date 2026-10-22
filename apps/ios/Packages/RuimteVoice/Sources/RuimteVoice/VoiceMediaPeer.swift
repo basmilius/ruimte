@@ -22,6 +22,9 @@ public enum VoiceMediaFailure: Error, LocalizedError, Sendable, Equatable {
     private static let gatherLimit: Duration = .seconds(5)
 
     public var onEvent: (@MainActor (VoiceMediaEvent) -> Void)?
+    public var muted = false {
+        didSet { microphone?.isEnabled = !muted }
+    }
     private var peer: RTCPeerConnection?
     private var channel: RTCDataChannel?
     private var microphone: RTCAudioTrack?
@@ -47,6 +50,7 @@ public enum VoiceMediaFailure: Error, LocalizedError, Sendable, Equatable {
         self.peer = peer
         let source = Self.factory.audioSource(with: constraints)
         let microphone = Self.factory.audioTrack(with: source, trackId: "voice-microphone")
+        microphone.isEnabled = !muted
         self.microphone = microphone
         guard peer.add(microphone, streamIds: ["voice"]) != nil else {
             throw Self.failure(String(localized: "WebRTC could not add the microphone.", bundle: .module))
@@ -74,6 +78,16 @@ public enum VoiceMediaFailure: Error, LocalizedError, Sendable, Equatable {
         guard let peer else { throw Self.failure(String(localized: "The Voice connection closed.", bundle: .module)) }
         try await peer.setRemoteDescription(RTCSessionDescription(type: .answer, sdp: answer))
         try checkOpen()
+    }
+
+    public func levels() async -> VoiceLevels? {
+        guard !ended, let peer else { return nil }
+        return await withCheckedContinuation { continuation in
+            peer.statistics { report in
+                let stats = report.statistics.values.map { (type: $0.type, values: $0.values as [String: Any]) }
+                continuation.resume(returning: VoiceLevels.read(stats))
+            }
+        }
     }
 
     public func close() {

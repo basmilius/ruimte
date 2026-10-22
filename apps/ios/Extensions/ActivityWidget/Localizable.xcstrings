@@ -258,6 +258,16 @@
         }
       }
     },
+    "Connecting to Voice" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbinden met Voice"
+          }
+        }
+      }
+    },
     "How many agents wait for you, and how many are working." : {
       "localizations" : {
         "nl" : {
@@ -284,6 +294,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Machine"
+          }
+        }
+      }
+    },
+    "Microphone muted" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Microfoon gedempt"
+          }
+        }
+      }
+    },
+    "Mute" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dempen"
+          }
+        }
+      }
+    },
+    "Mute or unmute the microphone" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Microfoon dempen of weer aanzetten"
           }
         }
       }
@@ -479,6 +519,36 @@
         }
       }
     },
+    "Stop" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stoppen"
+          }
+        }
+      }
+    },
+    "Stop Voice" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice stoppen"
+          }
+        }
+      }
+    },
+    "Stopping Voice" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice stopt"
+          }
+        }
+      }
+    },
     "Terminal agent" : {
       "localizations" : {
         "nl" : {
@@ -559,6 +629,16 @@
         }
       }
     },
+    "Unmute" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dempen opheffen"
+          }
+        }
+      }
+    },
     "Usage" : {
       "localizations" : {
         "nl" : {
@@ -575,6 +655,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verbruikslimieten en de kosten van vandaag van één machine."
+          }
+        }
+      }
+    },
+    "Voice ended" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice beëindigd"
+          }
+        }
+      }
+    },
+    "Voice is listening" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice luistert"
+          }
+        }
+      }
+    },
+    "Voice is speaking" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice spreekt"
+          }
+        }
+      }
+    },
+    "Voice is working" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice is bezig"
+          }
+        }
+      }
+    },
+    "Voice stopped" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice gestopt"
           }
         }
       }

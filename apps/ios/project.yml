@@ -47,6 +47,7 @@ targets:
     platform: iOS
     sources:
       - path: App
+      - path: Shared
       - path: ../../assets/AppIcon.icon
         type: file
         buildPhase: resources
@@ -98,7 +99,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         RuimtePushKeychainGroup: $(AppIdentifierPrefix)app.ruimte.mobile.push
-        UIBackgroundModes: [remote-notification, fetch]
+        UIBackgroundModes: [audio, remote-notification, fetch]
         BGTaskSchedulerPermittedIdentifiers: [app.ruimte.mobile.usage-widget]
         NSSupportsLiveActivities: true
         ITSAppUsesNonExemptEncryption: false
@@ -150,6 +151,7 @@ targets:
     platform: iOS
     sources:
       - path: Extensions/ActivityWidget
+      - path: Shared
       - path: App/PrivacyInfo.xcprivacy
     dependencies:
       - package: LucideSwift

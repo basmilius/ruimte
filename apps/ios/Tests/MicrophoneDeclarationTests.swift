@@ -47,7 +47,7 @@ final class MicrophoneDeclarationTests: XCTestCase {
         XCTAssertTrue(plist.contains("NSCameraUsageDescription"))
         XCTAssertTrue(plist.contains("<string>remote-notification</string>"))
         XCTAssertTrue(plist.contains("<string>fetch</string>"))
-        XCTAssertFalse(plist.contains("<string>audio</string>"), "Voice ends in the background and plays no audio there")
+        XCTAssertTrue(plist.contains("<string>audio</string>"), "Voice goes on in the background and on a locked screen")
     }
 
     func testTheMicrophonePromptHasItsWordsInBothLanguages() throws {

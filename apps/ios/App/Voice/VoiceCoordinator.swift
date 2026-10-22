@@ -12,6 +12,7 @@ struct VoiceTarget: Equatable {
     var projectID: String?
     var projectName: String?
     var viewID: String?
+    var machineName: String?
 }
 
 /// The requests a machine names in `endpoint.info`. `MachineClient` reads them; a test machine says what it answers.
@@ -28,6 +29,16 @@ struct VoiceActivityLine: Identifiable, Equatable {
     let status: String
     let label: String
     let detail: String
+    /// The transcript line that was the last one when the phone first heard of this entry, which places it in the
+    /// timeline. The entry's own `at` is on the machine's clock and the captions on this phone's, so arrival orders
+    /// them instead.
+    var after: Int?
+}
+
+/// Shows Voice's Live Activity. The coordinator says what it shows; the presenter starts, updates and ends it.
+@MainActor protocol VoiceLivePresenting: AnyObject {
+    func show(_ content: VoiceLiveContent, machine: String)
+    func end(_ content: VoiceLiveContent)
 }
 
 /// Voice on this phone: one session per app process, owned by the scene that started it. The machine mints the
@@ -36,8 +47,8 @@ struct VoiceActivityLine: Identifiable, Equatable {
 ///
 /// Every request after `voice.start` names the scene, and the events are taken only for the owner's scene and
 /// session, since the scenes of an iPad share one link. A second scene sees where Voice runs and does not take the
-/// microphone over. The owner going to the background, the screen locking, a call, the machine link or the media
-/// dropping all end the session: there is no resume.
+/// microphone over. Voice keeps running in the background and on a locked screen, holding the machine links open
+/// meanwhile; a call, the machine link or the media dropping end the session, and there is no resume.
 @MainActor @Observable
 final class VoiceCoordinator {
     enum Phase: Equatable {
@@ -58,6 +69,12 @@ final class VoiceCoordinator {
     static let keptActivity = 60
     /// Events that come before the start answered, which name a session the phone does not know yet.
     static let keptEarlyEvents = 32
+    /// How long after the last caption of the reply Voice still counts as speaking. The captions come in pieces as the
+    /// reply plays, with gaps between them.
+    static let speakingHoldMs: Double = 1_200
+    /// The scene that keeps the machine links open while Voice runs, also with every scene of the app in the
+    /// background.
+    static let linkScene = "voice"
 
     private(set) var phase = Phase.idle
     /// The scene that holds Voice, while a session starts or runs.
@@ -69,6 +86,15 @@ final class VoiceCoordinator {
     private(set) var sessionID: String?
     private(set) var transcript = VoiceTranscript()
     private(set) var activity: [VoiceActivityLine] = []
+    /// The last conversation of `lastScene` ended, and its timeline stays until the next start.
+    private(set) var ended = false
+    /// The microphone is off while the session goes on.
+    private(set) var muted = false
+    /// The reply plays now, as its captions come in.
+    private(set) var speaking = false
+    /// When the session went active.
+    private(set) var startedAt: Date?
+    private(set) var levels = VoiceLevelHistory()
     /// Where the reply plays, as iOS names the route.
     private(set) var route: String?
     /// Per machine, whether it holds an OpenAI key for Voice, as `voice.keyStatus` last said.
@@ -87,6 +113,9 @@ final class VoiceCoordinator {
     @ObservationIgnored private let deviceLanguage: () -> String
     @ObservationIgnored private let makeID: () -> String
     @ObservationIgnored private let timeZone: () -> String
+    @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored private let live: any VoiceLivePresenting
+    @ObservationIgnored private let holdLinks: @MainActor (Bool) -> Void
     @ObservationIgnored let declaresMicrophone: Bool
 
     @ObservationIgnored private var client: (any MachineRequesting)?
@@ -96,6 +125,9 @@ final class VoiceCoordinator {
     @ObservationIgnored private var early: [JSONValue] = []
     @ObservationIgnored private var subscriptions: [() -> Void] = []
     @ObservationIgnored private var cancelDeadline: (() -> Void)?
+    @ObservationIgnored private var cancelSpeaking: (() -> Void)?
+    /// What the Live Activity shows now; nil while there is none.
+    @ObservationIgnored private var shown: VoiceLiveContent?
     /// Per machine, the `voice.preferences` event this phone follows.
     @ObservationIgnored private var preferenceWatches: [String: () -> Void] = [:]
     /// Moves with every start and every end, so what a start awaited finds out it no longer counts.
@@ -107,6 +139,9 @@ final class VoiceCoordinator {
         deviceLanguage: @escaping () -> String = { VoicePreferences.defaultLanguage() },
         makeID: @escaping () -> String = { UUID().uuidString },
         timeZone: @escaping () -> String = { TimeZone.current.identifier },
+        now: @escaping () -> Date = { Date() },
+        live: any VoiceLivePresenting,
+        holdLinks: @escaping @MainActor (Bool) -> Void = { _ in },
         declaresMicrophone: Bool = VoiceCoordinator.appDeclaresMicrophone
     ) {
         makeMedia = media
@@ -115,6 +150,9 @@ final class VoiceCoordinator {
         self.deviceLanguage = deviceLanguage
         self.makeID = makeID
         self.timeZone = timeZone
+        self.now = now
+        self.live = live
+        self.holdLinks = holdLinks
         self.declaresMicrophone = declaresMicrophone
     }
 
@@ -210,7 +248,11 @@ final class VoiceCoordinator {
     /// What a scene shows of the last session that ran in it.
     func problem(in scene: String) -> Problem? { lastScene == scene ? problem : nil }
 
-    func dismissProblem() { problem = nil }
+    /// The timeline a scene shows: the conversation that runs in it, or the last one that ended there.
+    func timeline(in scene: String) -> [VoiceTimelineItem] {
+        guard lastScene == scene, owner == scene || ended else { return [] }
+        return VoiceTimeline.items(lines: transcript.lines, activity: activity, ended: owner == nil && ended)
+    }
 
     // MARK: Starting and stopping
 
@@ -232,7 +274,13 @@ final class VoiceCoordinator {
         route = nil
         transcript.clear()
         activity = []
+        ended = false
+        muted = false
+        speaking = false
+        startedAt = nil
+        levels.clear()
         phase = .connecting
+        holdLinks(true)
         if audio.permission == .undetermined {
             _ = await audio.requestPermission()
             guard current == attempt else { return }
@@ -248,6 +296,7 @@ final class VoiceCoordinator {
         guard current == attempt else { return }
         let media = makeMedia()
         self.media = media
+        media.muted = muted
         media.onEvent = { [weak self] event in self?.mediaEvent(event, attempt: current) }
         cancelDeadline = scheduler.after(milliseconds: Self.startDeadlineMs) { [weak self] in
             guard let self, current == attempt, sessionID == nil else { return }
@@ -296,22 +345,34 @@ final class VoiceCoordinator {
         end(nil, tellMachine: true)
     }
 
-    /// The scene went to the background, or came back. Only the owner going away ends Voice; another scene going away
-    /// does nothing, even while it held the machine link.
-    func scene(_ scene: String, background: Bool) {
-        guard background, owner == scene else { return }
-        end(.message(String(localized: "Voice stopped when Ruimte went to the background.")), tellMachine: true)
-    }
-
     func sceneClosed(_ scene: String) {
         guard owner == scene else { return }
         end(nil, tellMachine: true)
     }
 
-    /// The screen locked. A locked phone ends Voice; what Voice started on the machine goes on.
-    func deviceLocked() {
-        guard owner != nil else { return }
-        end(.message(String(localized: "Voice stopped when the screen locked.")), tellMachine: true)
+    /// Turns the microphone off or on again; the session and the reply go on either way.
+    func setMuted(_ muted: Bool, scene: String) {
+        guard owner == scene else { return }
+        self.muted = muted
+        media?.muted = muted
+        publishLive()
+    }
+
+    /// A button of the Live Activity, which acts on the session whichever scene holds it.
+    func perform(_ command: VoiceLiveCommands.Command) {
+        guard let owner else { return }
+        switch command {
+        case .stop: stop(scene: owner)
+        case .toggleMute: setMuted(!muted, scene: owner)
+        }
+    }
+
+    /// Reads how loud both sides are once; the sheet asks on a clock of its own while its band shows. A muted
+    /// microphone draws as silence.
+    func sampleLevels() async {
+        guard let media, owner != nil else { return }
+        guard let read = await media.levels(), media === self.media else { return }
+        levels.add(muted ? VoiceLevels(person: 0, voice: read.voice) : read)
     }
 
     /// The person's answer to an action that asked first.
@@ -371,15 +432,21 @@ final class VoiceCoordinator {
         if let project = status["project"] { follow(project) }
         switch status.text("phase") {
         case "starting": phase = .connecting
-        case "active": phase = .active
+        case "active":
+            phase = .active
+            if startedAt == nil { startedAt = now() }
         case "stopping": phase = .stopping
-        case "closed": end(nil, tellMachine: false)
+        case "closed":
+            end(nil, tellMachine: false)
+            return
         case "failed":
             let said = status["error"]?.text("message") ?? ""
             let message = said.isEmpty ? String(localized: "Voice stopped on the machine.") : said
             end(.message(message), tellMachine: false)
+            return
         default: break
         }
+        publishLive()
     }
 
     /// The project the machine says Voice works in now; null for none. The canvas on screen belongs to the project
@@ -391,31 +458,82 @@ final class VoiceCoordinator {
         if target.projectID == projectID {
             self.target?.projectName = name
         } else {
-            self.target = VoiceTarget(machineID: target.machineID, projectID: projectID, projectName: name)
+            self.target = VoiceTarget(
+                machineID: target.machineID, projectID: projectID, projectName: name, machineName: target.machineName)
         }
     }
 
     private func note(_ entry: JSONValue) {
-        let line = VoiceActivityLine(
+        var line = VoiceActivityLine(
             id: entry.text("id"), kind: entry.text("kind"), status: entry.text("status"), label: entry.text("label"),
-            detail: entry.text("detail"))
+            detail: entry.text("detail"), after: transcript.lines.last?.id)
         if let index = activity.firstIndex(where: { $0.id == line.id }) {
+            line.after = activity[index].after
             activity[index] = line
-            return
+        } else {
+            activity.append(line)
+            if activity.count > Self.keptActivity { activity.removeFirst(activity.count - Self.keptActivity) }
         }
-        activity.append(line)
-        if activity.count > Self.keptActivity { activity.removeFirst(activity.count - Self.keptActivity) }
+        publishLive()
     }
 
     private func mediaEvent(_ event: VoiceMediaEvent, attempt current: Int) {
         guard current == attempt else { return }
         switch event {
-        case .caption(let caption): transcript.add(caption)
+        case .caption(let caption):
+            transcript.add(caption)
+            heard(caption.speaker)
         case .started: break
         case .lost:
             let message = String(localized: "The audio connection to OpenAI dropped, so Voice stopped.")
             end(.message(message), tellMachine: true)
         }
+    }
+
+    /// The reply speaks while its captions come in and a moment after; the person speaking ends it, as they speak over
+    /// it.
+    private func heard(_ speaker: VoiceSpeaker) {
+        cancelSpeaking?()
+        cancelSpeaking = nil
+        guard speaker == .model else {
+            setSpeaking(false)
+            return
+        }
+        setSpeaking(true)
+        cancelSpeaking = scheduler.after(milliseconds: Self.speakingHoldMs) { [weak self] in
+            self?.cancelSpeaking = nil
+            self?.setSpeaking(false)
+        }
+    }
+
+    private func setSpeaking(_ speaking: Bool) {
+        guard self.speaking != speaking else { return }
+        self.speaking = speaking
+        publishLive()
+    }
+
+    // MARK: The Live Activity
+
+    /// What the Live Activity shows of the session now. It starts once the session went active, so a start that fails
+    /// leaves none behind.
+    var liveContent: VoiceLiveContent? {
+        guard owner != nil, shown != nil || phase == .active else { return nil }
+        let running = activity.last { $0.status == "running" }
+        let livePhase: VoiceLiveContent.Phase =
+            switch phase {
+            case .idle, .connecting: .connecting
+            case .stopping: .stopping
+            case .active: running != nil ? .acting : speaking ? .speaking : .listening
+            }
+        return VoiceLiveContent(
+            phase: livePhase, muted: muted, action: running?.label, project: target?.projectName,
+            startedAt: startedAt)
+    }
+
+    private func publishLive() {
+        guard let content = liveContent, content != shown else { return }
+        shown = content
+        live.show(content, machine: target?.machineName ?? "")
     }
 
     private func audioChanged(_ change: VoiceAudioChange) {
@@ -450,12 +568,15 @@ final class VoiceCoordinator {
         }
         cancelDeadline?()
         cancelDeadline = nil
+        cancelSpeaking?()
+        cancelSpeaking = nil
         for cancel in subscriptions { cancel() }
         subscriptions = []
         media?.onEvent = nil
         media?.close()
         media = nil
         audio.deactivate(owner: scene)
+        ended = sessionID != nil || !transcript.lines.isEmpty || !activity.isEmpty
         owner = nil
         client = nil
         sessionID = nil
@@ -463,7 +584,19 @@ final class VoiceCoordinator {
         seq = -1
         early = []
         phase = .idle
+        speaking = false
+        muted = false
         self.problem = problem
+        if let shown {
+            var last = shown
+            last.phase = .ended
+            last.muted = false
+            last.action = nil
+            last.problem = problem.map(VoiceText.problem)
+            live.end(last)
+            self.shown = nil
+        }
+        holdLinks(false)
     }
 
     private static func stop(client: any MachineRequesting, scene: String, field: String, id: String) {

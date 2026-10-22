@@ -2,49 +2,53 @@ import Observation
 import SwiftUI
 import UIKit
 
-/// What Voice is in one scene: its id on the wire, whether its panel shows, and the project it has open, which a
-/// start from the keyboard or the caption bar starts in. Without a project Voice starts on a machine of its own
-/// choosing, and the machine picks the project.
+/// What Voice is in one scene: its id on the wire, whether its sheet shows, and where a start from that sheet goes.
+/// The mic proposes the project on screen, or the machine of the project opened last; the person may pick another
+/// place in the sheet. Without a project Voice starts on that machine, and the machine picks the project.
 @MainActor @Observable
 final class VoiceScene {
+    typealias Place = (target: VoiceTarget, session: SharedMachineSession)
+
     let id: String
-    /// The iPhone's sheet with the timeline.
     var showsPanel = false
+    /// What the mic or the keyboard proposed when the sheet opened.
+    private(set) var proposal: Place?
+    /// The place the person picked in the sheet, until it closes.
+    var picked: Place?
     /// The project this scene shows, set by its home.
-    @ObservationIgnored var openTarget: () -> (VoiceTarget, SharedMachineSession)? = { nil }
+    @ObservationIgnored var openTarget: () -> Place? = { nil }
     /// Where a start without a project on screen goes, set by the app's home.
-    @ObservationIgnored var startingPoint: () -> (VoiceTarget, SharedMachineSession)? = { nil }
-    /// The iPad puts the panel in its inspector instead of a sheet.
-    @ObservationIgnored var presentPanel: (() -> Void)?
+    @ObservationIgnored var startingPoint: () -> Place? = { nil }
 
     init(id: String) { self.id = id }
 
-    func showPanel() {
-        if let presentPanel { presentPanel() } else { showsPanel = true }
+    /// Opens the sheet, proposing `target` as the place to talk about, else the project the scene shows.
+    func showPanel(proposing target: Place? = nil) {
+        proposal = target ?? openTarget()
+        picked = nil
+        showsPanel = true
     }
 
-    /// The mic button and ⌘⇧M: stop Voice here, or start it in what the scene shows, or else where `startingPoint`
-    /// says. With no machine that offers Voice it only shows the panel.
-    func toggle(_ voice: VoiceCoordinator) {
-        if voice.isOwner(id) {
-            voice.stop(scene: id)
-            return
-        }
-        guard !voice.runsElsewhere(than: id) else {
+    /// ⌘⇧M opens the sheet, and closes it again.
+    func toggleSheet() {
+        if showsPanel {
+            showsPanel = false
+        } else {
             showPanel()
-            return
         }
-        let open = openTarget().flatMap { voice.offers(machineID: $0.0.machineID, client: $0.1.rpc) ? $0 : nil }
-        guard let start = open ?? startingPoint() else {
-            showPanel()
-            return
-        }
-        self.start(voice, target: start.0, session: start.1)
     }
 
-    func start(_ voice: VoiceCoordinator, target: VoiceTarget, session: SharedMachineSession) {
-        if presentPanel != nil { showPanel() }
-        Task { await voice.start(scene: id, target: target, client: session.rpc) }
+    /// Where Start Voice goes: the place picked, else the one proposed while its machine offers Voice, else the
+    /// starting point. Nil while no machine offers Voice.
+    func place(_ voice: VoiceCoordinator) -> Place? {
+        let offered = [picked, proposal].lazy.compactMap { $0 }.first {
+            voice.offers(machineID: $0.target.machineID, client: $0.session.rpc)
+        }
+        return offered ?? startingPoint()
+    }
+
+    func start(_ voice: VoiceCoordinator, at place: Place) {
+        Task { await voice.start(scene: id, target: place.target, client: place.session.rpc) }
     }
 }
 
@@ -52,8 +56,8 @@ extension EnvironmentValues {
     @Entry var voiceScene: VoiceScene?
 }
 
-/// ⌘⇧M on an iPad keyboard, a `UIKeyCommand` on the window's root view controller, so it answers whatever the scene
-/// shows, a presented sheet included, whose responder chain runs through the controller that presented it.
+/// ⌘⇧M on a keyboard, a `UIKeyCommand` on the window's root view controller, so it answers whatever the scene shows,
+/// a presented sheet included, whose responder chain runs through the controller that presented it.
 @MainActor enum VoiceKeyCommand {
     static let input = "m"
     static let modifiers: UIKeyModifierFlags = [.command, .shift]
@@ -62,17 +66,16 @@ extension EnvironmentValues {
     private struct Registration {
         weak var window: UIWindow?
         weak var scene: VoiceScene?
-        let voice: VoiceCoordinator
     }
 
-    static func install(in window: UIWindow, scene: VoiceScene, voice: VoiceCoordinator) {
+    static func install(in window: UIWindow, scene: VoiceScene) {
         scenes = scenes.filter { $0.value.window != nil }
-        scenes[ObjectIdentifier(window)] = Registration(window: window, scene: scene, voice: voice)
+        scenes[ObjectIdentifier(window)] = Registration(window: window, scene: scene)
         guard let root = window.rootViewController,
             !(root.keyCommands ?? []).contains(where: { $0.input == input && $0.modifierFlags == modifiers })
         else { return }
         let command = UIKeyCommand(
-            title: String(localized: "Start or stop Voice"), action: #selector(UIViewController.toggleRuimteVoice(_:)),
+            title: String(localized: "Show Voice"), action: #selector(UIViewController.toggleRuimteVoice(_:)),
             input: input, modifierFlags: modifiers)
         command.discoverabilityTitle = String(localized: "Voice")
         root.addKeyCommand(command)
@@ -82,7 +85,7 @@ extension EnvironmentValues {
         guard let window, let registration = scenes[ObjectIdentifier(window)], let scene = registration.scene else {
             return
         }
-        scene.toggle(registration.voice)
+        scene.toggleSheet()
     }
 }
 
