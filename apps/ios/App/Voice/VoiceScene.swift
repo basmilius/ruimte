@@ -3,8 +3,9 @@ import SwiftUI
 import UIKit
 
 /// What Voice is in one scene: its id on the wire, whether its sheet shows, and where a start from that sheet goes.
-/// The mic proposes the project on screen, or the machine of the project opened last; the person may pick another
-/// place in the sheet. Without a project Voice starts on that machine, and the machine picks the project.
+/// The mic proposes the project on screen, or the machine of the project opened last. Without a project Voice starts on
+/// that machine, and the machine picks the project. There is nothing to choose: a session talks about every project of
+/// its machine and moves between them, as on the desktop.
 @MainActor @Observable
 final class VoiceScene {
     typealias Place = (target: VoiceTarget, session: SharedMachineSession)
@@ -13,8 +14,6 @@ final class VoiceScene {
     var showsPanel = false
     /// What the mic or the keyboard proposed when the sheet opened.
     private(set) var proposal: Place?
-    /// The place the person picked in the sheet, until it closes.
-    var picked: Place?
     /// The project this scene shows, set by its home.
     @ObservationIgnored var openTarget: () -> Place? = { nil }
     /// Where a start without a project on screen goes, set by the app's home.
@@ -25,7 +24,6 @@ final class VoiceScene {
     /// Opens the sheet, proposing `target` as the place to talk about, else the project the scene shows.
     func showPanel(proposing target: Place? = nil) {
         proposal = target ?? openTarget()
-        picked = nil
         showsPanel = true
     }
 
@@ -38,13 +36,13 @@ final class VoiceScene {
         }
     }
 
-    /// Where Start Voice goes: the place picked, else the one proposed while its machine offers Voice, else the
-    /// starting point. Nil while no machine offers Voice.
+    /// Where Start Voice goes: the place proposed while its machine offers Voice, else the starting point. Nil while no
+    /// machine offers Voice.
     func place(_ voice: VoiceCoordinator) -> Place? {
-        let offered = [picked, proposal].lazy.compactMap { $0 }.first {
-            voice.offers(machineID: $0.target.machineID, client: $0.session.rpc)
+        if let proposal, voice.offers(machineID: proposal.target.machineID, client: proposal.session.rpc) {
+            return proposal
         }
-        return offered ?? startingPoint()
+        return startingPoint()
     }
 
     func start(_ voice: VoiceCoordinator, at place: Place) {

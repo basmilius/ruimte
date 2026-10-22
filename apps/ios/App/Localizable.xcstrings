@@ -309,16 +309,6 @@
         }
       }
     },
-    "Choose another project" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kies een ander project"
-          }
-        }
-      }
-    },
     "Clean" : {
       "localizations" : {
         "nl" : {
@@ -1008,16 +998,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Praat met je werkruimte"
-          }
-        }
-      }
-    },
-    "The project opened last" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Het laatst geopende project"
           }
         }
       }
@@ -23615,12 +23595,13 @@
         }
       }
     },
-    "Talk about" : {
+    "Voice starts on %@" : {
+      "comment" : "%@ is the name of a machine",
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Praat over"
+            "value" : "Voice start op %@"
           }
         }
       }

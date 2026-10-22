@@ -229,9 +229,10 @@ its `oai-events` channel is ignored. `RuimteTransport` stays without audio.
   holds a key; a machine without a key offers no mic. The mic and ⌘⇧M open the Voice sheet (`VoicePanel`), the same
   on an iPhone and an iPad, and Start Voice there starts. In a project the sheet proposes that project as the starting
   point; on Now, or ⌘⇧M without a project, the machine of the project opened last (else the first machine that offers
-  Voice) without one, and the machine starts in its project opened last. Talk about opens `VoiceProjectPicker` for
-  another place. A session talks about every project in use on its machine and moves between them; the place the sheet
-  and the Live Activity name follows `project` in `voice.status`. No machine that offers Voice, no mic.
+  Voice) without one, and the machine starts in its project opened last. As on the desktop there is no project to
+  choose: a session talks about every project in use on its machine and moves between them, and the place the sheet
+  and the Live Activity name follows `project` in `voice.status`. With more than one machine offering Voice, the idle
+  sheet names the machine a start goes to. No machine that offers Voice, no mic.
 - One session per app process, owned by the scene that started it (`VoiceCoordinator`). Every request after
   `voice.start` names the scene, and the events count only for the owner's scene and session, since the scenes of an
   iPad share one link. Another scene shows where Voice runs and does not take the microphone over.

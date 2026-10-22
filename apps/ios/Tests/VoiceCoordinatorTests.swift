@@ -560,6 +560,36 @@ import Testing
         #expect(setup.voice.isOwner("A"), "Opening the sheet stops nothing")
     }
 
+    @Test func aStartGoesWhereTheMicProposedWhileItsMachineOffersVoiceElseToTheStartingPoint() async {
+        let setup = Self.setup()
+        await setup.voice.refreshKey(machineID: "machine", client: setup.machine)
+        let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
+        defer { runtime.connections.shutdown() }
+        let session: (String) -> SharedMachineSession = { id in
+            SharedMachineSession(
+                machine: Machine(
+                    id: id, name: id, icon: nil, publicKey: String(repeating: "A", count: 43),
+                    brokerUrl: "wss://broker.test", lastSeenAt: nil),
+                runtime: runtime)
+        }
+        let offering = session("machine")
+        offering.rpc.setFeatures(["voice.start", "voice.keyStatus"])
+        let silent = session("other")
+        let fallback = (target: VoiceTarget(machineID: "machine", machineName: "machine"), session: offering)
+        let scene = VoiceScene(id: "A")
+        scene.startingPoint = { fallback }
+
+        scene.showPanel(proposing: (Self.target, offering))
+        #expect(scene.place(setup.voice)?.target == Self.target)
+
+        scene.showPanel(proposing: (VoiceTarget(machineID: "other", projectID: "p", projectName: "P"), silent))
+        #expect(scene.place(setup.voice)?.target == fallback.target, "A machine without Voice is never proposed")
+
+        scene.openTarget = { nil }
+        scene.showPanel()
+        #expect(scene.place(setup.voice)?.target.projectID == nil, "Without a project the machine picks one")
+    }
+
     @Test func aNodeOpenedOnItsOwnNamesTheCanvasItStandsOn() {
         let node: (String) -> JSONValue = { .object(["id": .string($0), "kind": .string("chat")]) }
         let views: [JSONValue] = [

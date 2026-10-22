@@ -81,6 +81,7 @@ import UIKit
         let idle = Self.stage()
         try await Self.render(sheet(idle.voice), name: "1-idle-dark")
         try await Self.render(sheet(idle.voice), name: "2-idle-light", dark: false)
+        try await Self.render(sheet(idle.voice, namesMachine: true), name: "2b-idle-two-machines")
 
         let connecting = Self.stage()
         connecting.machine.holdStart = true
@@ -143,9 +144,10 @@ import UIKit
     }
 
     private func sheet(
-        _ voice: VoiceCoordinator, scene: String = "A", place: VoiceTarget? = VoiceSheetSnapshots.place
+        _ voice: VoiceCoordinator, scene: String = "A", place: VoiceTarget? = VoiceSheetSnapshots.place,
+        namesMachine: Bool = false
     ) -> some View {
-        VoiceSheet(voice: voice, scene: scene, place: place, start: {}, pickPlace: {}, close: {})
+        VoiceSheet(voice: voice, scene: scene, place: place, namesMachine: namesMachine, start: {}, close: {})
     }
 
     /// Draws `view` in a window of its own over the app, presented as a sheet unless `presented` is false.
@@ -159,7 +161,7 @@ import UIKit
         if presented {
             window.rootViewController = UIHostingController(
                 rootView: Color.black.ignoresSafeArea().sheet(isPresented: .constant(true)) {
-                    NavigationStack { view.toolbar(.hidden, for: .navigationBar) }.modifier(VoiceSheetSurface())
+                    view.modifier(VoiceSheetSurface())
                 })
         } else {
             window.rootViewController = UIHostingController(rootView: view.ignoresSafeArea())

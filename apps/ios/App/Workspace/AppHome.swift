@@ -59,7 +59,7 @@ struct AppHome: View {
         }
         .environment(\.openMobileWorkspace, OpenMobileWorkspaceAction(id: sceneID, action: openWorkspace))
         .environment(\.voiceScene, voiceScene)
-        .sheet(isPresented: voicePanel) { VoicePanel(runtime: runtime, now: now, scene: voiceScene) }
+        .sheet(isPresented: voicePanel) { VoicePanel(runtime: runtime, scene: voiceScene) }
         .background { VoiceKeyWatch(runtime: runtime) }
         .onAppear { voiceScene.startingPoint = { [runtime, now] in runtime.voiceStartingPoint(now: now) } }
         .onChange(of: window) { _, window in

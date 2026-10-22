@@ -4,32 +4,21 @@ import RuimteVoice
 import SwiftUI
 import UIKit
 
-/// The Voice sheet of a scene, the same on an iPhone and an iPad: the sheet itself, and the project picker it pushes
-/// for the place to talk about.
+/// The Voice sheet of a scene, the same on an iPhone and an iPad.
 struct VoicePanel: View {
     let runtime: AppRuntime
-    let now: NowModel
     let scene: VoiceScene
-    @State private var picking = false
 
     var body: some View {
-        NavigationStack {
-            VoiceSheet(
-                voice: runtime.voice, scene: scene.id, place: scene.place(runtime.voice)?.target,
-                start: {
-                    guard let place = scene.place(runtime.voice) else { return }
-                    scene.start(runtime.voice, at: place)
-                },
-                pickPlace: { picking = true }, close: { scene.showsPanel = false }
-            )
-            .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(isPresented: $picking) {
-                VoiceProjectPicker(runtime: runtime, now: now) { place in
-                    scene.picked = place
-                    picking = false
-                }
-            }
-        }
+        VoiceSheet(
+            voice: runtime.voice, scene: scene.id, place: scene.place(runtime.voice)?.target,
+            namesMachine: runtime.voiceMachines.count > 1,
+            start: {
+                guard let place = scene.place(runtime.voice) else { return }
+                scene.start(runtime.voice, at: place)
+            },
+            close: { scene.showsPanel = false }
+        )
         .modifier(VoiceSheetSurface())
     }
 }
@@ -41,7 +30,6 @@ struct VoiceSheetSurface: ViewModifier {
             .foregroundStyle(MobileStyle.text)
             .tint(MobileStyle.accent)
             .background(MobileStyle.canvas.ignoresSafeArea())
-            .containerBackground(MobileStyle.canvas, for: .navigation)
             .presentationBackground(MobileStyle.canvas)
             .presentationDragIndicator(.visible)
             .presentationSizing(.form)
@@ -49,14 +37,15 @@ struct VoiceSheetSurface: ViewModifier {
 }
 
 /// What the sheet shows: Voice's band, the timeline of the conversation, and Start or Mute and Stop. While no session
-/// runs it explains Voice and names the place a start talks about.
+/// runs it explains Voice.
 struct VoiceSheet: View {
     let voice: VoiceCoordinator
     let scene: String
     /// Where Start Voice goes; nil while no machine offers Voice.
     let place: VoiceTarget?
+    /// Whether more than one machine offers Voice, so the sheet says which one a start goes to.
+    var namesMachine = false
     let start: () -> Void
-    let pickPlace: () -> Void
     let close: () -> Void
 
     private var running: Bool { voice.isOwner(scene) }
@@ -193,14 +182,15 @@ struct VoiceSheet: View {
             }
         } else if !elsewhere, let place {
             VStack(spacing: 12) {
-                Button(action: pickPlace) { VoicePlaceRow(place: place) }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("voice.panel.place")
                 Button(action: start) {
                     Label(String(localized: "Start Voice"), lucideIcon: "mic")
                 }
                 .buttonStyle(SolidCapsuleButtonStyle())
                 .accessibilityIdentifier("voice.panel.start")
+                if namesMachine, let machine = place.machineName, !machine.isEmpty {
+                    Text("Voice starts on \(machine)")
+                        .font(.footnote).foregroundStyle(MobileStyle.muted).lineLimit(1).truncationMode(.middle)
+                }
             }
         }
     }
@@ -262,38 +252,6 @@ private struct VoiceHero<Actions: View>: View {
 extension VoiceHero where Actions == EmptyView {
     init(title: String, message: String) {
         self.init(title: title, message: message) { EmptyView() }
-    }
-}
-
-/// The place a start talks about, which opens the picker.
-private struct VoicePlaceRow: View {
-    let place: VoiceTarget
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(lucide: "folder", size: 20).foregroundStyle(MobileStyle.muted)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Talk about").font(.footnote).foregroundStyle(MobileStyle.muted)
-                Text(line).font(.body).lineLimit(1).truncationMode(.middle)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Image(lucide: "chevrons-up-down", size: 16).foregroundStyle(MobileStyle.muted)
-        }
-        .padding(.horizontal, 16).padding(.vertical, 12)
-        .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 16))
-        .contentShape(RoundedRectangle(cornerRadius: 16))
-        .accessibilityElement(children: .combine)
-        .accessibilityHint("Choose another project")
-    }
-
-    /// The project in the text color and its machine muted beside it.
-    private var line: AttributedString {
-        var project = AttributedString(place.projectName ?? String(localized: "The project opened last"))
-        project.foregroundColor = MobileStyle.text
-        guard let machine = place.machineName, !machine.isEmpty else { return project }
-        var rest = AttributedString(" · \(machine)")
-        rest.foregroundColor = MobileStyle.muted
-        return project + rest
     }
 }
 

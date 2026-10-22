@@ -32,53 +32,6 @@ struct VoiceMicButton: View {
     }
 }
 
-/// An open project of a machine that offers Voice, as the place a session starts in; it then moves between the
-/// projects of that machine.
-struct VoiceProjectPicker: View {
-    let runtime: AppRuntime
-    let now: NowModel
-    let picked: (VoiceScene.Place) -> Void
-
-    private var voice: VoiceCoordinator { runtime.voice }
-
-    var body: some View {
-        MobileForm {
-            let offering = runtime.machines.filter {
-                voice.offers(machineID: $0.id, client: runtime.session(for: $0).rpc)
-            }
-            if offering.isEmpty {
-                ContentUnavailableView(
-                    String(localized: "No machine offers Voice"), lucideIcon: "mic-off",
-                    description: Text("A machine offers Voice once it has an OpenAI key."))
-            }
-            ForEach(offering, id: \.id) { machine in
-                Section(machine.name) {
-                    let projects = now.chatProjects(on: machine.id)
-                    if projects.isEmpty {
-                        Text("No open projects").foregroundStyle(MobileStyle.muted)
-                    }
-                    ForEach(projects) { project in
-                        Button {
-                            picked(
-                                (
-                                    VoiceTarget(
-                                        machineID: machine.id, projectID: project.projectID,
-                                        projectName: project.name, machineName: machine.name),
-                                    runtime.session(for: machine)
-                                ))
-                        } label: {
-                            Label(project.name, lucideIcon: "folder")
-                        }
-                        .accessibilityIdentifier("voice.project.\(project.projectID)")
-                    }
-                }
-            }
-        }
-        .navigationTitle("Talk about")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
 /// Reads per machine whether it holds the key and how Voice talks there, whenever its link comes back, so the mic
 /// button knows where it shows and a start sends what the machine keeps.
 struct VoiceKeyWatch: View {
@@ -134,17 +87,19 @@ extension AppRuntime {
     /// offer Voice, else the first that offers it. No project goes with it, so the machine starts in the one opened
     /// last there.
     func voiceStartingPoint(now: NowModel) -> VoiceScene.Place? {
-        let offering = machines.filter { voice.offers(machineID: $0.id, client: session(for: $0).rpc) }
-        guard let machine = offering.max(by: { now.lastOpened(on: $0.id) < now.lastOpened(on: $1.id) }) else {
+        guard let machine = voiceMachines.max(by: { now.lastOpened(on: $0.id) < now.lastOpened(on: $1.id) }) else {
             return nil
         }
         return (VoiceTarget(machineID: machine.id, machineName: machine.name), session(for: machine))
     }
 
+    var voiceMachines: [Machine] {
+        machines.filter { voice.offers(machineID: $0.id, client: session(for: $0).rpc) }
+    }
+
     /// Whether a bar shows the mic: a machine offers Voice, or Voice runs in this scene.
     func showsVoice(in scene: VoiceScene?) -> Bool {
         guard let scene else { return false }
-        return voice.isOwner(scene.id)
-            || machines.contains { voice.offers(machineID: $0.id, client: session(for: $0).rpc) }
+        return voice.isOwner(scene.id) || !voiceMachines.isEmpty
     }
 }
