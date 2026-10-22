@@ -77133,6 +77133,33 @@
           "detail": {
             "type": "string",
             "maxLength": 500
+          },
+          "confirmation": {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "consequences": {
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              }
+            },
+            "required": [
+              "token",
+              "title",
+              "consequences"
+            ]
           }
         },
         "required": [

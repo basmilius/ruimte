@@ -235,6 +235,30 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
             throw e;
         }
     },
+    'chat.clear': async ({ chatId }, { context, confirmed }) => {
+        const voice = voiceOf(context);
+        // Checked again when the person answers, since the registry runs a confirmed action through this handler anew.
+        const chat = await chatOfSession(context, chatId);
+        const prompts = context.host.chatPrompts;
+        if (prompts === undefined || !prompts.running(chatId)) {
+            throw new VerbRefusal('chat-not-running', `“${chat.name}” does not run on the machine now. Opening it in Ruimte starts it again`);
+        }
+        if (!confirmed) {
+            return {
+                confirmation: {
+                    title: `Clear AI Chat “${chat.name}”?`,
+                    consequences: [
+                        'The conversation history, attachments and plans will be deleted. This cannot be undone.',
+                        'Any current turn and queued messages in this chat will be stopped or discarded. The chat itself stays in place.'
+                    ]
+                }
+            };
+        }
+        await prompts.clear(chatId);
+        // A turn Voice followed in this chat is gone with its thread, so nothing of it is told any more.
+        voice.follow?.cleared(chatId);
+        return { output: { chatId, chat: chat.name } };
+    },
     'workspace.inspect': async (_input, { context }) => {
         const { projectId, content } = await sessionProject(context);
         const canvas = visibleCanvas(content, context.place.canvasId);

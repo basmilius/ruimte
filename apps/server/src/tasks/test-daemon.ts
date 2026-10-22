@@ -402,7 +402,8 @@ export async function bootTestDaemon({
         },
         chatPrompts: {
             running: (chatId) => chats.get(chatId) !== undefined,
-            send: (chatId, text, delivery) => chats.send(chatId, text, delivery === undefined ? {} : { delivery })
+            send: (chatId, text, delivery) => chats.send(chatId, text, delivery === undefined ? {} : { delivery }),
+            clear: (chatId) => chats.clear(chatId, true)
         },
         terminals: {
             agentOf: (sessionId) => {

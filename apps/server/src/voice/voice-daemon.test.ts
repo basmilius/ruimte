@@ -285,7 +285,8 @@ describe('Voice starts a chat on the daemon', () => {
             timeZone: 'UTC',
             follow: {
                 expectPrompt: () => ({ bind: () => undefined, drop: () => undefined }),
-                expectStart: () => ({ bind: (chatId: string, chat: { project: string }) => bound.push(`${chatId} in ${chat.project}`), drop: () => dropped++ })
+                expectStart: () => ({ bind: (chatId: string, chat: { project: string }) => bound.push(`${chatId} in ${chat.project}`), drop: () => dropped++ }),
+                cleared: () => undefined
             }
         };
         const projects = daemon.host.projects;

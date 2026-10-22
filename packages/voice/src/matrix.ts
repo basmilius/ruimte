@@ -54,6 +54,12 @@ export const DAEMON_VOICE_ACTIONS: readonly DaemonVoiceAction[] = [
             'Sends a prompt to an AI Chat of the current project that runs on the machine, to steer its turn or queue behind it. The machine follows the turn the prompt opens and reports when it ends.'
     },
     {
+        name: 'chat.clear',
+        confirms: true,
+        description:
+            'Clears an AI Chat of the current project that runs on the machine, only when the user explicitly asks to clear or reset it: removes its history, attachments and plans and stops its current turn, and keeps its node or view. It asks the user first, and the phone shows the question too. Never send /clear as a prompt instead.'
+    },
+    {
         name: 'agent.start',
         confirms: false,
         description:
@@ -65,7 +71,7 @@ export const DAEMON_VOICE_ACTIONS: readonly DaemonVoiceAction[] = [
 const DOMAIN_WORDS: Readonly<Partial<Record<ActionDomain, string>>> = {
     projects: 'List the projects in use on this machine, or move Voice to one of them.',
     workspace: 'Read the current project, its views and the canvas actions land on, or resolve spoken names to the ids every other tool takes.',
-    communicate: 'Read the recent messages of an AI Chat of the current project, or send it a prompt.',
+    communicate: 'Read the recent messages of an AI Chat of the current project, send it a prompt, or clear it.',
     sessions: 'Read what an AI Chat of the current project runs on and what waits in it. Approvals are the user’s to answer in the app.',
     agents: 'Read what the agents of the current project do, or start a new AI Chat.'
 };

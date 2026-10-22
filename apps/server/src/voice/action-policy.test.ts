@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ACTION_ACTOR_KINDS, ACTION_DEFINITIONS, voiceToolDefinitions, type ActionName } from '@ruimte/actions';
+import { ACTION_ACTOR_KINDS, ACTION_DEFINITIONS, VOICE_CONTROL_TOOL, voiceToolDefinitions, type ActionName } from '@ruimte/actions';
 import { DAEMON_VOICE_ACTIONS, daemonVoiceTools } from '@ruimte/voice';
 import type { CanvasHost } from '../canvas/verb.ts';
 import { voiceActionCall, type VoiceActionContext, type ServerActionContext } from '../actions/context.ts';
@@ -50,6 +50,7 @@ const DAEMON_VOICE_REACH: Record<string, 'voice' | 'blocked'> = {
     'chat.inspect': 'voice',
     'agents.inspect': 'voice',
     'chat.send': 'voice',
+    'chat.clear': 'voice',
     'project.list': 'voice',
     'project.switch': 'voice'
 };
@@ -109,6 +110,8 @@ describe('the daemon policy of Voice', () => {
         expect(policy.check('agent.start', { ...start, machine: 'machine-b' })).toMatchObject({ code: 'voice-field' });
         expect(policy.check('chat.send', { chatId: 'c', prompt: 'hi', attachments: [{ name: 'x' }] })).toMatchObject({ code: 'voice-field' });
         expect(policy.check('chat.read', { chatId: 'c', limit: 5 })).toBeNull();
+        expect(policy.check('chat.clear', { chatId: 'c', force: null })).toBeNull();
+        expect(policy.check('chat.clear', { chatId: 'c', force: true })).toMatchObject({ code: 'voice-field' });
     });
 
     test('a call the registry would run for Voice never reaches it outside the matrix', async () => {
@@ -143,6 +146,9 @@ describe('the daemon policy of Voice', () => {
 
     test('the tools of the daemon offer the matrix and nothing the registry would refuse', () => {
         const offered = daemonVoiceTools().flatMap((tool) => {
+            if (tool.name === VOICE_CONTROL_TOOL) {
+                return [];
+            }
             const action = tool.parameters.properties.action as { enum?: string[] } | undefined;
             return action?.enum ?? [];
         });

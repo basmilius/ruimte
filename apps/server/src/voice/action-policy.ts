@@ -21,6 +21,8 @@ export const VOICE_FIELD_RULES: Readonly<Record<string, FieldRule>> = {
     'chat.inspect': { fields: null },
     'agents.inspect': { fields: null },
     'chat.send': { fields: ['chatId', 'prompt', 'delivery'] },
+    // Not `force`: a person's composer asks on a busy chat, and Voice's question already said the turn stops.
+    'chat.clear': { fields: ['chatId'] },
     // A chat with the person's CLI and model, never a terminal; a worktree, a task, another folder or machine are an agent's fields.
     'agent.start': { fields: ['provider', 'prompt', 'viewId', 'beside', 'title', 'model', 'effort', 'mode', 'requestId'], off: ['terminal'] }
 };

@@ -82,6 +82,17 @@ describe('the Voice wire', () => {
         expect(payload.safeParse({ sceneId: 'scene-1', sessionId: 'voice-1', token: 't', decision: 'maybe' }).success).toBe(false);
     });
 
+    test('a line that waits on the person carries its question, and every other line none', () => {
+        const event = EVENT_SCHEMAS['voice.activity'];
+        const line = { id: 'call-1', at: 1, kind: 'chat', status: 'running', label: 'Clear AI Chat', detail: '' };
+        expect(event.safeParse({ sessionId: 'voice-1', sceneId: 'scene-1', seq: 2, entry: line }).success).toBe(true);
+        const asked = { ...line, confirmation: { token: 't', title: 'Clear AI Chat “Builder”?', consequences: ['It cannot be undone.'] } };
+        expect(event.safeParse({ sessionId: 'voice-1', sceneId: 'scene-1', seq: 2, entry: asked }).success).toBe(true);
+        expect(event.safeParse({ sessionId: 'voice-1', sceneId: 'scene-1', seq: 2, entry: { ...asked, confirmation: { title: 'Clear?' } } }).success).toBe(
+            false
+        );
+    });
+
     test('a key goes in, and only whether there is one comes back', () => {
         expect(REQUEST_SCHEMAS['voice.setKey'].payload.safeParse({ key: '  ' }).success).toBe(false);
         expect(REQUEST_SCHEMAS['voice.setKey'].payload.safeParse({ key: 'x'.repeat(1025) }).success).toBe(false);

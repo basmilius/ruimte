@@ -131,7 +131,7 @@ export interface CanvasHost {
     chatThreads?: ChatThreadHost;
     /* What a terminal agent does, which Voice reads where a window would read its status. */
     terminals?: TerminalAgentHost;
-    /* Prompting a chat, which only Voice does through an action; an agent sends through `notify`. */
+    /* Prompting or clearing a chat, which only Voice does through an action; an agent sends through `notify`. */
     chatPrompts?: ChatPromptHost;
     /* Forks a chat an agent opened into a child of that agent; absent on a host that forks none. */
     forks?: AgentForkHost;
@@ -177,6 +177,8 @@ export interface ChatThreadHost {
 export interface ChatPromptHost {
     running(chatId: string): boolean;
     send(chatId: string, text: string, delivery: ChatDelivery | undefined): Promise<{ queued: boolean; turnId: string }>;
+    /* The daemon's own `chat.clear`, stopping a turn in the way: whoever calls it asked the person first. */
+    clear(chatId: string): Promise<void>;
 }
 
 /* The agent a terminal runs as its hooks last told it; null for a plain shell, undefined for no session of that id. */

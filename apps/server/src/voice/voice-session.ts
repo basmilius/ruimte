@@ -1,6 +1,7 @@
 import { ACTION_DEFINITIONS, type ActionDomain, type ActionName } from '@ruimte/actions';
 import type {
     ProjectSummary,
+    VoiceActivityConfirmation,
     VoiceActivityEntry,
     VoiceActivityEvent,
     VoiceActivityKind,
@@ -25,7 +26,7 @@ import { voicePreferencesFor } from './preferences-store.ts';
 import { phonePrompts } from './prompts.ts';
 import { sessionContext, timeContext } from './session-context.ts';
 import type { LiveSideband } from './sideband.ts';
-import { VoiceToolExecutor, type VoiceActionRunner } from './tool-executor.ts';
+import { VoiceToolExecutor, type VoiceActionRunner, type VoiceToolQuestion } from './tool-executor.ts';
 import { VoiceFollower, type VoiceFollowActivity, type VoiceFollowChats } from './voice-follower.ts';
 
 /* From the start request to the answer the phone connects with; past it the session runs on the person's audio alone. */
@@ -82,6 +83,15 @@ const TIMELINE: Partial<Record<ActionDomain, VoiceActivityKind>> = {
     agents: 'chat',
     plans: 'chat'
 };
+
+/* Cut to the bounds of the wire, since a title names a chat whose name has none. */
+function confirmationOf(question: VoiceToolQuestion): VoiceActivityConfirmation {
+    return {
+        token: question.token,
+        title: question.title.slice(0, 200),
+        consequences: question.consequences.slice(0, 4).map((line) => line.slice(0, 500))
+    };
+}
 
 /* A coded failure as the phone hears it; anything else says only that the start failed. */
 function voiceErrorOf(error: unknown): VoiceError {
@@ -223,7 +233,9 @@ export class VoiceSession {
                 },
                 observer: {
                     started: (callId, name) => this.#activity(callId, name, 'running'),
-                    finished: (callId, name, ok) => this.#activity(callId, name, ok ? 'completed' : 'failed')
+                    asked: (callId, name, question) => this.#activity(callId, name, 'running', confirmationOf(question)),
+                    finished: (callId, name, ok, declined) =>
+                        this.#activity(callId, name, ok ? 'completed' : 'failed', undefined, declined === true ? 'Cancelled' : '')
                 }
             });
             const executor = this.#executor;
@@ -409,7 +421,7 @@ export class VoiceSession {
         }
     }
 
-    #activity(callId: string, name: ActionName, status: VoiceActivityEntry['status']): void {
+    #activity(callId: string, name: ActionName, status: VoiceActivityEntry['status'], confirmation?: VoiceActivityConfirmation, detail = ''): void {
         if (this.#phase !== 'active') {
             return;
         }
@@ -425,7 +437,8 @@ export class VoiceSession {
                 kind: TIMELINE[definition.domain] ?? 'node',
                 status,
                 label: definition.title,
-                detail: ''
+                detail,
+                ...(confirmation === undefined ? {} : { confirmation })
             }
         });
     }

@@ -12,10 +12,21 @@ export interface VoiceActionRunner<Context> {
     forget?(actor: ActionCall<Context>['actor']): void;
 }
 
-/* Sees each call start and end, for the timeline the phone draws; never the arguments or the output. */
+/* The question of an action that asks first, as the registry wrote it; what the phone shows beside its Confirm and Cancel. */
+export interface VoiceToolQuestion {
+    token: string;
+    title: string;
+    consequences: readonly string[];
+}
+
+/*
+ * Sees each call start and end, for the timeline the phone draws; never the arguments or the output. A call
+ * that asks first ends only once its question is answered, from the phone or through the model.
+ */
 export interface VoiceToolObserver {
     started(callId: string, name: ActionName): void;
-    finished(callId: string, name: ActionName, ok: boolean): void;
+    asked?(callId: string, name: ActionName, question: VoiceToolQuestion): void;
+    finished(callId: string, name: ActionName, ok: boolean, declined?: boolean): void;
 }
 
 export interface VoiceToolExecutorOptions<Context> {
@@ -35,6 +46,14 @@ export interface VoiceToolExecutorOptions<Context> {
      */
     stateOf?(): Promise<string>;
     observer?: VoiceToolObserver;
+}
+
+/* A question this session asked, by the call that asked it and where the project stood then. */
+interface PendingConfirmation {
+    callId: string;
+    name: ActionName;
+    input: Record<string, unknown>;
+    state: string | null;
 }
 
 // Reads may overlap this far; every change runs alone, in the order the calls came.
@@ -115,7 +134,7 @@ export class VoiceToolExecutor<Context> {
     readonly #options: VoiceToolExecutorOptions<Context>;
     readonly #offered: Map<string, ReadonlySet<string>>;
     readonly #calls = new Map<string, Promise<VoiceToolOutput>>();
-    readonly #confirmations = new Map<string, { name: ActionName; input: Record<string, unknown>; state: string | null }>();
+    readonly #confirmations = new Map<string, PendingConfirmation>();
     readonly #reads = new Gate(PARALLEL_READS);
     #changes: Promise<unknown> = Promise.resolve();
     #count = 0;
@@ -149,10 +168,16 @@ export class VoiceToolExecutor<Context> {
             return refused('unknown-confirmation', 'This confirmation is no longer available.');
         }
         this.#confirmations.delete(token);
+        const output = await this.#answer(token, pending, approved);
+        this.#options.observer?.finished(pending.callId, pending.name, output.ok === true, !approved);
+        return output;
+    }
+
+    #answer(token: string, pending: PendingConfirmation, approved: boolean): Promise<VoiceToolOutput> {
         const refusal = this.#options.policy.check(pending.name, pending.input);
         if (refusal !== null) {
             this.#decline(token);
-            return refused(refusal.code, refusal.message);
+            return Promise.resolve(refused(refusal.code, refusal.message));
         }
         const run = async (): Promise<VoiceToolOutput> => {
             // Checked in the queue, right before the answer runs, so no change Voice made in between slips by.
@@ -218,16 +243,22 @@ export class VoiceToolExecutor<Context> {
         }
         const action = name as ActionName;
         this.#options.observer?.started(callId, action);
+        let question = null as VoiceToolQuestion | null;
         const output = await this.#queue(action, () =>
             this.#runner(action, async () => {
                 const result = await this.#options.runner.execute(action, input, this.#options.call());
                 if (result.status === 'needs_confirmation') {
-                    this.#remember(result.confirmationToken, action, input, await this.#state());
+                    this.#remember(result.confirmationToken, callId, action, input, await this.#state());
+                    question = { token: result.confirmationToken, title: result.confirmation.title, consequences: result.confirmation.consequences };
                 }
                 return result;
             })
         );
-        this.#options.observer?.finished(callId, action, output.ok === true);
+        if (question !== null) {
+            this.#options.observer?.asked?.(callId, action, question);
+        } else {
+            this.#options.observer?.finished(callId, action, output.ok === true);
+        }
         return output;
     }
 
@@ -287,14 +318,15 @@ export class VoiceToolExecutor<Context> {
         return refused(error.code, error.message);
     }
 
-    #remember(token: string, name: ActionName, input: Record<string, unknown>, state: string | null): void {
+    #remember(token: string, callId: string, name: ActionName, input: Record<string, unknown>, state: string | null): void {
         if (this.#confirmations.size >= CONFIRMATION_MEMORY) {
-            const oldest = this.#confirmations.keys().next().value;
-            if (oldest !== undefined) {
+            const [oldest, forgotten] = this.#confirmations.entries().next().value ?? [];
+            if (oldest !== undefined && forgotten !== undefined) {
                 this.#confirmations.delete(oldest);
                 this.#decline(oldest);
+                this.#options.observer?.finished(forgotten.callId, forgotten.name, false, true);
             }
         }
-        this.#confirmations.set(token, { name, input, state });
+        this.#confirmations.set(token, { callId, name, input, state });
     }
 }

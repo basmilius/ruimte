@@ -342,6 +342,85 @@ describe('VoiceToolExecutor', () => {
         expect(await tool.execute('communicate', read('elsewhere'), 'call-2')).toMatchObject({ ok: false, code: 'not-in-project' });
     });
 
+    describe('clearing a chat through the real registry', () => {
+        function clearing(stateOf: () => Promise<string>) {
+            const cleared: string[] = [];
+            const lines: string[] = [];
+            const host = {
+                projects: {
+                    locate: () => PLACE,
+                    machineOfNode: () => null,
+                    read: async () => SHOP
+                },
+                chatPrompts: {
+                    running: () => true,
+                    send: () => Promise.reject(new Error('not used here')),
+                    clear: async (chatId: string) => {
+                        cleared.push(chatId);
+                    }
+                }
+            } as unknown as CanvasHost;
+            const tool = new VoiceToolExecutor<ServerActionContext>({
+                sessionId: 'session-1',
+                runner: serverActions,
+                policy: voicePolicy(),
+                tools: daemonVoiceTools(),
+                call: () => voiceActionCall(host, PLACE, CALLER),
+                live: () => true,
+                stateOf,
+                observer: {
+                    started: (callId) => lines.push(`${callId} started`),
+                    asked: (callId, _name, question) => lines.push(`${callId} asks ${question.title}`),
+                    finished: (callId, _name, ok, declined) => lines.push(`${callId} ${ok ? 'done' : declined === true ? 'cancelled' : 'failed'}`)
+                }
+            });
+            return { tool, cleared, lines };
+        }
+
+        const clear = JSON.stringify({ action: 'chat.clear', chatId: 'chat-1', force: null });
+
+        test('asks first, and clears once the answer comes, from the phone or through the model', async () => {
+            const { tool, cleared, lines } = clearing(async () => 'project-1@4');
+            const asked = await tool.execute('communicate', clear, 'call-1');
+            expect(asked).toMatchObject({ ok: false, needs_confirmation: true, confirmation: { title: 'Clear AI Chat “Builder”?' } });
+            expect(cleared).toEqual([]);
+            expect(lines).toEqual(['call-1 started', 'call-1 asks Clear AI Chat “Builder”?']);
+            const answered = await tool.execute(
+                'control_action',
+                JSON.stringify({ action: 'confirm', confirmation_token: asked.confirmation_token }),
+                'call-2'
+            );
+            expect(answered).toMatchObject({
+                ok: true,
+                chatId: 'chat-1',
+                chat: 'Builder',
+                message: 'Cleared AI Chat “Builder”. Its node or view is still available.'
+            });
+            expect(cleared).toEqual(['chat-1']);
+            expect(lines.at(-1)).toBe('call-1 done');
+
+            const again = await tool.execute('communicate', clear, 'call-3');
+            expect(await tool.confirm(again.confirmation_token as string, false)).toMatchObject({ ok: false, code: 'confirmation-declined' });
+            expect(cleared).toEqual(['chat-1']);
+            expect(lines.at(-1)).toBe('call-3 cancelled');
+        });
+
+        for (const [moved, then] of [
+            ['moved on', 'project-1@5'],
+            ['is another project now', 'project-2@4']
+        ] as const) {
+            test(`clears nothing once the project ${moved} since it asked`, async () => {
+                let state = 'project-1@4';
+                const { tool, cleared, lines } = clearing(async () => state);
+                const asked = await tool.execute('communicate', clear, 'call-1');
+                state = then;
+                expect(await tool.confirm(asked.confirmation_token as string, true)).toMatchObject({ ok: false, code: 'confirmation-stale' });
+                expect(cleared).toEqual([]);
+                expect(lines.at(-1)).toBe('call-1 failed');
+            });
+        }
+    });
+
     test('a session that loops is refused once it made too many calls', async () => {
         const runner = new FakeRunner();
         runner.execute = async (_name, input) => completedRead((input as { chatId: string }).chatId);

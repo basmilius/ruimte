@@ -53,6 +53,7 @@ let terminals: Map<string, AgentInfo | null>;
 let running: Set<string>;
 let sent: { chatId: string; text: string; delivery: string | undefined }[];
 let sendFails: boolean;
+let cleared: string[];
 let followed: string[];
 
 function item(id: string, kind: 'user' | 'assistant', text: string, extra: Record<string, unknown> = {}): ChatItem {
@@ -88,6 +89,9 @@ function host(): CanvasHost {
                 }
                 sent.push({ chatId, text, delivery });
                 return { queued: delivery === 'queue', turnId: 'turn-9' };
+            },
+            clear: async (chatId) => {
+                cleared.push(chatId);
             }
         }
     } as Partial<CanvasHost> as CanvasHost;
@@ -113,6 +117,7 @@ beforeEach(() => {
     running = new Set();
     sent = [];
     sendFails = false;
+    cleared = [];
     followed = [];
 });
 
@@ -121,7 +126,8 @@ const FOLLOW: VoiceFollowHost = {
         followed.push(`expect ${chatId} ${chat.chat} in ${chat.project}`);
         return { bind: (turnId) => followed.push(`bind ${turnId}`), drop: () => followed.push('drop') };
     },
-    expectStart: () => ({ bind: () => undefined, drop: () => undefined })
+    expectStart: () => ({ bind: () => undefined, drop: () => undefined }),
+    cleared: (chatId) => followed.push(`cleared ${chatId}`)
 };
 
 function info(chatId: string, fields: Partial<ChatInfo> = {}): ChatInfo {
@@ -425,5 +431,83 @@ describe('chat.send for Voice', () => {
         expect(await send('chat-node', 'Run the tests')).toMatchObject({ status: 'failed', error: { code: 'remote-target' } });
         expect(await send('term-node', 'Run the tests')).toMatchObject({ status: 'failed', error: { code: 'not-in-project' } });
         expect([sent, followed]).toEqual([[], []]);
+    });
+});
+
+describe('chat.clear for Voice', () => {
+    const writer: VoiceCaller = { ...VOICE, follow: FOLLOW };
+
+    function clear(chatId: string, voice = writer) {
+        return serverActions.execute('chat.clear', { chatId, force: null }, voiceActionCall(host(), PLACE, voice));
+    }
+
+    test('asks first, and clears only once the person confirmed, letting go of what Voice followed there', async () => {
+        running.add('chat-node');
+        const asked = await clear('chat-node');
+        expect(asked).toMatchObject({ status: 'needs_confirmation', confirmation: { title: 'Clear AI Chat “Builder”?' } });
+        expect(cleared).toEqual([]);
+        if (asked.status !== 'needs_confirmation') {
+            throw new Error('expected a confirmation');
+        }
+        expect(await serverActions.confirm(asked.confirmationToken, true, voiceActionCall(host(), PLACE, writer))).toMatchObject({
+            status: 'completed',
+            output: { chatId: 'chat-node', chat: 'Builder' }
+        });
+        expect(cleared).toEqual(['chat-node']);
+        expect(followed).toEqual(['cleared chat-node']);
+    });
+
+    test('a chat view clears the same way, and a cancel clears nothing', async () => {
+        running.add('chat-view');
+        const asked = await clear('chat-view');
+        if (asked.status !== 'needs_confirmation') {
+            throw new Error('expected a confirmation');
+        }
+        expect(await serverActions.confirm(asked.confirmationToken, false, voiceActionCall(host(), PLACE, writer))).toMatchObject({
+            status: 'failed',
+            error: { code: 'confirmation-declined' }
+        });
+        expect(cleared).toEqual([]);
+    });
+
+    test('a chat of another project, on another machine or not running is refused before anything is asked', async () => {
+        expect(await clear('elsewhere')).toMatchObject({ status: 'failed', error: { code: 'not-in-project' } });
+        expect(await clear('term-node')).toMatchObject({ status: 'failed', error: { code: 'not-in-project' } });
+        expect(await clear('chat-node')).toMatchObject({ status: 'failed', error: { code: 'chat-not-running' } });
+        running.add('chat-node');
+        bound.add('chat-node');
+        expect(await clear('chat-node')).toMatchObject({ status: 'failed', error: { code: 'remote-target' } });
+        expect(await clear('chat-node', { ...writer, projectId: 'project-2' })).toMatchObject({ status: 'failed', error: { code: 'remote-target' } });
+        bound.delete('chat-node');
+        expect(await clear('chat-node', { ...writer, projectId: 'project-2' })).toMatchObject({ status: 'failed', error: { code: 'not-in-project' } });
+        expect(cleared).toEqual([]);
+    });
+
+    test('a chat that left the project between the question and the answer is not cleared', async () => {
+        running.add('chat-node');
+        const asked = await clear('chat-node');
+        if (asked.status !== 'needs_confirmation') {
+            throw new Error('expected a confirmation');
+        }
+        places.set('chat-node', 'project-2');
+        expect(await serverActions.confirm(asked.confirmationToken, true, voiceActionCall(host(), PLACE, writer))).toMatchObject({
+            status: 'failed',
+            error: { code: 'not-in-project' }
+        });
+        expect(cleared).toEqual([]);
+    });
+
+    test('no other actor clears a chat through this handler', async () => {
+        running.add('chat-node');
+        expect(await serverActions.execute('chat.clear', { chatId: 'chat-node', force: null }, serverActionCall(host(), PLACE, 'term-node'))).toMatchObject({
+            status: 'failed',
+            error: { code: 'forbidden-action' }
+        });
+        const person = { actor: { kind: 'person' as const, id: 'person' }, context: { host: host(), place: PLACE } };
+        expect(await serverActions.execute('chat.clear', { chatId: 'chat-node', force: true }, person)).toMatchObject({
+            status: 'failed',
+            error: { code: 'forbidden-action' }
+        });
+        expect(cleared).toEqual([]);
     });
 });

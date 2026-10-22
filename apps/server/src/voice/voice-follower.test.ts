@@ -11,6 +11,7 @@ let clock: FakeClock;
 let completions: { followUp: VoiceChatFollowUp; completion: VoiceChatCompletion }[];
 let reports: { id: string; chatKey: string; context: string }[];
 let activity: VoiceFollowActivity[];
+let cancelled: string[];
 
 function follower(): VoiceFollower {
     return new VoiceFollower({
@@ -18,7 +19,8 @@ function follower(): VoiceFollower {
         clock,
         delivery: {
             enqueue: (followUp, completion) => completions.push({ followUp, completion }),
-            report: (id, chatKey, context) => reports.push({ id, chatKey, context })
+            report: (id, chatKey, context) => reports.push({ id, chatKey, context }),
+            cancelChat: (chatKey) => cancelled.push(chatKey)
         },
         activity: (entry) => activity.push(entry)
     });
@@ -42,6 +44,7 @@ beforeEach(() => {
     completions = [];
     reports = [];
     activity = [];
+    cancelled = [];
 });
 
 describe('following a prompt', () => {
@@ -151,6 +154,20 @@ describe('following a prompt', () => {
         expect(voice.size).toBe(MAX_FOLLOWED);
         chats.set('chat-0', [turn('t0', 'done')], info('idle', null));
         expect(completions).toEqual([]);
+    });
+
+    test('a chat Voice cleared is followed no more, and what waited to be told of it goes', () => {
+        const voice = follower();
+        chats.set('chat-1', [turn('t1', 'running')], info('running', 't1'));
+        chats.set('chat-2', [turn('t2', 'running')], info('running', 't2'));
+        voice.expectPrompt('chat-1', NAMED).bind('t1');
+        voice.expectPrompt('chat-2', NAMED).bind('t2');
+        voice.cleared('chat-1');
+        expect(cancelled).toEqual(['chat-1']);
+        expect(voice.size).toBe(1);
+        chats.set('chat-1', [turn('t3', 'done')], info('idle', null));
+        chats.set('chat-2', [turn('t2', 'done')], info('idle', null));
+        expect(completions.map((entry) => entry.followUp.chatId)).toEqual(['chat-2']);
     });
 
     test('a stopped follower tells nothing more and listens no more', () => {

@@ -99,6 +99,7 @@ let threadGate: Promise<void>;
 let ids: number;
 let projectChanged: () => void;
 let placed: (string | null)[];
+let cleared: string[];
 let summaries: ProjectSummary[];
 
 function sessions(views: ProjectContent['views'] = CONTENT.views): VoiceSessions {
@@ -117,6 +118,13 @@ function sessions(views: ProjectContent['views'] = CONTENT.views): VoiceSessions
             items: async (chatId: string) => {
                 await threadGate;
                 return threads.get(chatId) ?? null;
+            }
+        },
+        chatPrompts: {
+            running: () => true,
+            send: () => Promise.reject(new Error('not used here')),
+            clear: async (chatId: string) => {
+                cleared.push(chatId);
             }
         }
     } as unknown as CanvasHost;
@@ -183,6 +191,7 @@ beforeEach(() => {
     threadGate = Promise.resolve();
     ids = 0;
     placed = [];
+    cleared = [];
     summaries = [summary('project-1', 'App', 200), summary('project-2', 'Site', 100)];
 });
 
@@ -422,10 +431,34 @@ describe('a running session', () => {
     test('a call outside the policy is answered as refused and runs nothing', async () => {
         const voice = sessions();
         const { attach } = await started(voice);
-        attach.socket.receive(functionCall('call-1', { action: 'chat.clear', chatId: 'chat-1', prompt: null, delivery: null, limit: null }));
+        attach.socket.receive(functionCall('call-1', { action: 'terminal.read', terminalId: 'term-1', lines: null }));
         await settle();
         const output = JSON.parse(String((attach.socket.sentOf('response.item.create')[0]!.item as { output: string }).output));
         expect(output).toMatchObject({ ok: false, code: 'not-offered' });
+    });
+
+    test('a clear asks first, and the phone sees the question on its line and answers it', async () => {
+        const voice = sessions();
+        const { attach, owner, result } = await started(voice);
+        attach.socket.receive(functionCall('call-1', { action: 'chat.clear', chatId: 'chat-1', force: null }));
+        await settle();
+        await settle();
+        const asked = eventsOf(owner, 'voice.activity').map((frame) => frame.payload.entry as Record<string, unknown>);
+        expect(asked.at(-1)).toMatchObject({
+            id: 'call-1',
+            status: 'running',
+            label: 'Clear AI Chat',
+            confirmation: { title: 'Clear AI Chat “Builder”?', consequences: expect.any(Array) }
+        });
+        expect(cleared).toEqual([]);
+        const token = (asked.at(-1)!.confirmation as { token: string }).token;
+        expect(await voice.confirm(owner, { sceneId: 'scene-1', sessionId: result.sessionId, token, decision: 'confirm' })).toEqual({ accepted: true });
+        expect(cleared).toEqual(['chat-1']);
+        const answered = eventsOf(owner, 'voice.activity').at(-1)!.payload.entry as Record<string, unknown>;
+        expect(answered).toMatchObject({ id: 'call-1', status: 'completed' });
+        expect(answered.confirmation).toBeUndefined();
+        // Used once, so a second answer finds nothing.
+        expect(await voice.confirm(owner, { sceneId: 'scene-1', sessionId: result.sessionId, token, decision: 'confirm' })).toEqual({ accepted: false });
     });
 
     test('a stop ends the session at OpenAI and lets go of the project', async () => {

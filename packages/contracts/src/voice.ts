@@ -76,6 +76,14 @@ export const VoiceStatusEventSchema = z.object({
 });
 export type VoiceStatusEvent = z.infer<typeof VoiceStatusEventSchema>;
 
+/* The question of an action that asks first; the phone answers it with `voice.confirm` and this token. */
+export const VoiceActivityConfirmationSchema = z.object({
+    token: z.string().min(1).max(128),
+    title: z.string().max(200),
+    consequences: z.array(z.string().max(500)).max(4)
+});
+export type VoiceActivityConfirmation = z.infer<typeof VoiceActivityConfirmationSchema>;
+
 /* A short line of what Voice did. Never audio, a whole transcript, raw tool arguments or a key. */
 export const VoiceActivityEntrySchema = z.object({
     id: z.string().min(1).max(128),
@@ -83,7 +91,9 @@ export const VoiceActivityEntrySchema = z.object({
     kind: VoiceActivityKindSchema,
     status: VoiceActivityStatusSchema,
     label: z.string().max(200),
-    detail: z.string().max(500)
+    detail: z.string().max(500),
+    // Only on a running line whose action waits on the person; the next line of that id, once answered, has none.
+    confirmation: VoiceActivityConfirmationSchema.optional()
 });
 export type VoiceActivityEntry = z.infer<typeof VoiceActivityEntrySchema>;
 

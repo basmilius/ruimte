@@ -37,7 +37,7 @@ export interface VoiceFollowActivity {
 
 export interface VoiceFollowerDeps {
     chats: VoiceFollowChats;
-    delivery: Pick<VoiceCompletionDelivery, 'enqueue' | 'report'>;
+    delivery: Pick<VoiceCompletionDelivery, 'enqueue' | 'report' | 'cancelChat'>;
     clock: VoiceClock;
     activity(entry: VoiceFollowActivity): void;
 }
@@ -64,6 +64,8 @@ export interface VoiceStartTicket {
 export interface VoiceFollowHost {
     expectPrompt(chatId: string, chat: VoiceFollowedChat): VoicePromptTicket;
     expectStart(): VoiceStartTicket;
+    /* A chat Voice cleared: what was followed in it and what waits to be told of it go. */
+    cleared(chatId: string): void;
 }
 
 interface Followed {
@@ -137,6 +139,14 @@ export class VoiceFollower implements VoiceFollowHost {
                 }
             }
         };
+    }
+
+    cleared(chatId: string): void {
+        const entry = this.#followed.get(chatId);
+        if (entry !== undefined) {
+            this.#forget(chatId, entry);
+        }
+        this.#deps.delivery.cancelChat(chatId);
     }
 
     get size(): number {
