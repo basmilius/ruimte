@@ -160,6 +160,10 @@ export class VoiceSession {
         const signal = this.#abort.signal;
         try {
             const first = await this.#whileStarting(this.#firstProject());
+            // A start that ended since that answered holds nothing.
+            if (this.#phase !== 'starting') {
+                throw this.#refusal(null);
+            }
             this.#focus(first?.place ?? null, first?.name ?? null);
             const key = await this.#whileStarting(this.#deps.key());
             if (key === null) {
