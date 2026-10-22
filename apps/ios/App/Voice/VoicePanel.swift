@@ -100,21 +100,18 @@ struct VoiceSheet: View {
 
     // MARK: Band
 
-    /// Until the phone has the audio itself, a column is a moment of WebRTC's `audioLevel`, the newest on the right, and
-    /// the labels read the newest moment.
     private var band: some View {
         let listening = running && voice.phase == .active
-        let levels = voice.levels
+        let bands = voice.bands
         return VoiceWaveform(
-            listening: listening, live: VoiceWaveformBands(input: levels.person, output: levels.voice),
-            inputSpeaks: VoiceWaveformBands.inputSpeaks([levels.person.last ?? 0]),
-            outputSpeaks: VoiceWaveformBands.outputSpeaks([levels.voice.last ?? 0]), muted: running && voice.muted
+            listening: listening, live: bands, inputSpeaks: VoiceWaveformBands.inputSpeaks(bands.input),
+            outputSpeaks: VoiceWaveformBands.outputSpeaks(bands.output), muted: running && voice.muted
         )
         .task(id: listening) {
             guard listening else { return }
             while !Task.isCancelled {
-                await voice.sampleLevels()
-                try? await Task.sleep(for: .milliseconds(80))
+                voice.measureBands()
+                try? await Task.sleep(for: .milliseconds(32))
             }
         }
     }

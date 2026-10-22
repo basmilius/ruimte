@@ -65,16 +65,26 @@ import UIKit
         say(.person, "Ask it to open a pull request for it.")
         say(.model, "Asking the release chat now. Anything else you want me to")
         did("prompt", 3, "running", "Prompting the chat", "Release")
-        for index in 0..<VoiceLevelHistory.kept {
-            let step = Double(index)
-            let person = index < 22 ? 0.01 + 0.18 * abs(sin(step * 0.7)) : 0.002
-            let voice = index > 20 ? 0.02 + 0.1 * abs(sin(step * 0.9)) : 0
-            stage.media.reading = VoiceLevels(person: person, voice: voice)
-            await stage.voice.sampleLevels()
+        // The person trails off while Voice starts its answer; the sheet goes on measuring the last window.
+        for frame in 0..<22 {
+            let time = 0.4 + Double(frame) * 0.032
+            stage.media.reading = VoiceSamples(
+                person: Self.voice(at: time, pitch: 150, loudness: frame < 14 ? 0.16 : 0.03),
+                voice: frame < 10 ? nil : Self.voice(at: time, pitch: 210, loudness: 0.12))
+            stage.voice.measureBands()
         }
-        // The band holds still from here, so the picture shows the levels above.
-        stage.media.reading = nil
         return stage
+    }
+
+    /// A voice of `pitch` Hz with two overtones and four syllables a second: the window of samples at 48 kHz that
+    /// ends `time` seconds in.
+    private static func voice(at time: Double, pitch: Double, loudness: Double) -> [Float] {
+        (0..<VoiceSampleWindow.size).map { index in
+            let moment = time - Double(VoiceSampleWindow.size - index) / 48_000
+            let syllable = max(0.15, sin(2 * .pi * 4 * moment))
+            let turn = 2 * Double.pi * pitch * moment
+            return Float(loudness * syllable * (sin(turn) + 0.5 * sin(2 * turn + 0.4) + 0.3 * sin(3 * turn + 1.1)))
+        }
     }
 
     @Test(.enabled(if: folder != nil)) func theSheetInEachState() async throws {
@@ -115,19 +125,23 @@ import UIKit
         try await Self.render(sheet(elsewhere.voice, scene: "B"), name: "11-runs-in-another-window")
     }
 
-    /// The band alone at the sheet's width, still, so a frame compares with the desktop's at the same moment.
+    /// The band alone at the sheet's width, still, so a frame compares with the desktop's at the same moment. The live
+    /// frames are generated voices measured through the coordinator, 32 ms apart, as the sheet measures them.
     @Test(.enabled(if: folder != nil)) func theBandFrames() async throws {
-        var history = VoiceLevelHistory()
-        for index in 0..<VoiceLevelHistory.kept {
-            let step = Double(index)
-            let person = index < 22 ? 0.01 + 0.18 * abs(sin(step * 0.7)) : 0.002
-            let voice = index > 20 ? 0.02 + 0.1 * abs(sin(step * 0.9)) : 0
-            history.add(VoiceLevels(person: person, voice: voice))
-        }
-        let frames: [(String, VoiceWaveformBands)] = [
-            ("15-band-idle-19s", .idle(atMs: 19_000)),
-            ("16-band-live", VoiceWaveformBands(input: history.person, output: history.voice)),
+        let stage = Self.stage()
+        await stage.voice.start(scene: "A", target: Self.place, client: stage.machine)
+        var frames: [(String, VoiceWaveformBands)] = [("15-band-idle-19s", .idle(atMs: 19_000))]
+        let kept: [Int: String] = [
+            9: "16-band-live-person", 10: "17-band-live-person-next", 20: "18-band-live-both", 34: "19-band-live-voice",
         ]
+        for frame in 0...34 {
+            let time = 0.3 + Double(frame) * 0.032
+            stage.media.reading = VoiceSamples(
+                person: frame < 22 ? Self.voice(at: time, pitch: 150, loudness: 0.16) : nil,
+                voice: frame > 14 ? Self.voice(at: time, pitch: 210, loudness: 0.12) : nil)
+            stage.voice.measureBands()
+            if let name = kept[frame] { frames.append((name, stage.voice.bands)) }
+        }
         for (name, bands) in frames {
             for dark in [true, false] {
                 let band = Canvas { context, size in VoiceWaveform.draw(bands, in: &context, size: size) }

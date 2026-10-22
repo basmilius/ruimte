@@ -94,7 +94,10 @@ final class VoiceCoordinator {
     private(set) var speaking = false
     /// When the session went active.
     private(set) var startedAt: Date?
-    private(set) var levels = VoiceLevelHistory()
+    /// The band while Voice listens, measured from both sides' samples as the desktop measures them.
+    private(set) var bands = VoiceWaveformBands.silent
+    @ObservationIgnored private var personMeter = VoiceWaveformMeter()
+    @ObservationIgnored private var voiceMeter = VoiceWaveformMeter()
     /// Where the reply plays, as iOS names the route.
     private(set) var route: String?
     /// Per machine, whether it holds an OpenAI key for Voice, as `voice.keyStatus` last said.
@@ -278,7 +281,9 @@ final class VoiceCoordinator {
         muted = false
         speaking = false
         startedAt = nil
-        levels.clear()
+        personMeter.clear()
+        voiceMeter.clear()
+        bands = .silent
         phase = .connecting
         holdLinks(true)
         if audio.permission == .undetermined {
@@ -367,12 +372,14 @@ final class VoiceCoordinator {
         }
     }
 
-    /// Reads how loud both sides are once; the sheet asks on a clock of its own while its band shows. A muted
-    /// microphone draws as silence.
-    func sampleLevels() async {
+    /// Measures the band once from the newest samples; the sheet asks every 32 ms while its band shows, as the
+    /// desktop's monitor measures. A muted microphone measures as silence.
+    func measureBands() {
         guard let media, owner != nil else { return }
-        guard let read = await media.levels(), media === self.media else { return }
-        levels.add(muted ? VoiceLevels(person: 0, voice: read.voice) : read)
+        let samples = media.samples()
+        personMeter.measure(muted ? nil : samples.person)
+        voiceMeter.measure(samples.voice)
+        bands = VoiceWaveformBands(input: personMeter.bands, output: voiceMeter.bands)
     }
 
     /// The person's answer to an action that asked first.

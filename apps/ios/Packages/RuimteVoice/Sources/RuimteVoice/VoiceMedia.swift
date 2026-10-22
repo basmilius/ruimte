@@ -19,8 +19,9 @@ public enum VoiceMediaEvent: Sendable, Equatable {
     func accept(answer: String) async throws
     /// Silences the microphone track and keeps the session: the model hears nothing until it is on again.
     var muted: Bool { get set }
-    /// How loud both sides are now; nil before the offer and after `close()`.
-    func levels() async -> VoiceLevels?
+    /// The newest samples of the microphone, as the model hears it, and of the reply; silent before the offer and after
+    /// `close()`.
+    func samples() -> VoiceSamples
     /// Ends the peer. No event follows.
     func close()
 }

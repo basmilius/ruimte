@@ -10,12 +10,12 @@ let package = Package(
     products: [.library(name: "RuimteVoice", targets: ["RuimteVoice"])],
     dependencies: [
         .package(path: "../RuimtePulsar"),
-        .package(url: "https://github.com/stasel/WebRTC.git", exact: "153.0.0"),
+        .package(url: "https://github.com/livekit/webrtc-xcframework.git", exact: "150.7871.03"),
     ],
     targets: [
         .target(
             name: "RuimteVoice",
-            dependencies: ["RuimtePulsar", .product(name: "WebRTC", package: "WebRTC", condition: .when(platforms: [.iOS]))],
+            dependencies: ["RuimtePulsar", .product(name: "LiveKitWebRTC", package: "webrtc-xcframework", condition: .when(platforms: [.iOS]))],
             resources: [.process("Localizable.xcstrings")]),
         .testTarget(name: "RuimteVoiceTests", dependencies: ["RuimteVoice"], resources: [.copy("Fixtures")]),
     ]

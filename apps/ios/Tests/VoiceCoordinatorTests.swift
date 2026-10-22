@@ -244,20 +244,23 @@ import Testing
         #expect(!setup.media.muted)
     }
 
-    @Test func theBandReadsTheLevelsOfTheMediaAndAMutedMicrophoneIsSilent() async throws {
+    @Test func theBandMeasuresTheSamplesOfTheMediaAndAMutedMicrophoneFallsSilent() async throws {
         let setup = Self.setup()
         await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
-        setup.media.reading = VoiceLevels(person: 0.25, voice: 0.09)
-        await setup.voice.sampleLevels()
-        #expect(try #require(setup.voice.levels.person.last) > 0)
-        #expect(try #require(setup.voice.levels.voice.last) > 0)
+        let window = (0..<VoiceSampleWindow.size).map { Float(sin(Double($0) * 0.2) * 0.1) }
+        setup.media.reading = VoiceSamples(person: window, voice: window.map { $0 / 2 })
+        setup.voice.measureBands()
+        let person = try #require(setup.voice.bands.input.max())
+        let voice = try #require(setup.voice.bands.output.max())
+        #expect(person > voice, "The louder side draws taller")
+        #expect(voice > 0)
         setup.voice.setMuted(true, scene: "A")
-        await setup.voice.sampleLevels()
-        #expect(setup.voice.levels.person.last == 0)
-        #expect(try #require(setup.voice.levels.voice.last) > 0, "The reply still plays")
+        setup.voice.measureBands()
+        #expect(try #require(setup.voice.bands.input.max()) < person, "The muted microphone falls back")
+        #expect(try #require(setup.voice.bands.output.max()) > voice, "The reply still plays")
         setup.voice.stop(scene: "A")
         await setup.voice.start(scene: "A", target: Self.target, client: setup.machine)
-        #expect(setup.voice.levels == VoiceLevelHistory(), "A new session starts with a quiet band")
+        #expect(setup.voice.bands == .silent, "A new session starts with a quiet band")
     }
 
     // MARK: The Live Activity

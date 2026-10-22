@@ -170,9 +170,10 @@ extensions are `app.ruimte.mobile.notifications` and `app.ruimte.mobile.activity
 signing. `project.yml` is the source of the committed Xcode project: regenerate it when adding files or
 dependencies, and commit the generated project and resolved packages without user state or build products.
 
-SwiftTerm is pinned to 1.15.0, Highlightr to 2.3.0, Sentry to 9.30.2 and WebRTC to 153.0.0. SwiftTerm's shaders need Apple's
-separate Metal Toolchain. Icons use [LucideSwift](https://github.com/ajaxjiang96/lucide-swift) 0.9.5 with upstream
-icons 1.46.0; the notices are in `App/Design/Lucide-LICENSE.txt`.
+SwiftTerm is pinned to 1.15.0, Highlightr to 2.3.0, Sentry to 9.30.2, WebRTC to 153.0.0 and LiveKit's WebRTC build to
+150.7871.03. SwiftTerm's shaders need Apple's separate Metal Toolchain. Icons use
+[LucideSwift](https://github.com/ajaxjiang96/lucide-swift) 0.9.5 with upstream icons 1.46.0; the notices are in
+`App/Design/Lucide-LICENSE.txt`.
 
 ```sh
 xcodebuild -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debug \
@@ -239,7 +240,7 @@ its `oai-events` channel is ignored. `RuimteTransport` stays without audio.
 - `AudioSessionController` holds the app's one audio session, `playAndRecord` in `voiceChat` on the speaker, with
   WebRTC's manual audio on, so the microphone and speaker start only while a session runs and the audio goes back to
   what played before with `notifyOthersOnDeactivation`. The same configuration is WebRTC's own
-  (`RTCAudioSessionConfiguration.setWebRTC`), since its audio unit applies that one when audio turns on and would
+  (`LKRTCAudioSessionConfiguration.setWebRTC`), since its audio unit applies that one when audio turns on and would
   otherwise drop the speaker for the earpiece. A file that plays while Voice runs keeps Voice's category, and anything
   that sets another category ends Voice rather than leaving it without a microphone.
 - Voice goes on in the background and on a locked screen: the app declares the `audio` background mode, and while a
@@ -252,11 +253,13 @@ its `oai-events` channel is ignored. `RuimteTransport` stays without audio.
   on the machine's clock and the captions on the phone's, so arrival orders them. An ended conversation stays, with a
   marker and why it ended, until the next start. The band is the desktop's (`VoiceWaveform`, with the math of
   `VoiceWaveformBands` held to `idle-waveform.ts` by a fixture): 40 columns, the person above the line and Voice below,
-  eased every frame, the idle patterns while Voice does not listen, still under Reduce Motion. WebRTC 153.0.0 hands
-  the phone no audio samples, so while Voice listens a column is a moment of its `audioLevel` of the microphone's
-  media source and of the inbound reply (`VoiceLevels`), read every 80 ms while the sheet shows, where the desktop
-  splits the current samples. Voice on a machine deletes nothing yet, so there is
-  no switch for asking before a deletion.
+  eased every frame, the idle patterns while Voice does not listen, still under Reduce Motion. While Voice listens the
+  band is measured as the desktop's `WaveformMonitor` measures it (`VoiceWaveformMeter`, held to `timeDomainBands` and
+  `easeBands` of `apps/client/src/audio/waveform.ts` by a fixture): every 32 ms while the sheet shows, the newest 256
+  samples of each side, in 40 slices. The peer takes the microphone after WebRTC's processing, as the model hears it,
+  from the processing module's capture post-processing delegate, and the reply from a renderer on its track; only the
+  newest 256 samples of each stay in memory (`VoiceSampleWindow`), and nothing is kept or logged. Voice on a machine
+  deletes nothing yet, so there is no switch for asking before a deletion.
 - The mic in the bar stands out in Voice's color while a session runs; outside the app the Live Activity shows it
   (`VoiceLiveActivities`, local only, no push). It starts once the session is active, follows the phase (listening,
   speaking, an action with its label, stopping), whether the microphone is muted, the project and the time, and ends
@@ -303,9 +306,15 @@ web fallback when the native service is unavailable. `apps/pulsar-worker/README.
   pairing, bound to the machine ID and both public keys, so later attempts need no account request. A revoked
   pairing stays a refusal; the app does not regain access through another statement. The statement goes into the
   offer as the address book answered it, v2 fields included, and those fields stay out of the signed signal bytes.
-- `stasel/WebRTC` is pinned to `153.0.0`, commit `4266157cd08f92115de885ab12d87196a8db87e1`, in `RuimteTransport` and
-  `RuimteVoice`. The machine link exchanges no audio or video and declares no microphone, camera or background-audio
-  capability; only Voice's own peer carries audio.
+- `stasel/WebRTC` is pinned to `153.0.0`, commit `4266157cd08f92115de885ab12d87196a8db87e1`, in `RuimteTransport`.
+  The machine link exchanges no audio or video and declares no microphone, camera or background-audio capability;
+  only Voice's own peer carries audio.
+- `RuimteVoice` uses LiveKit's build of WebRTC instead (`livekit/webrtc-xcframework`, MIT, pinned to `150.7871.03`,
+  commit `a41df9e9bcc7ab1d62131fda75c123ea391e5188`), since only it hands an app the samples of both sides: a renderer
+  on an audio track and a capture post-processing delegate on the audio processing module. Its classes carry an `LK`
+  prefix (`LKRTCPeerConnectionFactory`), so the two frameworks live side by side, each with its own audio session
+  object; the app ships both, about 12 MB each for an arm64 device. The factory keeps the platform's
+  voice-processing audio unit, as the plain factory has it.
 - `packages/contracts/scripts/generate-swift.ts` generates the daemon API, JSON schemas, constants and fixtures, and
   the closed vocabularies of the agent, task, plan and chat schemas as Swift enums, so a switch stops compiling when
   a case is added. `AgentKind`, `RuntimeMode`, `AgentStatus` and icon names are open on the wire (`x-open-enum`), so

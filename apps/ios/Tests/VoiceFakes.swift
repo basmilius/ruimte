@@ -95,15 +95,15 @@ import RuimteVoice
     var answer: String?
     var closed = false
     var offers = 0
-    /// What `levels()` reads; nil reads nothing, as a peer without stats.
-    var reading: VoiceLevels? = VoiceLevels.silent
+    /// What `samples()` reads.
+    var reading = VoiceSamples.silent
 
     func offer() async throws -> String {
         offers += 1
         return "offer-sdp"
     }
     func accept(answer: String) async throws { self.answer = answer }
-    func levels() async -> VoiceLevels? { closed ? nil : reading }
+    func samples() -> VoiceSamples { closed ? .silent : reading }
     func close() { closed = true }
 }
 

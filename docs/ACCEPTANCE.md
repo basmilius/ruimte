@@ -219,7 +219,9 @@ Features, in a disposable project where something writes:
 - [ ] Voice in a Debug build, against a machine with an OpenAI key: the reply plays on the
   speaker with the phone away from the ear, and moves to a Bluetooth headset and back. A call, a locked screen, the
   owner's scene in the background and a refused microphone each end it with a reason. Playing an audio or video file
-  while it runs keeps it listening, and it never shows Listening once it cannot hear.
+  while it runs keeps it listening, and it never shows Listening once it cannot hear. On LiveKit's WebRTC build:
+  Voice does not hear its own reply from the speaker (echo cancellation), the band moves with the person's voice above
+  the line and the reply below it, a muted microphone flattens the top half, and Voice goes on in the background.
 - [ ] Visual replies in both themes, links opening in Safari, and the machine's off switch; the same on the desktop
   and the station.
 - [ ] The appearance review of every Intelligent UI element against the desktop, in light, dark, narrow and with
