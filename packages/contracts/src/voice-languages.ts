@@ -1,6 +1,7 @@
 /*
  * One list for the picker and the shell's session instruction, so the picker never offers a language
- * the shell refuses. A label is the language's own name; `english` is what the instruction is built with.
+ * the shell refuses. A label is the language's own name; `english` is what the instruction is built with,
+ * and `accent` names whose pronunciation Voice takes where a language has more than one.
  */
 export const VOICE_LANGUAGES = [
     { id: 'ar', label: 'العربية', english: 'Arabic' },
@@ -8,7 +9,8 @@ export const VOICE_LANGUAGES = [
     { id: 'zh', label: '中文', english: 'Chinese' },
     { id: 'cs', label: 'Čeština', english: 'Czech' },
     { id: 'da', label: 'Dansk', english: 'Danish' },
-    { id: 'nl', label: 'Nederlands', english: 'Dutch' },
+    // The model drifts toward a Flemish accent for Dutch unless it is told which one.
+    { id: 'nl', label: 'Nederlands', english: 'Dutch', accent: 'a speaker from the Netherlands, never a Flemish or Belgian accent' },
     { id: 'en', label: 'English', english: 'English' },
     { id: 'fi', label: 'Suomi', english: 'Finnish' },
     { id: 'fr', label: 'Français', english: 'French' },

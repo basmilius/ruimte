@@ -20,7 +20,7 @@ describe('createOpenAiLiveSession', () => {
         expect(JSON.parse(String(requests[0]?.body))).toMatchObject({
             session: {
                 model: 'gpt-live-1',
-                instructions: expect.stringContaining('standard accent of a native Dutch speaker'),
+                instructions: expect.stringContaining('standard accent of a speaker from the Netherlands, never a Flemish or Belgian accent'),
                 audio: { output: { voice: 'cedar' } },
                 delegation: {
                     type: 'responses',

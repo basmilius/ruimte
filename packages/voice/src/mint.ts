@@ -20,9 +20,16 @@ function languageName(language: VoiceLanguage): string {
     return VOICE_LANGUAGES.find((entry) => entry.id === language)!.english;
 }
 
+function accentOf(language: VoiceLanguage): string | null {
+    const entry = VOICE_LANGUAGES.find((candidate) => candidate.id === language)!;
+    return 'accent' in entry ? entry.accent : null;
+}
+
 function languageInstruction(language: VoiceLanguage): string {
     const name = languageName(language);
-    return `Conduct the entire conversation in ${name}. Understand ${name} speech and always reply in natural ${name} unless the user explicitly asks for another language. Speak with the pronunciation, rhythm and standard accent of a native ${name} speaker; do not carry an English accent into ${name}.`;
+    const accent = accentOf(language);
+    const speaker = accent === null ? `a native ${name} speaker` : accent;
+    return `Conduct the entire conversation in ${name}. Understand ${name} speech and always reply in natural ${name} unless the user explicitly asks for another language. Speak with the pronunciation, rhythm and standard accent of ${speaker}; do not carry an English accent into ${name}.`;
 }
 
 /*
