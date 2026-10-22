@@ -5,6 +5,20 @@ export function silentBands(): number[] {
     return Array(WAVEFORM_BAND_COUNT).fill(0);
 }
 
+/* Each bar is the loudness of its slice of the time-domain bytes an `AnalyserNode` hands out, 128 being silence. */
+export function timeDomainBands(waveform: Uint8Array): number[] {
+    return Array.from({ length: WAVEFORM_BAND_COUNT }, (_, index) => {
+        const start = Math.floor((index / WAVEFORM_BAND_COUNT) * waveform.length);
+        const end = Math.max(start + 1, Math.floor(((index + 1) / WAVEFORM_BAND_COUNT) * waveform.length));
+        let squares = 0;
+        for (let sample = start; sample < end; sample += 1) {
+            const amplitude = ((waveform[sample] ?? 128) - 128) / 128;
+            squares += amplitude * amplitude;
+        }
+        return Math.min(1, Math.sqrt(squares / (end - start)) * 4);
+    });
+}
+
 export const SPEECH_SPECTRUM_BAND_COUNT = 5;
 
 /* Logarithmic bands separate the voice's low tones and higher consonants without amplifying silence. */

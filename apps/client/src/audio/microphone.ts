@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import { desktop } from '@/desktop/bridge';
-import { WAVEFORM_BAND_COUNT, easeBands, silentBands } from '@/audio/waveform';
+import { easeBands, silentBands, timeDomainBands } from '@/audio/waveform';
 
 export interface MicrophoneSnapshot {
     deviceName: string;
@@ -117,17 +117,7 @@ export class WaveformMonitor {
             this.#lastFrame = time;
             const waveform = new Uint8Array(analyser.fftSize);
             analyser.getByteTimeDomainData(waveform);
-            const measured = Array.from({ length: WAVEFORM_BAND_COUNT }, (_, index) => {
-                const start = Math.floor((index / WAVEFORM_BAND_COUNT) * waveform.length);
-                const end = Math.max(start + 1, Math.floor(((index + 1) / WAVEFORM_BAND_COUNT) * waveform.length));
-                let squares = 0;
-                for (let sample = start; sample < end; sample += 1) {
-                    const amplitude = ((waveform[sample] ?? 128) - 128) / 128;
-                    squares += amplitude * amplitude;
-                }
-                return Math.min(1, Math.sqrt(squares / (end - start)) * 4);
-            });
-            this.#levels = easeBands(this.#levels, measured);
+            this.#levels = easeBands(this.#levels, timeDomainBands(waveform));
             this.#onBands([...this.#levels]);
         }
         this.#frame = requestAnimationFrame((next) => this.#measure(next));

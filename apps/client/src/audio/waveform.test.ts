@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { easeBands, spectrumBands } from '@/audio/waveform';
+import { WAVEFORM_BAND_COUNT, easeBands, spectrumBands, timeDomainBands } from '@/audio/waveform';
 
 function filled(length: number, value: number): Float32Array {
     return Float32Array.from({ length }, () => value);
@@ -14,6 +14,22 @@ describe('easing the bars', () => {
 
     test('starts from nothing when there is no previous band', () => {
         expect(easeBands([], [1])).toEqual([0.38]);
+    });
+});
+
+describe('time-domain bars', () => {
+    test('silence stays at the floor', () => {
+        expect(timeDomainBands(new Uint8Array(256).fill(128))).toEqual(Array(WAVEFORM_BAND_COUNT).fill(0));
+    });
+
+    test('a bar is its slice of the samples, four times its loudness and never past full', () => {
+        const waveform = new Uint8Array(256).fill(128);
+        waveform.fill(144, 0, 6);
+        waveform.fill(255, 250);
+        const bands = timeDomainBands(waveform);
+        expect(bands[0]).toBe(0.5);
+        expect(bands[1]).toBe(0);
+        expect(bands[WAVEFORM_BAND_COUNT - 1]).toBe(1);
     });
 });
 
