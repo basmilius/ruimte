@@ -79,6 +79,12 @@ describe('a file link that names only the file', () => {
         await clickOn(link()!);
         await until(() => onScreen('packages/a/index.ts'));
         expect(onScreen('src/index.ts')).toBe(true);
+        // The choice lives outside the page, so a dialog left open shows up in whichever test draws the app next.
+        const cancel = [...page.host.ownerDocument.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(
+            (button) => button.textContent === 'Cancel'
+        );
+        await clickOn(cancel!);
+        await until(() => !onScreen('packages/a/index.ts'));
     });
 
     test('says so when the machine finds nothing', async () => {
