@@ -1,14 +1,18 @@
 import type { ActionOutput } from '@ruimte/actions';
 import {
     isCanvasView,
+    isHiddenCanvasView,
     isOpenableView,
     isUnknownNode,
     isUnknownView,
     type ProjectCanvasView,
     type ProjectContent,
     type ProjectNode,
+    type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
+import type { VoiceOpenProject } from '../actions/context.ts';
+import type { IndexedPlace, ProjectIndex } from '../projects/project-index.ts';
 
 /*
  * What Voice on the daemon reads of a project file: the views a person can open and the nodes of the
@@ -75,4 +79,27 @@ export function projectAgents(content: ProjectContent): VoiceAgentPlace[] {
 /* The chat of this id among them, by the name a person reads; null when the project shows no chat of that id. */
 export function projectChat(content: ProjectContent, chatId: string): VoiceAgentPlace | null {
     return projectAgents(content).find((agent) => agent.id === chatId && agent.kind === 'chat') ?? null;
+}
+
+/* The projects in use on this machine that Voice moves between, the most recently opened first. The Chats project keeps no project of its own, and a folder that went has nothing to read. */
+export function openProjects(summaries: readonly ProjectSummary[]): VoiceOpenProject[] {
+    return summaries
+        .filter((summary) => summary.closedAt == null && summary.available && summary.scratch !== true)
+        .sort((left, right) => right.lastOpenedAt - left.lastOpenedAt)
+        .map((summary) => ({ projectId: summary.projectId, name: summary.name, folder: summary.folder }));
+}
+
+/*
+ * Where the actions of Voice land in a project: the canvas of this id, else the project's first. The
+ * canvas another machine draws its nodes on is no place of this machine's, even when the phone names it.
+ * Null for a project this machine does not know.
+ */
+export function voicePlace(index: Pick<ProjectIndex, 'folderOf' | 'viewsOf'>, projectId: string, viewId?: string): IndexedPlace | null {
+    const folder = index.folderOf(projectId);
+    if (folder === null) {
+        return null;
+    }
+    const canvases = (index.viewsOf(projectId) ?? []).filter(isCanvasView).filter((view): boolean => !isHiddenCanvasView(view));
+    const canvas = canvases.find((view) => view.id === viewId) ?? canvases[0] ?? null;
+    return { projectId, folder, canvasId: canvas?.id ?? null };
 }

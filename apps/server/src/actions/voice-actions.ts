@@ -16,7 +16,7 @@ import {
     type VoiceAgentPlace,
     type VoiceTarget
 } from '../voice/project-reading.ts';
-import type { ServerActionContext, VoiceCaller } from './context.ts';
+import { noVoiceProject, type ServerActionContext, type VoiceCaller, type VoiceOpenProject } from './context.ts';
 
 const DEFAULT_READ = 20;
 
@@ -30,15 +30,19 @@ function voiceOf(context: ServerActionContext): VoiceCaller {
     return context.voice;
 }
 
-/* The project the session started in, whatever project or place the model names. */
-async function sessionProject(context: ServerActionContext): Promise<{ voice: VoiceCaller; content: ProjectContent }> {
+/* The project the session works in now, whatever project or place the model names. */
+async function sessionProject(context: ServerActionContext): Promise<{ voice: VoiceCaller; projectId: string; content: ProjectContent }> {
     const voice = voiceOf(context);
-    return { voice, content: await context.host.projects.read(voice.projectId) };
+    const projectId = voice.projectId;
+    if (projectId === null) {
+        throw noVoiceProject();
+    }
+    return { voice, projectId, content: await context.host.projects.read(projectId) };
 }
 
 /*
  * Refused before anything is read: a chat on another machine has nothing here but the shell it left, and
- * Voice reaches only the project its session started in, whatever id the model names. The words are for
+ * Voice reaches only the project its session works in now, whatever id the model names. The words are for
  * the model of a voice and name no `ruimte-context` flag.
  */
 async function chatOfSession(context: ServerActionContext, chatId: string): Promise<VoiceAgentPlace & { project: string }> {
@@ -47,13 +51,53 @@ async function chatOfSession(context: ServerActionContext, chatId: string): Prom
     if (host.projects.machineOfNode(chatId) !== null) {
         throw new VerbRefusal('remote-target', 'That chat runs on another machine; Voice reaches only the chats of this one');
     }
+    const projectId = voice.projectId;
+    if (projectId === null) {
+        throw noVoiceProject();
+    }
     const place = host.projects.locate(chatId);
-    const content = place?.projectId === voice.projectId ? await host.projects.read(voice.projectId) : null;
+    const content = place?.projectId === projectId ? await host.projects.read(projectId) : null;
     const chat = content === null ? null : projectChat(content, chatId);
     if (content === null || chat === null) {
-        throw new VerbRefusal('not-in-project', 'That id is no AI Chat of this project; resolve the chat by its name first');
+        throw new VerbRefusal('not-in-project', 'That id is no AI Chat of the project Voice works in; resolve the chat by its name first');
     }
-    return { ...chat, project: content.name ?? voice.projectId };
+    return { ...chat, project: content.name ?? projectId };
+}
+
+/* The projects Voice may move to: those in use on this machine, or only the current one for a session that moves nowhere. */
+async function openProjectsOf(voice: VoiceCaller, context: ServerActionContext): Promise<VoiceOpenProject[]> {
+    if (voice.projects !== undefined) {
+        return voice.projects.open();
+    }
+    if (voice.projectId === null) {
+        return [];
+    }
+    const content = await context.host.projects.read(voice.projectId);
+    return [{ projectId: voice.projectId, name: content.name ?? voice.projectId, folder: context.place.folder }];
+}
+
+function projectTarget(project: VoiceOpenProject, voice: VoiceCaller): VoiceTarget {
+    return {
+        id: project.projectId,
+        name: project.name,
+        kind: 'project',
+        viewId: null,
+        view: null,
+        endpointId: voice.projects?.machine.id ?? null,
+        machine: voice.projects?.machine.label ?? null
+    };
+}
+
+async function resolveProject(context: ServerActionContext, names: readonly string[] | null): Promise<Resolved> {
+    const voice = voiceOf(context);
+    const projects = (await openProjectsOf(voice, context)).map((project) => projectTarget(project, voice));
+    if (names === null) {
+        return current(
+            'project',
+            projects.filter((project) => project.id === voice.projectId)
+        );
+    }
+    return named('project', names, (name) => matchName(name, projects));
 }
 
 async function chatInfoOf(context: ServerActionContext, chatId: string): Promise<ChatInfo | null> {
@@ -73,7 +117,9 @@ function needsName(what: string): VerbRefusal {
     return new VerbRefusal('needs-window', `A phone has no selection or view of the screen, so name the ${what}`);
 }
 
-function resolveIn(content: ProjectContent, voice: VoiceCaller, canvasId: string | null, input: ActionInput<'target.resolve'>): Resolved {
+type InProject = ActionInput<'target.resolve'> & { target: Exclude<ActionInput<'target.resolve'>['target'], 'project'> };
+
+function resolveIn(content: ProjectContent, canvasId: string | null, input: InProject): Resolved {
     const { target, names, nodeKind, scope } = input;
     const canvas = visibleCanvas(content, canvasId);
     if (target === 'view') {
@@ -93,33 +139,20 @@ function resolveIn(content: ProjectContent, voice: VoiceCaller, canvasId: string
         const nodes = canvas.nodes.filter((node) => nodeKind === null || node.kind === nodeKind).map((node) => nodeTarget(node, canvas));
         return named(target, names, (name) => matchName(name, nodes));
     }
-    if (target === 'chat' || target === 'agent') {
-        if (names === null) {
-            throw needsName(target === 'chat' ? 'AI Chat' : 'agent');
-        }
-        const agents: VoiceTarget[] = projectAgents(content)
-            .filter((agent) => target === 'agent' || agent.kind === 'chat')
-            .map((agent) => ({ id: agent.id, name: agent.name, kind: agent.kind, viewId: agent.viewId, view: agent.view, endpointId: null, machine: null }));
-        return named(target, names, (name) => {
-            const exact = agents.find((agent) => agent.id === name);
-            if (exact) {
-                return { status: 'found', value: exact };
-            }
-            const qualified = matchName(name, agents, (agent) => `${agent.name} (${agent.view})`);
-            return qualified.status === 'found' ? qualified : matchName(name, agents);
-        });
+    if (names === null) {
+        throw needsName(target === 'chat' ? 'AI Chat' : 'agent');
     }
-    // Voice reaches the one project its session started in, so that is every project it can name.
-    const project: VoiceTarget = {
-        id: voice.projectId,
-        name: content.name ?? voice.projectId,
-        kind: 'project',
-        viewId: null,
-        view: null,
-        endpointId: null,
-        machine: null
-    };
-    return names === null ? current(target, [project]) : named(target, names, (name) => matchName(name, [project]));
+    const agents: VoiceTarget[] = projectAgents(content)
+        .filter((agent) => target === 'agent' || agent.kind === 'chat')
+        .map((agent) => ({ id: agent.id, name: agent.name, kind: agent.kind, viewId: agent.viewId, view: agent.view, endpointId: null, machine: null }));
+    return named(target, names, (name) => {
+        const exact = agents.find((agent) => agent.id === name);
+        if (exact) {
+            return { status: 'found', value: exact };
+        }
+        const qualified = matchName(name, agents, (agent) => `${agent.name} (${agent.view})`);
+        return qualified.status === 'found' ? qualified : matchName(name, agents);
+    });
 }
 
 function pendingRequests(items: readonly ChatItem[]) {
@@ -207,7 +240,7 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
         }
     },
     'workspace.inspect': async (_input, { context }) => {
-        const { voice, content } = await sessionProject(context);
+        const { projectId, content } = await sessionProject(context);
         const canvas = visibleCanvas(content, context.place.canvasId);
         const nodes = canvas
             ? await Promise.all(
@@ -220,8 +253,8 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
             : [];
         return {
             output: {
-                project: content.name ?? voice.projectId,
-                revision: await context.host.projects.revision(voice.projectId),
+                project: content.name ?? projectId,
+                revision: await context.host.projects.revision(projectId),
                 activeView: canvas ? { id: canvas.id, name: canvas.name, kind: 'canvas' } : null,
                 views: openableViews(content).map((view) => ({ id: view.id, name: view.name ?? view.id, kind: viewKindOf(view) })),
                 cells: [],
@@ -231,8 +264,12 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
         };
     },
     'target.resolve': async (input, { context }) => {
-        const { voice, content } = await sessionProject(context);
-        return { output: resolveIn(content, voice, context.place.canvasId, input) };
+        const { target } = input;
+        if (target === 'project') {
+            return { output: await resolveProject(context, input.names) };
+        }
+        const { content } = await sessionProject(context);
+        return { output: resolveIn(content, context.place.canvasId, { ...input, target }) };
     },
     'chat.inspect': async ({ chatId }, { context }) => {
         const chat = await chatOfSession(context, chatId);
@@ -270,7 +307,7 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
         };
     },
     'agents.inspect': async (_input, { context }) => {
-        const { voice, content } = await sessionProject(context);
+        const { projectId, content } = await sessionProject(context);
         const agents = await Promise.all(
             projectAgents(content)
                 // A chat or a terminal on another machine has nothing here but the shell it left.
@@ -280,6 +317,33 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
                     return read === null ? [] : [{ ...agent, ...read, selected: false, toolHistory: agent.kind === 'chat' }];
                 })
         );
-        return { output: { project: content.name ?? voice.projectId, connected: true, observedAt: Date.now(), agents: agents.flat() } };
+        return { output: { project: content.name ?? projectId, connected: true, observedAt: Date.now(), agents: agents.flat() } };
+    },
+    'project.list': async (_input, { context }) => {
+        const voice = voiceOf(context);
+        const machine = voice.projects?.machine ?? null;
+        const projects = (await openProjectsOf(voice, context)).map((project) => ({
+            endpointId: machine?.id ?? '',
+            projectId: project.projectId,
+            name: project.name,
+            machine: machine?.label ?? '',
+            folder: project.folder,
+            recent: false,
+            active: project.projectId === voice.projectId,
+            available: true
+        }));
+        return { output: { projects } };
+    },
+    'project.switch': async ({ endpointId, projectId }, { context }) => {
+        const voice = voiceOf(context);
+        const focus = voice.projects;
+        if (focus === undefined) {
+            throw new VerbRefusal('voice-no-switch', 'This Voice session works in one project only');
+        }
+        if (endpointId !== focus.machine.id) {
+            throw new VerbRefusal('remote-target', 'Voice works only in the projects of this machine; read project.list for the ids');
+        }
+        const project = await focus.switchTo(projectId);
+        return { output: { project: project.name, endpointId: focus.machine.id, projectId: project.projectId } };
     }
 };

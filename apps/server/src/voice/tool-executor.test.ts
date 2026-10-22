@@ -69,7 +69,7 @@ function executor(
         tools?: VoiceToolDefinition[];
         live?: () => boolean;
         sessionId?: string;
-        stateOf?: () => Promise<number>;
+        stateOf?: () => Promise<string>;
     } = {}
 ) {
     const runner = options.runner ?? new FakeRunner();
@@ -242,23 +242,28 @@ describe('VoiceToolExecutor', () => {
         expect(runner.confirmed).toEqual([{ token: 'token-1', approved: true, actor: 'voice:session-1' }]);
     });
 
-    test('a confirmation whose project moved on since it was asked is void, and Voice asks anew', async () => {
-        let revision = 4;
-        const { tool, runner } = executor({ stateOf: async () => revision });
-        const asking = tool.execute('communicate', send('c1'), 'send-1');
-        await settle();
-        runner.ran[0]!.resolve({
-            status: 'needs_confirmation',
-            action: 'chat.send',
-            confirmationToken: 'token-1',
-            confirmation: { title: 'Send?', consequences: [] }
+    for (const [moved, then] of [
+        ['moved on', 'project-1@5'],
+        ['is another project now', 'project-2@4']
+    ] as const) {
+        test(`a confirmation whose project ${moved} since it was asked is void, and Voice asks anew`, async () => {
+            let state = 'project-1@4';
+            const { tool, runner } = executor({ stateOf: async () => state });
+            const asking = tool.execute('communicate', send('c1'), 'send-1');
+            await settle();
+            runner.ran[0]!.resolve({
+                status: 'needs_confirmation',
+                action: 'chat.send',
+                confirmationToken: 'token-1',
+                confirmation: { title: 'Send?', consequences: [] }
+            });
+            await asking;
+            state = then;
+            expect(await tool.confirm('token-1', true)).toMatchObject({ ok: false, code: 'confirmation-stale' });
+            expect(runner.confirmed).toEqual([{ token: 'token-1', approved: false, actor: 'voice:session-1' }]);
+            expect(await tool.confirm('token-1', true)).toMatchObject({ code: 'unknown-confirmation' });
         });
-        await asking;
-        revision = 5;
-        expect(await tool.confirm('token-1', true)).toMatchObject({ ok: false, code: 'confirmation-stale' });
-        expect(runner.confirmed).toEqual([{ token: 'token-1', approved: false, actor: 'voice:session-1' }]);
-        expect(await tool.confirm('token-1', true)).toMatchObject({ code: 'unknown-confirmation' });
-    });
+    }
 
     test('a session that ends leaves nothing to confirm or undo, here or in the registry', async () => {
         const { tool, runner } = executor();

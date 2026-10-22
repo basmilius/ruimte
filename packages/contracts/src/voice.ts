@@ -43,13 +43,22 @@ export const VoiceSetKeyPayloadSchema = z.object({
 });
 export type VoiceSetKeyPayload = z.infer<typeof VoiceSetKeyPayloadSchema>;
 
+/* The project a session works in now; Voice moves between the projects of its machine. */
+export const VoiceProjectSchema = z.object({
+    id: z.string().min(1),
+    name: z.string()
+});
+export type VoiceProject = z.infer<typeof VoiceProjectSchema>;
+
 /* `seq` counts per session, over this event and `voice.activity` together, so a client puts both in one order and drops what it already had. */
 export const VoiceStatusEventSchema = z.object({
     sessionId: id,
     sceneId: id,
     seq: z.number().int().nonnegative(),
     phase: VoicePhaseSchema,
-    error: VoiceErrorSchema.optional()
+    error: VoiceErrorSchema.optional(),
+    // Null while no project is current; absent from a machine that binds a session to one project.
+    project: VoiceProjectSchema.nullable().optional()
 });
 export type VoiceStatusEvent = z.infer<typeof VoiceStatusEventSchema>;
 
@@ -74,13 +83,14 @@ export type VoiceActivityEvent = z.infer<typeof VoiceActivityEventSchema>;
 
 /*
  * `startId` is the client's, so a retry after a lost answer is the same start: the daemon keeps one per
- * client, scene and start id, and refuses the same id with other fields. `viewId` is the canvas on the
- * phone's screen, without which actions land on the project's first canvas.
+ * client, scene and start id, and refuses the same id with other fields. `projectId` is only where the
+ * session starts, the project on the phone's screen; without it the session starts in the project opened
+ * last. `viewId` is the canvas on the phone's screen, without which actions land on the project's first canvas.
  */
 export const VoiceStartPayloadSchema = z.object({
     startId: id,
     sceneId: id,
-    projectId: z.string().min(1),
+    projectId: z.string().min(1).optional(),
     sdp: z.string().min(1).max(VOICE_SDP_MAX_CHARS),
     language: VoiceLanguageSchema,
     voice: LiveVoiceSchema,

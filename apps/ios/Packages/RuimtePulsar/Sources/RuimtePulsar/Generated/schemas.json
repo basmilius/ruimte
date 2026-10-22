@@ -55718,7 +55718,6 @@
     "required": [
       "startId",
       "sceneId",
-      "projectId",
       "sdp",
       "language",
       "voice",
@@ -55778,6 +55777,29 @@
             "required": [
               "code",
               "message"
+            ]
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name"
+                ]
+              },
+              {
+                "type": "null"
+              }
             ]
           }
         },
@@ -76835,6 +76857,29 @@
         "required": [
           "code",
           "message"
+        ]
+      },
+      "project": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          {
+            "type": "null"
+          }
         ]
       }
     },

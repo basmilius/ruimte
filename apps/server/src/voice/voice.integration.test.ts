@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ServerWebSocket } from 'bun';
-import type { ChatItem, ProjectContent } from '@ruimte/contracts';
+import type { ChatItem, ProjectContent, ProjectSummary } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
 import { serverActions } from '../actions/server-actions.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
@@ -105,6 +105,22 @@ function daemon(home: string, openAiUrl: string, threads: Map<string, ChatItem[]
         host,
         chats: new FakeChats(),
         index: { folderOf: (projectId) => (projectId === 'project-1' ? '/work/app' : null), viewsOf: () => CONTENT.views },
+        projects: {
+            list: async () => [
+                {
+                    projectId: 'project-1',
+                    name: 'App',
+                    color: '#123456',
+                    folder: '/work/app',
+                    lastOpenedAt: 1,
+                    closedAt: null,
+                    available: true,
+                    icon: { kind: 'lucide', value: 'folder' },
+                    nameSource: 'folder'
+                } as ProjectSummary
+            ]
+        },
+        machine: { id: 'machine-1', label: 'Studio' },
         writes: false
     });
     const dispatcher = new Dispatcher();
@@ -207,7 +223,8 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const START = { startId: 'start-1', sceneId: 'scene-1', projectId: 'project-1', sdp: 'v=0 offer', language: 'en', voice: 'marin', timeZone: 'UTC' };
+// The phone names no project, so the session starts in the one opened last.
+const START = { startId: 'start-1', sceneId: 'scene-1', sdp: 'v=0 offer', language: 'en', voice: 'marin', timeZone: 'UTC' };
 
 describe('Voice run by the daemon over real sockets', () => {
     test('starts, runs a tool, reports and stops', async () => {
@@ -216,7 +233,7 @@ describe('Voice run by the daemon over real sockets', () => {
         const client = await phone(running.url);
 
         const started = await client.ask('voice.start', START);
-        expect(started).toMatchObject({ ok: true, result: { sdp: 'v=0 answer', status: { phase: 'active' } } });
+        expect(started).toMatchObject({ ok: true, result: { sdp: 'v=0 answer', status: { phase: 'active', project: { id: 'project-1', name: 'App' } } } });
         const sessionId = (started.result as { sessionId: string }).sessionId;
         expect(openAi.mints).toHaveLength(1);
         expect(openAi.mints[0]!.authorization).toBe(`Bearer ${KEY}`);

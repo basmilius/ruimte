@@ -26,11 +26,20 @@ describe('the daemon Voice matrix', () => {
         expect(DAEMON_VOICE_ACTIONS.filter((action) => action.writes).map((action) => action.name)).toEqual(['chat.send', 'agent.start']);
     });
 
-    test('without writes Voice only reads', () => {
+    test('without writes Voice only reads, and moves between the projects of its machine', () => {
         const actions = daemonVoiceActions({ writes: false });
-        expect(actions.map((action) => action.name)).toEqual(['workspace.inspect', 'target.resolve', 'chat.read', 'chat.inspect', 'agents.inspect']);
+        expect(actions.map((action) => action.name)).toEqual([
+            'project.list',
+            'project.switch',
+            'workspace.inspect',
+            'target.resolve',
+            'chat.read',
+            'chat.inspect',
+            'agents.inspect'
+        ]);
         for (const action of actions) {
-            expect(ACTION_DEFINITIONS[action.name].effect).toBe('read');
+            // A switch moves only the session, which the daemon keeps; it writes nothing a project holds.
+            expect(ACTION_DEFINITIONS[action.name].effect).toBe(action.name === 'project.switch' ? 'local' : 'read');
         }
         expect(offered(false)).not.toContain('chat.send');
     });

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { ChatItem, ProjectContent, ServerFrame, VoiceStartPayload } from '@ruimte/contracts';
+import type { ChatItem, ProjectContent, ProjectSummary, ServerFrame, VoiceStartPayload } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
 import type { CanvasHost } from '../canvas/verb.ts';
 import type { ClientConnection } from '../dispatcher.ts';
@@ -12,11 +12,34 @@ import { MAX_VOICE_SESSIONS, VoiceSessions } from './voice-sessions.ts';
 const KEY = 'sk-test-voice-0123456789abcdef';
 
 const CONTENT = {
+    name: 'App',
     views: [
         { id: 'main', kind: 'canvas', name: 'Main', nodes: [{ id: 'chat-1', kind: 'chat', title: 'Builder', x: 0, y: 0, w: 400, h: 300 }], edges: [] },
         { id: 'second', kind: 'canvas', name: 'Second', nodes: [], edges: [] }
     ]
 } as unknown as ProjectContent;
+
+const SITE = {
+    name: 'Site',
+    views: [{ id: 'board', kind: 'canvas', name: 'Board', nodes: [{ id: 'chat-2', kind: 'chat', title: 'Writer', x: 0, y: 0, w: 400, h: 300 }], edges: [] }]
+} as unknown as ProjectContent;
+
+const FOLDERS: Record<string, string> = { 'project-1': '/work/app', 'project-2': '/work/site' };
+
+function summary(projectId: string, name: string, lastOpenedAt: number, fields: Partial<ProjectSummary> = {}): ProjectSummary {
+    return {
+        projectId,
+        name,
+        color: '#123456',
+        folder: FOLDERS[projectId] ?? `/work/${projectId}`,
+        lastOpenedAt,
+        closedAt: null,
+        available: true,
+        icon: { kind: 'lucide', value: 'folder' },
+        nameSource: 'folder',
+        ...fields
+    } as ProjectSummary;
+}
 
 interface FakeClient extends ClientConnection {
     frames: ServerFrame[];
@@ -75,13 +98,19 @@ let threadGate: Promise<void>;
 let ids: number;
 let projectChanged: () => void;
 let placed: (string | null)[];
+let summaries: ProjectSummary[];
 
 function sessions(writes = false, views: ProjectContent['views'] = CONTENT.views): VoiceSessions {
     const host = {
         projects: {
-            locate: (id: string) => (id === 'chat-1' ? { projectId: 'project-1', folder: '/work/app', canvasId: 'main' } : null),
+            locate: (id: string) =>
+                id === 'chat-1'
+                    ? { projectId: 'project-1', folder: '/work/app', canvasId: 'main' }
+                    : id === 'chat-2'
+                      ? { projectId: 'project-2', folder: '/work/site', canvasId: 'board' }
+                      : null,
             machineOfNode: () => null,
-            read: async () => CONTENT
+            read: async (projectId: string) => (projectId === 'project-2' ? SITE : CONTENT)
         },
         chatThreads: {
             items: async (chatId: string) => {
@@ -104,7 +133,7 @@ function sessions(writes = false, views: ProjectContent['views'] = CONTENT.views
         // The registry itself, seen on the way in, so a test reads the place each action lands on.
         runner: {
             execute: (name, input, call) => {
-                placed.push(call.context.place.canvasId);
+                placed.push(call.context.voice?.projectId === null ? null : call.context.place.canvasId);
                 return serverActions.execute(name, input, call);
             },
             confirm: (token, approved, call) => serverActions.confirm(token, approved, call),
@@ -113,9 +142,11 @@ function sessions(writes = false, views: ProjectContent['views'] = CONTENT.views
         host,
         chats: new FakeChats(),
         index: {
-            folderOf: (projectId) => (projectId === 'project-1' ? '/work/app' : null),
-            viewsOf: (projectId) => (projectId === 'project-1' ? views : null)
+            folderOf: (projectId) => FOLDERS[projectId] ?? null,
+            viewsOf: (projectId) => (projectId === 'project-1' ? views : projectId === 'project-2' ? SITE.views : null)
         },
+        projects: { list: async () => summaries },
+        machine: { id: 'machine-1', label: 'Studio' },
         writes,
         newId: () => `session-${++ids}`
     });
@@ -150,6 +181,7 @@ beforeEach(() => {
     threadGate = Promise.resolve();
     ids = 0;
     placed = [];
+    summaries = [summary('project-1', 'App', 200), summary('project-2', 'Site', 100)];
 });
 
 describe('starting', () => {
@@ -174,7 +206,7 @@ describe('starting', () => {
         expect(result).toEqual({
             sessionId: 'session-1',
             sdp: 'answer-of-live_1',
-            status: { sessionId: 'session-1', sceneId: 'scene-1', seq: 1, phase: 'active' }
+            status: { sessionId: 'session-1', sceneId: 'scene-1', seq: 1, phase: 'active', project: { id: 'project-1', name: 'App' } }
         });
         expect(phases(owner)).toEqual(['active']);
         // The deadline is gone; what is left is the minute the model hears the time on.
@@ -549,5 +581,127 @@ describe('what the model knows', () => {
         const { attach } = await started(sessions(), client('client-1'), startPayload({ timeZone: 'Mars/Olympus' }));
         await settle();
         expect(thoughts(attach).join('')).toContain('IANA time zone: unknown (Mars/Olympus), shown in UTC');
+    });
+});
+
+describe('the project Voice works in', () => {
+    /* Long enough for a list, a switch and the reads queued behind it to answer. */
+    async function calm(): Promise<void> {
+        for (let i = 0; i < 5; i++) {
+            await settle();
+        }
+    }
+
+    function toolCall(callId: string, tool: string, args: Record<string, unknown>): LiveEvent {
+        return {
+            type: 'response.event',
+            delegation_id: 'delegation-1',
+            event: { type: 'response.output_item.done', item: { type: 'function_call', call_id: callId, name: tool, arguments: JSON.stringify(args) } }
+        };
+    }
+
+    function outputOf(attach: { socket: { sentOf(type: string): LiveEvent[] } }, callId: string): Record<string, unknown> {
+        const sent = attach.socket.sentOf('response.item.create').find((event) => (event.item as { call_id?: string }).call_id === callId);
+        return JSON.parse(String((sent!.item as { output: string }).output)) as Record<string, unknown>;
+    }
+
+    function said(attach: { socket: { sentOf(type: string): LiveEvent[] } }): string {
+        return attach.socket
+            .sentOf('session.thinking.append')
+            .map((event) => String(event.content))
+            .join('');
+    }
+
+    function unnamed(): VoiceStartPayload {
+        const { projectId: _projectId, ...payload } = startPayload();
+        return payload;
+    }
+
+    const SWITCH = { endpointId: 'machine-1', projectId: 'project-2' };
+
+    test('a start that names no project works in the one opened last, and tells the phone', async () => {
+        summaries = [
+            summary('project-1', 'App', 200),
+            summary('project-2', 'Site', 300),
+            summary('project-3', 'Old', 400, { closedAt: 50 }),
+            summary('project-4', 'Gone', 500, { available: false }),
+            summary('scratch', 'Chats', 600, { scratch: true })
+        ];
+        const { attach, result } = await started(sessions(), client('client-1'), unnamed());
+        await settle();
+        expect(holds).toEqual(['hold voice:session-1 project-2']);
+        expect(result.status.project).toEqual({ id: 'project-2', name: 'Site' });
+        expect(said(attach)).toContain('Projects in use on this machine: Site, App.');
+        expect(said(attach)).toContain('Voice works in project: Site.');
+    });
+
+    test('a start on a machine with no project in use works in none, and an action that needs one says how to pick one', async () => {
+        summaries = [];
+        const voice = sessions();
+        const { attach, owner, result } = await started(voice, client('client-1'), unnamed());
+        await settle();
+        expect(holds).toEqual([]);
+        expect(result.status.project).toBeNull();
+        expect(said(attach)).toContain('Voice works in no project now');
+        attach.socket.receive(toolCall('call-1', 'inspect_workspace', { action: 'workspace.inspect' }));
+        await settle();
+        expect(outputOf(attach, 'call-1')).toMatchObject({ ok: false, code: 'no-project' });
+        const stopping = voice.stop(owner, { sceneId: 'scene-1', sessionId: result.sessionId });
+        attach.socket.receive({ type: 'session.closed' });
+        await stopping;
+        expect(holds).toEqual([]);
+    });
+
+    test('lists the projects in use on this machine, the current one active, and resolves one by name', async () => {
+        const { attach } = await started(sessions());
+        attach.socket.receive(toolCall('call-1', 'manage_projects', { action: 'project.list' }));
+        attach.socket.receive(toolCall('call-2', 'inspect_workspace', { action: 'target.resolve', target: 'project', names: ['site'] }));
+        await calm();
+        expect(outputOf(attach, 'call-1')).toMatchObject({
+            ok: true,
+            projects: [
+                { endpointId: 'machine-1', projectId: 'project-1', name: 'App', machine: 'Studio', recent: false, active: true },
+                { endpointId: 'machine-1', projectId: 'project-2', name: 'Site', machine: 'Studio', recent: false, active: false }
+            ]
+        });
+        expect(outputOf(attach, 'call-2')).toMatchObject({ ok: true, found: [{ id: 'project-2', kind: 'project', endpointId: 'machine-1' }] });
+    });
+
+    test('a switch lets go of the old project, holds the new one, and tells the phone and the model', async () => {
+        const voice = sessions();
+        const { attach, owner, result } = await started(voice);
+        await settle();
+        attach.socket.receive(toolCall('call-1', 'manage_projects', { action: 'project.switch', ...SWITCH }));
+        await calm();
+        expect(outputOf(attach, 'call-1')).toMatchObject({ ok: true, project: 'Site', projectId: 'project-2' });
+        expect(holds).toEqual(['hold voice:session-1 project-1', 'letGo voice:session-1 project-1', 'hold voice:session-1 project-2']);
+        expect(eventsOf(owner, 'voice.status').at(-1)!.payload).toMatchObject({ phase: 'active', project: { id: 'project-2', name: 'Site' } });
+        expect(said(attach)).toContain('Voice works in project: Site.');
+        // Every other action now reads and lands in the new project, never the old one.
+        placed = [];
+        attach.socket.receive(functionCall('call-2', { action: 'chat.read', chatId: 'chat-2', limit: null }));
+        attach.socket.receive(functionCall('call-3', { action: 'chat.read', chatId: 'chat-1', limit: null }));
+        await calm();
+        expect(outputOf(attach, 'call-2')).toMatchObject({ ok: true, chat: 'Writer' });
+        expect(outputOf(attach, 'call-3')).toMatchObject({ ok: false, code: 'not-in-project' });
+        expect(placed).toEqual(['board', 'board']);
+        const stopping = voice.stop(owner, { sceneId: 'scene-1', sessionId: result.sessionId });
+        attach.socket.receive({ type: 'session.closed' });
+        await stopping;
+        expect(holds.at(-1)).toBe('letGo voice:session-1 project-2');
+    });
+
+    test('a switch to a project not in use here, or on another machine, is refused and moves nothing', async () => {
+        summaries = [summary('project-1', 'App', 200), summary('project-2', 'Site', 100, { closedAt: 150 })];
+        const { attach, owner } = await started(sessions());
+        attach.socket.receive(toolCall('call-1', 'manage_projects', { action: 'project.switch', ...SWITCH }));
+        attach.socket.receive(toolCall('call-2', 'manage_projects', { action: 'project.switch', endpointId: 'machine-1', projectId: 'nowhere' }));
+        attach.socket.receive(toolCall('call-3', 'manage_projects', { action: 'project.switch', endpointId: 'machine-2', projectId: 'project-1' }));
+        await calm();
+        expect(outputOf(attach, 'call-1')).toMatchObject({ ok: false, code: 'unknown-project' });
+        expect(outputOf(attach, 'call-2')).toMatchObject({ ok: false, code: 'unknown-project' });
+        expect(outputOf(attach, 'call-3')).toMatchObject({ ok: false, code: 'remote-target' });
+        expect(holds).toEqual(['hold voice:session-1 project-1']);
+        expect(eventsOf(owner, 'voice.status').map((event) => (event.payload.project as { id: string }).id)).toEqual(['project-1']);
     });
 });

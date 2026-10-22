@@ -30,9 +30,10 @@ export interface VoiceToolExecutorOptions<Context> {
     live(): boolean;
     /*
      * Where what the actions act on stands, read when an action asks first and again when it is answered:
-     * the revision of the project. A token whose target moved on in between is void, and Voice asks anew.
+     * the current project and its revision. A token whose project changed or moved on in between is void,
+     * and Voice asks anew.
      */
-    stateOf?(): Promise<number>;
+    stateOf?(): Promise<string>;
     observer?: VoiceToolObserver;
 }
 
@@ -114,7 +115,7 @@ export class VoiceToolExecutor<Context> {
     readonly #options: VoiceToolExecutorOptions<Context>;
     readonly #offered: Map<string, ReadonlySet<string>>;
     readonly #calls = new Map<string, Promise<VoiceToolOutput>>();
-    readonly #confirmations = new Map<string, { name: ActionName; input: Record<string, unknown>; state: number | null }>();
+    readonly #confirmations = new Map<string, { name: ActionName; input: Record<string, unknown>; state: string | null }>();
     readonly #reads = new Gate(PARALLEL_READS);
     #changes: Promise<unknown> = Promise.resolve();
     #count = 0;
@@ -175,7 +176,7 @@ export class VoiceToolExecutor<Context> {
         this.#options.runner.confirm(token, false, this.#options.call()).catch(() => undefined);
     }
 
-    async #state(): Promise<number | null> {
+    async #state(): Promise<string | null> {
         try {
             return (await this.#options.stateOf?.()) ?? null;
         } catch {
@@ -286,7 +287,7 @@ export class VoiceToolExecutor<Context> {
         return refused(error.code, error.message);
     }
 
-    #remember(token: string, name: ActionName, input: Record<string, unknown>, state: number | null): void {
+    #remember(token: string, name: ActionName, input: Record<string, unknown>, state: string | null): void {
         if (this.#confirmations.size >= CONFIRMATION_MEMORY) {
             const oldest = this.#confirmations.keys().next().value;
             if (oldest !== undefined) {

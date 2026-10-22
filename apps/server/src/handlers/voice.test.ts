@@ -84,6 +84,7 @@ describe('the voice requests', () => {
                 wireVoice({
                     config: { home: root, experimentalVoice: { enabled: true, writes: false } },
                     projects: { hold: () => undefined, letGo: () => undefined, index: { folderOf: () => null, viewsOf: () => null } } as never,
+                    machine: { id: 'machine-1', label: 'Studio' },
                     canvasHost: {} as CanvasHost,
                     chats: { observe: () => () => undefined, get: () => undefined },
                     ...fields
@@ -138,6 +139,7 @@ describe('the voice requests', () => {
         const off = wireVoice({
             config: { home: root, experimentalVoice: { enabled: false, writes: false } },
             projects: {} as never,
+            machine: { id: 'machine-1', label: 'Studio' },
             canvasHost: {} as CanvasHost,
             chats: { observe: () => () => undefined, get: () => undefined },
             compiled: false
@@ -148,6 +150,7 @@ describe('the voice requests', () => {
             const on = wireVoice({
                 config: { home: root, experimentalVoice: { enabled: true, writes: false } },
                 projects: { hold: () => undefined, letGo: () => undefined, index: { folderOf: () => null, viewsOf: () => null } } as never,
+                machine: { id: 'machine-1', label: 'Studio' },
                 canvasHost: {} as CanvasHost,
                 chats: { observe: () => () => undefined, get: () => undefined },
                 compiled: false,

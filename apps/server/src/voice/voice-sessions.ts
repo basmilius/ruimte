@@ -1,13 +1,8 @@
-import {
-    isCanvasView,
-    isHiddenCanvasView,
-    type VoiceConfirmPayload,
-    type VoiceStartPayload,
-    type VoiceStartResult,
-    type VoiceStopPayload
-} from '@ruimte/contracts';
+import type { VoiceConfirmPayload, VoiceStartPayload, VoiceStartResult, VoiceStopPayload } from '@ruimte/contracts';
 import { sendEvent, RequestError, type ClientConnection } from '../dispatcher.ts';
 import type { IndexedPlace, ProjectIndex } from '../projects/project-index.ts';
+import type { ProjectStore } from '../projects/project-store.ts';
+import { voicePlace } from './project-reading.ts';
 import { VoiceSession, type VoiceSessionDeps } from './voice-session.ts';
 
 // Each session costs money by the minute and holds a sideband, so a machine runs a few at most.
@@ -25,8 +20,9 @@ interface StartRecord {
     answer: Promise<VoiceStartResult> | null;
 }
 
-export interface VoiceSessionsDeps extends Omit<VoiceSessionDeps, 'emit'> {
+export interface VoiceSessionsDeps extends Omit<VoiceSessionDeps, 'emit' | 'places'> {
     index: Pick<ProjectIndex, 'folderOf' | 'viewsOf'>;
+    projects: Pick<ProjectStore, 'list'>;
     writes: boolean;
     /* A fresh session id; the daemon's, never a client's. */
     newId?: () => string;
@@ -84,17 +80,23 @@ export class VoiceSessions {
         if (running.length >= MAX_VOICE_SESSIONS) {
             return Promise.reject(new RequestError('voice-busy', 'Voice already runs on as many screens as this machine allows'));
         }
-        let place: IndexedPlace;
-        try {
-            place = this.#placeOf(payload);
-        } catch (e) {
-            return Promise.reject(e);
+        let place: IndexedPlace | null = null;
+        if (payload.projectId !== undefined) {
+            place = voicePlace(this.#deps.index, payload.projectId, payload.viewId);
+            if (place === null) {
+                return Promise.reject(new RequestError('unknown-project', 'This machine has no project of that id'));
+            }
         }
         const sessionId = (this.#deps.newId ?? (() => crypto.randomUUID()))();
+        const { index, projects } = this.#deps;
         const session = new VoiceSession(
             { sessionId, payload, owner: { clientId: client.id, sceneId: payload.sceneId }, place, writes: this.#deps.writes },
             {
                 ...this.#deps,
+                places: {
+                    summaries: () => projects.list(),
+                    placeOf: (projectId, viewId) => voicePlace(index, projectId, viewId)
+                },
                 emit: (event, eventPayload) => {
                     // A connection that went hears nothing; a late event of an ended start goes nowhere.
                     if (client.closed !== true) {
@@ -171,17 +173,6 @@ export class VoiceSessions {
         const stopped = session.running;
         await session.stop();
         return { stopped };
-    }
-
-    #placeOf(payload: VoiceStartPayload): IndexedPlace {
-        const folder = this.#deps.index.folderOf(payload.projectId);
-        if (folder === null) {
-            throw new RequestError('unknown-project', 'This machine has no project of that id');
-        }
-        // The canvas another machine draws its nodes on is no place of this machine's, even when the phone names it.
-        const canvases = (this.#deps.index.viewsOf(payload.projectId) ?? []).filter(isCanvasView).filter((view): boolean => !isHiddenCanvasView(view));
-        const canvas = canvases.find((view) => view.id === payload.viewId) ?? canvases[0] ?? null;
-        return { projectId: payload.projectId, folder, canvasId: canvas?.id ?? null };
     }
 
     #remember(key: string, record: StartRecord): void {

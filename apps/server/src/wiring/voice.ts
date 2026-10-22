@@ -19,7 +19,9 @@ export interface VoiceBundle {
 
 export interface VoiceInput {
     config: Pick<ServerConfig, 'home' | 'experimentalVoice'>;
-    projects: Pick<ProjectStore, 'hold' | 'letGo' | 'index' | 'subscribe'>;
+    projects: Pick<ProjectStore, 'hold' | 'letGo' | 'index' | 'subscribe' | 'list'>;
+    /* This machine, the only one whose projects Voice works in. */
+    machine: { id: string; label: string };
     canvasHost: CanvasHost;
     chats: Pick<ChatManager, 'observe' | 'get'>;
     compiled: boolean;
@@ -75,6 +77,8 @@ export function wireVoice(input: VoiceInput): VoiceBundle | null {
             }
         },
         index: projects.index,
+        projects,
+        machine: input.machine,
         writes: config.experimentalVoice.writes
     });
     console.log(

@@ -49,7 +49,9 @@ const DAEMON_VOICE_REACH: Record<string, 'voice' | 'blocked'> = {
     'target.resolve': 'voice',
     'chat.inspect': 'voice',
     'agents.inspect': 'voice',
-    'chat.send': 'voice'
+    'chat.send': 'voice',
+    'project.list': 'voice',
+    'project.switch': 'voice'
 };
 
 function voiceCall() {

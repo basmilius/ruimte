@@ -134,6 +134,7 @@ export class FakeLive implements OpenAiLive {
     readonly attaches: FakeAttach[] = [];
     readonly closed: string[] = [];
     #minted = 0;
+    #mintWaiters: { count: number; resolve: () => void }[] = [];
 
     constructor(clock: FakeClock) {
         this.clock = clock;
@@ -142,7 +143,20 @@ export class FakeLive implements OpenAiLive {
     mint(key: string, body: Record<string, unknown>, signal: AbortSignal): Promise<LiveSessionAnswer> {
         const pending = deferred<LiveSessionAnswer>();
         this.mints.push({ key, body, signal, pending });
+        const due = this.#mintWaiters.filter((waiter) => waiter.count <= this.mints.length);
+        this.#mintWaiters = this.#mintWaiters.filter((waiter) => !due.includes(waiter));
+        for (const waiter of due) {
+            waiter.resolve();
+        }
         return pending.promise;
+    }
+
+    /* Resolves once this many mints came, for a start that reads the disk before it mints. */
+    minting(count: number): Promise<void> {
+        if (this.mints.length >= count) {
+            return Promise.resolve();
+        }
+        return new Promise((resolve) => this.#mintWaiters.push({ count, resolve }));
     }
 
     attach(_key: string, sessionId: string, handlers: SidebandHandlers, signal: AbortSignal): Promise<LiveSideband> {

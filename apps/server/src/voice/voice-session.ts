@@ -1,24 +1,27 @@
 import { ACTION_DEFINITIONS, type ActionDomain, type ActionName } from '@ruimte/actions';
 import type {
+    ProjectSummary,
     VoiceActivityEntry,
     VoiceActivityEvent,
     VoiceActivityKind,
     VoiceError,
     VoicePhase,
+    VoiceProject,
     VoiceStartPayload,
     VoiceStartResult,
     VoiceStatusEvent
 } from '@ruimte/contracts';
 import { contextChunks, daemonVoiceTools, liveSessionBody, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
 import { CodedError } from '@adecore/agents';
-import type { CanvasHost } from '../canvas/verb.ts';
-import { voiceActionCall, type ServerActionContext, type VoiceCaller } from '../actions/context.ts';
+import { VerbRefusal, type CanvasHost } from '../canvas/verb.ts';
+import { voiceActionCall, type ServerActionContext, type VoiceCaller, type VoiceOpenProject } from '../actions/context.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { voicePolicy } from './action-policy.ts';
 import type { VoiceClock } from './clock.ts';
 import { LiveError, type OpenAiLive } from './openai-live.ts';
+import { openProjects } from './project-reading.ts';
 import { phonePrompts } from './prompts.ts';
-import { projectContext, timeContext } from './session-context.ts';
+import { sessionContext, timeContext } from './session-context.ts';
 import type { LiveSideband } from './sideband.ts';
 import { VoiceToolExecutor, type VoiceActionRunner } from './tool-executor.ts';
 import { VoiceFollower, type VoiceFollowActivity, type VoiceFollowChats } from './voice-follower.ts';
@@ -37,10 +40,18 @@ export interface VoiceSessionDeps {
     key(): Promise<string | null>;
     clock: VoiceClock;
     /*
-     * Keeps the project loaded while the session runs, as a hold that starts no launches, and lets go of it
-     * after. `changed` hears every change of the project's file meanwhile, the way a client holding it would.
+     * Keeps the current project loaded while the session works in it, as a hold that starts no launches,
+     * and lets go of it after. `changed` hears every change of the project's file meanwhile, the way a
+     * client holding it would. A holder holds one project at a time.
      */
     holds: { hold(holder: string, projectId: string, changed: () => void): void; letGo(holder: string, projectId: string): void };
+    /* The projects of this machine, which the session moves between. */
+    places: {
+        summaries(): Promise<ProjectSummary[]>;
+        placeOf(projectId: string, viewId?: string): IndexedPlace | null;
+    };
+    /* This machine, the only one whose projects Voice works in. */
+    machine: { id: string; label: string };
     runner: VoiceActionRunner<ServerActionContext>;
     host: CanvasHost;
     /* The daemon's chats, which the session follows once it prompted or started one. */
@@ -54,11 +65,13 @@ export interface VoiceSessionStart {
     sessionId: string;
     payload: VoiceStartPayload;
     owner: { clientId: string; sceneId: string };
-    place: IndexedPlace;
+    /* Where the phone starts the session; null starts it in the project opened last. */
+    place: IndexedPlace | null;
     writes: boolean;
 }
 
 const TIMELINE: Partial<Record<ActionDomain, VoiceActivityKind>> = {
+    projects: 'focus',
     workspace: 'view',
     views: 'view',
     communicate: 'chat',
@@ -87,6 +100,9 @@ export class VoiceSession {
     readonly #start: VoiceSessionStart;
     readonly #abort = new AbortController();
     readonly #holder: string;
+    /* The project the session works in now and holds; null while it works in none. */
+    #place: IndexedPlace | null = null;
+    #project: VoiceProject | null = null;
     #phase: VoicePhase = 'starting';
     #seq = 0;
     #error: VoiceError | undefined;
@@ -129,7 +145,8 @@ export class VoiceSession {
             sceneId: this.owner.sceneId,
             seq: this.#seq,
             phase: this.#phase,
-            ...(this.#error === undefined ? {} : { error: this.#error })
+            ...(this.#error === undefined ? {} : { error: this.#error }),
+            project: this.#project
         };
     }
 
@@ -137,12 +154,13 @@ export class VoiceSession {
     async start(): Promise<VoiceStartResult> {
         const { live, clock } = this.#deps;
         const { payload, writes } = this.#start;
-        this.#deps.holds.hold(this.#holder, this.#start.place.projectId, () => this.#projectChanged());
         this.#cancelDeadline = clock.after(VOICE_START_DEADLINE_MS, () => {
             void this.#end('failed', { code: 'voice-start-timeout', message: 'Voice did not start in time' });
         });
         const signal = this.#abort.signal;
         try {
+            const first = await this.#whileStarting(this.#firstProject());
+            this.#focus(first?.place ?? null, first?.name ?? null);
             const key = await this.#whileStarting(this.#deps.key());
             if (key === null) {
                 throw new LiveError('voice-no-key', 'No OpenAI key for Voice is set on this machine');
@@ -188,9 +206,12 @@ export class VoiceSession {
                 runner: this.#deps.runner,
                 policy: voicePolicy({ writes }),
                 tools,
-                call: () => voiceActionCall(this.#deps.host, this.#start.place, this.#caller()),
+                call: () => voiceActionCall(this.#deps.host, this.#place, this.#caller()),
                 live: () => this.#phase === 'active',
-                stateOf: () => this.#deps.host.projects.revision(this.#start.place.projectId),
+                stateOf: async () => {
+                    const place = this.#place;
+                    return place === null ? 'none' : `${place.projectId}@${await this.#deps.host.projects.revision(place.projectId)}`;
+                },
                 observer: {
                     started: (callId, name) => this.#activity(callId, name, 'running'),
                     finished: (callId, name, ok) => this.#activity(callId, name, ok ? 'completed' : 'failed')
@@ -278,11 +299,66 @@ export class VoiceSession {
         return {
             sessionId: this.id,
             owner: this.owner,
-            projectId: this.#start.place.projectId,
+            projectId: this.#place?.projectId ?? null,
+            projects: {
+                machine: this.#deps.machine,
+                open: async () => openProjects(await this.#deps.places.summaries()),
+                switchTo: (projectId) => this.#switchTo(projectId)
+            },
             timeZone: this.#start.payload.timeZone,
             writes: this.#start.writes,
             ...(this.#follower === null ? {} : { follow: this.#follower })
         };
+    }
+
+    /* The project the phone named, or else the one opened last; null when the machine has none in use. */
+    async #firstProject(): Promise<{ place: IndexedPlace; name: string } | null> {
+        const summaries = await this.#deps.places.summaries().catch((): ProjectSummary[] => []);
+        const named = this.#start.place;
+        if (named !== null) {
+            return { place: named, name: summaries.find((summary) => summary.projectId === named.projectId)?.name ?? named.projectId };
+        }
+        for (const project of openProjects(summaries)) {
+            const place = this.#deps.places.placeOf(project.projectId);
+            if (place !== null) {
+                return { place, name: project.name };
+            }
+        }
+        return null;
+    }
+
+    /* Lets go of the project the session worked in and holds this one; a holder holds one project at a time, so the old one goes first. */
+    #focus(place: IndexedPlace | null, name: string | null): void {
+        if (this.#place !== null) {
+            this.#deps.holds.letGo(this.#holder, this.#place.projectId);
+        }
+        this.#place = place;
+        this.#project = place === null ? null : { id: place.projectId, name: name ?? place.projectId };
+        if (place !== null) {
+            this.#deps.holds.hold(this.#holder, place.projectId, () => this.#projectChanged());
+        }
+    }
+
+    /* The model moves the session to another project in use on this machine, never to one of another machine. */
+    async #switchTo(projectId: string): Promise<VoiceOpenProject> {
+        const project = openProjects(await this.#deps.places.summaries()).find((candidate) => candidate.projectId === projectId);
+        // The phone's canvas is a canvas of the project it started in, so only a way back there lands on it again.
+        const viewId = projectId === this.#start.payload.projectId ? this.#start.payload.viewId : undefined;
+        const place = project === undefined ? null : this.#deps.places.placeOf(projectId, viewId);
+        if (project === undefined || place === null) {
+            throw new VerbRefusal('unknown-project', 'No project in use on this machine has that id; read project.list for the ids');
+        }
+        if (this.#phase !== 'active') {
+            throw new VerbRefusal('voice-ended', 'This Voice session has ended');
+        }
+        if (this.#place?.projectId !== projectId) {
+            this.#cancelContext?.();
+            this.#cancelContext = null;
+            this.#focus(place, project.name);
+            this.#announce();
+            void this.#sendContext();
+        }
+        return project;
     }
 
     /* The error a start answers with once the session ended under it: why it ended, or the error that ended it. */
@@ -354,9 +430,12 @@ export class VoiceSession {
     }
 
     async #sendContext(): Promise<void> {
+        const place = this.#place;
         try {
-            const context = await projectContext(this.#deps.host, this.#start.place, this.#deps.clock.now(), this.#start.payload.timeZone);
-            if (this.#phase === 'active') {
+            const open = openProjects(await this.#deps.places.summaries());
+            const context = await sessionContext(this.#deps.host, place, open, this.#deps.clock.now(), this.#start.payload.timeZone);
+            // A switch while this was read sends the context of the project it moved to itself.
+            if (this.#phase === 'active' && this.#place === place) {
                 this.#append(context);
             }
         } catch {
@@ -401,6 +480,10 @@ export class VoiceSession {
 
     #phaseTo(phase: VoicePhase): void {
         this.#phase = phase;
+        this.#announce();
+    }
+
+    #announce(): void {
         this.#seq += 1;
         this.#deps.emit('voice.status', this.status);
     }
@@ -428,7 +511,9 @@ export class VoiceSession {
             try {
                 await sideband?.close();
             } finally {
-                this.#deps.holds.letGo(this.#holder, this.#start.place.projectId);
+                if (this.#place !== null) {
+                    this.#deps.holds.letGo(this.#holder, this.#place.projectId);
+                }
                 this.#phaseTo(outcome);
                 this.#settle();
             }

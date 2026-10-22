@@ -105,6 +105,8 @@ function voiceSessions(writes = true): VoiceSessions {
             }
         },
         index: store.index,
+        projects: store,
+        machine: { id: 'machine-1', label: 'Studio' },
         writes,
         newId: () => `session-${++ids}`
     });
@@ -122,8 +124,9 @@ async function started(voice: VoiceSessions, project = projectId): Promise<FakeA
         voice: 'marin',
         timeZone: 'Europe/Amsterdam'
     };
+    const minted = live.mints.length;
     const answer = voice.start(phone, payload);
-    await settle();
+    await live.minting(minted + 1);
     live.answerMint();
     await settle();
     const attach = live.answerAttach();
@@ -351,6 +354,23 @@ describe('Voice starts a chat on the daemon', () => {
         await daemon.worker.settled();
         await daemon.until(() => turnsOf(chatId)[0]?.state === 'done');
         expect(reports(attach)).toContain('AI Chat “Notes too”, which you prompted, finished. Project: Bare.');
+    });
+
+    test('after a switch a chat starts in the project Voice moved to, which the session holds instead', async () => {
+        const voice = voiceSessions();
+        const attach = await started(voice, bareId);
+        const voiceHolder = (projectIdOf: string) => store.holdersOf(projectIdOf).filter((holder) => holder.startsWith('voice:'));
+        expect([voiceHolder(bareId), voiceHolder(projectId)]).toEqual([['voice:session-1'], []]);
+        call(attach, 'call-1', 'manage_projects', { action: 'project.switch', endpointId: 'machine-1', projectId });
+        expect(await outputOf(attach, 'call-1')).toMatchObject({ ok: true, project: 'Shop', projectId });
+        expect([voiceHolder(bareId), voiceHolder(projectId)]).toEqual([[], ['voice:session-1']]);
+        call(attach, 'call-2', 'inspect_agents', { action: 'agent.start', ...START });
+        const output = await outputOf(attach, 'call-2');
+        expect(output).toMatchObject({ ok: true, kind: 'chat', viewId: 'main' });
+        expect(store.index.locate(String(output.nodeId))?.projectId).toBe(projectId);
+        await daemon.worker.settled();
+        await daemon.until(() => turnsOf(String(output.nodeId))[0]?.state === 'done');
+        expect(reports(attach)).toContain('AI Chat “Helper”, which you prompted, finished. Project: Shop.');
     });
 
     test('four chats at once are each reported by their own first turn', async () => {
