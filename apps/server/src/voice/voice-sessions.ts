@@ -23,7 +23,6 @@ interface StartRecord {
 export interface VoiceSessionsDeps extends Omit<VoiceSessionDeps, 'emit' | 'places'> {
     index: Pick<ProjectIndex, 'folderOf' | 'viewsOf'>;
     projects: Pick<ProjectStore, 'list'>;
-    writes: boolean;
     /* A fresh session id; the daemon's, never a client's. */
     newId?: () => string;
 }
@@ -90,7 +89,7 @@ export class VoiceSessions {
         const sessionId = (this.#deps.newId ?? (() => crypto.randomUUID()))();
         const { index, projects } = this.#deps;
         const session = new VoiceSession(
-            { sessionId, payload, owner: { clientId: client.id, sceneId: payload.sceneId }, place, writes: this.#deps.writes },
+            { sessionId, payload, owner: { clientId: client.id, sceneId: payload.sceneId }, place },
             {
                 ...this.#deps,
                 places: {

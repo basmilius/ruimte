@@ -42,8 +42,6 @@ export interface VoiceCaller {
     projects?: VoiceProjectFocus;
     /* IANA, the clock of the person's phone. */
     timeZone: string;
-    /* RUIMTE_EXPERIMENTAL_VOICE_WRITES: Voice may prompt and start chats too. */
-    writes: boolean;
     /* Follows what a prompt or a start set going, so the session tells the person when it ends; absent in a test that follows nothing. */
     follow?: VoiceFollowHost;
 }

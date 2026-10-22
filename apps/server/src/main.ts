@@ -116,15 +116,10 @@ if (config.command === 'context') {
 
 if (config.command === 'voice') {
     const { processKeyReader, runVoice } = await import('./cli/voice.ts');
-    const { COMPILED } = await import('./version.ts');
-    const { homedir } = await import('node:os');
-    const { join } = await import('node:path');
     process.exit(
         await runVoice({
             args: config.args,
             home: config.home,
-            installedHome: join(homedir(), '.ruimte'),
-            compiled: COMPILED,
             interactive: process.stdin.isTTY === true,
             readKey: processKeyReader(process.stdin, (text) => process.stderr.write(text))
         })

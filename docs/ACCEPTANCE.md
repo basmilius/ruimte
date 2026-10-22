@@ -216,7 +216,7 @@ Features, in a disposable project where something writes:
   find it in the machine's Trash. Mention a file in a chat that is open and in one that is not. Bind a group to a
   worktree and start a chat in it on the desktop. Stop a rebase halfway and finish it from the Changes segment.
 - [ ] VoiceOver and larger text on the main pages, the chat and the composer.
-- [ ] Voice in a Debug build, against a machine with `RUIMTE_EXPERIMENTAL_VOICE=1` and a key: the reply plays on the
+- [ ] Voice in a Debug build, against a machine with an OpenAI key: the reply plays on the
   speaker with the phone away from the ear, and moves to a Bluetooth headset and back. A call, a locked screen, the
   owner's scene in the background and a refused microphone each end it with a reason. Playing an audio or video file
   while it runs keeps it listening, and it never shows Listening once it cannot hear.

@@ -77,7 +77,7 @@ export interface HttpInput {
     network: NetworkBundle;
     clients: ClientsBundle;
     canvasHost: CanvasHost;
-    voice: VoiceBundle | null;
+    voice: VoiceBundle;
 }
 
 /* Every HTTP route and the upgrade, before the cross-origin headers the desktop app's page needs. */
@@ -123,12 +123,6 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                 const refused = await refuseUnlessOwner(request, remote, 'POST');
                 if (refused) {
                     return refused;
-                }
-                if (voice === null) {
-                    return new Response('Voice is off', { status: 404 });
-                }
-                if (voice.keyHomeProblem !== null) {
-                    return new Response(voice.keyHomeProblem, { status: 409 });
                 }
                 const parsed = VoiceKeyRequestSchema.safeParse(await request.json().catch(() => null));
                 if (!parsed.success) {

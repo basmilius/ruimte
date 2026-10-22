@@ -337,6 +337,15 @@ import Testing
         #expect(!setup.voice.offers(machineID: "machine", client: setup.machine))
     }
 
+    @Test func aMachineThatAnswersButHoldsNoKeyOffersNoMic() async {
+        let setup = Self.setup()
+        setup.machine.keyPresent = false
+        await setup.voice.refreshKey(machineID: "machine", client: setup.machine)
+        #expect(setup.machine.sent("voice.keyStatus"))
+        #expect(setup.voice.keys["machine"] == false)
+        #expect(!setup.voice.offers(machineID: "machine", client: setup.machine))
+    }
+
     @Test func aMachineWithoutVoiceNeverShowsTheMic() async {
         let setup = Self.setup()
         setup.machine.features = []

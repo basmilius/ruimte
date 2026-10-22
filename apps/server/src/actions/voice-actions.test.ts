@@ -12,8 +12,7 @@ const VOICE: VoiceCaller = {
     sessionId: 'session-1',
     owner: { clientId: 'client-1', sceneId: 'scene-1' },
     projectId: 'project-1',
-    timeZone: 'Europe/Amsterdam',
-    writes: false
+    timeZone: 'Europe/Amsterdam'
 };
 
 const CONTENT = {
@@ -395,7 +394,7 @@ describe('agents.inspect for Voice', () => {
 });
 
 describe('chat.send for Voice', () => {
-    const writer: VoiceCaller = { ...VOICE, writes: true, follow: FOLLOW };
+    const writer: VoiceCaller = { ...VOICE, follow: FOLLOW };
 
     function send(chatId: string, prompt: string, delivery: string | null = null, voice = writer) {
         return serverActions.execute('chat.send', { chatId, prompt, delivery }, voiceActionCall(host(), PLACE, voice));
@@ -426,11 +425,5 @@ describe('chat.send for Voice', () => {
         expect(await send('chat-node', 'Run the tests')).toMatchObject({ status: 'failed', error: { code: 'remote-target' } });
         expect(await send('term-node', 'Run the tests')).toMatchObject({ status: 'failed', error: { code: 'not-in-project' } });
         expect([sent, followed]).toEqual([[], []]);
-    });
-
-    test('without the writes grant the handler refuses as well', async () => {
-        running.add('chat-node');
-        expect(await send('chat-node', 'Run the tests', null, VOICE)).toMatchObject({ status: 'failed', error: { code: 'voice-read-only' } });
-        expect(sent).toEqual([]);
     });
 });

@@ -89,7 +89,7 @@ struct VoiceSettingsPage: View {
                 Text("OpenAI key")
             } footer: {
                 Text(
-                    "The key stays on the machine and never reaches this phone. Set it there with ruimte voice key set. Voice is an experiment a machine turns on before it offers it."
+                    "The key stays on the machine and never reaches this phone. Set it in Ruimte on that computer, under Settings, Voice, or there with ruimte voice key set."
                 )
             }
         }

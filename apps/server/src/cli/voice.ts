@@ -1,11 +1,8 @@
-import { VoiceKeyStore, voiceKeyHomeProblem } from '../voice/key-store.ts';
+import { VoiceKeyStore } from '../voice/key-store.ts';
 
 export interface VoiceCliOptions {
     args: string[];
     home: string;
-    /* `~/.ruimte`, where an installed Ruimte keeps its state. */
-    installedHome: string;
-    compiled: boolean;
     /* Whether a person types at this end, so the key is asked for without echo; otherwise it is read from stdin. */
     interactive: boolean;
     /* The key a person typed without echo, or what stdin held; never an argument, which a shell keeps in its history. */
@@ -17,10 +14,8 @@ export interface VoiceCliOptions {
 const USAGE = 'Usage: ruimte voice key set|clear|status (set reads the key from stdin or asks for it, never from an argument)';
 
 /*
- * `ruimte voice key`: the OpenAI key Voice run by the daemon mints with. While Voice on the daemon is a
- * spike it goes only into a development home, never into the one an installed Ruimte uses, and a
- * compiled daemon has no such command at all. The file is read at every start of a session, so the
- * running daemon needs no restart.
+ * `ruimte voice key`: the OpenAI key Voice run by the daemon mints with, in the home of the daemon it names.
+ * The file is read at every start of a session, so the running daemon needs no restart.
  */
 export async function runVoice(options: VoiceCliOptions): Promise<number> {
     const out = options.out ?? ((line: string) => console.log(line));
@@ -29,11 +24,6 @@ export async function runVoice(options: VoiceCliOptions): Promise<number> {
     if (noun !== 'key' || (action !== 'set' && action !== 'clear' && action !== 'status') || rest.length > 0) {
         err(USAGE);
         return 2;
-    }
-    const problem = voiceKeyHomeProblem(options);
-    if (problem !== null) {
-        err(problem);
-        return 1;
     }
     const store = new VoiceKeyStore(options.home);
     if (action === 'status') {
@@ -52,7 +42,7 @@ export async function runVoice(options: VoiceCliOptions): Promise<number> {
         err(`The key was not saved: ${e instanceof Error ? e.message : 'it could not be written'}.`);
         return 1;
     }
-    out(`The Voice key is saved in ${options.home}. A daemon with RUIMTE_EXPERIMENTAL_VOICE=1 uses it from its next Voice session.`);
+    out(`The Voice key is saved in ${options.home}. The daemon uses it from its next Voice session.`);
     return 0;
 }
 

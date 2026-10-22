@@ -54,7 +54,7 @@ export async function askDaemonWork(daemon: DaemonPort): Promise<MachineWork | n
     }
 }
 
-/* False when the daemon proved nothing, runs without Voice or keeps no key in its home; the key then stays the shell's alone. */
+/* False when the daemon proved nothing or refused the key; the key then stays the shell's alone. */
 export async function handVoiceKey(daemon: DaemonPort, key: string): Promise<boolean> {
     const secret = await provenSecret(daemon);
     if (secret === null) {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ActionCall, ActionName, ActionResult, VoiceToolDefinition } from '@ruimte/actions';
+import { voiceToolDefinitions, type ActionCall, type ActionName, type ActionResult, type VoiceToolDefinition } from '@ruimte/actions';
 import { daemonVoiceTools } from '@ruimte/voice';
 import { voicePolicy, type VoicePolicy } from './action-policy.ts';
 import { MAX_CALLS_PER_SESSION, VoiceToolExecutor, type VoiceActionRunner } from './tool-executor.ts';
@@ -15,8 +15,7 @@ const CALLER: VoiceCaller = {
     sessionId: 'session-1',
     owner: { clientId: 'client-1', sceneId: 'scene-1' },
     projectId: 'project-1',
-    timeZone: 'UTC',
-    writes: false
+    timeZone: 'UTC'
 };
 const SHOP = {
     name: 'Shop',
@@ -78,8 +77,8 @@ function executor(
     const tool = new VoiceToolExecutor<null>({
         sessionId,
         runner,
-        policy: options.policy ?? voicePolicy({ writes: true }),
-        tools: options.tools ?? daemonVoiceTools({ writes: true }),
+        policy: options.policy ?? voicePolicy(),
+        tools: options.tools ?? daemonVoiceTools(),
         call: () => ({ actor: { kind: 'voice', id: `voice:${sessionId}` }, context: null }),
         live: options.live ?? (() => true),
         ...(options.stateOf === undefined ? {} : { stateOf: options.stateOf }),
@@ -128,16 +127,18 @@ describe('VoiceToolExecutor', () => {
         expect(reads.runner.ran).toHaveLength(5);
     });
 
-    test('refuses an action no tool offered, a write without its grant and arguments that are no object', async () => {
-        const { tool, runner } = executor({ tools: daemonVoiceTools({ writes: false }), policy: voicePolicy({ writes: false }) });
-        expect(await tool.execute('communicate', send('c1'), 'a')).toMatchObject({ ok: false, code: 'not-offered' });
+    test('refuses an action no tool offered, one outside the matrix and arguments that are no object', async () => {
+        const { tool, runner } = executor({ tools: daemonVoiceTools(), policy: voicePolicy() });
         expect(await tool.execute('manage_views', JSON.stringify({ action: 'view.delete', viewId: 'v' }), 'b')).toMatchObject({
             ok: false,
             code: 'not-offered'
         });
         expect(await tool.execute('communicate', '[1, 2]', 'c')).toMatchObject({ ok: false, code: 'invalid-arguments' });
-        const offeredAnyway = executor({ policy: voicePolicy({ writes: false }) });
-        expect(await offeredAnyway.tool.execute('communicate', send('c1'), 'd')).toMatchObject({ ok: false, code: 'voice-read-only' });
+        const offeredAnyway = executor({ tools: voiceToolDefinitions(), policy: voicePolicy() });
+        expect(await offeredAnyway.tool.execute('manage_views', JSON.stringify({ action: 'view.delete', viewId: 'v' }), 'd')).toMatchObject({
+            ok: false,
+            code: 'not-for-voice'
+        });
         expect([...runner.ran, ...offeredAnyway.runner.ran]).toEqual([]);
     });
 
@@ -192,12 +193,12 @@ describe('VoiceToolExecutor', () => {
         const runner = new FakeRunner();
         let checks = 0;
         let refuse = false;
-        const base = voicePolicy({ writes: true });
+        const base = voicePolicy();
         const policy: VoicePolicy = {
             actions: base.actions,
             check: (name, input) => {
                 checks += 1;
-                return refuse ? { code: 'voice-read-only', message: 'off' } : base.check(name, input);
+                return refuse ? { code: 'not-for-voice', message: 'off' } : base.check(name, input);
             }
         };
         const { tool } = executor({ runner, policy });
@@ -218,7 +219,7 @@ describe('VoiceToolExecutor', () => {
         const before = checks;
         expect(await tool.execute('control_action', JSON.stringify({ action: 'confirm', confirmation_token: 'token-1' }), 'confirm-1')).toMatchObject({
             ok: false,
-            code: 'voice-read-only'
+            code: 'not-for-voice'
         });
         expect(checks).toBe(before + 1);
         // Never confirmed; the token is taken back from the registry as a cancel.
@@ -328,8 +329,8 @@ describe('VoiceToolExecutor', () => {
         const tool = new VoiceToolExecutor<ServerActionContext>({
             sessionId: 'session-1',
             runner: serverActions,
-            policy: voicePolicy({ writes: false }),
-            tools: daemonVoiceTools({ writes: false }),
+            policy: voicePolicy(),
+            tools: daemonVoiceTools(),
             call: () => voiceActionCall(host, PLACE, CALLER),
             live: () => true
         });

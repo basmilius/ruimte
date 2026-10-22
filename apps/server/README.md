@@ -40,8 +40,6 @@ Other environment variables:
 | --- | --- |
 | `RUIMTE_HOME` | Where the daemon keeps its state (below). |
 | `RUIMTE_DEBUG=1` | Print the whole stack of an error instead of its message. |
-| `RUIMTE_EXPERIMENTAL_VOICE=1` | Answer the `voice.*` requests, Voice run by the daemon for a phone. A spike: off by default and on no flag. |
-| `RUIMTE_EXPERIMENTAL_VOICE_WRITES=1` | With the one above: Voice may also prompt and start chats (`chat.send`, `agent.start`). Without it Voice only reads. |
 | `RUIMTE_PULSAR_URL` | Another address book for `ruimte login`. |
 | `RUIMTE_DATABASE_HELPER` | The database helper binary (see "Databases"). |
 | `RUIMTE_PHP_LANGUAGE_SERVER_SOURCE`, `RUIMTE_SQL_LANGUAGE_SERVER_SOURCE` | A checkout of a native language server for a development daemon. |
@@ -104,7 +102,7 @@ npx ruimte service uninstall
 npx ruimte closed-lid install             # let keep awake hold a closed lid on a Mac (asks for sudo)
 npx ruimte closed-lid remove
 npx ruimte notify [--node <id>] <text>   # a notification from a script, which opens that node
-ruimte voice key set|clear|status         # the OpenAI key of Voice run by the daemon (a development spike)
+npx ruimte voice key set|clear|status     # the OpenAI key of Voice run by the daemon
 npx ruimte --version
 ```
 
@@ -118,7 +116,7 @@ A bare `ruimte` at a terminal prints the address it listens on and names the com
 
 `ruimte service install` copies `ruimte`, `ruimte-context` and `ruimte.build` to `$RUIMTE_HOME/bin`. It writes the LaunchAgent or systemd user unit the desktop app writes, pointing at that copy and never at the npx cache. The unit carries the flags after `install`, the PATH of the shell it ran in (without npx's own folders) and `RUIMTE_SERVICE=1`. Running it again with a newer version replaces the copy, and the daemon under the service moves to it once idle; different flags restart the service. It refuses to touch a service that runs another program, such as the desktop app's. On Linux it prints `loginctl enable-linger <user>` when lingering is off and leaves turning it on to you. `uninstall` stops the service and removes the definition and the copy, and leaves the rest of `$RUIMTE_HOME` alone. `status` exits 0 only when the service is installed and answers on `--port`.
 
-`ruimte voice key set` saves the OpenAI key Voice run by the daemon mints its sessions with, in `$RUIMTE_HOME/voice/openai.json` (0600 in a 0700 folder, `src/voice/key-store.ts`). It asks for the key without echo at a terminal and otherwise reads it from stdin (`pbpaste | RUIMTE_HOME=~/.ruimte-dev bun src/main.ts voice key set`); a key given as an argument is refused, since a shell keeps it in its history. `status` says only whether a key is set and `clear` removes it. While Voice on the daemon is a spike the command writes only into a development home: it refuses `~/.ruimte` and a compiled daemon. The daemon reads the file at every start of a Voice session, so a running daemon needs no restart. Nothing copies the desktop app's key or reads a CLI's credentials.
+`ruimte voice key set` saves the OpenAI key Voice run by the daemon mints its sessions with, in `$RUIMTE_HOME/voice/openai.json` (0600 in a 0700 folder, `src/voice/key-store.ts`). It asks for the key without echo at a terminal and otherwise reads it from stdin (`pbpaste | ruimte voice key set`); a key given as an argument is refused, since a shell keeps it in its history. `status` says only whether a key is set and `clear` removes it. The daemon reads the file at every start of a Voice session, so a running daemon needs no restart. The desktop app hands the key from its settings to the daemon it runs (`POST /machine/voice-key`, on the local secret); nothing reads a CLI's credentials.
 
 `ruimte context` is the agent-side CLI behind the `ruimte-context` script (see "Context links").
 
@@ -425,26 +423,24 @@ The usage page reads two things. Every call appends a line to `nanogpt/usage/<ye
 
 ## Voice for a phone
 
-An experimental route, on only with `RUIMTE_EXPERIMENTAL_VOICE=1` (`src/voice`, `src/wiring/voice.ts`, `src/handlers/voice.ts`). A phone opens its own WebRTC peer to OpenAI for audio and captions; the daemon mints the GPT-Live session with the key from `ruimte voice key`, attaches to its sideband (`wss://api.openai.com/v1/live/sessions/<id>/attach`) and runs every tool call itself. Without the variable no `voice.*` request is registered, so `endpoint.info` names none and a phone shows no Voice.
+`src/voice`, `src/wiring/voice.ts` and `src/handlers/voice.ts`. A phone opens its own WebRTC peer to OpenAI for audio and captions; the daemon mints the GPT-Live session with the key it holds (from the desktop app's settings or `ruimte voice key`), attaches to its sideband (`wss://api.openai.com/v1/live/sessions/<id>/attach`) and runs every tool call itself. A phone offers Voice only for a machine whose `voice.keyStatus` says it holds a key.
 
 - `voice.start` answers the phone's offer only once the sideband is attached, within 20 seconds. A `voice.stop` by `startId` cancels a start that has not answered, and the cancel is kept, so a mint that answers late is closed again and never becomes a session. One start is kept per connection, scene and start id; the same id with other fields is `voice-start-conflict`. A scene runs one session and the machine four.
 - A session belongs to the connection and the scene that started it: only they stop it, answer its questions and hear `voice.status` and `voice.activity`. A connection that goes ends its sessions; there is no resume.
 - A session talks about every project in use on this machine and works in one of them at a time. `projectId` in `voice.start` is only where it starts, the project on the phone's screen; without it the session starts in the project opened last, or in none. `project.list` and `project.switch` move it to another project of this machine, never of another. The session holds its current project the way a client does, without starting its launches, and lets go of it when it moves on or ends. `voice.status` names the current project in `project` (null for none).
-- Tool calls go through the shared `serverActions` as the voice actor (`voiceActionCall` in `src/actions/context.ts`), behind the policy of `src/voice/action-policy.ts`, derived from `DAEMON_VOICE_ACTIONS` in `@ruimte/voice`. It checks the action and its fields before the registry sees a call and again before a confirmation. The reads (`project.list`, `workspace.inspect`, `target.resolve`, `chat.read`, `chat.inspect`, `agents.inspect`), `project.switch` and `chat.send` have daemon handlers only the voice actor reaches (`src/actions/voice-actions.ts`), over the current project of the session and the canvas actions land on (the phone's in the project it started in, else the project's first); `agent.start` is the agents' own handler, open to Voice for a supervised AI Chat only. `chat.send` and `agent.start` are offered only with `RUIMTE_EXPERIMENTAL_VOICE_WRITES=1` too.
+- Tool calls go through the shared `serverActions` as the voice actor (`voiceActionCall` in `src/actions/context.ts`), behind the policy of `src/voice/action-policy.ts`, derived from `DAEMON_VOICE_ACTIONS` in `@ruimte/voice`. It checks the action and its fields before the registry sees a call and again before a confirmation. The reads (`project.list`, `workspace.inspect`, `target.resolve`, `chat.read`, `chat.inspect`, `agents.inspect`), `project.switch` and `chat.send` have daemon handlers only the voice actor reaches (`src/actions/voice-actions.ts`), over the current project of the session and the canvas actions land on (the phone's in the project it started in, else the project's first); `agent.start` is the agents' own handler, open to Voice for a supervised AI Chat only.
 - A chat Voice started has the session (`voice:<sessionId>`) as its opener in the lineage, at depth 1 under a `supervised` ceiling, and keeps running when the session ends; in a project without a canvas it is a chat view of its own. `src/voice/voice-follower.ts` follows the turn a prompt or a start set going, by its turn id, and the session reports its end, a failure or a wait on the person over the sideband through `VoiceCompletionDelivery`.
 - Over the sideband the model hears the projects in use with the current one and the phone's time when the session starts, the time every minute, a new context 250 ms after the current project changed and at once after a switch, as quiet `session.thinking.append` events.
 - The sideband carries no audio the daemon keeps: echoed audio events are dropped before anything could log them. OpenAI documents no field that bounds what the phone's data channel may send, so a client event on the sideband that the daemon never sent ends the session (`voice-foreign-client`).
-- `setKey` and `clearKey` are the local secret's only, and like `ruimte voice key` they refuse `~/.ruimte` and a compiled daemon with `voice-dev-home-only` while Voice is a spike (`voiceKeyHomeProblem`). No `voice.*` request is on a peer's list.
+- `setKey`, `clearKey` and `POST /machine/voice-key` are the local secret's only, like `ruimte voice key`. No `voice.*` request is on a peer's list.
 
-Two decisions are Bas's and hold the route back from a release: whether a daemon may hold an OpenAI key at all (until then only a development home takes one, by hand), and what Voice may do (until then prompting and starting chats stay behind `RUIMTE_EXPERIMENTAL_VOICE_WRITES=1`, off by default). The invariants of `src/voice` are in its `CLAUDE.md`. To try the route from a checkout:
+The invariants of `src/voice` are in its `CLAUDE.md`. A dev daemon keeps its key in its own home:
 
 ```sh
-RUIMTE_EXPERIMENTAL_VOICE=1 bun run --cwd apps/server dev             # reading only
-RUIMTE_EXPERIMENTAL_VOICE=1 RUIMTE_EXPERIMENTAL_VOICE_WRITES=1 bun run --cwd apps/server dev
 cd apps/server && RUIMTE_HOME=~/.ruimte-dev bun src/main.ts voice key set   # asks for the key without echo
 ```
 
-The daemon says at start which of the two it runs (`Experimental Voice for phones is on, reading only`). The key goes into the home of the dev daemon, so the command names that `RUIMTE_HOME`; without it the CLI aims at `~/.ruimte` and refuses.
+Without `RUIMTE_HOME` the CLI writes into `~/.ruimte`, the home of an installed Ruimte.
 
 ## Chats
 

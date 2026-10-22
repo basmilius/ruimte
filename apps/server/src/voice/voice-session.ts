@@ -67,7 +67,6 @@ export interface VoiceSessionStart {
     owner: { clientId: string; sceneId: string };
     /* Where the phone starts the session; null starts it in the project opened last. */
     place: IndexedPlace | null;
-    writes: boolean;
 }
 
 const TIMELINE: Partial<Record<ActionDomain, VoiceActivityKind>> = {
@@ -153,7 +152,7 @@ export class VoiceSession {
     /* Answers once the daemon can run tools, with the answer to the phone's offer; throws a coded error otherwise. */
     async start(): Promise<VoiceStartResult> {
         const { live, clock } = this.#deps;
-        const { payload, writes } = this.#start;
+        const { payload } = this.#start;
         this.#cancelDeadline = clock.after(VOICE_START_DEADLINE_MS, () => {
             void this.#end('failed', { code: 'voice-start-timeout', message: 'Voice did not start in time' });
         });
@@ -169,8 +168,8 @@ export class VoiceSession {
             if (key === null) {
                 throw new LiveError('voice-no-key', 'No OpenAI key for Voice is set on this machine');
             }
-            const tools = daemonVoiceTools({ writes });
-            const body = liveSessionBody({ language: payload.language, voice: payload.voice, ...phonePrompts(writes), tools, sdp: payload.sdp });
+            const tools = daemonVoiceTools();
+            const body = liveSessionBody({ language: payload.language, voice: payload.voice, ...phonePrompts(), tools, sdp: payload.sdp });
             const minting = live.mint(key, body, signal);
             // A mint that answers once the start ended would stay open at OpenAI, so it is closed again.
             minting.then(
@@ -208,7 +207,7 @@ export class VoiceSession {
             this.#executor = new VoiceToolExecutor({
                 sessionId: this.id,
                 runner: this.#deps.runner,
-                policy: voicePolicy({ writes }),
+                policy: voicePolicy(),
                 tools,
                 call: () => voiceActionCall(this.#deps.host, this.#place, this.#caller()),
                 live: () => this.#phase === 'active',
@@ -310,7 +309,6 @@ export class VoiceSession {
                 switchTo: (projectId) => this.#switchTo(projectId)
             },
             timeZone: this.#start.payload.timeZone,
-            writes: this.#start.writes,
             ...(this.#follower === null ? {} : { follow: this.#follower })
         };
     }

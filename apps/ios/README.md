@@ -220,13 +220,13 @@ Dutch or when its Dutch drops or adds a placeholder.
 
 Voice on a phone is run by the machine (`voice.start`, `voice.stop`, `voice.confirm`, and the `voice.status` and
 `voice.activity` events, in `packages/contracts/src/voice.ts`). The machine mints the GPT-Live session with an OpenAI
-key it holds itself, set there with `ruimte voice key set`, runs every tool and reports. The phone carries only the
-microphone, the reply and the captions, over a WebRTC peer of its own to OpenAI in `RuimteVoice` (`VoiceMediaPeer`,
-with a factory apart from the machine link's), and runs no tool: a function call on its `oai-events` channel is
-ignored. `RuimteTransport` stays without audio.
+key it holds itself (from the desktop app's settings or `ruimte voice key set`), runs every tool and reports. The
+phone carries only the microphone, the reply and the captions, over a WebRTC peer of its own to OpenAI in
+`RuimteVoice` (`VoiceMediaPeer`, with a factory apart from the machine link's), and runs no tool: a function call on
+its `oai-events` channel is ignored. `RuimteTransport` stays without audio.
 
-- The mic shows on Now and in a project only where the machine answers `voice.start`, which it names only with
-  `RUIMTE_EXPERIMENTAL_VOICE=1`, and `voice.keyStatus` says it holds a key. The mic starts at once. In a project it
+- The mic shows on Now and in a project only where the machine answers `voice.start` and `voice.keyStatus` says it
+  holds a key; a machine without a key offers no mic. The mic starts at once. In a project it
   names that project as the starting point; on Now, or ⌘⇧M without a project, it starts on the machine of the project
   opened last (else the first machine that offers Voice) without one, and the machine starts in its project opened
   last. A session talks about every project in use on its machine and moves between them; the place the caption bar
@@ -246,11 +246,10 @@ ignored. `RuimteTransport` stays without audio.
 - The captions stand above every tab of the scene (`VoiceCaptionBar`); the timeline is a sheet on an iPhone and the
   inspector on an iPad (`VoicePanel`). Language and voice are in Settings, Voice. Voice on a machine deletes nothing yet, so
   there is no switch for asking before a deletion.
-- Until Bas decides on the microphone and the privacy label that comes with it (audio data shared with OpenAI),
-  only a Debug build declares the microphone (`INFOPLIST_KEY_NSMicrophoneUsageDescription` in the Debug
-  configuration of `project.yml`). A build without the declaration never offers Voice, the build phase "Release
-  declares no microphone" fails a Release build that does, and `MicrophoneDeclarationTests` holds the spec. Nothing
-  with Voice goes to TestFlight or the App Store before then.
+- For now only a Debug build declares the microphone (`INFOPLIST_KEY_NSMicrophoneUsageDescription` in the Debug
+  configuration of `project.yml`), until a release carries the privacy label that comes with it (audio data shared
+  with OpenAI). A build without the declaration never offers Voice, the build phase "Release declares no microphone"
+  fails a Release build that does, and `MicrophoneDeclarationTests` holds the spec.
 
 Run the package's tests with `swift test --package-path apps/ios/Packages/RuimteVoice`.
 

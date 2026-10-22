@@ -1734,8 +1734,7 @@ describe('agent.start from Voice', () => {
         sessionId: 'session-1',
         owner: { clientId: 'client-1', sceneId: 'scene-1' },
         projectId: '',
-        timeZone: 'Europe/Amsterdam',
-        writes: true
+        timeZone: 'Europe/Amsterdam'
     };
     const voiceStart = {
         provider: 'claude',

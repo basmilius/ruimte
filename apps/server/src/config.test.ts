@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { DEFAULT_HOST, DEFAULT_PORT, experimentalVoiceOf, forgetInheritedSession, parseServerArgs } from './config.ts';
+import { DEFAULT_HOST, DEFAULT_PORT, forgetInheritedSession, parseServerArgs } from './config.ts';
 
 describe('forgetInheritedSession', () => {
     test('drops the session variables and keeps the rest', () => {
@@ -122,18 +122,5 @@ describe('parseServerArgs', () => {
 
     test('rejects an unknown flag', () => {
         expect(() => parseServerArgs(['--nope'], {})).toThrow();
-    });
-});
-
-describe('experimental Voice', () => {
-    test('is off unless RUIMTE_EXPERIMENTAL_VOICE is 1', () => {
-        expect(parseServerArgs([], {}).experimentalVoice).toEqual({ enabled: false, writes: false });
-        expect(experimentalVoiceOf({ RUIMTE_EXPERIMENTAL_VOICE: 'true' })).toEqual({ enabled: false, writes: false });
-        expect(parseServerArgs([], { RUIMTE_EXPERIMENTAL_VOICE: '1' }).experimentalVoice).toEqual({ enabled: true, writes: false });
-    });
-
-    test('writes only with RUIMTE_EXPERIMENTAL_VOICE_WRITES beside it, never on their own', () => {
-        expect(experimentalVoiceOf({ RUIMTE_EXPERIMENTAL_VOICE: '1', RUIMTE_EXPERIMENTAL_VOICE_WRITES: '1' })).toEqual({ enabled: true, writes: true });
-        expect(experimentalVoiceOf({ RUIMTE_EXPERIMENTAL_VOICE_WRITES: '1' })).toEqual({ enabled: false, writes: false });
     });
 });

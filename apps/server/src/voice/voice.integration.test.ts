@@ -120,11 +120,10 @@ function daemon(home: string, openAiUrl: string, threads: Map<string, ChatItem[]
                 } as ProjectSummary
             ]
         },
-        machine: { id: 'machine-1', label: 'Studio' },
-        writes: false
+        machine: { id: 'machine-1', label: 'Studio' }
     });
     const dispatcher = new Dispatcher();
-    registerVoiceHandlers(dispatcher, { keys: new VoiceKeyStore(home), sessions, keyHomeProblem: null });
+    registerVoiceHandlers(dispatcher, { keys: new VoiceKeyStore(home), sessions });
     const services = {
         dispatcher,
         sessions: { ...source(), get: () => undefined },

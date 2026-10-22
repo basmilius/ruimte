@@ -85,7 +85,7 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-function voiceSessions(writes = true): VoiceSessions {
+function voiceSessions(): VoiceSessions {
     let ids = 0;
     return new VoiceSessions({
         live,
@@ -107,7 +107,6 @@ function voiceSessions(writes = true): VoiceSessions {
         index: store.index,
         projects: store,
         machine: { id: 'machine-1', label: 'Studio' },
-        writes,
         newId: () => `session-${++ids}`
     });
 }
@@ -262,7 +261,7 @@ describe('Voice starts a chat on the daemon', () => {
 
         // The same start once more, under the id the executor gave it, answers with the node the first made.
         const place = { projectId, folder, canvasId: 'main' };
-        const caller = { sessionId: 'session-1', owner: { clientId: 'phone', sceneId: 'scene-1' }, projectId, timeZone: 'UTC', writes: true };
+        const caller = { sessionId: 'session-1', owner: { clientId: 'phone', sceneId: 'scene-1' }, projectId, timeZone: 'UTC' };
         // Every field the action has, the way the executor hands them on.
         const full = { ...Object.fromEntries(Object.keys(ACTION_DEFINITIONS['agent.start'].input.shape).map((field) => [field, null])), ...START };
         const again = await serverActions.execute('agent.start', { ...full, requestId: 'voice:session-1:call-1' }, voiceActionCall(daemon.host, place, caller));
@@ -274,18 +273,6 @@ describe('Voice starts a chat on the daemon', () => {
         expect(daemon.enqueued.filter((work) => work.kind === 'start-agent')).toHaveLength(2);
     });
 
-    test('without the writes grant the handler itself starts nothing, whoever builds the call', async () => {
-        const place = { projectId, folder, canvasId: 'main' };
-        const caller = { sessionId: 'session-1', owner: { clientId: 'phone', sceneId: 'scene-1' }, projectId, timeZone: 'UTC', writes: false };
-        const full = { ...Object.fromEntries(Object.keys(ACTION_DEFINITIONS['agent.start'].input.shape).map((field) => [field, null])), ...START };
-        expect(await serverActions.execute('agent.start', full, voiceActionCall(daemon.host, place, caller))).toMatchObject({
-            status: 'failed',
-            error: { code: 'voice-read-only' }
-        });
-        await daemon.worker.settled();
-        expect(daemon.enqueued.filter((work) => work.kind === 'start-agent')).toEqual([]);
-    });
-
     test('a start that made its chat answers with it, even when the name of the project cannot be read after', async () => {
         const place = { projectId, folder, canvasId: 'main' };
         const bound: string[] = [];
@@ -295,7 +282,6 @@ describe('Voice starts a chat on the daemon', () => {
             owner: { clientId: 'phone', sceneId: 'scene-1' },
             projectId,
             timeZone: 'UTC',
-            writes: true,
             follow: {
                 expectPrompt: () => ({ bind: () => undefined, drop: () => undefined }),
                 expectStart: () => ({ bind: (chatId: string, chat: { project: string }) => bound.push(`${chatId} in ${chat.project}`), drop: () => dropped++ })
@@ -418,14 +404,5 @@ describe('Voice prompts a chat on the daemon', () => {
         expect(said).toContain(`AI Chat “Lead”, which you prompted, finished. Project: Shop. Its tracked turn ${own} ended with state done`);
         expect(said).toContain('echo: next');
         expect(said).not.toContain('you chose Red');
-    });
-
-    test('without the writes grant Voice prompts nothing', async () => {
-        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
-        const voice = voiceSessions(false);
-        const attach = await started(voice);
-        call(attach, 'call-1', 'communicate', { action: 'chat.send', chatId: 'chat-lead', prompt: 'next', delivery: null });
-        expect(await outputOf(attach, 'call-1')).toMatchObject({ ok: false, code: 'not-offered' });
-        expect(turnsOf('chat-lead')).toEqual([]);
     });
 });

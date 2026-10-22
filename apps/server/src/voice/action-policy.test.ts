@@ -8,7 +8,7 @@ import { VOICE_FIELD_RULES, voicePolicy } from './action-policy.ts';
 import { VoiceToolExecutor } from './tool-executor.ts';
 
 const PLACE = { projectId: 'project-1', folder: '/work/app', canvasId: 'main' };
-const VOICE = { sessionId: 'session-1', owner: { clientId: 'client-1', sceneId: 'scene-1' }, projectId: 'project-1', timeZone: 'UTC', writes: false };
+const VOICE = { sessionId: 'session-1', owner: { clientId: 'client-1', sceneId: 'scene-1' }, projectId: 'project-1', timeZone: 'UTC' };
 
 /*
  * Every action of the daemon's registry that the catalog opens to Voice, and the choice for it on the
@@ -78,16 +78,14 @@ describe('the daemon policy of Voice', () => {
         expect(reached.filter((name) => matrix.has(name)).sort()).toEqual([...chosen].sort());
     });
 
-    test('lets through exactly the matrix, and the writes only with their grant', () => {
-        const reads = voicePolicy({ writes: false });
-        const writes = voicePolicy({ writes: true });
+    test('lets through exactly the matrix', () => {
+        const policy = voicePolicy();
         for (const name of Object.keys(ACTION_DEFINITIONS) as ActionName[]) {
             const action = DAEMON_VOICE_ACTIONS.find((candidate) => candidate.name === name);
-            expect(reads.check(name, {}) === null).toBe(action !== undefined && !action.writes);
-            expect(writes.check(name, {}) === null).toBe(action !== undefined);
+            expect(policy.check(name, {}) === null).toBe(action !== undefined);
         }
-        expect(reads.check('chat.send', { chatId: 'c', prompt: 'hi' })).toMatchObject({ code: 'voice-read-only' });
-        expect(reads.check('view.delete', { viewId: 'v' })).toMatchObject({ code: 'not-for-voice' });
+        expect(policy.check('chat.send', { chatId: 'c', prompt: 'hi' })).toBeNull();
+        expect(policy.check('view.delete', { viewId: 'v' })).toMatchObject({ code: 'not-for-voice' });
     });
 
     test('every action of the matrix has its rule for the fields', () => {
@@ -101,7 +99,7 @@ describe('the daemon policy of Voice', () => {
     });
 
     test('refuses the fields of agent.start that are not Voice’s, whatever their value', () => {
-        const policy = voicePolicy({ writes: true });
+        const policy = voicePolicy();
         const start = { provider: 'claude', terminal: false, worktree: false, prompt: 'Fix the tests', task: null, cwd: null };
         expect(policy.check('agent.start', start)).toBeNull();
         expect(policy.check('agent.start', { ...start, terminal: true })).toMatchObject({ code: 'voice-field' });
@@ -133,7 +131,7 @@ describe('the daemon policy of Voice', () => {
         const executor = new VoiceToolExecutor<ServerActionContext>({
             sessionId: VOICE.sessionId,
             runner: serverActions,
-            policy: voicePolicy({ writes: true }),
+            policy: voicePolicy(),
             tools: voiceToolDefinitions(),
             call: (): { actor: typeof call.actor; context: VoiceActionContext } => call,
             live: () => true
@@ -144,11 +142,11 @@ describe('the daemon policy of Voice', () => {
     });
 
     test('the tools of the daemon offer the matrix and nothing the registry would refuse', () => {
-        const offered = daemonVoiceTools({ writes: true }).flatMap((tool) => {
+        const offered = daemonVoiceTools().flatMap((tool) => {
             const action = tool.parameters.properties.action as { enum?: string[] } | undefined;
             return action?.enum ?? [];
         });
-        const policy = voicePolicy({ writes: true });
+        const policy = voicePolicy();
         expect(offered.every((name) => policy.check(name, {}) === null)).toBe(true);
     });
 });

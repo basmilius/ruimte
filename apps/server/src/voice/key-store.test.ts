@@ -79,8 +79,6 @@ describe('ruimte voice key', () => {
         return {
             args,
             home,
-            installedHome: join(root, '.ruimte'),
-            compiled: false,
             interactive: true,
             readKey: async (interactive) => {
                 asked.push(interactive);
@@ -115,12 +113,11 @@ describe('ruimte voice key', () => {
         expect([...before.lines, ...after.lines, ...clear.lines].join('\n')).not.toContain(KEY);
     });
 
-    test('refuses an installed home and a compiled daemon while Voice is a spike', async () => {
-        const installed = { ...options(['key', 'set']), installedHome: home };
-        expect(await runVoice(installed)).toBe(1);
-        const compiled = { ...options(['key', 'set']), compiled: true };
-        expect(await runVoice(compiled)).toBe(1);
-        expect(await store.has()).toBe(false);
+    test('saves the key in the home an installed Ruimte uses as well', async () => {
+        const installed = join(root, '.ruimte');
+        const run = { ...options(['key', 'set']), home: installed };
+        expect(await runVoice(run)).toBe(0);
+        expect(await new VoiceKeyStore(installed).read()).toBe(KEY);
     });
 
     test('an empty answer saves nothing', async () => {

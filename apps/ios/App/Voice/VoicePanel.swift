@@ -160,7 +160,7 @@ struct VoiceProjectPicker: View {
             if offering.isEmpty {
                 ContentUnavailableView(
                     String(localized: "No machine offers Voice"), lucideIcon: "mic-off",
-                    description: Text("A machine offers Voice once it has an OpenAI key and Voice is turned on there."))
+                    description: Text("A machine offers Voice once it has an OpenAI key."))
             }
             ForEach(offering, id: \.id) { machine in
                 Section(machine.name) {

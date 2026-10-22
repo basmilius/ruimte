@@ -23394,12 +23394,12 @@
         }
       }
     },
-    "A machine offers Voice once it has an OpenAI key and Voice is turned on there." : {
+    "A machine offers Voice once it has an OpenAI key." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een machine biedt Voice aan zodra hij een OpenAI-sleutel heeft en Voice daar aanstaat."
+            "value" : "Een machine biedt Voice aan zodra hij een OpenAI-sleutel heeft."
           }
         }
       }
@@ -23525,12 +23525,12 @@
         }
       }
     },
-    "The key stays on the machine and never reaches this phone. Set it there with ruimte voice key set. Voice is an experiment a machine turns on before it offers it." : {
+    "The key stays on the machine and never reaches this phone. Set it in Ruimte on that computer, under Settings, Voice, or there with ruimte voice key set." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De sleutel blijft op de machine en komt nooit op deze telefoon. Stel hem daar in met ruimte voice key set. Voice is een experiment dat een machine eerst aanzet voordat hij het aanbiedt."
+            "value" : "De sleutel blijft op de machine en komt nooit op deze telefoon. Stel hem in Ruimte op die computer in, onder Instellingen, Voice, of daar met ruimte voice key set."
           }
         }
       }

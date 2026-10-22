@@ -778,7 +778,7 @@ export const REQUEST_SCHEMAS = {
     'secret.requests': { payload: EmptySchema, result: SecretRequestsSchema },
     'secret.save': { payload: SecretSavePayloadSchema, result: SecretAnswerResultSchema },
     'secret.decline': { payload: SecretDeclinePayloadSchema, result: SecretAnswerResultSchema },
-    // Voice run by the daemon, offered only while it runs with RUIMTE_EXPERIMENTAL_VOICE=1. Setting and clearing the key is the local secret's.
+    // Voice run by the daemon for a phone. Setting and clearing the key is the local secret's.
     'voice.keyStatus': { payload: EmptySchema, result: VoiceKeyStatusSchema },
     'voice.setKey': { payload: VoiceSetKeyPayloadSchema, result: VoiceKeyStatusSchema },
     'voice.clearKey': { payload: EmptySchema, result: VoiceKeyStatusSchema },

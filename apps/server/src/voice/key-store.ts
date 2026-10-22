@@ -28,22 +28,10 @@ export function voiceKeyProblem(key: string): string | null {
 }
 
 /*
- * Why a key may not be set in this home, or null when it may. While Voice on the daemon is a spike its key
- * goes only into a development home: never into the one an installed Ruimte uses, and never from a compiled
- * daemon. The CLI and the requests of the local secret are held to the same rule.
- */
-export function voiceKeyHomeProblem(options: { home: string; installedHome: string; compiled: boolean }): string | null {
-    if (options.compiled || options.home === options.installedHome) {
-        return `Voice on the machine is a development spike: its key goes only into a development home, not ${options.home}. Set RUIMTE_HOME (bun dev uses ~/.ruimte-dev).`;
-    }
-    return null;
-}
-
-/*
  * The OpenAI key Voice run by the daemon mints its sessions with, one file under `$RUIMTE_HOME/voice`,
- * 0600 in a 0700 folder and replaced whole. A person puts it there, with `ruimte voice key set` or a
- * request only the local secret may make; nothing copies it from the desktop app or reads it from a
- * CLI's own credentials. `MachineHome` refuses the folder to every client file request, and the only
+ * 0600 in a 0700 folder and replaced whole. A person puts it there: in the desktop app's settings, which
+ * the shell hands over on the local secret, with `ruimte voice key set`, or with `voice.setKey`. Nothing
+ * reads it from a CLI's own credentials. `MachineHome` refuses the folder to every client file request, and the only
  * reader is the start of a Voice session, which hands it to OpenAI and nowhere else.
  */
 export class VoiceKeyStore {

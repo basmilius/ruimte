@@ -28,7 +28,7 @@ async function ask(dispatcher: Dispatcher, client: ClientConnection & { frames: 
     return client.frames.at(-1) as { ok: boolean; result?: unknown; error?: { code: string; message: string } };
 }
 
-function voiceDispatcher(keyHomeProblem: string | null = null): Dispatcher {
+function voiceDispatcher(): Dispatcher {
     const dispatcher = new Dispatcher();
     const sessions: VoiceHandlerDeps['sessions'] = {
         start: async (client, payload) => {
@@ -38,7 +38,7 @@ function voiceDispatcher(keyHomeProblem: string | null = null): Dispatcher {
         stop: async (client, payload) => ({ stopped: client.id === 'phone' && payload.sceneId === 'scene-1' }),
         confirm: async () => ({ accepted: false })
     };
-    registerVoiceHandlers(dispatcher, { keys, sessions, keyHomeProblem });
+    registerVoiceHandlers(dispatcher, { keys, sessions });
     return dispatcher;
 }
 
@@ -70,30 +70,21 @@ describe('the voice requests', () => {
         expect(await keys.has()).toBe(false);
     });
 
-    test('an installed or compiled daemon takes no key from the local secret either, as the CLI takes none there', async () => {
-        await keys.write(KEY);
-        const dispatcher = voiceDispatcher('Voice on the machine is a development spike');
+    test('the home an installed Ruimte uses takes the key from the local secret too', async () => {
+        const home = join(root, '.ruimte');
+        const wired = wireVoice({
+            config: { home },
+            projects: { hold: () => undefined, letGo: () => undefined, index: { folderOf: () => null, viewsOf: () => null } } as never,
+            machine: { id: 'machine-1', label: 'Studio' },
+            canvasHost: {} as CanvasHost,
+            chats: { observe: () => () => undefined, get: () => undefined }
+        });
+        const dispatcher = new Dispatcher();
+        registerVoiceHandlers(dispatcher, wired);
         const owner = connection('owner', OWNER);
-        expect(await ask(dispatcher, owner, 'voice.setKey', { key: KEY })).toMatchObject({ ok: false, error: { code: 'voice-dev-home-only' } });
-        expect(await ask(dispatcher, owner, 'voice.clearKey', {})).toMatchObject({ ok: false, error: { code: 'voice-dev-home-only' } });
-        expect(await keys.has()).toBe(true);
-        expect(await ask(dispatcher, owner, 'voice.keyStatus', {})).toMatchObject({ ok: true, result: { present: true } });
-        const log = spyOn(console, 'log').mockImplementation(() => undefined);
-        try {
-            const wired = (fields: { compiled: boolean; installedHome: string }) =>
-                wireVoice({
-                    config: { home: root, experimentalVoice: { enabled: true, writes: false } },
-                    projects: { hold: () => undefined, letGo: () => undefined, index: { folderOf: () => null, viewsOf: () => null } } as never,
-                    machine: { id: 'machine-1', label: 'Studio' },
-                    canvasHost: {} as CanvasHost,
-                    chats: { observe: () => () => undefined, get: () => undefined },
-                    ...fields
-                });
-            expect(wired({ compiled: true, installedHome: join(root, '.ruimte') })!.keyHomeProblem).toContain('development spike');
-            expect(wired({ compiled: false, installedHome: root })!.keyHomeProblem).toContain('development spike');
-        } finally {
-            log.mockRestore();
-        }
+        expect(await ask(dispatcher, owner, 'voice.setKey', { key: KEY })).toMatchObject({ ok: true, result: { present: true } });
+        expect(await new VoiceKeyStore(home).read()).toBe(KEY);
+        expect(await ask(dispatcher, owner, 'voice.clearKey', {})).toMatchObject({ ok: true, result: { present: false } });
     });
 
     test('a key that is refused is answered and logged without the key', async () => {
@@ -135,31 +126,19 @@ describe('the voice requests', () => {
         });
     });
 
-    test('without RUIMTE_EXPERIMENTAL_VOICE nothing is wired, so no client hears of Voice', () => {
-        const off = wireVoice({
-            config: { home: root, experimentalVoice: { enabled: false, writes: false } },
-            projects: {} as never,
-            machine: { id: 'machine-1', label: 'Studio' },
-            canvasHost: {} as CanvasHost,
-            chats: { observe: () => () => undefined, get: () => undefined },
-            compiled: false
-        });
-        expect(off).toBeNull();
+    test('is wired without any variable and says nothing at start, and no request is a peer’s', () => {
         const log = spyOn(console, 'log').mockImplementation(() => undefined);
         try {
-            const on = wireVoice({
-                config: { home: root, experimentalVoice: { enabled: true, writes: false } },
+            const wired = wireVoice({
+                config: { home: root },
                 projects: { hold: () => undefined, letGo: () => undefined, index: { folderOf: () => null, viewsOf: () => null } } as never,
                 machine: { id: 'machine-1', label: 'Studio' },
                 canvasHost: {} as CanvasHost,
-                chats: { observe: () => () => undefined, get: () => undefined },
-                compiled: false,
-                installedHome: join(root, '.ruimte')
+                chats: { observe: () => () => undefined, get: () => undefined }
             });
-            expect(on).not.toBeNull();
-            expect(on!.keyHomeProblem).toBeNull();
+            expect(log).not.toHaveBeenCalled();
             const dispatcher = new Dispatcher();
-            registerVoiceHandlers(dispatcher, on!);
+            registerVoiceHandlers(dispatcher, wired);
             expect(
                 dispatcher
                     .types()

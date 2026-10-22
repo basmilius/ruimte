@@ -209,10 +209,6 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
     },
     'chat.send': async ({ chatId, prompt, delivery }, { context }) => {
         const voice = voiceOf(context);
-        // The policy keeps this off without the grant already; a handler that writes says so itself too.
-        if (!voice.writes) {
-            throw new VerbRefusal('voice-read-only', 'Voice on this machine only reads for now; prompting a chat is off');
-        }
         const chat = await chatOfSession(context, chatId);
         const prompts = context.host.chatPrompts;
         if (prompts === undefined || !prompts.running(chatId)) {

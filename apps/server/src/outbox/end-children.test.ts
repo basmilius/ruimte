@@ -491,8 +491,7 @@ test('indexing the project again after Voice started a chat owes no end-children
         sessionId: 'session-1',
         owner: { clientId: 'client-1', sceneId: 'scene-1' },
         projectId,
-        timeZone: 'UTC',
-        writes: true
+        timeZone: 'UTC'
     });
     const start = { provider: 'claude', terminal: false, prompt: 'slow', viewId: null, beside: null, title: null, model: null, mode: null, requestId: null };
     const result = await serverActions.execute('agent.start', start, voice);

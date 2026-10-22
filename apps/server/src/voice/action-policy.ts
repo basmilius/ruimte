@@ -1,5 +1,5 @@
 import type { ActionName } from '@ruimte/actions';
-import { DAEMON_VOICE_ACTIONS, daemonVoiceActions, type DaemonVoiceGrant } from '@ruimte/voice';
+import { DAEMON_VOICE_ACTIONS } from '@ruimte/voice';
 
 /*
  * The fields Voice may fill per action of the matrix; every other field of the action stays null. `null`
@@ -41,20 +41,17 @@ function given(value: unknown): boolean {
 }
 
 /*
- * The policy of a session, derived from `DAEMON_VOICE_ACTIONS` and the grant the daemon started with. The
- * registry checks the actor and the catalog's fields as well; this is what keeps Voice off every daemon
- * handler that an agent's verb would reach, whatever a catalog entry opens to Voice for the desktop.
+ * The policy of a session, derived from `DAEMON_VOICE_ACTIONS`. The registry checks the actor and the
+ * catalog's fields as well; this is what keeps Voice off every daemon handler that an agent's verb would
+ * reach, whatever a catalog entry opens to Voice for the desktop.
  */
-export function voicePolicy(grant: DaemonVoiceGrant): VoicePolicy {
-    const actions: ReadonlySet<ActionName> = new Set(daemonVoiceActions(grant).map((action) => action.name));
-    const writes = new Set(DAEMON_VOICE_ACTIONS.filter((action) => action.writes).map((action) => action.name as string));
+export function voicePolicy(): VoicePolicy {
+    const actions: ReadonlySet<ActionName> = new Set(DAEMON_VOICE_ACTIONS.map((action) => action.name));
     return {
         actions,
         check(name, input) {
             if (!actions.has(name as ActionName)) {
-                return writes.has(name)
-                    ? { code: 'voice-read-only', message: 'Voice on this machine only reads for now; prompting and starting chats is off.' }
-                    : { code: 'not-for-voice', message: `Voice cannot run “${name}” on this machine.` };
+                return { code: 'not-for-voice', message: `Voice cannot run “${name}” on this machine.` };
             }
             const rule = VOICE_FIELD_RULES[name];
             if (rule === undefined) {

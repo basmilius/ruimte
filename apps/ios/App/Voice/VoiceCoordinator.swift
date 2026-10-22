@@ -123,7 +123,7 @@ final class VoiceCoordinator {
     // MARK: Whether Voice is offered
 
     /// Whether the mic button shows for a project on this machine: the app may use the microphone, the machine
-    /// answers `voice.start`, which it names only with its experimental flag on, and it holds a key.
+    /// answers `voice.start`, and `voice.keyStatus` last said it holds a key. A machine without one offers no mic.
     func offers(machineID: String, client: any MachineRequesting) -> Bool {
         declaresMicrophone && (client as? MachineFeatures)?.answers(.voiceStart) == true && keys[machineID] == true
     }
