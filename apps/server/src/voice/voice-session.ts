@@ -198,6 +198,7 @@ export class VoiceSession {
             );
             const sideband = await this.#whileStarting(attaching);
             this.#sideband = sideband;
+            console.log(`Voice session ${this.id} started in ${language} with the voice ${voice}`);
             // The reports go one append at a time against their acks, the same queue the desktop's window uses.
             this.#delivery = new VoiceCompletionDelivery((event) => this.#sideband?.send(event) ?? false, {
                 language,
