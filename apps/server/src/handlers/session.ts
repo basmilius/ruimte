@@ -19,9 +19,22 @@ export function registerSessionHandlers(
     logins?: LoginCommands,
     machineOf?: MachineOfNode
 ): void {
-    dispatcher.register('session.create', (payload) => {
+    dispatcher.register('session.create', async (payload, client) => {
         refuseBoundNode(machineOf, payload.sessionId);
-        return manager.create(payload);
+        const { endsWithClient, ...options } = payload;
+        if (!endsWithClient) {
+            return manager.create(options);
+        }
+        // A client's shell never holds a command, so one may not ride along past a person's approval.
+        if (options.command !== undefined || options.agent !== undefined) {
+            throw new SessionError('client-shell-command', 'A shell that ends with its client starts nothing of its own');
+        }
+        const created = await manager.create({ ...options, fresh: true, forClient: { clientId: client.id, label: 'Shell' } });
+        // As with a login: a client that left while the shell started had its others ended before this one was there.
+        if (client.closed) {
+            await manager.kill(created.sessionId);
+        }
+        return created;
     });
 
     /* No `cwd`, so the shell starts in the home folder. The default account is named outright, since a

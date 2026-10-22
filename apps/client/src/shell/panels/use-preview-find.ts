@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { FindState } from '@/find/use-find';
 
 /* The part of a `<webview>` a find needs. */
@@ -73,11 +73,11 @@ export function usePreviewFind(find: FindState, page: RefObject<FindablePage | n
         element?.findInPage(text, { findNext: true, matchCase: caseSensitive });
     }, [page, find.open, text, caseSensitive]);
 
-    const refresh = useCallback((): void => {
+    const refresh = (): void => {
         if (asked.current !== null) {
             readyPage(page)?.findInPage(asked.current.text, { findNext: true, matchCase: asked.current.caseSensitive });
         }
-    }, [page]);
+    };
 
     const step = (direction: 1 | -1): void => {
         if (text !== '') {
@@ -85,9 +85,9 @@ export function usePreviewFind(find: FindState, page: RefObject<FindablePage | n
         }
     };
 
-    const found = useCallback((result: FoundInPage): void => {
+    const found = (result: FoundInPage): void => {
         setState({ total: result.matches, current: result.activeMatchOrdinal > 0 ? result.activeMatchOrdinal - 1 : null });
-    }, []);
+    };
 
     return { total: find.open && text !== '' ? state.total : 0, current: find.open ? state.current : null, step, found, refresh };
 }

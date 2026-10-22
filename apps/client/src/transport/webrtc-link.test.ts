@@ -362,11 +362,11 @@ describe('webRtcLink', () => {
         expect(peer.closed).toBe(true);
     });
 
-    test('ICE failing is said in so many words', async () => {
+    test('ICE failing says there is no network path to the machine', async () => {
         const { peer, log } = await negotiated();
         peer.fail();
         expect(log.closes).toHaveLength(1);
-        expect(log.closes[0]).toContain('ICE failed');
+        expect(log.closes[0]).toContain('No network path to the machine');
     });
 
     test('a daemon that does not know the request says so, and an answer for another attempt is ignored', async () => {
@@ -384,7 +384,7 @@ describe('webRtcLink', () => {
     test('a signaling socket that closes before the channel is in is a failure; closing the link is not', async () => {
         const first = setup();
         first.socket.onclose?.();
-        expect(first.log.closes).toEqual(['The machine could not be reached to set up a direct connection']);
+        expect(first.log.closes).toEqual(['Could not reach the machine to set up a direct connection']);
 
         const second = await negotiated();
         second.link.close();
@@ -483,16 +483,16 @@ describe('webRtcLink', () => {
             }
         });
         await tick();
-        expect(refused.log.closes).toEqual(['The machine does not let this client in. Its access was revoked, or your account could not vouch for it.']);
+        expect(refused.log.closes).toEqual(['The machine does not let this device in. Its access was revoked, or your account could not confirm it.']);
         expect(forgotten).toBe(1);
 
         const failed = setup({
             signaling: () => (_connectionId, events) => {
-                events.fail('The broker at broker.example.com could not be reached');
+                events.fail('Could not reach the broker at broker.example.com');
                 return { send: () => undefined, close: () => undefined };
             }
         });
-        expect(failed.log.closes).toEqual(['The broker at broker.example.com could not be reached']);
+        expect(failed.log.closes).toEqual(['Could not reach the broker at broker.example.com']);
     });
 });
 

@@ -265,6 +265,7 @@ function setup(
         open?: string | null;
         stores?: WorkspaceStores;
         window?: Pick<Window, 'addEventListener' | 'removeEventListener'>;
+        nextFrame?: (run: () => void) => () => void;
     } = {}
 ) {
     const stores = options.stores ?? defaultWorkspaceStores;
@@ -289,7 +290,8 @@ function setup(
         forgetSessions: (machine: string, views: readonly ProjectView[]) =>
             forgotten.push({ endpointId: machine, nodes: sessionNodesOf(views).map((node) => `${node.kind}:${node.id}`) }),
         storage: fakeStorage(storage),
-        window: options.window ?? null
+        window: options.window ?? null,
+        nextFrame: options.nextFrame ?? null
     });
     if (open !== null) {
         // On the first tick, so a test can still set up what the daemon answers.
@@ -650,6 +652,50 @@ describe('ProjectClient', () => {
             ['a', 300],
             ['b', 24]
         ]);
+        dispose();
+    });
+
+    test('changes that come within one frame are taken in once, as the newest, with nothing of the ones before lost', async () => {
+        const frames: Array<() => void> = [];
+        const { transport, state, dispose } = setup({ nextFrame: (run) => (frames.push(run), () => frames.splice(frames.indexOf(run), 1)) });
+        const note = (id: string): ProjectCanvasView['nodes'][number] => ({ id, kind: 'note', title: id, x: 0, y: 0, w: 10, h: 10 });
+        await tick();
+        let merges = 0;
+        const off = useDocument.subscribe((next, previous) => {
+            merges += next.merging && !previous.merging ? 1 : 0;
+        });
+
+        transport.emit('project.changed', { projectId: 'p1', document: document(4, [canvasView('main', [note('a')])]) });
+        transport.emit('project.changed', { projectId: 'p1', document: document(5, [canvasView('main', [note('a'), note('b')])]) });
+        transport.emit('project.changed', { projectId: 'p1', document: document(6, [canvasView('main', [note('a'), note('b'), note('c')])]) });
+        expect(state.rev).toBe(3);
+        expect(frames).toHaveLength(1);
+
+        frames.shift()!();
+        expect(merges).toBe(1);
+        expect(state.rev).toBe(6);
+        expect(focusedCanvas().getState().order).toEqual(['a', 'b', 'c']);
+        off();
+        dispose();
+    });
+
+    test('a save takes a held change in first, so it writes against the rev that change brought', async () => {
+        const frames: Array<() => void> = [];
+        const { transport, state, client, dispose } = setup({ nextFrame: (run) => (frames.push(run), () => frames.splice(frames.indexOf(run), 1)) });
+        await tick();
+        transport.rev = 4;
+        transport.emit('project.changed', {
+            projectId: 'p1',
+            document: document(4, [canvasView('main', [{ id: 'theirs', kind: 'note', title: 't', x: 0, y: 0, w: 10, h: 10 }])])
+        });
+        focusedCanvas().getState().addNode('note', { x: 400, y: 0 });
+
+        await client.flush();
+        const save = transport.of('project.save').at(-1)?.payload as { baseRev: number; content: { views: ProjectCanvasView[] } };
+        expect(save.baseRev).toBe(4);
+        expect(save.content.views[0]!.nodes.map((node) => node.id)).toContain('theirs');
+        expect(state.conflict).toBeNull();
+        expect(frames).toHaveLength(0);
         dispose();
     });
 

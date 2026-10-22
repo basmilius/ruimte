@@ -56,6 +56,9 @@ const sample: ProcessesSampleEvent = {
     reset: false
 };
 
+const NOON = new Date(2026, 8, 23, 12).getTime();
+const DAY = 86_400_000;
+
 const alert: ProcessAlert = { id: 'alert-1', kind: 'busy-after-turn', nodeId: 'chat-1', pid: 2, startTime: 2, name: 'node', since: 50, value: 80 };
 
 const usage: UsageSummaryResult = {
@@ -92,7 +95,10 @@ function fake(overrides: Partial<MachineReach> = {}) {
                             plan: 'max',
                             checkedAt: 1,
                             source: 'probe',
-                            windows: [{ id: 'w', kind: 'session', label: '5h', used: 0.42, resetsAt: 9, durationMs: null }],
+                            windows: [
+                                { id: 'w', kind: 'session', label: '5h', used: 0.42, resetsAt: 9, durationMs: null },
+                                { id: 'week', kind: 'weekly', label: 'Week', used: 0.5, resetsAt: NOON + 4 * DAY, durationMs: 7 * DAY }
+                            ],
                             cost: null,
                             unavailable: null
                         }
@@ -109,7 +115,7 @@ function fake(overrides: Partial<MachineReach> = {}) {
             alerts: () => [alert],
             limits: () => null,
             titles: () => new Map([['chat-1', 'Research']]),
-            now: () => new Date(2026, 8, 23, 12),
+            now: () => new Date(NOON),
             timeZone: () => 'Europe/Amsterdam',
             ...overrides
         })
@@ -179,7 +185,19 @@ describe('machine actions', () => {
     test('plan windows come from what the window holds, and only asked of the machine without it', async () => {
         const { registry, requests } = fake();
         expect(await registry.execute('usage.limits', {}, VOICE_ACTION_CALL)).toMatchObject({
-            output: { providers: [{ provider: 'claude', plan: 'max', windows: [{ label: '5h', usedPercent: 42, resetsAt: 9 }] }] }
+            output: {
+                providers: [
+                    {
+                        provider: 'claude',
+                        plan: 'max',
+                        windows: [
+                            { label: '5h', usedPercent: 42, resetsAt: 9, evenPacePercent: null },
+                            // Three of the seven days have run, so an even pace stands at 43%.
+                            { label: 'Week', usedPercent: 50, evenPacePercent: 43 }
+                        ]
+                    }
+                ]
+            }
         });
         expect(requests.map((request) => request.type)).toEqual(['usage.limits']);
         const held = fake({ limits: () => ({ providers: [] }) });

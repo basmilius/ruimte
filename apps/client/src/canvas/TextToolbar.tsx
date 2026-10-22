@@ -1,5 +1,4 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { useShallow } from 'zustand/react/shallow';
 import { AlignCenter, AlignLeft, AlignRight, Bold, ChevronDown, Italic, Palette, Strikethrough, Underline } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { DrawingFont } from '@ruimte/contracts';
@@ -21,13 +20,10 @@ const BAR_HEIGHT = 40;
 export function TextToolbar() {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
-    const { camera, viewport, text } = useCanvas(
-        useShallow((s) => ({
-            camera: s.camera,
-            viewport: s.viewport,
-            text: s.selection.length === 1 ? (s.texts[s.selection[0]!] ?? null) : null
-        }))
-    );
+    const text = useCanvas((s) => (s.selection.length === 1 ? (s.texts[s.selection[0]!] ?? null) : null));
+    // Only a bar on screen follows the camera, so a pan with no text selected renders nothing here.
+    const camera = useCanvas((s) => (text === null ? null : s.camera));
+    const viewport = useCanvas((s) => s.viewport);
 
     const toolbarRef = useRef<HTMLDivElement>(null);
     const [toolbarWidth, setToolbarWidth] = useState(0);
@@ -60,7 +56,7 @@ export function TextToolbar() {
         return () => observer.disconnect();
     }, [text?.id]);
 
-    if (text === null) {
+    if (text === null || camera === null) {
         return null;
     }
 

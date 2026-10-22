@@ -119,9 +119,9 @@ import SwiftUI
         case .landed(let email): email.map { String(localized: "Logged in as \($0)") } ?? String(localized: "Logged in")
         case .ended(let dropped):
             dropped
-                ? String(localized: "The connection to the machine dropped, which ended the login.")
+                ? String(localized: "The machine disconnected, so the login ended.")
                 : String(localized: "The login ended.")
-        case .failed(let reason): String(localized: "The login could not start: \(reason)")
+        case .failed(let reason): String(localized: "Could not start the login: \(reason)")
         }
     }
 }
@@ -139,7 +139,7 @@ struct AccountLoginSheet: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                Text("\(cli) runs its own login in this terminal. It closes by itself once you are logged in.")
+                Text("\(cli) logs you in here. This closes once you are logged in.")
                     .font(.caption).foregroundStyle(MobileStyle.muted)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16).padding(.vertical, 8)

@@ -59,12 +59,12 @@ async function openLogin(kind: 'claude' | 'grok', name: string, sentence: string
 
 describe('the login dialog', () => {
     test('says it closes by itself for a CLI the machine can ask about its login', async () => {
-        const text = await openLogin('claude', 'Claude Code', 'It closes by itself once you are logged in.');
-        expect(text).not.toContain('Close this window');
+        const text = await openLogin('claude', 'Claude Code', 'This closes once you are logged in.');
+        expect(text).not.toContain('Close this once');
     });
 
     test('asks a person to close it for a CLI whose login cannot report back', async () => {
-        const text = await openLogin('grok', 'Grok', 'Close this window once you are logged in.');
-        expect(text).not.toContain('closes by itself');
+        const text = await openLogin('grok', 'Grok', 'Close this once you are logged in.');
+        expect(text).not.toContain('This closes once');
     });
 });

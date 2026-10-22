@@ -177,7 +177,7 @@ describe('explain the selection', () => {
         const { language, model } = await setup();
         await language.explain.explainHere();
         expect(model.requests).toEqual([]);
-        expect(useToasts.getState().toasts.at(-1)?.title).toContain('turned off');
+        expect(useToasts.getState().toasts.at(-1)?.title).toContain('Explain is off');
     });
 });
 

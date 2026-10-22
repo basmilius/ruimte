@@ -85,6 +85,19 @@ describe('DeviceManager', () => {
         expect(await manager.shutdown('simctl', 'ios', 'phone-1')).toMatchObject({ state: 'shutdown' });
     });
 
+    test('reads power through the backend, and calls it unknown where the backend has none or fails', async () => {
+        const backend = new FakeBackend();
+        const manager = new DeviceManager([backend]);
+        expect(await manager.power('simctl', 'ios', 'phone-1')).toBeNull();
+
+        Object.assign(backend, { power: async () => ({ level: 50, plugged: true, charging: true }) });
+        expect(await manager.power('simctl', 'ios', 'phone-1')).toEqual({ level: 50, plugged: true, charging: true });
+
+        Object.assign(backend, { power: () => Promise.reject(new DeviceError('device-not-booted', 'Start the device')) });
+        expect(await manager.power('simctl', 'ios', 'phone-1')).toBeNull();
+        expect(await manager.power('simctl', 'android', 'phone-1')).toBeNull();
+    });
+
     test('names a platform that has no backend', async () => {
         const manager = new DeviceManager([new FakeBackend()]);
 

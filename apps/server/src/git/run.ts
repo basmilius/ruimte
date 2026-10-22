@@ -18,6 +18,8 @@ interface GitOptions {
 
 export type GitErrorCode =
     | 'not-a-repo'
+    // A clone whose URL is not one git may fetch from a remote, or whose folder is taken.
+    | 'clone-refused'
     | 'outside-checkout'
     | 'git-failed'
     | 'worktree-not-found'

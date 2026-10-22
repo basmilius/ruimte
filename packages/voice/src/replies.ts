@@ -1,5 +1,5 @@
 import { ACTION_DEFINITIONS, type ActionDomain, type ActionName, type ActionOutput } from '@ruimte/actions';
-import type { VoiceActivityKind } from '@ruimte/contracts';
+import type { NodeAccent, VoiceActivityKind } from '@ruimte/contracts';
 
 /* The kinds of entry the Voice timeline draws, the same on the desktop as in `voice.activity`. */
 export type VoiceActionKind = VoiceActivityKind;
@@ -20,6 +20,7 @@ export interface VoiceReply {
 export interface VoiceReplyWords {
     activity(key: string): string;
     machine(endpointId: string): string;
+    color(accent: NodeAccent | null): string;
 }
 
 type Replies = { [Name in ActionName]?: (output: ActionOutput<Name>, words: VoiceReplyWords) => VoiceReply };
@@ -244,9 +245,14 @@ export const REPLIES: Replies = {
         message: `Started “${output.terminal}” again in a new session.`,
         entry: { kind: 'terminal', label: words.activity('restartedTerminal'), detail: output.terminal }
     }),
-    'note.setColor': (output, words) => ({
-        message: output.changed ? `Made the note ${output.color}.` : `The note was already ${output.color}.`,
-        entry: { kind: 'note', label: words.activity('changedNoteColor'), detail: output.color }
+    'node.setColor': (output, words) => ({
+        message:
+            output.color === null
+                ? `Took the color off the ${NODE_LABELS[output.kind]}.`
+                : output.changed
+                  ? `Made the ${NODE_LABELS[output.kind]} ${output.color}.`
+                  : `The ${NODE_LABELS[output.kind]} was already ${output.color}.`,
+        entry: { kind: 'node', label: words.activity('changedNodeColor'), detail: words.color(output.color) }
     })
 };
 

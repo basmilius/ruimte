@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import type { Database } from 'bun:sqlite';
 import { generateKeyPairSync, sign, verify, type KeyObject } from 'node:crypto';
 import {
@@ -31,13 +31,14 @@ function signWith(pair: Pair, message: string): string {
 }
 
 const statementKey = generateKeyPairSync('ed25519');
+const NOW = Date.UTC(2026, 9, 1);
 const statementPublicKey = statementKey.publicKey;
 
 let sqlite: Database;
 let env: Env;
 
 async function signIn(accountId: string): Promise<string> {
-    sqlite.query('INSERT INTO account (id, provider, subject, created_at) VALUES (?, ?, ?, ?)').run(accountId, 'github', accountId, Date.now());
+    sqlite.query('INSERT INTO account (id, provider, subject, created_at) VALUES (?, ?, ?, ?)').run(accountId, 'github', accountId, NOW);
     const session = await createSession(env.DB, { id: accountId, provider: 'github', login: accountId, displayName: null }, 'laptop', newPair().publicKey);
     return session.accessToken;
 }
@@ -52,7 +53,7 @@ function post(token: string, body: unknown): Request {
 
 // What a daemon signs for one account: `endpoint.signRegistration`, or any account a daemon from before this fix was asked for.
 function registration(machine: Pair, machineId: string, accountId: string): RegisterMachinePayload {
-    const issuedAt = Date.now();
+    const issuedAt = NOW;
     return {
         id: machineId,
         name: 'Studio',
@@ -88,12 +89,17 @@ function signedByAddressBook(message: string, signature: string | undefined): bo
 }
 
 beforeEach(() => {
+    setSystemTime(NOW);
     sqlite = migratedDatabase();
     env = {
         DB: d1(sqlite),
         PUBLIC_ORIGIN: 'https://pulsar.test',
         STATEMENT_PRIVATE_KEY: statementKey.privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64url')
     };
+});
+
+afterEach(() => {
+    setSystemTime();
 });
 
 describe('a machine id on two accounts', () => {
@@ -177,7 +183,7 @@ describe('a machine key on another account', () => {
         for (const accountId of ['owner', 'colleague']) {
             sqlite
                 .query('INSERT INTO machine (account_id, id, name, public_key, created_at) VALUES (?, ?, ?, ?, ?)')
-                .run(accountId, 'studio', 'Studio', machine.publicKey, Date.now());
+                .run(accountId, 'studio', 'Studio', machine.publicKey, NOW);
         }
         expect((await registerMachine(post(owner, registration(machine, 'studio', 'owner')), env)).status).toBe(200);
         expect((await registerMachine(post(colleague, registration(machine, 'studio', 'colleague')), env)).status).toBe(200);
@@ -189,8 +195,8 @@ describe('a machine key on another account', () => {
         await signIn('colleague');
         const machine = newPair();
         const signed = { id: 'studio', name: 'Studio', icon: null, brokerUrl: null, publicKey: machine.publicKey };
-        expect('machine' in (await storeMachine(env.DB, 'owner', signed, true, Date.now()))).toBe(true);
-        const refused = await storeMachine(env.DB, 'colleague', signed, true, Date.now());
+        expect('machine' in (await storeMachine(env.DB, 'owner', signed, true, NOW))).toBe(true);
+        const refused = await storeMachine(env.DB, 'colleague', signed, true, NOW);
         expect('response' in refused && (await errorCode(refused.response))).toBe('machine-on-other-account');
     });
 
@@ -198,10 +204,7 @@ describe('a machine key on another account', () => {
         await signIn('owner');
         await signIn('colleague');
         const signed = { id: 'studio', name: 'Studio', icon: null, brokerUrl: null, publicKey: newPair().publicKey };
-        const outcomes = await Promise.all([
-            storeMachine(env.DB, 'owner', signed, true, Date.now()),
-            storeMachine(env.DB, 'colleague', signed, true, Date.now())
-        ]);
+        const outcomes = await Promise.all([storeMachine(env.DB, 'owner', signed, true, NOW), storeMachine(env.DB, 'colleague', signed, true, NOW)]);
         expect(outcomes.filter((outcome) => 'machine' in outcome)).toHaveLength(1);
         expect(sqlite.query('SELECT COUNT(*) AS count FROM machine WHERE public_key = ?').get(signed.publicKey)).toEqual({ count: 1 });
     });
@@ -210,13 +213,13 @@ describe('a machine key on another account', () => {
         await signIn('owner');
         await signIn('colleague');
         const signed = { id: 'studio', name: 'Studio', icon: null, brokerUrl: null, publicKey: newPair().publicKey };
-        expect('machine' in (await storeMachine(env.DB, 'owner', signed, true, Date.now()))).toBe(true);
-        sqlite.query('INSERT INTO removed_machine (account_id, machine_id, removed_at) VALUES (?, ?, ?)').run('colleague', 'studio', Date.now());
-        expect('response' in (await storeMachine(env.DB, 'colleague', signed, true, Date.now()))).toBe(true);
+        expect('machine' in (await storeMachine(env.DB, 'owner', signed, true, NOW))).toBe(true);
+        sqlite.query('INSERT INTO removed_machine (account_id, machine_id, removed_at) VALUES (?, ?, ?)').run('colleague', 'studio', NOW);
+        expect('response' in (await storeMachine(env.DB, 'colleague', signed, true, NOW))).toBe(true);
         expect(sqlite.query("SELECT COUNT(*) AS count FROM removed_machine WHERE account_id = 'colleague'").get()).toEqual({ count: 1 });
 
         sqlite.query("DELETE FROM machine WHERE account_id = 'owner'").run();
-        expect('machine' in (await storeMachine(env.DB, 'colleague', signed, true, Date.now()))).toBe(true);
+        expect('machine' in (await storeMachine(env.DB, 'colleague', signed, true, NOW))).toBe(true);
         expect(sqlite.query("SELECT COUNT(*) AS count FROM removed_machine WHERE account_id = 'colleague'").get()).toEqual({ count: 0 });
     });
 });

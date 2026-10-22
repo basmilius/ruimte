@@ -235,7 +235,9 @@ export const FsCreatePayloadSchema = z.object({
     projectId: ProjectIdSchema.optional(),
     // False when the caller made those edits itself, as a workspace edit that creates the file does; the servers then only hear it was made.
     edits: z.boolean().optional(),
-    overwrite: z.boolean().optional()
+    overwrite: z.boolean().optional(),
+    // The permission bits a file is made with, exactly and before its text is in it, also over a file that was there.
+    mode: z.number().int().min(0).max(0o777).optional()
 });
 export type FsCreatePayload = z.infer<typeof FsCreatePayloadSchema>;
 

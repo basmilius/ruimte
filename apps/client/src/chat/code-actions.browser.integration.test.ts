@@ -266,9 +266,9 @@ test('real host renders the terminal icon only for complete eligible main replie
         expect(await view.evaluate<boolean>('document.querySelector("[aria-label=\\"Prepare in terminal\\"]").closest(".invisible")===null')).toBe(true);
         await view.evaluate('document.querySelector("[aria-label=\\"Prepare in terminal\\"]").focus()');
         await key(view, 'Enter', 'Enter', 13);
-        await waitFor(view, 'document.body.textContent.includes("The machine of this chat is not connected.")');
+        await waitFor(view, 'document.body.textContent.includes("This chat\'s machine is not connected.")');
         await mouse(view, null);
-        expect(await view.evaluate<boolean>('document.body.textContent.includes("The machine of this chat is not connected.")')).toBe(true);
+        expect(await view.evaluate<boolean>('document.body.textContent.includes("This chat\'s machine is not connected.")')).toBe(true);
         await view.evaluate('window.changeText("```bash\\none\\ntwo\\n```")');
         await view.evaluate(frame);
         expect(await view.evaluate<boolean>('document.querySelector("[aria-label=\\"Prepare in terminal\\"]")===null')).toBe(true);

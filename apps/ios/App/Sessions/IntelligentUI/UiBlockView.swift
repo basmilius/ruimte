@@ -263,7 +263,7 @@ struct UiFallbackPart: View {
             Group {
                 switch problem {
                 case .unknown(let component): Text("This version cannot draw \(component)")
-                case .failed: Text("Could not draw this part")
+                case .failed: Text("Could not show this part")
                 }
             }
             .font(.caption).foregroundStyle(MobileStyle.faint)

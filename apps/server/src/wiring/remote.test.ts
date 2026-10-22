@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { mkdtemp, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,14 +13,17 @@ import type { MachineBundle } from './machine.ts';
 let home: string;
 let auth: AuthStore;
 let machine: MachineBundle;
+const NOW = Date.UTC(2026, 9, 1);
 
 beforeEach(async () => {
+    setSystemTime(NOW);
     home = await mkdtemp(join(tmpdir(), 'ruimte-wire-remote-'));
     auth = new AuthStore(home);
     machine = { auth, peerKey: new PeerKey(home), pendingAdmissions: new PendingAdmissions() } as unknown as MachineBundle;
 });
 
 afterEach(async () => {
+    setSystemTime();
     await rm(home, { recursive: true, force: true });
 });
 
@@ -40,8 +43,8 @@ describe('what this machine holds of the machines it works in', () => {
             peerMachineId: 'machine-a',
             peerMachinePublicKey: 'A'.repeat(43),
             nonce: 'n'.repeat(22),
-            issuedAt: Date.now(),
-            expiresAt: Date.now() + 600_000,
+            issuedAt: NOW,
+            expiresAt: NOW + 600_000,
             signature: 's'.repeat(86)
         });
         const left: string[] = [];

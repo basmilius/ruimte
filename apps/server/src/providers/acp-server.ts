@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { z } from 'zod';
 import type { AgentKind, AgentServerStatus } from '@ruimte/contracts';
-import type { CliDetection } from '@adecore/agents/providers';
 import { extractZipFile } from '../language/archive.ts';
 
 const AssetSchema = z.object({
@@ -34,7 +33,7 @@ export function parseAcpServerRelease(descriptor: unknown): AcpServerRelease {
 /* Writes the body at the address to the file. The default streams it; tests answer from memory. */
 export type ServerDownload = (url: string, destination: string) => Promise<void>;
 
-const streamDownload: ServerDownload = async (url, destination) => {
+export const downloadFile: ServerDownload = async (url, destination) => {
     const response = await fetch(url, { redirect: 'follow' });
     if (!response.ok) {
         throw new Error(`${url} answered ${response.status}`);
@@ -42,7 +41,7 @@ const streamDownload: ServerDownload = async (url, destination) => {
     await Bun.write(destination, response);
 };
 
-async function sha256OfFile(path: string): Promise<string> {
+export async function sha256OfFile(path: string): Promise<string> {
     const hash = createHash('sha256');
     await pipeline(createReadStream(path), hash);
     return hash.digest('hex');
@@ -54,7 +53,6 @@ type Installed = z.infer<typeof InstalledSchema>;
 /* What a provider asks of its server: the line that starts it, once a verified copy is in place. */
 export interface AcpServerLaunch {
     launch(): string[] | null;
-    detection(): CliDetection;
 }
 
 export interface AcpServerInstallOptions {
@@ -88,17 +86,12 @@ export class AcpServerInstall implements AcpServerLaunch {
         this.folder = join(options.home, 'agent-servers', options.provider);
         this.release = options.release;
         this.asset = options.release.assets[`${options.platform ?? process.platform}-${options.arch ?? process.arch}`];
-        this.download = options.download ?? streamDownload;
+        this.download = options.download ?? downloadFile;
     }
 
     launch(): string[] | null {
         const installed = this.installed();
         return installed === null ? null : [join(this.folder, installed.version, installed.executable), ...installed.args];
-    }
-
-    detection(): CliDetection {
-        const installed = this.installed();
-        return { installed: installed !== null, version: installed?.version ?? null };
     }
 
     status(): AgentServerStatus {
@@ -137,7 +130,7 @@ export class AcpServerInstall implements AcpServerLaunch {
             await this.download(asset.url, archive);
             const actual = await sha256OfFile(archive);
             if (actual !== asset.sha256) {
-                throw new Error(`The download does not match its checksum (expected ${asset.sha256}, got ${actual})`);
+                throw new Error('The download is damaged. Try again.');
             }
             const unpacked = join(partial, 'server');
             const written = await extractZipFile(archive, unpacked);

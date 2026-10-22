@@ -17,6 +17,7 @@ use idevice::{
         build_start_video_parameters,
     },
     core_device_proxy::CoreDeviceProxy,
+    lockdown::LockdownClient,
     rsd::RsdHandshake,
     tcp::handle::UdpSocketHandle,
     usbmuxd::{UsbmuxdAddr, UsbmuxdConnection},
@@ -62,6 +63,13 @@ enum Command {
         timeout: u64,
         #[arg(long, value_enum, default_value_t = ProbeTransport::Wireless)]
         transport: ProbeTransport,
+    },
+    /// Prints the battery of a paired iPhone as one JSON line, read through lockdown over the wireless tunnel.
+    Battery {
+        #[arg(long)]
+        udid: Option<String>,
+        #[arg(long, default_value_t = 10)]
+        timeout: u64,
     },
 }
 
@@ -287,7 +295,59 @@ fn main() {
                 std::process::exit(1);
             }
         }),
+        Command::Battery { udid, timeout } => block_on(async move {
+            match tokio::time::timeout(Duration::from_secs(timeout), read_battery(udid.as_deref()))
+                .await
+            {
+                Ok(Ok(battery)) => println!("{battery}"),
+                Ok(Err(error)) => {
+                    eprintln!("could not read the battery: {error:#}");
+                    std::process::exit(1);
+                }
+                Err(_) => {
+                    eprintln!("the device did not say its battery in time");
+                    std::process::exit(1);
+                }
+            }
+        }),
     }
+}
+
+const BATTERY_DOMAIN: &str = "com.apple.mobile.battery";
+
+/// The trusted lockdown service the tunnel offers, so no pairing record is read or written.
+async fn read_battery(udid: Option<&str>) -> Result<serde_json::Value> {
+    let session = connect_rsd(udid).await?;
+    let mut provider = session.device_ip;
+    let mut handshake = session.handshake;
+    let mut lockdown = LockdownClient::connect_rsd(&mut provider, &mut handshake)
+        .await
+        .context("the device does not offer lockdown over its tunnel")?;
+    let values = lockdown
+        .get_value(None, Some(BATTERY_DOMAIN))
+        .await
+        .context("the device did not answer its battery")?;
+    battery_json(&values)
+}
+
+/// A missing key is an error rather than a guess, so the daemon shows the battery as unknown.
+fn battery_json(values: &plist::Value) -> Result<serde_json::Value> {
+    let values = values
+        .as_dictionary()
+        .context("the battery domain is not a dictionary")?;
+    let level = values
+        .get("BatteryCurrentCapacity")
+        .and_then(plist::Value::as_unsigned_integer)
+        .context("the battery domain has no level")?;
+    let charging = values
+        .get("BatteryIsCharging")
+        .and_then(plist::Value::as_boolean)
+        .context("the battery domain does not say whether it charges")?;
+    let plugged = values
+        .get("ExternalConnected")
+        .and_then(plist::Value::as_boolean)
+        .context("the battery domain does not say whether it is on power")?;
+    Ok(serde_json::json!({ "level": level.min(100), "charging": charging, "plugged": plugged }))
 }
 
 fn block_on(future: impl Future<Output = ()>) {
@@ -849,9 +909,52 @@ async fn negotiate_screen_media(
 mod tests {
     use super::{
         ACCESS_UNIT_DELIMITER, AccessUnitAssembler, Arguments, Command, DeviceButton, DeviceInput,
-        MAX_FRAME_BYTES, MediaUdp, PointerPhase, normalized_touch_coordinate, touch_state,
+        MAX_FRAME_BYTES, MediaUdp, PointerPhase, battery_json, normalized_touch_coordinate,
+        touch_state,
     };
     use clap::Parser;
+
+    fn battery(entries: &[(&str, plist::Value)]) -> plist::Value {
+        plist::Value::Dictionary(
+            entries
+                .iter()
+                .map(|(key, value)| (key.to_string(), value.clone()))
+                .collect(),
+        )
+    }
+
+    #[test]
+    fn battery_domain_becomes_one_json_line() {
+        let values = battery(&[
+            ("BatteryCurrentCapacity", plist::Value::Integer(14.into())),
+            ("BatteryIsCharging", plist::Value::Boolean(false)),
+            ("ExternalConnected", plist::Value::Boolean(false)),
+        ]);
+        assert_eq!(
+            battery_json(&values).unwrap(),
+            serde_json::json!({ "level": 14, "charging": false, "plugged": false })
+        );
+    }
+
+    #[test]
+    fn battery_domain_without_a_key_is_an_error() {
+        let values = battery(&[
+            ("BatteryCurrentCapacity", plist::Value::Integer(80.into())),
+            ("BatteryIsCharging", plist::Value::Boolean(true)),
+        ]);
+        assert!(battery_json(&values).is_err());
+        assert!(battery_json(&plist::Value::Boolean(true)).is_err());
+    }
+
+    #[test]
+    fn battery_command_takes_a_udid_and_a_timeout() {
+        assert!(matches!(
+            Arguments::try_parse_from(["bridge", "battery", "--udid", "0000", "--timeout", "5"])
+                .unwrap()
+                .command,
+            Command::Battery { timeout: 5, .. }
+        ));
+    }
     use std::net::{IpAddr, Ipv6Addr};
     use tokio::net::UdpSocket;
 

@@ -116,22 +116,42 @@ describe('switching to a project', () => {
         const outcome = projectSwitch.start(target, () => run);
         connect('No network path to the machine');
         expect(await outcome).toBe('failed');
-        expect(projectSwitch.state).toEqual({ kind: 'failed', target, reason: 'No network path to the machine' });
+        expect(projectSwitch.state).toEqual({ kind: 'failed', target, reason: 'No network path to the machine', step: 'connecting' });
         clock.advance(REVEAL_DELAY_MS);
         expect(projectSwitch.state.kind).toBe('failed');
+    });
+
+    test('a failure after the machine answered is the project step, and a retry starts at the machine again', async () => {
+        const projectSwitch = new ProjectSwitch(fakeClock());
+        const first = controlledRun();
+        const second = controlledRun();
+        const runs = [first.run, second.run];
+        const outcome = projectSwitch.start(target, () => runs.shift()!);
+        first.connect();
+        await flush();
+        first.open('The project folder is gone');
+        expect(await outcome).toBe('failed');
+        expect(projectSwitch.state).toMatchObject({ kind: 'failed', step: 'opening' });
+
+        void projectSwitch.retry();
+        expect(projectSwitch.state).toMatchObject({ kind: 'connecting' });
     });
 
     test('another copy of the canvas open on the machine is said in the words of the window', async () => {
         const projectSwitch = new ProjectSwitch(fakeClock());
         const run: SwitchRun = {
-            steps: () => Promise.reject(new TransportError('project-ids-taken', 'app (/work/app) is open on this machine with the same canvas')),
+            steps: async ({ opening }) => {
+                opening();
+                throw new TransportError('project-ids-taken', 'app (/work/app) is open on this machine with the same canvas');
+            },
             back: async () => undefined
         };
         expect(await projectSwitch.start(target, () => run)).toBe('failed');
         expect(projectSwitch.state).toEqual({
             kind: 'failed',
             target,
-            reason: 'Another copy of this canvas is open on this machine, from another checkout of the same repository. Close that project first, or the two would share their terminals and chats.'
+            reason: 'This canvas is already open from another checkout. Close that project first, or both share terminals and chats.',
+            step: 'opening'
         });
     });
 

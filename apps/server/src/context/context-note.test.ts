@@ -77,6 +77,7 @@ describe('verbsNote', () => {
         expect(VISUAL_NOTE).toContain('a model file (STL, binary glTF, USDZ) with `Model attachment=<id>` only when the person asks to see it');
         expect(VISUAL_NOTE).toContain('Stat in Stats');
         expect(VISUAL_NOTE).toContain('Stat takes numbers; Entry holds text.');
+        expect(VISUAL_NOTE).toContain('File and Diff paths, and file links, are relative to your working folder');
         expect(VISUAL_NOTE).toContain('@Query("database.query"');
         expect(VISUAL_NOTE).not.toContain('query --show');
         expect(VISUAL_NOTE).not.toContain('  ');
@@ -90,7 +91,7 @@ describe('verbsNote', () => {
 
     test('the UI and visual notes together stay within their size budget, listing names and required props instead of every prop', () => {
         const added = verbsNote({ depth: 0, visuals: true }).length - verbsNote({ depth: 0 }).length;
-        expect(added).toBeLessThanOrEqual(4550);
+        expect(added).toBeLessThanOrEqual(4570);
         expect(VISUAL_NOTE).not.toContain('Props:');
     });
 

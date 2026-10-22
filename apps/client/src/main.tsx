@@ -5,6 +5,7 @@ import { connectFormat } from '@/format/source';
 import { initI18n } from '@/i18n';
 import { startAgentNotifications } from '@/shell/notifications';
 import { startAttentionWatch } from '@/state/attention';
+import { startWaitingSinceWatch } from '@/state/waiting';
 import { startSnoozeClock } from '@/state/snooze';
 import { startSessionLifecycle } from '@/terminal/lifecycle';
 import { startServerInfo } from '@/transport/server-info';
@@ -74,6 +75,7 @@ if (!desktop()) {
 startSharedStorage();
 startSessionLifecycle();
 startSnoozeClock();
+startWaitingSinceWatch();
 startAgentNotifications();
 startAttentionWatch();
 startServerInfo();

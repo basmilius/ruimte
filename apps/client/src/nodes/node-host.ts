@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import {
     isSessionView,
     type AgentKind,
@@ -95,7 +95,7 @@ export function readNodeHost(id: string): NodeHost | null {
 export function useNodeHost(id: string): NodeHost | null {
     const node = useCanvas((s) => s.nodes[id]);
     const view = useDocument((s) => s.views.find((each) => each.id === id) ?? null);
-    return useMemo(() => (node ? hostOfNode(node) : view ? hostOfView(view) : null), [node, view]);
+    return node ? hostOfNode(node) : view ? hostOfView(view) : null;
 }
 
 /* The title of a node is the name of its view when it has no frame to carry one. */

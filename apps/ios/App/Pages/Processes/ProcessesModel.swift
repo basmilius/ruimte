@@ -274,11 +274,11 @@ enum ProcessesText {
         case "silent":
             return String(localized: "Working, but silent for \(duration(now - alert.since))", comment: "%@ is a duration")
         case "busy-after-turn":
-            return String(localized: "\(name) still uses \(percent(alert.value)) of a core after its turn ended")
+            return String(localized: "\(name) still uses \(percent(alert.value)) of a core after its turn")
         case "memory": return String(localized: "\(name) uses \(bytes(alert.value))", comment: "%@ is a process name, then an amount of memory")
         case "agent-gone":
             let agent = agentName(alert.name ?? String(localized: "The agent"))
-            return String(localized: "\(agent) has exited, but still shows as running")
+            return String(localized: "\(agent) exited but shows as running")
         case "orphan": return String(localized: "\(name) is still running after its terminal closed")
         case "probe-hung":
             return String(localized: "\(name), started by Ruimte, has run for \(duration(now - alert.since))")
@@ -359,7 +359,7 @@ enum ProcessesText {
             String(localized: "Force quit \(target.name)?"),
             String(
                 localized:
-                    "SIGKILL ends process \(target.pid) immediately. It cannot save or clean up, so files it was writing may be left incomplete."
+                    "Ends process \(target.pid) at once, without saving or cleaning up. Files it was writing may be incomplete."
             )
         )
     }
@@ -490,7 +490,7 @@ enum ProcessesText {
                 ]))
             problem = nil
         } catch {
-            problem = String(localized: "Could not signal \(target.name): \(error.localizedDescription)")
+            problem = String(localized: "Could not stop \(target.name): \(error.localizedDescription)")
         }
     }
 

@@ -5,6 +5,17 @@ import { defineActionVerb, runAction } from './action-verb.ts';
 import { machineDeviceLine } from '../actions/device-actions.ts';
 import { field, orNote, SCOPE_LINE, VerbRefusal } from './verb.ts';
 
+function powerLine(state: ActionOutput<'device.inspect'>): string {
+    const { power } = state;
+    if (state.device.kind !== 'physical') {
+        return 'power\tnone';
+    }
+    if (power === null) {
+        return 'power\tunknown';
+    }
+    return `power\t${power.level}%\t${power.plugged ? 'plugged' : 'battery'}\t${power.charging ? 'charging' : 'not-charging'}${power.simulated ? '\tsimulated' : ''}`;
+}
+
 function yesNo(value: boolean): string {
     return value ? 'yes' : 'no';
 }
@@ -137,6 +148,7 @@ const stateAction = defineActionVerb('device', {
     detail: [
         'prints\tdevice\tid\tname\tplatform\tkind\truntime\twhich device the node points at',
         'prints\tstate\tbooted|shutdown|transitioning|missing\twhether it runs; missing when this machine does not have it right now',
+        "prints\tpower\tN%\tplugged|battery\tcharging|not-charging[\tsimulated]\ta phone's own battery, read now; simulated while a level set with device set --battery stands in for it. unknown when the phone cannot say, none for a simulator or an emulator. Read only",
         'prints\tscreen\twidthxheight|unknown\tthe size of the last shot, which --at, --from and --to are counted in; unknown until you take one',
         'prints\tbuttons\tname ...\tthe buttons device button takes on this device',
         'prints\tcan\tshot|input|type|launch|tree\tyes|no\twhat works on it now; input is tap, swipe and button, tree the elements below',
@@ -157,6 +169,7 @@ const stateAction = defineActionVerb('device', {
         return [
             `device\t${id}\t${field(device.name)}\t${device.platform}\t${device.kind}\t${field(device.runtime)}`,
             `state\t${state.state ?? 'missing'}`,
+            powerLine(state),
             `screen\t${state.screen === null ? 'unknown' : `${state.screen.width}x${state.screen.height}`}`,
             `buttons\t${state.buttons.join(' ')}`,
             `can\tshot\t${yesNo(state.can.shot)}`,

@@ -65,8 +65,8 @@ async function askRestartUnproven(): Promise<boolean> {
         buttons: ['Restart Now', 'Quit'],
         defaultId: 1,
         cancelId: 1,
-        message: 'Ruimte was updated, and this machine still runs the previous version.',
-        detail: 'That version cannot prove to Ruimte that it belongs to you, so Ruimte connects only after a restart, which ends the terminals and agents running on it. If you quit instead, the machine restarts itself as soon as nothing runs on it.'
+        message: 'Ruimte was updated. Restart the machine to keep working.',
+        detail: 'Restarting ends the terminals and agents running on it. If you quit instead, the machine restarts by itself once nothing runs on it.'
     });
     return response === 0;
 }

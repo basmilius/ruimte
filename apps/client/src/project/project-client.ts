@@ -126,6 +126,28 @@ interface ProjectClientOptions {
     remote?: { close(): Promise<void>; release(): void };
     /* Left out in tests, where there is no window to listen on. */
     window?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null;
+    /* When a held `project.changed` is taken in; null takes every one in as it comes, which is what a test without a window gets. */
+    nextFrame?: ((run: () => void) => () => void) | null;
+}
+
+/* The next frame, or a moment later in a window that is not drawing frames (hidden or minimized). */
+function nextFrame(run: () => void): () => void {
+    let done = false;
+    const once = (): void => {
+        if (!done) {
+            done = true;
+            window.cancelAnimationFrame(frame);
+            window.clearTimeout(timer);
+            run();
+        }
+    };
+    const frame = window.requestAnimationFrame(once);
+    const timer = window.setTimeout(once, 100);
+    return () => {
+        done = true;
+        window.cancelAnimationFrame(frame);
+        window.clearTimeout(timer);
+    };
 }
 
 /* A document without what wraps it. The version and the rev are the daemon's, not the person's. */
@@ -171,6 +193,14 @@ export class ProjectClient {
     private refusal: string | null = null;
     /* Views that left the trash for good but may still be in the file, until a save without them lands. */
     private purging = new Set<string>();
+    private readonly nextFrame: ((run: () => void) => () => void) | null;
+    /*
+     * The newest document that came in, held until the next frame. An agent adding nodes in a loop
+     * writes once per node, and every event is the whole project, so the newest one says everything
+     * the ones before it did and the canvas merges and draws once for all of them.
+     */
+    private heldChange: { projectId: string; document: ProjectDocument } | null = null;
+    private cancelHeld: (() => void) | null = null;
 
     constructor(
         transport: Transport,
@@ -193,8 +223,9 @@ export class ProjectClient {
         this.forgetSessions = options.forgetSessions ?? ((): void => undefined);
         this.afterResume = options.afterResume ?? (() => Promise.resolve());
         this.remote = options.remote ?? { close: () => Promise.resolve(), release: (): void => undefined };
+        this.nextFrame = options.nextFrame === undefined ? (typeof window === 'undefined' ? null : nextFrame) : options.nextFrame;
         this.unsubscribe.push(
-            transport.on('project.changed', ({ projectId, document }) => this.onChanged(projectId, document)),
+            transport.on('project.changed', ({ projectId, document }) => this.holdChange(projectId, document)),
             transport.on('project.summary', ({ summary }) => this.applySummary(summary)),
             transport.subscribeStatus((status) => this.onStatus(status)),
             canvases.subscribe((_viewId, state, previous) => this.onCanvas(state, previous)),
@@ -262,6 +293,7 @@ export class ProjectClient {
      * The stores keep what they hold, for the next client to load over.
      */
     async leave(): Promise<void> {
+        this.takeHeldChange();
         const current = this.opened ? this.sink.getState().current : null;
         if (current) {
             this.documents.getState().purgeTrash();
@@ -283,6 +315,7 @@ export class ProjectClient {
      * the row moves under Recent here even while the machine still has the project in use.
      */
     async closeProject(): Promise<void> {
+        this.takeHeldChange();
         const current = this.sink.getState().current;
         if (this.opened) {
             this.documents.getState().purgeTrash();
@@ -404,6 +437,9 @@ export class ProjectClient {
 
     /* Lets go of the machine. No more events, and no timer that would write to a daemon the client left. */
     dispose(): void {
+        this.cancelHeld?.();
+        this.cancelHeld = null;
+        this.heldChange = null;
         for (const off of this.unsubscribe) {
             off();
         }
@@ -470,6 +506,7 @@ export class ProjectClient {
                 this.sink.setSummary({ ...result.summary, name: draft.document.name, color: draft.document.color });
                 this.sink.setDirty(true);
                 if (result.document.rev !== draft.base.rev) {
+                    this.takeHeldChange();
                     this.onChanged(result.summary.projectId, result.document);
                 }
                 this.scheduleSave();
@@ -613,6 +650,8 @@ export class ProjectClient {
     }
 
     private save(): Promise<SaveOutcome> {
+        // A save goes against the newest rev this client heard of, never one a held change already moved past.
+        this.takeHeldChange();
         if (this.saving) {
             // One write at a time; the edits made meanwhile ride the next one.
             return this.saving.then((outcome) => (outcome === 'saved' && this.sink.getState().dirty ? this.save() : outcome));
@@ -654,6 +693,7 @@ export class ProjectClient {
             .catch((e: unknown) => {
                 this.sink.setDirty(true);
                 if (e instanceof TransportError && e.code === 'rev-conflict') {
+                    this.takeHeldChange();
                     /* A change that landed while this save was on its way has already been merged in,
                        rev and all, so the write only has to be made again against it. If the rev has
                        not moved the watcher's event is still coming, and carries what to merge with. */
@@ -673,6 +713,33 @@ export class ProjectClient {
                 this.saving = null;
             });
         return this.saving;
+    }
+
+    private holdChange(projectId: string, document: ProjectDocument): void {
+        if (this.nextFrame === null) {
+            this.onChanged(projectId, document);
+            return;
+        }
+        // Another project's document is no newer version of the held one, so that one goes in first.
+        if (this.heldChange !== null && this.heldChange.projectId !== projectId) {
+            this.takeHeldChange();
+        }
+        this.heldChange = { projectId, document };
+        this.cancelHeld ??= this.nextFrame(() => {
+            this.cancelHeld = null;
+            this.takeHeldChange();
+        });
+    }
+
+    /* Takes in the document still held, before anything reads the rev or the base it moves on. */
+    private takeHeldChange(): void {
+        this.cancelHeld?.();
+        this.cancelHeld = null;
+        const held = this.heldChange;
+        this.heldChange = null;
+        if (held !== null) {
+            this.onChanged(held.projectId, held.document);
+        }
     }
 
     private onChanged(projectId: string, document: ProjectDocument): void {
@@ -783,6 +850,7 @@ export class ProjectClient {
             if (this.sink.getState().current?.projectId !== current.projectId) {
                 return;
             }
+            this.takeHeldChange();
             if (result.document.rev !== this.sink.getState().rev) {
                 this.onChanged(current.projectId, result.document);
             }

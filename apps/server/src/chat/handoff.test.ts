@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem } from '@ruimte/contracts';
-import { handoffText, type HandoffMeta } from './handoff.ts';
+import { HANDOFF_CEILING_BYTES, HANDOFF_FLOOR_BYTES, handoffBudget, handoffText, type HandoffMeta } from './handoff.ts';
 
 const meta: HandoffMeta = {
     fromName: 'Claude Code',
@@ -68,5 +68,32 @@ describe('handoffText', () => {
         expect(text).not.toContain('ruimte-context');
         expect(text).toContain('What follows is all of it, as text.');
         expect(text).toEndWith("Continue from here. The person's next message follows.");
+    });
+});
+
+describe('handoffBudget', () => {
+    test('a model with an unknown window gets the floor', () => {
+        expect([handoffBudget(null), handoffBudget(undefined), handoffBudget(0), handoffBudget(Number.NaN)]).toEqual([
+            HANDOFF_FLOOR_BYTES,
+            HANDOFF_FLOOR_BYTES,
+            HANDOFF_FLOOR_BYTES,
+            HANDOFF_FLOOR_BYTES
+        ]);
+    });
+
+    test('a small window never goes below the floor', () => {
+        expect(handoffBudget(32_000)).toBe(HANDOFF_FLOOR_BYTES);
+        expect(handoffBudget(128_000)).toBe(12_800);
+    });
+
+    test('a larger window takes a share of itself, and a very large one stops at the ceiling', () => {
+        expect(handoffBudget(200_000)).toBe(20_000);
+        expect(handoffBudget(400_000)).toBe(40_000);
+        expect(handoffBudget(1_000_000)).toBe(HANDOFF_CEILING_BYTES);
+    });
+
+    test('a conversation too long for the floor goes along whole under a large window', () => {
+        expect(handoffText(sixTurns(4000), meta, handoffBudget(null)).turns).toBe(3);
+        expect(handoffText(sixTurns(4000), meta, handoffBudget(1_000_000))).toMatchObject({ turns: 6, all: true });
     });
 });

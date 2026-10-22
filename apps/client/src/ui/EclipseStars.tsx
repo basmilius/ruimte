@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useTheme } from '@/state/theme';
 import { starsOf } from '@/ui/eclipse-stars';
 import Galaxy from '@/ui/galaxy/Galaxy';
 
 function FallbackStars({ density, seed }: { density: number; seed: number }) {
-    const field = useMemo(() => starsOf(Math.round(58 * density), seed), [density, seed]);
+    const field = starsOf(Math.round(58 * density), seed);
     return field.map((star, index) => (
         <span
             key={index}
@@ -31,7 +31,7 @@ export function EclipseStars({ center, density, seed }: { center: number; densit
     const ref = useRef<HTMLDivElement>(null);
     const [height, setHeight] = useState(400);
     const [available, setAvailable] = useState(true);
-    const unavailable = useCallback(() => setAvailable(false), []);
+    const unavailable = () => setAvailable(false);
 
     useEffect(() => {
         const element = ref.current;

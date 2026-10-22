@@ -104,9 +104,9 @@ describe('the screen over a workspace whose machine is this computer and was ref
         installShell(serviceState());
         await openWorkspaceOnThisComputer();
         await act(async () => machine.lose(protocolRefusal('daemon-older')));
-        await until(() => button('Restart this machine') !== null);
+        await until(() => button('Restart machine') !== null);
 
-        await clickOn(button('Restart this machine'));
+        await clickOn(button('Restart machine'));
         await until(() => button('Restart now') !== null || button('Restart') !== null);
         expect(restarts).toBe(0);
         await clickOn(button('Restart now') ?? button('Restart'));
@@ -118,7 +118,7 @@ describe('the screen over a workspace whose machine is this computer and was ref
         await openWorkspaceOnThisComputer();
         await act(async () => machine.lose(protocolRefusal('daemon-older')));
         await until(() => lostScreen() !== null);
-        expect(button('Restart this machine')).toBeNull();
+        expect(button('Restart machine')).toBeNull();
         // The sibling actions stay.
         expect(button('Open another project')).not.toBeNull();
 
@@ -127,7 +127,7 @@ describe('the screen over a workspace whose machine is this computer and was ref
         await until(() => button('Open another project') === null);
         await act(async () => machine.lose(protocolRefusal('daemon-older')));
         await until(() => button('Open another project') !== null);
-        expect(button('Restart this machine')).toBeNull();
+        expect(button('Restart machine')).toBeNull();
     });
 
     test('offers nothing for a machine that is merely silent', async () => {
@@ -135,7 +135,7 @@ describe('the screen over a workspace whose machine is this computer and was ref
         await openWorkspaceOnThisComputer();
         await act(async () => machine.lose());
         await until(() => lostScreen() !== null);
-        expect(button('Restart this machine')).toBeNull();
+        expect(button('Restart machine')).toBeNull();
         expect(button('Try again')).not.toBeNull();
     });
 });

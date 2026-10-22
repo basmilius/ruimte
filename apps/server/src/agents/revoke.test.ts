@@ -57,3 +57,26 @@ describe('removeHooks', () => {
         expect(removeHooks({ hooks: [] }, 'claude', { createdHooksKey: false }).refused).toBe(true);
     });
 });
+
+describe('removeHooks in the files of Copilot and Antigravity', () => {
+    test("takes Copilot's entries and the version it added, and keeps a person's entry with the version", () => {
+        expect(removeHooks(mergeHooks({}, 'copilot').config, 'copilot', { createdHooksKey: true }).config).toEqual({});
+        const person = { type: 'command', bash: 'echo theirs' };
+        const removal = removeHooks(mergeHooks({ version: 1, hooks: { Stop: [person] } }, 'copilot').config, 'copilot', { createdHooksKey: false });
+        expect(removal.config).toEqual({ version: 1, hooks: { Stop: [person] } });
+    });
+
+    test('an edited Copilot entry stays and is counted', () => {
+        const config = mergeHooks({}, 'copilot').config as { hooks: Record<string, Array<Record<string, unknown>>> };
+        config.hooks.Stop![0]!.timeoutSec = 30;
+        const removal = removeHooks(config, 'copilot', { createdHooksKey: true });
+        expect(removal.keptEdited).toBe(1);
+        expect((removal.config.hooks as Record<string, unknown[]>).Stop).toHaveLength(1);
+    });
+
+    test("takes Antigravity's named hook and nothing beside it", () => {
+        const removal = removeHooks(mergeHooks({ lint: { Stop: [theirs] } }, 'antigravity').config, 'antigravity', { createdHooksKey: true });
+        expect(removal).toEqual({ config: { lint: { Stop: [theirs] } }, removed: 1, keptEdited: 0, refused: false });
+        expect(hookEntry('antigravity')).toMatchObject({ type: 'command', timeout: 3 });
+    });
+});

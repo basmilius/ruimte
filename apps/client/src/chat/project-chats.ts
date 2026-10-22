@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import type { ProjectNode, ProjectView } from '@ruimte/contracts';
 import type { ProjectChat } from '@adecore/agents-react/chat';
 import type { NodesOfView } from '@/project/view-nodes';
@@ -20,5 +19,5 @@ export function projectChats(views: readonly ProjectView[], nodesOf: NodesOfView
 /* The chats of the open project, renamed the moment a node on a live canvas is. */
 export function useProjectChats(): ProjectChat[] {
     const source = useSidebarSource();
-    return useMemo(() => projectChats(source.views, source.nodesOf), [source]);
+    return projectChats(source.views, source.nodesOf);
 }

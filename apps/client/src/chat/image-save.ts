@@ -41,8 +41,16 @@ export class ImageSaveSession {
     }
 
     path(): string {
-        const { directory, name } = this.state.getState();
+        return this.pathOf(this.state.getState());
+    }
+
+    /* For a render, which has to pass the state it subscribed to: one read from the store there stays as it was first drawn. */
+    pathOf({ directory, name }: Pick<ImageSaveState, 'directory' | 'name'>): string {
         return absoluteOf(this.root.folder, directory === '' ? name : `${directory}/${name}`);
+    }
+
+    canSave(state: ImageSaveState): boolean {
+        return validImageFileName(state.name) && state.checkedPath === this.pathOf(state);
     }
 
     selectDirectory(directory: string): void {

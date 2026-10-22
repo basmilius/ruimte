@@ -62,10 +62,10 @@ Do not reverse one without asking Bas.
   checked-out fixture reads CRLF and tests fail.
 - Integration tests still assume `/bin/sh` and POSIX paths. The unit tests pass on Windows: `unit
   (Windows)` in `ci.yml` runs on two workers, since four files starting git processes at once pushed tests
-  past Bun's five seconds on that runner. Until Windows ships it stays out of the final check and may fail
-  without failing the run, so a release goes on without it: the worktree tests
-  (`canvas/worktree-verb.test.ts`, `git/worktree-merge.test.ts`) still time out there now and then and
-  leave a temporary folder Windows holds on to (`EBUSY`).
+  past Bun's five seconds on that runner. Until Windows ships it only runs once the repository variable
+  `WINDOWS_RELEASE` is `true`, stays out of the final check and may fail without failing the run: the
+  worktree tests (`canvas/worktree-verb.test.ts`, `git/worktree-merge.test.ts`) still time out there now
+  and then and leave a temporary folder Windows holds on to (`EBUSY`).
 
 ### 2. The daemon starts and stops
 

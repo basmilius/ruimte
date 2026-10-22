@@ -1,4 +1,4 @@
-import { Globe, PenTool } from 'lucide-react';
+import { Globe, MapIcon, PenTool } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { SettingsRow } from '@adecore/ui/settings';
@@ -12,6 +12,7 @@ const MOD_HELD = shortcut('Mod');
 /* What new nodes start at, then a section per kind of view. Zoom, locks and layouts act on the canvas that is open, so they stay in the dock and the palette instead of here. */
 export function ViewsPane() {
     const { t } = useTranslation('settings');
+    const canvasMinimap = useSettings((s) => s.canvasMinimap);
     const drawingSnap = useSettings((s) => s.drawingSnap);
     const browserSwipe = useSettings((s) => s.browserSwipe);
     const update = useSettings((s) => s.update);
@@ -19,6 +20,20 @@ export function ViewsPane() {
     return (
         <>
             <NodeSizeSections />
+            <SettingsSection title={t('views.canvas.title')} icon={MapIcon}>
+                <SettingsRow
+                    searchId="views.canvas.minimap"
+                    label={t('views.canvas.minimap.label')}
+                    description={t('views.canvas.minimap.description')}
+                    control={
+                        <Switch
+                            checked={canvasMinimap}
+                            onCheckedChange={(checked) => update({ canvasMinimap: checked })}
+                            label={t('views.canvas.minimap.label')}
+                        />
+                    }
+                />
+            </SettingsSection>
             <SettingsSection title={t('views.drawing.title')} icon={PenTool}>
                 <SettingsRow
                     searchId="views.drawing.snap"

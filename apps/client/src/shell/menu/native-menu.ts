@@ -42,7 +42,9 @@ export function useNativeMenu(): void {
             }
         };
         const schedule = (): void => {
-            timer ??= setTimeout(send, SETTLE_MS);
+            if (timer === null) {
+                timer = setTimeout(send, SETTLE_MS);
+            }
         };
         const unsubscribes = [
             useDocument.subscribe(schedule),

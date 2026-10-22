@@ -21,7 +21,7 @@ export function launchActions(overrides: Partial<LaunchReach> = {}): ActionHandl
         'launch.save': async ({ projectId, baseRev, launches, imported }) => {
             const transport = reach.transport();
             if (transport === null) {
-                throw new ActionRefusal('no-machine', 'The machine this project runs on is not connected.');
+                throw new ActionRefusal('no-machine', "This project's machine is not connected.");
             }
             try {
                 return { output: await transport.request('launches.save', { projectId, baseRev, launches, imported }) };

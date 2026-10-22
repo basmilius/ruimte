@@ -38,7 +38,7 @@ struct GeneratedImageSaveDialog: View {
                 } else if model.exists {
                     Section {
                         Label {
-                            Text("\(model.name) already exists in this folder")
+                            Text("\(model.name) already exists")
                         } icon: {
                             Image(lucide: "circle-alert", size: 14)
                         }

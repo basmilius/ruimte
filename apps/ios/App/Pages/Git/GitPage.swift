@@ -329,7 +329,7 @@ struct GitHaltedRows: View {
                     Text(GitHaltedText.title(checkout, named: named)).lineLimit(1)
                     Text(
                         checkout.conflictCount == 0
-                            ? "Every file is resolved." : "\(checkout.conflictCount) files conflict"
+                            ? "All files resolved." : "\(checkout.conflictCount) files conflict"
                     ).font(.caption).foregroundStyle(MobileStyle.muted)
                 }
             }

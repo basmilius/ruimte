@@ -24,7 +24,7 @@ const DOT: Record<TransportStatus, string> = {
 // A hollow dot is a machine with no link here, which says nothing about whether it runs.
 const HOLLOW = 'border border-border-strong bg-surface-raised';
 
-/* The icon tile of a row with its connection as a dot in the corner; the tooltip carries the address and what matters when it does not answer. */
+/* The icon tile of a row with its connection as a dot in the corner; the tooltip carries how it is reached and what matters when it does not answer. */
 function Tile({ entry, dot, tooltip }: { entry: MachineEntry; dot: string; tooltip: ReactNode }) {
     const icon = useMachineIcon(entry);
     return (
@@ -51,7 +51,6 @@ function ConnectedTile({ entry, endpoint }: { entry: MachineEntry; endpoint: End
             <span>{describeConnection(connection, null)}</span>
             {lastSeen !== null && <span className="text-text-muted">{lastSeen}</span>}
             <span className="text-text-muted">{reachabilityLabel(reachability)}</span>
-            {endpoint.id === LOCAL_ENDPOINT_ID && <span className="font-mono text-text-muted">{endpoint.httpBaseUrl}</span>}
             {endpoint.id === LOCAL_ENDPOINT_ID && endpoint.direct === true && <span className="text-text-muted">{t('machines.dot.direct')}</span>}
             <span className="text-text-muted">{describePing(latency)}</span>
         </span>

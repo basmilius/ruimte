@@ -10,7 +10,9 @@ import type {
     LiveFrameHeader,
     LiveStreamFrame
 } from '@ruimte/contracts';
+import { powerKey, useDevicePowers } from '@/devices/device-power';
 import { useDevices } from '@/devices/state';
+import { machineAnswers } from '@/transport/features';
 import { HandlerTable } from '@/transport/handler-table';
 import { decodeBase64 } from '@/transport/piece';
 import { MountedRegistry, type MountedEntry } from '@adecore/agents-react';
@@ -24,6 +26,7 @@ interface MountedDevice extends MountedEntry {
 }
 
 const DEVICE_REFRESH_MS = 1_000;
+const POWER_REFRESH_MS = 60_000;
 const DRAWABLE_FORMATS: DeviceVideoFormat[] = ['jpeg', 'hevc', 'h264'];
 export type DeviceTarget = Pick<DeviceInfo, 'backendId' | 'platform' | 'deviceId'>;
 
@@ -38,6 +41,7 @@ export class DeviceClient {
     private readonly frameHandlers = new HandlerTable<LiveStreamFrame>();
     private readonly latestFrames = new Map<string, LiveStreamFrame>();
     private readonly mounted = new MountedRegistry<MountedDevice>();
+    private readonly powerWatches = new Map<string, { refs: number; timer: ReturnType<typeof setInterval> }>();
     private refreshInFlight: Promise<DeviceInfo[]> | null = null;
     private refreshTimer: ReturnType<typeof setInterval> | null = null;
     private readonly streamHandlers = new HandlerTable<string>();
@@ -105,7 +109,52 @@ export class DeviceClient {
     }
 
     async action(action: DeviceAction): Promise<DeviceDetail> {
-        return this.transport.request('device.action', action);
+        const detail = await this.transport.request('device.action', action);
+        if ((action.action === 'setBattery' || action.action === 'resetBattery') && this.powerWatches.has(keyOf(action))) {
+            void this.readPower(action);
+        }
+        return detail;
+    }
+
+    /*
+     * A phone's battery, read now and once a minute while anything on screen shows it, and never
+     * while nothing does. Every watcher of one device shares one timer.
+     */
+    watchPower(device: DeviceTarget): () => void {
+        const key = keyOf(device);
+        const current = this.powerWatches.get(key);
+        if (current) {
+            current.refs += 1;
+        } else {
+            void this.readPower(device);
+            this.powerWatches.set(key, { refs: 1, timer: setInterval(() => void this.readPower(device), POWER_REFRESH_MS) });
+        }
+        let watching = true;
+        return () => {
+            const watch = this.powerWatches.get(key);
+            if (!watching || watch === undefined) {
+                return;
+            }
+            watching = false;
+            watch.refs -= 1;
+            if (watch.refs === 0) {
+                clearInterval(watch.timer);
+                this.powerWatches.delete(key);
+            }
+        };
+    }
+
+    private async readPower(device: DeviceTarget): Promise<void> {
+        if (!machineAnswers(this.transport.connection, 'device.power')) {
+            return;
+        }
+        const key = powerKey(this.endpointId, device);
+        try {
+            const { power } = await this.transport.request('device.power', targetOf(device));
+            useDevicePowers.setState({ [key]: power });
+        } catch {
+            useDevicePowers.setState({ [key]: null });
+        }
     }
 
     async capture(device: DeviceTarget): Promise<DeviceCaptureResult> {
@@ -200,6 +249,10 @@ export class DeviceClient {
             clearInterval(this.refreshTimer);
             this.refreshTimer = null;
         }
+        for (const watch of this.powerWatches.values()) {
+            clearInterval(watch.timer);
+        }
+        this.powerWatches.clear();
         this.watchers = 0;
         this.mounted.clear();
         this.frameHandlers.clear();

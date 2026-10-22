@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -97,7 +97,7 @@ function LaunchPicker({ view }: { view: LaunchView }) {
     const now = useNow(1_000);
     const { folder, views } = useProjectLaunches();
     const { repos } = useProjectRepos(folder);
-    const others = useMemo(() => othersOf(views, view.launch), [views, view.launch]);
+    const others = othersOf(views, view.launch);
     const detail = pickerDetail(view, now, t);
 
     return (
@@ -171,7 +171,7 @@ function LaunchOutput({ view }: { view: LaunchView }) {
     const reachable = useAddressReachable();
     const { launch, status } = view;
     const address = view.phase === 'running' && launch.url !== undefined ? launch.url : null;
-    const device = useMemo(() => (launch.command === undefined ? null : deviceTargetOf(launch.command)), [launch.command]);
+    const device = launch.command === undefined ? null : deviceTargetOf(launch.command);
 
     return (
         <div className="flex min-h-0 grow flex-col">

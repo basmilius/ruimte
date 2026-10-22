@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, GitBranch, OctagonX, Pencil, Play, Plus, RotateCw, Search, ShieldCheck, Square, SquareTerminal } from 'lucide-react';
 import type { GitRepo, LaunchesDocument } from '@ruimte/contracts';
@@ -20,7 +20,7 @@ export function LaunchChip() {
     const { repos } = useProjectRepos(folder);
     const pressed = useUi((s) => s.panel.open && s.panel.kind === 'launches');
     const ask = useLaunches((s) => s.ask);
-    const view = useMemo(() => headlineOf(views), [views]);
+    const view = headlineOf(views);
 
     if (key === null) {
         return null;
@@ -107,7 +107,7 @@ export function LaunchChip() {
 export function LaunchMenu({ repos, showOutput = true }: { repos: readonly GitRepo[]; showOutput?: boolean }) {
     const { t } = useTranslation('launches');
     const { document, folder, views } = useProjectLaunches();
-    const sections = useMemo(() => (document === null || folder === null ? [] : launchSections(document.launches, folder, repos)), [document, folder, repos]);
+    const sections = document === null || folder === null ? [] : launchSections(document.launches, folder, repos);
 
     return (
         <>
@@ -191,7 +191,7 @@ function FoundInProject({ document }: { document: LaunchesDocument }) {
     const { t } = useTranslation('launches');
     const { projectId } = useProjectLaunches();
     const { suggestions } = useLaunchSuggestions(projectId);
-    const text = useMemo(() => (suggestions === null ? null : foundText(newSuggestions(suggestions, document))), [suggestions, document]);
+    const text = suggestions === null ? null : foundText(newSuggestions(suggestions, document));
 
     if (suggestions !== null && text === null) {
         return null;

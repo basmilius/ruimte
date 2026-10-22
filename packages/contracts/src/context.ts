@@ -54,6 +54,7 @@ export const CONTEXT_VERBS = [
     'project',
     'database',
     'language',
+    'provider',
     'computer'
 ] as const;
 export type ContextVerb = (typeof CONTEXT_VERBS)[number];

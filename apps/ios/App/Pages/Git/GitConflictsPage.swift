@@ -57,11 +57,11 @@ struct GitConflictsPage: View {
         Section {
             if session.entries.isEmpty {
                 ContentUnavailableView(
-                    String(localized: "Nothing conflicts any more"), lucideIcon: "circle-check",
+                    String(localized: "No conflicts left"), lucideIcon: "circle-check",
                     description: Text(
                         session.operation.map {
-                            String(localized: "Everything is resolved. Finish the \($0) below.", comment: "%@ is a git operation: merge, rebase, cherry-pick or revert")
-                        } ?? String(localized: "Nothing waits on you in this checkout.")))
+                            String(localized: "All resolved. Finish the \($0) below.", comment: "%@ is a git operation: merge, rebase, cherry-pick or revert")
+                        } ?? String(localized: "Nothing to resolve.")))
             }
             ForEach(session.entries) { entry in
                 NavigationLink {
@@ -140,7 +140,7 @@ struct GitOperationSection: View {
                 }.disabled(session.busy)
             } footer: {
                 Text(
-                    session.entries.isEmpty ? "Every file is resolved." : "\(session.entries.count) files left.")
+                    session.entries.isEmpty ? "All files resolved." : "\(session.entries.count) files left.")
             }
         }
     }
@@ -226,7 +226,7 @@ struct GitConflictFilePage: View {
                         let wandable = draft.wandable(in: file).count
                         Button(
                             wandable == 0
-                                ? String(localized: "Nothing left that resolves itself")
+                                ? String(localized: "Nothing to auto-resolve")
                                 : String(localized: "Resolve the \(wandable) that need no choice", comment: "%lld counts conflicts"),
                             lucideIcon: "wand-sparkles"
                         ) { session.wand(path) }.disabled(wandable == 0)
@@ -270,7 +270,7 @@ struct GitConflictFilePage: View {
             }
         }
         .alert("Drop \((path as NSString).lastPathComponent)?", isPresented: $confirmDrop) {
-            Button("Drop the file", role: .destructive) { Task { await take("delete") } }
+            Button("Drop file", role: .destructive) { Task { await take("delete") } }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("The file is taken out of the checkout on both sides of the \(session.operation ?? "merge").", comment: "%@ is a git operation: merge, rebase, cherry-pick or revert")
@@ -294,7 +294,7 @@ struct GitConflictFilePage: View {
                 .disabled(session.busy || file.kind == "deleted-by-us")
             Button(String(localized: "Take \(session.theirs)"), lucideIcon: "check") { Task { await take("theirs") } }
                 .disabled(session.busy || file.kind == "deleted-by-them")
-            Button(String(localized: "Drop the file"), lucideIcon: "trash", role: .destructive) { confirmDrop = true }
+            Button(String(localized: "Drop file"), lucideIcon: "trash", role: .destructive) { confirmDrop = true }
                 .disabled(session.busy)
         } header: {
             Text(path).textCase(nil)
@@ -395,7 +395,7 @@ private struct GitConflictBlockView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1).truncationMode(.middle)
             if lines.isEmpty {
-                Text("This side holds nothing here.").font(.caption).foregroundStyle(MobileStyle.faint)
+                Text("Empty on this side.").font(.caption).foregroundStyle(MobileStyle.faint)
             } else {
                 GitLinesView(lines: lines, tint: tint)
             }

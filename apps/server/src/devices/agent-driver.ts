@@ -1,4 +1,13 @@
-import { deviceTools, type DeviceAction, type DeviceButton, type DeviceInfo, type DeviceInput, type DeviceReference, type DeviceTool } from '@ruimte/contracts';
+import {
+    deviceTools,
+    type DeviceAction,
+    type DeviceButton,
+    type DeviceInfo,
+    type DeviceInput,
+    type DevicePower,
+    type DeviceReference,
+    type DeviceTool
+} from '@ruimte/contracts';
 import { realTimers, type Timers } from '../computer/approvals.ts';
 import { CodedError } from '@adecore/agents';
 import { captureFile, pngSize, writeShot } from '../shots.ts';
@@ -119,6 +128,7 @@ type Manager = Pick<
     | 'clipboard'
     | 'startRecording'
     | 'stopRecording'
+    | 'power'
 >;
 
 export interface DeviceDriverOptions {
@@ -178,6 +188,11 @@ export class DeviceDriver {
 
     find(reference: DeviceReference): Promise<DeviceInfo | null> {
         return this.manager.find(reference);
+    }
+
+    /* Read only, for an agent that tests what an app does on a low battery; only a phone has one of its own. */
+    power(device: DeviceInfo): Promise<DevicePower | null> {
+        return device.kind === 'physical' ? this.manager.power(device.backendId, device.platform, device.deviceId) : Promise.resolve(null);
     }
 
     /* The size of the last shot of this device, which is what coordinates are counted in; null before one. */

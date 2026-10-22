@@ -239,14 +239,14 @@ enum UiModelPhase {
             "kind": .string("attachment"), "chatId": .string(chat.chatID), "attachmentId": .string(attachment),
         ])
         guard let bytes = try? await chat.client.readResource(resource, maxBytes: WireConstants.chatModelMaxBytes)
-        else { return .row(problem: String(localized: "The model is not available")) }
+        else { return .row(problem: String(localized: "Model unavailable")) }
         guard let format = UiModelFormat.of(bytes.data) else {
-            return .row(problem: String(localized: "The model could not be opened"))
+            return .row(problem: String(localized: "Could not open the model"))
         }
         guard format.opens else { return .row(problem: nil) }
         let data = bytes.data
         let scene = await Task.detached(priority: .userInitiated) { UiModelScene.open(data, format: format) }.value
-        return scene.map { .ready($0) } ?? .row(problem: String(localized: "The model could not be opened"))
+        return scene.map { .ready($0) } ?? .row(problem: String(localized: "Could not open the model"))
     }
 }
 
@@ -297,7 +297,7 @@ struct UiModelView: View {
         .task(id: attachment) {
             if case .row = phase { return }
             guard let attachment, let chat else {
-                phase = .row(problem: String(localized: "The model is not available"))
+                phase = .row(problem: String(localized: "Model unavailable"))
                 return
             }
             let loaded = await UiModelPhase.load(attachment: attachment, chat: chat)

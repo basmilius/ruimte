@@ -142,7 +142,7 @@ struct LaunchEditorSheet: View {
             Section {
                 Label(failure, lucideIcon: "triangle-alert").foregroundStyle(.red)
                 if model.conflict {
-                    Button("Start over from the latest") { model.startOver() }
+                    Button("Start over") { model.startOver() }
                 }
             }
         }
@@ -177,14 +177,14 @@ struct LaunchEditorSheet: View {
             Toggle(isOn: $model.draft.autostart) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Launch when the project opens")
-                    Text("Only once it is approved on this machine.").font(.caption).foregroundStyle(MobileStyle.muted)
+                    Text("Once approved on this machine.").font(.caption).foregroundStyle(MobileStyle.muted)
                 }
             }
             Toggle(isOn: $model.draft.shared) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Share with the team")
+                    Text("Share with team")
                     Text(
-                        "Shared launches go in .ruimte/launches.json and into git. Keep secrets out of the environment above."
+                        "Shared launches are committed with the project. Keep secrets out of the environment above."
                     )
                     .font(.caption).foregroundStyle(MobileStyle.muted)
                 }
@@ -192,7 +192,7 @@ struct LaunchEditorSheet: View {
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
                 if model.draft.shared && model.draft.hasOverlay {
-                    Text("This machine lays its own folder or variables over this launch; they stay as they are.")
+                    Text("This machine uses its own folder or variables for this launch. They stay as they are.")
                 }
                 Text("Saving a launch approves its command on this machine.")
             }
@@ -264,8 +264,8 @@ struct LaunchEditorSheet: View {
 
     private static func kindHint(_ kind: String) -> String {
         switch kind {
-        case "task": String(localized: "Runs until it is done, such as the tests or a build.")
-        case "group": String(localized: "Starts the launches checked below together.")
+        case "task": String(localized: "Runs until done, like tests or a build.")
+        case "group": String(localized: "Starts the checked launches together.")
         default:
             String(localized: "Keeps running, such as a web server. With an address it is running once the port answers.")
         }
@@ -298,15 +298,15 @@ struct LaunchImportSheet: View {
                 }
                 if let offered {
                     if failed {
-                        Text("Could not look through the project.").foregroundStyle(MobileStyle.muted)
+                        Text("Could not search the project.").foregroundStyle(MobileStyle.muted)
                     } else if offered.isEmpty {
-                        Text("Found nothing to import in this project.").foregroundStyle(MobileStyle.muted)
+                        Text("Nothing to import.").foregroundStyle(MobileStyle.muted)
                     } else {
                         Section {
                             ForEach(offered) { suggestion in suggestionRow(suggestion) }
                         }
                         Section {
-                            Toggle("Share with the team in .ruimte/launches.json", isOn: $share)
+                            Toggle("Share with team", isOn: $share)
                         }
                     }
                 } else {
@@ -351,7 +351,7 @@ struct LaunchImportSheet: View {
                 if let reason = suggestion.unsupported {
                     Text("Not supported: \(reason)").font(.caption).foregroundStyle(MobileStyle.faint)
                 } else if suggestion.isPrivate {
-                    Text("Stays on this machine: it names a path outside the project.").font(.caption)
+                    Text("Stays on this machine. Its path is outside the project.").font(.caption)
                         .foregroundStyle(MobileStyle.faint)
                 }
             }

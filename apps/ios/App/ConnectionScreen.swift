@@ -66,7 +66,7 @@ struct ConnectionScreen: View {
                                     Text(machine.name)
                                     Text(
                                         machine.brokerUrl == nil
-                                            ? String(localized: "No broker configured") : machine.id
+                                            ? String(localized: "Not reachable through your account") : machine.id
                                     )
                                     .font(.caption).foregroundStyle(MobileStyle.muted)
                                 }

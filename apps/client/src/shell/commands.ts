@@ -53,6 +53,7 @@ import { afterSettleCandidates, chooseAfterSettle, chosenLaunchId, startLaunch, 
 import { launchViews } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
 import { activeViewOf, useDocument } from '@/state/document';
+import { nextWaitingTitle, revealNextWaiting } from '@/shell/next-waiting';
 import { hasPrWatch, stopPrWatch } from '@/shell/pr-watch-actions';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
@@ -72,7 +73,7 @@ import { activeViewFacts } from '@/shell/menu/context';
 import { runAppShortcut } from '@/shell/app-shortcuts';
 import { canSplit, cellAt, cellCount, cellsRightOf, isTabHost, maximizedCell } from '@/shell/split';
 import type { Shortcut } from '@adecore/ui';
-import { sendFromComposer } from '@adecore/agents-react/chat';
+import { sendFromComposer, stepEffortFromComposer, stepTimelineMessage } from '@adecore/agents-react/chat';
 import { focusedChatId } from '@/chat/focused-chat';
 import { restartChatSession } from '@/chat/restart-session';
 import { COMMANDS, type PaletteCommandId } from '@/shell/command-table';
@@ -336,7 +337,11 @@ export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Co
                       'chat-send-new',
                       afterPaletteCloses(() => sendFromComposer(endpointKey(endpointOfNodeId(chat), chat), 'and-new'))
                   ),
-                  row('chat-restart', () => void restartChatSession(chat))
+                  row('chat-restart', () => void restartChatSession(chat)),
+                  row('chat-effort-up', () => stepEffortFromComposer(endpointKey(endpointOfNodeId(chat), chat), 'up')),
+                  row('chat-effort-down', () => stepEffortFromComposer(endpointKey(endpointOfNodeId(chat), chat), 'down')),
+                  row('chat-message-previous', () => stepTimelineMessage(endpointKey(endpointOfNodeId(chat), chat), -1)),
+                  row('chat-message-next', () => stepTimelineMessage(endpointKey(endpointOfNodeId(chat), chat), 1))
               ]
             : []),
         ...(leavingChatId !== null
@@ -432,6 +437,11 @@ export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Co
         ...(inWorkspace
             ? [
                   row('view-new', () => void createViewAction('canvas')),
+                  row(
+                      'needs-you-next',
+                      afterPaletteCloses(() => void revealNextWaiting()),
+                      { hint: nextWaitingTitle() ?? i18next.t('shell:palette.hints.nothingWaits') }
+                  ),
                   ...(activeViewId
                       ? [
                             row('view-settings', () => askViewSettings(activeViewId)),

@@ -1,5 +1,13 @@
-import { CLOSED_LID_BATTERY_FLOOR, MACHINE_STATUS_PATH, MachineStatusSchema, type MachineStatus } from '@ruimte/contracts';
+import {
+    CLOSED_LID_BATTERY_FLOOR,
+    MACHINE_STATUS_CHECK_QUERY,
+    MACHINE_STATUS_PATH,
+    MachineStatusSchema,
+    type MachineStatus,
+    type ReachCheck
+} from '@ruimte/contracts';
 import { portFlag } from '../config.ts';
+import { reachAdvice } from '../pulsar/reach-classify.ts';
 
 type Fetch = (input: string, init: RequestInit) => Promise<Response>;
 
@@ -11,11 +19,13 @@ export function startFirst(port: number): string {
 
 export type StatusAnswer = { status: MachineStatus } | { problem: 'not-running' | 'other-home' | 'too-old' };
 
-/* Asks the daemon on `port` how clients reach it, on the local secret of the home this command runs with. */
-export async function readMachineStatus(port: number, secret: string, fetcher: Fetch): Promise<StatusAnswer> {
-    const response = await fetcher(`http://127.0.0.1:${port}${MACHINE_STATUS_PATH}`, { method: 'GET', headers: { authorization: `Bearer ${secret}` } }).catch(
-        () => null
-    );
+/* Asks the daemon on `port` how clients reach it, on the local secret of the home this command runs with; `check` has it check again first. */
+export async function readMachineStatus(port: number, secret: string, fetcher: Fetch, check = false): Promise<StatusAnswer> {
+    const query = check ? `?${MACHINE_STATUS_CHECK_QUERY}=1` : '';
+    const response = await fetcher(`http://127.0.0.1:${port}${MACHINE_STATUS_PATH}${query}`, {
+        method: 'GET',
+        headers: { authorization: `Bearer ${secret}` }
+    }).catch(() => null);
     if (!response) {
         return { problem: 'not-running' };
     }
@@ -104,8 +114,39 @@ export function statusLines(status: MachineStatus, port: number): string[] {
             lines.push(`Lid       ${lid}`);
         }
     }
-    if (broker.url === null && (lan === null || lan.addresses.length === 0)) {
+    if (status.reach) {
+        lines.push(...reachLines(status.reach));
+    } else if (broker.url === null && (lan === null || lan.addresses.length === 0)) {
         lines.push('', 'No client elsewhere can reach this machine: the broker is off, and nothing on the local network can reach it either.');
+    }
+    return lines;
+}
+
+const SEVERITY_WORD: Record<ReachCheck['severity'], string> = {
+    ok: 'reachable',
+    relayed: 'reachable through the relay only',
+    limited: 'reachable from some places only',
+    unreachable: 'not reachable from elsewhere'
+};
+
+function probeLine(probe: ReachCheck['facts']['probes'][number]): string {
+    const outcome = probe.outcome === 'ok' ? 'answers' : probe.outcome === 'refused' ? 'answers, but refused' : 'no answer';
+    return `          ${probe.kind.toUpperCase()} ${probe.transport.toUpperCase()} ${probe.url}: ${outcome}${probe.error === undefined || probe.outcome === 'ok' ? '' : ` (${probe.error})`}`;
+}
+
+/* The check as `ruimte status` prints it: the verdict, each server that was asked, and what is wrong with a fix. */
+export function reachLines(reach: ReachCheck): string[] {
+    const { problem, fix } = reachAdvice(reach.cause, reach.facts);
+    const lines = [`Reach     ${SEVERITY_WORD[reach.severity]}, checked ${new Date(reach.checkedAt).toISOString()}`];
+    if (reach.facts.tunnel !== null) {
+        lines.push(`Route     through ${reach.facts.tunnel}, a VPN or an exit node`);
+    }
+    lines.push(...reach.facts.probes.map(probeLine));
+    if (reach.cause !== 'ok') {
+        lines.push('', problem);
+        if (fix !== null) {
+            lines.push(fix);
+        }
     }
     return lines;
 }

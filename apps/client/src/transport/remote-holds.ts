@@ -61,7 +61,9 @@ export function useRemoteHolds(workspaceId: string): void {
     const rows = useEndpoints((state) => state.endpoints);
     const holds = useRef<RemoteHolds | null>(null);
     useEffect(() => {
-        holds.current ??= new RemoteHolds((endpoint) => pool.hold(endpoint));
+        if (holds.current === null) {
+            holds.current = new RemoteHolds((endpoint) => pool.hold(endpoint));
+        }
         holds.current.set(machines, endpointById);
     }, [machines, rows]);
     useEffect(

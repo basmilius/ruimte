@@ -37,6 +37,10 @@ export function registerDeviceHandlers(dispatcher: Dispatcher, devices: DeviceMa
         requireStreaming();
         return { ...payload, settings: await devices.detail(payload.backendId, payload.platform, payload.deviceId) };
     });
+    dispatcher.register('device.power', async (payload) => {
+        requireStreaming();
+        return { power: await devices.power(payload.backendId, payload.platform, payload.deviceId) };
+    });
     dispatcher.register('device.action', async (payload) => {
         requireStreaming();
         return {

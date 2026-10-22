@@ -64,7 +64,7 @@ struct ProjectsPage<Notice: View>: View {
                         ChatsRowLabel(
                             title: String(localized: "Chats"),
                             detail: [
-                                projects.chats.count > 1 ? row.machine.name : String(localized: "Your earlier chats"),
+                                projects.chats.count > 1 ? row.machine.name : String(localized: "Earlier chats"),
                                 row.connected ? nil : String(localized: "Offline"),
                             ].compactMap { $0 }.joined(separator: " · "),
                             icon: "messages-square")

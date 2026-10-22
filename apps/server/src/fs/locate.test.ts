@@ -80,6 +80,69 @@ describe('locateFile', () => {
         expect((await locateFile({ path: join(root, 'worktree/key-link'), cwd: root }, deps)).matches).toEqual([]);
     });
 
+    describe('by the end of its path', () => {
+        // What the listing of the project folder holds; an ignored file would not be in it.
+        const listed = ['src/own.ts', 'lib/src/own.ts', 'lib/src/deep.ts', 'other/src/deep.ts', 'worktree-only.ts'];
+        const withList = (homes: string[] = []): LocateDeps => ({
+            ...depsWith({}, homes),
+            list: async (folder) => (folder === join(root, 'project') ? listed : [])
+        });
+
+        test('a bare name finds the one file deeper in the tree', async () => {
+            const project = join(root, 'project');
+            expect((await locateFile({ path: 'own.ts', cwd: join(project, 'docs'), folder: project }, withList())).matches).toEqual([
+                join(project, 'src/own.ts'),
+                join(project, 'lib/src/own.ts')
+            ]);
+        });
+
+        test('every file it fits comes back, the shortest first', async () => {
+            const project = join(root, 'project');
+            expect((await locateFile({ path: 'deep.ts', cwd: project }, withList())).matches).toEqual([
+                join(project, 'lib/src/deep.ts'),
+                join(project, 'other/src/deep.ts')
+            ]);
+        });
+
+        test('a path from a folder below the root fits only where its folders match', async () => {
+            const project = join(root, 'project');
+            expect((await locateFile({ path: 'lib/src/deep.ts', cwd: join(project, 'docs'), folder: project }, withList())).matches).toEqual([
+                join(project, 'lib/src/deep.ts')
+            ]);
+            expect((await locateFile({ path: 'rc/deep.ts', cwd: project }, withList())).matches).toEqual([]);
+        });
+
+        test('a file that is listed but gone, or under the machine home, is not handed out', async () => {
+            const project = join(root, 'project');
+            expect((await locateFile({ path: 'worktree-only.ts', cwd: project }, withList())).matches).toEqual([]);
+            expect((await locateFile({ path: 'deep.ts', cwd: project }, withList([join(project, 'lib')]))).matches).toEqual([
+                join(project, 'other/src/deep.ts')
+            ]);
+        });
+
+        test('the own folder and the repositories still answer before the listing is read', async () => {
+            const project = join(root, 'project');
+            let read = 0;
+            const deps: LocateDeps = {
+                ...depsWith({ [project]: [project, join(project, 'lib')] }),
+                list: async () => {
+                    read += 1;
+                    return listed;
+                }
+            };
+            expect((await locateFile({ path: 'src/deep.ts', cwd: project }, deps)).matches).toEqual([join(project, 'lib/src/deep.ts')]);
+            expect(read).toBe(0);
+        });
+
+        test('a folder, a path that climbs out and a caller without a listing do not search', async () => {
+            const project = join(root, 'project');
+            const anyFolder: LocateDeps = { ...depsWith({}), list: async () => listed };
+            expect((await locateFile({ path: 'src', cwd: join(project, 'docs'), directory: true }, anyFolder)).matches).toEqual([]);
+            expect((await locateFile({ path: '../src/own.ts', cwd: project }, withList())).matches).toEqual([]);
+            expect((await locateFile({ path: 'deep.ts', cwd: project }, depsWith({}))).matches).toEqual([]);
+        });
+    });
+
     test('dots in the path name the same file once', async () => {
         const project = join(root, 'project');
         const result = await locateFile({ path: './lib/../src/own.ts', cwd: project }, depsWith({}));

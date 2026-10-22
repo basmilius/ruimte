@@ -155,15 +155,21 @@ function CommentCard({ review, item }: { review: AgentReview; item: ReviewItem }
 export function ReviewLayer({ review, editor }: { review: AgentReview; editor: Editor }) {
     const items = useStore(review.store, (state) => state.items);
     const commenting = useStore(review.store, (state) => state.commenting);
-    useSyncExternalStore(review.rows.subscribe, review.rows.getVersion);
-    useSyncExternalStore(review.actions.subscribe, review.actions.getVersion);
+    const rows = useSyncExternalStore(
+        (listener) => review.rows.subscribe(listener),
+        () => review.rows.getContainers()
+    );
+    const actionRows = useSyncExternalStore(
+        (listener) => review.actions.subscribe(listener),
+        () => review.actions.getContainers()
+    );
 
     return (
         <>
             {items.map((item) => {
-                const removed = review.rows.container(item.run.id);
-                const actions = review.actions.container(item.run.id);
-                const comment = commenting?.runId === item.run.id ? review.rows.container(commentRowId(item.run.id)) : undefined;
+                const removed = rows.get(item.run.id);
+                const actions = actionRows.get(item.run.id);
+                const comment = commenting?.runId === item.run.id ? rows.get(commentRowId(item.run.id)) : undefined;
                 return (
                     <span key={item.run.id}>
                         {removed !== undefined && createPortal(<RemovedRow review={review} editor={editor} item={item} />, removed)}

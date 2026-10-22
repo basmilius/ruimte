@@ -166,7 +166,7 @@ struct UiCompareView: View {
             case (.image(let shown), .failed), (.failed, .image(let shown)):
                 Image(uiImage: shown).resizable().scaledToFit().frame(maxWidth: 320, maxHeight: 200)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
-                Text("One image is not available").font(.caption).foregroundStyle(MobileStyle.faint)
+                Text("One image missing").font(.caption).foregroundStyle(MobileStyle.faint)
             default:
                 Color.clear.aspectRatio(Self.loadingShape, contentMode: .fit).frame(maxWidth: 320)
                     .overlay { Spinner(size: 14).foregroundStyle(MobileStyle.faint) }

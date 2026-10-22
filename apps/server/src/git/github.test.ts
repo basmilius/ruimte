@@ -138,6 +138,9 @@ function summaryPage(oid: string, runs: unknown[], hasNext: boolean): string {
                     mergeable: 'MERGEABLE',
                     mergeStateStatus: 'CLEAN',
                     reviewDecision: null,
+                    additions: 7,
+                    deletions: 3,
+                    changedFiles: 2,
                     commits: { nodes: [{ commit: { statusCheckRollup: { contexts: { nodes: runs, pageInfo: { hasNextPage: hasNext, endCursor: 'x' } } } } }] }
                 }
             }
@@ -166,6 +169,7 @@ describe('readPullRequest', () => {
         expect(pr?.threads[119]?.comments[0]).toMatchObject({ author: 'coderabbitai[bot]', bot: true });
         expect(pr?.checks.map((check) => `${check.name}:${check.state}`)).toEqual(['lint:success', 'test:pending']);
         expect(pr?.checkState).toBe('pending');
+        expect(pr).toMatchObject({ added: 7, deleted: 3, changedFiles: 2 });
     });
 
     test('a branch without a pull request answers null', async () => {

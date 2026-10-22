@@ -169,7 +169,7 @@ describe('ghost text on request', () => {
         model.answer('}');
         await settle();
         expect(editor.ghost).toBeNull();
-        expect(useToasts.getState().toasts.at(-1)?.title).toBe('No suggestion for this spot');
+        expect(useToasts.getState().toasts.at(-1)?.title).toBe('No suggestion here');
     });
 
     test('says why the model is not there and asks for nothing', async () => {
@@ -185,7 +185,7 @@ describe('ghost text on request', () => {
         expect(suggest()).toBe(false);
         await language.ghost.request();
         expect(model.requests).toEqual([]);
-        expect(useToasts.getState().toasts.at(-1)?.title).toContain('turned off');
+        expect(useToasts.getState().toasts.at(-1)?.title).toContain('Suggestions are off');
     });
 
     test('never asks while typing, and does nothing over a selection', async () => {

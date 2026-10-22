@@ -22,7 +22,7 @@ function isRecord(value: unknown): value is Line {
 function formatRefusal(detail: string): ChatError {
     return new ChatError(
         'transcript-format',
-        `Claude Code's conversation file has a shape this machine does not know (${detail}; checked against Claude Code ${CLAUDE_TRANSCRIPT_CHECKED}), so it cannot be forked`
+        `Ruimte cannot read this Claude Code conversation, so it cannot be forked (${detail}, checked against Claude Code ${CLAUDE_TRANSCRIPT_CHECKED})`
     );
 }
 
@@ -81,10 +81,7 @@ export function cutTranscript(text: string, at: TranscriptCutPoint, sessionId: s
             let seen = 0;
             start = lines.findIndex((line) => isSpokenPrompt(line) && ++seen === at.turns);
             if (start < 0) {
-                throw new ChatError(
-                    'turn-not-found',
-                    `Claude Code's conversation file has fewer than ${at.turns} prompts, so the turn could not be found in it`
-                );
+                throw new ChatError('turn-not-found', 'Claude Code no longer has this turn, so it cannot be forked');
             }
         }
         const next = lines.findIndex((line, index) => index > start && isSpokenPrompt(line));
@@ -115,10 +112,7 @@ export async function forkClaudeTranscript(input: ClaudeForkInput): Promise<{ pa
     }
     const source = await findClaudeSession(input.projectsDir, input.sessionId, input.cwd);
     if (source === null) {
-        throw new ChatError(
-            'transcript-missing',
-            `Claude Code's conversation file ${join(input.projectsDir, claudeProjectSlug(input.cwd), `${input.sessionId}.jsonl`)} is not there`
-        );
+        throw new ChatError('transcript-missing', 'Claude Code no longer has this conversation');
     }
     const copy = cutTranscript(await readFile(source, 'utf8'), input.at, input.sessionId, input.newSessionId);
     const dir = join(input.projectsDir, claudeProjectSlug(input.forkCwd));

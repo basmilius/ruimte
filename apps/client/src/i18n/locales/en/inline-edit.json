@@ -3,21 +3,21 @@
         "input": "Describe the change…",
         "run": "Run",
         "cancel": "Cancel",
-        "note": "Runs as a chat in this project. File changes ask for approval.",
+        "note": "Runs as a chat. File changes need approval.",
         "agent": "Agent",
-        "lines": "The selected lines",
+        "lines": "Selected lines",
         "problems": "Problems on these lines",
-        "noAgent": "No agent that can chat is installed.",
+        "noAgent": "No chat agent installed.",
         "account": "Account for {{provider}}"
     },
     "card": {
         "running": "Working…",
-        "waiting": "Waiting for your approval",
+        "waiting": "Waiting for approval",
         "done": "Done · {{duration}}",
         "failed": "Failed",
         "noChange": "No change proposed",
-        "stale": "The selected text changed, so this can no longer be applied. Open it as a chat to go on.",
-        "readOnly": "This file is read only, so nothing can be applied.",
+        "stale": "The selection changed, so this cannot be applied. Open as chat to continue.",
+        "readOnly": "This file is read-only.",
         "followUp": "Ask for another change…",
         "send": "Send",
         "openAsChat": "Open as chat",
@@ -28,7 +28,7 @@
         "removedLines_other": "{{count}} lines removed",
         "stop": "Stop",
         "stopped": "Stopped",
-        "stoppedEmpty": "Stopped before the agent proposed anything.",
+        "stoppedEmpty": "Stopped before a proposal.",
         "runAgain": "Run again"
     },
     "toast": {
@@ -37,17 +37,17 @@
         "failed": "The edit to {{name}} failed",
         "apply": "Apply",
         "show": "Show",
-        "stale": "The selected text changed",
-        "staleHint": "Open the chat to go on from there.",
-        "none": "This file has no inline edit to show."
+        "stale": "The selection changed",
+        "staleHint": "Open the chat to continue.",
+        "none": "No inline edit in this file."
     },
     "error": {
         "noAnswer": "This edit has no answer yet.",
         "failed": "The agent could not answer.",
-        "open": "The chat could not be opened.",
-        "stop": "The turn could not be stopped."
+        "open": "Could not open the chat.",
+        "stop": "Could not stop the turn."
     },
     "marker": {
-        "show": "Show the inline edit of these lines"
+        "show": "Show inline edit"
     }
 }

@@ -171,7 +171,7 @@ describe('forking a chat that runs on another machine', () => {
         await until(() => button('Fork')?.hasAttribute('disabled') === false);
 
         expect(useUi.getState().forkDialog).toEqual({ chatId: LEAD.id, turnId: 'turn-1', machine: REMOTE });
-        expect(dialog()?.textContent).toContain('A new chat node on this machine starts from a transcript of this one');
+        expect(dialog()?.textContent).toContain('A new chat node here starts from a transcript of this one');
         expect(dialog()?.textContent).not.toContain('git worktree');
         expect(here.requests('chat.forkInfo')).toEqual([]);
     });

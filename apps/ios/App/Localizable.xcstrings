@@ -1,13 +1,13 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ already exists in this folder" : {
+    "%@ already exists" : {
       "comment" : "%@ is a file name",
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ bestaat al in deze map"
+            "value" : "%@ bestaat al"
           }
         }
       }
@@ -63,7 +63,7 @@
         }
       }
     },
-    "%lld more places are not shown" : {
+    "%lld more places not shown" : {
       "localizations" : {
         "en" : {
           "variations" : {
@@ -71,13 +71,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld more place is not shown"
+                  "value" : "%lld more place not shown"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld more places are not shown"
+                  "value" : "%lld more places not shown"
                 }
               }
             }
@@ -89,13 +89,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld plek meer wordt niet getoond"
+                  "value" : "%lld plek meer niet getoond"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld plekken meer worden niet getoond"
+                  "value" : "%lld plekken meer niet getoond"
                 }
               }
             }
@@ -113,12 +113,65 @@
         }
       }
     },
+    "A note takes its paper from its color." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een notitie neemt haar papier uit haar kleur."
+          }
+        }
+      }
+    },
+    "5 hours %@ used" : {
+      "comment" : "A CLI account's session window",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 uur %@ verbruikt"
+          }
+        }
+      }
+    },
+    "5 hours %@ used, week %@ used" : {
+      "comment" : "A CLI account's two limit windows as VoiceOver reads them",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 uur %1$@ verbruikt, week %2$@ verbruikt"
+          }
+        }
+      }
+    },
+    "Account status unavailable" : {
+      "comment" : "Under a machine's limits when it could not list its accounts",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accountstatus niet beschikbaar"
+          }
+        }
+      }
+    },
     "After" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Na"
+          }
+        }
+      }
+    },
+    "Amber" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Amber"
           }
         }
       }
@@ -295,6 +348,16 @@
         }
       }
     },
+    "Cyan" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cyaan"
+          }
+        }
+      }
+    },
     "Danger" : {
       "localizations" : {
         "nl" : {
@@ -331,6 +394,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Scherm"
+          }
+        }
+      }
+    },
+    "Emerald" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smaragd"
           }
         }
       }
@@ -415,6 +488,16 @@
         }
       }
     },
+    "Fuchsia" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fuchsia"
+          }
+        }
+      }
+    },
     "Grant" : {
       "localizations" : {
         "nl" : {
@@ -465,12 +548,32 @@
         }
       }
     },
+    "Indigo" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indigo"
+          }
+        }
+      }
+    },
     "Large" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Groot"
+          }
+        }
+      }
+    },
+    "Lime" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limoen"
           }
         }
       }
@@ -545,12 +648,12 @@
         }
       }
     },
-    "Map tiles are not available offline. The places stay listed." : {
+    "No map tiles offline. The places stay listed." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kaarttegels zijn offline niet beschikbaar. De plekken blijven in de lijst."
+            "value" : "Geen kaarttegels offline. De plekken blijven in de lijst."
           }
         }
       }
@@ -615,6 +718,17 @@
         }
       }
     },
+    "n/a" : {
+      "comment" : "In place of a limit window the CLI does not have",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "n.v.t."
+          }
+        }
+      }
+    },
     "No match" : {
       "localizations" : {
         "nl" : {
@@ -645,6 +759,17 @@
         }
       }
     },
+    "Not read yet" : {
+      "comment" : "An account whose limits the machine has not read",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nog niet gelezen"
+          }
+        }
+      }
+    },
     "Notification text" : {
       "localizations" : {
         "nl" : {
@@ -655,12 +780,12 @@
         }
       }
     },
-    "One image is not available" : {
+    "One image missing" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eén afbeelding is niet beschikbaar"
+            "value" : "Eén afbeelding ontbreekt"
           }
         }
       }
@@ -765,6 +890,16 @@
         }
       }
     },
+    "Rose" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozerood"
+          }
+        }
+      }
+    },
     "Save image to project" : {
       "localizations" : {
         "nl" : {
@@ -775,12 +910,12 @@
         }
       }
     },
-    "Browser owner unavailable" : {
+    "The project's machine cannot be reached" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eigenaar van de browser niet beschikbaar"
+            "value" : "De machine van het project is niet bereikbaar"
           }
         }
       }
@@ -795,12 +930,12 @@
         }
       }
     },
-    "File search failed" : {
+    "Could not search files" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bestanden zoeken mislukt"
+            "value" : "Kon bestanden niet doorzoeken"
           }
         }
       }
@@ -933,22 +1068,22 @@
         }
       }
     },
-    "Devices on the same network connect directly, without the broker." : {
+    "Devices on the same network connect directly." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apparaten op hetzelfde netwerk verbinden rechtstreeks, zonder de broker."
+            "value" : "Apparaten op hetzelfde netwerk verbinden rechtstreeks."
           }
         }
       }
     },
-    "Every client that reaches this machine sees these. Leave it empty for the machine's own name." : {
+    "Every device that reaches this machine sees these. Leave it empty for the machine's own name." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elke client die deze machine bereikt, ziet ze. Laat het leeg voor de eigen naam van de machine."
+            "value" : "Elk apparaat dat deze machine bereikt, ziet ze. Laat het leeg voor de eigen naam van de machine."
           }
         }
       }
@@ -1014,12 +1149,12 @@
         }
       }
     },
-    "On, an agent may show a chart, table or mockup above its reply, as a page. Off, it answers in text. Visuals already in a chat stay." : {
+    "Agents may show a chart, table or mockup above a reply. Off, they answer in text; existing visuals stay." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aan mag een agent een grafiek, tabel of mockup als pagina boven zijn antwoord tonen. Uit antwoordt hij in tekst. Visualisaties die al in een chat staan, blijven staan."
+            "value" : "Agents mogen een grafiek, tabel of mockup boven een antwoord tonen. Uit antwoorden ze in tekst; bestaande visualisaties blijven."
           }
         }
       }
@@ -1065,12 +1200,12 @@
         }
       }
     },
-    "Remove this visual?" : {
+    "Remove visual?" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze visualisatie verwijderen?"
+            "value" : "Visualisatie verwijderen?"
           }
         }
       }
@@ -1165,6 +1300,16 @@
         }
       }
     },
+    "Sky" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hemelsblauw"
+          }
+        }
+      }
+    },
     "Small" : {
       "localizations" : {
         "nl" : {
@@ -1195,6 +1340,16 @@
         }
       }
     },
+    "Teal" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blauwgroen"
+          }
+        }
+      }
+    },
     "Text size" : {
       "localizations" : {
         "nl" : {
@@ -1205,52 +1360,52 @@
         }
       }
     },
-    "The branch moved during this turn (%@ to %@), so this includes what came in with it." : {
+    "Branch moved this turn (%@ to %@). Includes its incoming changes." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De branch is tijdens deze beurt verplaatst (%@ naar %@), dus dit omvat ook wat daarmee binnenkwam."
+            "value" : "Branch verplaatst tijdens deze beurt (%@ naar %@). Inclusief wat daarmee binnenkwam."
           }
         }
       }
     },
-    "The local network setting could not be changed. %@" : {
+    "Could not change the local network setting. %@" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De instelling voor het lokale netwerk kon niet worden aangepast. %@"
+            "value" : "Kon de instelling voor het lokale netwerk niet aanpassen. %@"
           }
         }
       }
     },
-    "The model could not be opened" : {
+    "Could not open the model" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het model kon niet worden geopend"
+            "value" : "Kon het model niet openen"
           }
         }
       }
     },
-    "The model is not available" : {
+    "Model unavailable" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het model is niet beschikbaar"
+            "value" : "Model niet beschikbaar"
           }
         }
       }
     },
-    "This is the client you are using. It loses access to this machine and forgets it here." : {
+    "This is the device you are using. It loses access to this machine and forgets it here." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dit is de client die je gebruikt. Hij verliest toegang tot deze machine en vergeet die hier."
+            "value" : "Dit is het apparaat dat je gebruikt. Het verliest toegang tot deze machine en vergeet die hier."
           }
         }
       }
@@ -1265,13 +1420,34 @@
         }
       }
     },
-    "Via broker" : {
+    "Top: 5 hours · Bottom: week · percent used" : {
+      "comment" : "Explains the two bars of each account on a machine card",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boven: 5 uur · Onder: week · procent verbruikt"
+          }
+        }
+      }
+    },
+    "Through your account" : {
       "comment" : "A machine reached through the broker",
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Via broker"
+            "value" : "Via je account"
+          }
+        }
+      }
+    },
+    "Violet" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Violet"
           }
         }
       }
@@ -1282,6 +1458,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Visuele antwoorden"
+          }
+        }
+      }
+    },
+    "Week %@ used" : {
+      "comment" : "A CLI account's weekly window",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Week %@ verbruikt"
           }
         }
       }
@@ -1302,12 +1489,12 @@
         }
       }
     },
-    "· this client" : {
+    "· this device" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "· deze client"
+            "value" : "· dit apparaat"
           }
         }
       }
@@ -1637,12 +1824,12 @@
         }
       }
     },
-    "%@ comes from .ruimte/launches.json. Nothing from it runs on this machine until you approve it." : {
+    "%@ comes from the project file. It runs on this machine only after you approve it." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ komt uit .ruimte/launches.json. Niets daaruit draait op deze machine tot je het goedkeurt."
+            "value" : "%@ komt uit het projectbestand. Hij draait pas op deze machine als je hem goedkeurt."
           }
         }
       }
@@ -1690,12 +1877,12 @@
         }
       }
     },
-    "%@ has exited, but still shows as running" : {
+    "%@ exited but shows as running" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ is gestopt, maar staat nog als actief"
+            "value" : "%@ is gestopt maar staat nog als actief"
           }
         }
       }
@@ -1851,12 +2038,12 @@
         }
       }
     },
-    "%@ runs its own login in this terminal. It closes by itself once you are logged in." : {
+    "%@ logs you in here. This closes once you are logged in." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ draait zijn eigen login in deze terminal. Die sluit vanzelf zodra je bent ingelogd."
+            "value" : "%@ logt je hier in. Dit sluit zodra je bent ingelogd."
           }
         }
       }
@@ -1887,18 +2074,18 @@
         }
       }
     },
-    "%@ still uses %@ of a core after its turn ended" : {
+    "%@ still uses %@ of a core after its turn" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$@ still uses %2$@ of a core after its turn ended"
+            "value" : "%1$@ still uses %2$@ of a core after its turn"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ gebruikt nog %@ van een core nadat de turn afliep"
+            "value" : "%1$@ gebruikt nog %2$@ van een core na de turn"
           }
         }
       }
@@ -2008,18 +2195,18 @@
         }
       }
     },
-    "%@ uses port %lld. Stop it and launch %@?" : {
+    "Stop %@ and launch %@?" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$@ uses port %2$lld. Stop it and launch %3$@?"
+            "value" : "Stop %1$@ and launch %2$@?"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ gebruikt poort %2$lld. Stoppen en %3$@ starten?"
+            "value" : "%1$@ stoppen en %2$@ starten?"
           }
         }
       }
@@ -2399,7 +2586,7 @@
         }
       }
     },
-    "%lld changes in the folder this turn" : {
+    "%lld folder changes this turn" : {
       "localizations" : {
         "en" : {
           "variations" : {
@@ -2407,13 +2594,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld change in the folder this turn"
+                  "value" : "%lld folder change this turn"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld changes in the folder this turn"
+                  "value" : "%lld folder changes this turn"
                 }
               }
             }
@@ -2425,13 +2612,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld wijziging in de map tijdens deze beurt"
+                  "value" : "%lld mapwijziging tijdens deze beurt"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld wijzigingen in de map tijdens deze beurt"
+                  "value" : "%lld mapwijzigingen tijdens deze beurt"
                 }
               }
             }
@@ -3132,7 +3319,7 @@
         }
       }
     },
-    "%lld forks go on after this turn" : {
+    "%lld forks after this turn" : {
       "localizations" : {
         "en" : {
           "variations" : {
@@ -3140,13 +3327,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "A fork goes on after this turn"
+                  "value" : "A fork after this turn"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld forks go on after this turn"
+                  "value" : "%lld forks after this turn"
                 }
               }
             }
@@ -3158,13 +3345,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Na deze turn gaat een fork verder"
+                  "value" : "Een fork na deze turn"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Na deze turn gaan %lld forks verder"
+                  "value" : "%lld forks na deze turn"
                 }
               }
             }
@@ -3718,7 +3905,7 @@
         }
       }
     },
-    "%lld other clients still have it open, so nothing stops running. It moves to Recently closed on this phone only." : {
+    "%lld other devices still have it open, so nothing stops running. It moves to Recently closed on this phone only." : {
       "localizations" : {
         "en" : {
           "variations" : {
@@ -3726,13 +3913,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 other client still has it open, so nothing stops running. It moves to Recently closed on this phone only."
+                  "value" : "1 other device still has it open, so nothing stops running. It moves to Recently closed on this phone only."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld other clients still have it open, so nothing stops running. It moves to Recently closed on this phone only."
+                  "value" : "%lld other devices still have it open, so nothing stops running. It moves to Recently closed on this phone only."
                 }
               }
             }
@@ -3744,13 +3931,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "1 andere client heeft het nog open, dus er stopt niets. Het gaat alleen op deze telefoon naar Recent gesloten."
+                  "value" : "1 ander apparaat heeft het nog open, dus er stopt niets. Het gaat alleen op deze telefoon naar Recent gesloten."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld andere clients hebben het nog open, dus er stopt niets. Het gaat alleen op deze telefoon naar Recent gesloten."
+                  "value" : "%lld andere apparaten hebben het nog open, dus er stopt niets. Het gaat alleen op deze telefoon naar Recent gesloten."
                 }
               }
             }
@@ -4784,12 +4971,12 @@
         }
       }
     },
-    "A branch with this name exists already" : {
+    "Name already taken" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er bestaat al een branch met deze naam"
+            "value" : "Naam al in gebruik"
           }
         }
       }
@@ -4834,12 +5021,12 @@
         }
       }
     },
-    "A merge commit; every commit of the worktree stays in the history." : {
+    "A merge commit; every worktree commit stays in history." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een merge commit; elke commit van de worktree blijft in de historie staan."
+            "value" : "Een merge commit; elke worktree-commit blijft in de historie."
           }
         }
       }
@@ -5034,12 +5221,12 @@
         }
       }
     },
-    "A service or a task needs a command." : {
+    "Needs a command." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een service of een task heeft een commando nodig."
+            "value" : "Heeft een commando nodig."
           }
         }
       }
@@ -5064,12 +5251,12 @@
         }
       }
     },
-    "A web page" : {
+    "Web page" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een webpagina"
+            "value" : "Webpagina"
           }
         }
       }
@@ -5247,12 +5434,12 @@
         }
       }
     },
-    "Add a machine" : {
+    "Add machine" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een machine toevoegen"
+            "value" : "Machine toevoegen"
           }
         }
       }
@@ -5703,7 +5890,7 @@
         }
       }
     },
-    "Also ends the %lld agents it opened. Their nodes stay on the canvas with what they did so far." : {
+    "Also ends the %lld agents it opened. Their nodes and work so far stay on the canvas." : {
       "localizations" : {
         "en" : {
           "variations" : {
@@ -5711,13 +5898,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Also ends the agent it opened. Its node stays on the canvas with what it did so far."
+                  "value" : "Also ends the agent it opened. Its node and work so far stay on the canvas."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Also ends the %lld agents it opened. Their nodes stay on the canvas with what they did so far."
+                  "value" : "Also ends the %lld agents it opened. Their nodes and work so far stay on the canvas."
                 }
               }
             }
@@ -5729,13 +5916,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Stopt ook de agent die het opende. Zijn node blijft op het canvas staan met wat hij tot nu toe deed."
+                  "value" : "Stopt ook de agent die het opende. Zijn node en werk tot nu toe blijven op het canvas."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Stopt ook de %lld agents die het opende. Hun nodes blijven op het canvas staan met wat ze tot nu toe deden."
+                  "value" : "Stopt ook de %lld agents die het opende. Hun nodes en werk tot nu toe blijven op het canvas."
                 }
               }
             }
@@ -6293,12 +6480,12 @@
         }
       }
     },
-    "Attachments can total at most 10 MiB per message." : {
+    "At most 10 MiB in total per message." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bijlagen mogen samen maximaal 10 MiB per bericht zijn."
+            "value" : "Hoogstens 10 MiB in totaal per bericht."
           }
         }
       }
@@ -6406,12 +6593,12 @@
         }
       }
     },
-    "Bind to a worktree" : {
+    "Bind to worktree" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aan een worktree koppelen"
+            "value" : "Aan worktree koppelen"
           }
         }
       }
@@ -6578,7 +6765,7 @@
         }
       }
     },
-    "Browser and device streaming is disabled in this machine's settings." : {
+    "Browser and device streaming is off in this machine's settings." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
@@ -6872,12 +7059,12 @@
         }
       }
     },
-    "Check at least one launch for this group." : {
+    "Check at least one launch." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vink minstens één launch aan voor deze groep."
+            "value" : "Vink minstens één launch aan."
           }
         }
       }
@@ -7346,12 +7533,12 @@
         }
       }
     },
-    "Commit the uncommitted files first" : {
+    "Commit uncommitted files first" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eerst de niet-gecommitte bestanden committen"
+            "value" : "Eerst niet-gecommitte bestanden committen"
           }
         }
       }
@@ -8171,7 +8358,7 @@
         }
       }
     },
-    "Could not look through the project." : {
+    "Could not search the project." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
@@ -8303,22 +8490,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kon %1$@ niet afsluiten. %2$@"
-          }
-        }
-      }
-    },
-    "Could not signal %@: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Could not signal %1$@: %2$@"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kon geen signaal naar %1$@ sturen: %2$@"
           }
         }
       }
@@ -8492,7 +8663,7 @@
         }
       }
     },
-    "Declined" : {
+    "Denied" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
@@ -9254,7 +9425,7 @@
         }
       }
     },
-    "Drop the file" : {
+    "Drop file" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
@@ -9566,12 +9737,12 @@
         }
       }
     },
-    "Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node stays on the canvas." : {
+    "Ends the agent and cancels the task. The chat that gave it is not told. Its node stays on the canvas." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Beëindigt de agent die aan deze taak werkt en annuleert de taak zonder de chat te wekken die hem gaf. Zijn node blijft op het canvas staan."
+            "value" : "Beëindigt de agent en annuleert de taak. De chat die hem gaf, hoort er niets van. Zijn node blijft op het canvas staan."
           }
         }
       }
@@ -9638,12 +9809,12 @@
         }
       }
     },
-    "Every file is resolved." : {
+    "All files resolved." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elk bestand is opgelost."
+            "value" : "Alle bestanden opgelost."
           }
         }
       }
@@ -9668,13 +9839,13 @@
         }
       }
     },
-    "Everything is resolved. Finish the %@ below." : {
+    "All resolved. Finish the %@ below." : {
       "comment" : "%@ is a git operation: merge, rebase, cherry-pick or revert",
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alles is opgelost. Rond de %@ hieronder af."
+            "value" : "Alles opgelost. Rond de %@ hieronder af."
           }
         }
       }
@@ -9689,12 +9860,12 @@
         }
       }
     },
-    "Everything that changed is set aside and the working tree goes back to HEAD." : {
+    "Everything that changed is set aside and the working tree goes back to the latest commit." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alles wat veranderd is, wordt opzijgezet en de working tree gaat terug naar HEAD."
+            "value" : "Alles wat veranderd is, wordt opzijgezet en de working tree gaat terug naar de laatste commit."
           }
         }
       }
@@ -10110,12 +10281,12 @@
         }
       }
     },
-    "Find in this project…" : {
+    "Find in project…" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zoeken in dit project…"
+            "value" : "Zoeken in project…"
           }
         }
       }
@@ -10367,12 +10538,12 @@
         }
       }
     },
-    "For a question or a quick task" : {
+    "A question or quick task" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voor een vraag of een klusje"
+            "value" : "Een vraag of klusje"
           }
         }
       }
@@ -10397,12 +10568,12 @@
         }
       }
     },
-    "Force push this branch?" : {
+    "Force push branch?" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze branch force pushen?"
+            "value" : "Branch force pushen?"
           }
         }
       }
@@ -10518,16 +10689,6 @@
         }
       }
     },
-    "Fork this conversation" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dit gesprek forken"
-          }
-        }
-      }
-    },
     "Forked after turn %lld, %@" : {
       "localizations" : {
         "en" : {
@@ -10574,22 +10735,22 @@
         }
       }
     },
-    "Found in this project" : {
+    "Found in project" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gevonden in dit project"
+            "value" : "Gevonden in project"
           }
         }
       }
     },
-    "Found nothing to import in this project." : {
+    "Nothing to import." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Niets gevonden om te importeren in dit project."
+            "value" : "Niets om te importeren."
           }
         }
       }
@@ -10676,12 +10837,12 @@
         }
       }
     },
-    "Give this launch a name." : {
+    "Give it a name." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Geef deze launch een naam."
+            "value" : "Geef hem een naam."
           }
         }
       }
@@ -10706,22 +10867,22 @@
         }
       }
     },
-    "Goes on by itself at %@, when the limit resets." : {
+    "Resumes at %@." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gaat om %@ vanzelf verder, als de limiet reset."
+            "value" : "Gaat verder om %@."
           }
         }
       }
     },
-    "Goes on under %@, which has the most room left. The interrupted turn is sent again." : {
+    "Switches to %@, which has the most room left, and resends the turn." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gaat verder onder %@, dat de meeste ruimte over heeft. De onderbroken turn wordt opnieuw verstuurd."
+            "value" : "Wisselt naar %@, dat de meeste ruimte over heeft, en verstuurt de turn opnieuw."
           }
         }
       }
@@ -10901,28 +11062,28 @@
         }
       }
     },
-    "How should %@ come together?" : {
+    "How do you want to update %@?" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hoe moet %@ samenkomen?"
+            "value" : "Hoe wil je %@ bijwerken?"
           }
         }
       }
     },
-    "How should %@ in %@ come together?" : {
+    "How do you want to update %@ in %@?" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "How should %1$@ in %2$@ come together?"
+            "value" : "How do you want to update %1$@ in %2$@?"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hoe moet %@ in %@ samenkomen?"
+            "value" : "Hoe wil je %1$@ in %2$@ bijwerken?"
           }
         }
       }
@@ -11220,12 +11381,12 @@
         }
       }
     },
-    "It goes from .ruimte/launches.json, for everyone who shares the project." : {
+    "It goes from the project file, for everyone who shares the project." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hij verdwijnt uit .ruimte/launches.json, voor iedereen die het project deelt."
+            "value" : "Hij verdwijnt uit het projectbestand, voor iedereen die het project deelt."
           }
         }
       }
@@ -11560,12 +11721,12 @@
         }
       }
     },
-    "Keep awake could not be changed. %@" : {
+    "Could not change keep awake. %@" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wakker houden kon niet worden aangepast. %@"
+            "value" : "Kon wakker houden niet aanpassen. %@"
           }
         }
       }
@@ -11580,22 +11741,22 @@
         }
       }
     },
-    "Keep the display on" : {
+    "Keep display on" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het scherm aan laten"
+            "value" : "Scherm aan laten"
           }
         }
       }
     },
-    "Keep the tool after drawing" : {
+    "Keep tool after drawing" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het gereedschap geselecteerd houden na het tekenen"
+            "value" : "Gereedschap houden na tekenen"
           }
         }
       }
@@ -11975,12 +12136,12 @@
         }
       }
     },
-    "Loading clients" : {
+    "Loading devices" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clients laden"
+            "value" : "Apparaten laden"
           }
         }
       }
@@ -12637,12 +12798,12 @@
         }
       }
     },
-    "Merging %@ failed" : {
+    "Could not merge %@" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ mergen is mislukt"
+            "value" : "Kon %@ niet mergen"
           }
         }
       }
@@ -12858,12 +13019,12 @@
         }
       }
     },
-    "Name it, or leave it empty" : {
+    "Name, optional" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Geef het een naam, of laat het leeg"
+            "value" : "Naam, optioneel"
           }
         }
       }
@@ -13187,12 +13348,12 @@
         }
       }
     },
-    "No broker configured" : {
+    "Not reachable through your account" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Geen broker ingesteld"
+            "value" : "Niet bereikbaar via je account"
           }
         }
       }
@@ -13267,12 +13428,12 @@
         }
       }
     },
-    "No devices were found on this machine." : {
+    "No devices on this machine." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er zijn geen apparaten gevonden op deze machine."
+            "value" : "Geen apparaten op deze machine."
           }
         }
       }
@@ -13297,12 +13458,12 @@
         }
       }
     },
-    "No launches in this project yet." : {
+    "No launches yet." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dit project heeft nog geen launches."
+            "value" : "Nog geen launches."
           }
         }
       }
@@ -13598,22 +13759,22 @@
         }
       }
     },
-    "Not logged in. Log in on the machine to see its limits." : {
+    "Not logged in. Log in on the machine to see limits." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Niet ingelogd. Log in op de machine om de limieten te zien."
+            "value" : "Niet ingelogd. Log in op de machine om limieten te zien."
           }
         }
       }
     },
-    "Not logged in. Log in to see its limits." : {
+    "Not logged in. Log in to see limits." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Niet ingelogd. Log in om de limieten te zien."
+            "value" : "Niet ingelogd. Log in om limieten te zien."
           }
         }
       }
@@ -13718,12 +13879,12 @@
         }
       }
     },
-    "Nothing conflicts any more" : {
+    "No conflicts left" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er conflicteert niets meer"
+            "value" : "Geen conflicten meer"
           }
         }
       }
@@ -13758,12 +13919,12 @@
         }
       }
     },
-    "Nothing in it is lost: it holds no uncommitted files, no new files and no commits that %@ lacks." : {
+    "Nothing is lost. No uncommitted files, new files or commits that %@ lacks." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er gaat niets verloren: er staan geen niet-gecommitte bestanden in, geen nieuwe bestanden en geen commits die %@ mist."
+            "value" : "Er gaat niets verloren. Geen niet-gecommitte of nieuwe bestanden, en geen commits die %@ mist."
           }
         }
       }
@@ -13808,12 +13969,12 @@
         }
       }
     },
-    "Nothing is open." : {
+    "Nothing open." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er staat niets open."
+            "value" : "Niets open."
           }
         }
       }
@@ -13848,12 +14009,12 @@
         }
       }
     },
-    "Nothing left that resolves itself" : {
+    "Nothing to auto-resolve" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er lost niets meer zichzelf op"
+            "value" : "Niets om automatisch op te lossen"
           }
         }
       }
@@ -13918,12 +14079,12 @@
         }
       }
     },
-    "Nothing waits on you in this checkout." : {
+    "Nothing to resolve." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er wacht niets op je in deze checkout."
+            "value" : "Niets op te lossen."
           }
         }
       }
@@ -14131,22 +14292,22 @@
         }
       }
     },
-    "Only once it is approved on this machine." : {
+    "Once approved on this machine." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pas als hij op deze machine is goedgekeurd."
+            "value" : "Na goedkeuring op deze machine."
           }
         }
       }
     },
-    "Only the beginning of this agent's work is kept." : {
+    "Only the start is kept." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alleen het begin van het werk van deze agent is bewaard."
+            "value" : "Alleen het begin is bewaard."
           }
         }
       }
@@ -14162,12 +14323,12 @@
         }
       }
     },
-    "Open a folder as a project…" : {
+    "Open folder as project…" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een map als project openen…"
+            "value" : "Map als project openen…"
           }
         }
       }
@@ -14198,16 +14359,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open een project op je computer of kies er een uit Recent gesloten."
-          }
-        }
-      }
-    },
-    "Open a pull request" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Een pull request openen"
           }
         }
       }
@@ -14342,7 +14493,7 @@
         }
       }
     },
-    "Opening the pull request" : {
+    "Opening pull request" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
@@ -14444,12 +14595,12 @@
         }
       }
     },
-    "Overwrites the remote branch with this checkout, so commits only the remote has are lost. It stops if someone else pushed since the last fetch." : {
+    "Overwrites the remote branch, so commits only the remote has are lost. Stops if someone pushed since the last fetch." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Overschrijft de remote branch met deze checkout, dus commits die alleen de remote heeft gaan verloren. Het stopt als iemand anders sinds de laatste fetch gepusht heeft."
+            "value" : "Overschrijft de remote branch, dus commits die alleen de remote heeft gaan verloren. Stopt als iemand sinds de laatste fetch pushte."
           }
         }
       }
@@ -14981,12 +15132,12 @@
         }
       }
     },
-    "Prices from LiteLLM, %@" : {
+    "Prices of %@" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Prijzen van LiteLLM, %@"
+            "value" : "Prijzen van %@"
           }
         }
       }
@@ -15419,12 +15570,12 @@
         }
       }
     },
-    "Reason for declining, optional" : {
+    "Reason, optional" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reden om te weigeren, optioneel"
+            "value" : "Reden, optioneel"
           }
         }
       }
@@ -15583,12 +15734,12 @@
         }
       }
     },
-    "Refuse gestures" : {
+    "Ignore gestures" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gebaren weigeren"
+            "value" : "Gebaren negeren"
           }
         }
       }
@@ -16029,52 +16180,52 @@
         }
       }
     },
-    "Resolve the cherry-pick" : {
+    "Resolve cherry-pick" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los de cherry-pick op"
+            "value" : "Cherry-pick oplossen"
           }
         }
       }
     },
-    "Resolve the conflicts" : {
+    "Resolve conflicts" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los de conflicten op"
+            "value" : "Conflicten oplossen"
           }
         }
       }
     },
-    "Resolve the merge" : {
+    "Resolve merge" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los de merge op"
+            "value" : "Merge oplossen"
           }
         }
       }
     },
-    "Resolve the rebase" : {
+    "Resolve rebase" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los de rebase op"
+            "value" : "Rebase oplossen"
           }
         }
       }
     },
-    "Resolve the revert" : {
+    "Resolve revert" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los de revert op"
+            "value" : "Revert oplossen"
           }
         }
       }
@@ -16381,12 +16532,12 @@
         }
       }
     },
-    "Runs until it is done, such as the tests or a build." : {
+    "Runs until done, like tests or a build." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Loopt tot hij klaar is, zoals de tests of een build."
+            "value" : "Draait tot hij klaar is, zoals tests of een build."
           }
         }
       }
@@ -16996,42 +17147,32 @@
         }
       }
     },
-    "Share with the team" : {
+    "Share with team" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Delen met het team"
+            "value" : "Delen met team"
           }
         }
       }
     },
-    "Share with the team in .ruimte/launches.json" : {
+    "Shared launches are committed with the project. Keep secrets out of the environment above." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Delen met het team in .ruimte/launches.json"
+            "value" : "Gedeelde launches worden met het project gecommit. Houd geheimen uit de omgeving hierboven."
           }
         }
       }
     },
-    "Shared launches go in .ruimte/launches.json and into git. Keep secrets out of the environment above." : {
+    "Shared with team" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gedeelde launches komen in .ruimte/launches.json en in git. Houd geheimen uit de omgeving hierboven."
-          }
-        }
-      }
-    },
-    "Shared with the team" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gedeeld met het team"
+            "value" : "Gedeeld met team"
           }
         }
       }
@@ -17326,12 +17467,12 @@
         }
       }
     },
-    "SIGKILL ends process %lld immediately. It cannot save or clean up, so files it was writing may be left incomplete." : {
+    "Ends process %lld at once, without saving or cleaning up. Files it was writing may be incomplete." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SIGKILL beëindigt proces %lld meteen. Het kan niets opslaan of opruimen, dus bestanden waar het naar schreef kunnen onvolledig blijven."
+            "value" : "Stopt proces %lld meteen, zonder opslaan of opruimen. Bestanden waarin het schreef kunnen half af zijn."
           }
         }
       }
@@ -17386,12 +17527,12 @@
         }
       }
     },
-    "Sign-in failed" : {
+    "Could not sign in" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Inloggen mislukt"
+            "value" : "Kon niet inloggen"
           }
         }
       }
@@ -17494,12 +17635,12 @@
         }
       }
     },
-    "Signed out" : {
+    "Not logged in" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uitgelogd"
+            "value" : "Niet ingelogd"
           }
         }
       }
@@ -17574,12 +17715,12 @@
         }
       }
     },
-    "Snap to the grid" : {
+    "Snap to grid" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uitlijnen op het raster"
+            "value" : "Uitlijnen op raster"
           }
         }
       }
@@ -17806,12 +17947,12 @@
         }
       }
     },
-    "Stage what belongs in this commit first." : {
+    "Stage changes first." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stage eerst wat in deze commit hoort."
+            "value" : "Stage eerst wijzigingen."
           }
         }
       }
@@ -17877,12 +18018,12 @@
         }
       }
     },
-    "Start over from the latest" : {
+    "Start over" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opnieuw beginnen vanaf de nieuwste"
+            "value" : "Opnieuw beginnen"
           }
         }
       }
@@ -17927,12 +18068,12 @@
         }
       }
     },
-    "Starts the launches checked below together." : {
+    "Starts the checked launches together." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Start de launches die hieronder aangevinkt staan samen."
+            "value" : "Start de aangevinkte launches samen."
           }
         }
       }
@@ -17978,12 +18119,12 @@
         }
       }
     },
-    "Stashing failed: %@" : {
+    "Could not stash: %@" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stashen mislukt: %@"
+            "value" : "Kon niet stashen: %@"
           }
         }
       }
@@ -17998,12 +18139,12 @@
         }
       }
     },
-    "Stays on this machine: it names a path outside the project." : {
+    "Stays on this machine. Its path is outside the project." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Blijft op deze machine: hij noemt een pad buiten het project."
+            "value" : "Blijft op deze machine. Het pad ligt buiten het project."
           }
         }
       }
@@ -18495,12 +18636,12 @@
         }
       }
     },
-    "Take the uncommitted files along" : {
+    "Take uncommitted files along" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De niet-gecommitte bestanden meenemen"
+            "value" : "Niet-gecommitte bestanden meenemen"
           }
         }
       }
@@ -18684,12 +18825,12 @@
         }
       }
     },
-    "The agent reviews routine actions itself" : {
+    "Reviews routine actions itself" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De agent beoordeelt routineklussen zelf"
+            "value" : "Beoordeelt routineklussen zelf"
           }
         }
       }
@@ -18704,12 +18845,12 @@
         }
       }
     },
-    "The Android SDK was not found on this machine. Install it to use Android emulators and devices." : {
+    "Install the Android SDK to use Android emulators and devices." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De Android SDK staat niet op deze machine. Installeer hem om Android-emulators en -apparaten te gebruiken."
+            "value" : "Installeer de Android SDK om Android-emulators en -apparaten te gebruiken."
           }
         }
       }
@@ -18724,12 +18865,12 @@
         }
       }
     },
-    "The benchmarks could not be loaded. Check the connection and try again." : {
+    "Could not load benchmarks. Check the connection and try again." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De benchmarks konden niet worden geladen. Controleer de verbinding en probeer het opnieuw."
+            "value" : "Kon benchmarks niet laden. Controleer de verbinding en probeer het opnieuw."
           }
         }
       }
@@ -18795,7 +18936,7 @@
         }
       }
     },
-    "The cherry-pick was taken back." : {
+    "Aborted the cherry-pick." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
@@ -18805,12 +18946,12 @@
         }
       }
     },
-    "The CLI never started a conversation here" : {
+    "Nothing to fork yet. Send a message first." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De CLI is hier nooit een gesprek begonnen"
+            "value" : "Nog niets om te forken. Stuur eerst een bericht."
           }
         }
       }
@@ -18835,12 +18976,12 @@
         }
       }
     },
-    "The connection to the machine dropped, which ended the login." : {
+    "The machine disconnected, so the login ended." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De verbinding met de machine viel weg, en daarmee stopte de login."
+            "value" : "De machine viel weg, dus de login stopte."
           }
         }
       }
@@ -18875,12 +19016,12 @@
         }
       }
     },
-    "The document renderer could not be loaded." : {
+    "Could not load the document view." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De documentrenderer kon niet worden geladen."
+            "value" : "Kon de documentweergave niet laden."
           }
         }
       }
@@ -18936,22 +19077,22 @@
         }
       }
     },
-    "The files of this turn are no longer in the repository, so the worktree starts from HEAD." : {
+    "The files of this turn are no longer in the repository, so the worktree starts from the latest commit." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De bestanden van deze turn zitten niet meer in de repository, dus de worktree begint bij HEAD."
+            "value" : "De bestanden van deze turn zitten niet meer in de repository, dus de worktree begint bij de laatste commit."
           }
         }
       }
     },
-    "The files stay as they are now; the agent is told the folder is newer than this turn." : {
+    "The files stay as they are now. The agent knows they changed after this turn." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De bestanden blijven zoals ze nu zijn; de agent krijgt te horen dat de map nieuwer is dan deze turn."
+            "value" : "De bestanden blijven zoals ze nu zijn. De agent weet dat ze na deze turn zijn veranderd."
           }
         }
       }
@@ -19076,12 +19217,12 @@
         }
       }
     },
-    "The history could not be read." : {
+    "Could not read the history." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De geschiedenis kon niet worden gelezen."
+            "value" : "Kon de geschiedenis niet lezen."
           }
         }
       }
@@ -19096,12 +19237,12 @@
         }
       }
     },
-    "The launches changed elsewhere while you edited them." : {
+    "The launches changed elsewhere." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De launches zijn elders gewijzigd terwijl je ze bewerkte."
+            "value" : "De launches zijn elders gewijzigd."
           }
         }
       }
@@ -19126,12 +19267,12 @@
         }
       }
     },
-    "The login could not start: %@" : {
+    "Could not start the login: %@" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De login kon niet starten: %@"
+            "value" : "Kon de login niet starten: %@"
           }
         }
       }
@@ -19246,22 +19387,22 @@
         }
       }
     },
-    "The merge was taken back." : {
+    "Aborted the merge." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De merge is teruggedraaid."
+            "value" : "De merge is afgebroken."
           }
         }
       }
     },
-    "The model was overloaded" : {
+    "Model overloaded" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het model was overbelast"
+            "value" : "Model overbelast"
           }
         }
       }
@@ -19286,22 +19427,22 @@
         }
       }
     },
-    "The operation was taken back." : {
+    "Aborted the operation." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De bewerking is teruggedraaid."
+            "value" : "De bewerking is afgebroken."
           }
         }
       }
     },
-    "The original is no longer in this project" : {
+    "Original no longer in this project" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het origineel zit niet meer in dit project"
+            "value" : "Origineel niet meer in dit project"
           }
         }
       }
@@ -19336,12 +19477,12 @@
         }
       }
     },
-    "The project could not be opened." : {
+    "Could not open the project." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het project kon niet worden geopend."
+            "value" : "Kon het project niet openen."
           }
         }
       }
@@ -19376,12 +19517,12 @@
         }
       }
     },
-    "The rebase was taken back." : {
+    "Aborted the rebase." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De rebase is teruggedraaid."
+            "value" : "De rebase is afgebroken."
           }
         }
       }
@@ -19416,12 +19557,12 @@
         }
       }
     },
-    "The revert was taken back." : {
+    "Aborted the revert." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De revert is teruggedraaid."
+            "value" : "De revert is afgebroken."
           }
         }
       }
@@ -19446,12 +19587,12 @@
         }
       }
     },
-    "The sub-agent could not be stopped" : {
+    "Could not stop sub-agent" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De sub-agent kon niet worden gestopt"
+            "value" : "Kon de sub-agent niet stoppen"
           }
         }
       }
@@ -19466,12 +19607,12 @@
         }
       }
     },
-    "The task could not be stopped" : {
+    "Could not stop the task" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De taak kon niet worden gestopt"
+            "value" : "Kon de taak niet stoppen"
           }
         }
       }
@@ -19496,32 +19637,32 @@
         }
       }
     },
-    "The update failed on this machine." : {
+    "Could not update this machine." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De update is mislukt op deze machine."
+            "value" : "Kon deze machine niet updaten."
           }
         }
       }
     },
-    "The update failed: %@" : {
+    "Could not update: %@" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De update is mislukt: %@"
+            "value" : "Kon niet updaten: %@"
           }
         }
       }
     },
-    "The worktree starts from HEAD, without uncommitted work." : {
+    "The worktree starts from the latest commit, without uncommitted work." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De worktree begint bij HEAD, zonder niet-gecommit werk."
+            "value" : "De worktree begint bij de laatste commit, zonder niet-gecommit werk."
           }
         }
       }
@@ -19546,12 +19687,12 @@
         }
       }
     },
-    "There are no benchmarks to show yet." : {
+    "No benchmarks yet." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er zijn nog geen benchmarks om te tonen."
+            "value" : "Nog geen benchmarks."
           }
         }
       }
@@ -19566,12 +19707,12 @@
         }
       }
     },
-    "There is no worktree left to merge." : {
+    "No worktree left to merge." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er is geen worktree meer om te mergen."
+            "value" : "Geen worktree meer om te mergen."
           }
         }
       }
@@ -19738,32 +19879,32 @@
         }
       }
     },
-    "This clears the shared terminal scrollback on every client." : {
+    "This clears the shared terminal scrollback on every device." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dit wist de gedeelde terminalgeschiedenis op elke client."
+            "value" : "Dit wist de gedeelde terminalgeschiedenis op elk apparaat."
           }
         }
       }
     },
-    "This CLI has no conversation that can be forked" : {
+    "This agent cannot fork its conversation" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze CLI heeft geen gesprek dat geforkt kan worden"
+            "value" : "Deze agent kan zijn gesprek niet forken"
           }
         }
       }
     },
-    "this client" : {
+    "this device" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "deze client"
+            "value" : "dit apparaat"
           }
         }
       }
@@ -19788,12 +19929,12 @@
         }
       }
     },
-    "This document could not be rendered." : {
+    "Could not show this document." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dit document kon niet worden weergegeven."
+            "value" : "Kon dit document niet tonen."
           }
         }
       }
@@ -19868,12 +20009,12 @@
         }
       }
     },
-    "This file is not UTF-8 text. Keep one side whole or drop it." : {
+    "This file is not text. Keep one side whole or drop it." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dit bestand is geen UTF-8-tekst. Houd een kant heel of gooi het weg."
+            "value" : "Dit bestand is geen tekst. Houd een kant heel of gooi het weg."
           }
         }
       }
@@ -19898,42 +20039,42 @@
         }
       }
     },
-    "This folder is not in a git repository, so the fork works in the same folder." : {
+    "Not a git repository, so the fork works in the same folder." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze map zit niet in een git-repository, dus de fork werkt in dezelfde map."
+            "value" : "Geen git-repository, dus de fork werkt in dezelfde map."
           }
         }
       }
     },
-    "This folder is not in a git repository, so the fork works in the same folder. The files stay as they are now; the agent is told the folder is newer than this turn." : {
+    "Not a git repository, so the fork works in the same folder. The files stay as they are now. The agent knows they changed after this turn." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze map zit niet in een git-repository, dus de fork werkt in dezelfde map. De bestanden blijven zoals ze nu zijn; de agent hoort dat de map nieuwer is dan deze turn."
+            "value" : "Geen git-repository, dus de fork werkt in dezelfde map. De bestanden blijven zoals ze nu zijn. De agent weet dat ze na deze turn zijn veranderd."
           }
         }
       }
     },
-    "This image could not be used. Pick a smaller one." : {
+    "Could not use this image. Pick a smaller one." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze afbeelding kon niet worden gebruikt. Kies een kleinere."
+            "value" : "Kon deze afbeelding niet gebruiken. Kies een kleinere."
           }
         }
       }
     },
-    "This is a submodule. Pick the commit one side points at." : {
+    "Submodule. Pick the commit of one side." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dit is een submodule. Kies de commit waar een kant naar wijst."
+            "value" : "Submodule. Kies de commit van een kant."
           }
         }
       }
@@ -19958,12 +20099,12 @@
         }
       }
     },
-    "This launch comes from .ruimte/launches.json. Nothing from it runs on this machine until you approve it here." : {
+    "This launch comes from the project file. It runs on this machine only after you approve it." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze launch komt uit .ruimte/launches.json. Er draait niets van op deze machine tot je hem hier goedkeurt."
+            "value" : "Deze launch komt uit het projectbestand. Hij draait pas op deze machine als je hem goedkeurt."
           }
         }
       }
@@ -20038,22 +20179,22 @@
         }
       }
     },
-    "This machine lays its own folder or variables over this launch; they stay as they are." : {
+    "This machine uses its own folder or variables for this launch. They stay as they are." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze machine legt een eigen map of eigen variabelen over deze launch; die blijven zoals ze zijn."
+            "value" : "Deze machine gebruikt een eigen map of eigen variabelen voor deze launch. Die blijven zoals ze zijn."
           }
         }
       }
     },
-    "This machine needs a secure broker address." : {
+    "This machine cannot be reached through your account." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze machine heeft een veilig broker-adres nodig."
+            "value" : "Deze machine is niet bereikbaar via je account."
           }
         }
       }
@@ -20078,12 +20219,12 @@
         }
       }
     },
-    "This plan has no steps yet." : {
+    "No steps yet." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dit plan heeft nog geen stappen."
+            "value" : "Nog geen stappen."
           }
         }
       }
@@ -20148,12 +20289,12 @@
         }
       }
     },
-    "This removes the conversation history and stops any active turn on every client." : {
+    "This removes the conversation history and stops any active turn on every device." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dit verwijdert de gespreksgeschiedenis en stopt een lopende turn op elke client."
+            "value" : "Dit verwijdert de gespreksgeschiedenis en stopt een lopende turn op elk apparaat."
           }
         }
       }
@@ -20178,12 +20319,12 @@
         }
       }
     },
-    "This side holds nothing here." : {
+    "Empty on this side." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze kant heeft hier niets."
+            "value" : "Leeg aan deze kant."
           }
         }
       }
@@ -20369,12 +20510,12 @@
         }
       }
     },
-    "Took the merge back." : {
+    "Merge aborted." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De merge is teruggedraaid."
+            "value" : "Merge afgebroken."
           }
         }
       }
@@ -20399,12 +20540,12 @@
         }
       }
     },
-    "Tries again by itself at %@." : {
+    "Retries at %@." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Probeert het om %@ zelf opnieuw."
+            "value" : "Probeert opnieuw om %@."
           }
         }
       }
@@ -20622,12 +20763,12 @@
         }
       }
     },
-    "Unnamed client" : {
+    "Unnamed device" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Naamloze client"
+            "value" : "Naamloos apparaat"
           }
         }
       }
@@ -20996,12 +21137,12 @@
         }
       }
     },
-    "Use the folder's icon" : {
+    "Use folder icon" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het icoon van de map gebruiken"
+            "value" : "Mapicoon gebruiken"
           }
         }
       }
@@ -21117,12 +21258,12 @@
         }
       }
     },
-    "View full diff" : {
+    "Show full diff" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Volledige diff bekijken"
+            "value" : "Volledige diff tonen"
           }
         }
       }
@@ -21418,12 +21559,12 @@
         }
       }
     },
-    "Without that commit the merge would leave half of the work behind." : {
+    "Otherwise the merge leaves that work behind." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zonder die commit laat de merge de helft van het werk achter."
+            "value" : "Anders laat de merge dat werk achter."
           }
         }
       }
@@ -21841,12 +21982,12 @@
         }
       }
     },
-    "Your commits are written again on top of that branch, as new commits. A branch you already pushed then needs a force push. A conflict stops the rebase halfway, for you to resolve or take back." : {
+    "Rewrites your commits on top of that branch. A pushed branch then needs a force push. A conflict pauses the rebase for you to resolve or abort." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Je commits worden opnieuw geschreven boven op die branch, als nieuwe commits. Een branch die je al pushte, heeft daarna een force push nodig. Een conflict stopt de rebase halverwege, zodat je het oplost of terugdraait."
+            "value" : "Herschrijft je commits boven op die branch. Een gepushte branch heeft daarna een force push nodig. Een conflict pauzeert de rebase, zodat je het oplost of afbreekt."
           }
         }
       }
@@ -21862,12 +22003,12 @@
         }
       }
     },
-    "Your earlier chats" : {
+    "Earlier chats" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Je eerdere chats"
+            "value" : "Eerdere chats"
           }
         }
       }
@@ -22248,12 +22389,12 @@
         }
       }
     },
-    "Could not draw this part" : {
+    "Could not show this part" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dit deel kon niet getekend worden"
+            "value" : "Kon dit deel niet tonen"
           }
         }
       }
@@ -22309,12 +22450,12 @@
         }
       }
     },
-    "Image generation failed" : {
+    "Could not generate image" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Afbeelding maken mislukt"
+            "value" : "Kon afbeelding niet maken"
           }
         }
       }
@@ -22496,45 +22637,34 @@
         }
       }
     },
-    "The first %@ of %@ rows are drawn." : {
+    "Showing %@ of %@ rows." : {
       "comment" : "The first number is the rows a chart draws, the second all rows of its data",
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De eerste %@ van %@ rijen zijn getekend."
+            "value" : "%1$@ van %2$@ rijen getoond."
           }
         }
       }
     },
-    "%@ is not drawn." : {
+    "%@ not shown." : {
       "comment" : "%@ is the name of a series a chart leaves out",
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ is niet getekend."
+            "value" : "%@ niet getoond."
           }
         }
       }
     },
-    "%@ are not drawn." : {
-      "comment" : "%@ is a list of series a chart leaves out",
+    "Negative values cannot stack. Series shown side by side." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ zijn niet getekend."
-          }
-        }
-      }
-    },
-    "Negative values cannot be stacked, so the series stand side by side." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Negatieve waarden kunnen niet gestapeld worden, dus de reeksen staan naast elkaar."
+            "value" : "Negatieve waarden kunnen niet stapelen. Reeksen staan naast elkaar."
           }
         }
       }
@@ -22580,12 +22710,12 @@
         }
       }
     },
-    "The block could not be read" : {
+    "Could not read block" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het blok kon niet gelezen worden"
+            "value" : "Kon het blok niet lezen"
           }
         }
       }
@@ -22600,23 +22730,23 @@
         }
       }
     },
-    "The image came back empty" : {
+    "Image is empty" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De afbeelding kwam leeg terug"
+            "value" : "Afbeelding is leeg"
           }
         }
       }
     },
-    "The image is larger than %@" : {
+    "Larger than %@" : {
       "comment" : "%@ is a size, such as 10 MB",
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De afbeelding is groter dan %@"
+            "value" : "Groter dan %@"
           }
         }
       }
@@ -22631,12 +22761,12 @@
         }
       }
     },
-    "The result is not an image" : {
+    "Not an image" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het resultaat is geen afbeelding"
+            "value" : "Geen afbeelding"
           }
         }
       }
@@ -22746,12 +22876,12 @@
         }
       }
     },
-    "Too many live blocks are reading right now." : {
+    "Too many live blocks reading." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Er lezen nu te veel live blokken tegelijk."
+            "value" : "Er lezen te veel live blokken tegelijk."
           }
         }
       }
@@ -22856,12 +22986,12 @@
         }
       }
     },
-    "The source could not be read." : {
+    "Could not read the source." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De bron kon niet gelezen worden."
+            "value" : "Kon de bron niet lezen."
           }
         }
       }
@@ -23037,12 +23167,12 @@
         }
       }
     },
-    "and more, truncated" : {
+    "and more" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "en meer, afgekapt"
+            "value" : "en meer"
           }
         }
       }
@@ -23153,12 +23283,12 @@
         }
       }
     },
-    "No progress reported for five minutes. The workflow is still running; you can stop it." : {
+    "No progress for five minutes. It is still running, and you can stop it." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vijf minuten geen voortgang gemeld. De workflow loopt nog; je kunt hem stoppen."
+            "value" : "Vijf minuten geen voortgang. Hij loopt nog, en je kunt hem stoppen."
           }
         }
       }

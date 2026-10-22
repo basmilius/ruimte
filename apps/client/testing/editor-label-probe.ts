@@ -12,8 +12,13 @@ import dutchPanels from '@/i18n/locales/nl/panels.json' with { type: 'json' };
 import { FileEditor } from '@/shell/panels/FileEditor';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { ProjectLanguage } from '@/language/ruimte-project-language';
+import { initI18n } from '@/i18n';
 
 export async function probeEditorLabels() {
+    // The probe page boots no app, so nothing set the words up yet.
+    if (!i18next.isInitialized) {
+        await initI18n();
+    }
     const container = document.createElement('div');
     container.style.cssText = 'width: 600px; height: 300px';
     document.body.append(container);

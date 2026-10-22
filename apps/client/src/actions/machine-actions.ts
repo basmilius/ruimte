@@ -21,6 +21,7 @@ import { currentEndpointId } from '@/state/keys';
 import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { serverInfoOf } from '@/state/server';
 import { dayOf, useUsageStore } from '@adecore/agents-react/state';
+import { evenPace } from '@adecore/agents-react/usage';
 import type { Transport } from '@/transport/transport';
 import { transportFor } from '@/transport';
 import { machineFor } from '@/transport/connections';
@@ -111,7 +112,7 @@ function usageOf(summary: UsageSummaryResult): UsageOutput {
     };
 }
 
-function limitsOf(snapshot: UsageLimitsSnapshot): ActionOutput<'usage.limits'> {
+function limitsOf(snapshot: UsageLimitsSnapshot, now: number): ActionOutput<'usage.limits'> {
     return {
         providers: snapshot.providers.map((provider) => ({
             provider: provider.kind,
@@ -123,7 +124,8 @@ function limitsOf(snapshot: UsageLimitsSnapshot): ActionOutput<'usage.limits'> {
                 label: window.label,
                 kind: window.kind,
                 usedPercent: Math.round(window.used * 100),
-                resetsAt: window.resetsAt
+                resetsAt: window.resetsAt,
+                evenPacePercent: evenPace(window, now)?.percent ?? null
             }))
         }))
     };
@@ -258,6 +260,8 @@ export function machineActions(overrides: Partial<MachineReach> = {}): ActionHan
             }
             return { output: usageOf(await ask((transport) => transport.request('usage.summary', payload))) };
         },
-        'usage.limits': async () => ({ output: limitsOf(machine.limits() ?? (await ask((transport) => transport.request('usage.limits', {})))) })
+        'usage.limits': async () => ({
+            output: limitsOf(machine.limits() ?? (await ask((transport) => transport.request('usage.limits', {}))), machine.now().getTime())
+        })
     };
 }

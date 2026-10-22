@@ -33,7 +33,7 @@ describe('callerName', () => {
 describe('showViewNotice', () => {
     test('following reports what moved and offers the way back', () => {
         const notice = showViewNotice({ agent: 'Refactor', view: 'Board', follow: true, alreadyThere: false });
-        expect(notice.message).toBe('Refactor showed Board in the cell you were working in');
+        expect(notice.message).toBe('Refactor showed Board where you were working');
         expect(notice.action).toBe('back');
     });
 
@@ -46,7 +46,7 @@ describe('showViewNotice', () => {
     test('the view already in front reads the same either way, and offers nothing at all', () => {
         for (const follow of [true, false]) {
             const notice = showViewNotice({ agent: 'Refactor', view: 'Board', follow, alreadyThere: true });
-            expect(notice.message).toBe('Refactor pointed at Board, which you were already looking at');
+            expect(notice.message).toBe('Refactor pointed at Board, already in view');
             expect(notice.action).toBeNull();
         }
     });

@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, RuntimeMode, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
 import { codexIndexIn } from '../agents/codex-title.ts';
-import { modeOfHook, normalizeHook, requestOfHook, settleWaiting } from '../agents/hooks.ts';
+import { borrowedHook, modeOfHook, normalizeHook, requestOfHook, settleWaiting } from '../agents/hooks.ts';
 import { isTerminalReply } from './terminal-replies.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, offersKind, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { narrowerMode, launchEnv, storedAccount, type AccountLaunches } from '@adecore/agents/providers';
@@ -29,6 +29,7 @@ type SessionErrorCode =
     | 'agent-resuming'
     | 'shell-busy'
     | 'login-unavailable'
+    | 'client-shell-command'
     | 'git-bash-missing';
 
 /*
@@ -460,10 +461,19 @@ export class SessionManager {
         if (!session) {
             return 'unknown-token';
         }
-        const outcome = normalizeHook(body);
-        if (!outcome) {
+        const current = session.agent ?? null;
+        if (borrowedHook(kind, body, current)) {
             return 'ignored';
         }
+        const reported = normalizeHook(body, kind);
+        if (!reported) {
+            return 'ignored';
+        }
+        // A subagent that reports under a session of its own is still part of the conversation the person has.
+        const outcome =
+            reported.subagentId !== null && current !== null && reported.agentSessionId !== current.agentSessionId
+                ? { ...reported, agentSessionId: current.agentSessionId, transcriptPath: null }
+                : reported;
         const settled = settleWaiting(this.waiting.get(session.id) ?? new Set(), outcome, session.agent?.status ?? null);
         this.waiting.set(session.id, settled.waiting);
         const updatedAt = Date.now();

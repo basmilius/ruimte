@@ -76,6 +76,7 @@ export const TERMINAL_HANDED_BACK: readonly Shortcut[] = [
     CANVAS_SHORTCUTS.launchRun,
     CANVAS_SHORTCUTS.launchStop,
     CANVAS_SHORTCUTS.focusPrompts,
+    CANVAS_SHORTCUTS.nextNeedsYou,
     ...Object.values(FOCUS_SHORTCUTS),
     APP_SHORTCUTS.settings,
     APP_SHORTCUTS.sidebar,
@@ -118,6 +119,14 @@ export function shellShortcuts(apple: boolean): readonly Shortcut[] {
 
 export function isShellShortcut(event: KeyLike, apple: boolean): boolean {
     return matchesAny(shellShortcuts(apple), event, apple);
+}
+
+/* The chat's own keys, which the composer hands back besides those so a chat steps its reasoning effort while you type. */
+// Not Alt+Up or Alt+Down: in the composer they recall your earlier prompts, and stepping between messages is the thread's, the menu's and the palette's.
+const COMPOSER_HANDED_BACK: readonly Shortcut[] = [CANVAS_SHORTCUTS.raiseEffort, CANVAS_SHORTCUTS.lowerEffort];
+
+export function isComposerShortcut(event: KeyLike, apple: boolean): boolean {
+    return isShellShortcut(event, apple) || matchesAny(COMPOSER_HANDED_BACK, event, apple);
 }
 
 /* Home and End in both forms the application cursor keys mode (DECCKM) asks for. */

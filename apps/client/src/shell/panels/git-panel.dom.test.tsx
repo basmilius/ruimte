@@ -126,7 +126,7 @@ describe('the git panel over a folder of two repositories', () => {
         await act(async () => focusedCanvas().getState().select([TEAM.id]));
         await until(() => followBar() !== null);
         expect(buttonWithText('2 repositories')).toBeNull();
-        await clickOn(buttonWithText('Back to the project folder'));
+        await clickOn(buttonWithText('Back to project folder'));
         await until(() => followBar() === null);
         await until(() => buttonWithText('2 repositories') !== null);
     });

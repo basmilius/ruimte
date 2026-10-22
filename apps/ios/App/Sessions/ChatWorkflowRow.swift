@@ -93,7 +93,7 @@ struct ChatWorkflowRow: View {
             if running, workflow.stalledAt != nil {
                 HStack(spacing: 6) {
                     Image(lucide: "triangle-alert", size: 12).foregroundStyle(MobileStyle.statusNeedsYou)
-                    Text("No progress reported for five minutes. The workflow is still running; you can stop it.")
+                    Text("No progress for five minutes. It is still running, and you can stop it.")
                         .lineLimit(1)
                 }
                 .font(.caption).foregroundStyle(MobileStyle.muted)
@@ -127,7 +127,7 @@ struct ChatWorkflowRow: View {
             }
         }
         .alert(
-            "The task could not be stopped",
+            "Could not stop the task",
             isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })
         ) {
             Button("OK") { failure = nil }

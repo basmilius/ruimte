@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { CustomLanguageServer, LanguageServerStatus } from '@ruimte/contracts';
@@ -277,7 +277,7 @@ function ServerList({ language }: { language: ProjectLanguage }) {
     const statuses = useStatuses(tracker);
     const own = useWindowCustomServers();
     const [logOf, setLogOf] = useState<string | null>(null);
-    const groups = useMemo(() => groupedStatuses(statuses.filter((status) => !isOwn(status))), [statuses]);
+    const groups = groupedStatuses(statuses.filter((status) => !isOwn(status)));
 
     return (
         <>

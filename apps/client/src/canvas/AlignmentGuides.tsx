@@ -7,8 +7,9 @@ const TICK = 4;
 
 /* Reads the camera itself, so a pan redraws the guides and not the canvas that places them. */
 export function AlignmentGuides({ guides, gaps }: { guides: readonly AlignmentGuide[]; gaps: readonly GapGuide[] }) {
-    const camera = useCanvas((s) => s.camera);
-    if (guides.length === 0 && gaps.length === 0) {
+    const shown = guides.length > 0 || gaps.length > 0;
+    const camera = useCanvas((s) => (shown ? s.camera : null));
+    if (camera === null) {
         return null;
     }
     const toScreen = (value: number, axis: 'x' | 'y'): number => value * camera.zoom + (axis === 'x' ? camera.x : camera.y);

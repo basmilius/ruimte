@@ -1,7 +1,9 @@
 import { limitAccountsOf, usageAccountsOf, usageRootsOf, UsageMonitor, UsageService } from '@adecore/agents/usage';
 import type { ServerConfig } from '../config.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
+import { copilotUsageDirectory } from '../providers/acp-providers.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
+import { followPlan } from '../usage/nanogpt-live.ts';
 import { sessionAccountsOf } from '../usage/session-accounts.ts';
 import type { AgentsBundle } from './agents.ts';
 import type { ProvidersBundle } from './providers.ts';
@@ -18,7 +20,12 @@ export function wireUsage(config: ServerConfig, providers: ProvidersBundle, agen
         home: config.home,
         allowPriceFetch: config.priceFetch,
         knownProjects: () => projects.known(),
-        roots: () => usageRootsOf(providers.accounts),
+        // A subscription API and Copilot leave no transcript the scan reads, so the daemon keeps a log of their turns.
+        roots: () => [
+            ...usageRootsOf(providers.accounts),
+            { provider: 'nanogpt', path: providers.nanogpt.usageDirectory },
+            { provider: 'copilot', path: copilotUsageDirectory(config.home) }
+        ],
         sessionAccounts: () =>
             sessionAccountsOf(
                 chats.list(),
@@ -29,8 +36,12 @@ export function wireUsage(config: ServerConfig, providers: ProvidersBundle, agen
     const limits = new UsageMonitor({
         providers: providers.providers,
         accounts: limitAccountsOf(providers.accounts, providers.nameOfCli, process.env),
-        client: RUIMTE_CODEX_CLIENT
+        client: RUIMTE_CODEX_CLIENT,
+        plans: { nanogpt: () => providers.nanogpt.readPlan() }
     });
     providers.accounts.listen(() => limits.accountsChanged());
+    providers.nanogpt.onCall(
+        followPlan(() => providers.nanogpt.readPlan(), { apply: ({ plan, windows }) => limits.applyLive({ kind: 'nanogpt', plan, windows }) })
+    );
     return { usage, limits };
 }

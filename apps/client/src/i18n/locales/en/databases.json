@@ -6,71 +6,71 @@
         "design": "{{table}} (design)",
         "hint": "{{schema}} on {{connection}}",
         "where": "Where this table is",
-        "unsubmitted": "Edits nobody submitted",
+        "unsubmitted": "Unsubmitted edits",
         "gone": "This connection is no longer in the project.",
         "close": "Close tab",
-        "failed": "This tab failed to render",
+        "failed": "This tab could not be shown",
         "discard": {
-            "title": "Discard the changes to {{table}}?",
-            "description": "Nobody submitted the edits in this table. Closing the tab throws them away.",
+            "title": "Discard changes to {{table}}?",
+            "description": "These edits were never submitted.",
             "confirm": "Discard and close"
         }
     },
     "view": {
         "manage": "Manage connections",
-        "gone": "The connection of {{table}} is not on this machine. Add it in the connections, or ask whoever shared this view.",
-        "withheld": "The password of the connection of {{table}} has to be entered again before the table opens."
+        "gone": "The connection of {{table}} is not on this machine. Add it, or ask whoever shared this view.",
+        "withheld": "Enter the connection password again to open {{table}}."
     },
     "console": {
         "runOn": "Run on a connection",
-        "asFile": "Just the file",
+        "asFile": "File only",
         "untitled": "Untitled connection",
-        "failed": "The console could not be made",
-        "failedToDraw": "This console failed to render",
+        "failed": "Could not create the console",
+        "failedToDraw": "This console could not be shown",
         "taken": "Every console name for {{name}} is taken.",
-        "moveFailed": "The console could not move to that connection",
+        "moveFailed": "Could not move the console to that connection",
         "rename": {
-            "description": "Type a new name for the console. It stays with its connection.",
-            "noFolders": "A console name has no folders in it."
+            "description": "The console stays with its connection.",
+            "noFolders": "A name cannot contain folders."
         }
     },
     "panel": {
         "newConsole": "New console",
         "manage": "Manage connections",
-        "reading": "Reading the connections…",
-        "failed": "The connections could not be read: {{reason}}",
-        "empty": "This project has no database connections yet.",
+        "reading": "Reading connections…",
+        "failed": "Could not read connections: {{reason}}",
+        "empty": "No connections yet.",
         "add": "Add connection",
         "containers": "Running database containers",
         "addContainer": "Add {{name}}",
         "consoles": "Consoles",
         "withheld": {
-            "moved": "The address of {{name}} was changed outside this window, so its saved password is not sent there. Enter it again to use it.",
-            "unbound": "Enter the password of {{name}} again. Ruimte now keeps a password with the address it is for.",
+            "moved": "{{name}} has a new address. Enter its password again.",
+            "unbound": "Enter the password of {{name}} again.",
             "enter": "Enter password"
         }
     },
     "dialog": {
         "title": "Database connections",
-        "description": "The connections of this project, and what each may be used for.",
+        "description": "What each connection may be used for.",
         "share": {
-            "label": "Share in the repository",
-            "description": "Saves the connection in .ruimte/databases.json for everyone who works on this project. The password never goes into the file.",
+            "label": "Share with team",
+            "description": "Saves the connection with the project for everyone who works on it. The password is never shared.",
             "outside": "The database file is outside the project folder, so the connection cannot be shared."
         },
         "agents": {
             "label": "Agents",
-            "description": "What AI agents in this project may do with this connection. Only a person on this machine can let them write.",
+            "description": "What agents may do with this connection. Only someone on this machine can allow writing.",
             "off": "Off",
             "read": "Read only",
             "write": "Read and write",
             "writeRemote": "Only from the app on that machine",
-            "failed": "Could not change what agents may do"
+            "failed": "Could not change agent access"
         },
-        "saveFailed": "The machine did not save the connections: {{reason}}",
+        "saveFailed": "Could not save connections: {{reason}}",
         "withheld": {
-            "moved": "The address of this connection was changed outside this window, so its saved password is not sent there. Enter the password again to use it at this address.",
-            "unbound": "Enter the password of this connection again. Ruimte now keeps a password with the address it is for."
+            "moved": "This connection has a new address. Enter the password again.",
+            "unbound": "Enter the password of this connection again."
         },
         "persistence": {
             "app": "This computer cannot encrypt passwords, so Ruimte keeps them only until it quits.",
@@ -79,17 +79,17 @@
     },
     "connections": {
         "conflict": {
-            "title": "The database connections changed elsewhere",
-            "description": "They were read again, and your last change was not saved."
+            "title": "Connections changed elsewhere",
+            "description": "Your last change was not saved."
         }
     },
     "secrets": {
         "readFailed_one": "Could not read the saved password of {{name}}",
         "readFailed_other": "Could not read the saved passwords of {{count}} connections",
-        "writeFailed_one": "The password of {{name}} was not saved on this computer",
-        "writeFailed_other": "The passwords of {{count}} connections were not saved on this computer",
-        "removeFailed_one": "The password of {{name}} was not removed from this computer",
-        "removeFailed_other": "The passwords of {{count}} connections were not removed from this computer"
+        "writeFailed_one": "Could not save the password of {{name}}",
+        "writeFailed_other": "Could not save {{count}} passwords",
+        "removeFailed_one": "Could not remove the password of {{name}}",
+        "removeFailed_other": "Could not remove {{count}} passwords"
     },
     "sql": {
         "label": "SQL of this file: {{choice}}",
@@ -99,19 +99,19 @@
         "projectDefault": "Project default ({{name}})",
         "projectDefaultNone": "Project default (none)",
         "noneItem": "None",
-        "allDatabases": "Every database",
+        "allDatabases": "All databases",
         "startDatabase": "{{database}}, where it starts",
-        "addConnection": "Add a connection…",
+        "addConnection": "Add connection…",
         "defaultSection": "Project default",
         "makeDefault": "Use {{name}} for the project",
-        "clearDefault": "Clear the project default",
-        "noDefault": "The project has no default; pick a connection for this file first",
+        "clearDefault": "Clear project default",
+        "noDefault": "No project default. Pick a connection for this file first.",
         "noSnapshot": "No schema read yet. Open {{name}} in the Databases panel",
         "snapshot_one": "{{count}} table, read {{time}}",
         "snapshot_other": "{{count}} tables, read {{time}}",
-        "refresh": "Read the schema again",
-        "bindFailed": "The SQL connection could not be saved",
-        "refreshFailed": "The schema could not be read",
-        "failedToDraw": "The SQL connection picker failed to render"
+        "refresh": "Read schema again",
+        "bindFailed": "Could not save the connection",
+        "refreshFailed": "Could not read the schema",
+        "failedToDraw": "The SQL connection picker could not be shown"
     }
 }

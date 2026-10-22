@@ -104,7 +104,7 @@ export class OnDeviceModel {
 
     async dispose(): Promise<void> {
         this.disposed = true;
-        this.failAll(new CodedError('unavailable', 'The daemon is stopping.'));
+        this.failAll(new CodedError('unavailable', 'The machine is stopping.'));
         await this.child?.end();
     }
 
@@ -122,7 +122,7 @@ export class OnDeviceModel {
 
     private start(): Promise<void> {
         if (this.disposed) {
-            return Promise.reject(new CodedError('unavailable', 'The daemon is stopping.'));
+            return Promise.reject(new CodedError('unavailable', 'The machine is stopping.'));
         }
         if (!this.supported()) {
             return Promise.reject(new CodedError('unavailable', UNSUPPORTED));
@@ -223,7 +223,7 @@ export class OnDeviceModel {
         }
         if (event.type === 'session') {
             // A helper from before `--oneshot` ignores the flag and opens a conversation instead.
-            this.lose(new CodedError('unavailable', 'The on-device helper is older than this daemon.'));
+            this.lose(new CodedError('unavailable', 'Update Ruimte to use on-device help.'));
             return;
         }
         if (event.type === 'startup.error') {

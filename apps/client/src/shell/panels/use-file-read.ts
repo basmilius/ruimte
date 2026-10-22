@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import i18next from 'i18next';
 import type { FsReadResult, FsReadText } from '@ruimte/contracts';
 import { dirnameOf } from '@/shell/panels/files-tree';
@@ -71,10 +71,10 @@ export function useFileRead(path: string): { state: FileRead; retry(): void } {
         });
     }, [transport, folder]);
 
-    const retry = useCallback(() => {
+    const retry = () => {
         setState({ status: 'loading' });
         setAttempt((count) => count + 1);
-    }, []);
+    };
 
     return { state, retry };
 }

@@ -1,5 +1,7 @@
-import { portPoint, routeEdge, type Obstacle, type Side } from '@/canvas/edge-route';
+import { portPoint, type Side } from '@/canvas/edge-route';
+import type { LineRoutes } from '@/canvas/line-routes';
 import type { Point, Rect } from '@/canvas/math';
+import { memoByIdentity } from '@/state/identity-memo';
 
 const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left'];
 
@@ -49,33 +51,16 @@ export function portHints(nodes: readonly (Rect & { id: string })[], point: Poin
 
 /*
  * The sides a line already leaves from or lands on, which is where a node draws no dot of its own.
- * The route decides that, so this walks the same routes the canvas draws.
+ * Read off the routes the canvas draws, so a pointer walking over it routes nothing.
  */
-export function takenPorts(
-    edges: readonly { from: string; to: string; fromSide?: Side; toSide?: Side }[],
-    rectOf: (id: string) => Rect | null,
-    obstacles: readonly Obstacle[] = []
-): Set<string> {
+export const takenPorts = memoByIdentity((drawn: Pick<LineRoutes, 'lines' | 'routes'>): ReadonlySet<string> => {
     const taken = new Set<string>();
-    for (const edge of edges) {
-        const from = rectOf(edge.from);
-        const to = rectOf(edge.to);
-        if (from === null || to === null) {
-            continue;
+    for (const line of drawn.lines) {
+        const route = drawn.routes.get(line.edge.id);
+        if (route !== undefined) {
+            taken.add(portKey(line.edge.from, route.fromSide));
+            taken.add(portKey(line.edge.to, route.toSide));
         }
-        if (edge.from === edge.to) {
-            // A loop onto the same node leaves and comes back on the right.
-            taken.add(portKey(edge.from, 'right'));
-            continue;
-        }
-        const route = routeEdge(
-            from,
-            to,
-            obstacles.filter((obstacle) => obstacle.id !== edge.from && obstacle.id !== edge.to),
-            { fromSide: edge.fromSide, toSide: edge.toSide }
-        );
-        taken.add(portKey(edge.from, route.fromSide));
-        taken.add(portKey(edge.to, route.toSide));
     }
     return taken;
-}
+});

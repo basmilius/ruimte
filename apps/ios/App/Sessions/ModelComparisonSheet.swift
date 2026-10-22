@@ -20,8 +20,8 @@ struct ModelComparisonSheet: View {
                     } description: {
                         Text(
                             unavailable
-                                ? "There are no benchmarks to show yet."
-                                : "The benchmarks could not be loaded. Check the connection and try again.")
+                                ? "No benchmarks yet."
+                                : "Could not load benchmarks. Check the connection and try again.")
                     } actions: {
                         Button("Try again") { Task { await comparison.reload() } }
                     }

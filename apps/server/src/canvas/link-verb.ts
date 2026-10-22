@@ -1,6 +1,8 @@
 import { EDGE_ROLES } from '@ruimte/contracts';
 import { z } from 'zod';
+import { MAX_PER_CALL } from '@ruimte/actions';
 import { canvasIdFor, defineActionVerb, runAction } from './action-verb.ts';
+import { ONE_WRITE, idBatch } from './batch.ts';
 import { MAX_LINKS } from './links.ts';
 import { idList } from './nodes.ts';
 import { MAX_TITLE_LENGTH, REVISION_ROW, SCOPE_LINE, field, placeOf, titleField } from './verb.ts';
@@ -105,13 +107,21 @@ export const linkListAction = defineActionVerb('link', {
 export const linkDeleteAction = defineActionVerb('link', {
     name: 'delete',
     action: 'link.delete',
-    usage: '<edgeId> [--view V]',
+    usage: '<edgeId>[,<edgeId>...] [--view V]',
     params: [
-        { syntax: '<edgeId>', need: 'required', field: 'edgeId', text: 'The line to remove, by id', more: 'ruimte-context link list lists them' },
-        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the line is on, by view id; without it the one you are on' }
+        {
+            syntax: '<edgeId>[,<edgeId>...]',
+            need: 'required',
+            field: 'edgeId',
+            text: `The lines to remove, by id, separated by commas; at most ${MAX_PER_CALL}`,
+            more: 'ruimte-context link list lists them'
+        },
+        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the lines are on, by view id; without it the one you are on' }
     ],
     detail: [
-        'prints\tdeleted\tid\tfrom\tto\tlabel\tthe line that went, the label empty where it had none',
+        'prints\tdeleted\tid\tfrom\tto\tlabel\tthe line that went, the label empty where it had none; one row per line, in the order given',
+        `many\tTo remove several lines, name them all in one call, as a,b,c, instead of calling once per line: ${ONE_WRITE}`,
+        'many\tEach line is checked the way a single one is, and a refusal names the line',
         'rule\tOnly a line whose ends are both yours: you, or a node you made with node new, node group, agent or team',
         'rule\tA line that touches a node a person made stays, and so does a line a person drew into you, since that is the context they gave you',
         'rule\tA machine can free every node and view of every project on it, and every line with them; a refusal says whether this one does',
@@ -120,12 +130,17 @@ export const linkDeleteAction = defineActionVerb('link', {
         'see\truimte-context link list\tthe lines of a canvas, with the ids this takes'
     ],
     positionals: z.tuple([z.string().min(1, 'link delete needs the id of a line')], {
-        error: (issue) => (issue.code === 'too_big' ? 'link delete takes one line id and nothing else' : 'link delete needs the id of a line')
+        error: (issue) =>
+            issue.code === 'too_big' ? 'link delete takes its line ids in one argument, separated by commas, as a,b,c' : 'link delete needs the id of a line'
     }),
     flags: z.object({ view: z.string().min(1, '--view needs the id of a canvas').optional() }),
-    async run({ positionals: [id], flags }, call) {
+    async run({ positionals: [raw], flags }, call) {
+        const ids = idBatch(raw, 'link delete');
         const viewId = await canvasIdFor(call, placeOf(call), flags.view);
-        const deleted = await runAction(call, 'link.delete', { viewId, edgeId: id });
-        return [['deleted', deleted.edgeId, deleted.from, deleted.to, field(deleted.label ?? '')].join('\t')];
+        const edges =
+            ids.length === 1
+                ? [await runAction(call, 'link.delete', { viewId, edgeId: ids[0]! })]
+                : (await runAction(call, 'link.deleteMany', { viewId, edgeIds: ids })).edges;
+        return edges.map((edge) => ['deleted', edge.edgeId, edge.from, edge.to, field(edge.label ?? '')].join('\t'));
     }
 });

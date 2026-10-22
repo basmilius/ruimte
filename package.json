@@ -20,7 +20,7 @@
     "check": "bun run check:types && bun run check:generated && bun run lint && bun run format:check",
     "check:types": "tsc -p tsconfig.scripts.json && bun run --filter '*' typecheck",
     "check:generated": "bun run --cwd packages/contracts check:swift",
-    "lint": "oxlint --deny-warnings && oxlint --type-aware --deny-warnings -c apps/server/oxlint.promises.json apps/server/src && bun scripts/check-client-conventions.ts",
+    "lint": "oxlint --deny-warnings && oxlint --type-aware --deny-warnings -c apps/server/oxlint.promises.json apps/server/src && bun scripts/check-client-conventions.ts && bun scripts/check-test-clock.ts",
     "test": "bun test --conditions=source --parallel --only-failures --timings=test-timings.json",
     "test:timings": "bun run test --update-timings",
     "test:dom": "bun --config=dom.bunfig.toml test --conditions=source .dom.test.",

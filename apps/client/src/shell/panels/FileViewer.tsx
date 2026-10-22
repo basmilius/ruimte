@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DiffFile } from '@/shell/panels/DiffFile';
 import { FileBody } from '@/shell/panels/FileBody';
@@ -17,7 +17,7 @@ const DatabaseTabBody = lazyNamed(() => import('@/database/DatabaseTabBody'), 'D
 function KeptTab({ up, children }: { up: boolean; children: ReactNode }) {
     const slot = useFileToolbarSlot();
     const [parked, setParked] = useState<HTMLElement | null>(null);
-    const parkedSlot = useMemo(() => fixedSlot(parked), [parked]);
+    const parkedSlot = fixedSlot(parked);
     return (
         <div className={`absolute inset-0 flex min-h-0 min-w-0 flex-col justify-center ${up ? '' : 'invisible'}`} inert={!up}>
             <span ref={setParked} hidden className="hidden" />
@@ -36,7 +36,7 @@ export function FileViewer({ active, ids }: { active: string | null; ids: readon
     const pool = useFiles((s) => s.tabs);
     const unsubmitted = useFiles((s) => s.unsubmitted);
     const [shown, setShown] = useState<readonly string[]>([]);
-    const tabs = useMemo(() => ids.flatMap((id): Tab[] => pool.filter((entry) => entry.key === id)), [ids, pool]);
+    const tabs = ids.flatMap((id): Tab[] => pool.filter((entry) => entry.key === id));
     // A view of the project in front leaves no loose tab up: what was shown last stays drawn, hidden.
     const up = active !== null && tabs.some((entry) => entry.key === active) ? active : null;
     if (up !== null && shown[0] !== up) {

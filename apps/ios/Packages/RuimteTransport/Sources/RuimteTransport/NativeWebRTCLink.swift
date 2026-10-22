@@ -321,7 +321,7 @@ import RuimtePulsar
     private func handshake(_ frame: JSONValue) throws {
         trace("handshake frame")
         if !proofSent {
-            guard let binding else { throw TransportFailure.invalid(String(localized: "The channel opened before its answer was applied.", bundle: .module)) }
+            guard let binding else { throw TransportFailure.invalid(String(localized: "Could not set up the direct connection. Try again.", bundle: .module)) }
             let proof = try DirectIdentity.proof(challenge: frame, binding: binding, machineID: machineID, machineKey: machineKey, signer: signer)
             proofSent = true
             deflating = proof["compression"] != nil
@@ -505,7 +505,7 @@ extension NativeWebRTCLink: RTCPeerConnectionDelegate, RTCDataChannelDelegate {
     nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceConnectionState) {
         Task { @MainActor [weak self] in
             self?.trace("ICE state \(newState.rawValue)")
-            if newState == .failed { self?.end(TransportFailure.invalid(String(localized: "No network path to the machine: ICE failed.", bundle: .module))) }
+            if newState == .failed { self?.end(TransportFailure.invalid(String(localized: "No network path to the machine.", bundle: .module))) }
         }
     }
     nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceGatheringState) {

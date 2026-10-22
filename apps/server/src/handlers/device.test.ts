@@ -142,6 +142,22 @@ describe('device handlers', () => {
         expect(frames.at(-1)).toMatchObject({ ok: true, result: { ...target, settings: { appearance: 'light' } } });
     });
 
+    test("answers a phone's power, and nothing while the machine does not stream devices", async () => {
+        const devices = {
+            power: (...args: unknown[]) => Promise.resolve(args[2] === 'R5CT' ? { level: 14, plugged: false, charging: false } : null)
+        } as unknown as DeviceManager;
+        const allowed = { now: true };
+        const { dispatcher, frames, client } = setup(devices, () => allowed.now);
+
+        await dispatcher.handle(client, request('device.power', { backendId: 'android', platform: 'android', deviceId: 'R5CT' }));
+        expect(frames.at(-1)).toMatchObject({ ok: true, result: { power: { level: 14, plugged: false, charging: false } } });
+        await dispatcher.handle(client, request('device.power', { backendId: 'android', platform: 'android', deviceId: 'emulator-5554' }));
+        expect(frames.at(-1)).toMatchObject({ ok: true, result: { power: null } });
+        allowed.now = false;
+        await dispatcher.handle(client, request('device.power', { backendId: 'android', platform: 'android', deviceId: 'R5CT' }));
+        expect(frames.at(-1)).toMatchObject({ ok: false, error: { code: 'streaming-disabled' } });
+    });
+
     test("writes a person's capture under the machine's captures and answers its path and size", async () => {
         const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 4, 0xb6, 0, 0, 0x0a, 0x3e]);
         const devices = { capture: () => Promise.resolve(png) } as unknown as DeviceManager;

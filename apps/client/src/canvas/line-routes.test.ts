@@ -50,4 +50,28 @@ describe('the routes of the lines on a canvas', () => {
         expect(after).not.toBe(before);
         expect(after.routes.get('e1')).not.toEqual(before.routes.get('e1'));
     });
+
+    test('keep every route when a node changes what it says and not where it stands', () => {
+        const store = createCanvasStore();
+        store.getState().loadView(view([node('a', 0, 0), node('b', 600, 0), node('between', 300, -20)]), null);
+        const before = routesOf(store);
+
+        store.getState().renameNode('between', 'Renamed');
+        const after = routesOf(store);
+        expect(after).not.toBe(before);
+        expect(after.routes.get('e1')).toBe(before.routes.get('e1')!);
+        expect(after.lines[0]).toBe(before.lines[0]!);
+    });
+
+    test('hand back the route a line had when a node arrives that it does not pass', () => {
+        const store = createCanvasStore();
+        store.getState().loadView(view([node('a', 0, 0), node('b', 600, 0)]), null);
+        const before = routesOf(store);
+
+        const far = node('far', 4000, 4000);
+        store
+            .getState()
+            .applyExternal({ nodes: [far], texts: [], edges: [], removed: { nodes: [], texts: [], edges: [] }, order: ['a', 'b', 'far'], layouts: null });
+        expect(routesOf(store).routes.get('e1')).toBe(before.routes.get('e1')!);
+    });
 });

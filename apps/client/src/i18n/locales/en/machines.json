@@ -29,25 +29,42 @@
         "finding": "Finding {{name}}…",
         "notInstalled": "{{name}} with {{runtime}} is not installed on this machine.",
         "plate": "Device",
-        "listFailed": "The devices could not be read",
+        "listFailed": "Could not read devices",
+        "power": {
+            "battery": "On battery",
+            "low": "Battery low · not on power",
+            "plugged": "On power",
+            "pluggedFrom": "On power ({{source}})",
+            "charging": "charging",
+            "notCharging": "not charging",
+            "full": "full",
+            "simulated": "simulated",
+            "simulatedTooltip": "Simulated: apps see {{level}}. Reset it in the tools.",
+            "source": {
+                "ac": "AC",
+                "usb": "USB",
+                "wireless": "wireless",
+                "dock": "dock"
+            }
+        },
         "stream": {
             "screen": "{{name}} screen",
             "starting": "Starting device…",
-            "noDecoder": "This browser cannot decode the device video stream",
-            "undecodable": "The device video stream could not be decoded",
-            "frameFailed": "A device frame could not be drawn",
+            "noDecoder": "This browser cannot show the device screen",
+            "undecodable": "Could not show the device screen",
+            "frameFailed": "Could not show the device screen",
             "startFailed": "The device could not start streaming",
             "notReady": "The device stream is not ready yet",
-            "httpStatus": "The device stream returned {{status}}",
-            "unknownFormat": "The machine returned an unknown stream format",
+            "httpStatus": "Could not load the device screen ({{status}})",
+            "unknownFormat": "The machine sent a screen this app cannot show. Update Ruimte.",
             "stopped": "The device stream stopped"
         },
         "tools": {
             "title": "Device tools",
             "close": "Close tools",
             "loading": "Reading device settings…",
-            "readFailed": "The device settings could not be read",
-            "changeFailed": "The device setting could not be changed",
+            "readFailed": "Could not read the device settings",
+            "changeFailed": "Could not change the device setting",
             "bundleId": "Bundle ID",
             "packageName": "Package name",
             "app": {
@@ -130,25 +147,25 @@
                 "copy": "Copy screenshot",
                 "save": "Save screenshot",
                 "place": "Place screenshot on canvas",
-                "noCanvas": "Open a canvas to place the screenshot on.",
-                "placeUnsupported": "The machine of this project runs a Ruimte that cannot keep a screenshot from another machine.",
-                "placeTooLarge": "The screenshot is too large to place on a canvas of another machine.",
-                "failed": "The screenshot could not be taken",
+                "noCanvas": "Open a canvas first.",
+                "placeUnsupported": "This project's machine cannot keep a screenshot from another machine.",
+                "placeTooLarge": "The screenshot is too large for another machine's canvas.",
+                "failed": "Could not take the screenshot",
                 "record": "Screen recording",
                 "start": "Record",
                 "stop": "Stop recording",
                 "recording": "Recording, {{time}}",
                 "ended": "Ended",
-                "endedLabel": "The recording ended by itself and its video waits",
+                "endedLabel": "Recording ended; video ready",
                 "saveVideo": "Save video",
-                "recordFailed": "The recording could not be made",
-                "androidLimit": "Android stops a recording by itself after 3 minutes."
+                "recordFailed": "Could not make the recording",
+                "androidLimit": "Android stops recordings after 3 minutes."
             },
             "clipboard": {
                 "title": "Clipboard",
                 "send": "Send my clipboard",
                 "copy": "Copy device clipboard",
-                "failed": "The clipboard could not be reached"
+                "failed": "Could not reach the clipboard"
             },
             "statusBar": {
                 "title": "Status bar",
@@ -173,11 +190,11 @@
                 "up": "Up one folder",
                 "cancel": "Stop picking",
                 "list": "Files on the machine",
-                "empty": "Nothing here this device takes.",
+                "empty": "Nothing this device accepts.",
                 "add": "Add",
                 "drop": "Drop to install the app or add the pictures",
-                "dropFailed": "The device did not take that",
-                "notTaken": "Drop one app bundle this device installs, or up to 20 pictures and videos."
+                "dropFailed": "The device could not use that file",
+                "notTaken": "Drop one app this device can install, or up to 20 photos and videos."
             },
             "camera": {
                 "title": "Camera",
@@ -240,10 +257,10 @@
         "erase": {
             "open": "Erase…",
             "title": "Erase {{name}}?",
-            "description": "Every app, its data and the settings on {{name}} are deleted, as on a new device. A running device is shut down first and started again after.",
+            "description": "Deletes every app, its data and the settings on {{name}}, like a new device. A running device restarts afterward.",
             "confirm": "Erase",
             "busy": "Erasing…",
-            "failed": "The device could not be erased"
+            "failed": "Could not erase the device"
         },
         "shake": "Shake",
         "memoryWarning": "Simulate memory warning",
@@ -267,12 +284,12 @@
         }
     },
     "handshake": {
-        "noEndpoint": "No endpoint {{id}} to connect to"
+        "noEndpoint": "Machine {{id}} is not in the list"
     },
     "identity": {
         "mismatch": {
             "title": "{{label}} answers as another machine",
-            "description": "{{address}} answers as another machine than the one this client opened. Forget it here and open it from your account again."
+            "description": "{{address}} answers as a different machine. Forget it here and reopen it from your account."
         },
         "merged": {
             "title": "{{label}} is already in the list",
@@ -286,8 +303,8 @@
         "notOnAccount": "That machine is no longer in the list or on your account"
     },
     "storage": {
-        "indexedDbClosed": "IndexedDB would not open",
-        "indexedDbRefused": "IndexedDB refused the request"
+        "indexedDbClosed": "Ruimte could not open its local storage",
+        "indexedDbRefused": "Ruimte's local storage refused the change"
     },
     "account": {
         "yours": {
@@ -312,44 +329,44 @@
             "signedIn": "Signed in with {{provider}}",
             "signedInAs": "Signed in with {{provider}} as {{login}}",
             "linked": "{{provider}} added to your account",
-            "deleted": "Your Ruimte account is deleted, and this app signed out",
-            "deletedAndLeft": "Your Ruimte account is deleted, this app signed out and this computer's machine left the account",
-            "deletedLeaveFailed": "Your Ruimte account is deleted and this app signed out, but this computer's machine is still on it. Take it off in its settings under Machines before you sign in again."
+            "deleted": "Account deleted and signed out",
+            "deletedAndLeft": "Account deleted, signed out, and this computer's machine left it",
+            "deletedLeaveFailed": "Account deleted and signed out, but this computer's machine is still on it. Remove it under Settings › Account before signing in again."
         },
-        "sessionEndedOnDevice": "Your session on this device ended. Sign in again to open your machines.",
-        "sessionEnded": "Your session ended. Sign in again.",
+        "sessionEndedOnDevice": "Session ended. Sign in again to open your machines.",
+        "sessionEnded": "Session ended. Sign in again.",
         "signInUnavailable": "Signing in works in the desktop app and at station.ruimte.app",
-        "signInFirst": "Sign in to your account first",
-        "statementMismatch": "Your account answered with a statement for something else",
-        "signInAndConnect": "Sign in, and connect to the machine, first",
-        "noBroker": "{{name}} is not connected to a broker yet, so it can only be reached on its own network",
+        "signInFirst": "Sign in first",
+        "statementMismatch": "Your account sent an unexpected answer. Try again.",
+        "signInAndConnect": "Sign in and connect to the machine first",
+        "noBroker": "{{name}} is not connected through your account yet, so it can only be reached on its own network",
         "refusal": {
             "onlyOnMachine": "Only the app on that machine can put it on an account.",
             "machineHasAccount": "This machine is on another account. Take it off that account on the machine itself first.",
-            "listedElsewhere": "Another account still lists this machine. Remove it there first, from a client signed in to that account."
+            "listedElsewhere": "Another account still lists this machine. Remove it there first, from a device signed in to that account."
         }
     },
     "signIn": {
         "wrongCallback": "The answer from the browser does not belong to this sign-in. Try again.",
-        "cancelled": "Signing in was cancelled.",
-        "failed": "Signing in did not work ({{error}}).",
+        "cancelled": "Sign-in cancelled.",
+        "failed": "Could not sign in ({{error}}).",
         "noCode": "The browser came back without a sign-in code. Try again.",
         "notStarted": "This page did not start a sign-in. Sign in again.",
-        "tooLong": "The sign-in took too long. Sign in again."
+        "tooLong": "Sign-in timed out. Sign in again."
     },
     "protocol": {
         "daemon-older": "This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update.",
         "daemon-newer": "This machine runs a newer Ruimte than this app. Update this app."
     },
     "broker": {
-        "badUrl": "The broker URL {{url}} does not open",
-        "limited": "The broker at {{host}} is limiting this client; trying again in {{seconds}} seconds",
-        "refusedClient": "The broker at {{host}} refused this client: {{reason}}",
-        "unreachable": "The broker at {{host}} could not be reached",
-        "machineAbsent": "The machine is not connected to the broker at {{host}}. It needs to run with the broker switched on.",
-        "refusedSignal": "The broker at {{host}} refused the signal: {{reason}}",
-        "signInFailed": "Could not sign in to the broker: {{reason}}",
-        "noVouch": "Your account could not vouch for this client: {{reason}}"
+        "badUrl": "The address {{url}} of the connection service does not open",
+        "limited": "The connection service is limiting this device. Trying again in {{seconds}} seconds.",
+        "refusedClient": "The connection service refused this device: {{reason}}",
+        "unreachable": "Could not reach the connection service at {{host}}",
+        "machineAbsent": "The machine is not connected through your account. Turn its connection service on.",
+        "refusedSignal": "The connection service refused the connection: {{reason}}",
+        "signInFailed": "Could not sign in to the connection service: {{reason}}",
+        "noVouch": "Your account could not confirm this device: {{reason}}"
     },
     "direct": {
         "closed": {
@@ -357,59 +374,59 @@
             "failed": "The machine could not answer the direct connection",
             "timeout": "The machine gave up waiting for the direct connection",
             "done": "The machine ended the direct connection",
-            "not-paired": "The machine does not let this client in. Its access was revoked, or your account could not vouch for it.",
+            "not-paired": "The machine does not let this device in. Its access was revoked, or your account could not confirm it.",
             "statements-refused": "The machine turns away sign-in through an account.",
             "other": "The machine closed the direct connection"
         },
-        "channelEarly": "The channel opened before the answer that describes it",
-        "badHandshake": "The machine answered the direct connection with something other than its handshake",
+        "channelEarly": "Could not set up the direct connection. Try again.",
+        "badHandshake": "The machine gave an unexpected answer to the direct connection",
         "dead": "The machine stopped answering over the direct connection",
-        "badFrame": "The machine sent a frame this client cannot read",
+        "badFrame": "The machine sent data this app cannot read",
         "channelClosed": "The direct connection closed",
-        "channelClosedEarly": "The channel closed before the machine let this client in",
-        "noPathWithRelay": "No network path to the machine: ICE failed, through the relay as well.",
-        "noPath": "No network path to the machine: ICE failed. A direct connection needs UDP between both sides, and this route offers no relay.",
-        "noOffer": "The browser made no offer",
+        "channelClosedEarly": "The connection closed before the machine let this device in",
+        "noPathWithRelay": "No network path to the machine, also not through the relay.",
+        "noPath": "No network path to the machine. A direct connection needs UDP between both sides, and there is no relay to fall back on.",
+        "noOffer": "The browser could not start a direct connection",
         "refused": "The machine did not take the direct connection: {{reason}}",
         "noReason": "no reason given",
-        "unreachable": "The machine could not be reached to set up a direct connection",
-        "unreachableWith": "The machine could not be reached to set up a direct connection: {{reason}}",
-        "unsignedSignal": "A signal on the broker names the machine but is not signed by it",
-        "noKeyOverBroker": "A direct connection over the broker signs in with a key, and this browser cannot make one",
+        "unreachable": "Could not reach the machine to set up a direct connection",
+        "unreachableWith": "Could not reach the machine to set up a direct connection: {{reason}}",
+        "unsignedSignal": "A connection request claims to come from the machine but cannot be verified",
+        "noKeyOverBroker": "A direct connection through your account signs in with a key, and this browser cannot make one",
         "notProven": "{{label}} did not prove its identity over the direct connection",
         "noKey": "A direct connection signs in with a key, and this browser cannot make one",
         "needsPairedKey": "A direct connection needs a machine on your account, or the Ruimte app on this machine",
         "timedOut": "The direct connection did not come up within {{seconds}} seconds",
-        "frameRefused": "The direct connection refused a frame: {{reason}}",
-        "answerNotApplied": "The machine's answer did not apply: {{reason}}",
+        "frameRefused": "The direct connection refused data: {{reason}}",
+        "answerNotApplied": "Could not use the machine's answer: {{reason}}",
         "refusedVerdict": "The machine refused the direct connection: {{reason}}",
         "setupFailed": "Could not set up a direct connection: {{reason}}"
     },
     "lan": {
         "notProven": "The machine at this address on the local network could not prove it is this machine",
         "noKey": "A connection on the local network signs in with a key, and this browser cannot make one",
-        "unsignedSignal": "A signal on the local network names the machine but is not signed by it",
-        "refused": "The machine's door on the local network refused this client: {{reason}}",
-        "failed": "Could not use the machine's door on the local network: {{reason}}",
-        "unreachable": "The machine's door on the local network could not be reached"
+        "unsignedSignal": "A connection on the local network claims to come from the machine but cannot be verified",
+        "refused": "The machine refused this device on the local network: {{reason}}",
+        "failed": "Could not connect to the machine on the local network: {{reason}}",
+        "unreachable": "Could not reach the machine on the local network"
     },
     "route": {
-        "none": "This machine is not connected to a broker, and this client knows no door of it on the local network"
+        "none": "Could not reach this machine through your account or on the local network"
     },
     "connection": {
         "notConnected": "The machine is not connected",
         "closedBeforeAnswer": "The connection closed before the machine answered",
-        "noMachine": "No machine is picked. Sign in and open one of your machines.",
+        "noMachine": "No machine selected. Sign in and open one.",
         "unknownMachine": "This machine is not known here",
         "openFailed": "Could not open a connection: {{reason}}",
-        "badReply": "The reply to {{type}} does not match its contract",
+        "badReply": "The machine sent an unexpected reply to {{type}}. Update Ruimte on both sides.",
         "noAddress": "No address within {{seconds}} seconds",
         "noAnswer": "The machine did not answer within {{seconds}} seconds",
         "timedOut": "The machine did not answer {{type}} within {{seconds}} seconds"
     },
     "file": {
         "tooLarge": "This file is {{size}} MB; at most {{max}} MB loads over a direct connection",
-        "emptyPiece": "The machine sent an empty piece before the end of the file",
+        "emptyPiece": "The file stopped loading before the end. Try again.",
         "changed": "The file changed while it was loading"
     }
 }

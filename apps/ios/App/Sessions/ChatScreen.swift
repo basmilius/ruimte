@@ -169,7 +169,7 @@ struct ChatScreen: View {
                 ? "Name this bookmark" : "Rename bookmark",
             isPresented: Binding(get: { namingBookmark != nil }, set: { if !$0 { namingBookmark = nil } })
         ) {
-            TextField("Name it, or leave it empty", text: $bookmarkName)
+            TextField("Name, optional", text: $bookmarkName)
             Button("Cancel", role: .cancel) { namingBookmark = nil }
             Button("Save") {
                 guard let id = namingBookmark else { return }
@@ -279,7 +279,7 @@ struct ChatScreen: View {
                 }
             }
         } message: {
-            Text("This removes the conversation history and stops any active turn on every client.")
+            Text("This removes the conversation history and stops any active turn on every device.")
         }
     }
 

@@ -338,7 +338,7 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
             if (asksFirst(call)) {
                 return {
                     confirmation: {
-                        title: `Discard the changes to ${plural(paths.length, 'file')} in ${checkout.label}?`,
+                        title: `Discard changes to ${plural(paths.length, 'file')} in ${checkout.label}?`,
                         consequences: [filesLine(paths), 'The changes go into a stash, which brings them back until it is dropped.']
                     }
                 };
@@ -551,7 +551,7 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
                 const status = await statusOf(checkout);
                 return {
                     confirmation: {
-                        title: `Open a pull request “${title}” for ${branchOf(status)} of ${checkout.label}?`,
+                        title: `Create pull request “${title}” for ${branchOf(status)} of ${checkout.label}?`,
                         consequences: [
                             ...(status.upstream === null ? [`${branchOf(status)} is published to origin first.`] : []),
                             'The pull request is public to everyone with access to the repository.'

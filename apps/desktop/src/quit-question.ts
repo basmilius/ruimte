@@ -47,12 +47,12 @@ function bothRunning(agents: number, terminals: number, dutch: boolean): string 
 function detailWhenSurviving(elsewhere: boolean, dutch: boolean): string {
     if (elsewhere) {
         return dutch
-            ? 'Ze blijven op hun eigen machines draaien nadat Ruimte sluit. Je kunt vanuit elke client verdergaan.'
-            : 'They keep running on their own machines after Ruimte quits, and you can pick them up from any client.';
+            ? 'Ze blijven op hun eigen machines draaien nadat Ruimte sluit. Je kunt op elk apparaat verdergaan.'
+            : 'They keep running on their own machines after Ruimte quits, and you can pick them up from any device.';
     }
     return dutch
-        ? 'Ze blijven op deze machine draaien nadat Ruimte sluit. Je kunt vanuit elke client verdergaan.'
-        : 'They keep running on this machine after Ruimte quits, and you can pick them up from any client.';
+        ? 'Ze blijven op deze machine draaien nadat Ruimte sluit. Je kunt op elk apparaat verdergaan.'
+        : 'They keep running on this machine after Ruimte quits, and you can pick them up from any device.';
 }
 
 /*

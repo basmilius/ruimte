@@ -191,6 +191,6 @@ describe('find in a terminal', () => {
         open = true;
         await render();
         await until(() => latest.disabledReason !== null);
-        expect(latest.disabledReason).toBe('Find is not available here right now');
+        expect(latest.disabledReason).toBe('Find is not available here');
     });
 });

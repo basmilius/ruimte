@@ -7,14 +7,14 @@ import { canSplit, cellAt, locateView } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { setTabPinned, tabsToClose } from '@/state/tab-close';
-import { currentProjectKey, useViewPins } from '@/state/view-pins';
+import { useCurrentProjectKey, useViewPins } from '@/state/view-pins';
 import { Icon, Kbd, Menu } from '@adecore/ui';
 
 /* Whether a tab of a host is pinned, for a loose tab in the pool and for a view of the project in this client's pins. */
 function usePinnedOf(): (id: string) => boolean {
     const loose = useFiles((s) => s.tabs);
     const pins = useViewPins((s) => s.pins);
-    const key = currentProjectKey();
+    const key = useCurrentProjectKey();
     return (id) => {
         const tab = loose.find((entry) => entry.key === id);
         return tab === undefined ? key !== null && (pins[key]?.includes(id) ?? false) : tab.pinned;

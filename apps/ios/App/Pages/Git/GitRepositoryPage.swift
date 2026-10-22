@@ -151,7 +151,7 @@ struct GitDivergedRow: View {
     var body: some View {
         let branch = checkout.branch ?? String(localized: "This branch")
         VStack(alignment: .leading, spacing: 8) {
-            Text(named ? "How should \(branch) in \(checkout.label) come together?" : "How should \(branch) come together?")
+            Text(named ? "How do you want to update \(branch) in \(checkout.label)?" : "How do you want to update \(branch)?")
                 .font(.callout)
             Text(
                 "It has \(checkout.ahead) commits of its own and \(checkout.behind) from \(checkout.status?.upstream ?? String(localized: "the remote")). A pull only fast-forwards until you choose."

@@ -86,11 +86,11 @@ describe('the command palette keeps the keyboard in its field', () => {
     test('what is typed lands in the field and filters the list', async () => {
         const before = rows().length;
         await pressKey(field()!, 'ArrowDown');
-        await type('open a folder');
+        await type('open folder');
         await until(() => rows().length < before);
-        expect(field()!.value).toBe('open a folder');
+        expect(field()!.value).toBe('open folder');
         expect(rows().length).toBeGreaterThan(0);
-        expect(rows().every((row) => row.textContent!.toLowerCase().includes('open a folder'))).toBe(true);
+        expect(rows().every((row) => row.textContent!.toLowerCase().includes('open folder'))).toBe(true);
         expectFieldHoldsTheKeys(rows()[0]!);
     });
 });

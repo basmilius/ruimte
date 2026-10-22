@@ -8,6 +8,7 @@ import {
     CODEX_RULES,
     HOOK_MARKER,
     HookFileRefused,
+    NAMED_HOOK,
     defaultCodexRulesPath,
     hookCommand,
     installCodexRules,
@@ -225,15 +226,39 @@ describe('installInFolder', () => {
         expect(await readFile(join(dir, 'rules', 'ruimte.rules'), 'utf8')).toBe(CODEX_RULES);
     });
 
-    test('gives an Antigravity folder only the rule, in the settings of agy', async () => {
+    test('gives an Antigravity folder the rule in the settings of agy and its Stop hook in a hook of its own', async () => {
         const settings = join(dir, 'antigravity-cli', 'settings.json');
+        const hooks = join(dir, 'config', 'hooks.json');
         expect(await installInFolder('antigravity', dir)).toEqual([
-            { path: settings, kind: 'rules', result: 'written', createdFile: true, createdHooksKey: true }
+            { path: settings, kind: 'rules', result: 'written', createdFile: true, createdHooksKey: true },
+            { path: hooks, kind: 'hooks', result: 'written', createdFile: true, createdHooksKey: true }
         ]);
         expect(JSON.parse(await readFile(settings, 'utf8'))).toEqual({ permissions: { allow: [...ANTIGRAVITY_RULES] } });
+        expect(JSON.parse(await readFile(hooks, 'utf8'))).toEqual({
+            [NAMED_HOOK]: { Stop: [{ type: 'command', command: hookCommand('antigravity'), timeout: 3 }] }
+        });
+        expect((await installInFolder('antigravity', dir)).map((install) => install.result)).toEqual(['unchanged', 'unchanged']);
+    });
+
+    test("gives Grok a hooks file of Ruimte's own in the shape of Claude Code's settings", async () => {
+        const path = join(dir, 'hooks', 'ruimte.json');
+        expect(await installInFolder('grok', dir)).toEqual([{ path, kind: 'hooks', result: 'written', createdFile: true, createdHooksKey: true }]);
+        const hooks = JSON.parse(await readFile(path, 'utf8')).hooks as Record<string, Array<{ hooks: Array<{ command: string }> }>>;
+        expect(Object.keys(hooks).sort()).toEqual([...(HOOK_EVENTS.grok ?? [])].sort());
+        expect(hooks.Notification?.[0]?.hooks[0]?.command).toBe(hookCommand('grok'));
+    });
+
+    test("gives Copilot a hooks file of Ruimte's own, one bash entry per PascalCase event", async () => {
+        const path = join(dir, 'hooks', 'ruimte.json');
+        expect(await installInFolder('copilot', dir)).toEqual([{ path, kind: 'hooks', result: 'written', createdFile: true, createdHooksKey: true }]);
+        const file = JSON.parse(await readFile(path, 'utf8')) as { version: number; hooks: Record<string, unknown[]> };
+        expect(file.version).toBe(1);
+        expect(Object.keys(file.hooks).sort()).toEqual([...(HOOK_EVENTS.copilot ?? [])].sort());
+        expect(file.hooks.PermissionRequest).toEqual([{ type: 'command', bash: hookCommand('copilot'), timeoutSec: 3 }]);
+        expect(await installInFolder('copilot', dir)).toEqual([{ path, kind: 'hooks', result: 'unchanged', createdFile: false, createdHooksKey: false }]);
     });
 
     test('writes nothing for a CLI whose settings the daemon cannot wire', async () => {
-        expect(await installInFolder('grok', dir)).toEqual([]);
+        expect(await installInFolder('apple', dir)).toEqual([]);
     });
 });

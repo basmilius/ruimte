@@ -24,7 +24,7 @@ final class ConnectionProbe {
         disconnect()
         self.machine = machine
         guard let key = runtime.key, runtime.reachable(machine) else {
-            status = String(localized: "This machine needs a secure broker address.")
+            status = String(localized: "This machine cannot be reached through your account.")
             return
         }
         status = String(localized: "Connecting")

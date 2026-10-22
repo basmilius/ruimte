@@ -11,7 +11,7 @@
             "runningAndroid": "Actieve Android-emulators",
             "runningIos": "Actieve iOS-simulators"
         },
-        "none": "Er zijn geen apparaten gevonden op deze machine.",
+        "none": "Geen apparaten op deze machine.",
         "openAsView": "Openen als weergave",
         "openElsewhere": "Apparaat ergens anders openen",
         "openInPanel": "Openen in het apparaatpaneel",
@@ -21,7 +21,7 @@
         "shutdownFailed": "Kon {{name}} niet afsluiten",
         "start": "Apparaat starten",
         "startFailed": "Kon {{name}} niet starten",
-        "starting": "Apparaat wordt gestart",
+        "starting": "Apparaat starten…",
         "state": {
             "changing": "Bezig met wisselen",
             "connected": "Verbonden",
@@ -33,24 +33,24 @@
             "unauthorized": "Sta USB-foutopsporing toe op het apparaat",
             "unavailable": "Niet beschikbaar"
         },
-        "streamingOff": "Browser- en apparaatstreaming staat uit in de instellingen van deze machine.",
+        "streamingOff": "Browser- en apparaatstreaming staat uit in de instellingen.",
         "thisMachine": "Deze machine",
         "tools": "Apparaattools",
         "unavailable": {
-            "androidSdk": "De Android SDK staat niet op deze machine. Installeer hem om Android-emulators en -apparaten te gebruiken.",
+            "androidSdk": "Installeer de Android SDK om Android-emulators en -apparaten te gebruiken.",
             "needsMac": "iOS-simulators hebben een Mac nodig.",
             "xcode": "Installeer Xcode om iOS-simulators en iPhones te gebruiken."
         }
     },
     "diff": {
-        "commitCrashed": "De commitweergave liep vast",
+        "commitCrashed": "Kon de commit niet tonen",
         "commitFailed": "Kon de commit niet lezen.",
         "layout": {
             "split": "Naast elkaar",
             "stacked": "Onder elkaar"
         },
-        "loading": "Diff laden",
-        "moreFiles": "Er zijn meer bestanden veranderd dan in deze lijst passen.",
+        "loading": "Diff laden…",
+        "moreFiles": "Meer bestanden gewijzigd dan getoond.",
         "noChange": "Er is niets veranderd in {{path}} in deze scope.",
         "noFiles": "Deze commit veranderde geen bestanden.",
         "nothingSince": "Er is niets veranderd sinds {{base}}.",
@@ -60,9 +60,9 @@
         },
         "readAgain": "Opnieuw lezen",
         "readFailed": "Kon de diff niet lezen.",
-        "reading": "De diff van {{path}} lezen…",
-        "readingChanges": "De wijzigingen lezen.",
-        "readingCommit": "De commit lezen.",
+        "reading": "{{path}} lezen…",
+        "readingChanges": "Wijzigingen lezen…",
+        "readingCommit": "Commit lezen…",
         "scope": {
             "base": "Tegen de base branch",
             "worktree": "Tegen de working tree"
@@ -85,10 +85,10 @@
         },
         "html": {
             "failed": "{{name}} is niet geladen ({{error}})",
-            "findDesktopOnly": "Zoeken in een HTML-preview kan alleen in de desktop-app",
-            "findLocalOnly": "Zoeken in een HTML-preview werkt alleen voor een bestand op deze machine",
+            "findDesktopOnly": "Zoeken in HTML-preview kan alleen in de desktop-app",
+            "findLocalOnly": "Zoeken in HTML-preview werkt alleen voor lokale bestanden",
             "findTextOnly": "Een HTML-preview vindt alleen gewone tekst",
-            "loading": "De pagina laden",
+            "loading": "Pagina laden",
             "previewTitle": "Voorbeeld van {{name}}"
         },
         "image": {
@@ -107,9 +107,9 @@
             "copyRelativePath": "Relatief pad kopiëren",
             "copyMention": "Als @mention kopiëren",
             "openAsView": "Openen als weergave",
-            "openInBrowser": "Openen in een browser node",
+            "openInBrowser": "Openen in browser node",
             "refresh": "Vernieuwen",
-            "revealInFiles": "Tonen in het bestandenpaneel",
+            "revealInFiles": "Tonen in Bestanden",
             "showOnCanvas": "Op het canvas tonen"
         },
         "noFile": "Geen bestand om te tonen.",
@@ -122,19 +122,19 @@
             "closeNamed": "{{name}} sluiten",
             "closeOthers": "Andere tabs sluiten",
             "copyCommit": "Commit hash kopiëren",
-            "keepInSidebar": "In sidebar houden",
-            "openItself": "Het bestand zelf openen",
+            "keepInSidebar": "In zijbalk houden",
+            "openItself": "Bestand openen",
             "pin": "Tab vastzetten",
-            "stage": "Dit bestand stagen",
+            "stage": "Bestand stagen",
             "unpin": "Tab losmaken",
-            "unstage": "Dit bestand unstagen",
+            "unstage": "Bestand unstagen",
             "closeToRight": "Tabs rechts ervan sluiten"
         },
         "model": {
-            "crashed": "De 3D-weergave liep vast",
+            "crashed": "Kon het 3D-model niet tonen",
             "failed": "Kon {{name}} niet tonen. {{reason}}",
-            "nestedRoot": "De root layer staat in een map binnen het pakket, en dat opent deze app niet.",
-            "noWebgl": "{{name}} is een 3D-model, en dit venster kan geen 3D tekenen. WebGL is hier niet beschikbaar.",
+            "nestedRoot": "Het model staat in een submap van het bestand, en dat opent deze app niet.",
+            "noWebgl": "{{name}} is een 3D-model, en dit venster kan geen 3D tonen.",
             "pause": "Animatie pauzeren",
             "play": "Animatie afspelen",
             "resetCamera": "Camera herstellen",
@@ -146,7 +146,7 @@
             "wireframe": "Wireframe"
         },
         "pdf": {
-            "crashed": "De PDF-weergave liep vast",
+            "crashed": "Kon de PDF niet tonen",
             "failed": "Kon {{name}} niet openen. {{reason}}",
             "page": "Pagina {{page}} van {{total}}",
             "password": "Het is beveiligd met een wachtwoord, en daar vraagt deze app niet om."
@@ -162,33 +162,33 @@
             "preview": "Voorbeeld",
             "source": "Broncode",
             "table": "Tabel",
-            "tableAfterSave": "De tabel verschijnt zodra de wijzigingen zijn opgeslagen",
-            "previewAfterSave": "Het voorbeeld verschijnt zodra de wijzigingen zijn opgeslagen"
+            "tableAfterSave": "Sla op om de tabel te tonen",
+            "previewAfterSave": "Sla op om het voorbeeld te tonen"
         },
         "patch": {
             "patch": "Patchweergave",
             "text": "Platte tekst",
             "binary": "binair",
             "truncated": "Afgekapt",
-            "truncatedHint": "Deze patch is te lang om helemaal te tonen. De bestanden na de afkapping staan niet in de lijst en zijn niet gekleurd.",
+            "truncatedHint": "Te lang om helemaal te tonen. Bestanden na de afkapping staan er niet in en zijn niet gekleurd.",
             "mismatch": "Hunks verouderd",
-            "mismatchHint": "Deze patch komt niet meer overeen met de hunkkoppen. Je kunt gewoon verder bewerken; de aantallen in de koppen worden niet hersteld."
+            "mismatchHint": "De patch past niet meer bij de hunkkoppen. Bewerken kan, maar de aantallen worden niet hersteld."
         },
         "markdown": {
             "frontmatter": "Frontmatter",
-            "invalidFrontmatter": "De frontmatter kon niet als YAML worden gelezen. Hieronder staat de oorspronkelijke tekst."
+            "invalidFrontmatter": "Frontmatter is geen geldige YAML. Hieronder als tekst."
         },
         "edit": {
             "label": "Codebestand {{path}}",
             "readOnly": "Alleen lezen",
             "outsideProject": "Alleen bestanden in dit project en zijn worktrees kun je bewerken",
-            "ruimteState": "Hier bewaart Ruimte zijn eigen staat, die bewerk je niet met de hand",
-            "large": "Groter dan {{size}}, dus platte tekst die je hier niet bewerkt",
-            "plain": "Meer dan {{lines}} regels, dus platte tekst die je hier niet bewerkt",
+            "ruimteState": "Eigen staat van Ruimte, niet met de hand te bewerken",
+            "large": "Groter dan {{size}}, getoond als platte tekst en alleen-lezen",
+            "plain": "Meer dan {{lines}} regels, getoond als platte tekst en alleen-lezen",
             "touch": "Bewerken vraagt om een muis of een trackpad",
-            "loadFailed": "De editor is niet geladen",
+            "loadFailed": "Kon de editor niet laden",
             "noMoreOccurrences": "Geen treffers meer",
-            "failed": "De editor liep vast"
+            "failed": "Kon de editor niet tonen"
         },
         "draft": {
             "changedOnDisk": "Het bestand is op schijf veranderd",
@@ -205,17 +205,17 @@
             "mark": "Niet-opgeslagen wijzigingen",
             "title_one": "{{name}} sluiten zonder op te slaan?",
             "title_other": "{{count}} bestanden sluiten zonder op te slaan?",
-            "description_one": "De wijzigingen konden niet worden opgeslagen. Sluiten gooit ze weg.",
-            "description_other": "De wijzigingen konden niet worden opgeslagen. Sluiten gooit ze weg.",
+            "description_one": "Kon de wijzigingen niet opslaan. Sluiten gooit ze weg.",
+            "description_other": "Kon de wijzigingen niet opslaan. Sluiten gooit ze weg.",
             "confirm": "Sluiten zonder opslaan",
-            "failedTitle": "Sommige bestanden konden niet worden opgeslagen",
+            "failedTitle": "Kon sommige bestanden niet opslaan",
             "keepEditing": "Verder bewerken"
         },
-        "revealFailed": "Dit bestand kon niet worden getoond",
-        "breadcrumb": "Locatie van de cursor in het project en het bestand",
+        "revealFailed": "Kon dit bestand niet tonen",
+        "breadcrumb": "Cursorlocatie",
         "agent": {
             "editing": "{{name}} is aan het bewerken",
-            "focusChat": "Toon de chat",
+            "focusChat": "Chat tonen",
             "inChat": "in {{chat}}",
             "openChat": "Open chat",
             "openChatAtTurn": "Open chat bij turn {{turn}}",
@@ -263,13 +263,13 @@
         "notFound": "{{path}} staat niet op deze machine",
         "choice": {
             "title": "Welke {{path}}?",
-            "description": "Meer dan één map van het project heeft dit bestand. Kies het bestand dat de agent bedoelde."
+            "description": "Meerdere projectmappen hebben dit bestand. Kies het bestand dat de agent bedoelde."
         },
         "table": {
-            "crashed": "De tabelweergave liep vast",
+            "crashed": "Kon de tabel niet tonen",
             "empty": "{{name}} is leeg.",
             "noRows": "{{name}} heeft een koprij en geen rijen.",
-            "malformed": "Dit bestand is mogelijk beschadigd. Een waarde tussen aanhalingstekens eindigt niet waar dat zou moeten, dus de rijen erna kunnen verschoven zijn.",
+            "malformed": "Een waarde tussen aanhalingstekens sluit niet goed af, dus latere rijen kunnen verschoven zijn.",
             "header": "Eerste rij is koprij",
             "column": "Kolom {{position}}",
             "delimiter": "Scheidingsteken",
@@ -284,14 +284,14 @@
             "columns_other": "{{value}} kolommen"
         },
         "archive": {
-            "crashed": "De archiefweergave is vastgelopen",
+            "crashed": "Kon het archief niet tonen",
             "listing": "De inhoud van {{name}} lezen…",
-            "failed": "{{name}} kon niet worden geopend. {{reason}}",
+            "failed": "Kon {{name}} niet openen. {{reason}}",
             "empty": "{{name}} is leeg.",
             "truncated": "Alleen de eerste {{value}} items staan in de lijst.",
-            "unsafe_one": "{{count}} item is weggelaten, omdat de naam buiten de map zou uitkomen waarin het wordt uitgepakt.",
-            "unsafe_other": "{{count}} items zijn weggelaten, omdat de namen buiten de map zouden uitkomen waarin ze worden uitgepakt.",
-            "pick": "Kies een bestand om het te bekijken.",
+            "unsafe_one": "{{count}} item is weggelaten omdat de naam buiten de map wijst.",
+            "unsafe_other": "{{count}} items zijn weggelaten omdat de namen buiten de map wijzen.",
+            "pick": "Kies een bestand om te bekijken.",
             "tree": "Inhoud van {{name}}",
             "extractAll": "Alles uitpakken",
             "files_one": "{{value}} bestand",
@@ -305,14 +305,14 @@
                 "tooLarge": "{{name}} is {{size}}. Items boven {{limit}} worden niet getoond. Pak het uit om het te openen.",
                 "nested": "{{name}} is een archief in dit archief. Pak het uit om het te openen.",
                 "cannotShow": "{{name}} ({{mime}}, {{size}}) kan hier niet worden getoond.",
-                "failed": "{{name}} kon niet worden gelezen. {{reason}}"
+                "failed": "Kon {{name}} niet lezen. {{reason}}"
             },
             "menu": {
                 "saveAs": "Opslaan als…",
                 "extract": "Uitpakken…",
                 "extractFolder": "Map uitpakken…"
             },
-            "saveFailed": "{{name}} kon niet worden opgeslagen",
+            "saveFailed": "Kon {{name}} niet opslaan",
             "extract": {
                 "title": "{{name}} uitpakken",
                 "description": "In een nieuwe map in {{folder}}.",
@@ -322,8 +322,8 @@
                 "badName": "Vul één mapnaam in, zonder schuine strepen.",
                 "done_one": "{{count}} bestand uitgepakt in {{folder}}",
                 "done_other": "{{count}} bestanden uitgepakt in {{folder}}",
-                "skipped_one": "{{count}} item is weggelaten. Links worden nooit gemaakt, en namen die buiten de map uitkomen of in .git belanden worden overgeslagen.",
-                "skipped_other": "{{count}} items zijn weggelaten. Links worden nooit gemaakt, en namen die buiten de map uitkomen of in .git belanden worden overgeslagen."
+                "skipped_one": "{{count}} item is overgeslagen. Links en namen buiten de map of in .git worden nooit uitgepakt.",
+                "skipped_other": "{{count}} items zijn overgeslagen. Links en namen buiten de map of in .git worden nooit uitgepakt."
             }
         }
     },
@@ -353,8 +353,8 @@
                 "exists": "Die naam is al in gebruik.",
                 "git-state": "Git bewaart daar zijn eigen staat, dus daarin wordt niets gemaakt.",
                 "machine-state": "Dat hoort bij de machine en kan hier niet worden gemaakt.",
-                "no-machine": "De machine waarop dit project draait is niet verbonden.",
-                "not-a-directory": "Een deel van dat pad is een bestand, geen map.",
+                "no-machine": "De machine van dit project is niet verbonden.",
+                "not-a-directory": "Een deel van dat pad is een bestand.",
                 "not-writable": "De machine kan daar niet schrijven.",
                 "outside-project": "Dat valt buiten dit project.",
                 "ruimte-state": "Ruimte bewaart daar zijn eigen staat, dus daarin wordt niets gemaakt.",
@@ -364,28 +364,28 @@
         "delete": "Naar de prullenbak…",
         "deleteDialog": {
             "confirm": "Naar de prullenbak",
-            "fallback": "Dit naar de prullenbak verplaatsen?",
-            "fileDescription": "Het bestand gaat naar de prullenbak van de machine waarop dit project draait en is daar terug te halen.",
-            "fileTitle": "{{name}} naar de prullenbak verplaatsen?",
-            "folderDescription": "De map en alles erin gaan naar de prullenbak van de machine waarop dit project draait en zijn daar terug te halen.",
-            "folderTitle": "{{name}} naar de prullenbak verplaatsen?",
-            "manyDescription": "De bestanden en mappen, met alles in die mappen, gaan naar de prullenbak van de machine waarop dit project draait en zijn daar terug te halen.",
-            "manyTitle": "{{count}} items naar de prullenbak verplaatsen?"
+            "fallback": "Naar prullenbak verplaatsen?",
+            "fileDescription": "Het gaat naar de prullenbak op de machine van dit project, waar je het kunt terughalen.",
+            "fileTitle": "{{name}} naar prullenbak verplaatsen?",
+            "folderDescription": "De map en alles erin gaan naar de prullenbak op de machine van dit project, waar je ze kunt terughalen.",
+            "folderTitle": "{{name}} naar prullenbak verplaatsen?",
+            "manyDescription": "De bestanden en mappen, met alles erin, gaan naar de prullenbak op de machine van dit project, waar je ze kunt terughalen.",
+            "manyTitle": "{{count}} items naar prullenbak verplaatsen?"
         },
-        "deleteFailed": "Kon niet naar de prullenbak verplaatsen",
+        "deleteFailed": "Kon niet naar prullenbak verplaatsen",
         "deleteMany": "{{count}} items naar de prullenbak…",
         "empty": "Deze map is leeg.",
         "filter": "Bestanden filteren",
         "noMatch": "Geen bestanden die aan het filter voldoen.",
         "onlyHidden": "Alles in deze map is verborgen of genegeerd. Zet Verborgen en genegeerde bestanden tonen aan in het menu Meer.",
-        "reading": "{{name}} lezen.",
+        "reading": "{{name}} lezen…",
         "rename": {
             "confirm": "Hernoemen",
-            "description": "Typ een nieuwe naam, of een pad in het project om het te verplaatsen. De language servers van het project passen eerst aan wat de verplaatsing raakt, zoals de namespace en de imports van een PHP-klasse.",
-            "failed": "Verplaatsen mislukt",
+            "description": "Typ een nieuwe naam, of een pad in het project om het te verplaatsen. Imports en namespaces die ernaar verwijzen gaan mee.",
+            "failed": "Kon niet verplaatsen",
             "fallback": "Dit hernoemen?",
             "fileTitle": "{{name}} hernoemen",
-            "folderTitle": "De map {{name}} hernoemen",
+            "folderTitle": "Map {{name}} hernoemen",
             "menu": "Hernoemen…",
             "name": "Naam",
             "refused": {
@@ -393,21 +393,21 @@
                 "exists": "Die naam is al in gebruik.",
                 "git-state": "Git bewaart zijn eigen staat daar, dus er verplaatst niets in of uit.",
                 "into-itself": "Een map kan niet in zichzelf.",
-                "language-failed": "Een language server kon de wijzigingen van de verplaatsing niet maken, dus er is niets verplaatst.",
+                "language-failed": "Kon de verwijzingen ernaar niet bijwerken, dus er is niets verplaatst.",
                 "machine-state": "Dat hoort bij de machine en wordt niet vanaf hier verplaatst.",
-                "no-machine": "De machine waarop dit project draait is niet verbonden.",
-                "not-a-directory": "Een deel van dat pad is een bestand, geen map.",
+                "no-machine": "De machine van dit project is niet verbonden.",
+                "not-a-directory": "Een deel van dat pad is een bestand.",
                 "not-found": "Dat is er niet meer.",
                 "not-writable": "De machine kan daar niet schrijven.",
                 "outside-project": "Dat valt buiten dit project.",
-                "project-root": "De projectmap verplaats je buiten Ruimte.",
+                "project-root": "Verplaats de projectmap in Finder of een terminal.",
                 "ruimte-state": "Ruimte bewaart zijn eigen staat daar, dus er verplaatst niets in of uit."
             },
             "unsaved": "{{name}} heeft wijzigingen die niet konden worden opgeslagen, dus er is niets verplaatst."
         },
         "showHidden": "Verborgen en genegeerde bestanden tonen",
         "searching": "Bestanden zoeken…",
-        "searchFailed": "Bestanden zoeken is mislukt: {{reason}}"
+        "searchFailed": "Kon niet in bestanden zoeken: {{reason}}"
     },
     "git": {
         "action": {
@@ -454,38 +454,46 @@
             "stashGroup": "Stash",
             "pullRequestGroup": "Pull request"
         },
+        "changeKind": {
+            "code": "Code",
+            "tests": "Tests",
+            "mocks": "Mocks",
+            "generated": "Gegenereerd"
+        },
         "pr": {
             "title": "Pull request",
-            "loading": "De pull request lezen…",
+            "loading": "Pull request lezen…",
             "none": "Deze branch heeft geen pull request.",
             "open": "Openen op GitHub",
             "refresh": "Vernieuwen",
-            "failed": "De pull request kon niet worden gelezen",
+            "failed": "Kon de pull request niet lezen",
             "draft": "Concept",
             "state": {
                 "open": "Open",
                 "merged": "Samengevoegd",
                 "closed": "Gesloten"
             },
-            "noChecks": "Op deze commit zijn geen checks gedraaid.",
+            "files_one": "{{count}} bestand gewijzigd",
+            "files_other": "{{count}} bestanden gewijzigd",
+            "noChecks": "Geen checks op deze commit.",
             "status": "Status",
             "noThreads": "Geen reviewdraden",
             "checks": "Checks",
             "checksFailed_one": "{{count}} check mislukt",
             "checksFailed_other": "{{count}} checks mislukt",
-            "checksPending_one": "{{count}} check loopt nog",
-            "checksPending_other": "{{count}} checks lopen nog",
+            "checksPending_one": "{{count}} check loopt",
+            "checksPending_other": "{{count}} checks lopen",
             "checksPassed_one": "{{count}} check geslaagd",
             "checksPassed_other": "{{count}} checks geslaagd",
             "merge": {
                 "clean": "Klaar om te mergen",
                 "blocked": "Mergen is geblokkeerd",
-                "behind": "De branch loopt achter op zijn basis",
+                "behind": "Loopt achter op basis",
                 "dirty": "Mergeconflicten",
                 "draft": "Nog een concept",
                 "has_hooks": "Klaar om te mergen, met checks die moeten slagen",
-                "unstable": "Mergen kan, maar checks zijn mislukt",
-                "unknown": "Mergestatus nog niet bekend",
+                "unstable": "Mergebaar, maar checks mislukt",
+                "unknown": "Mergestatus onbekend",
                 "review": {
                     "approved": "Goedgekeurd",
                     "changes_requested": "Wijzigingen gevraagd",
@@ -501,18 +509,18 @@
             "outdated": "verouderd",
             "bot": "bot",
             "copyToChat": "Naar chat kopiëren…",
-            "copyToChatHint": "Zet de draad in de prompt van een chat. Er wordt niets verstuurd.",
-            "truncated": "Er staan meer reacties in deze draad dan hier getoond.",
+            "copyToChatHint": "Zet de draad in de prompt van een chat. Er gaat niets weg.",
+            "truncated": "Meer reacties dan getoond.",
             "watch": {
                 "forChat": "Volgen voor chat…",
-                "forChatHint": "Wekt de chat één keer als de checks van de huidige commit klaar zijn en als er een review binnenkomt. Er wordt niets samengevoegd of gepusht.",
+                "forChatHint": "Wekt de chat als de checks van deze commit klaar zijn of er een review binnenkomt. Er wordt niets gemerged of gepusht.",
                 "stop": "Stoppen met volgen",
                 "watching": "Gevolgd voor {{chat}}",
                 "ended": "Het volgen is beëindigd.",
                 "merged": "De pull request is samengevoegd, dus het volgen is beëindigd.",
                 "closed": "De pull request is gesloten, dus het volgen is beëindigd.",
                 "expired": "Het volgen liep 7 dagen en is beëindigd.",
-                "folderMissing": "De map van deze chat bestaat niet meer, dus het volgen is beëindigd.",
+                "folderMissing": "De map van de chat is weg, dus het volgen is gestopt.",
                 "limit": "Deze machine volgt al 50 pull requests. Stop er eerst één.",
                 "failed": "Kon het volgen niet starten"
             }
@@ -524,19 +532,19 @@
             "default": "standaard",
             "detached": "detached",
             "inWorktree": "in een andere worktree",
-            "loading": "De branches lezen.",
+            "loading": "Branches lezen…",
             "noCheckouts": "Geen checkouts",
-            "noMatch": "Geen branch met die naam.",
+            "noMatch": "Geen passende branch.",
             "repositories": "Repositories",
             "search": "Branches zoeken",
-            "tooltip": "De branch waar deze checkout op staat",
+            "tooltip": "Huidige branch",
             "chipRepos_one": "{{count}} repository",
             "chipRepos_other": "{{count}} repositories",
             "tooltipRepos_one": "{{count}} repository en zijn branches",
             "tooltipRepos_other": "{{count}} repositories en hun branches",
-            "tooltipWorktree": "{{branch}}, in de worktree {{worktree}}",
+            "tooltipWorktree": "{{branch}}, in worktree {{worktree}}",
             "worktrees": "Worktrees",
-            "failed": "Branches lezen is mislukt: {{reason}}"
+            "failed": "Kon branches niet lezen: {{reason}}"
         },
         "commit": {
             "commit": "Commit",
@@ -545,16 +553,16 @@
             "commitAndPushHint": "Committen en pushen",
             "commitStagedHint": "Committen wat gestaged is",
             "in": "Commit in {{repos}}",
-            "letWrite": "{{provider}} het bericht laten schrijven op basis van de gestagede wijzigingen",
+            "letWrite": "{{provider}} het bericht laten schrijven",
             "needsMessage": "Heeft een bericht en een wijziging nodig",
-            "needsStaged": "Stage eerst wat in deze commit hoort",
+            "needsStaged": "Stage eerst wijzigingen",
             "placeholder": "Samenvatting, dan een lege regel en de details",
-            "stageAllHint": "Alle wijzigingen stagen en committen",
+            "stageAllHint": "Alles stagen en committen",
             "stopWriting": "Stoppen met het schrijven van het bericht",
             "writeFailedBody": "Het bericht kon niet geschreven worden.",
             "writeFailedTitle": "Kon het bericht niet schrijven",
-            "writeOneRepo": "Een message wordt uit één repository geschreven",
-            "suggestionReady": "Je concept is gewijzigd terwijl dit voorstel werd geschreven.",
+            "writeOneRepo": "Schrijft voor één repository tegelijk",
+            "suggestionReady": "Je concept veranderde tijdens dit voorstel.",
             "useSuggestion": "Voorstel gebruiken"
         },
         "conflict": {
@@ -571,29 +579,29 @@
             "createBranch": {
                 "confirm": "Branch aanmaken",
                 "description": "Begint bij de huidige commit en gaat er meteen naartoe.",
-                "title": "Een branch aanmaken"
+                "title": "Branch aanmaken"
             },
             "deleteBranch": {
                 "anyway": "Toch verwijderen",
                 "confirm": "Branch verwijderen",
-                "description": "Verwijdert de lokale branch. Een remote branch met dezelfde naam blijft staan.",
-                "fallback": "Deze branch verwijderen?",
+                "description": "Verwijdert de lokale branch. De remote branch blijft.",
+                "fallback": "Branch verwijderen?",
                 "title": "{{branch}} verwijderen?",
-                "unmerged": "Deze branch heeft commits die geen andere branch heeft. Verwijderen betekent dat die verloren gaan."
+                "unmerged": "Deze branch heeft commits die geen andere branch heeft. Verwijderen wist ze."
             },
             "deleteFile": {
                 "confirm": "Naar de prullenbak",
-                "description": "Het bestand is nieuw, dus git kan het niet terugzetten. Het gaat naar de prullenbak van de machine waarop dit project draait.",
-                "descriptionMany": "De bestanden zijn nieuw, dus git kan ze niet terugzetten. Ze gaan naar de prullenbak van de machine waarop dit project draait.",
-                "fallback": "Dit bestand naar de prullenbak verplaatsen?",
-                "title": "{{name}} naar de prullenbak verplaatsen?",
-                "titleMany": "{{count}} bestanden naar de prullenbak verplaatsen?"
+                "description": "Het bestand is nieuw, dus git kan het niet terugzetten. Het gaat naar de prullenbak op de machine van dit project.",
+                "descriptionMany": "De bestanden zijn nieuw, dus git kan ze niet terugzetten. Ze gaan naar de prullenbak op de machine van dit project.",
+                "fallback": "Bestand naar prullenbak verplaatsen?",
+                "title": "{{name}} naar prullenbak verplaatsen?",
+                "titleMany": "{{count}} bestanden naar prullenbak verplaatsen?"
             },
             "discard": {
                 "confirm": "Weggooien",
                 "description": "Zet het bestand terug naar HEAD. De wijzigingen worden eerst gestasht, dus \"git stash pop\" zet ze terug.",
                 "descriptionMany": "Zet de bestanden terug naar HEAD. De wijzigingen worden eerst gestasht, dus \"git stash pop\" haalt ze terug.",
-                "fallback": "Dit bestand weggooien?",
+                "fallback": "Bestand weggooien?",
                 "title": "{{name}} weggooien?",
                 "titleMany": "{{count}} bestanden weggooien?"
             },
@@ -602,20 +610,20 @@
                 "merge": "Mergen",
                 "mergeHint": "Houdt beide geschiedenissen en schrijft een merge commit.",
                 "rebase": "Rebasen",
-                "rebaseHint": "Zet jouw commits boven op die van de remote, zodat de geschiedenis één lijn blijft.",
-                "title": "Hoe moet {{branch}} samenkomen?"
+                "rebaseHint": "Zet je commits boven op de remote, in één lijn.",
+                "title": "Hoe wil je {{branch}} bijwerken?"
             },
             "filter": "Filteren",
             "forcePush": {
                 "confirm": "Force push",
-                "description": "Overschrijft de remote branch met deze checkout, dus commits die alleen de remote heeft gaan verloren. Het stopt als iemand anders sinds de laatste fetch gepusht heeft.",
-                "title": "Deze branch force pushen?"
+                "description": "Overschrijft de remote branch, dus commits die alleen de remote heeft gaan verloren. Stopt als iemand sinds de laatste fetch pushte.",
+                "title": "Branch force pushen?"
             },
             "message": "Bericht",
             "name": "Naam",
             "optional": "Optioneel",
             "pick": {
-                "delete": "Een branch verwijderen",
+                "delete": "Branch verwijderen",
                 "empty": "Geen andere branches.",
                 "fallback": "Kies een branch",
                 "merge": "Een branch in deze mergen",
@@ -624,7 +632,7 @@
             "popStash": {
                 "description": "Zet de stash terug in de working tree en verwijdert hem.",
                 "empty": "Geen stashes.",
-                "title": "Een stash poppen"
+                "title": "Stash poppen"
             },
             "pullRequest": {
                 "body": "Beschrijving",
@@ -632,23 +640,23 @@
                 "confirm": "Pull request aanmaken",
                 "description": "Publiceert de branch eerst als dat nodig is. De pull request opent in je browser.",
                 "subject": "Titel",
-                "title": "Een pull request openen"
+                "title": "Pull request aanmaken"
             },
             "rebase": {
                 "confirm": "Rebasen",
-                "description": "Je commits worden opnieuw geschreven boven op die branch, als nieuwe commits. Een branch die je al pushte, heeft daarna een force push nodig. Een conflict stopt de rebase halverwege, zodat je het oplost of terugdraait.",
-                "fallback": "Deze branch rebasen?",
+                "description": "Herschrijft je commits boven op die branch. Een gepushte branch heeft daarna een force push nodig. Een conflict pauzeert de rebase, zodat je het oplost of afbreekt.",
+                "fallback": "Branch rebasen?",
                 "title": "Rebasen op {{onto}}?"
             },
             "renameBranch": {
                 "confirm": "Branch hernoemen",
                 "description": "De remote branch houdt de oude naam tot de volgende push.",
-                "title": "Deze branch hernoemen"
+                "title": "Branch hernoemen"
             },
             "stash": {
                 "confirm": "Wijzigingen stashen",
                 "description": "Stasht elke wijziging, ook untracked bestanden, en zet de working tree terug naar HEAD.",
-                "title": "De wijzigingen stashen"
+                "title": "Wijzigingen stashen"
             },
             "switch": {
                 "confirm": "Stashen en wisselen",
@@ -663,16 +671,16 @@
             "unversioned": "Niet-geversioneerde bestanden"
         },
         "list": {
-            "collapseFolder": "Deze map inklappen",
+            "collapseFolder": "Map inklappen",
             "deleteFile": "Naar de prullenbak…",
             "deleteMany": "{{count}} nieuwe bestanden naar de prullenbak…",
             "discard": "Wijzigingen weggooien…",
             "discardMany": "{{count}} bestanden weggooien…",
-            "expandFolder": "Deze map uitklappen",
+            "expandFolder": "Map uitklappen",
             "files_one": "{{count}} bestand",
             "files_other": "{{count}} bestanden",
             "noChanges": "Geen wijzigingen.",
-            "noRepo": "Deze map is geen git repository.",
+            "noRepo": "Geen git-repository.",
             "openChanges": "Wijzigingen openen",
             "stage": "Stage",
             "stageHere": "Alles hier stagen",
@@ -688,7 +696,7 @@
             "failed": "Kon de historie niet lezen.",
             "loadMore": "Meer laden",
             "moreRefs": "+{{count}}",
-            "open": "De commit openen",
+            "open": "Commit openen",
             "today": "Vandaag",
             "tracked": "{{name}}, dezelfde commit als {{remote}}",
             "yesterday": "Gisteren"
@@ -712,9 +720,9 @@
         },
         "panel": {
             "collapseAll": "Alle mappen inklappen",
-            "deleteDone": "{{path}} naar de prullenbak verplaatst",
+            "deleteDone": "{{path}} naar prullenbak verplaatst",
             "deleteFailed": "Kon het bestand niet verwijderen",
-            "discardFailed": "Weggooien mislukt",
+            "discardFailed": "Kon niet weggooien",
             "discardNothing": "{{path}} had niets om weg te gooien",
             "discardRestore": "Zet {{stash}} terug met \"git stash pop\".",
             "discardStashed": "{{path}} gestasht",
@@ -762,18 +770,18 @@
             "behind_one": "{{count}} commit om te pullen",
             "behind_other": "{{count}} commits om te pullen",
             "needsYou": "Halverwege gestopt of heeft een conflict",
-            "hide": "Verberg deze repository",
+            "hide": "Repository verbergen",
             "showAll_one": "Toon {{count}} verborgen repository",
             "showAll_other": "Toon {{count}} verborgen repositories"
         },
         "stage": {
-            "failed": "Stagen mislukt",
-            "unstageFailed": "Unstagen mislukt"
+            "failed": "Kon niet stagen",
+            "unstageFailed": "Kon niet unstagen"
         },
         "tab": {
             "changes": "Wijzigingen",
             "checkoutHint": "Alles wat {{name}} veranderde sinds {{base}}",
-            "commitHint": "De commit {{hash}}"
+            "commitHint": "Commit {{hash}}"
         }
     },
     "language": {
@@ -791,8 +799,8 @@
         "documents_one": "{{formatted}} open bestand",
         "documents_other": "{{formatted}} open bestanden",
         "install": "Installeren",
-        "installDetail": "Installeert {{name}} {{version}} eenmalig op deze machine.",
-        "unavailable": "Er is nog geen release van deze server beschikbaar",
+        "installDetail": "Installeert {{name}} {{version}} op deze machine.",
+        "unavailable": "Nog geen release beschikbaar",
         "update": "Bijwerken naar {{version}}",
         "rebuild": "Rebuild",
         "rollback": "{{version}} gebruiken",
@@ -806,7 +814,7 @@
         "showLog": "Toon log",
         "logTitle": "Log van {{name}}",
         "logEmpty": "Nog niets gelogd",
-        "failed": "De language server is niet bereikbaar: {{message}}",
+        "failed": "Kon de language server niet bereiken: {{message}}",
         "none": "Geen language server voor dit bestand",
         "logs": "Logs",
         "sidecar": {
@@ -817,27 +825,27 @@
         },
         "hover": {
             "quickFix": "Quick fix…",
-            "quickFixNone": "Deze language server biedt geen quick fixes",
+            "quickFixNone": "Geen quick fixes",
             "definition": "Ga naar definitie",
             "references_one": "{{formatted}} referentie",
             "references_other": "{{formatted}} referenties",
-            "none": "Geen informatie voor deze plek"
+            "none": "Geen informatie hier"
         },
         "edit": {
-            "staged_one": "{{count}} bestand gewijzigd en nog niet opgeslagen",
-            "staged_other": "{{count}} bestanden gewijzigd en nog niet opgeslagen",
+            "staged_one": "{{count}} niet-opgeslagen bestand",
+            "staged_other": "{{count}} niet-opgeslagen bestanden",
             "stagedMore": "{{names}} en nog {{count}}",
             "saveAll": "Alles opslaan",
-            "notSaved": "{{name}} kon niet worden opgeslagen"
+            "notSaved": "Kon {{name}} niet opslaan"
         },
         "actions": {
             "show": "Toon code actions",
             "none": "Geen code actions hier",
             "unavailable": "Geen language server biedt hier code actions",
-            "organized": "De imports zijn al georganiseerd",
+            "organized": "Imports al georganiseerd",
             "noFormatter": "Geen language server formatteert dit bestand",
             "readOnly": "Dit bestand is alleen-lezen",
-            "failed": "De actie kon niet worden toegepast: {{message}}",
+            "failed": "Kon de actie niet toepassen: {{message}}",
             "refused": "De wijziging is geweigerd",
             "moreLines": "nog {{count}} regels",
             "otherFiles_one": "en nog {{count}} bestand",
@@ -857,10 +865,10 @@
         },
         "rename": {
             "unavailable": "Geen language server hernoemt in dit bestand",
-            "nothing": "Hier is niets om te hernoemen",
+            "nothing": "Niets te hernoemen hier",
             "refused": "De language server weigerde de nieuwe naam",
-            "stale": "De tekst veranderde terwijl de hernoeming werd opgevraagd",
-            "failed": "Hernoemen mislukt: {{message}}",
+            "stale": "De tekst veranderde tijdens het hernoemen",
+            "failed": "Kon niet hernoemen: {{message}}",
             "occurrences_one": "{{formatted}} voorkomen",
             "occurrences_other": "{{formatted}} voorkomens",
             "occurrencesFiles_one": "{{formatted}} voorkomen in {{files}} bestanden",
@@ -875,7 +883,7 @@
         "navigation": {
             "unavailable": "Geen language server die dat hier beantwoordt",
             "none": "Niets gevonden",
-            "failed": "Opzoeken mislukt: {{message}}",
+            "failed": "Kon het niet opzoeken: {{message}}",
             "titles": {
                 "definition": "Definities",
                 "declaration": "Declaraties",
@@ -887,7 +895,7 @@
         "peek": {
             "unavailable": "Geen language server vindt referenties in dit bestand",
             "none": "Geen referenties gevonden",
-            "failed": "Referenties opzoeken mislukt: {{message}}",
+            "failed": "Kon geen referenties vinden: {{message}}",
             "references_one": "{{formatted}} referentie",
             "references_other": "{{formatted}} referenties",
             "close": "Sluit",
@@ -905,20 +913,20 @@
             "newCode": "nieuw *",
             "lines_one": "{{formatted}} regel",
             "lines_other": "{{formatted}} regels",
-            "uncommitted": "Nog niet gecommit",
+            "uncommitted": "Niet gecommit",
             "latest": "Laatste wijziging",
             "showCommit": "Commit tonen"
         },
         "symbols": {
             "unavailable": "Geen language server kent de symbolen van dit bestand",
-            "failed": "De symbolen konden niet worden gelezen: {{message}}",
+            "failed": "Kon de symbolen niet lezen: {{message}}",
             "placeholder": "Ga naar symbool in {{file}}",
             "navigate": "Navigeer",
             "open": "Open",
             "workspace": "Symbolen in het project",
             "line": "Ga naar regel",
             "none": "Geen symbolen gevonden",
-            "workspaceHint": "Typ de naam van een symbool in het project",
+            "workspaceHint": "Typ een symboolnaam",
             "lineHint": "Typ een regelnummer",
             "goToLine": "Ga naar regel {{line}}",
             "groups": {
@@ -952,7 +960,7 @@
         "onDevice": {
             "explain": "Uitleg",
             "explanation": "Uitleg · Apple Foundation Models, op het apparaat",
-            "note": "Geschreven door het model op deze Mac. Het kost geen tegoed en de code blijft op deze Mac.",
+            "note": "Geschreven op deze Mac. Gratis, en de code blijft hier.",
             "thinking": "Uitleg wordt op deze Mac geschreven…",
             "off": "Uitleg staat uit. Zet hem aan bij Instellingen, Editor, AI.",
             "nothing": "Selecteer code, of zet de cursor in een functie, om die uit te leggen."
@@ -963,7 +971,7 @@
             "next": "Volgende",
             "thinking": "Bezig op deze Mac",
             "off": "Suggesties staan uit. Zet ze aan bij Instellingen, Editor, AI.",
-            "none": "Geen suggestie voor deze plek",
+            "none": "Geen suggestie hier",
             "unavailable": "Het model op het apparaat is niet beschikbaar."
         }
     },
@@ -975,7 +983,7 @@
         "warning_other": "{{formatted}} waarschuwingen",
         "info_one": "{{formatted}} melding",
         "info_other": "{{formatted}} meldingen",
-        "empty": "Geen problemen in de geopende bestanden. De language servers rapporteren over de bestanden die ze hebben gekregen.",
+        "empty": "Geen problemen in geopende bestanden.",
         "filter": "Filter",
         "nothingMatches": "Geen probleem past bij het filter"
     },
@@ -994,7 +1002,7 @@
         "expand": "{{name}} uitklappen",
         "force": {
             "confirm": "Geforceerd stoppen",
-            "description": "SIGKILL stopt proces {{pid}} meteen. Het kan niet opslaan of opruimen, dus bestanden waarin het schreef kunnen half af blijven.",
+            "description": "Stopt proces {{pid}} meteen, zonder opslaan of opruimen. Bestanden waarin het schreef kunnen half af zijn.",
             "title": "{{name}} geforceerd stoppen?"
         },
         "interruptFailed": "Kon de turn niet onderbreken",
@@ -1017,7 +1025,7 @@
             "interrupt": "Onderbreken",
             "terminate": "Beëindigen"
         },
-        "signalFailed": "Kon geen signaal naar {{name}} sturen",
+        "signalFailed": "Kon {{name}} niet stoppen",
         "sortBy": {
             "cpu": "Sorteren op CPU",
             "disk": "Sorteren op schijf",
@@ -1058,7 +1066,7 @@
             "strategy": {
                 "merge": {
                     "label": "Merge",
-                    "line": "Een merge commit; elke commit van de worktree blijft in de historie staan."
+                    "line": "Een merge commit; elke worktree-commit blijft in de historie."
                 },
                 "rebase": {
                     "label": "Rebase",
@@ -1077,17 +1085,17 @@
         },
         "remove": {
             "anyway": "Toch verwijderen",
-            "clean": "Er gaat niets verloren: er staan geen niet-gecommitte bestanden in, geen nieuwe bestanden en geen commits die {{target}} mist.",
-            "cleanMissing": "De map is al weg. Er gaat niets verloren: er staan geen niet-gecommitte bestanden in, geen nieuwe bestanden en geen commits die {{target}} mist.",
-            "holding": "Hij bevat {{work}}. Dat gaat verloren, en de branch ook.",
+            "clean": "Er gaat niets verloren. Geen niet-gecommitte of nieuwe bestanden, en geen commits die {{target}} mist.",
+            "cleanMissing": "De map is al weg. Er gaat niets verloren. Geen niet-gecommitte of nieuwe bestanden, en geen commits die {{target}} mist.",
+            "holding": "Hij bevat {{work}}. Dat gaat verloren met de branch.",
             "holdingMissing": "De map is al weg, en de branch bevat {{work}}. Die commits gaan verloren met de branch.",
-            "ignoredNote": "Bestanden die git negeert, zoals .env of een lokale database, gaan mee en tellen hierboven niet mee.",
+            "ignoredNote": "Genegeerde bestanden, zoals .env of een lokale database, gaan ook weg.",
             "title": "Worktree {{branch}} verwijderen?"
         },
         "removeAll": {
-            "clean": "Er gaat niets verloren: geen ervan bevat niet-gecommitte bestanden, nieuwe bestanden of commits die zijn branch mist.",
+            "clean": "Er gaat niets verloren. Geen ervan bevat niet-gecommitte bestanden, nieuwe bestanden of commits die zijn branch mist.",
             "holding": "{{lines}}. Dat gaat verloren, en hun branches ook.",
-            "ignoredNote": "Bestanden die git negeert, zoals .env of een lokale database, gaan mee en tellen hierboven niet mee.",
+            "ignoredNote": "Genegeerde bestanden, zoals .env of een lokale database, gaan ook weg.",
             "line": "{{branch}} bevat {{work}}",
             "title_one": "{{count}} worktree verwijderen?",
             "title_other": "{{count}} worktrees verwijderen?"
@@ -1118,10 +1126,10 @@
             "inspecting": "Bezig met inspecteren…",
             "clean": "Er gaat niets verloren. Hij kan weg.",
             "hasWork": "Hij bevat {{work}}. Verwijderen verliest dat.",
-            "locked": "Hij is vergrendeld met git worktree lock. Verwijderen kan alleen geforceerd.",
-            "agentWorking": "Er werkt een agent in. Stop de agent voordat je hem verwijdert.",
-            "missing": "De map is weg. Alleen de registratie ervan moet nog worden verwijderd.",
-            "failed": "De worktree kon niet worden bekeken"
+            "locked": "Hij is vergrendeld. Kies Toch verwijderen om hem te verwijderen.",
+            "agentWorking": "Er werkt een agent in. Stop die eerst.",
+            "missing": "De map is weg. Alleen de registratie blijft over.",
+            "failed": "Kon de worktree niet bekijken"
         },
         "work": {
             "ahead_one": "{{count}} commit die {{target}} mist",

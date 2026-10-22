@@ -34,7 +34,7 @@ import SwiftUI
             }
         }
         // Only a folder where not one repository answered has nothing to say but the failure.
-        problem = failures > 0 && loaded.isEmpty ? String(localized: "The history could not be read.") : nil
+        problem = failures > 0 && loaded.isEmpty ? String(localized: "Could not read the history.") : nil
         logs = loaded
     }
 

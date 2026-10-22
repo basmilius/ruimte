@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
+import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { refusalBody } from '@adecore/agents/context';
+import { initRepo } from '../git/test-repo.ts';
 import type { ProposalAnswer, ProposalAsk } from '../projects/project-proposals.ts';
 import { VerbRefusal, type CanvasHost, type Noun, type Verb } from './verb.ts';
 import { verbNamed } from './verbs.ts';
@@ -75,5 +79,24 @@ describe('ruimte-context project', () => {
         expect(text).not.toContain('outcome\tmoved');
         // A card that lapsed or whose chat stopped is not reported either: the next suggestion simply raises a new one.
         expect(text).not.toContain('outcome\tcancelled');
+    });
+});
+
+describe('ruimte-context project ignored', () => {
+    test('lists the files git ignores in the project, links apart, and refuses a folder outside a repository', async () => {
+        const folder = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-ignored-verb-')));
+        const outside = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-ignored-none-')));
+        try {
+            await initRepo(folder, { '.gitignore': '.env\nlatest\n' });
+            await writeFile(join(folder, '.env'), 'KEY=1\n');
+            await symlink(join(folder, '.env'), join(folder, 'latest'));
+            host = { projects: { locate: (id: string) => ({ projectId: 'p', folder, canvasId: 'c', id }) } } as unknown as CanvasHost;
+            expect(await run(['ignored'])).toEqual([`root\t${folder}`, 'file\t.env\t6', 'link\tlatest']);
+            host = { projects: { locate: (id: string) => ({ projectId: 'p', folder: outside, canvasId: 'c', id }) } } as unknown as CanvasHost;
+            expect((await run(['ignored']))[0]).toStartWith('refused\tnot-a-repository\t');
+        } finally {
+            await rm(folder, { recursive: true, force: true });
+            await rm(outside, { recursive: true, force: true });
+        }
     });
 });

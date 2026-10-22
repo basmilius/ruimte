@@ -353,9 +353,10 @@ export function CanvasLineToolbar() {
     const { t } = useTranslation(['canvas', 'drawing']);
     const store = useCanvasStore();
     const line = useCanvas((s) => (s.selection.length === 1 ? s.lines[s.selection[0]!] : undefined));
-    const camera = useCanvas((s) => s.camera);
+    // Only a bar on screen follows the camera, so a pan with no line selected renders nothing here.
+    const camera = useCanvas((s) => (line === undefined ? null : s.camera));
     const viewport = useCanvas((s) => s.viewport);
-    if (!line) {
+    if (!line || camera === null) {
         return null;
     }
     const bounds = lineBounds(line);

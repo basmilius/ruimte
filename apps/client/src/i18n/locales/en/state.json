@@ -2,18 +2,18 @@
     "localMachine": "This machine",
     "update": {
         "unsupported": "Updates come from the desktop app",
-        "checking": "Checking for updates",
+        "checking": "Checking for updates…",
         "available": "Version {{version}} is available",
-        "downloading": "Downloading {{version}}",
+        "downloading": "Downloading {{version}}…",
         "ready": "Version {{version}} is ready",
         "readyDetail": "Ruimte restarts to install it. Nothing you have open is lost.",
-        "failed": "The last check did not finish",
+        "failed": "Could not check for updates",
         "failedDetail": "No reason given.",
-        "noFeed": "No release feed found. There is no published release yet, or the repository is private.",
+        "noFeed": "No published release found.",
         "current": "Ruimte is up to date",
         "unknownVersion": "unknown",
         "theUpdate": "the update",
-        "noAnswer": "The shell did not answer.",
+        "noAnswer": "The app did not answer.",
         "updated": {
             "title": "Updated to version {{version}}",
             "whatsNew": "What's new"

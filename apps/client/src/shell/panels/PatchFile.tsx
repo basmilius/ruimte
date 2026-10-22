@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileDiff, FileText } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
@@ -64,21 +64,18 @@ export function PatchFile({ path, read }: { path: string; read: FsReadText }) {
     const [picked, setPicked] = useState<string | null>(null);
     const layout = usePatchDecorations(patchOn ? editor : null);
     const caret = useEditorCaret(patchOn ? editor : null);
-    const sections = useMemo(() => (layout === null ? [] : sectionsOf(layout)), [layout]);
-    const files = useMemo(() => sections.map((section) => section.file), [sections]);
-    const byPath = useMemo(() => new Map<string, PatchSection>(sections.map((section) => [section.path, section])), [sections]);
+    const sections = layout === null ? [] : sectionsOf(layout);
+    const files = sections.map((section) => section.file);
+    const byPath = new Map<string, PatchSection>(sections.map((section) => [section.path, section]));
     const shown = sectionAt(sections, caret.line)?.path ?? picked ?? sections[0]?.path ?? null;
     const tree = patchOn && showsTree(sections);
     /* A patch names its files from the root of the repository it was made in, which is the project's as often as not. */
     const folder = useProject((s) => s.current?.folder ?? null);
 
-    const marks = useCallback(
-        (file: { path: string }) => {
-            const section = byPath.get(file.path);
-            return section === undefined ? [] : patchSectionParts(section, t('file.patch.binary'));
-        },
-        [byPath, t]
-    );
+    const marks = (file: { path: string }) => {
+        const section = byPath.get(file.path);
+        return section === undefined ? [] : patchSectionParts(section, t('file.patch.binary'));
+    };
 
     const pick = (sectionPath: string): void => {
         setPicked(sectionPath);

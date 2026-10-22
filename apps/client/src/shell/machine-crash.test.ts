@@ -6,7 +6,7 @@ describe('machineCrashToast', () => {
         expect(machineCrashToast(null, { total: 1, restarting: true })).toEqual({
             id: 'machine-crash',
             kind: 'error',
-            title: 'This machine stopped unexpectedly',
+            title: 'Machine stopped unexpectedly',
             description: 'Ruimte starts it again. What was running on it has ended.',
             persist: false
         });
@@ -16,7 +16,7 @@ describe('machineCrashToast', () => {
 
     test('stays up once the app gave up on it', () => {
         const toast = machineCrashToast({ total: 5, restarting: true }, { total: 6, restarting: false });
-        expect(toast?.description).toContain('no longer starts it');
+        expect(toast?.description).toContain('Quit Ruimte and open it again');
         expect(toast?.persist).toBe(true);
     });
 

@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import i18next from 'i18next';
 import { perform } from '@/actions/client-actions';
 import { canKeepAwake, desktop, type DesktopBridge, type KeepAwakeRequest } from '@/desktop/bridge';
@@ -112,7 +111,7 @@ export function closedLidOffered(): boolean {
 /* The closed lid of this computer's machine, inside a render. */
 export function useClosedLid(): ClosedLid {
     const info = useServers((s) => (hasLocalMachine() ? s.byEndpoint[LOCAL_ENDPOINT_ID] : undefined));
-    return useMemo(() => closedLidOf(info), [info]);
+    return closedLidOf(info);
 }
 
 export function setKeepAwakeLidClosed(on: boolean): void {

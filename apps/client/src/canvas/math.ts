@@ -19,9 +19,22 @@ const ZOOM_MAX = 4;
 export const GRID = CANVAS_GRID;
 
 /* Where the dots of the ground sit for a camera: three grid steps apart, and moving with the world. */
-export function groundPlacement(camera: Camera): { backgroundSize: string; backgroundPosition: string } {
+export function groundPlacement(camera: Camera): { backgroundSize: string; backgroundPosition: string; backgroundImage: string } {
     const step = GRID * 3 * camera.zoom;
-    return { backgroundSize: `${step}px ${step}px`, backgroundPosition: `${camera.x}px ${camera.y}px` };
+    return {
+        backgroundSize: `${step}px ${step}px`,
+        backgroundPosition: `${camera.x}px ${camera.y}px`,
+        backgroundImage: `radial-gradient(circle, color-mix(in srgb, var(--canvas-dot) ${dotStrength(step)}%, transparent) 1px, transparent 1px)`
+    };
+}
+
+/* Dots drawn closer together than this start to fade, and are gone at the second: packed tight they turn into a texture. */
+const DOTS_FULL_STEP = 18;
+const DOTS_GONE_STEP = 6;
+
+function dotStrength(step: number): number {
+    const share = (step - DOTS_GONE_STEP) / (DOTS_FULL_STEP - DOTS_GONE_STEP);
+    return Math.round(Math.min(1, Math.max(0, share)) * 100);
 }
 
 export function clampZoom(zoom: number): number {

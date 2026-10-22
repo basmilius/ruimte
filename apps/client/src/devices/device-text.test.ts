@@ -25,7 +25,7 @@ describe('unavailableNotes', () => {
 
     test('translates the codes it knows and says Xcode once', () => {
         expect(unavailableNotes([adb, simctl, devicectl], 'darwin')).toEqual([
-            'The Android SDK was not found on this machine. Install it to use Android emulators and devices.',
+            'Install the Android SDK to use Android emulators and devices.',
             'Install Xcode to use iOS simulators and iPhones.'
         ]);
     });

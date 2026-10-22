@@ -21,8 +21,8 @@ test('a Model block in a window that cannot draw 3D says so with the name of the
     }) as typeof fetch;
     try {
         await page.render(<ChatModelView scopeId="machine" chatId="chat" attachmentId="agent-1" url="blob:model" label="Bracket" caption="" />);
-        await until(() => page.host.textContent?.includes('WebGL') === true);
-        expect(page.host.textContent).toBe('Bracket is a 3D model, and this window cannot draw 3D. WebGL is not available here.');
+        await until(() => page.host.textContent?.includes('cannot show 3D') === true);
+        expect(page.host.textContent).toBe('Bracket is a 3D model, and this window cannot show 3D.');
         expect(page.host.querySelector('canvas')).toBeNull();
         expect(fetched).toEqual([]);
     } finally {

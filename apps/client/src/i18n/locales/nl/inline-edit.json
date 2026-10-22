@@ -3,21 +3,21 @@
         "input": "Beschrijf de wijziging…",
         "run": "Uitvoeren",
         "cancel": "Annuleren",
-        "note": "Draait als chat in dit project. Bestandswijzigingen vragen om goedkeuring.",
+        "note": "Draait als chat. Bestandswijzigingen vragen om goedkeuring.",
         "agent": "Agent",
-        "lines": "De geselecteerde regels",
+        "lines": "Geselecteerde regels",
         "problems": "Problemen op deze regels",
-        "noAgent": "Er is geen agent geïnstalleerd die kan chatten.",
+        "noAgent": "Geen chatagent geïnstalleerd.",
         "account": "Account voor {{provider}}"
     },
     "card": {
         "running": "Bezig…",
-        "waiting": "Wacht op je goedkeuring",
+        "waiting": "Wacht op goedkeuring",
         "done": "Klaar · {{duration}}",
         "failed": "Mislukt",
         "noChange": "Geen wijziging voorgesteld",
-        "stale": "De geselecteerde tekst is veranderd, dus dit kan niet meer worden toegepast. Open het als chat om verder te gaan.",
-        "readOnly": "Dit bestand is alleen-lezen, dus er kan niets worden toegepast.",
+        "stale": "De selectie is gewijzigd, dus dit kan niet worden toegepast. Open als chat om verder te gaan.",
+        "readOnly": "Dit bestand is alleen-lezen.",
         "followUp": "Vraag om een andere wijziging…",
         "send": "Versturen",
         "openAsChat": "Openen als chat",
@@ -28,7 +28,7 @@
         "removedLines_other": "{{count}} regels verwijderd",
         "stop": "Stoppen",
         "stopped": "Gestopt",
-        "stoppedEmpty": "Gestopt voordat de agent iets voorstelde.",
+        "stoppedEmpty": "Gestopt voordat er een voorstel was.",
         "runAgain": "Opnieuw uitvoeren"
     },
     "toast": {
@@ -37,17 +37,17 @@
         "failed": "De wijziging in {{name}} is mislukt",
         "apply": "Toepassen",
         "show": "Tonen",
-        "stale": "De geselecteerde tekst is veranderd",
-        "staleHint": "Open de chat om vanaf daar verder te gaan.",
-        "none": "Dit bestand heeft geen inline wijziging om te tonen."
+        "stale": "De selectie is gewijzigd",
+        "staleHint": "Open de chat om verder te gaan.",
+        "none": "Geen inline wijziging in dit bestand."
     },
     "error": {
         "noAnswer": "Deze wijziging heeft nog geen antwoord.",
         "failed": "De agent kon niet antwoorden.",
-        "open": "De chat kon niet worden geopend.",
-        "stop": "De turn kon niet worden gestopt."
+        "open": "Kon de chat niet openen.",
+        "stop": "Kon de turn niet stoppen."
     },
     "marker": {
-        "show": "Toon de inline wijziging van deze regels"
+        "show": "Inline wijziging tonen"
     }
 }

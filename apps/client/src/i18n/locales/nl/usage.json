@@ -4,7 +4,7 @@
         "disconnected": "{{machine}} is niet verbonden.",
         "connecting": "Verbinden met {{machine}}…",
         "silent": "{{machine}} antwoordt niet.",
-        "stale": "Dit zijn de getallen van de laatste scan die hem bereikte."
+        "stale": "Deze getallen zijn van de laatste keer dat hij antwoordde."
     },
     "dialog": {
         "machine": "Machine"

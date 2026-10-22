@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import { useProviders } from '@adecore/agents-react/state';
@@ -40,7 +40,7 @@ function ChooserMenu({ offer, x, y }: { offer: SelectionOffer; x: number; y: num
     const providers = useProviders((s) => s.providers);
     const trigger = useRef<HTMLDivElement>(null);
     const picked = useRef(false);
-    const linkedIds = useMemo(() => ('nodeId' in offer.source ? linkedChatsOfNode(offer.source.nodeId) : []), [offer]);
+    const linkedIds = 'nodeId' in offer.source ? linkedChatsOfNode(offer.source.nodeId) : [];
     const sections = useChooserSections(linkedIds);
     const agents = availableAgents(providers, 'chat');
     useDetectProviders();

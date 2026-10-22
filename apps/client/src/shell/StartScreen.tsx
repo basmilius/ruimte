@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { isRecentProject } from '@ruimte/contracts';
@@ -210,12 +210,9 @@ function StartContent() {
     useMachineHold(useEndpoints((s) => startScreenMachine(s.endpoints)));
 
     const boot = stationBoot({ withoutMachine: !hasLocalMachine(), accountStatus, machines: accountMachines });
-    const recent = useMemo(() => recentProjects(rows, endpoints, connected), [rows, endpoints, connected]);
-    const chats = useMemo(() => openableRows(chatsProjects(rows, endpoints, connected)), [rows, endpoints, connected]);
-    const machines = useMemo(
-        () => mergeMachines({ endpoints, accountMachines: accountStatus === 'signed-in' ? accountMachines : null, showLocal: hasLocalMachine() }),
-        [endpoints, accountMachines, accountStatus]
-    );
+    const recent = recentProjects(rows, endpoints, connected);
+    const chats = openableRows(chatsProjects(rows, endpoints, connected));
+    const machines = mergeMachines({ endpoints, accountMachines: accountStatus === 'signed-in' ? accountMachines : null, showLocal: hasLocalMachine() });
     const failedRow =
         failure === null ? null : (recent.find((row) => row.endpointId === failure.endpointId && row.summary.projectId === failure.projectId) ?? null);
     /* The row that failed is already on top with its reason, and one nobody can open is left out. */

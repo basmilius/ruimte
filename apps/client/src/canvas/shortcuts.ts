@@ -21,6 +21,7 @@ export const CANVAS_SHORTCUTS = {
     launchRun: shortcut('Mod+Alt+R'),
     launchStop: shortcut('Mod+Alt+.'),
     focusPrompts: shortcut('Mod+Shift+P'),
+    nextNeedsYou: shortcut('Mod+Alt+P'),
     previousTab: shortcut('Ctrl+Shift+Tab'),
     nextTab: shortcut('Ctrl+Tab'),
     moveTabLeft: shortcut('Mod+Alt+Shift+ArrowLeft'),
@@ -73,7 +74,9 @@ export const CANVAS_SHORTCUTS = {
     suggestInline: requiredShortcut('suggestInline'),
     acceptGhostWord: requiredShortcut('acceptGhostWord'),
     previousMessage: shortcut('Alt+ArrowUp'),
-    nextMessage: shortcut('Alt+ArrowDown')
+    nextMessage: shortcut('Alt+ArrowDown'),
+    raiseEffort: shortcut('Mod+Shift+.'),
+    lowerEffort: shortcut('Mod+Shift+,')
 } as const;
 
 export const NODE_NAVIGATION_SHORTCUTS: Record<SplitDirection, Shortcut> = {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -145,15 +145,11 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
     const sep = separatorFor(platform);
     /* Every machine this client knows, joined the way the Machines pane joins them, so one the account
        has and nothing here ever opened is a row to pick like any other. */
-    const machines = useMemo(
-        () =>
-            browseMachines(
-                mergeMachines({ endpoints, accountMachines: accountStatus === 'signed-in' ? accountMachines : null, showLocal: hasLocalMachine() }),
-                activeId
-            ),
-        [endpoints, accountMachines, accountStatus, activeId]
+    const machines = browseMachines(
+        mergeMachines({ endpoints, accountMachines: accountStatus === 'signed-in' ? accountMachines : null, showLocal: hasLocalMachine() }),
+        activeId
     );
-    const connectionOf = useCallback((endpointId: string): ConnectionState => connections[endpointId] ?? NO_LINK, [connections]);
+    const connectionOf = (endpointId: string): ConnectionState => connections[endpointId] ?? NO_LINK;
     const linkWait = browse !== null && !browse.machines ? (browse.link ?? null) : null;
     const browseRow = machines.find((row) => row.endpointId === browseEndpointId) ?? null;
     /* The machines list sorts this machine first but opens on the machine the client is pointed at,
@@ -331,25 +327,22 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
      * An open machine lists its folders at once; any other waits for its link on a step of its own.
      * The path resets to that machine's start folder, since a path from one machine rarely exists on the next.
      */
-    const chooseMachine = useCallback(
-        (endpointId: string): void => {
-            setFailure(null);
-            if (browseFor === 'chat') {
-                close();
-                void newChatOn(endpointId);
-                return;
-            }
-            if (connectionOf(endpointId).status === 'open') {
-                void startBrowsing(endpointId);
-                return;
-            }
-            setListing(null);
-            setQuery('');
-            setIndex(0);
-            setBrowse(pickMachine(endpointId, false));
-        },
-        [browseFor, close, connectionOf, setIndex, setQuery, startBrowsing]
-    );
+    const chooseMachine = (endpointId: string): void => {
+        setFailure(null);
+        if (browseFor === 'chat') {
+            close();
+            void newChatOn(endpointId);
+            return;
+        }
+        if (connectionOf(endpointId).status === 'open') {
+            void startBrowsing(endpointId);
+            return;
+        }
+        setListing(null);
+        setQuery('');
+        setIndex(0);
+        setBrowse(pickMachine(endpointId, false));
+    };
 
     const retry = (): void => {
         setFailure(null);
@@ -365,7 +358,7 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
         openFolderAction(browseEndpointId, path, offer === 'create');
     };
 
-    const entries = useMemo<Entry[]>(() => {
+    const listEntries = (): Entry[] => {
         if (!browsing) {
             return [];
         }
@@ -399,7 +392,8 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
             return [];
         }
         return folderEntries(parentOf(query, sep), listing?.result ?? null);
-    }, [browsing, listing, chooseMachine, connectionOf, machines, machineStep, linkWait, query, sep, servers]);
+    };
+    const entries = listEntries();
 
     /* Every list opens with its first row highlighted, browsing included, so Enter walks into the
        folders without an arrow key first and Cmd+Enter is what opens the path in the field. */

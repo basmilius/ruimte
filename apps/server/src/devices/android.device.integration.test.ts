@@ -126,3 +126,15 @@ describe.skipIf(booted === undefined)('Android screen', () => {
         60_000
     );
 });
+
+const phone = sdk === null ? undefined : (await backend.list().catch(() => [])).find((device) => device.state === 'booted' && device.kind === 'physical');
+
+describe.skipIf(phone === undefined)('Android battery', () => {
+    test('a phone says its own level and whether it is on power', async () => {
+        const power = await backend.power(phone!.deviceId);
+        expect(power).not.toBeNull();
+        expect(power!.level).toBeGreaterThanOrEqual(0);
+        expect(power!.level).toBeLessThanOrEqual(100);
+        expect(power!.simulated).toBeUndefined();
+    });
+});

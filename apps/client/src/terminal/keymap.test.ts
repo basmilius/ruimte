@@ -5,6 +5,7 @@ import type { KeyLike, Shortcut } from '@adecore/ui';
 import {
     isAppShortcut,
     isClearShortcut,
+    isComposerShortcut,
     isLeaveNodeShortcut,
     isShellShortcut,
     isTerminalFindShortcut,
@@ -159,6 +160,26 @@ describe('isShellShortcut', () => {
         expect(isAppShortcut(shortcut('Enter', { ctrlKey: true, shiftKey: true }), false)).toBe(true);
         expect(isShellShortcut(shortcut('Enter', { metaKey: true, shiftKey: true }), true)).toBe(true);
         expect(isAppShortcut(shortcut('Enter', { shiftKey: true }), true)).toBe(false);
+    });
+});
+
+describe('isComposerShortcut', () => {
+    test('hands the reasoning effort keys back as a Mac types them, which a terminal and the file editor keep', () => {
+        expect(isComposerShortcut(shortcut('>', { code: 'Period', metaKey: true, shiftKey: true }), true)).toBe(true);
+        expect(isComposerShortcut(shortcut('<', { code: 'Comma', metaKey: true, shiftKey: true }), true)).toBe(true);
+        expect(isComposerShortcut(shortcut('>', { code: 'Period', ctrlKey: true, shiftKey: true }), false)).toBe(true);
+        expect(isShellShortcut(shortcut('>', { code: 'Period', metaKey: true, shiftKey: true }), true)).toBe(false);
+        expect(isAppShortcut(shortcut('>', { code: 'Period', metaKey: true, shiftKey: true }), true)).toBe(false);
+    });
+
+    test('keeps Alt+Up and Alt+Down, which recall earlier prompts there instead of stepping between messages', () => {
+        expect(isComposerShortcut(shortcut('ArrowUp', { code: 'ArrowUp', altKey: true }), true)).toBe(false);
+        expect(isComposerShortcut(shortcut('ArrowDown', { code: 'ArrowDown', altKey: true }), false)).toBe(false);
+    });
+
+    test('hands back what every text field does', () => {
+        expect(isComposerShortcut(shortcut('k', { code: 'KeyK', metaKey: true }), true)).toBe(true);
+        expect(isComposerShortcut(shortcut('s', { code: 'KeyS', metaKey: true }), true)).toBe(false);
     });
 });
 

@@ -438,7 +438,7 @@ describe('native install', () => {
                 onChange: () => undefined
             });
             await installer.install('php-native');
-            expect(installer.failureOf('php-native')).toContain('does not match its checksum');
+            expect(installer.failureOf('php-native')).toContain('The download is damaged');
             expect(calls).toEqual([]);
             expect(await installer.state('php-native')).toBe('missing');
         });
@@ -514,7 +514,7 @@ describe('native install', () => {
             const switched: string[] = [];
             const broken = installerFor(releaseOf('1.2.4', COMMIT, '0'.repeat(64)), switched);
             await broken.install('php-native');
-            expect(broken.failureOf('php-native')).toContain('does not match its checksum');
+            expect(broken.failureOf('php-native')).toContain('The download is damaged');
             expect(switched).toEqual([]);
             expect(await broken.state('php-native')).toBe('installed');
             expect(broken.versionOf('php-native')).toBe('1.2.3');

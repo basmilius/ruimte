@@ -202,7 +202,7 @@ import RuimtePulsar
             } else if frameID != nil {
                 for member in Array(shared.members.values) { member.refused(frame) }
             } else {
-                throw TransportFailure.invalid(frame["message"]?.stringValue ?? String(localized: "The broker is limiting this client. Try again later.", bundle: .module))
+                throw TransportFailure.invalid(frame["message"]?.stringValue ?? String(localized: "The broker is limiting this device. Try again later.", bundle: .module))
             }
         case .delivered: break
         }

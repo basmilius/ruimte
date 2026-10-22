@@ -18,6 +18,7 @@ import { ForkDialog } from '@/shell/ForkDialog';
 import { LayoutDialog } from '@/shell/LayoutDialog';
 import { LeaveConflictDialog } from '@/shell/LeaveConflictDialog';
 import { MachineLostScreen } from '@/shell/MachineLostScreen';
+import { useMachineLost } from '@/shell/use-machine-lost';
 import { MergeWorktreeDialog } from '@/shell/MergeWorktreeDialog';
 import { Panel } from '@/shell/Panel';
 import { DiscardEditsDialog } from '@/shell/panels/DiscardEditsDialog';
@@ -107,6 +108,13 @@ const RemoteNodeDialog = lazyDialog(
     (s) => s.remoteNodeDialog !== null
 );
 
+const AddToMachineDialog = lazyDialog(
+    () => import('@/shell/AddToMachineDialog'),
+    'AddToMachineDialog',
+    useUi,
+    (s) => s.addToMachineDialog !== null
+);
+
 const MoveChatDialog = lazyDialog(
     () => import('@/project/MoveChatDialog'),
     'MoveChatDialog',
@@ -144,6 +152,7 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     const planOpen = useUi((state) => state.planOpen);
     const panelOpen = useShownPanel().open;
     const voiceOpen = useVoice((state) => state.open);
+    const lost = useMachineLost();
 
     useEffect(() => {
         void prefetcher.prefetchEverything();
@@ -162,7 +171,8 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
             <ConnectionProvider connection={workspace.connection}>
                 <FileToolbarSlotProvider value={{ host: fileToolbarHost, mount: setFileToolbarHost }}>
                     <CoreWorkspace
-                        render={<main />}
+                        // Under the lost screen nothing may be reached by a key either, since it would act on a machine that is gone.
+                        render={<main inert={lost} />}
                         className="workspace"
                         layout={layout}
                         sidebarWidth="auto"
@@ -197,10 +207,7 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                         <ErrorBoundary label={failed('cellChrome')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                             <CellOverlayLayer />
                         </ErrorBoundary>
-                        {/* After the parked pages, which carry no z-index of their own and would otherwise draw over these screens. */}
-                        <ErrorBoundary label={failed('machine')} resetKeys={[workspace]} className="absolute inset-0 z-10">
-                            <MachineLostScreen />
-                        </ErrorBoundary>
+                        {/* After the parked pages, which carry no z-index of their own and would otherwise draw over this screen. */}
                         <ErrorBoundary label={failed('projectSwitch')} resetKeys={[workspace]} className="absolute inset-0 z-10">
                             <ProjectSwitchScreen />
                         </ErrorBoundary>
@@ -209,6 +216,9 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                         </ErrorBoundary>
                     </CoreWorkspace>
                 </FileToolbarSlotProvider>
+                <ErrorBoundary label={failed('machine')} resetKeys={[workspace]} className="fixed inset-0 z-40">
+                    <MachineLostScreen />
+                </ErrorBoundary>
                 <VoiceOverlay />
                 {/* About the project that is open, so they belong to its workspace and not to the shell. */}
                 <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
@@ -256,6 +266,7 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                 </ErrorBoundary>
                 <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                     <RemoteNodeDialog />
+                    <AddToMachineDialog />
                     <EraseDeviceDialog />
                 </ErrorBoundary>
                 <ErrorBoundary label={failed('dialog')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>

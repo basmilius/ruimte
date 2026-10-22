@@ -147,6 +147,22 @@ describe('fs.create', () => {
         expect(result.size).toBe(11);
     });
 
+    test('makes a file with the permission bits it was given, also over a file that others could read', async () => {
+        const fresh = join(project, '.env');
+        await createEntry({ path: fresh, kind: 'file', text: 'KEY=1\n', mode: 0o600 }, boundary());
+        expect((await stat(fresh)).mode & 0o777).toBe(0o600);
+
+        const taken = join(project, '.env.local');
+        await writeFile(taken, 'old', { mode: 0o644 });
+        await createEntry({ path: taken, kind: 'file', text: 'KEY=2\n', overwrite: true, mode: 0o600 }, boundary());
+        expect((await stat(taken)).mode & 0o777).toBe(0o600);
+        expect(await readFile(taken, 'utf8')).toBe('KEY=2\n');
+
+        const script = join(project, 'run.sh');
+        await createEntry({ path: script, kind: 'file', text: '#!/bin/sh\n', mode: 0o755 }, boundary());
+        expect((await stat(script)).mode & 0o777).toBe(0o755);
+    });
+
     test('shortens a file it overwrites', async () => {
         const path = join(project, 'src', 'a.ts');
         await writeFile(path, 'a long old text');

@@ -212,7 +212,7 @@ struct NewChatRow: View {
 
     private var label: some View {
         ChatsRowLabel(
-            title: String(localized: "New chat"), detail: String(localized: "For a question or a quick task"),
+            title: String(localized: "New chat"), detail: String(localized: "A question or quick task"),
             icon: "message-square-plus")
     }
 }

@@ -2,4 +2,4 @@
 # Only for `bun run test:dom`, which runs the `*.dom.test.tsx` files the unit run leaves out.
 pathIgnorePatterns = ["**/*.integration.test.ts", "**/docs/reports/private/**"]
 # The page first: React DOM reads `document` once, as it loads, and the other two load it.
-preload = ["./apps/client/testing/dom-preload.ts", "./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts", "./apps/client/test-preload.ts"]
+preload = ["./apps/client/testing/dom-preload.ts", "./apps/client/testing/react-compiler-preload.ts", "./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts", "./apps/client/test-preload.ts"]

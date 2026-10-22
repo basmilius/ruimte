@@ -12,4 +12,6 @@ export interface Relay {
     readonly isReady?: boolean;
     /* The ICE servers the relay handed out for a direct connection, TURN credentials included; none when it has none. */
     iceServers?(): IceServer[];
+    /* Every ICE server the relay was handed, before any is left out for werift; for the reach check. */
+    grantedIceServers?(): IceServer[];
 }

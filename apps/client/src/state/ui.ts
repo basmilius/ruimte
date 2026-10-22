@@ -1,5 +1,4 @@
 import type { AgentKind, ProjectPanelKind, ProjectPanels } from '@ruimte/contracts';
-import { useMemo } from 'react';
 import { create } from 'zustand';
 import { z } from 'zod';
 import { isScratchProject, useProject } from '@/state/project';
@@ -143,7 +142,7 @@ export type ViewDialog =
    folder, searching the messages of the project's chats, or picking one file out of it. The mode is a
    step inside the same dialog, not a dialog of its own. */
 /*
- * A chat in Chats that leaves it. `make` starts a new project from the chat ("Make a project…"); `pick`
+ * A chat in Chats that leaves it. `make` starts a new project from the chat ("Make project…"); `pick`
  * moves it into a project that already exists, `projectId` being the one chosen beforehand, if any.
  */
 export interface MoveChatRequest {
@@ -178,6 +177,12 @@ export interface RemoteNodeRequest {
      * `source` is the daemon id of the machine the original runs on, absent for the workspace's.
      */
     handoff?: { chatId: string; turnId: string; title: string; provider?: AgentKind; source?: string };
+}
+
+/* A project being put on another machine; `then` is the node that was being made there, which opens again once the clone is in. */
+export interface AddToMachineRequest {
+    machineId: string | null;
+    then?: RemoteNodeRequest;
 }
 
 export type PaletteMode = 'default' | 'grep' | 'chats' | 'file';
@@ -266,6 +271,7 @@ interface UiStore {
     pullRequestDialog: { cwd: string } | null;
     /* A node on another machine being made, or made over for a machine that no longer links the project. */
     remoteNodeDialog: RemoteNodeRequest | null;
+    addToMachineDialog: AddToMachineRequest | null;
     /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
     viewDialog: ViewDialog;
     /* The sidebar row the caret is in, which is how a new heading opens. */
@@ -293,6 +299,7 @@ interface UiStore {
     setIssueStartOpen(open: boolean): void;
     setPullRequestDialog(request: { cwd: string } | null): void;
     setRemoteNodeDialog(request: RemoteNodeRequest | null): void;
+    setAddToMachineDialog(request: AddToMachineRequest | null): void;
     setViewDialog(dialog: ViewDialog): void;
     setRenamingViewId(viewId: string | null): void;
     setSidebarOpen(open: boolean): void;
@@ -359,6 +366,7 @@ export const useUi = create<UiStore>((set, get) => ({
     issueStartOpen: false,
     pullRequestDialog: null,
     remoteNodeDialog: null,
+    addToMachineDialog: null,
     viewDialog: null,
     renamingViewId: null,
     projectSettingsAsked: false,
@@ -421,6 +429,9 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setRemoteNodeDialog(request) {
         set({ remoteNodeDialog: request });
+    },
+    setAddToMachineDialog(request) {
+        set({ addToMachineDialog: request });
     },
     setViewDialog(dialog) {
         set({ viewDialog: dialog });
@@ -523,5 +534,5 @@ export const useUi = create<UiStore>((set, get) => ({
 export function useShownPanel(): PanelState {
     const panel = useUi((s) => s.panel);
     const scratch = useProject((s) => isScratchProject(s.current));
-    return useMemo(() => shownPanel(panel, scratch), [panel, scratch]);
+    return shownPanel(panel, scratch);
 }

@@ -43,6 +43,7 @@ import { stopRecording } from '@/devices/device-capture';
 import { dropAction } from '@/devices/device-files';
 import { ANDROID_BUTTONS } from '@/devices/operated';
 import { useDeviceList, useDevices, useRecordingEnded, useRecordingSince, useResolvedDevice } from '@/devices/state';
+import { DevicePowerPill } from '@/devices/DevicePowerPill';
 import { DeviceStream } from '@/devices/DeviceStream';
 import { failed } from '@/shell/surface-failure';
 import { useEndpointId } from '@/state/keys';
@@ -288,10 +289,19 @@ function DeviceRecordingBadge({ device }: { device: DeviceInfo }) {
     );
 }
 
-export function DeviceToolbar({ id }: { id: string }) {
+export function DeviceToolbar({ id, narrow = false }: { id: string; narrow?: boolean }) {
+    const endpointId = useEndpointId();
     const reference = useNodeHost(id)?.device;
     const { device } = useDeviceFor(reference);
-    return device ? <DeviceControls device={device} /> : null;
+    if (!device) {
+        return null;
+    }
+    return (
+        <>
+            <DevicePowerPill endpointId={endpointId} device={device} narrow={narrow} />
+            <DeviceControls device={device} />
+        </>
+    );
 }
 
 export function DeviceSurface({ device }: { device: DeviceInfo }) {

@@ -474,7 +474,8 @@ export class ChatManager extends ChatCore {
         if (to === from) {
             throw new ChatError('same-account', `The chat already runs under the account '${this.accountLabel(kind, to)}'`);
         }
-        this.requireAccount(kind, to);
+        // As named and not as stored, which reads the default account as none: a turned-off default account is refused.
+        this.requireAccount(kind, account);
         if (session.info.activeTurnId !== null) {
             throw new ChatError('chat-busy', 'The chat is working on a turn; go on under another account once it ends');
         }

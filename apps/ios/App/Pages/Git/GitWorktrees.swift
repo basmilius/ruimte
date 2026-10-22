@@ -82,7 +82,7 @@ enum GitMergeStrategy: String, CaseIterable, Identifiable {
     var line: String {
         switch self {
         case .squash: String(localized: "One commit on the target with the message below.")
-        case .merge: String(localized: "A merge commit; every commit of the worktree stays in the history.")
+        case .merge: String(localized: "A merge commit; every worktree commit stays in history.")
         case .rebase: String(localized: "The commits on top of the target, in a straight line.")
         }
     }
@@ -196,7 +196,7 @@ enum GitWorktreeText {
         guard worktree.hasWork else {
             let clean = String(
                 localized:
-                    "Nothing in it is lost: it holds no uncommitted files, no new files and no commits that \(worktree.target) lacks."
+                    "Nothing is lost. No uncommitted files, new files or commits that \(worktree.target) lacks."
             )
             let gone = worktree.missing ? String(localized: "Its folder is already gone.") : nil
             return GitWorktreeRemoval(
@@ -328,7 +328,7 @@ enum GitWorktreeText {
     /// The merge sheet, asked with the work counted now and not with the numbers on the row.
     func ask(client: any MachineRequesting, merge worktree: GitWorktree) async {
         guard let fresh = await fresh(client: client, path: worktree.path), !fresh.missing else {
-            note = String(localized: "There is no worktree left to merge.")
+            note = String(localized: "No worktree left to merge.")
             return
         }
         merging = fresh
@@ -440,7 +440,7 @@ enum GitWorktreeText {
         } catch {
             busy = false
             let reason = error.localizedDescription
-            problem = String(localized: "Stashing failed: \(reason)")
+            problem = String(localized: "Could not stash: \(reason)")
             return
         }
         busy = false
@@ -472,7 +472,7 @@ enum GitWorktreeText {
             _ = try await client.request("git.worktree-abort", payload: .object(["cwd": .string(cwd)]))
             outcome = nil
             problem = nil
-            note = String(localized: "Took the merge back.")
+            note = String(localized: "Merge aborted.")
         } catch {
             problem = error.localizedDescription
         }

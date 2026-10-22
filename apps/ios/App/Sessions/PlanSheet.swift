@@ -240,8 +240,8 @@ struct PlanSheet: View {
     private var emptyText: String {
         switch filter {
         case .issues: String(localized: "No issues.")
-        case .open: String(localized: "Nothing is open.")
-        case .all: String(localized: "This plan has no steps yet.")
+        case .open: String(localized: "Nothing open.")
+        case .all: String(localized: "No steps yet.")
         }
     }
 

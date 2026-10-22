@@ -131,11 +131,27 @@
     --agent-ink: #fff;
     /* The soft edge under the headers sticky scroll pins over the code. */
     --editor-sticky-shadow: rgb(0 0 0 / 0.12);
-    --note-yellow: #fff3bf;
-    --note-green: #dcf5e3;
-    --note-blue: #dbe9ff;
-    --note-pink: #fde2ea;
-    --note-gray: #ececef;
+    /* The paper of a note in each of the colors. Yellow, green, blue and pink are the sheets notes
+       had before Color covered them; the others share their lightness and chroma at the hue of
+       their accent. Neutral is only for a note that was gray. */
+    --paper-red: #ffe3dd;
+    --paper-orange: #ffe3d9;
+    --paper-amber: #ffe6d3;
+    --paper-yellow: #fff3bf;
+    --paper-lime: #e2f3d7;
+    --paper-green: #dcf5e3;
+    --paper-emerald: #d5f6e3;
+    --paper-teal: #cef6f0;
+    --paper-cyan: #cff3ff;
+    --paper-sky: #d6f0ff;
+    --paper-blue: #dbe9ff;
+    --paper-indigo: #e5ebff;
+    --paper-violet: #ede8ff;
+    --paper-purple: #f1e6ff;
+    --paper-fuchsia: #fbe4fd;
+    --paper-pink: #fde2ea;
+    --paper-rose: #ffe2e1;
+    --paper-neutral: #ececef;
     /* The band under the points no other point beats; ink at a low alpha, never the accent. */
     --chart-frontier: rgb(0 0 0 / 0.07);
     /* The word beside the icon at the top of the sidebar, between the text and its muted tone. */
@@ -152,18 +168,18 @@
     --draw-blue: #2563eb;
     --draw-purple: #7c3aed;
     --draw-pink: #db2777;
-    /* The paper a sticky note is written on: the same ten names, pale enough to read ink off.
-       Where a note color already exists for the canvas, a drawing uses that very sheet. */
+    /* The paper a sticky note is written on: the same ten names, pale enough to read ink off. Values
+       of their own, so a change to the paper of a note never recolors a drawing. */
     --draw-paper-ink: #f4f4f6;
-    --draw-paper-muted: var(--note-gray);
+    --draw-paper-muted: #ececef;
     --draw-paper-accent: #e2e5fd;
     --draw-paper-red: #fddfdf;
     --draw-paper-orange: #fde9d0;
-    --draw-paper-yellow: var(--note-yellow);
-    --draw-paper-green: var(--note-green);
-    --draw-paper-blue: var(--note-blue);
+    --draw-paper-yellow: #fff3bf;
+    --draw-paper-green: #dcf5e3;
+    --draw-paper-blue: #dbe9ff;
     --draw-paper-purple: #eadffb;
-    --draw-paper-pink: var(--note-pink);
+    --draw-paper-pink: #fde2ea;
     /* The edge of that sheet: the same paper, a step deeper into its own color. */
     --draw-edge-ink: color-mix(in oklab, var(--draw-paper-ink) 80%, var(--draw-ink));
     --draw-edge-muted: color-mix(in oklab, var(--draw-paper-muted) 80%, var(--draw-muted));
@@ -210,11 +226,24 @@
     --agent-4: #e0518a;
     --agent-5: #b8860b;
     --agent-6: #3b8fd6;
-    --note-yellow: #3b3416;
-    --note-green: #173a25;
-    --note-blue: #182f4b;
-    --note-pink: #43212c;
-    --note-gray: #26262d;
+    --paper-red: #482520;
+    --paper-orange: #47261c;
+    --paper-amber: #452814;
+    --paper-yellow: #3b3416;
+    --paper-lime: #253619;
+    --paper-green: #173a25;
+    --paper-emerald: #123927;
+    --paper-teal: #023933;
+    --paper-cyan: #073645;
+    --paper-sky: #16334a;
+    --paper-blue: #182f4b;
+    --paper-indigo: #292d4b;
+    --paper-violet: #312b49;
+    --paper-purple: #352947;
+    --paper-fuchsia: #3d2740;
+    --paper-pink: #43212c;
+    --paper-rose: #482425;
+    --paper-neutral: #26262d;
     --chart-frontier: rgb(255 255 255 / 0.08);
     --wordmark: #b4b4c0;
     --draw-red: #ff7b72;
@@ -225,10 +254,15 @@
     --draw-purple: #c39bff;
     --draw-pink: #ff8ac2;
     --draw-paper-ink: #2a2a31;
+    --draw-paper-muted: #26262d;
     --draw-paper-accent: #262a55;
     --draw-paper-red: #402021;
     --draw-paper-orange: #402c17;
+    --draw-paper-yellow: #3b3416;
+    --draw-paper-green: #173a25;
+    --draw-paper-blue: #182f4b;
     --draw-paper-purple: #2e2148;
+    --draw-paper-pink: #43212c;
 }
 
 @theme {
@@ -247,11 +281,24 @@
     --color-term-blue: var(--term-blue);
     --color-term-red: var(--term-red);
     --color-find-current: var(--find-current);
-    --color-note-yellow: var(--note-yellow);
-    --color-note-green: var(--note-green);
-    --color-note-blue: var(--note-blue);
-    --color-note-pink: var(--note-pink);
-    --color-note-gray: var(--note-gray);
+    --color-paper-red: var(--paper-red);
+    --color-paper-orange: var(--paper-orange);
+    --color-paper-amber: var(--paper-amber);
+    --color-paper-yellow: var(--paper-yellow);
+    --color-paper-lime: var(--paper-lime);
+    --color-paper-green: var(--paper-green);
+    --color-paper-emerald: var(--paper-emerald);
+    --color-paper-teal: var(--paper-teal);
+    --color-paper-cyan: var(--paper-cyan);
+    --color-paper-sky: var(--paper-sky);
+    --color-paper-blue: var(--paper-blue);
+    --color-paper-indigo: var(--paper-indigo);
+    --color-paper-violet: var(--paper-violet);
+    --color-paper-purple: var(--paper-purple);
+    --color-paper-fuchsia: var(--paper-fuchsia);
+    --color-paper-pink: var(--paper-pink);
+    --color-paper-rose: var(--paper-rose);
+    --color-paper-neutral: var(--paper-neutral);
     --color-draw-ink: var(--draw-ink);
     --color-draw-muted: var(--draw-muted);
     --color-draw-accent: var(--draw-accent);

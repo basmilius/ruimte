@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import { create } from 'zustand';
-import type { ProjectNewChatPayload } from '@ruimte/contracts';
+import type { ProjectNewChatPayload, RuntimeMode } from '@ruimte/contracts';
+import { openChatInMode } from '@/chat/opening-mode';
 import { desktop } from '@/desktop/bridge';
 import { ensureMachine } from '@/endpoint/reach';
 import { listProjects } from '@/project/list';
@@ -77,9 +78,9 @@ export async function showChatIn(endpointId: string, projectId: string, viewId: 
 /*
  * A chat outside any project on one machine, which makes it in its Chats project and shows it. The
  * machine shows the chat nobody wrote in yet instead when there is one, of the CLI and account the
- * payload names when it names one. False when no chat came.
+ * payload names when it names one, in the mode given or else the default. False when no chat came.
  */
-export async function newChatOn(endpointId: string, payload: ProjectNewChatPayload = {}): Promise<boolean> {
+export async function newChatOn(endpointId: string, payload: ProjectNewChatPayload = {}, runtimeMode?: RuntimeMode): Promise<boolean> {
     let id = endpointId;
     try {
         id = await ensureMachine(endpointId);
@@ -89,6 +90,9 @@ export async function newChatOn(endpointId: string, payload: ProjectNewChatPaylo
         }
         const { summary, viewId } = await transport.request('project.newChat', payload);
         void listProjects(id).catch(() => undefined);
+        if (runtimeMode !== undefined) {
+            openChatInMode(id, viewId, runtimeMode);
+        }
         await showChatIn(id, summary.projectId, viewId);
         return true;
     } catch (e) {

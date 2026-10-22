@@ -314,6 +314,9 @@ const finish = (gl: WebGL2RenderingContext, program: WebGLProgram): Program | nu
     return { program, uniforms };
 };
 
+// WebGL's `useProgram` reads as a hook to the React Compiler, which would leave the component as written.
+const bindProgram = (gl: WebGL2RenderingContext, program: WebGLProgram) => gl.useProgram(program);
+
 const Galaxy = ({
     onUnavailable,
     maxFps = 60,
@@ -383,6 +386,8 @@ const Galaxy = ({
         dpr
     };
     const settingsRef = useRef(settings);
+    // Read when the context fails, so a caller's new function never tears down and rebuilds the WebGL scene.
+    const unavailableRef = useRef(onUnavailable);
 
     useEffect(() => {
         const container = containerRef.current;
@@ -395,7 +400,7 @@ const Galaxy = ({
             stencil: false
         });
         if (!container || !canvas || !gl) {
-            onUnavailable?.();
+            unavailableRef.current?.();
             return undefined;
         }
 
@@ -424,7 +429,7 @@ const Galaxy = ({
         const initial = settingsRef.current;
         if (!variant(initial.palette.length > 0, false, false, true)) {
             programs.forEach((found) => found.program && gl.deleteProgram(found.program));
-            onUnavailable?.();
+            unavailableRef.current?.();
             return undefined;
         }
 
@@ -495,7 +500,7 @@ const Galaxy = ({
             const program = (repel || warp ? variant(palette, repel, warp, false) : null) ?? base;
             const u = program.uniforms;
             gl.viewport(0, 0, canvas.width, canvas.height);
-            gl.useProgram(program.program);
+            bindProgram(gl, program.program);
             gl.bindVertexArray(vao);
             gl.uniform1f(u.uTime, state.time);
             gl.uniform2f(u.uResolution, canvas.width, canvas.height);
@@ -654,7 +659,7 @@ const Galaxy = ({
         };
         const onContextLost = () => {
             cancelAnimationFrame(raf);
-            onUnavailable?.();
+            unavailableRef.current?.();
         };
         canvas.addEventListener('webglcontextlost', onContextLost);
         motionPreference.addEventListener('change', onMotionChange);
@@ -720,10 +725,11 @@ const Galaxy = ({
             gl.deleteVertexArray(vao);
             // Leave the context alive for React Strict Mode's second setup on the same canvas.
         };
-    }, [onUnavailable]);
+    }, []);
 
     useEffect(() => {
         settingsRef.current = settings;
+        unavailableRef.current = onUnavailable;
         wakeRef.current?.();
     });
 

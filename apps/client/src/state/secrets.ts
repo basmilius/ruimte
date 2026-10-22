@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { create } from 'zustand';
 import type { SecretRequest } from '@ruimte/contracts';
 
@@ -29,5 +28,5 @@ export function secretRequestsOf(endpointId: string): readonly SecretRequest[] {
 /* The cards of one chat, oldest first, which is the order the machine sends them in. */
 export function useNodeSecretRequests(endpointId: string, nodeId: string): readonly SecretRequest[] {
     const all = useSecrets((s) => s.requests[endpointId] ?? NONE);
-    return useMemo(() => (all.some((request) => request.nodeId === nodeId) ? all.filter((request) => request.nodeId === nodeId) : NONE), [all, nodeId]);
+    return all.some((request) => request.nodeId === nodeId) ? all.filter((request) => request.nodeId === nodeId) : NONE;
 }

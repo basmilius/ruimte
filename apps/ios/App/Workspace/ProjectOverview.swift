@@ -71,7 +71,7 @@ struct ProjectOverviewRow: Identifiable {
     var detail: String? {
         if unavailable { return String(localized: "Folder unavailable") }
         if isChats {
-            guard let activity else { return String(localized: "Your earlier chats") }
+            guard let activity else { return String(localized: "Earlier chats") }
             return activity.chats == 0
                 ? String(localized: "No chats yet") : String(localized: "\(activity.chats) chats")
         }

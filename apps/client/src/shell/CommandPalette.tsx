@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { FileSearch, FileText, MessageSquare, Search } from 'lucide-react';
@@ -57,7 +57,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
     const [query, setQuery] = useState('');
     const [index, setIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
-    const close = useCallback((): void => setOpen(false), [setOpen]);
+    const close = (): void => setOpen(false);
     const context: PaletteContext = { open, query, setQuery, index, setIndex, close };
 
     const browse = usePaletteBrowse(context, grepping || chatting);

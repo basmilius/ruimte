@@ -108,7 +108,7 @@ export async function planCreate(
                     await mkdir(real);
                     return { size: 0, mtime: Math.round((await lstat(real)).mtimeMs) };
                 }
-                const handle = await open(real, constants.O_WRONLY | (replacing ? 0 : constants.O_CREAT | constants.O_EXCL) | noFollow, 0o644);
+                const handle = await open(real, constants.O_WRONLY | (replacing ? 0 : constants.O_CREAT | constants.O_EXCL) | noFollow, payload.mode ?? 0o644);
                 try {
                     // Truncated only once the handle is the file the plan saw: without `O_NOFOLLOW`, a link put in its place since would be followed.
                     if (replacing) {
@@ -116,6 +116,12 @@ export async function planCreate(
                         if (opened.ino !== taken.ino || opened.dev !== taken.dev) {
                             throw new CreateError('exists', `${target} changed before it was replaced`);
                         }
+                    }
+                    // Before the text goes in, so a secret never sits in a file others may read.
+                    if (payload.mode !== undefined) {
+                        await handle.chmod(payload.mode);
+                    }
+                    if (replacing) {
                         await handle.truncate(0);
                     }
                     await handle.writeFile(bytes);

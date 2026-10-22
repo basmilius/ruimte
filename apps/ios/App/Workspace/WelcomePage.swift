@@ -42,7 +42,7 @@ struct WelcomePage: View {
         }
         .eclipseTouch(eclipseInteraction)
         .alert(
-            "Sign-in failed",
+            "Could not sign in",
             isPresented: Binding(
                 get: { runtime.problem != nil },
                 set: { if !$0 { runtime.problem = nil } }

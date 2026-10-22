@@ -16,6 +16,7 @@ import {
     LanDoorRow,
     MachineAccess,
     MachineLinks,
+    ReachRow,
     StreamingRow,
     UsageStatsRow,
     WithReason,
@@ -99,6 +100,7 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                     <SettingsSection title={t('machineDialog.connection')}>
                         <BrokerRow endpoint={entry.endpoint} reason={reason} />
                         <LanDoorRow endpoint={entry.endpoint} reason={reason} />
+                        <ReachRow endpoint={entry.endpoint} reason={reason} />
                         {model.direct && <DirectRow endpoint={entry.endpoint} />}
                         <StreamingRow endpoint={entry.endpoint} reason={reason} />
                     </SettingsSection>

@@ -11,7 +11,7 @@
         "text": "Text",
         "note": "Sticky note",
         "eraser": "Eraser",
-        "keep": "Keep the tool"
+        "keep": "Keep tool"
     },
     "color": {
         "label": "Color",
@@ -79,8 +79,8 @@
     },
     "export": {
         "label": "Export",
-        "selection": "Export the selection",
-        "drawing": "Export the drawing",
+        "selection": "Export selection",
+        "drawing": "Export drawing",
         "copyPng": "Copy as PNG",
         "savePng": "Save PNG",
         "copySvg": "Copy as SVG",
@@ -89,34 +89,34 @@
     },
     "diagram": {
         "title": "Diagram",
-        "openJson": "Open the JSON file",
+        "openJson": "Open JSON",
         "copyJson": "Copy as JSON",
         "nodeLabel": "Label",
         "tone": "Tone",
         "resetPosition": "Reset position",
         "empty": {
-            "description": "This diagram is empty. An agent writes one from what you tell it.",
+            "description": "Empty diagram. An agent can fill it for you.",
             "agent": {
                 "title": "Ask an agent",
-                "description": "A chat beside it on the canvas"
+                "description": "Opens a chat beside it"
             },
             "json": {
                 "title": "Open JSON",
-                "description": "Write the nodes and edges by hand"
+                "description": "Write nodes and edges by hand"
             },
             "example": {
-                "title": "Insert an example",
-                "description": "A small flow to edit into your own"
+                "title": "Insert example",
+                "description": "A small flow to start from"
             }
         }
     },
     "error": {
-        "drawingCopy": "The drawing could not be copied",
-        "drawingOpen": "The drawing could not be opened",
-        "drawingSave": "The drawing could not be saved",
-        "diagramCopy": "The diagram could not be copied",
-        "diagramOpen": "The diagram could not be opened",
-        "diagramSave": "The diagram could not be saved"
+        "drawingCopy": "Could not copy the drawing",
+        "drawingOpen": "Could not open the drawing",
+        "drawingSave": "Could not save the drawing",
+        "diagramCopy": "Could not copy the diagram",
+        "diagramOpen": "Could not open the diagram",
+        "diagramSave": "Could not save the diagram"
     },
     "menu": {
         "cut": "Cut",
@@ -130,6 +130,6 @@
         "zoom": "Zoom"
     },
     "empty": {
-        "description": "Nothing drawn yet. Choose a tool with <tools/> or paste shapes from another drawing with <paste/>."
+        "description": "Nothing drawn yet. Pick a tool with <tools/> or paste with <paste/>."
     }
 }

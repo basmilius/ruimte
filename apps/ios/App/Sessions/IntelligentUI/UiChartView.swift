@@ -75,18 +75,16 @@ struct UiChartView: View {
                 ? [
                     String(
                         localized:
-                            "The first \(UiFormat.number(Double(chart.labels.count))) of \(UiFormat.number(Double(chart.total))) rows are drawn."
+                            "Showing \(UiFormat.number(Double(chart.labels.count))) of \(UiFormat.number(Double(chart.total))) rows."
                     )
                 ] : [])
             + (chart.omitted.isEmpty
                 ? []
                 : [
-                    chart.omitted.count == 1
-                        ? String(localized: "\(chart.omitted[0]) is not drawn.")
-                        : String(localized: "\(chart.omitted.joined(separator: ", ")) are not drawn.")
+                    String(localized: "\(chart.omitted.joined(separator: ", ")) not shown.")
                 ])
             + (requested == "stacked" && chart.kind != "stacked"
-                ? [String(localized: "Negative values cannot be stacked, so the series stand side by side.")] : [])
+                ? [String(localized: "Negative values cannot stack. Series shown side by side.")] : [])
         if !lines.isEmpty {
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(lines, id: \.self) { Text($0) }

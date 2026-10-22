@@ -14,6 +14,7 @@ import {
     composerWrites,
     useSubagentTrail
 } from '@adecore/agents-react/chat';
+import { peekOpeningMode, settleOpeningMode } from '@/chat/opening-mode';
 import { deriveNodeTitle } from '@/chat/title';
 import { Composer, SubagentTimeline, Timeline } from '@adecore/agents-react/chat/ui';
 import { useProject } from '@/state/project';
@@ -67,7 +68,12 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
                 cwd: host?.cwd ?? useProject.getState().current?.folder ?? undefined,
                 resume: host?.resume,
                 selection: (catalog === undefined ? selectionFor(preferences, provider) : startingSelection(preferences, catalog)) ?? undefined,
-                runtimeMode: preferences.runtimeMode
+                runtimeMode: peekOpeningMode(endpointId, id) ?? preferences.runtimeMode
+            })
+            .then((opened) => {
+                if (opened && !cancelled) {
+                    settleOpeningMode(endpointId, id);
+                }
             })
             .catch((e: unknown) => {
                 if (!cancelled) {

@@ -23,7 +23,7 @@ enum GitConfirmation: Identifiable {
     var title: String {
         switch self {
         case .discard(_, let path): String(localized: "Discard changes in \((path as NSString).lastPathComponent)?")
-        case .forcePush: String(localized: "Force push this branch?")
+        case .forcePush: String(localized: "Force push branch?")
         case .deleteBranch(_, let ref, let force):
             force ? String(localized: "Delete \(ref) anyway?") : String(localized: "Delete \(ref)?")
         case .checkout(_, let ref): String(localized: "Switch to \(ref)?")
@@ -34,7 +34,7 @@ enum GitConfirmation: Identifiable {
     var detail: String {
         switch self {
         case .discard: String(localized: "The file goes back to what it was, and git keeps a stash to undo it with.")
-        case .forcePush: String(localized: "Overwrites the remote branch with this checkout, so commits only the remote has are lost. It stops if someone else pushed since the last fetch.")
+        case .forcePush: String(localized: "Overwrites the remote branch, so commits only the remote has are lost. Stops if someone pushed since the last fetch.")
         case .deleteBranch(_, _, let force):
             force
                 ? String(localized: "This branch has not been merged anywhere. Its commits are only reachable by hash.")
@@ -43,7 +43,7 @@ enum GitConfirmation: Identifiable {
         case .rebase:
             String(
                 localized:
-                    "Your commits are written again on top of that branch, as new commits. A branch you already pushed then needs a force push. A conflict stops the rebase halfway, for you to resolve or take back."
+                    "Rewrites your commits on top of that branch. A pushed branch then needs a force push. A conflict pauses the rebase for you to resolve or abort."
             )
         }
     }

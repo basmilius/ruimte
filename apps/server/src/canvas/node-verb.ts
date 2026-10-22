@@ -1,6 +1,9 @@
-import { isCanvasView } from '@ruimte/contracts';
+import { NODE_ACCENT_NAMES, isCanvasView, isNodeAccent } from '@ruimte/contracts';
+import { MAX_PER_CALL } from '@ruimte/actions';
+import { COLOR_LINES } from '../actions/node-actions.ts';
 import { z } from 'zod';
 import { canvasIdFor, defineActionVerb, runAction } from './action-verb.ts';
+import { ONE_WRITE, idBatch, jsonBatch } from './batch.ts';
 import { EVERY_KIND_LINE, NODE_VERB_KINDS, REQUIRED_FLAG, kindLine, kindsFor } from './node-kinds.ts';
 import { MAX_CANVAS_NODES } from './nodes.ts';
 import { unescapeText } from './text-escapes.ts';
@@ -12,6 +15,7 @@ import {
     SCOPE_LINE,
     SNOOZE_LINE,
     TITLE_LINE,
+    VerbRefusal,
     field,
     placeOf,
     titleField
@@ -29,10 +33,31 @@ const REQUIRED_NOTE = `${Object.entries(REQUIRED_FLAG)
 
 const LISTED = 'ruimte-context view list lists them';
 
+const NEW_USAGE = `(<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--device D] [--cwd P] [--color C] [--beside N] | --json J) [--view V] [--dry-run]`;
+
+// What the parser answers a call it cannot read with, for the two it cannot catch on its own: no kind, and a kind beside --json.
+const NEW_USAGE_LINES = [`usage\tnode new\t${NEW_USAGE}`, 'detail\truimte-context help node new'];
+
+/* One node of a --json call: the kind and the fields of the flags a single call takes, by their flag names. */
+const JsonNodeSchema = z.strictObject({
+    kind: z.enum(NODE_VERB_KINDS, { error: KIND_MESSAGE }),
+    title: titleField('title', 'title needs a title').optional(),
+    text: z.string().optional(),
+    url: z.string().min(1, 'url needs an http or https address').optional(),
+    path: z.string().min(1, 'path needs the path of a file').optional(),
+    source: z.string().min(1, 'source needs the id of a drawing or diagram view').optional(),
+    device: z.string().min(1, 'device needs the id of a device of this machine').optional(),
+    cwd: z.string().min(1, 'cwd needs the path of a directory').optional(),
+    beside: z.string().min(1, 'beside needs the id of a node on that canvas').optional(),
+    color: z.enum(NODE_ACCENT_NAMES, { error: `color takes one of the ${NODE_ACCENT_NAMES.length} colors` }).optional()
+});
+
+const JSON_EXAMPLE = `ruimte-context node new --json '[{"kind":"note","title":"Idea","text":"Body","color":"teal"},{"kind":"browser","url":"https://example.com"}]'`;
+
 export const nodeNewAction = defineActionVerb('node', {
     name: 'new',
     action: 'node.create',
-    usage: `<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--device D] [--cwd P] [--view V] [--beside N] [--dry-run]`,
+    usage: NEW_USAGE,
     note: REQUIRED_NOTE,
     dryRun: true,
     params: [
@@ -45,6 +70,13 @@ export const nodeNewAction = defineActionVerb('node', {
         },
         { syntax: '--view V', need: 'every kind', field: 'viewId', text: 'The canvas to add to, by view id', more: LISTED },
         { syntax: '--beside N', need: 'every kind', field: 'beside' },
+        {
+            syntax: '--color C',
+            need: 'every kind',
+            field: 'color',
+            text: `One of the ${NODE_ACCENT_NAMES.length} colors; a note takes its paper from it`,
+            more: 'ruimte-context help node color lists them'
+        },
         {
             syntax: '--dry-run',
             need: 'no value',
@@ -60,10 +92,19 @@ export const nodeNewAction = defineActionVerb('node', {
         { syntax: '--source V', need: kindsFor('source'), field: 'source', more: LISTED },
         { syntax: '--path P', need: kindsFor('path'), field: 'path', more: 'it has to exist' },
         { syntax: '--device D', need: kindsFor('device'), field: 'device', more: 'ruimte-context device list lists the ones of this machine' },
-        { syntax: '--cwd P', need: kindsFor('cwd'), field: 'cwd' }
+        { syntax: '--cwd P', need: kindsFor('cwd'), field: 'cwd' },
+        {
+            syntax: '--json J',
+            need: 'in place of <kind>',
+            text: `Several nodes in one call: an array of up to ${MAX_PER_CALL} objects, each with kind and the fields of the flags above by their names (title, text, url, path, source, device, cwd, beside, color)`,
+            more: '--json - takes the array from stdin, a heredoc included'
+        }
     ],
     detail: [
-        'prints\tid\tkind\tview\tedge\tthe id of the new node, its kind, the canvas it landed on and the id of the line drawn from you into it (- when none was drawn)',
+        'prints\tid\tkind\tview\tedge\tthe id of the new node, its kind, the canvas it landed on and the id of the line drawn from you into it (- when none was drawn); one line per node, in the order given',
+        `many\tTo add several nodes, give them all to one call with --json instead of calling once per node: ${ONE_WRITE}`,
+        `many\tEach node is checked the way a single call checks it, placed after the ones before it, and gets its own line from you; a refusal names the node by its place in the array, counted from 1`,
+        `example\t${JSON_EXAMPLE}`,
         ...NODE_VERB_KINDS.map(kindLine),
         EVERY_KIND_LINE,
         'edge\tA line is drawn from you into the new node, so the canvas says where it came from and not only that it is there',
@@ -77,10 +118,10 @@ export const nodeNewAction = defineActionVerb('node', {
         'paths\t--path and --cwd are resolved against the project folder, never against your own directory; both may also be absolute',
         'paths\t--cwd has to stay inside the project folder or a worktree of its repository; --path may point outside and is then stored absolute',
         `limit\tA canvas holds at most ${MAX_CANVAS_NODES} nodes; a terminal or chat starts no process until a client shows it`,
-        "size\tA new node takes the size a person on this machine gave its kind (Make this the default size, in a node's menu), else the built-in size of the kind; agent and team size their nodes the same way, and no verb changes it",
+        "size\tA new node takes the size a person on this machine gave its kind (Set as default size, in a node's menu), else the built-in size of the kind; agent and team size their nodes the same way, and no verb changes it",
         TITLE_LINE
     ],
-    positionals: z.tuple([z.enum(NODE_VERB_KINDS, { error: KIND_MESSAGE })], {
+    positionals: z.tuple([z.enum(NODE_VERB_KINDS, { error: KIND_MESSAGE }).optional()], {
         error: (issue) => (issue.code === 'too_big' ? 'node new takes one kind and nothing else; a title goes in --title' : KIND_MESSAGE)
     }),
     flags: z.object({
@@ -92,9 +133,55 @@ export const nodeNewAction = defineActionVerb('node', {
         device: z.string().min(1, '--device needs the id of a device of this machine').optional(),
         cwd: z.string().min(1, '--cwd needs the path of a directory').optional(),
         view: z.string().min(1, '--view needs the id of a canvas').optional(),
-        beside: z.string().min(1, '--beside needs the id of a node on that canvas').optional()
+        beside: z.string().min(1, '--beside needs the id of a node on that canvas').optional(),
+        color: z.string().min(1, '--color needs one of the colors').optional(),
+        json: z.string().min(1, '--json needs an array of nodes').optional()
     }),
     async run({ positionals: [kind], flags, dryRun }, call) {
+        if (flags.json !== undefined) {
+            const single = (['title', 'text', 'url', 'path', 'source', 'device', 'cwd', 'beside', 'color'] as const).filter(
+                (flag) => flags[flag] !== undefined
+            );
+            if (kind !== undefined || single.length > 0) {
+                throw new VerbRefusal(
+                    'bad-arguments',
+                    `--json carries every node with its own fields; leave out ${kind === undefined ? single.map((flag) => `--${flag}`).join(', ') : 'the kind'}`,
+                    NEW_USAGE_LINES
+                );
+            }
+            const nodes = jsonBatch(flags.json, JsonNodeSchema, JSON_EXAMPLE);
+            const made = await runAction(
+                call,
+                'node.createMany',
+                {
+                    viewId: await canvasIdFor(call, placeOf(call), flags.view, OPENING_OFF_CANVAS),
+                    nodes: nodes.map((node) => ({
+                        kind: node.kind,
+                        title: node.title ?? null,
+                        content: node.text ?? null,
+                        url: node.url ?? null,
+                        path: node.path ?? null,
+                        source: node.source ?? null,
+                        cwd: node.cwd ?? null,
+                        beside: node.beside ?? null,
+                        device: node.device ?? null,
+                        color: node.color ?? null
+                    }))
+                },
+                dryRun
+            );
+            return made.nodes.map((node) =>
+                dryRun
+                    ? `dry-run\t${node.kind}\t${made.viewId}\t${node.edge ? `${node.edge.from} -> ${node.edge.to}` : '-'}`
+                    : `${node.nodeId}\t${node.kind}\t${made.viewId}\t${node.edge?.edgeId ?? '-'}`
+            );
+        }
+        if (kind === undefined) {
+            throw new VerbRefusal('bad-arguments', KIND_MESSAGE, NEW_USAGE_LINES);
+        }
+        if (flags.color !== undefined && !isNodeAccent(flags.color)) {
+            throw new VerbRefusal('unknown-color', `${flags.color} is not one of the ${NODE_ACCENT_NAMES.length} colors a node takes`, [...COLOR_LINES]);
+        }
         const viewId = await canvasIdFor(call, placeOf(call), flags.view, OPENING_OFF_CANVAS);
         const made = await runAction(
             call,
@@ -112,7 +199,8 @@ export const nodeNewAction = defineActionVerb('node', {
                 source: flags.source ?? null,
                 device: flags.device ?? null,
                 cwd: flags.cwd ?? null,
-                beside: flags.beside ?? null
+                beside: flags.beside ?? null,
+                color: flags.color ?? null
             },
             dryRun
         );
@@ -128,40 +216,64 @@ export const nodeNewAction = defineActionVerb('node', {
 export const nodeDeleteAction = defineActionVerb('node', {
     name: 'delete',
     action: 'node.delete',
-    usage: '<nodeId>',
-    params: [{ syntax: '<nodeId>', need: 'required', field: 'nodeIds', text: 'The node to remove, by id', more: 'ruimte-context node list lists them' }],
+    usage: '<nodeId>[,<nodeId>...]',
+    params: [
+        {
+            syntax: '<nodeId>[,<nodeId>...]',
+            need: 'required',
+            field: 'nodeIds',
+            text: `The nodes to remove, by id, separated by commas; at most ${MAX_PER_CALL}, all on one canvas`,
+            more: 'ruimte-context node list lists them'
+        }
+    ],
     detail: [
         'prints\tdeleted\tid\tkind\ttitle\tthe node that went',
         'prints\tended\tid\tkind\tthe session it took with it, for a terminal or a chat',
         'prints\tedges\tcount\thow many lines ran into or out of it and went with it',
         'prints\tmembers\tcount\tfor a group: how many nodes stood in the frame and stayed where they are',
+        'order\tThose rows come once per node, in the order given',
+        `many\tTo remove several nodes, name them all in one call, as a,b,c, instead of calling once per node: ${ONE_WRITE}`,
+        'many\tEach node is checked the way a single one is, and a refusal names the node',
         'rule\tOnly a node whose maker is you, which is every node you made with node new, node group, agent or team',
         'rule\tA machine can free every node and view of every project on it; a refusal says whether this one does',
         'rule\tNever your own node, since that would end the session asking',
         'group\tRemoving a group takes the frame and nothing else: the nodes inside it stay where they stand, because they are not yours to remove with it',
-        'note\tThe node is found on any canvas of this project, so this takes no --view',
+        'note\tThe nodes are found on any canvas of this project, so this takes no --view; one call takes the nodes of one canvas',
         'see\truimte-context node list\tthe nodes of a canvas, with the ids this takes'
     ],
     positionals: z.tuple([z.string().min(1, 'node delete needs the id of a node')], {
-        error: (issue) => (issue.code === 'too_big' ? 'node delete takes one node id and nothing else' : 'node delete needs the id of a node')
+        error: (issue) =>
+            issue.code === 'too_big' ? 'node delete takes its node ids in one argument, separated by commas, as a,b,c' : 'node delete needs the id of a node'
     }),
     flags: z.object({}),
-    async run({ positionals: [id] }, call) {
+    async run({ positionals: [raw] }, call) {
+        const ids = idBatch(raw, 'node delete');
         const place = placeOf(call);
         const content = await call.host.projects.read(place.projectId);
-        const holding = content.views.filter(isCanvasView).find((view) => view.nodes.some((node) => node.id === id));
-        // The action refuses a node on no canvas before it reads the canvas, so any id stands in for one there.
-        const deleted = await runAction(call, 'node.delete', { viewId: holding?.id ?? place.canvasId ?? id, nodeIds: [id] });
-        const removed = deleted.removed?.[0];
-        if (!removed) {
-            throw new Error(`node delete removed nothing for ${id}`);
+        const canvases = content.views.filter(isCanvasView);
+        const holders = ids.flatMap((id) => {
+            const holding = canvases.find((view) => view.nodes.some((node) => node.id === id));
+            return holding === undefined ? [] : [{ id, viewId: holding.id }];
+        });
+        const other = holders.find((holder) => holder.viewId !== holders[0]!.viewId);
+        if (other !== undefined) {
+            throw new VerbRefusal(
+                'bad-arguments',
+                `node delete takes the nodes of one canvas per call, and ${holders[0]!.id} is on ${holders[0]!.viewId} while ${other.id} is on ${other.viewId}`
+            );
         }
-        return [
-            `deleted\t${id}\t${removed.kind}\t${field(removed.title)}`,
-            ...(removed.ended ? [`ended\t${id}\t${removed.kind}`] : []),
-            `edges\t${removed.edges}`,
-            ...(removed.members === null ? [] : [`members\t${removed.members}\tleft where they stand`])
-        ];
+        // The action refuses a node on no canvas before it reads the canvas, so any id stands in for one there.
+        const deleted = await runAction(call, 'node.delete', { viewId: holders[0]?.viewId ?? place.canvasId ?? ids[0]!, nodeIds: ids });
+        const removed = deleted.removed ?? [];
+        if (removed.length !== ids.length) {
+            throw new Error(`node delete removed ${removed.length} of ${ids.join(', ')}`);
+        }
+        return removed.flatMap((node) => [
+            `deleted\t${node.nodeId}\t${node.kind}\t${field(node.title)}`,
+            ...(node.ended ? [`ended\t${node.nodeId}\t${node.kind}`] : []),
+            `edges\t${node.edges}`,
+            ...(node.members === null ? [] : [`members\t${node.members}\tleft where they stand`])
+        ]);
     }
 });
 

@@ -83,7 +83,7 @@ struct CanvasDock: View {
 
     private var lockMenu: some View {
         Menu {
-            Section("Refuse gestures") {
+            Section("Ignore gestures") {
                 Toggle(isOn: lockBinding(\.pan)) {
                     Text("Pan")
                     Text("The canvas stays in place")

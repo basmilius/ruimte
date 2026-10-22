@@ -198,7 +198,7 @@ struct ProjectRowMarksView: View {
             }
             if marks.shared {
                 Image(lucide: "users", size: 12).foregroundStyle(MobileStyle.faint)
-                    .accessibilityLabel("Shared with the team")
+                    .accessibilityLabel("Shared with team")
             }
             if marks.draft {
                 Circle().fill(MobileStyle.faint).frame(width: 6, height: 6).accessibilityLabel("Draft")

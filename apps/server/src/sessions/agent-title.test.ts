@@ -84,7 +84,7 @@ describe('the name of a terminal agent', () => {
 
     test('a CLI that writes no name down is never asked for one', async () => {
         await writeFile(transcript, `${JSON.stringify({ type: 'ai-title', aiTitle: 'Not for antigravity' })}\n`);
-        await harness.manager.applyHook('antigravity', token(), hook('Stop'));
+        await harness.manager.applyHook('antigravity', token(), { conversationId: 'claude-1', transcriptPath: transcript });
         expect(reads.started).toEqual([]);
         expect(lastAgent()).toMatchObject({ kind: 'antigravity', status: 'idle' });
         expect(lastAgent()?.suggestedTitle).toBeUndefined();

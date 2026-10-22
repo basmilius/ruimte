@@ -17,8 +17,8 @@ function render(grants: Grants): string {
 describe('the grants of a machine in settings', () => {
     test('an empty list says so, and nothing is held this time', () => {
         const markup = render(EMPTY);
-        expect(markup).toContain('No apps are allowed for always.');
-        expect(markup).toContain('No apps have been seen running a shell.');
+        expect(markup).toContain('No apps allowed.');
+        expect(markup).toContain('No apps seen running a shell.');
         expect(markup).not.toContain('This time');
         expect(markup).not.toContain('<button');
     });

@@ -111,7 +111,7 @@ describe('on-device model', () => {
         const running = rig.model.generate({ purpose: 'explain', prompt: 'x' });
         await new Promise((resolve) => setImmediate(resolve));
         rig.out({ type: 'session', id: '00000000-0000-4000-8000-000000000000', restored: false });
-        await expect(running).rejects.toMatchObject({ code: 'unavailable', message: 'The on-device helper is older than this daemon.' });
+        await expect(running).rejects.toMatchObject({ code: 'unavailable', message: 'Update Ruimte to use on-device help.' });
     });
 
     test('a helper that crashes fails what waits and is started again by the next request', async () => {

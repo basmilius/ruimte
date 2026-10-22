@@ -1,10 +1,17 @@
 import { describe, expect, test } from 'bun:test';
+import type { CanvasNode, Edge } from '@/state/canvas';
+import { lineRoutes } from './line-routes';
 import { portHints, takenPorts } from './port-hints';
 
 function node(id: string, x: number, y: number) {
     return { id, x, y, w: 100, h: 100 };
 }
 const nodes = [node('a', 0, 0), node('b', 400, 0)];
+const byId = Object.fromEntries(nodes.map((each) => [each.id, { ...each, kind: 'note', title: each.id } as CanvasNode]));
+
+function taken(edges: Edge[], hidden = new Set<string>()): ReadonlySet<string> {
+    return takenPorts(lineRoutes(edges, byId, {}, hidden));
+}
 
 describe('the ports offered to a pointer', () => {
     test('are the nearest side of every node within reach', () => {
@@ -31,22 +38,29 @@ describe('the ports offered to a pointer', () => {
     test('include a side a line already leaves from, which is the only way to start a second one there', () => {
         const hints = portHints(nodes, { x: 120, y: 50 }, 56);
         expect(hints.map((hint) => hint.side)).toEqual(['right']);
-        expect(takenPorts([{ from: 'a', to: 'b' }], (id) => nodes.find((candidate) => candidate.id === id) ?? null)).toContain('a:right');
+        expect(taken([{ id: 'ab', from: 'a', to: 'b' }])).toContain('a:right');
     });
 });
 
 describe('the sides a line already uses', () => {
-    const rectOf = (id: string) => nodes.find((candidate) => candidate.id === id) ?? null;
-
     test('are the facing sides of the nodes it runs between', () => {
-        expect([...takenPorts([{ from: 'a', to: 'b' }], rectOf)]).toEqual(['a:right', 'b:left']);
+        expect([...taken([{ id: 'ab', from: 'a', to: 'b' }])]).toEqual(['a:right', 'b:left']);
     });
 
     test('are the right side alone for a line onto its own node', () => {
-        expect([...takenPorts([{ from: 'a', to: 'a' }], rectOf)]).toEqual(['a:right']);
+        expect([...taken([{ id: 'aa', from: 'a', to: 'a' }])]).toEqual(['a:right']);
     });
 
     test('are none for an edge whose node is gone or hidden', () => {
-        expect([...takenPorts([{ from: 'a', to: 'gone' }], rectOf)]).toEqual([]);
+        expect([...taken([{ id: 'gone', from: 'a', to: 'gone' }])]).toEqual([]);
+        expect([...taken([{ id: 'ab', from: 'a', to: 'b' }], new Set(['b']))]).toEqual([]);
+    });
+
+    test('are read off the routes the canvas draws, so asking again for the same canvas routes nothing', () => {
+        const edges = [{ id: 'ab', from: 'a', to: 'b' }];
+        const texts = {};
+        const hidden = new Set<string>();
+        const drawn = lineRoutes(edges, byId, texts, hidden);
+        expect(takenPorts(lineRoutes(edges, byId, texts, hidden))).toBe(takenPorts(drawn));
     });
 });

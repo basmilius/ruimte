@@ -34,7 +34,7 @@ export function useProjectMenu() {
     const current = useProject((s) => s.current);
     const currentEndpointId = useProject((s) => s.currentEndpointId);
     const stored = useEndpoints((s) => s.endpoints);
-    const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
+    const endpoints = listedEndpoints(stored);
     const activeId = useEndpoints((s) => s.activeId);
     const connected = useOpenEndpoints();
     const [closing, setClosing] = useState<{ row: ProjectMenuRow; name: string; sessions: number; otherClients: number } | null>(null);
@@ -45,10 +45,7 @@ export function useProjectMenu() {
     }, [rows, endpoints, connected, currentKey]);
     const showMachine = endpoints.length > 1;
     const machineId = currentEndpointId ?? activeId;
-    const chats = useMemo(
-        () => chatsProjects(rows, endpoints, connected).find((row) => row.endpointId === machineId && row.summary.available) ?? null,
-        [rows, endpoints, connected, machineId]
-    );
+    const chats = chatsProjects(rows, endpoints, connected).find((row) => row.endpointId === machineId && row.summary.available) ?? null;
     const offersChat = useOffersNewChat();
     const machine = machineId === LOCAL_ENDPOINT_ID ? null : (endpoints.find((endpoint) => endpoint.id === machineId) ?? null);
     const servers = useServers((s) => s.byEndpoint);

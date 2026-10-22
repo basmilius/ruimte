@@ -113,11 +113,7 @@ describe('the machines a node waits for', () => {
 
 describe('what the pill of a waiting node says', () => {
     test('names one task or counts several', () => {
-        expect(i18next.t('canvas:remote.waitTooltip', { machine: 'MacBook Pro', count: 1 })).toBe(
-            'The task waits until MacBook Pro answers. It carries on there by itself then.'
-        );
-        expect(i18next.t('canvas:remote.waitTooltip', { machine: 'MacBook Pro', count: 3 })).toBe(
-            '3 tasks wait until MacBook Pro answers. They carry on there by themselves then.'
-        );
+        expect(i18next.t('canvas:remote.waitTooltip', { machine: 'MacBook Pro', count: 1 })).toBe('The task waits until MacBook Pro answers.');
+        expect(i18next.t('canvas:remote.waitTooltip', { machine: 'MacBook Pro', count: 3 })).toBe('3 tasks wait until MacBook Pro answers.');
     });
 });

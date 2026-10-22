@@ -638,17 +638,18 @@ function crosses(a: Point, b: Point, box: Bounds): boolean {
     if (box.maxX <= box.minX || box.maxY <= box.minY) {
         return false;
     }
+    // A run wholly on one side of the box misses it, which is what nearly every pair on a busy canvas is.
+    if (Math.max(a.x, b.x) <= box.minX || Math.min(a.x, b.x) >= box.maxX || Math.max(a.y, b.y) <= box.minY || Math.min(a.y, b.y) >= box.maxY) {
+        return false;
+    }
     const dx = b.x - a.x;
     const dy = b.y - a.y;
-    const slabs: readonly (readonly [number, number])[] = [
-        [-dx, a.x - box.minX],
-        [dx, box.maxX - a.x],
-        [-dy, a.y - box.minY],
-        [dy, box.maxY - a.y]
-    ];
     let enter = 0;
     let leave = 1;
-    for (const [edge, room] of slabs) {
+    // The slabs one by one rather than as an array: this runs for every leg against every box, and an allocation per call was most of a search.
+    for (let slab = 0; slab < 4; slab++) {
+        const edge = slab === 0 ? -dx : slab === 1 ? dx : slab === 2 ? -dy : dy;
+        const room = slab === 0 ? a.x - box.minX : slab === 1 ? box.maxX - a.x : slab === 2 ? a.y - box.minY : box.maxY - a.y;
         if (edge === 0) {
             if (room <= 0) {
                 return false;

@@ -128,7 +128,7 @@ const TURN = { urls: ['turn:turn.example.com:3478?transport=udp', 'turn:turn.exa
 describe('BrokerRelay and ICE servers', () => {
     const lastIce = (socket: FakeSocket) => socket.sent.filter((frame) => frame.type === 'ice').at(-1) as Extract<BrokerPeerFrame, { type: 'ice' }> | undefined;
 
-    const withIceRequest = async () => {
+    const withIceRequest = async (onSettled?: () => void) => {
         clock = 1_000_000;
         const machine = generateKeyPair();
         const sockets: FakeSocket[] = [];
@@ -145,7 +145,8 @@ describe('BrokerRelay and ICE servers', () => {
             backoffMinMs: 10,
             backoffMaxMs: 20,
             log: quiet,
-            now: () => clock
+            now: () => clock,
+            ...(onSettled === undefined ? {} : { onSettled })
         });
         await relay.publish();
         const socket = sockets[0]!;
@@ -200,6 +201,21 @@ describe('BrokerRelay and ICE servers', () => {
         socket.onclose?.();
         expect(relay.iceServers()).toHaveLength(1);
         await waitUntil(() => sockets.length === 2);
+        await relay.stop();
+    });
+
+    test('the reach check hears once per connection, on the first answer about ICE, and sees every server', async () => {
+        let settled = 0;
+        const { relay, socket } = await withIceRequest(() => {
+            settled += 1;
+        });
+        expect(settled).toBe(0);
+        socket.deliver({ type: 'ice', id: lastIce(socket)!.id, servers: [TURN], expiresAt: clock + 90_000 });
+        expect(settled).toBe(1);
+        expect(relay.grantedIceServers()).toEqual([TURN]);
+        jest.advanceTimersByTime(60_000);
+        socket.deliver({ type: 'ice', id: lastIce(socket)!.id, servers: [TURN], expiresAt: clock + 90_000 });
+        expect(settled).toBe(1);
         await relay.stop();
     });
 

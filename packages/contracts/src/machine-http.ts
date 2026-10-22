@@ -2,6 +2,7 @@ import { toBase64Url } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { KeepAwakeModeSchema } from './keep-awake.ts';
 import { LanDoorSchema } from './lan-door.ts';
+import { ReachCheckSchema } from './reach.ts';
 
 /*
  * The HTTP routes a daemon answers beside the socket, asked by the desktop shell and by
@@ -79,6 +80,9 @@ export function isIdle(work: MachineWork): boolean {
  */
 export const MACHINE_STATUS_PATH = '/machine/status';
 
+// `GET /machine/status?check=1` checks whether other devices reach the machine before it answers.
+export const MACHINE_STATUS_CHECK_QUERY = 'check';
+
 export const MachineStatusSchema = z.object({
     version: z.string().min(1),
     service: z.boolean(),
@@ -99,7 +103,9 @@ export const MachineStatusSchema = z.object({
             holding: z.boolean(),
             lid: z.object({ on: z.boolean(), rule: z.boolean(), holding: z.boolean() }).nullable()
         })
-        .optional()
+        .optional(),
+    // Whether other devices reach it and, if not, why; null before the first check. Absent from a daemon older than the check.
+    reach: ReachCheckSchema.nullable().optional()
 });
 export type MachineStatus = z.infer<typeof MachineStatusSchema>;
 

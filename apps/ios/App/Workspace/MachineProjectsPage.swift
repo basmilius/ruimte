@@ -72,7 +72,7 @@ struct MachineProjectsPage: View {
                                 MobileWorkspace(session: session, projectID: chats.text("projectId"), summary: chats))
                         } label: {
                             ChatsRowLabel(
-                                title: String(localized: "Chats"), detail: String(localized: "Your earlier chats"),
+                                title: String(localized: "Chats"), detail: String(localized: "Earlier chats"),
                                 icon: "messages-square")
                         }
                         .modifier(MobileSidebarRow())

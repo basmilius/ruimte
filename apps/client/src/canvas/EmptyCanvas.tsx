@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { FileText, Globe, LayoutGrid, LayoutTemplate, MessageSquare, PenTool, StickyNote, Terminal, Type, Workflow } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { applyLayoutAction, createNodeAction, createTextAction, showViewOnCanvasAction } from '@/actions/client-actions';
@@ -44,7 +44,7 @@ export function EmptyCanvas() {
     const views = useDocument((s) => s.views);
     const hasFolder = useProject((s) => shownFolderOf(s.current) !== null);
     const providers = useProviders((s) => s.providers);
-    const sections = useMemo(() => emptyCanvasSections({ providers, hasFolder, layouts, views }), [providers, hasFolder, layouts, views]);
+    const sections = emptyCanvasSections({ providers, hasFolder, layouts, views });
 
     const center = (): { x: number; y: number } => {
         const state = canvasStore.getState();

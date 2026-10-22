@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Monitor } from 'lucide-react';
+import { Monitor, MonitorUp } from 'lucide-react';
 import type { RemoteLink } from '@ruimte/contracts';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import type { Point } from '@/canvas/math';
 import { iconOfEntry } from '@/shell/settings/machine-icon';
 import { nameOf, type MachineEntry } from '@/shell/settings/machine-list';
 import { useOtherMachines } from '@/canvas/use-other-machines';
-import { useCanvasStore } from '@/state/canvas';
+import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
@@ -42,13 +42,13 @@ function useLinks(): RemoteLink[] {
 
 /*
  * "On another machine": one row per machine of the account, in a submenu below the node kinds, so the
- * menu does not grow with every machine. A node of another machine goes on a canvas only you have,
- * so on a shared canvas each row says why it is off.
+ * menu does not grow with every machine, and the way to put this project on a machine that has no
+ * checkout of it yet. A node of another machine goes on a canvas only you have, so on a shared canvas
+ * each row says why it is off.
  */
 export function RemoteMachineItems({ at }: { at: () => Point }) {
     const { t } = useTranslation('canvas');
-    const canvasStore = useCanvasStore();
-    const viewId = canvasStore.getState().viewId;
+    const viewId = useCanvas((s) => s.viewId);
     const shared = useDocument((s) => viewId !== null && s.shared.includes(viewId));
     const machines = useOtherMachines();
     const links = useLinks();
@@ -72,6 +72,10 @@ export function RemoteMachineItems({ at }: { at: () => Point }) {
                         }}
                     />
                 ))}
+                <ContextMenu.Separator />
+                <ContextMenu.Item onClick={() => useUi.getState().setAddToMachineDialog({ machineId: null })}>
+                    <Icon icon={MonitorUp} size={14} /> {t('otherMachine.addProject')}
+                </ContextMenu.Item>
             </ContextMenu.Popup>
         </ContextMenu.SubmenuRoot>
     );

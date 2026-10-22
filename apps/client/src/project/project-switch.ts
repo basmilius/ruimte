@@ -28,7 +28,8 @@ export type SwitchState =
     | { kind: 'idle' }
     /* `visible` turns on after `REVEAL_DELAY_MS`; before that the screen draws nothing. */
     | { kind: 'connecting' | 'opening' | 'returning'; target: SwitchTarget; visible: boolean }
-    | { kind: 'failed'; target: SwitchTarget; reason: string };
+    /* `step` says whether the machine never answered or answered and the project would not open. */
+    | { kind: 'failed'; target: SwitchTarget; reason: string; step: 'connecting' | 'opening' };
 
 export type SwitchOutcome = 'done' | 'failed' | 'cancelled' | 'replaced';
 
@@ -162,7 +163,7 @@ export class ProjectSwitch {
         }
         entry.cancelReveal();
         if (failure !== null) {
-            this.set({ kind: 'failed', target: entry.target, reason: failure });
+            this.set({ kind: 'failed', target: entry.target, reason: failure, step: this.state.kind === 'opening' ? 'opening' : 'connecting' });
             return 'failed';
         }
         this.finish(entry);

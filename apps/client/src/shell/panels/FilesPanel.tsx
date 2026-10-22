@@ -1,7 +1,8 @@
 import { revealFile } from './reveal-file';
+import { isQuickLookKey, useQuickLook } from './quick-look';
 import { ActionRefusal } from '@ruimte/actions';
 import { perform } from '@/actions/client-actions';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FileTreeDropResult } from '@pierre/trees';
 import { FileTree, useFileTree } from '@adecore/ui';
@@ -95,6 +96,12 @@ const FILES_TREE_CSS = `
     ${PLACEHOLDER_CSS}
 `;
 
+/* A key typed into a field inside the tree, such as its own search, is text and no command. */
+function typing(event: Event): boolean {
+    const origin = event.composedPath()[0];
+    return origin instanceof HTMLElement && (origin instanceof HTMLInputElement || origin instanceof HTMLTextAreaElement || origin.isContentEditable);
+}
+
 const EMPTY_MATCHES: readonly string[] = [];
 const EMPTY_CACHE: EntryCache = new Map();
 
@@ -157,6 +164,7 @@ export function FilesPanel() {
     const answeredReveal = useRef(0);
     const cache = listed.folder === folder ? listed.byDir : EMPTY_CACHE;
     const reveal = useFiles((s) => s.reveal);
+    const quickLook = useQuickLook(endpointId, folder);
 
     const { model } = useFileTree({
         paths: [],
@@ -453,6 +461,31 @@ export function FilesPanel() {
             return;
         }
         useFiles.getState().open(absoluteOf(folder, treePath), tabLimit, undefined, undefined, { focus: false });
+    };
+
+    /* Space shows the focused file in Quick Look and hides it again; Escape hides it too. A folder has none. */
+    const onTreeKey = (event: KeyboardEvent<HTMLDivElement>): void => {
+        if (quickLook === null || !folder || typing(event.nativeEvent)) {
+            return;
+        }
+        if (event.key === 'Escape' && quickLook.close()) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+        const path = activeModel.getFocusedPath();
+        if (!isQuickLookKey(event) || path === null || isDirectoryPath(path)) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        quickLook.toggle(absoluteOf(folder, path));
+    };
+
+    const followQuickLook = (treePath: string): void => {
+        if (quickLook !== null && folder && !isDirectoryPath(treePath)) {
+            quickLook.follow(absoluteOf(folder, treePath));
+        }
     };
 
     const onDragStart = (_path: string, paths: readonly string[], event: DragEvent): void => {
@@ -776,6 +809,8 @@ export function FilesPanel() {
                                 label={t('shell:panel.names.files')}
                                 resetKey={folder ?? ''}
                                 onActivate={openPath}
+                                onFocusMove={followQuickLook}
+                                onKeyDownCapture={onTreeKey}
                                 onRowDragStart={onDragStart}
                             />
                         </ContextMenu.Trigger>

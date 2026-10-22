@@ -101,14 +101,14 @@ struct GitPullRequestPage: View {
             }
             if model.repositories.busy {
                 Section {
-                    GitBusyRow(text: model.repositories.progress ?? String(localized: "Opening the pull request"))
+                    GitBusyRow(text: model.repositories.progress ?? String(localized: "Opening pull request"))
                 }
             }
             if let problem = model.repositories.problem {
                 Section { Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red) }
             }
         }
-        .navigationTitle("Open a pull request")
+        .navigationTitle("Create pull request")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             GitBottomBar {

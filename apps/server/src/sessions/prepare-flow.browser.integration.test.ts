@@ -138,7 +138,7 @@ for (const change of ['none', 'busy', 'input', 'refused', 'lost-ack', 'lost-ack-
                             expect((await f.session.shellPrompt.inspect())?.empty).toBe(false);
                         } else {
                             expect(await view.evaluate<string>('document.querySelector("[role=alert]").textContent')).toContain(
-                                change === 'lost-ack-nl' ? 'De opdracht staat mogelijk al in de terminal' : 'The command may already be in the terminal'
+                                change === 'lost-ack-nl' ? 'Het commando staat mogelijk al in de terminal' : 'The command may already be in the terminal'
                             );
                             expect(await view.evaluate<boolean>('window.pasteButton().disabled')).toBe(true);
                             await view.evaluate('window.pasteButton().click()');
@@ -150,7 +150,7 @@ for (const change of ['none', 'busy', 'input', 'refused', 'lost-ack', 'lost-ack-
                             expect(screen).toContain('my existing input');
                         }
                         expect(await view.evaluate<string>('document.querySelector("[role=alert]").textContent')).toContain(
-                            change === 'refused' ? 'Nothing was inserted' : 'Nothing was pasted'
+                            change === 'refused' ? 'The terminal did not accept the command' : 'Nothing was pasted'
                         );
                     }
                     await expect(access(join(f.home, 'chosen'))).rejects.toThrow();

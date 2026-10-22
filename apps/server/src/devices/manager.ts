@@ -9,6 +9,7 @@ import {
     type DeviceKind,
     type DeviceOpenResult,
     type DevicePlatform,
+    type DevicePower,
     type DeviceReference,
     type DeviceSettings,
     type DeviceUnavailable,
@@ -97,6 +98,8 @@ export interface DeviceBackend {
     tree?(deviceId: string): Promise<DeviceTree>;
     /* Ends whatever `tree` keeps running for this device. */
     closeTree?(deviceId: string): void;
+    /* A phone's own battery; null for a device without one of its own, such as a simulator. */
+    power?(deviceId: string): Promise<DevicePower | null>;
     /* Ends what runs beside the sessions (recordings, camera helpers, tree readers), for a daemon that stops. */
     closeAll?(): void;
 }
@@ -234,6 +237,15 @@ export class DeviceManager {
             throw new DeviceError('device-tools-unavailable', 'This device has no tools in Ruimte');
         }
         return backend.detail(deviceId);
+    }
+
+    /* Read only and never refused: a device that cannot say, for whatever reason, has an unknown battery. */
+    async power(backendId: string, platform: DevicePlatform, deviceId: string): Promise<DevicePower | null> {
+        try {
+            return (await this.backend(backendId, platform).power?.(deviceId)) ?? null;
+        } catch {
+            return null;
+        }
     }
 
     async action(action: DeviceAction): Promise<DeviceSettings> {

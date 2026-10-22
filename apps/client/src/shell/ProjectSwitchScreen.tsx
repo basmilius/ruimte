@@ -1,7 +1,6 @@
-import type { ReactNode } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { CircleAlert, LoaderCircle, Moon, type LucideIcon } from 'lucide-react';
+import { Moon } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { projectSwitch, useProjectSwitch } from '@/project/open';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
@@ -10,11 +9,13 @@ import { describeRoute } from '@/shell/connection-info';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';
+import { MachineCard } from '@/shell/MachineCard';
+import { StatusCard } from '@/shell/StatusCard';
 import { useMachineEntry } from '@/shell/use-machine-entry';
 import { useProjectList } from '@/state/project-list';
 import { useWindow } from '@/state/window';
 import { useEndpointConnection } from '@/transport/status';
-import { Button, Icon } from '@adecore/ui';
+import { Button } from '@adecore/ui';
 
 /* What is being opened, in the words a person picked it by. */
 function titleOf(target: SwitchTarget, machine: string): string {
@@ -34,40 +35,6 @@ function lineOf(state: Exclude<SwitchState, { kind: 'idle' }>, title: string, ma
     }
 }
 
-interface StatusCardProps {
-    glyph: ReactNode;
-    title: string;
-    /* The line under the title: the machine a project is on, or when a machine was last seen. */
-    meta?: ReactNode;
-    line: string;
-    failed: boolean;
-    /* Stands in for the spinner, for a window that is not waiting on anything. */
-    icon?: LucideIcon;
-    children?: ReactNode;
-}
-
-/* The card the window shows while it waits on a machine or after one failed it: what, where, why, and what to do. */
-export function StatusCard({ glyph, title, meta, line, failed, icon, children }: StatusCardProps) {
-    return (
-        <div className="flex w-80 max-w-full flex-col items-center gap-3 px-6 text-center">
-            {glyph}
-            <div className="flex max-w-full flex-col items-center gap-1">
-                <span className="max-w-full truncate text-sm font-medium text-text">{title}</span>
-                {meta}
-            </div>
-            <p className="flex items-start gap-2 text-xs leading-snug text-text-muted">
-                <Icon
-                    icon={failed ? CircleAlert : (icon ?? LoaderCircle)}
-                    size={14}
-                    className={failed ? 'mt-px shrink-0 text-status-error' : icon ? 'mt-px shrink-0' : 'mt-px shrink-0 animate-spin'}
-                />
-                <span>{line}</span>
-            </p>
-            {children && <div className="mt-2 flex flex-wrap items-center justify-center gap-2">{children}</div>}
-        </div>
-    );
-}
-
 function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }) {
     const { t } = useTranslation(['shell', 'common']);
     const { target } = state;
@@ -79,6 +46,25 @@ function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }
     // A project the cached list does not have has nothing but its machine's name to show, and saying it twice says nothing.
     const aboutMachine = target.summary === null && target.folder === null && target.name === null;
     const failed = state.kind === 'failed';
+    const actions = failed && (
+        <>
+            <Button size="sm" variant="secondary" onClick={() => void projectSwitch.back()}>
+                {t('switch.goBack')}
+            </Button>
+            <Button size="sm" variant="primary" onClick={() => void projectSwitch.retry()}>
+                {t('common:action.retry')}
+            </Button>
+        </>
+    );
+
+    // The machine never answered, so nothing is known to be wrong with the project: the card is the machine's.
+    if (state.kind === 'failed' && state.step === 'connecting') {
+        return (
+            <MachineCard machine={target.endpointId} line={state.reason} failed>
+                {actions}
+            </MachineCard>
+        );
+    }
 
     return (
         <StatusCard
@@ -115,16 +101,7 @@ function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }
                     {t('common:action.cancel')}
                 </Button>
             )}
-            {failed && (
-                <>
-                    <Button size="sm" variant="secondary" onClick={() => void projectSwitch.back()}>
-                        {t('switch.goBack')}
-                    </Button>
-                    <Button size="sm" variant="primary" onClick={() => void projectSwitch.retry()}>
-                        {t('common:action.retry')}
-                    </Button>
-                </>
-            )}
+            {actions}
         </StatusCard>
     );
 }

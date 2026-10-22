@@ -41,7 +41,13 @@ export function MachineTerminal({ endpointId, sourceId, onFileLinkHover, classNa
     const viewRef = useRef<TerminalViewHandle>(null);
     const [hovered, setHovered] = useState<HoveredLink | null>(null);
     const platform = useServers((state) => state.byEndpoint[endpointId]?.platform ?? null);
+    // Read at hover time, so a caller's new function never rebinds the links or loses the cwd tracked from output already on screen.
+    const fileLinkHover = useRef(onFileLinkHover);
     useImperativeHandle(ref, () => viewRef.current!, []);
+
+    useEffect(() => {
+        fileLinkHover.current = onFileLinkHover;
+    });
 
     useEffect(() => {
         const term = viewRef.current?.terminal;
@@ -57,7 +63,7 @@ export function MachineTerminal({ endpointId, sourceId, onFileLinkHover, classNa
                 }
             },
             hover: (link, bounds) => {
-                onFileLinkHover?.(link);
+                fileLinkHover.current?.(link);
                 setHovered((current) => {
                     if (!link || !bounds) {
                         return current?.kind === 'file' ? null : current;
@@ -79,7 +85,7 @@ export function MachineTerminal({ endpointId, sourceId, onFileLinkHover, classNa
             unbind();
             cwd.dispose();
         };
-    }, [endpointId, sourceId, onFileLinkHover, platform]);
+    }, [endpointId, sourceId, platform]);
     const link = hovered?.endpointId === endpointId && hovered.sourceId === sourceId ? hovered : null;
     const machine = useEndpoints((state) => state.endpoints.find((entry) => entry.id === endpointId)?.label);
     const destination = useSettings((state) => state.terminalLinkDestination);

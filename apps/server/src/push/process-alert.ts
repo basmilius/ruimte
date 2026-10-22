@@ -7,11 +7,11 @@ export function processAlertBody(alert: ProcessAlert): string {
         case 'silent':
             return 'Working, but silent for a while.';
         case 'busy-after-turn':
-            return `${name} is still busy after its turn ended.`;
+            return `${name} is still busy after its turn.`;
         case 'memory':
             return `${name} uses a lot of memory.`;
         case 'agent-gone':
-            return `${alert.name ?? 'The agent'} has exited, but still shows as running.`;
+            return `${alert.name ?? 'The agent'} exited but shows as running.`;
         case 'orphan':
             return `${name} is still running after its terminal closed.`;
         case 'probe-hung':

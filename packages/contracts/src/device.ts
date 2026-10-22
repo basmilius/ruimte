@@ -167,6 +167,19 @@ export const DeviceSettingsSchema = z.object({
 });
 
 export const DeviceDetailSchema = DeviceTargetPayloadSchema.extend({ settings: DeviceSettingsSchema });
+
+/* A phone's own battery as it last read it, or the fake level apps see while one is set (`simulated`). */
+export const DevicePowerSchema = z.object({
+    level: DeviceBatteryLevelSchema,
+    plugged: z.boolean(),
+    charging: z.boolean(),
+    /* What it hangs on when the phone says, such as `ac`, `usb` or `wireless`; open, since a phone may name a dock tomorrow. */
+    source: z.string().min(1).max(16).optional(),
+    simulated: z.boolean().optional()
+});
+
+/* Null where the battery cannot be read: a simulator, an emulator, or a phone that did not answer. */
+export const DevicePowerResultSchema = z.object({ power: DevicePowerSchema.nullable() });
 export const DeviceDetailPayloadSchema = DeviceTargetPayloadSchema;
 
 const DeviceActionTarget = DeviceTargetPayloadSchema.shape;
@@ -425,6 +438,7 @@ export type DeviceOperated = z.infer<typeof DeviceOperatedSchema>;
 export type DeviceOperatedState = z.infer<typeof DeviceOperatedStateSchema>;
 export type DevicePermission = z.infer<typeof DevicePermissionSchema>;
 export type DevicePlatform = z.infer<typeof DevicePlatformSchema>;
+export type DevicePower = z.infer<typeof DevicePowerSchema>;
 export type DeviceReference = z.infer<typeof DeviceReferenceSchema>;
 export type DeviceSettings = z.infer<typeof DeviceSettingsSchema>;
 export type DeviceState = z.infer<typeof DeviceStateSchema>;

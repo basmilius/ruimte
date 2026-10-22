@@ -117,7 +117,7 @@ export class PrepareTerminal {
         };
         check();
         if ((await this.host.sessions.holdsForeground(ticket.session.pid)) !== true) {
-            refuse('The terminal is busy, or its shell cannot be verified. Nothing was pasted.');
+            refuse('The terminal is busy. Nothing was pasted.');
         }
         check();
         const outcome = await ticket.session.shellPrompt.prepare({ revision: ticket.revision, cwd: ticket.place.cwd }, ticket.command, check);

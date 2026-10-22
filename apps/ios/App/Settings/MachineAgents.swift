@@ -100,8 +100,8 @@ import SwiftUI
         case "ready":
             let parts = [status?["plan"]?.stringValue, status?["email"]?.stringValue].compactMap { $0 }
                 .filter { !$0.isEmpty }
-            return parts.isEmpty ? String(localized: "Signed in") : parts.joined(separator: " · ")
-        case "signed-out": return String(localized: "Signed out")
+            return parts.isEmpty ? String(localized: "Logged in") : parts.joined(separator: " · ")
+        case "signed-out": return String(localized: "Not logged in")
         case "disabled": return String(localized: "Off", comment: "An agent account that is turned off")
         case "checking", nil: return String(localized: "Checking")
         case "folder-missing": return String(localized: "Its folder is missing")
@@ -236,7 +236,7 @@ struct MachineAgentsPage: View {
                 Toggle(isOn: endpointBinding("visualReplies")) {
                     Text("Visual replies")
                     Text(
-                        "On, an agent may show a chart, table or mockup above its reply, as a page. Off, it answers in text. Visuals already in a chat stay."
+                        "Agents may show a chart, table or mockup above a reply. Off, they answer in text; existing visuals stay."
                     )
                 }
                 .disabled(model.state.busy)

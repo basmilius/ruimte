@@ -1,6 +1,5 @@
-import { memo, useMemo, type RefObject } from 'react';
-import { textRect } from '@/canvas/edge-lines';
-import type { Rect } from '@/canvas/math';
+import { type RefObject } from 'react';
+import { lineRoutes } from '@/canvas/line-routes';
 import { HINT_HOT, HINT_REACH, portHints, portKey, takenPorts } from '@/canvas/port-hints';
 import { useWorldPointer } from '@/canvas/use-world-pointer';
 import { useCanvas } from '@/state/canvas';
@@ -10,7 +9,7 @@ import { useCanvas } from '@/state/canvas';
  * so a port sits beside its node in the same layer as the line it starts, and a node holds nothing
  * of the canvas around it.
  */
-export const PortHints = memo(function PortHints({ rootRef }: { rootRef: RefObject<HTMLDivElement | null> }) {
+export function PortHints({ rootRef }: { rootRef: RefObject<HTMLDivElement | null> }) {
     const nodes = useCanvas((s) => s.nodes);
     const texts = useCanvas((s) => s.texts);
     const edges = useCanvas((s) => s.edges);
@@ -21,28 +20,12 @@ export const PortHints = memo(function PortHints({ rootRef }: { rootRef: RefObje
     const point = useWorldPointer(rootRef);
 
     /* A group is a frame under its nodes, never something you draw a line from by brushing past its border. */
-    const open = useMemo(() => Object.values(nodes).filter((node) => node.kind !== 'group' && !hidden.has(node.id)), [hidden, nodes]);
+    const open = Object.values(nodes).filter((node) => node.kind !== 'group' && !hidden.has(node.id));
 
-    const hints = useMemo(() => (point === null || quiet ? [] : portHints(open, point, HINT_REACH / zoom)), [open, point, quiet, zoom]);
+    const hints = point === null || quiet ? [] : portHints(open, point, HINT_REACH / zoom);
 
     /* A side a line already leaves from has its dot drawn by that line, so this one only takes the press. */
-    const taken = useMemo(() => {
-        if (quiet) {
-            return new Set<string>();
-        }
-        const rectOf = (id: string): Rect | null => {
-            if (hidden.has(id)) {
-                return null;
-            }
-            const text = texts[id];
-            return nodes[id] ?? (text === undefined ? null : textRect(text));
-        };
-        return takenPorts(
-            edges,
-            rectOf,
-            open.map(({ id, x, y, w, h }) => ({ id, x, y, w, h }))
-        );
-    }, [edges, hidden, nodes, open, quiet, texts]);
+    const taken = quiet ? new Set<string>() : takenPorts(lineRoutes(edges, nodes, texts, hidden));
 
     if (hints.length === 0) {
         return null;
@@ -80,4 +63,4 @@ export const PortHints = memo(function PortHints({ rootRef }: { rootRef: RefObje
             })}
         </svg>
     );
-});
+}

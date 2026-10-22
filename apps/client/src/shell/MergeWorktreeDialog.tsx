@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { Worktree, WorktreeMergeResult, WorktreeMergeStrategy } from '@ruimte/contracts';
@@ -89,7 +89,7 @@ export function MergeWorktreeDialog() {
     }, [transport, request]);
 
     const shown = reading !== null && reading.request === request ? reading : null;
-    const worktrees = useMemo(() => shown?.worktrees ?? [], [shown]);
+    const worktrees = shown?.worktrees ?? [];
     const failure =
         shown === null
             ? null
@@ -98,17 +98,10 @@ export function MergeWorktreeDialog() {
               : shown.worktrees.length === 0
                 ? t('merge.nothingLeft')
                 : null;
-    const working = useMemo(
-        () => worktrees.flatMap((worktree) => nodesInWorktree(nodes, worktree)).filter((node) => nodeWorking(node, sessions, chats, endpointId)),
-        [worktrees, nodes, sessions, chats, endpointId]
-    );
-    const live = useMemo(
-        () =>
-            worktrees
-                .flatMap((worktree) => nodesInWorktree(nodes, worktree))
-                .filter((node) => nodeLive(node, sessions, chats, endpointId) || nodeWorking(node, sessions, chats, endpointId)),
-        [worktrees, nodes, sessions, chats, endpointId]
-    );
+    const working = worktrees.flatMap((worktree) => nodesInWorktree(nodes, worktree)).filter((node) => nodeWorking(node, sessions, chats, endpointId));
+    const live = worktrees
+        .flatMap((worktree) => nodesInWorktree(nodes, worktree))
+        .filter((node) => nodeLive(node, sessions, chats, endpointId) || nodeWorking(node, sessions, chats, endpointId));
     const workingIds = working.map((node) => node.id).join('\u0000');
 
     useEffect(() => {

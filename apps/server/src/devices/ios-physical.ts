@@ -1,5 +1,6 @@
+import { existsSync } from 'node:fs';
 import { z } from 'zod';
-import type { DeviceAction, DeviceInfo, DeviceSettings } from '@ruimte/contracts';
+import type { DeviceAction, DeviceInfo, DevicePower, DeviceSettings } from '@ruimte/contracts';
 import { requireExtension } from './device-paths.ts';
 import { DeviceError, type DeviceBackend, type DeviceSource } from './manager.ts';
 import {
@@ -52,6 +53,34 @@ const PhysicalDeviceSchema = z.object({
 
 const PhysicalDeviceListSchema = z.object({ result: z.object({ devices: z.array(PhysicalDeviceSchema) }) });
 
+/* The line the bridge's `battery` prints, from lockdown's battery domain. */
+const BridgeBatterySchema = z.object({ level: z.number().int().min(0).max(100), charging: z.boolean(), plugged: z.boolean() });
+
+/* Asks the phone with this hardware udid for its battery and answers the bridge's JSON line; throws when it could not. */
+export type PhysicalBatteryReader = (udid: string) => Promise<string>;
+
+// The bridge gives up after its own timeout; this only ends a bridge that hangs past it.
+const BATTERY_BRIDGE_TIMEOUT_SECONDS = 10;
+const BATTERY_KILL_MS = 15_000;
+
+export function createPhysicalBatteryReader(helper: string): PhysicalBatteryReader | null {
+    if (!existsSync(helper)) {
+        return null;
+    }
+    return async (udid) => {
+        const process = Bun.spawn([helper, 'battery', '--udid', udid, '--timeout', String(BATTERY_BRIDGE_TIMEOUT_SECONDS)], {
+            stdout: 'pipe',
+            stderr: 'pipe',
+            timeout: BATTERY_KILL_MS
+        });
+        const [exitCode, stdout, stderr] = await Promise.all([process.exited, new Response(process.stdout).text(), new Response(process.stderr).text()]);
+        if (exitCode !== 0) {
+            throw new Error(stderr.trim() || 'The phone did not say its battery');
+        }
+        return stdout;
+    };
+}
+
 async function defaultRunner(arguments_: string[]): Promise<CommandResult> {
     const process = Bun.spawn(['xcrun', 'devicectl', ...arguments_], { stdout: 'pipe', stderr: 'pipe' });
     const [exitCode, stdout, stderr] = await Promise.all([process.exited, new Response(process.stdout).text(), new Response(process.stderr).text()]);
@@ -67,17 +96,36 @@ export class IosPhysicalBackend implements DeviceBackend {
     private readonly photograph: PhysicalScreenshot;
     private readonly udids = new Map<string, string>();
     private readonly run: DevicectlRunner;
+    private readonly readBattery: PhysicalBatteryReader | null;
 
     constructor(
         run: DevicectlRunner = defaultRunner,
         capture: PhysicalFrameCapture = capturePhysicalFrame,
         createLiveSource: PhysicalStreamSourceFactory | null = null,
-        photograph: PhysicalScreenshot = capturePhysicalScreenshot
+        photograph: PhysicalScreenshot = capturePhysicalScreenshot,
+        readBattery: PhysicalBatteryReader | null = null
     ) {
         this.run = run;
         this.captureFrame = capture;
         this.createLiveSource = createLiveSource;
         this.photograph = photograph;
+        this.readBattery = readBattery;
+    }
+
+    /* Null without the bridge, for a phone the last list did not hold, and for an answer that is not the bridge's line. */
+    async power(deviceId: string): Promise<DevicePower | null> {
+        const udid = this.udids.get(deviceId);
+        if (this.readBattery === null || udid === undefined) {
+            return null;
+        }
+        let parsed: unknown;
+        try {
+            parsed = JSON.parse(await this.readBattery(udid));
+        } catch {
+            return null;
+        }
+        const battery = BridgeBatterySchema.safeParse(parsed);
+        return battery.success ? battery.data : null;
     }
 
     async list(): Promise<DeviceInfo[]> {

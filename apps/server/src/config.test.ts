@@ -69,6 +69,9 @@ describe('parseServerArgs', () => {
             args: ['Build', 'done']
         });
         expect(() => parseServerArgs(['status', '--node', 'chat-1'], {})).toThrow('--node only goes with notify');
+        expect(parseServerArgs(['status', '--json', '--check'], {})).toMatchObject({ command: 'status', json: true, check: true });
+        expect(parseServerArgs(['status'], {}).json).toBeUndefined();
+        expect(() => parseServerArgs(['login', '--json'], {})).toThrow('--json and --check only go with status');
         expect(() => parseServerArgs(['--port', '1', 'service', 'install'], {})).toThrow('Usage: ruimte service');
         expect(parseServerArgs(['context', 'node', 'note', '--text', 'hi', '--port=1'], {})).toMatchObject({
             command: 'context',

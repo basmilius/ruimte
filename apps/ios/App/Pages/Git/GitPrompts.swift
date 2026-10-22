@@ -29,7 +29,7 @@ enum GitPrompt: Identifiable {
 
     var detail: String {
         switch self {
-        case .stash: String(localized: "Everything that changed is set aside and the working tree goes back to HEAD.")
+        case .stash: String(localized: "Everything that changed is set aside and the working tree goes back to the latest commit.")
         case .createBranch: String(localized: "Branches off what is checked out now and switches to it.")
         case .renameBranch: String(localized: "Renames the branch that is checked out here.")
         case .createWorktree:

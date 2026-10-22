@@ -31,13 +31,14 @@ import { followSpaceRelease, holdSpace, releaseSpace, spaceWorksTarget } from '@
 import { setGapModifierDown } from '@/canvas/gap-modifier';
 import { cancelCanvasGesture } from '@/canvas/gesture-cancel';
 import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/prompt-stack';
-import { useSubagentView, stepTimelineMessage } from '@adecore/agents-react/chat';
+import { useSubagentView, stepEffortFromComposer, stepTimelineMessage } from '@adecore/agents-react/chat';
 import { openFocusedFind } from '@/find/hosts';
 import { focusedCanvas, maximizeTargetOf, zoomNodeTargetOf, type CanvasState } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
 import { drawingHasSomethingToClear, focusedDrawing } from '@/state/drawing';
 import { isScratchProject, useProject } from '@/state/project';
 import { commandForKey, type WorkspaceCommandId } from '@/shell/command-table';
+import { revealNextWaiting } from '@/shell/next-waiting';
 import { focusViewRow } from '@/shell/sidebar-focus';
 import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { transportFor } from '@/transport';
@@ -47,6 +48,7 @@ import { cellAt, cellCount, isTabHost, type SplitDirection } from '@/shell/split
 import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
 import { endpointKey } from '@/state/keys';
 import { windowWorkspace } from '@/state/window';
+import { focusedChatComposerKey, keyboardChatKey } from '@/chat/focused-chat';
 
 function workspaceEndpointId(): string | null {
     return windowWorkspace()?.connection.endpointId ?? null;
@@ -140,21 +142,6 @@ function focusedBrowserKey(): string | null {
     }
     const { bodyFocusId, nodes } = focusedCanvas().getState();
     return bodyFocusId !== null && nodes[bodyFocusId]?.kind === 'browser' ? endpointKey(endpointId, bodyFocusId) : null;
-}
-
-/* The chat the keyboard is in: a chat view whose body has it, or the active chat node on its canvas. */
-function focusedChatKey(): string | null {
-    const endpointId = workspaceEndpointId();
-    const documentState = useDocument.getState();
-    const view = activeViewOf(documentState);
-    if (endpointId === null || view === null) {
-        return null;
-    }
-    if (!isCanvasView(view)) {
-        return view.kind === 'chat' && documentState.bodyFocused ? endpointKey(endpointId, view.id) : null;
-    }
-    const { bodyFocusId, nodes } = focusedCanvas().getState();
-    return bodyFocusId !== null && nodes[bodyFocusId]?.kind === 'chat' ? endpointKey(endpointId, bodyFocusId) : null;
 }
 
 export function isTypingTarget(el: EventTarget | null): boolean {
@@ -316,11 +303,20 @@ function answerWindowKey(e: KeyboardEvent, s: CanvasState, is: Matches, command:
             return true;
         }
     }
-    /* The composer leaves these keys alone (its keymap is the standard one, without moving lines), so
-       they work while typing. Nothing is taken when the chat has no message that way. */
+    /* From the thread only: the composer keeps these for its prompt recall (`terminal/keymap.ts`). Nothing
+       is taken when the chat has no message that way, so the canvas still moves between nodes. */
     if (is(CANVAS_SHORTCUTS.previousMessage) || is(CANVAS_SHORTCUTS.nextMessage)) {
-        const key = focusedChatKey();
+        const key = keyboardChatKey();
         if (key !== null && !isInFloatingLayer(e.target) && stepTimelineMessage(key, is(CANVAS_SHORTCUTS.nextMessage) ? 1 : -1)) {
+            e.preventDefault();
+            return true;
+        }
+    }
+    /* The chat the menu's row means: the shell drops an accelerator for a key the page saw, and off
+       macOS registers none, so this listener is the only way the key the menu shows acts. */
+    if (command === 'chat-effort-up' || command === 'chat-effort-down') {
+        const key = focusedChatComposerKey();
+        if (key !== null && !isInFloatingLayer(e.target) && stepEffortFromComposer(key, command === 'chat-effort-up' ? 'up' : 'down')) {
             e.preventDefault();
             return true;
         }
@@ -338,6 +334,12 @@ function answerWindowKey(e: KeyboardEvent, s: CanvasState, is: Matches, command:
     // From anywhere, a terminal included: the point is to answer without first leaving what you type in.
     if (command === 'prompts') {
         if (focusPromptStack()) {
+            e.preventDefault();
+        }
+        return true;
+    }
+    if (command === 'needs-you-next') {
+        if (revealNextWaiting()) {
             e.preventDefault();
         }
         return true;
@@ -580,7 +582,7 @@ export function useCanvasShortcuts(): void {
                 return;
             }
             // A chat that shows a sub-agent goes one level back up first, the way a drawing clears its selection before it lets go of the keyboard.
-            const key = focusedChatKey();
+            const key = keyboardChatKey();
             if (key !== null && useSubagentView.getState().back(key)) {
                 e.preventDefault();
                 e.stopPropagation();

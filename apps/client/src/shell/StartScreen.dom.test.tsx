@@ -65,7 +65,7 @@ afterEach(async () => {
 
 describe('the start screen of an app that runs no machine', () => {
     test('signed out it leads with signing in, says it is about this app, and opens no folder', () => {
-        expect(text()).toContain('Sign in to open the machines on your account from this app.');
+        expect(text()).toContain('Sign in to open your machines from this app.');
         expect(text()).not.toContain('This machine');
     });
 

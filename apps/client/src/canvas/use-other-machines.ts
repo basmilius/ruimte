@@ -1,7 +1,7 @@
 import { usePulsarAccount } from '@/pulsar/account';
 import { usePulsarMachines } from '@/pulsar/machines';
 import { machineIdOf, mergeMachines, type MachineEntry } from '@/shell/settings/machine-list';
-import { useEndpoints } from '@/state/endpoints';
+import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useWorkspace } from '@/transport/connections';
 
@@ -11,8 +11,12 @@ export function useOtherMachines(): MachineEntry[] {
     const endpoints = useEndpoints((s) => s.endpoints);
     const accountStatus = usePulsarAccount((s) => s.status);
     const accountMachines = usePulsarMachines((s) => s.machines);
-    const own = workspace === null ? null : endpoints.find((endpoint) => endpoint.id === workspace.connection.endpointId);
+    const own = workspace === null ? undefined : endpoints.find((endpoint) => endpoint.id === workspace.connection.endpointId);
     return mergeMachines({ endpoints, accountMachines: accountStatus === 'signed-in' ? accountMachines : null, showLocal: hasLocalMachine() }).filter(
-        (entry) => entry.endpoint?.id !== own?.id && entry.id !== (own === undefined || own === null ? null : machineIdOf(own))
+        (entry) => !isOwn(entry, own)
     );
+}
+
+function isOwn(entry: MachineEntry, own: Endpoint | undefined): boolean {
+    return entry.endpoint?.id === own?.id || (own !== undefined && entry.id === machineIdOf(own));
 }

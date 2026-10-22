@@ -62,13 +62,13 @@ describe('closeWarning', () => {
     });
 
     test('a project with nothing running says so instead of counting zero', () => {
-        expect(closeWarning(0)).toStartWith('Nothing in this project is running.');
+        expect(closeWarning(0)).toStartWith('Nothing is running.');
         expect(closeWarning(0)).not.toInclude('session');
     });
 
     test('a project another client still has open loses nothing, whatever it holds', () => {
-        expect(closeWarning(3, 1)).toStartWith('Another client still has this project open');
-        expect(closeWarning(3, 2)).toStartWith('2 other clients still have this project open');
-        expect(closeWarning(3, 1)).toInclude('nothing stops running');
+        expect(closeWarning(3, 1)).toStartWith('This project is still open on another device');
+        expect(closeWarning(3, 2)).toStartWith('This project is still open on 2 other devices');
+        expect(closeWarning(3, 1)).toInclude('nothing stops');
     });
 });

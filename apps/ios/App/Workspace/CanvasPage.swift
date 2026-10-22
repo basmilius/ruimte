@@ -14,6 +14,7 @@ struct CanvasPage: View {
     @State private var renameID: String?
     @State private var name = ""
     @State private var linkID: String?
+    @State private var colorID: String?
     @State private var groupingID: String?
     @State private var savingLayout = false
     @State private var layoutName = ""
@@ -169,6 +170,11 @@ struct CanvasPage: View {
                 CanvasLinkSheet(workspace: workspace, viewID: viewID, sourceID: linkID) { self.linkID = nil }
             }
         }
+        .mobileSheet(isPresented: Binding(get: { colorID != nil }, set: { if !$0 { colorID = nil } })) {
+            if let colorID {
+                CanvasColorSheet(workspace: workspace, viewID: viewID, nodeID: colorID) { self.colorID = nil }
+            }
+        }
         .mobileSheet(isPresented: Binding(get: { groupingID != nil }, set: { if !$0 { groupingID = nil } })) {
             if let groupingID {
                 CanvasGroupSheet(workspace: workspace, viewID: viewID, firstID: groupingID) { self.groupingID = nil }
@@ -215,6 +221,8 @@ struct CanvasPage: View {
                     name = node.text("title")
                     renameID = node.stableID
                 }
+            case .color:
+                Button(String(localized: "Color"), lucideIcon: "palette") { colorID = node.stableID }
             case .snooze:
                 let snoozes = workspace.session.snoozes
                 SnoozeMenu(until: snoozes.until(node.stableID)) {
@@ -327,6 +335,87 @@ private struct CanvasLinkSheet: View {
         let from = name(edge.text("from"))
         let to = name(edge.text("to"))
         return String(localized: "\(from) to \(to)", comment: "A line between two nodes on a canvas")
+    }
+}
+
+/// The colors a node takes, the same accents the desktop lists under Color; a note takes its paper from it.
+private struct CanvasColorSheet: View {
+    let workspace: MobileWorkspace
+    let viewID: String
+    let nodeID: String
+    let done: () -> Void
+    private var canvas: JSONValue { workspace.views.first { $0.stableID == viewID } ?? .object([:]) }
+    private var node: JSONValue? { canvas.list("nodes").first { $0.stableID == nodeID } }
+    private var picked: String? {
+        guard let node else { return nil }
+        return node.text("kind") == "note"
+            ? RuimteColors.notePaper(accent: node.text("accent"), color: node.text("color"))
+            : RuimteColors.nodeAccents[node.text("accent")] == nil ? nil : node.text("accent")
+    }
+
+    var body: some View {
+        NavigationStack {
+            MobileList {
+                Section {
+                    ForEach(RuimteColors.nodeAccentNames, id: \.self) { accent in
+                        row(accent) {
+                            Label {
+                                Text(CanvasColorSheet.name(accent)).foregroundStyle(MobileStyle.text)
+                            } icon: {
+                                Circle().fill(RuimteColors.nodeAccent(accent) ?? MobileStyle.accent).frame(
+                                    width: 14, height: 14)
+                            }
+                        }
+                    }
+                    row(nil) { Text("None").foregroundStyle(MobileStyle.text) }
+                } footer: {
+                    if node?.text("kind") == "note" {
+                        Text("A note takes its paper from its color.")
+                    }
+                }
+            }
+            .navigationTitle("Color").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done", action: done) } }
+        }
+    }
+
+    private func row(_ accent: String?, @ViewBuilder label: () -> some View) -> some View {
+        Button {
+            Task {
+                await workspace.updateView(viewID) { CanvasEditing.coloring($0, id: nodeID, accent: accent) }
+                if workspace.problem == nil { done() }
+            }
+        } label: {
+            HStack {
+                label()
+                Spacer()
+                if picked == accent { Image(lucide: "check").foregroundStyle(MobileStyle.accent) }
+            }
+        }
+    }
+
+    /// The names the desktop gives the accents, in the language of the app.
+    static func name(_ accent: String) -> String {
+        switch accent {
+        case "red": String(localized: "Red")
+        case "orange": String(localized: "Orange")
+        case "amber": String(localized: "Amber")
+        case "yellow": String(localized: "Yellow")
+        case "lime": String(localized: "Lime")
+        case "green": String(localized: "Green")
+        case "emerald": String(localized: "Emerald")
+        case "teal": String(localized: "Teal")
+        case "cyan": String(localized: "Cyan")
+        case "sky": String(localized: "Sky")
+        case "blue": String(localized: "Blue")
+        case "indigo": String(localized: "Indigo")
+        case "violet": String(localized: "Violet")
+        case "purple": String(localized: "Purple")
+        case "fuchsia": String(localized: "Fuchsia")
+        case "pink": String(localized: "Pink")
+        case "rose": String(localized: "Rose")
+        default: accent
+        }
     }
 }
 
@@ -700,14 +789,16 @@ private final class CanvasSurface: UIView {
             let frame = nodeRect(node)
             guard frame.intersects(viewport) else { continue }
             let path = UIBezierPath(roundedRect: frame, cornerRadius: 16)
+            let accent = node.text("kind") == "note" ? nil : MobileStyle.nodeAccentColor(node.text("accent"))
             if node.text("kind") == "note" {
-                CanvasSurface.noteColor(node.text("color")).setFill()
+                MobileStyle.notePaperColor(accent: node.text("accent"), color: node.text("color")).setFill()
             } else {
                 MobileStyle.panelColor.setFill()
             }
             path.fill()
-            UIColor.separator.setStroke()
-            path.lineWidth = 1
+            // A note wears its color as paper; any other node on its edge, as the desktop draws it.
+            (accent?.withAlphaComponent(0.6) ?? UIColor.separator).setStroke()
+            path.lineWidth = accent == nil ? 1 : 1.5
             path.stroke()
             let id = node.stableID
             if needingYou.contains(id) || statuses[id] == .running || unseen.contains(id) {
@@ -752,28 +843,12 @@ private final class CanvasSurface: UIView {
             }
         }
     }
-    /// The paper a note takes, by the names the desktop offers; a name this version does not know reads as yellow.
-    static func noteColor(_ name: String) -> UIColor {
-        let tone: UIColor =
-            switch name {
-            case "green": .systemGreen
-            case "blue": .systemBlue
-            case "pink": .systemPink
-            case "gray": .systemGray
-            default: .systemYellow
-            }
-        return UIColor { traits in
-            MobileStyle.panelColor.resolvedColor(with: traits).blended(
-                with: tone.resolvedColor(with: traits), share: traits.userInterfaceStyle == .dark ? 0.3 : 0.22)
-        }
-    }
-
     /// A group is a frame with its title in a chip on the band at its top.
     private func drawGroup(_ group: JSONValue, viewport: CGRect) {
         let frame = nodeRect(group)
         guard frame.intersects(viewport) else { return }
         let collapsed = group["collapsed"]?.boolValue == true
-        let tint = MobileStyle.accentColor
+        let tint = MobileStyle.nodeAccentColor(group.text("accent")) ?? MobileStyle.accentColor
         let path = UIBezierPath(roundedRect: frame, cornerRadius: 18)
         tint.withAlphaComponent(collapsed ? 0.14 : 0.06).setFill()
         path.fill()

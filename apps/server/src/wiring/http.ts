@@ -3,6 +3,7 @@ import {
     MACHINE_HEALTH_PATH,
     MACHINE_NOTIFY_PATH,
     MACHINE_PROOF_PATH,
+    MACHINE_STATUS_CHECK_QUERY,
     MACHINE_STATUS_PATH,
     MACHINE_WORK_PATH,
     PROTOCOL_PARAM,
@@ -128,11 +129,12 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
         {
             exact: [MACHINE_STATUS_PATH],
             // `ruimte status` on the local secret; a client sees the same through `endpoint.info`.
-            handle: async ({ request, remote }) => {
+            handle: async ({ request, remote, url }) => {
                 const refused = await refuseUnlessOwner(request, remote, 'GET');
                 if (refused) {
                     return refused;
                 }
+                const reach = url.searchParams.has(MACHINE_STATUS_CHECK_QUERY) ? await network.reach.check() : await network.reach.current();
                 const binding = await auth.accountBinding();
                 const { keepAwake, closedLid } = power;
                 return Response.json({
@@ -147,7 +149,8 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                         onBattery: identity.keepAwake.onBattery,
                         holding: keepAwake.holding,
                         lid: closedLid.available ? { on: identity.keepAwake.lidClosed, rule: await closedLid.refreshRule(), holding: closedLid.holding } : null
-                    }
+                    },
+                    reach
                 } satisfies MachineStatus);
             }
         },

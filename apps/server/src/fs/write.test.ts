@@ -121,8 +121,8 @@ describe('fs.write', () => {
     });
 
     test('a save inside the millisecond of the read still moves the mtime, so the same read cannot save twice', async () => {
-        const { path } = await put(join(project, 'tick.txt'), 'start\n');
-        const future = new Date(Date.now() + 86_400_000);
+        const { path, mtime: written } = await put(join(project, 'tick.txt'), 'start\n');
+        const future = new Date(written + 86_400_000);
         await utimes(path, future, future);
         const mtime = Math.round(future.getTime());
 

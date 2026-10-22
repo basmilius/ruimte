@@ -15,6 +15,11 @@ export function listedEndpoints<T extends Pick<Endpoint, 'id'>>(endpoints: reado
     return local ? [...endpoints] : endpoints.filter((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID);
 }
 
+/* Whether a machine is the one this app runs, the only one whose folders a person here works in directly. */
+export function isThisMachine(endpointId: string, local: boolean = hasLocalMachine()): boolean {
+    return local && endpointId === LOCAL_ENDPOINT_ID;
+}
+
 /* Whether the machine the client points at is one a person picked, rather than the idle local row of the web client. */
 export function isRealMachine(endpointId: string, local: boolean = hasLocalMachine()): boolean {
     return local || endpointId !== LOCAL_ENDPOINT_ID;

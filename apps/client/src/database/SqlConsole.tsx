@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useImperativeHandle, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useImperativeHandle, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Database } from 'lucide-react';
 import type { Editor } from '@adecore/editor';
@@ -19,7 +19,7 @@ const AS_FILE = '';
 
 /* The text of the editor as it is now, or what the file read as while there is no editor, such as on a touch screen. */
 function useEditorText(editor: Editor | null, fallback: string): string {
-    const subscribe = useCallback((listener: () => void) => (editor === null ? () => undefined : editor.onChange(listener)), [editor]);
+    const subscribe = (listener: () => void) => (editor === null ? () => undefined : editor.onChange(listener));
     return useSyncExternalStore(subscribe, () => editor?.getText() ?? fallback);
 }
 
@@ -169,7 +169,7 @@ function ConsoleEditor({ ref, run, value, editor, children }: QueryConsoleEditor
     return children;
 }
 
-/* The connection a console runs on, in its bar: another one runs it there, and Just the file takes the bar back to Run on a connection. */
+/* The connection a console runs on, in its bar: another one runs it there, and File only takes the bar back to Run on a connection. */
 function SqlConsolePicker({ path, binding }: { path: string; binding: ConsoleBinding | undefined }) {
     const { t } = useTranslation('databases');
     const connections = useDatabaseConnectionList();

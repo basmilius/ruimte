@@ -18,13 +18,6 @@
         "pink": "Roze",
         "rose": "Rozerood"
     },
-    "noteColors": {
-        "yellow": "Geel",
-        "green": "Groen",
-        "blue": "Blauw",
-        "pink": "Roze",
-        "gray": "Grijs"
-    },
     "locks": {
         "pan": {
             "label": "Verschuiven",
@@ -52,17 +45,17 @@
         "delegating": "Sub-agents bezig"
     },
     "node": {
-        "failed": "Deze node kon niet worden getekend",
+        "failed": "Deze node kon niet worden getoond",
         "zoomTo": "Naar node zoomen",
         "maximize": "Node maximaliseren",
         "restore": "Node herstellen",
         "close": "Node sluiten",
         "context": {
-            "tooltip": "Gekoppelde context. De agent leest die met ruimte-context.",
+            "tooltip": "Gekoppelde context. De agent kan die lezen.",
             "pill": "context"
         },
         "issuePill": "{{issue}} openen op GitHub",
-        "prWatchPill": "{{pr}} gevolgd: {{state}}. Klik om de pull request te openen.",
+        "prWatchPill": "{{pr}} gevolgd: {{state}}",
         "prWatchState": {
             "pending": "checks lopen",
             "success": "checks geslaagd",
@@ -71,11 +64,11 @@
         }
     },
     "group": {
-        "arrange": "Groepsleden ordenen",
+        "arrange": "Groep ordenen",
         "arrangeRefused": "Ordenen zou een node in of uit een groep halen.",
-        "arrangeCollapsed": "Klap de groep uit voordat je de leden ordent.",
-        "arrangeEmpty": "De groep heeft geen eigen nodes om te ordenen.",
-        "arrangeLocked": "Verplaatsen is vergrendeld op dit canvas.",
+        "arrangeCollapsed": "Klap de groep eerst uit.",
+        "arrangeEmpty": "Niets in deze groep om te ordenen.",
+        "arrangeLocked": "Verplaatsen is vergrendeld.",
         "expand": "Uitklappen",
         "collapse": "Inklappen",
         "inside_one": "{{count}} erin",
@@ -98,17 +91,16 @@
         "viewWorktree": "Worktree bekijken",
         "openInChat": "In een chat openen",
         "clear": "Wissen",
-        "clearFailed": "{{what}} wissen lukte niet",
+        "clearFailed": "Kon {{what}} niet wissen",
         "openInTerminal": "In een terminal openen",
         "openAsView": "Als weergave openen",
         "openAsViewHint": "De sessie blijft behouden",
         "startAgentFromNote": "Agent starten vanuit de notitie",
-        "noteColor": "Kleur van de notitie",
         "color": "Kleur",
         "noAccent": "Geen",
         "stopPrWatch": "Pull request niet meer volgen",
         "stopWaiting": "Niet meer wachten",
-        "makeDefaultSize": "Maak dit de standaardgrootte",
+        "makeDefaultSize": "Als standaardgrootte instellen",
         "conversation": "Gesprek",
         "worktree": "Worktree",
         "sizeAndPosition": "Grootte en positie",
@@ -134,11 +126,11 @@
         "sections": {
             "agents": "Agents",
             "place": "Toevoegen",
-            "project": "Uit dit project"
+            "project": "Uit project"
         },
         "agent": {
             "chat": "Chat",
-            "terminal": "In een terminal"
+            "terminal": "Terminal"
         },
         "connecting": {
             "title": "Verbinden",
@@ -150,16 +142,16 @@
         },
         "node": {
             "chat": "Kies een model",
-            "terminal": "Een shell",
-            "browser": "Een webpagina",
+            "terminal": "Shell",
+            "browser": "Webpagina",
             "note": "Markdown",
-            "group": "Een kader om nodes heen"
+            "group": "Kader om nodes"
         },
         "file": "Uit de projectmap",
         "text": "Of dubbelklik",
-        "layout": "Deze indeling toepassen",
-        "drawing": "De tekening hier tonen",
-        "diagram": "Het diagram hier tonen",
+        "layout": "Indeling toepassen",
+        "drawing": "Tekening tonen",
+        "diagram": "Diagram tonen",
         "hint": "Sleep bestanden hierheen, klik met rechts voor meer, of druk op <palette/>."
     },
     "promptStack": {
@@ -167,7 +159,7 @@
         "previous": "Vorige prompt",
         "next": "Volgende prompt",
         "position": "{{index}} van {{count}}",
-        "failed": "Deze prompt kon niet worden getekend"
+        "failed": "Deze prompt kon niet worden getoond"
     },
     "text": {
         "placeholder": "Typ iets",
@@ -192,7 +184,7 @@
         "alignment": "Uitlijning",
         "color": "Tekstkleur",
         "defaultColor": "Standaard tekstkleur",
-        "resizeWidth": "Sleep om de breedte aan te passen. Dubbelklik voor automatische breedte."
+        "resizeWidth": "Sleep om de breedte aan te passen. Dubbelklik om passend te maken."
     },
     "delete": {
         "nodes_one": "{{count}} node",
@@ -201,17 +193,17 @@
     "drop": {
         "controlCharacter": {
             "title": "Ruimte kan die bestandsnaam niet typen",
-            "description": "Een naam met een besturingsteken kan een opdracht in de terminal uitvoeren, dus Ruimte heeft niets van deze drop getypt."
+            "description": "De naam bevat een verborgen teken dat een opdracht kan uitvoeren, dus Ruimte heeft niets getypt."
         },
         "noBridge": {
             "title": "Bestanden uit {{app}} kun je alleen in de desktop-app neerzetten",
-            "description": "Open het bestand via het paneel Bestanden.",
-            "terminalDescription": "Typ of plak het pad zelf."
+            "description": "Open het via het paneel Bestanden.",
+            "terminalDescription": "Typ of plak het pad."
         },
         "otherMachine": {
             "title": "Dit project draait op {{machine}}",
-            "description": "Die machine kan geen bestanden uit {{app}} lezen. Open het bestand via het paneel Bestanden.",
-            "terminalDescription": "Die machine kan geen bestanden uit {{app}} lezen. Typ of plak een pad dat daar bestaat.",
+            "description": "Die kan geen bestanden uit {{app}} lezen. Open het via het paneel Bestanden.",
+            "terminalDescription": "Die kan geen bestanden uit {{app}} lezen. Typ of plak een pad op die machine.",
             "unknown": "een andere machine"
         }
     },
@@ -224,12 +216,12 @@
         "empty": "Klik om te schrijven"
     },
     "drawing": {
-        "gone": "Deze tekening is uit het project verwijderd.",
+        "gone": "Deze tekening is verwijderd.",
         "empty": "Nog niets getekend. Dubbelklik om te tekenen."
     },
     "diagram": {
-        "gone": "Dit diagram is uit het project verwijderd.",
-        "empty": "Nog niets in dit diagram. Een agent vult het met ruimte-context view diagram; dubbelklik om het te openen.",
+        "gone": "Dit diagram is verwijderd.",
+        "empty": "Leeg diagram. Dubbelklik om te openen.",
         "label": "Diagram"
     },
     "file": {
@@ -237,7 +229,7 @@
         "unsaved": "Niet-opgeslagen wijzigingen"
     },
     "unknown": {
-        "needsNewer": "Deze node vraagt om een nieuwere versie van Ruimte"
+        "needsNewer": "Vraagt om een nieuwere Ruimte"
     },
     "notice": {
         "connecting": "Verbinden met de machine",
@@ -246,14 +238,14 @@
     "terminal": {
         "links": {
             "previewFile": "In preview openen",
-            "openFile": "{{modifier}}+klik om bestand in preview te openen",
-            "open": "{{modifier}}+klik om in je browser te openen",
+            "openFile": "{{modifier}}+klik voor preview",
+            "open": "{{modifier}}+klik om in browser te openen",
             "openInRuimte": "{{modifier}}+klik om in Ruimte te openen",
-            "remoteLoopback": "Dit adres hoort bij {{machine}}. Ruimte stuurt de lokale poorten van die machine niet door naar deze computer.",
-            "unavailable": "Deze lokale link kan hier niet worden geopend",
+            "remoteLoopback": "Dit adres werkt alleen op {{machine}}.",
+            "unavailable": "Kan deze link hier niet openen",
             "thisMachine": "de machine van de terminal"
         },
-        "startFailed": "De sessie kon niet worden gestart",
+        "startFailed": "Kon de sessie niet starten",
         "sessionEnded": "[sessie beëindigd]",
         "exited": "[proces gestopt met code {{code}}]",
         "resume": "Hervatten",
@@ -263,32 +255,32 @@
         "ports": {
             "label": "Sessiepoorten",
             "open": "Open :{{port}}",
-            "openHint": "Controleer deze listener en open een gekoppelde browser",
-            "remote": "Open deze poort in Ruimte op de machine waarop de sessie draait.",
+            "openHint": "In gekoppelde browser openen",
+            "remote": "Opent in Ruimte op de machine van de sessie.",
             "unknown": "Sessiepoorten onbekend",
-            "unavailable": "Sessiepoortdetectie is niet beschikbaar. Hiervoor zijn macOS en een actuele Ruimte-daemon nodig.",
-            "openFailed": "Deze sessiepoort kon niet worden geopend",
-            "retry": "De listener kon niet worden gecontroleerd. Probeer het na de volgende scan opnieuw."
+            "unavailable": "Poorten tonen vraagt om macOS en een actuele Ruimte op de machine.",
+            "openFailed": "Kon de poort niet openen",
+            "retry": "Kon de poort niet controleren. Probeer het na de volgende scan opnieuw."
         }
     },
     "chat": {
-        "openFailed": "De chat kon niet worden geopend",
-        "retargetFailed": "De provider kon niet worden gewijzigd",
-        "sendFailed": "Het bericht kon niet worden verstuurd",
-        "conversationFailed": "Dit gesprek kon niet worden getekend"
+        "openFailed": "Kon de chat niet openen",
+        "retargetFailed": "Kon de provider niet wijzigen",
+        "sendFailed": "Kon het bericht niet versturen",
+        "conversationFailed": "Dit gesprek kon niet worden getoond"
     },
     "browser": {
-        "routeUnavailable": "Dit adres hoort bij de machine van het project. Deze desktopbrowser heeft geen route naar die machine.",
-        "ownerUnavailable": "Eigenaar van de browser niet beschikbaar",
+        "routeUnavailable": "Dit adres staat op de machine van het project, en die kan deze browser niet bereiken.",
+        "ownerUnavailable": "De machine van het project is niet bereikbaar",
         "back": "Terug",
         "forward": "Vooruit",
         "stop": "Laden stoppen",
         "reloadHint": "{{shortcut}} slaat de cache over",
         "address": "Adres",
-        "addressPlaceholder": "Voer een adres in",
-        "loading": "De pagina laadt",
-        "streamDpi": "DPI van de browserstream",
-        "openExternal": "In de systeembrowser openen",
+        "addressPlaceholder": "Adres invoeren",
+        "loading": "Laden",
+        "streamDpi": "Scherpte van de pagina",
+        "openExternal": "In systeembrowser openen",
         "inspect": "Inspecteren",
         "error": {
             "openExternal": "In systeembrowser openen"
@@ -300,31 +292,32 @@
     },
     "defaultSize": {
         "saved": "{{kind}}-nodes beginnen nu op {{size}}",
-        "savedDescription": "Op {{machine}}, ook voor de nodes die agents daar toevoegen. Wijzig of herstel het in Instellingen, onder Weergaven.",
-        "failed": "De standaardgrootte van {{kind}}-nodes is niet veranderd",
-        "resetFailed": "De grootte van {{kind}}-nodes is niet teruggezet"
+        "savedDescription": "Op {{machine}}, ook voor nodes van agents. Wijzig het in Instellingen, onder Weergaven.",
+        "failed": "Kon de standaardgrootte van {{kind}}-nodes niet wijzigen",
+        "resetFailed": "Kon de grootte van {{kind}}-nodes niet terugzetten"
     },
     "remote": {
         "offline": "{{machine}} antwoordt niet. Misschien slaapt hij.",
         "retrying": "Opnieuw verbinding maken met {{machine}}…",
         "unlinked": "Dit project is niet meer gekoppeld op {{machine}}.",
-        "unstarted": "{{machine}} heeft deze taak nog niet opgepakt. Hij begint daar vanzelf zodra {{machine}} antwoordt.",
+        "unstarted": "Nog niet gestart. Begint zodra {{machine}} antwoordt.",
         "taskNotStarted": "Taak: {{title}} · niet gestart",
         "linkAgain": "Opnieuw koppelen",
         "tooOld": "Op {{machine}} draait een oudere Ruimte. Werk hem bij om deze node te gebruiken.",
         "pill": "Deze node draait op {{machine}}",
-        "pillLapsed": "Deze node draait op {{machine}}. Agents daar kunnen pas taken geven als je hem opnieuw koppelt. Klik om te koppelen.",
-        "linkAgainFailed": "{{machine}} kon niet opnieuw worden gekoppeld",
+        "pillLapsed": "Deze node draait op {{machine}}. Agents daar kunnen pas taken geven als je hem opnieuw koppelt.",
+        "linkAgainFailed": "Kon {{machine}} niet opnieuw koppelen",
         "waiting": "Wacht op {{machine}}",
-        "waitTooltip_one": "De taak wacht tot {{machine}} antwoordt. Daarna gaat hij daar zelf verder.",
-        "waitTooltip_other": "{{count}} taken wachten tot {{machine}} antwoordt. Daarna gaan ze daar zelf verder."
+        "waitTooltip_one": "De taak wacht tot {{machine}} antwoordt.",
+        "waitTooltip_other": "{{count}} taken wachten tot {{machine}} antwoordt."
     },
     "otherMachine": {
         "group": "Op een andere machine",
+        "addProject": "Toevoegen aan een andere machine…",
         "notAnswering": "Antwoordt niet",
         "needsUpdate": "Heeft een update nodig",
         "needsUpdateTip": "Op {{machine}} draait een oudere Ruimte",
-        "shared": "Een canvas dat je met het team deelt, kan geen node op een andere machine hebben"
+        "shared": "Een gedeeld canvas kan geen nodes op een andere machine hebben"
     },
     "bringBack": {
         "item": "Terughalen naar deze machine",
@@ -341,6 +334,9 @@
         "reverse": "Richting omdraaien",
         "drawHint": "Sleep om te tekenen. Houd Shift ingedrukt voor rechte of diagonale lijnen. Escape annuleert.",
         "defaultColor": "Standaardlijnkleur"
+    },
+    "minimap": {
+        "label": "Canvaskaart"
     },
     "missingProvider": {
         "notInstalled": "{{name}} is niet geïnstalleerd op deze machine.",

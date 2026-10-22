@@ -136,7 +136,7 @@ struct ChatPromptCard: View {
                     if changes.count > 1 {
                         Text("Allow applies to all \(changes.count) files.").font(.caption).padding(.horizontal, 12)
                     }
-                    Button("View full diff") { showingFullDiff = true }
+                    Button("Show full diff") { showingFullDiff = true }
                         .font(.caption).frame(minHeight: 44).padding(.horizontal, 12)
                 }
                 .padding(.vertical, 10).background(MobileStyle.inset, in: RoundedRectangle(cornerRadius: 12))
@@ -159,7 +159,7 @@ struct ChatPromptCard: View {
             }
             if denyReason {
                 if prompts.draft.showingReason {
-                    TextField("Reason for declining, optional", text: $prompts.draft.denialReason, axis: .vertical)
+                    TextField("Reason, optional", text: $prompts.draft.denialReason, axis: .vertical)
                         .lineLimit(2...6).focused($reasonFocused)
                         .onAppear { reasonFocused = true }
                         .font(.subheadline).padding(12).background(

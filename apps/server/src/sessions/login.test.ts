@@ -72,6 +72,18 @@ describe('a login outside every project', () => {
         expect(harness.manager.list()).toEqual([]);
     });
 
+    // Needs the daemon of ADE CORE to refuse a named default account that is off (`envFor`).
+    test('refuses the default account while it is turned off, the way it refuses any account that is off', async () => {
+        const { accounts: map } = accounts.snapshot();
+        await accounts.save({ ...map, claude: { ...map.claude, kind: 'claude', enabled: false } });
+        expect(await login('desktop', 'login-default', 'claude')).toMatchObject({
+            ok: false,
+            error: { code: 'account-unavailable', message: expect.stringContaining('it is turned off') }
+        });
+        expect(await login('desktop', 'login-named-default', 'claude', 'claude')).toMatchObject({ ok: false, error: { code: 'account-unavailable' } });
+        expect(harness.manager.list()).toEqual([]);
+    });
+
     test('ends when the client that asked for it leaves, and only then', async () => {
         await login('desktop', 'login-1', 'claude');
         await request('phone', 'session.attach', { sessionId: 'login-1', cols: 80, rows: 24 });

@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileWarning } from 'lucide-react';
 import type { FileSurfaceKind } from '@/shell/panels/FileActionItems';
@@ -29,7 +29,7 @@ export function FileBody({ path, name, on, tabKey, nodeId }: { path: string; nam
     useMountCount('file');
     const { t } = useTranslation('panels');
     const { state, retry } = useFileRead(path);
-    const actions = useMemo(() => ({ path, name, on, tabKey, nodeId, refresh: retry }), [path, name, on, tabKey, nodeId, retry]);
+    const actions = { path, name, on, tabKey, nodeId, refresh: retry };
 
     const body = (): ReactNode => {
         if (state.status === 'loading') {

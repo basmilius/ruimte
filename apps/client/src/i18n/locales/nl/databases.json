@@ -6,71 +6,71 @@
         "design": "{{table}} (ontwerp)",
         "hint": "{{schema}} op {{connection}}",
         "where": "Waar deze tabel staat",
-        "unsubmitted": "Wijzigingen die niemand indiende",
+        "unsubmitted": "Niet-ingediende wijzigingen",
         "gone": "Deze verbinding hoort niet meer bij het project.",
         "close": "Tab sluiten",
-        "failed": "Deze tab kon niet worden getekend",
+        "failed": "Deze tab kon niet worden getoond",
         "discard": {
             "title": "Wijzigingen in {{table}} weggooien?",
-            "description": "Niemand heeft de wijzigingen in deze tabel ingediend. Sluit je de tab, dan zijn ze weg.",
+            "description": "Deze wijzigingen zijn nooit ingediend.",
             "confirm": "Weggooien en sluiten"
         }
     },
     "view": {
         "manage": "Verbindingen beheren",
-        "gone": "De verbinding van {{table}} staat niet op deze machine. Voeg hem toe bij de verbindingen, of vraag het aan wie deze view deelde.",
-        "withheld": "Het wachtwoord van de verbinding van {{table}} moet opnieuw worden ingevoerd voordat de tabel opent."
+        "gone": "De verbinding van {{table}} staat niet op deze machine. Voeg hem toe, of vraag het aan wie deze weergave deelde.",
+        "withheld": "Voer het wachtwoord van de verbinding opnieuw in om {{table}} te openen."
     },
     "console": {
         "runOn": "Uitvoeren op een verbinding",
         "asFile": "Alleen het bestand",
         "untitled": "Naamloze verbinding",
-        "failed": "De console kon niet worden gemaakt",
-        "failedToDraw": "Deze console kon niet worden getekend",
+        "failed": "Kon de console niet maken",
+        "failedToDraw": "Deze console kon niet worden getoond",
         "taken": "Elke consolenaam voor {{name}} is al in gebruik.",
-        "moveFailed": "De console kon niet naar die verbinding",
+        "moveFailed": "Kon de console niet naar die verbinding verplaatsen",
         "rename": {
-            "description": "Typ een nieuwe naam voor de console. Hij blijft bij zijn verbinding.",
-            "noFolders": "Een consolenaam bevat geen mappen."
+            "description": "De console blijft bij zijn verbinding.",
+            "noFolders": "Een naam kan geen mappen bevatten."
         }
     },
     "panel": {
         "newConsole": "Nieuwe console",
         "manage": "Verbindingen beheren",
         "reading": "Verbindingen lezen…",
-        "failed": "De verbindingen konden niet worden gelezen: {{reason}}",
-        "empty": "Dit project heeft nog geen databaseverbindingen.",
+        "failed": "Kon verbindingen niet lezen: {{reason}}",
+        "empty": "Nog geen verbindingen.",
         "add": "Verbinding toevoegen",
         "containers": "Draaiende databasecontainers",
         "addContainer": "{{name}} toevoegen",
         "consoles": "Consoles",
         "withheld": {
-            "moved": "Het adres van {{name}} is buiten dit venster gewijzigd, dus het bewaarde wachtwoord gaat daar niet heen. Voer het opnieuw in om de verbinding te gebruiken.",
-            "unbound": "Voer het wachtwoord van {{name}} opnieuw in. Ruimte bewaart een wachtwoord nu bij het adres waarvoor het is.",
+            "moved": "{{name}} heeft een nieuw adres. Voer het wachtwoord opnieuw in.",
+            "unbound": "Voer het wachtwoord van {{name}} opnieuw in.",
             "enter": "Wachtwoord invoeren"
         }
     },
     "dialog": {
         "title": "Databaseverbindingen",
-        "description": "De verbindingen van dit project, en waarvoor elk gebruikt mag worden.",
+        "description": "Waarvoor elke verbinding gebruikt mag worden.",
         "share": {
-            "label": "Delen in de repository",
-            "description": "Bewaart de verbinding in .ruimte/databases.json voor iedereen die aan dit project werkt. Het wachtwoord komt nooit in het bestand.",
+            "label": "Delen met team",
+            "description": "Bewaart de verbinding bij het project voor iedereen die eraan werkt. Het wachtwoord wordt nooit gedeeld.",
             "outside": "Het databasebestand staat buiten de projectmap, dus de verbinding kan niet worden gedeeld."
         },
         "agents": {
             "label": "Agents",
-            "description": "Wat AI-agents in dit project met deze verbinding mogen doen. Alleen een persoon op deze machine kan ze laten schrijven.",
+            "description": "Wat agents met deze verbinding mogen. Alleen iemand op deze machine kan schrijven toestaan.",
             "off": "Uit",
             "read": "Alleen lezen",
             "write": "Lezen en schrijven",
             "writeRemote": "Alleen vanuit de app op die machine",
-            "failed": "Kon niet wijzigen wat agents mogen doen"
+            "failed": "Kon toegang van agents niet wijzigen"
         },
-        "saveFailed": "De machine heeft de verbindingen niet opgeslagen: {{reason}}",
+        "saveFailed": "Kon verbindingen niet opslaan: {{reason}}",
         "withheld": {
-            "moved": "Het adres van deze verbinding is buiten dit venster gewijzigd, dus het bewaarde wachtwoord gaat daar niet heen. Voer het wachtwoord opnieuw in om het op dit adres te gebruiken.",
-            "unbound": "Voer het wachtwoord van deze verbinding opnieuw in. Ruimte bewaart een wachtwoord nu bij het adres waarvoor het is."
+            "moved": "Deze verbinding heeft een nieuw adres. Voer het wachtwoord opnieuw in.",
+            "unbound": "Voer het wachtwoord van deze verbinding opnieuw in."
         },
         "persistence": {
             "app": "Deze computer kan wachtwoorden niet versleutelen, dus Ruimte bewaart ze alleen tot het afsluit.",
@@ -79,17 +79,17 @@
     },
     "connections": {
         "conflict": {
-            "title": "De databaseverbindingen zijn elders gewijzigd",
-            "description": "Ze zijn opnieuw gelezen, en je laatste wijziging is niet opgeslagen."
+            "title": "Verbindingen elders gewijzigd",
+            "description": "Je laatste wijziging is niet opgeslagen."
         }
     },
     "secrets": {
         "readFailed_one": "Kon het bewaarde wachtwoord van {{name}} niet lezen",
         "readFailed_other": "Kon de bewaarde wachtwoorden van {{count}} verbindingen niet lezen",
-        "writeFailed_one": "Het wachtwoord van {{name}} is niet op deze computer bewaard",
-        "writeFailed_other": "De wachtwoorden van {{count}} verbindingen zijn niet op deze computer bewaard",
-        "removeFailed_one": "Het wachtwoord van {{name}} is niet van deze computer verwijderd",
-        "removeFailed_other": "De wachtwoorden van {{count}} verbindingen zijn niet van deze computer verwijderd"
+        "writeFailed_one": "Kon het wachtwoord van {{name}} niet opslaan",
+        "writeFailed_other": "Kon {{count}} wachtwoorden niet opslaan",
+        "removeFailed_one": "Kon het wachtwoord van {{name}} niet verwijderen",
+        "removeFailed_other": "Kon {{count}} wachtwoorden niet verwijderen"
     },
     "sql": {
         "label": "SQL van dit bestand: {{choice}}",
@@ -99,19 +99,19 @@
         "projectDefault": "Projectstandaard ({{name}})",
         "projectDefaultNone": "Projectstandaard (geen)",
         "noneItem": "Geen",
-        "allDatabases": "Elke database",
+        "allDatabases": "Alle databases",
         "startDatabase": "{{database}}, waar hij start",
         "addConnection": "Verbinding toevoegen…",
         "defaultSection": "Projectstandaard",
         "makeDefault": "{{name}} gebruiken voor het project",
         "clearDefault": "Projectstandaard wissen",
-        "noDefault": "Het project heeft geen standaard; kies eerst een verbinding voor dit bestand",
+        "noDefault": "Geen projectstandaard. Kies eerst een verbinding voor dit bestand.",
         "noSnapshot": "Nog geen schema gelezen. Open {{name}} in het paneel Databases",
         "snapshot_one": "{{count}} tabel, gelezen {{time}}",
         "snapshot_other": "{{count}} tabellen, gelezen {{time}}",
         "refresh": "Schema opnieuw lezen",
-        "bindFailed": "De SQL-verbinding kon niet worden bewaard",
-        "refreshFailed": "Het schema kon niet worden gelezen",
-        "failedToDraw": "De keuze van de SQL-verbinding kon niet worden getekend"
+        "bindFailed": "Kon de verbinding niet opslaan",
+        "refreshFailed": "Kon het schema niet lezen",
+        "failedToDraw": "De keuze van de SQL-verbinding kon niet worden getoond"
     }
 }

@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { HINT_HOT } from '@/canvas/port-hints';
 import {
     handleRail,
@@ -37,7 +37,7 @@ const CURSOR: Record<ResizeEdge, string> = {
  * The resize handle a node offers the pointer that comes near it, outside its frame so the content
  * keeps every pixel. Like a port it belongs to the canvas: one handle at a time, on the nearest node.
  */
-export const ResizeHandles = memo(function ResizeHandles({ rootRef }: { rootRef: RefObject<HTMLDivElement | null> }) {
+export function ResizeHandles({ rootRef }: { rootRef: RefObject<HTMLDivElement | null> }) {
     const nodes = useCanvas((s) => s.nodes);
     const hidden = useCanvas((s) => s.hidden);
     const zoom = useCanvas((s) => s.camera.zoom);
@@ -133,7 +133,7 @@ export const ResizeHandles = memo(function ResizeHandles({ rootRef }: { rootRef:
             )}
         </svg>
     );
-});
+}
 
 /* The whole rail, of which only the handle's stretch is drawn: a change of shape slides along it.
    Keyed on the zoom, or a zoom step would glide where it should jump. */

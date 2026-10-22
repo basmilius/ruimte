@@ -182,6 +182,15 @@ describe('the menus', () => {
         }
     });
 
+    test('the reasoning effort of the chat that has the focus steps up and down from the menu, each with a key of its own', () => {
+        expect(commandIds(menuModel(context({ view: 'chat' })))).not.toContain('chat-effort-up');
+        for (const view of ['chat', 'canvas'] as const) {
+            const spec = menuModel(context({ view, chat: true }));
+            expect(find(spec, 'chat-effort-up')?.accelerator).toBe('CommandOrControl+Shift+.');
+            expect(find(spec, 'chat-effort-down')?.accelerator).toBe('CommandOrControl+Shift+,');
+        }
+    });
+
     test('a chat in a worktree and a chat from an issue are offered in any view of a project with a folder', () => {
         for (const view of ['canvas', 'chat', 'terminal'] as const) {
             const ids = commandIds(menuModel(context({ view })));
@@ -405,7 +414,7 @@ describe('the menus', () => {
         const spec = menuModel(context({ keepAwake: 'working' }));
         const app = menu(spec, 'Ruimte');
         const keepAwake = app[app.findIndex((node) => node.kind === 'command' && node.id === 'settings') + 1];
-        expect(keepAwake).toMatchObject({ kind: 'submenu', id: 'keep-awake', label: 'Keep This Computer Awake' });
+        expect(keepAwake).toMatchObject({ kind: 'submenu', id: 'keep-awake', label: 'Keep Computer Awake' });
         const choices = keepAwake?.kind === 'submenu' ? keepAwake.items : [];
         expect(choices).toEqual([
             { kind: 'command', id: 'keep-awake-off', label: 'Off', checked: false, radio: true },

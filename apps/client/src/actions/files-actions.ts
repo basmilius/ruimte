@@ -58,7 +58,7 @@ const LIVE_MACHINE: FilesMachine = {
         const endpointId = currentEndpointId();
         const transport = machineFor(endpointId)?.transport;
         if (transport === undefined) {
-            throw new ActionRefusal('no-machine', 'The machine this project runs on is not connected.');
+            throw new ActionRefusal('no-machine', "This project's machine is not connected.");
         }
         await moveFile(transport, endpointId, useProject.getState().current?.projectId ?? null, from, to, { edits: true });
     },
@@ -117,7 +117,7 @@ export function filesActions(overrides: Partial<FilesMachine> = {}): ActionHandl
     const connected = (): Requester => {
         const transport = machine.transport();
         if (transport === null) {
-            throw new ActionRefusal('no-machine', 'The machine this project runs on is not connected.');
+            throw new ActionRefusal('no-machine', "This project's machine is not connected.");
         }
         return transport;
     };

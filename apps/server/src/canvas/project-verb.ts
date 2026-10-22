@@ -2,7 +2,7 @@ import { PROJECT_PROPOSAL_LIMITS } from '@ruimte/contracts';
 import { z } from 'zod';
 import { PROPOSAL_CARD_MS } from '../projects/project-proposals.ts';
 import { defineActionVerb, runAction } from './action-verb.ts';
-import { SCOPE_LINE } from './verb.ts';
+import { SCOPE_LINE, field, orNote } from './verb.ts';
 
 const PROJECT_CARD_HOURS = PROPOSAL_CARD_MS / 3_600_000;
 
@@ -49,8 +49,35 @@ const proposeAction = defineActionVerb('project', {
     }
 });
 
+const ignoredAction = defineActionVerb('project', {
+    name: 'ignored',
+    action: 'project.ignoredFiles',
+    usage: '',
+    params: [],
+    detail: [
+        'prints\tfile\tpath\tbytes\tone line per file git ignores, relative to the root line',
+        'prints\tlink\tpath\ta symbolic link git ignores, which a copy elsewhere would not keep',
+        'leaves out\tA folder ignored whole, such as node_modules or dist, since it is built or installed rather than written',
+        'why\tThese are the files a clone on another machine does not bring, such as .env files; copying them there is for a person, from the app',
+        SCOPE_LINE
+    ],
+    positionals: z.tuple([], { error: 'project ignored takes no arguments' }),
+    flags: z.object({}),
+    async run(_input, call) {
+        const { root, files, truncated } = await runAction(call, 'project.ignoredFiles', {});
+        return [
+            `root\t${field(root)}`,
+            ...orNote(
+                files.map((file) => (file.link ? `link\t${field(file.path)}` : `file\t${field(file.path)}\t${file.size}`)),
+                'git ignores no file here outside folders it ignores whole'
+            ),
+            ...(truncated ? ['note\tthe list is cut; more files are ignored than one answer lists'] : [])
+        ];
+    }
+});
+
 export const PROJECT_SUMMARY =
-    'Suggests, in a card of your chat in Chats, that the chat becomes a project; the person decides and you only hear what became of it';
+    'Suggests, in a card of your chat in Chats, that the chat becomes a project, and lists the files git ignores in the project, the ones a clone elsewhere does not bring';
 
 export const PROJECT_DETAIL: readonly string[] = [
     'note\tOnly an AI chat in Chats suggests; the card shows in that chat until the person reviews it or declines',
@@ -58,4 +85,4 @@ export const PROJECT_DETAIL: readonly string[] = [
     SCOPE_LINE
 ];
 
-export const PROJECT_ACTIONS = [proposeAction] as const;
+export const PROJECT_ACTIONS = [proposeAction, ignoredAction] as const;

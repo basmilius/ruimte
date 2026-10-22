@@ -31,9 +31,9 @@ export interface OnboardingFacts {
     computer: ComputerSetupPhase;
 }
 
-/* Apple's on-device model is a provider with no CLI to install or log in to. */
+/* Apple's on-device model and NanoGPT's subscription API are providers with no CLI to install or log in to. */
 function isCli(provider: ProviderInfo): boolean {
-    return provider.kind !== 'apple';
+    return provider.kind !== 'apple' && provider.kind !== 'nanogpt';
 }
 
 export function cliRowsOf(providers: readonly ProviderInfo[], accounts: ProviderAccounts | null): CliRow[] {

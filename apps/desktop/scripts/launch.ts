@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { LAUNCHER_PIPE_VARIABLE } from '../src/launcher-pipe';
 import { prepareMacDevelopmentApp } from './mac-dev-app';
@@ -16,6 +17,9 @@ const executable = process.platform === 'darwin' ? prepareMacDevelopmentApp(elec
 const env: NodeJS.ProcessEnv = { ...process.env, [LAUNCHER_PIPE_VARIABLE]: '3' };
 delete env.ELECTRON_RUN_AS_NODE;
 
+// `bun dev` starts Vite beside this script, and a window that loads before Vite listens stays blank.
+await waitForDevServer(process.env.RUIMTE_DEV_URL);
+
 // The fourth descriptor is a pipe Electron watches: it quits the moment this script is gone, however it went.
 const child = spawn(executable, ['.', ...process.argv.slice(2)], { stdio: ['inherit', 'inherit', 'inherit', 'pipe'], env });
 child.on('exit', (code) => process.exit(code ?? 0));
@@ -25,4 +29,22 @@ for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
     process.on(signal, () => {
         child.stdio[3]?.destroy();
     });
+}
+
+/**
+ * Waits until the dev server answers, for at most two minutes; after that Electron starts anyway and shows why.
+ */
+async function waitForDevServer(url: string | undefined): Promise<void> {
+    if (url === undefined) {
+        return;
+    }
+    const deadline = Date.now() + 120_000;
+    while (Date.now() < deadline) {
+        try {
+            await fetch(url, { signal: AbortSignal.timeout(2_000) });
+            return;
+        } catch {
+            await sleep(250);
+        }
+    }
 }

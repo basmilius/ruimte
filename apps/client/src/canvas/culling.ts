@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Viewport } from '@/canvas/camera-slice';
-import { intersects, visibleRect, type Camera } from '@/canvas/math';
-import { useCanvas, type CanvasNode } from '@/state/canvas';
+import { intersects, isMeasured, visibleRect, type Camera } from '@/canvas/math';
+import { maximizedNodeOf, useCanvas, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { memoByIdentity } from '@/state/identity-memo';
 
 /* Screen pixels around the viewport that still count as visible, so an edge does not flicker. */
@@ -49,4 +49,33 @@ export function useHeldWhileVisible(visible: boolean): boolean {
         return () => window.clearTimeout(timer);
     }, [visible]);
     return visible || held;
+}
+
+/* Kinds whose frame holds nothing that lives without it: a file's editor already lets go of its document off screen. */
+const DRAWN_WHEN_NEAR: ReadonlySet<string> = new Set(['note', 'file']);
+
+/*
+ * The nodes left out of the page for now: a note or a file further than a viewport past every edge,
+ * which a pan never shows before it is drawn again. A node anyone acts on stays, and so does every
+ * live kind, whose session, screen or page would go with it. As one string, so the canvas renders
+ * when the set changes and not on every frame of the camera.
+ */
+export function farNodeKey(s: CanvasState): string {
+    if (!isMeasured(s.viewport) || maximizedNodeOf(s) !== null) {
+        return '';
+    }
+    const near = visibleRect(s.camera, s.viewport, Math.max(s.viewport.w, s.viewport.h));
+    const far: string[] = [];
+    for (const node of Object.values(s.nodes)) {
+        if (DRAWN_WHEN_NEAR.has(node.kind) && !intersects(node, near) && !actedOn(s, node.id)) {
+            far.push(node.id);
+        }
+    }
+    return far.join('\n');
+}
+
+function actedOn(s: CanvasState, id: string): boolean {
+    return (
+        s.selection.includes(id) || s.bodyFocusId === id || s.resizing === id || s.navigationId === id || s.linkDraft?.from === id || s.linkDraft?.over === id
+    );
 }

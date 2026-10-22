@@ -26,7 +26,7 @@ const DOMAIN_TOOLS: Record<ActionDomain, { name: string; description: string }> 
     views: { name: 'manage_views', description: 'Focus, create, rename, mark, duplicate or delete views, or bring a view onto the canvas.' },
     canvas: {
         name: 'manage_canvas',
-        description: 'Create, focus, rename, select, group, move or delete nodes on the active canvas, and control its camera, history and locks.'
+        description: 'Create, focus, rename, color, select, group, move or delete nodes on the active canvas, and control its camera, history and locks.'
     },
     layout: {
         name: 'manage_layout',
@@ -57,7 +57,7 @@ const DOMAIN_TOOLS: Record<ActionDomain, { name: string; description: string }> 
     content: {
         name: 'edit_content',
         description:
-            'Read and change what notes, drawings and diagrams on screen hold: write in a note or change its color, draw, change, move, delete, duplicate, reorder or lock drawing elements, rename or recolor diagram nodes, replace a whole drawing or diagram, or copy one to the clipboard. Undo brings a change back while the view stays open.'
+            'Read and change what notes, drawings and diagrams on screen hold: write in a note, draw, change, move, delete, duplicate, reorder or lock drawing elements, rename or recolor diagram nodes, replace a whole drawing or diagram, or copy one to the clipboard. Undo brings a change back while the view stays open.'
     },
     pages: {
         name: 'browse_pages',

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionManager } from '@adecore/database';
 import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
@@ -37,7 +37,7 @@ export function DatabaseConnectionsDialog() {
     const withheld = useWithheldPasswords();
     const persistence = useSecretPersistence();
     const { endpointId } = useConnection();
-    const browse = useMemo(() => databaseBrowse(endpointId, desktop()), [endpointId]);
+    const browse = databaseBrowse(endpointId, desktop());
     const shown = connections.find((connection) => connection.id === selected) ?? connections[0] ?? null;
     const held = shown === null ? undefined : withheld[shown.id];
 

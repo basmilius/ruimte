@@ -25,7 +25,7 @@ import { useNodeComputerApprovals } from '@/state/computer';
 import { useNodeProposals } from '@/state/proposals';
 import { useNodeSecretRequests } from '@/state/secrets';
 import { useToasts } from '@/state/toasts';
-import { isShellShortcut } from '@/terminal/keymap';
+import { isComposerShortcut } from '@/terminal/keymap';
 
 /*
  * What the chat takes from Ruimte that only a workspace draws: the find over a thread, dictation, the
@@ -37,7 +37,7 @@ const intelligentUi = CHAT_HOST.intelligentUi;
 
 export const WORKSPACE_CHAT_HOST: Partial<ChatHost> = {
     ...(intelligentUi ? { intelligentUi: { ...intelligentUi, openLink: openUiLink, openUrl: openUiUrl } } : {}),
-    isAppShortcut: (event) => isShellShortcut(event, isApplePlatform()),
+    isAppShortcut: (event) => isComposerShortcut(event, isApplePlatform()),
     ReadImage,
     MarkdownImage,
     ModelView: ChatModelView,

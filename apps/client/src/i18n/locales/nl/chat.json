@@ -12,7 +12,7 @@
             "summarize": "Samenvatten voor het origineel",
             "summarizeFor": "Samenvatten voor {{title}}",
             "showOriginal": "Origineel tonen",
-            "summaryFailed": "De samenvatting kon niet worden gevraagd"
+            "summaryFailed": "Kon de samenvatting niet vragen"
         },
         "refusal": {
             "originalGone": "Het origineel zit niet meer in dit project"
@@ -20,30 +20,30 @@
     },
     "image": {
         "gone": "Dat bestand staat er niet meer",
-        "notShown": "Een {{format}}-afbeelding, een formaat dat deze app niet toont"
+        "notShown": "Kan {{format}}-afbeeldingen niet tonen"
     },
     "modelView": {
-        "notModel": "De bytes zijn geen binair glTF-, USDZ- of STL-model."
+        "notModel": "Dit bestand is geen 3D-model dat Ruimte kan tonen (glTF, USDZ of STL)."
     },
     "generatedImage": {
         "saveTitle": "Afbeelding opslaan in project",
-        "saveIn": "De afbeelding wordt opgeslagen in {{project}}.",
+        "saveIn": "Wordt opgeslagen in {{project}}.",
         "folder": "Map",
         "name": "Naam",
-        "exists": "{{name}} bestaat al in deze map",
+        "exists": "{{name}} bestaat al",
         "replace": "Vervangen",
-        "openFailed": "Afbeelding openen mislukt",
-        "saveFailed": "Afbeelding opslaan mislukt"
+        "openFailed": "Kon de afbeelding niet openen",
+        "saveFailed": "Kon de afbeelding niet opslaan"
     },
     "login": {
         "title": "Inloggen bij {{account}}",
-        "description": "{{cli}} draait zijn eigen login in deze terminal. Die sluit vanzelf zodra je bent ingelogd.",
-        "descriptionSilent": "{{cli}} draait zijn eigen login in deze terminal. Sluit dit venster zodra je bent ingelogd.",
+        "description": "{{cli}} logt je hier in. Dit sluit zodra je bent ingelogd.",
+        "descriptionSilent": "{{cli}} logt je hier in. Sluit dit zodra je bent ingelogd.",
         "landed": "Ingelogd",
         "landedAs": "Ingelogd als {{email}}",
         "ended": "De login is gestopt.",
-        "dropped": "De verbinding met de machine viel weg, en daarmee stopte de login.",
-        "failed": "De login kon niet starten: {{reason}}"
+        "dropped": "De machine viel weg, dus de login stopte.",
+        "failed": "Kon de login niet starten: {{reason}}"
     },
     "selection": {
         "title": "Selectie aan chat toevoegen",
@@ -51,35 +51,35 @@
         "here": "Hier geopend",
         "others": "Andere chats",
         "newWith": "Nieuwe chat met {{provider}}",
-        "note": "Zet {{label}} in het concept. Er wordt nog niets verstuurd.",
+        "note": "Zet {{label}} in het concept zonder te versturen.",
         "ask": "Vraag aan {{provider}}",
         "problem": "Probleem: {{message}}",
-        "noChat": "Er kon geen chat worden gestart"
+        "noChat": "Kon geen chat starten"
     },
     "prepare": {
         "action": "Klaarzetten in terminal",
-        "explanation": "Controleer het volledige commando hieronder. Ruimte plakt het zonder Enter. Je voert het zelf uit.",
+        "explanation": "Controleer het commando. Ruimte plakt het zonder Enter, dus je voert het zelf uit.",
         "machine": "Machine",
         "cwd": "Werkmap",
         "terminal": "Terminal",
         "paste": "Plakken zonder Enter",
-        "noShell": "Er is geen gecontroleerde lege shell beschikbaar in deze map. Open hier een zsh-terminal of maak de invoer leeg. Andere shells ondersteunen het klaarzetten van opdrachten nog niet.",
+        "noShell": "Geen lege zsh-terminal in deze map. Open er hier een of maak de invoer leeg.",
         "offline": "De machine van deze chat is niet verbonden.",
-        "failed": "Het commando kon niet worden klaargezet.",
+        "failed": "Kon het commando niet klaarzetten.",
         "ready": "Commando klaargezet",
-        "readyIn": "Het commando staat klaar in {{terminal}}. Druk daar op Enter om het uit te voeren.",
-        "unconfirmed": "Het klaarzetten is niet bevestigd. De opdracht staat mogelijk al in de terminal. Controleer de invoer voordat je opnieuw iets klaarzet.",
-        "refused": "De shelleditor heeft de opdracht geweigerd. Er is niets ingevoegd. Open het voorbeeld opnieuw."
+        "readyIn": "Klaar in {{terminal}}. Druk daar op Enter om het uit te voeren.",
+        "unconfirmed": "Niet bevestigd. Het commando staat mogelijk al in de terminal, dus controleer eerst de invoer.",
+        "refused": "De terminal nam het commando niet aan. Open het voorbeeld opnieuw."
     },
     "offline": "De machine van deze chat is niet verbonden.",
     "uiLink": {
-        "elsewhere": "Deze link leidt naar een project dat niet in dit venster open is.",
-        "invalidUrl": "Deze link is geen webadres dat Ruimte opent."
+        "elsewhere": "Linkt naar een project dat niet in dit venster open is.",
+        "invalidUrl": "Ruimte kan deze link niet openen."
     },
     "restart": {
         "done": "Agentsessie herstart",
-        "doneDescription": "Het volgende bericht start een nieuwe sessie die het gesprek voortzet en nieuwe skills, plugins, commando’s en MCP-servers oppikt.",
-        "failed": "Agentsessie herstarten mislukt"
+        "doneDescription": "Het volgende bericht zet het gesprek voort en laadt nieuwe skills, plugins, commando’s en MCP-servers.",
+        "failed": "Kon de agentsessie niet herstarten"
     },
     "commandLook": {
         "used_one": "1 keer Ruimte {{name}} gebruikt",
@@ -88,9 +88,9 @@
         "usedAny_other": "{{count}} keer Ruimte gebruikt"
     },
     "providerCommand": {
-        "description": "Druk op Enter om het commando uit te voeren.",
+        "description": "Druk op Enter om uit te voeren.",
         "ended": "De terminal is gestopt.",
-        "dropped": "De verbinding met de machine viel weg, waardoor de terminal stopte.",
-        "failed": "De terminal kon niet starten: {{reason}}"
+        "dropped": "De machine viel weg, dus de terminal stopte.",
+        "failed": "Kon de terminal niet starten: {{reason}}"
     }
 }

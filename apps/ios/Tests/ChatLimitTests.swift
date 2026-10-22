@@ -29,7 +29,7 @@ import XCTest
             ChatLimitView(title: "Stopped on a usage limit", detail: "The limit resets at at5."))
         XCTAssertEqual(
             ChatLimits.view(info: info(limit: usage, resumeAt: 7), moment: moment)?.detail,
-            "Goes on by itself at at7, when the limit resets.")
+            "Resumes at at7.")
         XCTAssertNil(
             ChatLimits.view(info: info(limit: .object(["kind": .string("usage")])), moment: moment)?.detail)
     }
@@ -38,10 +38,10 @@ import XCTest
         let overload = JSONValue.object(["kind": .string("overload")])
         XCTAssertEqual(
             ChatLimits.view(info: info(limit: overload), moment: moment),
-            ChatLimitView(title: "The model was overloaded", detail: "Send a message to try again."))
+            ChatLimitView(title: "Model overloaded", detail: "Send a message to try again."))
         XCTAssertEqual(
             ChatLimits.view(info: info(limit: overload, resumeAt: 3), moment: moment)?.detail,
-            "Tries again by itself at at3.")
+            "Retries at at3.")
     }
 
     func testNothingIsSaidWithoutALimitOrWhileATurnRuns() {

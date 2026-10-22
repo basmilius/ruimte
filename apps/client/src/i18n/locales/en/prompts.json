@@ -12,8 +12,8 @@
     },
     "secret": {
         "body": "The agent asks for a secret for the launch {{launch}}.",
-        "variable": "Saved on this machine as {{variable}} for {{launch}}. Only that launch gets it when it starts; the agent never sees it.",
-        "replaces": "This replaces the value {{variable}} has now.",
+        "variable": "Saved on this machine as {{variable}}. Only {{launch}} gets it, never the agent.",
+        "replaces": "Replaces the current value of {{variable}}.",
         "field": "Secret",
         "save": "Save",
         "decline": "Decline",
@@ -28,12 +28,12 @@
         "heading": "Waiting for you in its terminal",
         "approval": "Approval requested by {{tool}}",
         "question": "Question from {{tool}}",
-        "body": "This question can only be answered in the terminal.",
+        "body": "Answer it in the terminal.",
         "goToTerminal": "Go to terminal"
     },
     "error": {
-        "expired": "This request was already answered or has expired",
-        "terminalOnly": "This prompt can only be answered in its terminal",
+        "expired": "Already answered or expired",
+        "terminalOnly": "Answer it in the terminal.",
         "notConnected": "Not connected to the machine"
     }
 }

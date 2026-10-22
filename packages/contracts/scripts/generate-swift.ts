@@ -29,6 +29,7 @@ import * as envelope from '../src/envelope.ts';
 import * as signing from '../../pulsar/src/signing.ts';
 import * as liveness from '../src/direct-liveness.ts';
 import * as agent from '../src/agent.ts';
+import { UsageProviderSchema } from '@adecore/agent-contracts';
 import * as task from '../src/task.ts';
 import * as plan from '@adecore/plan/protocol';
 import * as chat from '../src/chat.ts';
@@ -268,6 +269,7 @@ const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknow
     [MachineUpdateStatusSchema, MachineUpdateStatusSchema.options],
     [PushNotifyKindSchema, PushNotifyKindSchema.options],
     [ProjectIconNameSchema, PROJECT_ICON_NAMES],
+    [UsageProviderSchema, UsageProviderSchema.options],
     [VoicePhaseSchema, VoicePhaseSchema.options],
     [VoiceActivityKindSchema, VoiceActivityKindSchema.options],
     [VoiceActivityStatusSchema, VoiceActivityStatusSchema.options]

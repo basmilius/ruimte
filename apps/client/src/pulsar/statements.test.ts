@@ -51,7 +51,7 @@ describe('requestSignalAccess', () => {
         const key = (await createClientKeyLoader(memoryStore())())!;
         for (const patch of [{ machineId: 'machine-2' }, { clientPublicKey: 'B'.repeat(43) }, { nonce: 'n'.repeat(24) }]) {
             const request = async (payload: AccessRequestPayload) => ({ ...payload, issuedAt: 1, expiresAt: 2, signature: 's'.repeat(86), ...patch });
-            expect(requestSignalAccess('machine-1', key, 'x', request)).rejects.toThrow('for something else');
+            expect(requestSignalAccess('machine-1', key, 'x', request)).rejects.toThrow('unexpected answer');
         }
     });
 });

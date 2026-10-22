@@ -968,6 +968,9 @@
                   "minCliVersion": {
                     "type": "string",
                     "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
+                  },
+                  "tools": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -6681,6 +6684,9 @@
         "required": [
           "kind"
         ]
+      },
+      "endsWithClient": {
+        "type": "boolean"
       }
     },
     "required": [
@@ -12527,6 +12533,79 @@
       "text"
     ]
   },
+  "request.device.power.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform"
+    ]
+  },
+  "request.device.power.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "power": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "level": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "plugged": {
+                "type": "boolean"
+              },
+              "charging": {
+                "type": "boolean"
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16
+              },
+              "simulated": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "level",
+              "plugged",
+              "charging"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "power"
+    ]
+  },
   "request.agent.resume.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -12990,6 +13069,14 @@
               "conversation",
               "system"
             ]
+          },
+          "cacheTtlMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "cacheExpiresAt": {
+            "type": "number"
           }
         },
         "required": [
@@ -15349,6 +15436,14 @@
                   "conversation",
                   "system"
                 ]
+              },
+              "cacheTtlMs": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "cacheExpiresAt": {
+                "type": "number"
               }
             },
             "required": [
@@ -21119,6 +21214,14 @@
                             "conversation",
                             "system"
                           ]
+                        },
+                        "cacheTtlMs": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "cacheExpiresAt": {
+                          "type": "number"
                         }
                       },
                       "required": [
@@ -21778,6 +21881,14 @@
                             "conversation",
                             "system"
                           ]
+                        },
+                        "cacheTtlMs": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "cacheExpiresAt": {
+                          "type": "number"
                         }
                       },
                       "required": [
@@ -25153,6 +25264,14 @@
               "conversation",
               "system"
             ]
+          },
+          "cacheTtlMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "cacheExpiresAt": {
+            "type": "number"
           }
         },
         "required": [
@@ -26113,6 +26232,14 @@
                   "conversation",
                   "system"
                 ]
+              },
+              "cacheTtlMs": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "cacheExpiresAt": {
+                "type": "number"
               }
             },
             "required": [
@@ -26885,6 +27012,14 @@
                       "conversation",
                       "system"
                     ]
+                  },
+                  "cacheTtlMs": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "cacheExpiresAt": {
+                    "type": "number"
                   }
                 },
                 "required": [
@@ -30862,6 +30997,9 @@
                   },
                   "minCliVersion": {
                     "type": "string"
+                  },
+                  "tools": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -31170,6 +31308,9 @@
                   },
                   "minCliVersion": {
                     "type": "string"
+                  },
+                  "tools": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -31481,6 +31622,577 @@
     },
     "required": [
       "server"
+    ]
+  },
+  "request.provider.registry.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "refresh": {
+        "type": "boolean"
+      }
+    }
+  },
+  "request.provider.registry.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "catalog": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "live",
+              "cached",
+              "unavailable"
+            ]
+          },
+          "fetchedAt": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "platform": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "agents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32,
+                  "pattern": "^[a-z][a-z0-9-]*$",
+                  "x-open-enum": [
+                    "claude",
+                    "codex",
+                    "gemini",
+                    "copilot",
+                    "apple"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "website": {
+                  "type": "string"
+                },
+                "repository": {
+                  "type": "string"
+                },
+                "license": {
+                  "type": "string"
+                },
+                "distribution": {
+                  "type": "string",
+                  "enum": [
+                    "binary",
+                    "npm",
+                    "uv"
+                  ]
+                },
+                "checksum": {
+                  "type": "boolean"
+                },
+                "installed": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "missing",
+                    "installing",
+                    "installed",
+                    "failed"
+                  ]
+                },
+                "error": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "name",
+                "version",
+                "description",
+                "distribution",
+                "checksum",
+                "installed",
+                "state"
+              ]
+            }
+          }
+        },
+        "required": [
+          "source",
+          "fetchedAt",
+          "platform",
+          "agents"
+        ]
+      }
+    },
+    "required": [
+      "catalog"
+    ]
+  },
+  "request.provider.installAgent.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "request.provider.installAgent.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "agent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "x-open-enum": [
+              "claude",
+              "codex",
+              "gemini",
+              "copilot",
+              "apple"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          },
+          "repository": {
+            "type": "string"
+          },
+          "license": {
+            "type": "string"
+          },
+          "distribution": {
+            "type": "string",
+            "enum": [
+              "binary",
+              "npm",
+              "uv"
+            ]
+          },
+          "checksum": {
+            "type": "boolean"
+          },
+          "installed": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "installing",
+              "installed",
+              "failed"
+            ]
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "version",
+          "description",
+          "distribution",
+          "checksum",
+          "installed",
+          "state"
+        ]
+      }
+    },
+    "required": [
+      "agent"
+    ]
+  },
+  "request.provider.removeAgent.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "request.provider.removeAgent.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "agent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "x-open-enum": [
+              "claude",
+              "codex",
+              "gemini",
+              "copilot",
+              "apple"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          },
+          "repository": {
+            "type": "string"
+          },
+          "license": {
+            "type": "string"
+          },
+          "distribution": {
+            "type": "string",
+            "enum": [
+              "binary",
+              "npm",
+              "uv"
+            ]
+          },
+          "checksum": {
+            "type": "boolean"
+          },
+          "installed": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "installing",
+              "installed",
+              "failed"
+            ]
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "version",
+          "description",
+          "distribution",
+          "checksum",
+          "installed",
+          "state"
+        ]
+      }
+    },
+    "required": [
+      "agent"
+    ]
+  },
+  "request.provider.versions.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "provider": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32,
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "x-open-enum": [
+          "claude",
+          "codex",
+          "gemini",
+          "copilot",
+          "apple"
+        ]
+      },
+      "refresh": {
+        "type": "boolean"
+      }
+    }
+  },
+  "request.provider.versions.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "versions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "x-open-enum": [
+                "claude",
+                "codex",
+                "gemini",
+                "copilot",
+                "apple"
+              ]
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "homebrew",
+                "homebrew-cask",
+                "npm",
+                "pnpm",
+                "bun",
+                "ruimte",
+                "unknown"
+              ]
+            },
+            "package": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "path": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "latest": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "updatable": {
+              "type": "boolean"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "idle",
+                "updating",
+                "failed"
+              ]
+            },
+            "error": {
+              "type": "string"
+            },
+            "checkedAt": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "provider",
+            "method",
+            "package",
+            "path",
+            "version",
+            "latest",
+            "updatable",
+            "state",
+            "checkedAt"
+          ]
+        }
+      }
+    },
+    "required": [
+      "versions"
+    ]
+  },
+  "request.provider.update.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "provider": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32,
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "x-open-enum": [
+          "claude",
+          "codex",
+          "gemini",
+          "copilot",
+          "apple"
+        ]
+      }
+    },
+    "required": [
+      "provider"
+    ]
+  },
+  "request.provider.update.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "version": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "x-open-enum": [
+              "claude",
+              "codex",
+              "gemini",
+              "copilot",
+              "apple"
+            ]
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "homebrew",
+              "homebrew-cask",
+              "npm",
+              "pnpm",
+              "bun",
+              "ruimte",
+              "unknown"
+            ]
+          },
+          "package": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "latest": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updatable": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "updating",
+              "failed"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "checkedAt": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "provider",
+          "method",
+          "package",
+          "path",
+          "version",
+          "latest",
+          "updatable",
+          "state",
+          "checkedAt"
+        ]
+      }
+    },
+    "required": [
+      "version"
     ]
   },
   "request.accounts.list.payload": {
@@ -49004,6 +49716,11 @@
       },
       "overwrite": {
         "type": "boolean"
+      },
+      "mode": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 511
       }
     },
     "required": [
@@ -50801,6 +51518,21 @@
                     "comments"
                   ]
                 }
+              },
+              "added": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "deleted": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "changedFiles": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -50829,6 +51561,133 @@
     },
     "required": [
       "pr"
+    ]
+  },
+  "request.git.prSplit.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "cwd": {
+        "type": "string",
+        "minLength": 1
+      },
+      "number": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      },
+      "headSha": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "cwd",
+      "number",
+      "headSha"
+    ]
+  },
+  "request.git.prSplit.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "split": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "object",
+                "properties": {
+                  "added": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "deleted": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "added",
+                  "deleted"
+                ]
+              },
+              "tests": {
+                "type": "object",
+                "properties": {
+                  "added": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "deleted": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "added",
+                  "deleted"
+                ]
+              },
+              "mocks": {
+                "type": "object",
+                "properties": {
+                  "added": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "deleted": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "added",
+                  "deleted"
+                ]
+              },
+              "generated": {
+                "type": "object",
+                "properties": {
+                  "added": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "deleted": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "added",
+                  "deleted"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "tests",
+              "mocks",
+              "generated"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "split"
     ]
   },
   "request.git.pr-watch.payload": {
@@ -51502,6 +52361,108 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "request.git.clone.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "actionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "url": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2048
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      }
+    },
+    "required": [
+      "actionId",
+      "url",
+      "path"
+    ]
+  },
+  "request.git.clone.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string"
+      },
+      "output": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "path",
+      "output"
+    ]
+  },
+  "request.git.ignoredFiles.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "cwd": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "cwd"
+    ]
+  },
+  "request.git.ignoredFiles.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "root": {
+        "type": "string"
+      },
+      "prefix": {
+        "type": "string"
+      },
+      "files": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "size": {
+              "type": "number"
+            },
+            "link": {
+              "type": "boolean"
+            },
+            "mode": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "path",
+            "size",
+            "link"
+          ]
+        }
+      },
+      "truncated": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "root",
+      "prefix",
+      "files",
+      "truncated"
+    ]
   },
   "request.git.conflicts.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -52190,11 +53151,12 @@
             },
             "provider": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "claude",
                 "codex",
                 "nanogpt",
-                "grok"
+                "grok",
+                "copilot"
               ]
             },
             "model": {
@@ -52286,11 +53248,12 @@
           "properties": {
             "provider": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "claude",
                 "codex",
                 "nanogpt",
-                "grok"
+                "grok",
+                "copilot"
               ]
             },
             "model": {
@@ -52402,11 +53365,12 @@
               "type": "object",
               "propertyNames": {
                 "type": "string",
-                "enum": [
+                "x-open-enum": [
                   "claude",
                   "codex",
                   "nanogpt",
-                  "grok"
+                  "grok",
+                  "copilot"
                 ]
               },
               "additionalProperties": {
@@ -52599,11 +53563,12 @@
           "properties": {
             "provider": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "claude",
                 "codex",
                 "nanogpt",
-                "grok"
+                "grok",
+                "copilot"
               ]
             },
             "path": {
@@ -52643,11 +53608,12 @@
             },
             "kind": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "claude",
                 "codex",
                 "nanogpt",
-                "grok"
+                "grok",
+                "copilot"
               ]
             },
             "label": {
@@ -52716,11 +53682,12 @@
           "properties": {
             "kind": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "claude",
                 "codex",
                 "nanogpt",
-                "grok"
+                "grok",
+                "copilot"
               ]
             },
             "account": {
@@ -52902,11 +53869,12 @@
           "properties": {
             "kind": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "claude",
                 "codex",
                 "nanogpt",
-                "grok"
+                "grok",
+                "copilot"
               ]
             },
             "account": {
@@ -58477,6 +59445,173 @@
       "ending"
     ]
   },
+  "request.endpoint.reach.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "check": {
+        "type": "boolean"
+      }
+    }
+  },
+  "request.endpoint.reach.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "reach": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "checkedAt": {
+                "type": "number"
+              },
+              "cause": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "relayed",
+                  "limited",
+                  "unreachable"
+                ]
+              },
+              "facts": {
+                "type": "object",
+                "properties": {
+                  "broker": {
+                    "type": "object",
+                    "properties": {
+                      "url": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "connected": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "url",
+                      "connected"
+                    ]
+                  },
+                  "granted": {
+                    "type": "boolean"
+                  },
+                  "probes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "stun",
+                            "turn"
+                          ]
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "transport": {
+                          "type": "string",
+                          "enum": [
+                            "udp",
+                            "tcp",
+                            "tls"
+                          ]
+                        },
+                        "outcome": {
+                          "type": "string",
+                          "enum": [
+                            "ok",
+                            "refused",
+                            "unreachable"
+                          ]
+                        },
+                        "error": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "url",
+                        "transport",
+                        "outcome"
+                      ]
+                    }
+                  },
+                  "lanDoor": {
+                    "type": "object",
+                    "properties": {
+                      "wanted": {
+                        "type": "boolean"
+                      },
+                      "listening": {
+                        "type": "boolean"
+                      },
+                      "port": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "addresses": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "wanted",
+                      "listening",
+                      "port",
+                      "addresses"
+                    ]
+                  },
+                  "tunnel": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "broker",
+                  "granted",
+                  "probes",
+                  "lanDoor",
+                  "tunnel"
+                ]
+              }
+            },
+            "required": [
+              "checkedAt",
+              "cause",
+              "severity",
+              "facts"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "reach"
+    ]
+  },
   "request.auth.sessions.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -59254,6 +60389,14 @@
                     "conversation",
                     "system"
                   ]
+                },
+                "cacheTtlMs": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "cacheExpiresAt": {
+                  "type": "number"
                 }
               },
               "required": [
@@ -60580,6 +61723,121 @@
     },
     "required": [
       "updated"
+    ]
+  },
+  "request.nanogpt.status.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.nanogpt.status.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "configured": {
+        "type": "boolean"
+      },
+      "models": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "autoContinue": {
+            "type": "boolean"
+          },
+          "roundsPerRun": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 200
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "required": [
+          "autoContinue",
+          "roundsPerRun",
+          "runs"
+        ]
+      }
+    },
+    "required": [
+      "configured",
+      "models"
+    ]
+  },
+  "request.nanogpt.configure.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "apiKey": {
+        "type": "string",
+        "maxLength": 4096
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "autoContinue": {
+            "type": "boolean"
+          },
+          "roundsPerRun": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 200
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        }
+      }
+    }
+  },
+  "request.nanogpt.configure.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "configured": {
+        "type": "boolean"
+      },
+      "models": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "autoContinue": {
+            "type": "boolean"
+          },
+          "roundsPerRun": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 200
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "required": [
+          "autoContinue",
+          "roundsPerRun",
+          "runs"
+        ]
+      }
+    },
+    "required": [
+      "configured",
+      "models"
     ]
   },
   "event.push.attention": {
@@ -63689,6 +64947,14 @@
                           "conversation",
                           "system"
                         ]
+                      },
+                      "cacheTtlMs": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "cacheExpiresAt": {
+                        "type": "number"
                       }
                     },
                     "required": [
@@ -64348,6 +65614,14 @@
                           "conversation",
                           "system"
                         ]
+                      },
+                      "cacheTtlMs": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "cacheExpiresAt": {
+                        "type": "number"
                       }
                     },
                     "required": [
@@ -66654,6 +67928,14 @@
                   "conversation",
                   "system"
                 ]
+              },
+              "cacheTtlMs": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "cacheExpiresAt": {
+                "type": "number"
               }
             },
             "required": [
@@ -74064,11 +75346,12 @@
           "properties": {
             "kind": {
               "type": "string",
-              "enum": [
+              "x-open-enum": [
                 "claude",
                 "codex",
                 "nanogpt",
-                "grok"
+                "grok",
+                "copilot"
               ]
             },
             "account": {
@@ -74430,6 +75713,312 @@
     "required": [
       "accounts",
       "statuses"
+    ]
+  },
+  "event.provider.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "providers": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "x-open-enum": [
+                "claude",
+                "codex",
+                "gemini",
+                "copilot",
+                "apple"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "installed": {
+              "type": "boolean"
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "models": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "badge": {
+                    "type": "string"
+                  },
+                  "vendor": {
+                    "type": "string"
+                  },
+                  "legacy": {
+                    "type": "boolean"
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "select"
+                            },
+                            "choices": {
+                              "minItems": 1,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "description": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "label"
+                                ]
+                              }
+                            },
+                            "defaultChoice": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "label",
+                            "type",
+                            "choices",
+                            "defaultChoice"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "boolean"
+                            },
+                            "defaultValue": {
+                              "type": "boolean"
+                            },
+                            "description": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "label",
+                            "type",
+                            "defaultValue"
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "minCliVersion": {
+                    "type": "string"
+                  },
+                  "tools": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "slug",
+                  "name",
+                  "legacy",
+                  "isDefault",
+                  "options"
+                ]
+              }
+            },
+            "defaultModel": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "capabilities": {
+              "type": "object",
+              "properties": {
+                "chat": {
+                  "type": "boolean"
+                },
+                "terminal": {
+                  "type": "boolean"
+                },
+                "hooks": {
+                  "type": "boolean"
+                },
+                "streamsToolOutput": {
+                  "type": "boolean"
+                },
+                "diffs": {
+                  "type": "string",
+                  "enum": [
+                    "unified",
+                    "before-after",
+                    "none"
+                  ]
+                },
+                "attachments": {
+                  "type": "boolean"
+                },
+                "mentions": {
+                  "type": "boolean"
+                },
+                "denyReason": {
+                  "type": "boolean"
+                },
+                "allowAlways": {
+                  "type": "boolean"
+                },
+                "asyncQuestions": {
+                  "type": "boolean"
+                },
+                "steer": {
+                  "type": "boolean"
+                },
+                "compaction": {
+                  "type": "string",
+                  "enum": [
+                    "native",
+                    "prompt",
+                    "none"
+                  ]
+                },
+                "reportsCost": {
+                  "type": "boolean"
+                },
+                "reportsContextWindow": {
+                  "type": "boolean"
+                },
+                "reportsThinking": {
+                  "type": "boolean"
+                },
+                "slashCommands": {
+                  "type": "boolean"
+                },
+                "goals": {
+                  "type": "string",
+                  "enum": [
+                    "native",
+                    "command"
+                  ]
+                }
+              },
+              "required": [
+                "chat",
+                "terminal",
+                "hooks",
+                "streamsToolOutput",
+                "diffs",
+                "attachments",
+                "mentions",
+                "denyReason",
+                "allowAlways",
+                "asyncQuestions",
+                "compaction",
+                "reportsCost",
+                "reportsContextWindow",
+                "reportsThinking",
+                "slashCommands"
+              ]
+            },
+            "resumeCommand": {
+              "type": "string"
+            },
+            "install": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "commands": {
+                  "type": "object",
+                  "properties": {
+                    "darwin": {
+                      "type": "string"
+                    },
+                    "linux": {
+                      "type": "string"
+                    },
+                    "win32": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "guideUrl": {
+                  "type": "string"
+                },
+                "signIn": {
+                  "type": "array",
+                  "items": {}
+                }
+              },
+              "required": [
+                "description",
+                "commands",
+                "signIn"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "name",
+            "installed",
+            "version",
+            "models",
+            "defaultModel",
+            "capabilities",
+            "resumeCommand"
+          ]
+        }
+      }
+    },
+    "required": [
+      "providers"
     ]
   },
   "event.processes.sample": {

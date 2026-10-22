@@ -150,7 +150,7 @@ const PR_QUERY = `query($owner:String!,$name:String!,$number:Int!,$endCursor:Str
   viewer{login}
   repository(owner:$owner,name:$name){
     pullRequest(number:$number){
-      number url title state isDraft headRefOid headRefName baseRefName mergeable mergeStateStatus reviewDecision
+      number url title state isDraft headRefOid headRefName baseRefName mergeable mergeStateStatus reviewDecision additions deletions changedFiles
       reviews(last:20){nodes{id submittedAt state author{login __typename}}}
       commits(last:1){nodes{commit{oid statusCheckRollup{contexts(first:100,after:$endCursor){
         nodes{__typename
@@ -184,6 +184,9 @@ interface PullRequestJson {
     mergeable?: string;
     mergeStateStatus?: string;
     reviewDecision?: string | null;
+    additions?: number;
+    deletions?: number;
+    changedFiles?: number;
     reviews?: { nodes?: Array<{ id?: string; submittedAt?: string | null; state?: string; author?: { login?: string; __typename?: string } | null }> };
     commits?: { nodes?: Array<{ commit?: { statusCheckRollup?: { contexts?: { nodes?: RawCheck[] } } | null } }> };
 }
@@ -204,7 +207,8 @@ interface Page<Node> {
     data?: { viewer?: { login?: string } | null; repository?: { pullRequest?: Node | null } | null };
 }
 
-function pagesOf<Node>(output: string): Node[] {
+/* The pull request of every page of a `--paginate` answer, in order. */
+export function pagesOf<Node>(output: string): Node[] {
     return (jsonDocuments(output) as Array<Page<Node>>)
         .map((page) => page.data?.repository?.pullRequest)
         .filter((node): node is Node => node !== null && node !== undefined);
@@ -239,7 +243,7 @@ function locate(url: string): { owner: string; name: string; number: number } | 
     return match ? { owner: match[1]!, name: match[2]!, number: Number.parseInt(match[3]!, 10) } : null;
 }
 
-function graphql(query: string, place: { owner: string; name: string; number: number }): string[] {
+export function graphql(query: string, place: { owner: string; name: string; number: number }): string[] {
     return ['api', 'graphql', '--paginate', '-f', `query=${query}`, '-f', `owner=${place.owner}`, '-f', `name=${place.name}`, '-F', `number=${place.number}`];
 }
 
@@ -296,7 +300,10 @@ export function pullRequestOf(
         reviewDecision: first.reviewDecision ?? null,
         checks,
         checkState: summarizeChecks(checks),
-        threads: threadPages.flatMap((page) => page.reviewThreads?.nodes ?? []).map(threadOf)
+        threads: threadPages.flatMap((page) => page.reviewThreads?.nodes ?? []).map(threadOf),
+        ...(typeof first.additions === 'number' ? { added: first.additions } : {}),
+        ...(typeof first.deletions === 'number' ? { deleted: first.deletions } : {}),
+        ...(typeof first.changedFiles === 'number' ? { changedFiles: first.changedFiles } : {})
     };
 }
 

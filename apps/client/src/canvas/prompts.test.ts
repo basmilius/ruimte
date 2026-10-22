@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentInfo, ChatInfo, ChatItem, ComputerApproval, SecretRequest } from '@ruimte/contracts';
+import { CHAT_REQUEST_LIMITS, type AgentInfo, type ChatInfo, type ChatItem, type ComputerApproval, type SecretRequest } from '@ruimte/contracts';
 import { PROMPT_SAMPLES } from '@adecore/agents-react/testing';
 import type { ChatsById } from '@adecore/agents-react/state';
 import { endpointKey } from '@/state/keys';
 import type { SessionsByKey } from '@/state/sessions';
 import { isRuimtePrompt, waitingPrompt } from '@/prompts/ruimte-prompts';
-import { canvasPrompts, samePrompts, stackFront, type CanvasPrompt, type CanvasPromptsInput } from './prompts';
+import { canvasPrompts, samePrompts, stackFront, standingRequestsOf, type CanvasPrompt, type CanvasPromptsInput } from './prompts';
 
 const ENDPOINT = 'local';
 
@@ -20,9 +20,14 @@ function key(nodeId: string): string {
 const approval = PROMPT_SAMPLES.find((sample) => sample.label === 'Permission · Command')!.items[0]!;
 const optional = PROMPT_SAMPLES.find((sample) => sample.label === 'Question · Optional')!.items[0]!;
 
-function chatOf(items: ChatItem[]): ChatsById[string] {
+function chatOf(items: ChatItem[], info: Partial<ChatInfo> = { status: 'needs-you' }): ChatsById[string] {
     const byId = Object.fromEntries(items.map((item) => [item.id, item]));
-    return { info: { provider: 'codex' } as ChatInfo, items: byId, structure: byId, order: items.map((item) => item.id) };
+    return { info: { provider: 'codex', ...info } as ChatInfo, items: byId, structure: byId, order: items.map((item) => item.id) };
+}
+
+/* The summary a machine lists in a chat's status for a request that waits. */
+function listed(requestId: string, createdAt: number): NonNullable<ChatInfo['requests']>[number] {
+    return { requestId, itemId: requestId, kind: 'approval', createdAt };
 }
 
 function agent(status: AgentInfo['status'], updatedAt: number): AgentInfo {
@@ -173,6 +178,26 @@ describe('canvasPrompts', () => {
         expect(waiting.subject).toEqual({ kind: 'host', nodeId: 'ios', prompt: waitingPrompt('ios', 400) });
         later.sessions = { ...later.sessions, [key('ios')]: { attached: true, agent: agent('running', 950) } };
         expect(canvasPrompts({ ...later, waitingSince: second.waitingSince }).waitingSince.has(key('ios'))).toBe(false);
+    });
+});
+
+describe('standingRequestsOf', () => {
+    const first = { ...approval, id: 'first', requestId: 'first', createdAt: 100 } as ChatItem;
+    const second = { ...approval, id: 'second', requestId: 'second', createdAt: 200 } as ChatItem;
+
+    test('a thread held from before its chat went idle waits on nothing', () => {
+        expect(standingRequestsOf(chatOf([first], { status: 'idle' }))).toEqual([]);
+    });
+
+    test('a request the status no longer lists is answered, though the thread still holds it as waiting', () => {
+        const chat = chatOf([first, second], { status: 'needs-you', requests: [listed('second', 200)] });
+        expect(standingRequestsOf(chat).map((request) => request.requestId)).toEqual(['second']);
+    });
+
+    test('a machine that lists no requests, or a full list, leaves the thread to say', () => {
+        expect(standingRequestsOf(chatOf([first, second])).map((request) => request.requestId)).toEqual(['first', 'second']);
+        const full = Array.from({ length: CHAT_REQUEST_LIMITS.perChat }, (_, i) => listed(`other-${i}`, i));
+        expect(standingRequestsOf(chatOf([first], { status: 'needs-you', requests: full })).map((request) => request.requestId)).toEqual(['first']);
     });
 });
 

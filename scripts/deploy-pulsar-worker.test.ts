@@ -1,12 +1,15 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { deployPulsarWorker } from './deploy-pulsar-worker.ts';
 
 describe('Worker deployment', () => {
+    afterEach(() => setSystemTime());
+
     test('migrates and deploys before refreshing, with only a digest in Wrangler arguments', async () => {
         const commands: string[][] = [];
         let requests = 0;
-        const startedAt = Date.now();
+        const now = Date.UTC(2026, 9, 1);
+        setSystemTime(now);
         await deployPulsarWorker(
             async (args) => {
                 commands.push(args);
@@ -24,8 +27,7 @@ describe('Worker deployment', () => {
                 expect(commands.flat().join(' ')).not.toContain(token);
                 expect(commands[1]).toContain(`BENCHMARK_REFRESH_TOKEN_HASH:${createHash('sha256').update(token).digest('base64url')}`);
                 const expiry = Number(commands[1].find((arg) => arg.startsWith('BENCHMARK_REFRESH_TOKEN_EXPIRES_AT:'))?.split(':')[1]);
-                expect(expiry).toBeGreaterThanOrEqual(startedAt + 15 * 60_000);
-                expect(expiry).toBeLessThanOrEqual(Date.now() + 15 * 60_000);
+                expect(expiry).toBe(now + 15 * 60_000);
                 return Response.json({ refreshed: true, fetchedAt: 123, measurements: 70 });
             }
         );

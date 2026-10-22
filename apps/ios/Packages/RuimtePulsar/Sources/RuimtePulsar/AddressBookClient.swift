@@ -118,7 +118,7 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, AccountAPI, Sendabl
         guard statement.machineId == machineID, statement.clientPublicKey == key.publicKey, statement.nonce == nonce
         else {
             throw AddressBookRequestError(
-                code: "bad-answer", status: 200, message: String(localized: "Your account answered with a statement for something else.", bundle: .module))
+                code: "bad-answer", status: 200, message: String(localized: "Your account sent an unexpected answer. Try again.", bundle: .module))
         }
         return SignalAccess(statement: statement, label: boundedDeviceLabel(label))
     }
@@ -132,7 +132,7 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, AccountAPI, Sendabl
         } catch {
             throw AddressBookRequestError(
                 code: "bad-answer", status: response.statusCode,
-                message: String(localized: "The address book answered with something this client cannot read.", bundle: .module))
+                message: String(localized: "The address book answered with something this app cannot read.", bundle: .module))
         }
     }
 
@@ -168,7 +168,7 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, AccountAPI, Sendabl
         } catch let error as AddressBookRequestError {
             throw error
         } catch {
-            throw AddressBookRequestError(code: "network", status: 0, message: String(localized: "The address book could not be reached.", bundle: .module))
+            throw AddressBookRequestError(code: "network", status: 0, message: String(localized: "Could not reach the address book.", bundle: .module))
         }
         guard (200..<300).contains(response.statusCode) else {
             if let failure = try? JSONDecoder().decode(AddressBookError.self, from: data) {

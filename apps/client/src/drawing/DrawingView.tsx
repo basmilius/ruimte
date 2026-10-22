@@ -190,7 +190,9 @@ export function DrawingView({ id }: { id: string }) {
             }
         };
         const schedule = (): void => {
-            frame ||= requestAnimationFrame(draw);
+            if (frame === 0) {
+                frame = requestAnimationFrame(draw);
+            }
         };
         schedule();
         const unsubscribe = drawingStore.subscribe((state, previous) => {

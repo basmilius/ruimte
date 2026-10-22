@@ -185,7 +185,7 @@ describe('an edit under the selection', () => {
 
         await feature.show();
 
-        expect(useToasts.getState().toasts.map((toast) => toast.title)).toEqual(['This file has no inline edit to show.']);
+        expect(useToasts.getState().toasts.map((toast) => toast.title)).toEqual(['No inline edit in this file.']);
     });
 
     test('shows the edit this client kept before a reload', async () => {
@@ -343,7 +343,7 @@ describe('the mark in the gutter', () => {
         saveInlineEdit(currentEndpointId(), record);
         const { editor, feature } = await openOwn();
 
-        expect(markersOf(editor)).toEqual([{ id: 'inline-edit', line: 1, label: 'Show the inline edit of these lines' }]);
+        expect(markersOf(editor)).toEqual([{ id: 'inline-edit', line: 1, label: 'Show inline edit' }]);
 
         editor.applyEdits([{ range: { start: at(0, 0), end: at(0, 0) }, text: '// new\n' }]);
         expect(markersOf(editor)?.[0]?.line).toBe(2);
@@ -379,7 +379,7 @@ describe('the mark in the gutter', () => {
         const session = inlineSessionOf(currentEndpointId(), path)!;
 
         session.hide();
-        expect(markersOf(editor)).toEqual([{ id: 'inline-edit', line: 1, label: 'Show the inline edit of these lines' }]);
+        expect(markersOf(editor)).toEqual([{ id: 'inline-edit', line: 1, label: 'Show inline edit' }]);
 
         await session.discard();
         expect(markersOf(editor)).toBeUndefined();

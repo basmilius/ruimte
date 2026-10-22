@@ -43,7 +43,7 @@ enum ChatDraftLimits {
 
     static func attachmentProblem(count: Int, bytes: Int) -> String? {
         if count > files { return String(localized: "Choose up to 8 files per message.") }
-        if bytes > Self.bytes { return String(localized: "Attachments can total at most 10 MiB per message.") }
+        if bytes > Self.bytes { return String(localized: "At most 10 MiB in total per message.") }
         return nil
     }
 }

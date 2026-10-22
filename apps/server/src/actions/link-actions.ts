@@ -5,12 +5,53 @@ import { newId, nodeLines } from '../canvas/nodes.ts';
 import { refuseMissingNodes } from '../canvas/own-view.ts';
 import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import { VerbRefusal, canvasNamed } from '../canvas/verb.ts';
-import { verbCallOf, type ServerActionContext } from './context.ts';
+import { verbCallOf, type ServerActionCall, type ServerActionContext } from './context.ts';
 
 type DrawnEdge = ActionOutput<'link.create'>['edges'][number];
 
 function pickId(edge: ProjectEdge): string {
     return edge.id;
+}
+
+/*
+ * Removes the lines in one write. Each is checked against the canvas as it was read, before any
+ * goes, so a refusal of one removes none.
+ */
+async function deleteEdges(call: ServerActionCall, viewId: string, edgeIds: readonly string[]): Promise<ActionOutput<'link.deleteMany'>> {
+    const { host, place } = call.context;
+    const caller = verbCallOf(call);
+    const anyLine = host.machine.agentsDeleteAnyView;
+    const deletable = (edge: ProjectEdge): boolean => anyLine || (ownEnd(edge.from, caller) && ownEnd(edge.to, caller));
+    const ids = [...new Set(edgeIds)];
+    return host.projects.mutate(place.projectId, (content) => {
+        const canvas = canvasNamed(content, viewId);
+        const going = ids.map((edgeId) => {
+            const edge = canvas.edges.find((candidate) => candidate.id === edgeId);
+            if (!edge) {
+                throw new VerbRefusal('unknown-edge', `${edgeId} is not a line on ${canvas.id}`, edgeLines(canvas, deletable));
+            }
+            if (!deletable(edge)) {
+                const foreign = ownEnd(edge.from, caller) ? edge.to : edge.from;
+                const maker = host.lineage.madeBy(foreign) ?? 'a person';
+                throw new VerbRefusal(
+                    'not-yours',
+                    `${edgeId} runs ${foreign === edge.from ? 'from' : 'into'} ${foreign}, which ${maker} made, and link delete only removes a line whose ends are both yours`,
+                    [
+                        `made by\t${foreign}\t${maker}`,
+                        `you\t${caller.caller}`,
+                        "setting\tagentsDeleteAnyView in this machine's endpoint.json frees every node, view and line; a person turns it on from the Machines pane"
+                    ]
+                );
+            }
+            return edge;
+        });
+        const gone = new Set(ids);
+        const edges = canvas.edges.filter((candidate) => !gone.has(candidate.id));
+        return {
+            content: { ...content, views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, edges } : view)) },
+            result: { viewId: canvas.id, edges: going.map((edge) => ({ edgeId: edge.id, from: edge.from, to: edge.to, label: edge.label ?? null })) }
+        };
+    });
 }
 
 export const linkActions: ActionHandlers<ServerActionContext> = {
@@ -128,34 +169,10 @@ export const linkActions: ActionHandlers<ServerActionContext> = {
         });
     },
     'link.delete': async ({ viewId, edgeId }, call) => {
-        const { host, place } = call.context;
-        const caller = verbCallOf(call);
-        const anyLine = host.machine.agentsDeleteAnyView;
-        const deletable = (edge: ProjectEdge): boolean => anyLine || (ownEnd(edge.from, caller) && ownEnd(edge.to, caller));
-        return host.projects.mutate(place.projectId, (content) => {
-            const canvas = canvasNamed(content, viewId);
-            const edge = canvas.edges.find((candidate) => candidate.id === edgeId);
-            if (!edge) {
-                throw new VerbRefusal('unknown-edge', `${edgeId} is not a line on ${canvas.id}`, edgeLines(canvas, deletable));
-            }
-            if (!deletable(edge)) {
-                const foreign = ownEnd(edge.from, caller) ? edge.to : edge.from;
-                const maker = host.lineage.madeBy(foreign) ?? 'a person';
-                throw new VerbRefusal(
-                    'not-yours',
-                    `${edgeId} runs ${foreign === edge.from ? 'from' : 'into'} ${foreign}, which ${maker} made, and link delete only removes a line whose ends are both yours`,
-                    [
-                        `made by\t${foreign}\t${maker}`,
-                        `you\t${caller.caller}`,
-                        "setting\tagentsDeleteAnyView in this machine's endpoint.json frees every node, view and line; a person turns it on from the Machines pane"
-                    ]
-                );
-            }
-            const edges = canvas.edges.filter((candidate) => candidate.id !== edgeId);
-            return {
-                content: { ...content, views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, edges } : view)) },
-                result: { output: { viewId: canvas.id, edgeId: edge.id, from: edge.from, to: edge.to, label: edge.label ?? null } }
-            };
-        });
+        const removed = await deleteEdges(call, viewId, [edgeId]);
+        return { output: { viewId: removed.viewId, ...removed.edges[0]! } };
+    },
+    'link.deleteMany': async ({ viewId, edgeIds }, call) => {
+        return { output: await deleteEdges(call, viewId, edgeIds) };
     }
 };

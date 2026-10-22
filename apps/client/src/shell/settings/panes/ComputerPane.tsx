@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ComputerGrant } from '@ruimte/contracts';
 import { canSwitch, showsGrants, type ComputerSetup } from '@/computer/setup';
@@ -26,7 +26,7 @@ export function ComputerPane() {
 /* A block per machine, like every setting an agent is held to: the machine enforces it, so each keeps its own. */
 function ComputerSection() {
     const stored = useEndpoints((s) => s.endpoints);
-    const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
+    const endpoints = listedEndpoints(stored);
     const ordered = [
         ...endpoints.filter((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID),
         ...endpoints.filter((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID)

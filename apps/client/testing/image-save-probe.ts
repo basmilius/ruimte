@@ -6,6 +6,7 @@ import type { RequestType } from '@ruimte/contracts';
 import { ImageSaveHost } from '@/chat/ImageSaveHost';
 import { imageSaveDialog, requestImageSave } from '@/chat/image-save';
 import type { Transport } from '@/transport';
+import { initI18n } from '@/i18n';
 
 async function waitFor(condition: () => boolean, phase: string): Promise<void> {
     const started = performance.now();
@@ -18,6 +19,10 @@ async function waitFor(condition: () => boolean, phase: string): Promise<void> {
 }
 
 export async function probeImageSave() {
+    // The probe page boots no app, so nothing set the words up yet.
+    if (!i18next.isInitialized) {
+        await initI18n();
+    }
     const container = document.createElement('div');
     document.body.append(container);
     const root = createRoot(container);

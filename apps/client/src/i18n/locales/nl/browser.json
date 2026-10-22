@@ -25,7 +25,7 @@
         },
         "dns": {
             "title": "Dat adres heeft geen server",
-            "hint": "Controleer de spelling, of het adres op dit netwerk bestaat."
+            "hint": "Controleer de spelling, of het op dit netwerk bestaat."
         },
         "refused": {
             "title": "De server weigerde de verbinding",
@@ -33,7 +33,7 @@
         },
         "certificate": {
             "title": "De verbinding is niet veilig",
-            "hint": "Het certificaat is niet geldig, dus de pagina is niet geladen."
+            "hint": "Ongeldig certificaat, dus de pagina is niet geladen."
         },
         "timeout": {
             "title": "De server deed er te lang over",
@@ -54,18 +54,18 @@
     "stream": {
         "pageLabel": "Webpagina op afstand",
         "starting": "Browser starten…",
-        "frameFailed": "Een frame kon niet getekend worden",
+        "frameFailed": "Kon de pagina niet tonen",
         "startFailed": "De browser kon niet starten",
-        "notReady": "De browserstream is nog niet klaar",
-        "status": "De browserstream antwoordde met {{status}}",
-        "unknownFormat": "De machine gaf een onbekend streamformaat terug",
+        "notReady": "De browser is nog niet klaar",
+        "status": "De browser antwoordde niet ({{status}})",
+        "unknownFormat": "Kon de pagina niet tonen",
         "stopped": "De browserstream is gestopt",
         "failed": "De browser op afstand gaf een fout"
     },
     "splash": {
         "title": "Open hier een pagina",
-        "hint": "Kies een dev server, of typ een adres in de balk hierboven.",
-        "running": "Draait nu",
+        "hint": "Kies een dev server of typ hierboven een adres.",
+        "running": "Draait",
         "common": "Veelgebruikte poorten"
     },
     "node": {

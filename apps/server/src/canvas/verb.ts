@@ -12,12 +12,15 @@ import {
     type ChatItem,
     type ChatForkResult,
     type ChatVisual,
+    type CliVersion,
     type GitDiffResult,
     type LaunchConfigKind,
     type LaunchStartResult,
     type LaunchStatus,
     type ProjectCanvasView,
     type ProjectContent,
+    type RegistryCatalog,
+    type UsageLimitsSnapshot,
     type RuntimeMode,
     type ModelSelection,
     type VisualAppearance,
@@ -37,6 +40,7 @@ import type { DeviceDriver } from '../devices/agent-driver.ts';
 import type { DatabaseAgentHost } from '../database/agent-databases.ts';
 import type { AgentLanguage } from '../language/agent-language.ts';
 import type { AgentLineageStore, Notice, ChatRequests, TaskVerbs } from '@adecore/agents/coordination';
+import type { ContextReading } from '../context/context-store.ts';
 import type { NoticeDelivery } from '../context/notices.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
@@ -85,6 +89,18 @@ export type WorktreeWant = ({ fresh: string } | { branch: string }) & { base?: s
  * call of it, so a new capability is a method of its service and a name here. An interface so a
  * test can hand in a store of its own.
  */
+/* What an agent may read of the CLIs a person installs and updates in Settings, Providers. */
+export interface ProviderInstallHost {
+    catalog(refresh: boolean): Promise<RegistryCatalog>;
+    versions(refresh: boolean): Promise<CliVersion[]>;
+}
+
+/* The plan windows the CLIs of this machine reported, as last read; a verb only reports them and never asks again. */
+export interface PlanLimitsHost {
+    snapshot(): UsageLimitsSnapshot;
+    now(): number;
+}
+
 export interface CanvasHost {
     projects: ProjectHost;
     hiddenAgents?: HiddenAgentStore;
@@ -135,6 +151,10 @@ export interface CanvasHost {
     databases?: DatabaseAgentHost;
     /* The project's running language servers as an agent may ask them; absent on a host without them. */
     language?: LanguageAgentHost;
+    /* The ACP registry and the versions of the agent CLIs, which an agent reads and only a person installs from; absent on a host without them. */
+    providerInstalls?: ProviderInstallHost;
+    /* What the plans of this machine's accounts have left; absent on a host that reads none. */
+    planLimits?: PlanLimitsHost;
     /* The cards in which an agent asks a person for a launch's secret; absent on a host that keeps none. */
     secrets?: SecretHost;
     /* The cards in which an agent in Chats suggests a project; absent on a host that keeps none. */
@@ -293,9 +313,9 @@ export interface LaunchHost {
 export interface ContextHost {
     list(targetId: string): Pick<ContextSource, 'id' | 'kind' | 'title'>[];
     /* One linked source as text; a source it cannot answer throws a `CodedError` that says why. */
-    answer(targetId: string, sourceId: string, tail: number | null, subagent: string | null): Promise<string>;
+    answer(targetId: string, sourceId: string, tail: number | null, subagent: string | null): Promise<ContextReading>;
     /* A source the caller reads without a line, such as a node of the canvas a chat view names. */
-    answerSource(targetId: string, source: ContextSource, tail: number | null, subagent: string | null): Promise<string>;
+    answerSource(targetId: string, source: ContextSource, tail: number | null, subagent: string | null): Promise<ContextReading>;
 }
 
 /*
@@ -333,7 +353,22 @@ export type ComputerHost = Pick<ComputerUse, 'enabled' | 'apps' | 'operate' | 't
 
 export type DeviceDriveHost = Pick<
     DeviceDriver,
-    'list' | 'find' | 'screen' | 'abilities' | 'tree' | 'shot' | 'tap' | 'tapElement' | 'swipe' | 'button' | 'type' | 'launch' | 'act' | 'clipboard' | 'record'
+    | 'list'
+    | 'find'
+    | 'screen'
+    | 'abilities'
+    | 'power'
+    | 'tree'
+    | 'shot'
+    | 'tap'
+    | 'tapElement'
+    | 'swipe'
+    | 'button'
+    | 'type'
+    | 'launch'
+    | 'act'
+    | 'clipboard'
+    | 'record'
 >;
 
 export interface WorktreeHost {

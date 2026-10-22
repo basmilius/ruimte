@@ -231,7 +231,7 @@ public enum SignalingRoute: Equatable, Sendable {
                     publicKey: machineKey, message: message, signature: try string(frame, "signature"))
             else {
                 throw TransportFailure.invalid(
-                    String(localized: "A broker signal names the machine but is not signed by it.", bundle: .module))
+                    String(localized: "A connection request claims to come from the machine but cannot be verified.", bundle: .module))
             }
             events?.signal(envelope)
         } catch { fail(error) }

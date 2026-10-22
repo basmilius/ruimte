@@ -1,8 +1,9 @@
 import { type AgentKind, type ProjectCanvasView, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
 import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
+import { z } from 'zod';
 import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
 import { BUILT_IN_KINDS } from '../providers/kinds.ts';
-import { providerFor } from '../providers/registry.ts';
+import { offeredAgentKinds, providerFor } from '../providers/registry.ts';
 import { MAX_LINKS } from './links.ts';
 import { narrowerMode } from '@adecore/agents/providers';
 import type { placeInGroup, Rect } from './placement.ts';
@@ -10,6 +11,15 @@ import { readPromptFile } from './project-paths.ts';
 import { VerbRefusal, field, orNote, type CanvasHost, type VerbCall } from './verb.ts';
 
 export const AGENT_KINDS = BUILT_IN_KINDS;
+
+/* A kind an agent may name: one the daemon ships with, or an agent a person installed from the ACP registry. */
+export function agentKindField(what: string) {
+    const message = () => `${what} needs a CLI: ${offeredAgentKinds().join(', ')}`;
+    return z.string({ error: message }).refine((kind) => offeredAgentKinds().includes(kind), { error: message });
+}
+
+export const REGISTRY_KINDS_LINE =
+    'kinds\tregistry\tAn agent a person installed from the ACP registry is named by its kind, and is a chat only; ruimte-context provider catalog lists them';
 
 /* The CLIs with a chat backend; the rest only ever runs in a shell, so an agent of theirs is always a terminal. */
 export function chatKinds(): AgentKind[] {

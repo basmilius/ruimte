@@ -39,7 +39,7 @@ struct MachineIdentitySheet: View {
                 } header: {
                     Text("Name")
                 } footer: {
-                    Text("Every client that reaches this machine sees these. Leave it empty for the machine's own name.")
+                    Text("Every device that reaches this machine sees these. Leave it empty for the machine's own name.")
                 }
                 Section("Icon") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {

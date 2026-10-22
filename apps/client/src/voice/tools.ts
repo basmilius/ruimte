@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import { ACTION_DEFINITIONS, VOICE_CONTROL_TOOL, VOICE_TOOL_ACTIONS, type ActionName, type ActionOutput, type ActionResult } from '@ruimte/actions';
 import { voiceReplyOf, type VoiceChatFollowUp, type VoiceReplyWords, type VoiceWatchedSession } from '@ruimte/voice';
 import { clientActions, VOICE_ACTION_CALL } from '@/actions/client-actions';
+import { accentLabel } from '@/canvas/accents';
 import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -18,7 +19,8 @@ function activity(key: string): string {
 
 const REPLY_WORDS: VoiceReplyWords = {
     activity,
-    machine: (endpointId) => useEndpoints.getState().endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? endpointId
+    machine: (endpointId) => useEndpoints.getState().endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? endpointId,
+    color: (accent) => (accent === null ? i18next.t('canvas:menu.noAccent') : accentLabel(accent))
 };
 
 interface ToolAction {

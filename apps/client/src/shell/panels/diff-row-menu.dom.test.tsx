@@ -61,8 +61,8 @@ afterEach(async () => {
 describe('a file in a list that is read and not staged', () => {
     test('offers what a file is asked, and nothing that stages or discards', async () => {
         await rightClick(entry('src/b.ts'));
-        expect(menuItem('Open the file itself')).not.toBeNull();
-        expect(menuItem('Reveal in the Files panel')).not.toBeNull();
+        expect(menuItem('Open file')).not.toBeNull();
+        expect(menuItem('Reveal in Files')).not.toBeNull();
         expect(menuItem('Stage')).toBeNull();
         expect(menuItem('Discard')).toBeNull();
         expect(menuItem('Copy commit hash')).toBeNull();
@@ -76,10 +76,10 @@ describe('a file in a list that is read and not staged', () => {
         expect(entry('src/a.ts')!.className.includes('bg-surface-active')).toBe(false);
     });
 
-    test('"Open the file itself" reads the file of the checkout', async () => {
+    test('"Open file" reads the file of the checkout', async () => {
         machine.answer('fs.read', () => ({ kind: 'text', text: 'export {};\n', encoding: 'utf-8', size: 11, mtime: 1, language: 'typescript' }) as never);
         await rightClick(entry('src/b.ts'));
-        await clickOn(menuItem('Open the file itself'));
+        await clickOn(menuItem('Open file'));
         await until(() => machine.requests('fs.read').some((payload) => payload.path === `${CWD}/src/b.ts`));
     });
 });

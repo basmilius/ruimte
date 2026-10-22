@@ -78,13 +78,16 @@ function Theirs({ conflict, editor, block }: { conflict: ConflictResolution; edi
 /* The rows of a conflict in the editor: portals into the elements it hands out, so the editor owns where they stand. */
 export function ConflictLayer({ conflict, editor }: { conflict: ConflictResolution; editor: Editor }) {
     const { blocks } = useStore(conflict.store);
-    useSyncExternalStore(conflict.rows.subscribe, conflict.rows.getVersion);
+    const rows = useSyncExternalStore(
+        (listener) => conflict.rows.subscribe(listener),
+        () => conflict.rows.getContainers()
+    );
 
     return (
         <>
             {blocks.map((block) => {
-                const yours = conflict.rows.container(`${block.id}:yours`);
-                const theirs = conflict.rows.container(`${block.id}:theirs`);
+                const yours = rows.get(`${block.id}:yours`);
+                const theirs = rows.get(`${block.id}:theirs`);
                 return (
                     <span key={block.id}>
                         {yours !== undefined && createPortal(<Yours conflict={conflict} block={block} />, yours)}

@@ -45,7 +45,7 @@ enum ProjectSettingsLogic {
         if otherClients > 0 {
             return String(
                 localized:
-                    "\(otherClients) other clients still have it open, so nothing stops running. It moves to Recently closed on this phone only."
+                    "\(otherClients) other devices still have it open, so nothing stops running. It moves to Recently closed on this phone only."
             )
         }
         if sessions == 0 {
@@ -235,7 +235,7 @@ struct ProjectSettingsPage: View {
         case .image:
             HStack(spacing: 16) {
                 PhotosPicker("Choose an image…", selection: $photo, matching: .images)
-                Button("Use the folder's icon") { Task { await uploadImage(nil) } }
+                Button("Use folder icon") { Task { await uploadImage(nil) } }
             }
             .font(.subheadline)
         }
@@ -263,7 +263,7 @@ struct ProjectSettingsPage: View {
         guard let data = try? await item.loadTransferable(type: Data.self),
             let image = ProjectSettingsLogic.iconImage(data)
         else {
-            problem = String(localized: "This image could not be used. Pick a smaller one.")
+            problem = String(localized: "Could not use this image. Pick a smaller one.")
             return
         }
         await uploadImage(.object(["mime": .string(image.mime), "base64": .string(image.base64)]))

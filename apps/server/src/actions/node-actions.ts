@@ -1,10 +1,12 @@
 import { basename } from 'node:path';
-import { ARRANGE_LAYOUTS, ActionRefusal, type ActionHandlers, type ActionOutput } from '@ruimte/actions';
+import { ARRANGE_LAYOUTS, ActionRefusal, type ActionHandlers, type ActionInput, type ActionOutput } from '@ruimte/actions';
 import {
     DEFAULT_TITLES,
     NODE_ACCENT_NAMES,
     flagOf,
     groupFrame,
+    nodeColorOf,
+    nodeColorPatch,
     isCanvasView,
     isDiagramView,
     isDrawingView,
@@ -28,7 +30,7 @@ import { checkCwd, checkPath, isInside } from '../canvas/project-paths.ts';
 import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import { NEW_NODE, VerbRefusal, canvasNamed, field, orNote, snoozedAt, type VerbCall } from '../canvas/verb.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { verbCallOf, type ServerActionContext } from './context.ts';
+import { verbCallOf, type ServerActionCall, type ServerActionContext } from './context.ts';
 import { machineDevice } from './device-actions.ts';
 
 /* The set is closed and short enough to print whole, unlike the Lucide names a view picks from. */
@@ -58,11 +60,12 @@ function deletableLines(content: ProjectContent, place: IndexedPlace, call: Verb
 }
 
 /*
- * Who may write in a note: not the maker alone, so two agents can keep one between them. A line a
- * person drew grants it, in either direction, since a note holds no agent. A chat view has no lines
- * and writes in any note of the canvas it names, as a person arranging that canvas would.
+ * Who may write in a note or color a node: not the maker alone, so two agents can keep one between
+ * them. A line a person drew grants it, in either direction, since a note holds no agent and a color
+ * is no way into what a session runs. A chat view has no lines and touches any node of the canvas
+ * it names, as a person arranging that canvas would.
  */
-function mayWrite(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, chatView: boolean): boolean {
+function mayTouch(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, chatView: boolean): boolean {
     return (
         chatView ||
         call.host.lineage.madeBy(node.id) === call.caller ||
@@ -70,10 +73,23 @@ function mayWrite(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, 
     );
 }
 
+/* Its own node too: how a session's node looks is that session's to say. */
+function mayColor(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, chatView: boolean): boolean {
+    return node.id === call.caller || mayTouch(canvas, node, call, chatView);
+}
+
+/* What a refusal may offer instead: only the nodes this same call would really color. */
+function colorableLines(canvas: ProjectCanvasView, call: VerbCall, chatView: boolean): string[] {
+    return nodeLines(canvas, {
+        takes: (node) => !isUnknownNode(node) && mayColor(canvas, node, call, chatView),
+        empty: `${canvas.id} has no node you may color; ruimte-context node new adds one of your own`
+    });
+}
+
 /* What a refusal may offer instead: only the notes this same call would really write in. */
 function writableLines(canvas: ProjectCanvasView, call: VerbCall, chatView: boolean): string[] {
     return nodeLines(canvas, {
-        takes: (node) => node.kind === 'note' && mayWrite(canvas, node, call, chatView),
+        takes: (node) => node.kind === 'note' && mayTouch(canvas, node, call, chatView),
         empty: `${canvas.id} has no note you may write in; ruimte-context node new note --text B adds one of your own`
     });
 }
@@ -99,9 +115,230 @@ function ownLinesInto(edges: readonly ProjectEdge[], held: ReadonlySet<string>, 
     );
 }
 
+/* A rename on the canvas as it stands, refused for a node it does not hold or a kind it cannot write back. */
+function renamedOn(content: ProjectContent, canvas: ProjectCanvasView, nodeId: string, name: string) {
+    const [node] = nodesNamed(content, canvas, [nodeId], { cannot: 'there is no node to rename' });
+    if (!node || isUnknownNode(node)) {
+        throw new VerbRefusal('unknown-node', `${nodeId} is not a renameable node on ${canvas.id}`);
+    }
+    const previousName = node.title;
+    const previousSource = node.titleSource ?? null;
+    const changed = previousName !== name || previousSource !== 'user';
+    const nodes = changed
+        ? canvas.nodes.map((candidate) => (candidate.id === nodeId ? { ...candidate, title: name, titleSource: 'user' as const } : candidate))
+        : canvas.nodes;
+    return { canvas: changed ? { ...canvas, nodes } : canvas, kind: node.kind, previousName, previousSource, changed };
+}
+
+/* A note written on the canvas as it stands, refused for anything but a note the caller may write in. */
+function writtenOn(
+    content: ProjectContent,
+    canvas: ProjectCanvasView,
+    { nodeId, text, append }: { nodeId: string; text: string; append: boolean },
+    caller: VerbCall,
+    chatView: boolean
+) {
+    const node = canvas.nodes.find((candidate) => candidate.id === nodeId);
+    if (!node) {
+        throw refuseMissingNodes(content, [nodeId], canvas.id, 'there is no node to write in', writableLines(canvas, caller, chatView));
+    }
+    refuseOtherMachine(caller.host, nodeId);
+    if (node.kind !== 'note') {
+        throw new VerbRefusal(
+            'not-a-note',
+            `${nodeId} is a ${node.kind} node and only a note holds a body to write; what a file, a browser, a terminal or a chat shows is not yours to set`,
+            writableLines(canvas, caller, chatView)
+        );
+    }
+    if (!mayTouch(canvas, node, caller, chatView)) {
+        throw new VerbRefusal('not-linked', `${nodeId} is a note you did not make and no line joins you to it: draw that line and you can write in it`, [
+            ...writableLines(canvas, caller, chatView),
+            `see\truimte-context link new --to ${nodeId}\tdraws the line this needs`
+        ]);
+    }
+    /*
+     * The body is read here and nowhere earlier. `mutate` runs under the project's lock
+     * against the document as it stands, so two agents appending in the same breath queue
+     * up and the second one writes its line under the first instead of over it.
+     */
+    const body = node.body ?? '';
+    const next = append ? withLine(body, text) : text;
+    const output = { nodeId, lines: next === '' ? 0 : next.split('\n').length, characters: next.length, changed: next !== body };
+    if (next === body) {
+        return { canvas, output };
+    }
+    return { canvas: { ...canvas, nodes: canvas.nodes.map((candidate) => (candidate.id === nodeId ? { ...candidate, body: next } : candidate)) }, output };
+}
+
 /* Where a node stands, said in the words a refusal needs: a frame by id, or the canvas itself. */
 function placeName(container: ProjectNode | undefined): string {
     return container === undefined ? 'on the canvas itself' : `in group ${container.id}`;
+}
+
+/* One node to make, as node.create and node.createMany both take it. */
+type NodeSpec = { [Field in keyof ActionInput<'node.createMany'>['nodes'][number]]?: ActionInput<'node.createMany'>['nodes'][number][Field] | null } & {
+    kind: ActionInput<'node.create'>['kind'];
+    title: string | null;
+    at?: { x: number; y: number } | null;
+};
+
+/* What a spec names on the disk or the machine, looked up before the project's lock is taken. */
+interface Checked {
+    spec: NodeSpec;
+    url: string | undefined;
+    path: string | undefined;
+    cwd: string | undefined;
+    device: ProjectNode['device'];
+}
+
+type Made = ActionOutput<'node.createMany'>['nodes'][number];
+
+/* A refusal about one node of several says which one, counted from 1 the way a person counts them. */
+async function forNode<T>(index: number | null, run: () => Promise<T>): Promise<T> {
+    try {
+        return await run();
+    } catch (error) {
+        if (index !== null && error instanceof VerbRefusal) {
+            throw new VerbRefusal(error.code, `Node ${index + 1}: ${error.message}`, error.lines);
+        }
+        throw error;
+    }
+}
+
+/* Everything that touches the disk or git, which runs before the lock so a slow repository holds up no save. */
+async function checkNode(spec: NodeSpec, call: ServerActionCall): Promise<Checked> {
+    const { host, place } = call.context;
+    const { kind } = spec;
+    if (kind === 'group') {
+        throw new VerbRefusal('bad-arguments', 'node new draws no frame; ruimte-context node group draws one around nodes');
+    }
+    const kindLines = [kindLine(kind), EVERY_KIND_LINE];
+    const given: Record<KindFlag, unknown> = {
+        text: spec.content,
+        url: spec.url,
+        path: spec.path,
+        source: spec.source,
+        device: spec.device,
+        cwd: spec.cwd
+    };
+    for (const flag of ['text', 'url', 'path', 'source', 'device', 'cwd'] as const) {
+        if (given[flag] != null && !KIND_FLAGS[kind].includes(flag)) {
+            throw new VerbRefusal('flag-not-for-kind', `--${flag} does not go with a ${kind} node`, kindLines);
+        }
+    }
+    const required = REQUIRED_FLAG[kind];
+    if (required && given[required] == null) {
+        throw new VerbRefusal('missing-flag', `A ${kind} node needs --${required}`, kindLines);
+    }
+    return {
+        spec,
+        url: spec.url == null ? undefined : checkUrl(spec.url),
+        path: spec.path == null ? undefined : await checkPath(place.folder, spec.path),
+        cwd: spec.cwd == null ? undefined : await checkCwd(place.folder, spec.cwd, (folder) => host.checkouts.paths(folder)),
+        device: spec.device == null ? undefined : await machineDevice(host, spec.device)
+    };
+}
+
+/* The title a drawing or a diagram takes from the view it mirrors, after checking that view is one of its kind. */
+function sourceNameOf(content: ProjectContent, spec: NodeSpec): string | undefined {
+    if (spec.source == null) {
+        return undefined;
+    }
+    // Only a drawing or a diagram takes --source, and each mirrors a view of its own kind.
+    const sourceKind = spec.kind === 'diagram' ? 'diagram' : 'drawing';
+    const ofKind = (view: ProjectView): view is ProjectDrawingView | ProjectDiagramView =>
+        sourceKind === 'diagram' ? isDiagramView(view) : isDrawingView(view);
+    const source = content.views.find((view) => view.id === spec.source);
+    if (!source || !ofKind(source)) {
+        throw new VerbRefusal(
+            `not-a-${sourceKind}`,
+            `${spec.source} is not a ${sourceKind} view of this project`,
+            orNote(
+                content.views.filter(ofKind).map((view) => `${sourceKind}\t${view.id}\t${field(view.name)}`),
+                sourceKind === 'diagram'
+                    ? 'This project has no diagram views; ruimte-context view new --kind diagram makes one'
+                    : 'This project has no drawing views; a person makes one in the sidebar'
+            )
+        );
+    }
+    return source.name;
+}
+
+/*
+ * Makes the nodes in one write, each placed after the ones before it, with a line from the caller
+ * into each. Every node is checked before the lock and again under it before anything is written, so
+ * a refusal of one makes none.
+ */
+async function createNodes(call: ServerActionCall, viewId: string, specs: readonly NodeSpec[], counted: boolean): Promise<ActionOutput<'node.createMany'>> {
+    const { actor, context, dryRun } = call;
+    const { host, place } = context;
+    const checked: Checked[] = [];
+    for (const [index, spec] of specs.entries()) {
+        checked.push(await forNode(counted ? index : null, () => checkNode(spec, call)));
+    }
+    const { output } = await host.projects.mutate<{ output: ActionOutput<'node.createMany'> }>(place.projectId, async (content) => {
+        let canvas = canvasNamed(content, viewId);
+        if (canvas.nodes.length + specs.length > MAX_CANVAS_NODES) {
+            throw canvasFull(canvas, specs.length);
+        }
+        const caller = canvas.nodes.find((node) => node.id === actor.id) ?? null;
+        let current = content;
+        const made: Made[] = [];
+        const owned: string[] = [];
+        for (const [index, { spec, url, path, cwd, device }] of checked.entries()) {
+            const { kind } = spec;
+            const placed = await forNode(counted ? index : null, async () => {
+                const sourceName = sourceNameOf(current, spec);
+                const size = host.machine.nodeSize(kind);
+                const anchor = spec.beside == null ? undefined : canvas.nodes.find((node) => node.id === spec.beside);
+                if (spec.beside != null && !anchor) {
+                    throw refuseMissingNodes(current, [spec.beside], canvas.id, 'the new node has nothing there to stand beside', nodeLines(canvas));
+                }
+                const rect = anchor
+                    ? placeBeside(anchor, size)
+                    : spec.at != null
+                      ? { x: Math.round(spec.at.x - size.w / 2), y: Math.round(spec.at.y - size.h / 2), ...size }
+                      : placeFree(canvas.nodes, size, caller);
+                return { rect, title: spec.title ?? sourceName ?? (path === undefined ? (device?.name ?? DEFAULT_TITLES[kind]) : basename(path)) };
+            });
+            const id = newId(kind, current);
+            const node: ProjectNode = {
+                id,
+                kind,
+                title: placed.title,
+                // A title the agent chose is not one the session may rename, the rule a person's typing follows.
+                ...(spec.title === null ? {} : { titleSource: 'user' as const }),
+                ...placed.rect,
+                ...(spec.color == null ? {} : { accent: spec.color }),
+                ...(spec.content == null ? {} : { body: spec.content }),
+                ...(url === undefined ? {} : { url }),
+                ...(path === undefined ? {} : { path: isInside(place.folder, path) ? storedPathOf(place.folder, path) : path }),
+                ...(spec.source == null ? {} : { viewId: spec.source }),
+                ...(device === undefined ? {} : { device }),
+                ...(cwd === undefined ? {} : { cwd })
+            };
+            const edge = caller ? openingEdge(caller.id, node, current) : null;
+            canvas = { ...canvas, nodes: [...canvas.nodes, node], edges: edge ? [...canvas.edges, edge] : canvas.edges };
+            current = withCanvas(current, canvas);
+            owned.push(id);
+            made.push(
+                dryRun === true
+                    ? { nodeId: NEW_NODE, node: node.title, kind, edge: caller ? { edgeId: null, from: caller.id, to: NEW_NODE } : null }
+                    : { nodeId: id, node: node.title, kind, edge: edge ? { edgeId: edge.id, from: edge.from, to: edge.to } : null }
+            );
+        }
+        const output = { viewId: canvas.id, view: canvas.name, nodes: made };
+        if (dryRun === true) {
+            return { content: null, result: { output } };
+        }
+        /* Written down under the project's lock, before the nodes are on disk: who made a node is
+           the whole of the rule `node delete` follows, and it may not arrive after the node does. */
+        for (const nodeId of owned) {
+            await host.lineage.put({ projectId: place.projectId, nodeId, openedBy: actor.id, depth: 0, agent: false });
+        }
+        return { content: current, result: { output } };
+    });
+    return output;
 }
 
 export const nodeActions: ActionHandlers<ServerActionContext> = {
@@ -131,147 +368,26 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
         };
     },
     'node.create': async (input, call) => {
-        const { actor, context, dryRun } = call;
-        const { host, place } = context;
-        const { kind } = input;
         // Only `agent` starts anything, so a node an agent adds opens empty.
         if (input.command !== null || input.provider !== null) {
             throw new VerbRefusal('starts-nothing', 'node new starts no CLI and no command; ruimte-context agent is what opens an agent');
         }
-        if (kind === 'group') {
-            throw new VerbRefusal('bad-arguments', 'node new draws no frame; ruimte-context node group draws one around nodes');
-        }
-        const kindLines = [kindLine(kind), EVERY_KIND_LINE];
-        const given: Record<KindFlag, unknown> = {
-            text: input.content,
-            url: input.url,
-            path: input.path,
-            source: input.source,
-            device: input.device,
-            cwd: input.cwd
-        };
-        for (const flag of ['text', 'url', 'path', 'source', 'device', 'cwd'] as const) {
-            if (given[flag] != null && !KIND_FLAGS[kind].includes(flag)) {
-                throw new VerbRefusal('flag-not-for-kind', `--${flag} does not go with a ${kind} node`, kindLines);
-            }
-        }
-        const required = REQUIRED_FLAG[kind];
-        if (required && given[required] == null) {
-            throw new VerbRefusal('missing-flag', `A ${kind} node needs --${required}`, kindLines);
-        }
-
-        // Everything that touches the disk or git runs before the lock, so a slow repository holds up no save.
-        const url = input.url === null ? undefined : checkUrl(input.url);
-        const path = input.path === null ? undefined : await checkPath(place.folder, input.path);
-        const cwd = input.cwd == null ? undefined : await checkCwd(place.folder, input.cwd, (folder) => host.checkouts.paths(folder));
-        const device = input.device == null ? undefined : await machineDevice(host, input.device);
-
-        return host.projects.mutate<{ output: ActionOutput<'node.create'> }>(place.projectId, async (content) => {
-            const canvas = canvasNamed(content, input.viewId);
-            if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
-                throw canvasFull(canvas, 1);
-            }
-            let sourceName: string | undefined;
-            if (input.source != null) {
-                // Only a drawing or a diagram takes --source, and each mirrors a view of its own kind.
-                const sourceKind = kind === 'diagram' ? 'diagram' : 'drawing';
-                const ofKind = (view: ProjectView): view is ProjectDrawingView | ProjectDiagramView =>
-                    sourceKind === 'diagram' ? isDiagramView(view) : isDrawingView(view);
-                const source = content.views.find((view) => view.id === input.source);
-                if (!source || !ofKind(source)) {
-                    throw new VerbRefusal(
-                        `not-a-${sourceKind}`,
-                        `${input.source} is not a ${sourceKind} view of this project`,
-                        orNote(
-                            content.views.filter(ofKind).map((view) => `${sourceKind}\t${view.id}\t${field(view.name)}`),
-                            sourceKind === 'diagram'
-                                ? 'This project has no diagram views; ruimte-context view new --kind diagram makes one'
-                                : 'This project has no drawing views; a person makes one in the sidebar'
-                        )
-                    );
-                }
-                sourceName = source.name;
-            }
-            const size = host.machine.nodeSize(kind);
-            const anchor = input.beside == null ? undefined : canvas.nodes.find((node) => node.id === input.beside);
-            if (input.beside != null && !anchor) {
-                throw refuseMissingNodes(content, [input.beside], canvas.id, 'the new node has nothing there to stand beside', nodeLines(canvas));
-            }
-            const caller = canvas.nodes.find((node) => node.id === actor.id) ?? null;
-            const rect = anchor
-                ? placeBeside(anchor, size)
-                : input.at !== null
-                  ? { x: Math.round(input.at.x - size.w / 2), y: Math.round(input.at.y - size.h / 2), ...size }
-                  : placeFree(canvas.nodes, size, caller);
-            const title = input.title ?? sourceName ?? (path === undefined ? (device?.name ?? DEFAULT_TITLES[kind]) : basename(path));
-            if (dryRun === true) {
-                return {
-                    content: null,
-                    result: {
-                        output: {
-                            viewId: canvas.id,
-                            view: canvas.name,
-                            nodeId: NEW_NODE,
-                            node: title,
-                            kind,
-                            edge: caller ? { edgeId: null, from: caller.id, to: NEW_NODE } : null
-                        }
-                    }
-                };
-            }
-
-            const id = newId(kind, content);
-            /* Written down under the project's lock, before the node is on disk: who made a node is
-               the whole of the rule `node delete` follows, and it may not arrive after the node does. */
-            await host.lineage.put({ projectId: place.projectId, nodeId: id, openedBy: actor.id, depth: 0, agent: false });
-            const node: ProjectNode = {
-                id,
-                kind,
-                title,
-                // A title the agent chose is not one the session may rename, the rule a person's typing follows.
-                ...(input.title === null ? {} : { titleSource: 'user' as const }),
-                ...rect,
-                ...(input.content === null ? {} : { body: input.content }),
-                ...(url === undefined ? {} : { url }),
-                ...(path === undefined ? {} : { path: isInside(place.folder, path) ? storedPathOf(place.folder, path) : path }),
-                ...(input.source == null ? {} : { viewId: input.source }),
-                ...(device === undefined ? {} : { device }),
-                ...(cwd === undefined ? {} : { cwd })
-            };
-            const edge = caller ? openingEdge(caller.id, node, content) : null;
-            return {
-                content: withCanvas(content, { ...canvas, nodes: [...canvas.nodes, node], edges: edge ? [...canvas.edges, edge] : canvas.edges }),
-                result: {
-                    output: {
-                        viewId: canvas.id,
-                        view: canvas.name,
-                        nodeId: id,
-                        node: node.title,
-                        kind,
-                        edge: edge ? { edgeId: edge.id, from: edge.from, to: edge.to } : null
-                    }
-                }
-            };
-        });
+        const made = await createNodes(call, input.viewId, [input], false);
+        const [first] = made.nodes;
+        return { output: { viewId: made.viewId, view: made.view, nodeId: first!.nodeId, node: first!.node, kind: first!.kind, edge: first!.edge } };
+    },
+    'node.createMany': async ({ viewId, nodes }, call) => {
+        return { output: await createNodes(call, viewId, nodes, true) };
     },
     'node.rename': async ({ viewId, nodeId, name }, { context }) => {
         const { host, place } = context;
         return host.projects.mutate(place.projectId, (content) => {
-            const canvas = canvasNamed(content, viewId);
-            const [node] = nodesNamed(content, canvas, [nodeId], { cannot: 'there is no node to rename' });
-            if (!node || isUnknownNode(node)) {
-                throw new VerbRefusal('unknown-node', `${nodeId} is not a renameable node on ${viewId}`);
-            }
-            const previousName = node.title;
-            const previousSource = node.titleSource ?? null;
-            const changed = previousName !== name || previousSource !== 'user';
-            const nodes = changed
-                ? canvas.nodes.map((candidate) => (candidate.id === nodeId ? { ...candidate, title: name, titleSource: 'user' as const } : candidate))
-                : canvas.nodes;
+            const renamed = renamedOn(content, canvasNamed(content, viewId), nodeId, name);
+            const { previousName, previousSource, changed } = renamed;
             return {
-                content: changed ? withCanvas(content, { ...canvas, nodes }) : null,
+                content: changed ? withCanvas(content, renamed.canvas) : null,
                 result: {
-                    output: { viewId, nodeId, kind: node.kind, previousName, name, changed },
+                    output: { viewId, nodeId, kind: renamed.kind, previousName, name, changed },
                     ...(changed
                         ? {
                               undo: async () => {
@@ -290,6 +406,22 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                           }
                         : {})
                 }
+            };
+        });
+    },
+    'node.renameMany': async ({ viewId, nodes: renames }, { context }) => {
+        const { host, place } = context;
+        return host.projects.mutate(place.projectId, (content) => {
+            let canvas = canvasNamed(content, viewId);
+            const nodes: ActionOutput<'node.renameMany'>['nodes'] = [];
+            for (const { nodeId, name } of renames) {
+                const renamed = renamedOn(content, canvas, nodeId, name);
+                canvas = renamed.canvas;
+                nodes.push({ nodeId, kind: renamed.kind, previousName: renamed.previousName, name, changed: renamed.changed });
+            }
+            return {
+                content: nodes.some((node) => node.changed) ? withCanvas(content, canvas) : null,
+                result: { output: { viewId: canvas.id, nodes } }
             };
         });
     },
@@ -369,38 +501,71 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
         }
         return host.projects.mutate(place.projectId, (content) => {
             const canvas = canvasNamed(content, viewId);
+            const written = writtenOn(content, canvas, { nodeId, text, append }, caller, isChatView(content, caller.caller));
+            return {
+                content: written.output.changed ? withCanvas(content, written.canvas) : null,
+                result: { output: { viewId: canvas.id, ...written.output } }
+            };
+        });
+    },
+    'node.updateMany': async ({ viewId, nodes: edits }, call) => {
+        const { host, place } = call.context;
+        const caller = verbCallOf(call);
+        const empty = edits.find((edit) => edit.append && edit.text === '');
+        if (empty) {
+            throw new VerbRefusal(
+                'bad-arguments',
+                `${empty.nodeId} has append and nothing to add, since its text is empty; leave append off to empty the note`
+            );
+        }
+        return host.projects.mutate(place.projectId, (content) => {
+            let canvas = canvasNamed(content, viewId);
+            const chatView = isChatView(content, caller.caller);
+            const nodes: ActionOutput<'node.updateMany'>['nodes'] = [];
+            for (const edit of edits) {
+                const written = writtenOn(content, canvas, edit, caller, chatView);
+                canvas = written.canvas;
+                nodes.push(written.output);
+            }
+            return {
+                content: nodes.some((node) => node.changed) ? withCanvas(content, canvas) : null,
+                result: { output: { viewId: canvas.id, nodes } }
+            };
+        });
+    },
+    'node.setColor': async ({ viewId, nodeId, color }, call) => {
+        const { host, place } = call.context;
+        const caller = verbCallOf(call);
+        return host.projects.mutate(place.projectId, (content) => {
+            const canvas = canvasNamed(content, viewId);
             const chatView = isChatView(content, caller.caller);
             const node = canvas.nodes.find((candidate) => candidate.id === nodeId);
             if (!node) {
-                throw refuseMissingNodes(content, [nodeId], canvas.id, 'there is no node to write in', writableLines(canvas, caller, chatView));
+                throw refuseMissingNodes(content, [nodeId], canvas.id, 'there is no node to color', colorableLines(canvas, caller, chatView));
+            }
+            // A newer Ruimte's node is written back as it was read, so a color on it would never reach the file.
+            if (isUnknownNode(node)) {
+                throw new VerbRefusal(
+                    'unknown-node',
+                    `${nodeId} is a node of a kind this machine does not know, so it cannot color it`,
+                    colorableLines(canvas, caller, chatView)
+                );
             }
             refuseOtherMachine(host, nodeId);
-            if (node.kind !== 'note') {
-                throw new VerbRefusal(
-                    'not-a-note',
-                    `${nodeId} is a ${node.kind} node and only a note holds a body to write; what a file, a browser, a terminal or a chat shows is not yours to set`,
-                    writableLines(canvas, caller, chatView)
-                );
+            if (!mayColor(canvas, node, caller, chatView)) {
+                throw new VerbRefusal('not-linked', `${nodeId} is a node you did not make and no line joins you to it: draw that line and you can color it`, [
+                    ...colorableLines(canvas, caller, chatView),
+                    `see\truimte-context link new --to ${nodeId}\tdraws the line this needs`
+                ]);
             }
-            if (!mayWrite(canvas, node, caller, chatView)) {
-                throw new VerbRefusal(
-                    'not-linked',
-                    `${nodeId} is a note you did not make and no line joins you to it: draw that line and you can write in it`,
-                    [...writableLines(canvas, caller, chatView), `see\truimte-context link new --to ${nodeId}\tdraws the line this needs`]
-                );
-            }
-            /*
-             * The body is read here and nowhere earlier. `mutate` runs under the project's lock
-             * against the document as it stands, so two agents appending in the same breath queue
-             * up and the second one writes its line under the first instead of over it.
-             */
-            const body = node.body ?? '';
-            const next = append ? withLine(body, text) : text;
-            const output = { viewId: canvas.id, nodeId, lines: next === '' ? 0 : next.split('\n').length, characters: next.length, changed: next !== body };
-            if (next === body) {
+            const patch = nodeColorPatch(node, color);
+            // A note that already shows the color still changes when an old paper goes, so the file says what it shows.
+            const changed = node.accent !== patch.accent || ('color' in patch && node.color !== undefined);
+            const output = { viewId: canvas.id, nodeId, kind: node.kind, color, previousColor: nodeColorOf(node), changed };
+            if (!changed || call.dryRun === true) {
                 return { content: null, result: { output } };
             }
-            const nodes = canvas.nodes.map((candidate) => (candidate.id === nodeId ? { ...candidate, body: next } : candidate));
+            const nodes = canvas.nodes.map((candidate) => (candidate.id === nodeId ? { ...candidate, ...patch } : candidate));
             return { content: withCanvas(content, { ...canvas, nodes }), result: { output } };
         });
     },

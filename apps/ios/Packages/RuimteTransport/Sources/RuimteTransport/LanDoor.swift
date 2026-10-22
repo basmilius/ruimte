@@ -82,7 +82,7 @@ public struct LanDoorPeer {
             else {
                 throw TransportFailure.invalid(
                     String(
-                        localized: "A signal on the local network names the machine but is not signed by it.",
+                        localized: "A connection on the local network claims to come from the machine but cannot be verified.",
                         bundle: .module))
             }
             return [.signal(envelope)]

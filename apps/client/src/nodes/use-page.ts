@@ -23,7 +23,7 @@ export function usePage(id: string): { url: string; available: boolean } {
     const endpointId = useEndpointId();
     const key = endpointKey(endpointId, id);
     const localIdentity = useLocalDaemonId();
-    const available = isDesktop() && localBrowserRouteAvailable(endpointId, savedUrl, host?.browserOwner);
+    const available = isDesktop() && localBrowserRouteAvailable(endpointId, savedUrl, host?.browserOwner, localIdentity);
 
     useEffect(() => {
         if (isDesktop() && savedUrl !== '') {

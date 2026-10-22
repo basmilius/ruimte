@@ -110,3 +110,20 @@ test('the name input cannot select a parent or another directory', () => {
     }
     expect(validImageFileName('rabbit.png')).toBe(true);
 });
+
+test('the path and whether it saves follow the state they are handed, not the store', async () => {
+    const session = new ImageSaveSession(
+        connection(async () => ROOT),
+        { chatId: 'chat', attachmentId: 'image' },
+        ROOT,
+        () => {}
+    );
+    const drawn = session.state.getState();
+    session.selectDirectory('assets');
+    await session.check();
+    const current = session.state.getState();
+    expect(session.pathOf(drawn)).toBe('/project/rabbit.png');
+    expect(session.pathOf(current)).toBe('/project/assets/rabbit.png');
+    expect(session.canSave(current)).toBe(true);
+    expect(session.canSave({ ...current, directory: '' })).toBe(false);
+});

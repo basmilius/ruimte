@@ -1,0 +1,13 @@
+name: Cache React Compiler output
+description: Keep what the React Compiler made between runs, so a run compiles only the modules that changed
+
+# After the install. The cache's own key (`apps/client/react-compiler-cache.ts`) holds the whole lockfile and the
+# compiler's set-up, so an entry from under another lockfile is never read: those are not restored at all.
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: apps/client/node_modules/.vite/react-compiler
+        key: react-compiler-v1-${{ runner.os }}-${{ hashFiles('bun.lock', 'apps/client/react-compiler*.ts') }}-${{ hashFiles('apps/client/src/**') }}
+        restore-keys: react-compiler-v1-${{ runner.os }}-${{ hashFiles('bun.lock', 'apps/client/react-compiler*.ts') }}-

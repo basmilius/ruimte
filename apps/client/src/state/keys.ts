@@ -1,4 +1,4 @@
-import { endpointIdOfMachine, useEndpoints } from '@/state/endpoints';
+import { endpointIdIn, endpointIdOfMachine, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useOptionalConnection } from '@/transport/context';
 import { windowWorkspace } from '@/state/window';
 
@@ -27,6 +27,17 @@ export function isOfEndpoint(key: string, endpointId: string): boolean {
 /* The machine a node runs on: the one it names, and the workspace's own when it names none. */
 export function endpointOfNode(node: { machine?: string }, workspaceEndpointId: string): string {
     return node.machine === undefined ? workspaceEndpointId : endpointIdOfMachine(node.machine);
+}
+
+/* The same machine for a render, which follows a row that learns its daemon id. */
+export function useEndpointOfNode(node: { machine?: string } | undefined, workspaceEndpointId: string): string {
+    const machine = node?.machine;
+    return useEndpoints((state) => (machine === undefined ? workspaceEndpointId : endpointIdIn(state.endpoints, machine)));
+}
+
+/* The same machine out of a list a render subscribed to, for a render that asks for many nodes. */
+export function endpointOfNodeIn(endpoints: readonly Endpoint[], node: { machine?: string }, workspaceEndpointId: string): string {
+    return node.machine === undefined ? workspaceEndpointId : endpointIdIn(endpoints, node.machine);
 }
 
 /*

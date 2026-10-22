@@ -13,7 +13,7 @@ enum LaunchSaveFailure: Error, Equatable {
 enum LaunchesText {
     static func reason(_ error: any Error) -> String {
         switch error {
-        case LaunchSaveFailure.conflict: String(localized: "The launches changed elsewhere while you edited them.")
+        case LaunchSaveFailure.conflict: String(localized: "The launches changed elsewhere.")
         case LaunchSaveFailure.failed(let reason): reason
         default: error.localizedDescription
         }

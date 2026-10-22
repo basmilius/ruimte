@@ -2,9 +2,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate } from '../git/test-repo.ts';
-import { forgetRepos } from '../git/repo-cache.ts';
+import { cachedRepos, forgetRepos } from '../git/repo-cache.ts';
 import { locateFile } from './locate.ts';
-import { forgetSearchCache, searchFiles } from './search.ts';
+import { NO_MACHINE_HOME } from './machine-home.ts';
+import { forgetSearchCache, listSearchableFiles, searchFiles } from './search.ts';
 
 let template: RepoTemplate;
 let root: string;
@@ -45,6 +46,17 @@ describe('a project with a submodule', () => {
         const worktree = join(root, 'worktree');
         await gitIn(project, ['worktree', 'add', '--quiet', worktree]);
         expect((await locateFile({ path: 'lib/src/a.ts', cwd: worktree, folder: project })).matches).toEqual([join(project, 'lib', 'src', 'a.ts')]);
+    });
+
+    test('a link that names only the file opens it deeper in the tree, and never an ignored copy', async () => {
+        root = await template.copy();
+        const project = join(root, 'project');
+        await writeFile(join(project, '.gitignore'), 'dist/\n');
+        await mkdir(join(project, 'dist'), { recursive: true });
+        await writeFile(join(project, 'dist', 'a.ts'), '');
+        const list = async (folder: string): Promise<string[]> => (await listSearchableFiles(folder)).files;
+        const deps = { repos: (folder: string) => cachedRepos(folder), policy: NO_MACHINE_HOME, list };
+        expect((await locateFile({ path: 'a.ts', cwd: project }, deps)).matches).toEqual([join(project, 'lib', 'src', 'a.ts')]);
     });
 
     test('the composer finds a file of the submodule by its name', async () => {

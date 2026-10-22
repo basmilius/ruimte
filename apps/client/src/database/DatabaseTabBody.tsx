@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, Database, Unplug } from 'lucide-react';
 import { StructureView, TableDesigner, TableView, useDatabaseClient, type Connection } from '@adecore/database';
@@ -87,7 +87,7 @@ export function DatabaseBody({
 /* One database tab of a tab host. */
 export function DatabaseTabBody({ tab }: { tab: DatabaseTab }) {
     const { t } = useTranslation('databases');
-    const onTableKind = useCallback((kind: TableKind) => useFiles.getState().setTableKind(tab.key, kind), [tab.key]);
+    const onTableKind = (kind: TableKind) => useFiles.getState().setTableKind(tab.key, kind);
     return (
         <DatabaseBody
             stateKey={tab.key}
@@ -113,6 +113,12 @@ export function DatabaseTabBody({ tab }: { tab: DatabaseTab }) {
 /* What the database says the table is, which corrects a tab that was opened without knowing or before the table became a view. */
 function TableKindCheck({ connection, schema, table, onKind }: { connection: Connection; schema: string; table: string; onKind: (kind: TableKind) => void }) {
     const client = useDatabaseClient();
+    // Read when the answer comes, so a caller's new function never asks the database again.
+    const kindRef = useRef(onKind);
+
+    useEffect(() => {
+        kindRef.current = onKind;
+    });
 
     useEffect(() => {
         const controller = new AbortController();
@@ -122,12 +128,12 @@ function TableKindCheck({ connection, schema, table, onKind }: { connection: Con
             .then((tables) => {
                 const kind = tables.find((entry) => entry.name === table)?.kind;
                 if (kind !== undefined) {
-                    onKind(kind);
+                    kindRef.current(kind);
                 }
             })
             .catch(() => undefined);
         return () => controller.abort();
-    }, [client, connection, onKind, schema, table]);
+    }, [client, connection, schema, table]);
 
     return null;
 }

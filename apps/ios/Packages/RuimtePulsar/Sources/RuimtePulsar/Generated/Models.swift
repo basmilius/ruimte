@@ -936,8 +936,9 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
     public let `aliases`: [String]?
     public let `legacy`: Bool?
     public let `minCliVersion`: String?
+    public let `tools`: Bool?
 
-    public init(`slug`: String, `name`: String, `badge`: String? = nil, `vendor`: String? = nil, `profile`: String, `aliases`: [String]? = nil, `legacy`: Bool? = nil, `minCliVersion`: String? = nil) {
+    public init(`slug`: String, `name`: String, `badge`: String? = nil, `vendor`: String? = nil, `profile`: String, `aliases`: [String]? = nil, `legacy`: Bool? = nil, `minCliVersion`: String? = nil, `tools`: Bool? = nil) {
         self.`slug` = `slug`
         self.`name` = `name`
         self.`badge` = `badge`
@@ -946,6 +947,7 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
         self.`aliases` = `aliases`
         self.`legacy` = `legacy`
         self.`minCliVersion` = `minCliVersion`
+        self.`tools` = `tools`
     }
 
     public init(from decoder: Decoder) throws {
@@ -958,6 +960,7 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
         `aliases` = try container.decodeIfPresent([String].self, forKey: .`aliases`)
         `legacy` = try container.decodeIfPresent(Bool.self, forKey: .`legacy`)
         `minCliVersion` = try container.decodeIfPresent(String.self, forKey: .`minCliVersion`)
+        `tools` = try container.decodeIfPresent(Bool.self, forKey: .`tools`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -970,6 +973,7 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
         try container.encodeIfPresent(`aliases`, forKey: .`aliases`)
         try container.encodeIfPresent(`legacy`, forKey: .`legacy`)
         try container.encodeIfPresent(`minCliVersion`, forKey: .`minCliVersion`)
+        try container.encodeIfPresent(`tools`, forKey: .`tools`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -981,6 +985,7 @@ public struct ModelCatalogsResultCatalogsValueModelsItem: Codable, Sendable, Equ
         case `aliases` = "aliases"
         case `legacy` = "legacy"
         case `minCliVersion` = "minCliVersion"
+        case `tools` = "tools"
     }
 }
 
@@ -6907,13 +6912,17 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
     public let `costUsd`: Double
     public let `turns`: Int64
     public let `breakdown`: ChatInfoUsageBreakdown?
+    public let `cacheTtlMs`: Int64?
+    public let `cacheExpiresAt`: Double?
 
-    public init(`contextTokens`: Int64, `contextWindow`: Int64?, `costUsd`: Double, `turns`: Int64, `breakdown`: ChatInfoUsageBreakdown? = nil) {
+    public init(`contextTokens`: Int64, `contextWindow`: Int64?, `costUsd`: Double, `turns`: Int64, `breakdown`: ChatInfoUsageBreakdown? = nil, `cacheTtlMs`: Int64? = nil, `cacheExpiresAt`: Double? = nil) {
         self.`contextTokens` = `contextTokens`
         self.`contextWindow` = `contextWindow`
         self.`costUsd` = `costUsd`
         self.`turns` = `turns`
         self.`breakdown` = `breakdown`
+        self.`cacheTtlMs` = `cacheTtlMs`
+        self.`cacheExpiresAt` = `cacheExpiresAt`
     }
 
     public init(from decoder: Decoder) throws {
@@ -6923,6 +6932,8 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
         `costUsd` = try container.decode(Double.self, forKey: .`costUsd`)
         `turns` = try container.decode(Int64.self, forKey: .`turns`)
         `breakdown` = try container.decodeIfPresent(ChatInfoUsageBreakdown.self, forKey: .`breakdown`)
+        `cacheTtlMs` = try container.decodeIfPresent(Int64.self, forKey: .`cacheTtlMs`)
+        `cacheExpiresAt` = try container.decodeIfPresent(Double.self, forKey: .`cacheExpiresAt`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -6932,6 +6943,8 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
         try container.encode(`costUsd`, forKey: .`costUsd`)
         try container.encode(`turns`, forKey: .`turns`)
         try container.encodeIfPresent(`breakdown`, forKey: .`breakdown`)
+        try container.encodeIfPresent(`cacheTtlMs`, forKey: .`cacheTtlMs`)
+        try container.encodeIfPresent(`cacheExpiresAt`, forKey: .`cacheExpiresAt`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -6940,6 +6953,8 @@ public struct ChatInfoUsage: Codable, Sendable, Equatable {
         case `costUsd` = "costUsd"
         case `turns` = "turns"
         case `breakdown` = "breakdown"
+        case `cacheTtlMs` = "cacheTtlMs"
+        case `cacheExpiresAt` = "cacheExpiresAt"
     }
 }
 

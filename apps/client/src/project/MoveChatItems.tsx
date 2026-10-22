@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FolderInput, FolderPlus } from 'lucide-react';
 import { moveTargetsOf } from '@/project/move-targets';
@@ -23,7 +22,7 @@ export function MoveChatItems({ chatId, endpointId, working }: MoveChatItemsProp
     const { t } = useTranslation('shell');
     const rows = useProjectList((state) => state.projects);
     const endpoints = useEndpoints((state) => state.endpoints);
-    const targets = useMemo(() => moveTargetsOf(rows, endpoints, endpointId), [rows, endpoints, endpointId]);
+    const targets = moveTargetsOf(rows, endpoints, endpointId);
     const reason = working ? t('viewMenu.moveWhileWorking') : null;
     const ask = (mode: 'make' | 'pick', projectId: string | null): void => useUi.getState().setMoveChatDialog({ chatId, mode, projectId });
     return (

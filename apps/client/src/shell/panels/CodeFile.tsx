@@ -185,7 +185,7 @@ function chunksOf(text: string): { chunks: { start: number; code: string; lines:
 export function CodeText({ text, language }: { text: string; language: string | undefined }) {
     const theme = useCodeTheme();
     const wrap = useSettings((s) => s.codeWrap);
-    const { chunks, lineCount } = useMemo(() => chunksOf(text), [text]);
+    const { chunks, lineCount } = chunksOf(text);
     const plain = text.length > FS_READ_MAX_TEXT_BYTES || lineCount > HIGHLIGHT_MAX_LINES;
     const highlight = useMemo(
         () =>
@@ -249,7 +249,7 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
     const sqlTab = tabKey !== null && isSqlPath(path) ? tabKey : null;
     const binding = useFiles((s) => (sqlTab === null ? undefined : fileTabOf(s, sqlTab)?.console));
 
-    const { chunks, lineCount } = useMemo(() => chunksOf(read.text), [read.text]);
+    const { chunks, lineCount } = chunksOf(read.text);
     // Text past what `fs.read` carries came as bytes, and a save of it would not fit `fs.write`.
     const large = read.size > FS_READ_MAX_TEXT_BYTES;
     const plain = large || lineCount > HIGHLIGHT_MAX_LINES;
@@ -266,7 +266,7 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
         [chunks, language, theme]
     );
     const editing = useFileEditing(path, read, plain, large);
-    const disk = useMemo(() => ({ text: read.text, mtime: read.mtime }), [read]);
+    const disk = { text: read.text, mtime: read.mtime };
     const readOnlyReason =
         editing.block === null ? null : t(BLOCK_LABELS[editing.block], { lines: formatNumber(HIGHLIGHT_MAX_LINES), size: formatBytes(FS_READ_MAX_TEXT_BYTES) });
     const [editor, setEditor] = useState<Editor | null>(null);

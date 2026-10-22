@@ -199,6 +199,17 @@ describe('a new node on another machine', () => {
         expect(button('Create')?.hasAttribute('disabled')).toBe(true);
     });
 
+    test('offers to clone the project there, and comes back to the node once it is in', async () => {
+        there.answer('project.list', () => ({ projects: [] }));
+        await openDialog();
+        await until(() => button('Clone it on MacBook Pro…') !== null);
+        const request = useUi.getState().remoteNodeDialog;
+        await clickOn(button('Clone it on MacBook Pro…'));
+        expect(useUi.getState().remoteNodeDialog).toBeNull();
+        expect(useUi.getState().addToMachineDialog).toEqual({ machineId: REMOTE, then: request! });
+        await act(async () => useUi.getState().setAddToMachineDialog(null));
+    });
+
     test('says that the machine is not answering, and looks again on Try again', async () => {
         there.answer('project.list', () => {
             throw new Error('Connection refused');
@@ -489,6 +500,13 @@ describe('the canvas menu', () => {
         expect(document.querySelector('[role="menu"]')?.textContent).toContain('On another machine');
         await clickOn(menuItem('MacBook Pro'));
         expect(useUi.getState().remoteNodeDialog).toMatchObject({ machineId: REMOTE, kind: 'chat', viewId: 'main', relink: false });
+    });
+
+    test('offers to add the project to another machine below them', async () => {
+        await openCanvasMenu();
+        await clickOn(menuItem('Add to another machine'));
+        expect(useUi.getState().addToMachineDialog).toEqual({ machineId: null });
+        await act(async () => useUi.getState().setAddToMachineDialog(null));
     });
 
     test('says it is off on a shared canvas, since a node of another machine stays on a canvas only you have', async () => {

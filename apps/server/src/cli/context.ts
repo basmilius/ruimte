@@ -44,6 +44,9 @@ async function verbArgv(command: string, args: string[], stdin: () => Promise<st
     if (command === 'plan' && args[1] === 'new') {
         return ['new', ...(await withStdinPlan(rest, stdin))];
     }
+    if (command === 'node' && (args[1] === 'new' || args[1] === 'edit' || args[1] === 'rename')) {
+        return [args[1], ...(await withStdinJson(rest, stdin))];
+    }
     return withStdinText(args.slice(1), stdin);
 }
 
@@ -90,6 +93,10 @@ async function runRead(url: string, id: string | undefined, flags: string[], hea
     if (subagent !== null) {
         query.set('subagent', subagent);
     }
+    const json = flags.includes('--json');
+    if (json) {
+        query.set('json', '');
+    }
     let response: Response;
     try {
         response = await fetch(`${url}/${encodeURIComponent(id)}${query.size === 0 ? '' : `?${query}`}`, { headers });
@@ -113,8 +120,14 @@ async function runRead(url: string, id: string | undefined, flags: string[], hea
         console.error(`The daemon answered ${response.status}`);
         return 1;
     }
-    process.stdout.write(`${await response.text()}\n`);
+    process.stdout.write(`${json ? await readJson(response) : await response.text()}\n`);
     return 0;
+}
+
+/* A daemon from before `--json` answers the text alone, which then stands as the one field it would have had. */
+async function readJson(response: Response): Promise<string> {
+    const body = response.headers.get('content-type')?.startsWith('application/json') ? await response.json() : { text: await response.text() };
+    return JSON.stringify(body, null, 2);
 }
 
 /*
@@ -212,7 +225,7 @@ interface ContextRow {
     snoozedUntil?: string;
 }
 
-const READ_USAGE = 'usage\tread\t<id> [--tail N] [--subagent T] [--view V]';
+const READ_USAGE = 'usage\tread\t<id> [--tail N] [--subagent T] [--view V] [--json]';
 const READ_HELP = 'detail\truimte-context help read';
 
 /* What follows `--name` or `--name=`: null when the flag is not there, empty when it has no value. */
@@ -346,6 +359,21 @@ async function withStdinText(argv: string[], stdin: () => Promise<string>): Prom
         }
     }
     return words;
+}
+
+/* `--json -` on node new, edit and rename reads its array from stdin as it is: JSON has escapes of its own. */
+async function withStdinJson(argv: string[], stdin: () => Promise<string>): Promise<string[]> {
+    const words: string[] = [];
+    for (let i = 0; i < argv.length; i++) {
+        const word = argv[i]!;
+        if (word === '--json=-' || (word === '--json' && argv[i + 1] === '-')) {
+            words.push(`--json=${await stdin()}`);
+            i += word === '--json' ? 1 : 0;
+            continue;
+        }
+        words.push(word);
+    }
+    return withStdinText(words, stdin);
 }
 
 async function runVerb(canvasUrl: string, verb: string, argv: string[], headers: Record<string, string>, env: Environment): Promise<number> {

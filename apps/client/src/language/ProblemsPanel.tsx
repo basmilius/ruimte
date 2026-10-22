@@ -59,7 +59,7 @@ export function ProblemsPanel() {
     const files = useSyncExternalStore(language?.problems.subscribe ?? (() => () => undefined), language?.problems.getSnapshot ?? (() => NONE));
     const [filter, setFilter] = useState('');
     const [hidden, setHidden] = useState<ReadonlySet<Severity>>(new Set());
-    const counts = useMemo(() => countsOf(files), [files]);
+    const counts = countsOf(files);
 
     const shown = useMemo(() => {
         const needle = filter.trim().toLowerCase();

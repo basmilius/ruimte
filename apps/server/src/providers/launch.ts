@@ -1,5 +1,5 @@
 import { resumeCommandFor, type AgentKind, type AgentLaunch, type RuntimeMode } from '@ruimte/contracts';
-import { COPILOT_ALLOW_CONTEXT, GROK_ALLOW_CONTEXT } from './acp-providers.ts';
+import { ANTIGRAVITY_CLI, COPILOT_ALLOW_CONTEXT, GROK_ALLOW_CONTEXT } from './acp-providers.ts';
 import { CLAUDE_ALLOW_CONTEXT } from './claude-provider.ts';
 import { BUILT_IN_KINDS } from './kinds.ts';
 import { providerFor } from './registry.ts';
@@ -14,6 +14,7 @@ import { providerFor } from './registry.ts';
  */
 const RUNTIME_FLAGS: Partial<Record<AgentKind, Record<RuntimeMode, string[]>>> = {
     apple: { supervised: [], 'auto-accept-edits': [], auto: [], 'full-access': [] },
+    nanogpt: { supervised: [], 'auto-accept-edits': [], auto: [], 'full-access': [] },
     claude: {
         supervised: [],
         'auto-accept-edits': ['--permission-mode', 'acceptEdits'],
@@ -54,7 +55,7 @@ export function offersKind(kind: AgentKind): boolean {
 }
 
 // The executable a terminal of a CLI starts where its provider's command is a chat server instead.
-const TERMINAL_EXECUTABLES: Partial<Record<AgentKind, string>> = { antigravity: 'agy' };
+const TERMINAL_EXECUTABLES: Partial<Record<AgentKind, string>> = { antigravity: ANTIGRAVITY_CLI };
 
 /* The executable a terminal of this kind starts. */
 export function terminalExecutable(kind: AgentKind): string {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { afterEach, beforeEach, expect, setSystemTime, test } from 'bun:test';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ChatCheckpointDiff } from '@ruimte/contracts';
@@ -19,6 +19,7 @@ beforeEach(async () => {
     ({ home, claude, manager, recorder, makeManager } = await makeChatFixture());
 });
 afterEach(async () => {
+    setSystemTime();
     await retire(manager);
     await rm(home, { recursive: true, force: true });
 });
@@ -168,17 +169,16 @@ test('what a chat waits on rides on its status, again whenever a request opens o
 test('a running tool carries the progress the CLI reports until its result arrives', async () => {
     await manager.create({ chatId: 'chat-2b', cwd: home });
     manager.attach('chat-2b', 'c1');
-    const before = Date.now();
+    const now = Date.UTC(2026, 9, 1);
+    setSystemTime(now);
     await manager.send('chat-2b', 'run: sleep 30');
     await recorder.until(idle);
-    const after = Date.now();
 
     const running = recorder.events.filter((event) => event.type === 'item' && event.item.kind === 'tool' && event.item.state === 'running');
     const withProgress = running.map((event) => (event.type === 'item' && event.item.kind === 'tool' ? event.item.progress : undefined)).filter(Boolean);
     expect(withProgress.at(-1)).toMatchObject({ description: 'Run sleep 30', output: null });
     // The CLI said 30 seconds had passed, so the start lies 30 seconds before the moment the frame was read.
-    expect(withProgress.at(-1)!.startedAt).toBeGreaterThanOrEqual(before - 30_000);
-    expect(withProgress.at(-1)!.startedAt).toBeLessThanOrEqual(after - 30_000);
+    expect(withProgress.at(-1)!.startedAt).toBe(now - 30_000);
     expect(recorder.ofKind('tool')[0]).toMatchObject({ toolUseId: 'toolu_run', state: 'done', output: 'ran: sleep 30' });
     expect(recorder.ofKind('tool')[0]).not.toHaveProperty('progress');
 });

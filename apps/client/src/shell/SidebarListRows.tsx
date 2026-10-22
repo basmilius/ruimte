@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent as ReactKeyboardEvent, type ReactElement, type ReactNode } from 'react';
+import { useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactElement, type ReactNode } from 'react';
 import { ChevronRight, Globe, PanelTop, Pencil, Plus, Trash, TriangleAlert, Users } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -82,6 +82,11 @@ export function MaybeTooltip({ label, children }: { label: string | null | undef
     );
 }
 
+/*
+ * Ends on blur, so a menu that opened it must not give the keyboard back as it closes: its row is gone
+ * by then, and Base UI hands the focus to whatever had it before some earlier popup (`finalFocus` on
+ * each menu with a Rename).
+ */
 function RenameField({ value, placeholder, onDone }: { value: string; placeholder?: string; onDone(next: string | null): void }) {
     return (
         <Input
@@ -157,6 +162,8 @@ export function NodeRow({ row, tabbable, onFocus, onArrow, snoozable }: RowProps
     // Only the canvas that is up has a selection, so a row of another view is never the current one.
     const selected = picked && onScreen;
     const [renaming, setRenaming] = useState(false);
+    // The menu's Rename swaps this row for the field, which then has the keyboard.
+    const renamedFromMenu = useRef(false);
     if (renaming) {
         return (
             <ListRow variant="inset" className={`${ROW} pl-6`}>
@@ -219,7 +226,15 @@ export function NodeRow({ row, tabbable, onFocus, onArrow, snoozable }: RowProps
                 <NodeMenuPopup
                     id={node.id}
                     viewId={row.viewId}
-                    onRename={() => setRenaming(true)}
+                    onRename={() => {
+                        renamedFromMenu.current = true;
+                        setRenaming(true);
+                    }}
+                    finalFocus={() => {
+                        const renamed = renamedFromMenu.current;
+                        renamedFromMenu.current = false;
+                        return !renamed;
+                    }}
                     snooze={
                         node.status === 'needs-you' || node.snoozedUntil ? (
                             <SnoozeMenuItems endpointId={endpointId} nodeId={node.id} needsYou={node.status === 'needs-you'} />
@@ -348,7 +363,7 @@ export function SubheaderRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag
             >
                 <span className="min-w-0 truncate">{view.name}</span>
             </ContextMenu.Trigger>
-            <ContextMenu.Popup>
+            <ContextMenu.Popup finalFocus={() => useUi.getState().renamingViewId !== view.id}>
                 <ContextMenu.Item onClick={() => rename(true)}>
                     <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <ContextMenu.Hint>{t('sidebar.doubleClick')}</ContextMenu.Hint>
                 </ContextMenu.Item>
@@ -683,7 +698,7 @@ export function ProjectSeparatorRow({
                     <span className="-mx-2 h-px grow bg-border-soft" />
                 )}
             </ContextMenu.Trigger>
-            <ContextMenu.Popup>
+            <ContextMenu.Popup finalFocus={() => useSidebarProjects.getState().renamingSeparatorId !== separator.id}>
                 <ContextMenu.Item onClick={() => rename(true)}>
                     <Icon icon={Pencil} size={14} /> {t('common:action.rename')}{' '}
                     <ContextMenu.Hint>{separator.label === '' ? t('sidebar.doubleClick') : 'F2'}</ContextMenu.Hint>

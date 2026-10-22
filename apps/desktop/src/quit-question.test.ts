@@ -37,7 +37,7 @@ describe('quitQuestion', () => {
             buttons: ['Quit', 'Cancel'],
             defaultId: 0,
             message: 'An agent is still working.',
-            detail: 'They keep running on this machine after Ruimte quits, and you can pick them up from any client.'
+            detail: 'They keep running on this machine after Ruimte quits, and you can pick them up from any device.'
         });
     });
 });
@@ -55,10 +55,10 @@ test('the quit question follows the app language, including after its windows cl
 test('agents on machines this app does not run are said to keep running there', () => {
     const windows = { working: 1, attention: 0 };
     expect(quitQuestion({ survives: true, elsewhere: true, windows, machine: null })?.detail).toBe(
-        'They keep running on their own machines after Ruimte quits, and you can pick them up from any client.'
+        'They keep running on their own machines after Ruimte quits, and you can pick them up from any device.'
     );
     expect(quitQuestion({ survives: true, elsewhere: true, language: 'nl-NL', windows, machine: null })?.detail).toBe(
-        'Ze blijven op hun eigen machines draaien nadat Ruimte sluit. Je kunt vanuit elke client verdergaan.'
+        'Ze blijven op hun eigen machines draaien nadat Ruimte sluit. Je kunt op elk apparaat verdergaan.'
     );
     expect(quitQuestion({ survives: true, windows, machine: null })?.detail).toContain('on this machine');
 });

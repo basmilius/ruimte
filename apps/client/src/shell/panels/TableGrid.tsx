@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FsReadText } from '@ruimte/contracts';
 import { DataGrid, type DataGridProps, type GridLayout, type GridSort } from '@adecore/database';
@@ -35,16 +35,16 @@ export function TableGrid({ path, name, read, header, delimiter, delimiterName }
     const find = useFind(surface);
     const [picked, setPicked] = useState<{ matches: readonly CellMatch[]; index: number } | null>(null);
 
-    const parsed = useMemo(() => parseDelimited(read.text, delimiter), [read.text, delimiter]);
-    const table = useMemo(() => tableOf(parsed.records, header, (position) => t('file.table.column', { position })), [parsed, header, t]);
-    const rows = useMemo(() => sortRows(table.rows, table.columns, sorts), [table, sorts]);
+    const parsed = parseDelimited(read.text, delimiter);
+    const table = tableOf(parsed.records, header, (position) => t('file.table.column', { position }));
+    const rows = sortRows(table.rows, table.columns, sorts);
 
-    const compiled = useMemo(() => compileFind(find.query), [find.query]);
+    const compiled = compileFind(find.query);
     const pattern = find.open && compiled.kind === 'pattern' ? compiled.pattern : null;
-    const matches = useMemo(() => (pattern === null ? [] : findCells(rows, pattern)), [rows, pattern]);
+    const matches = pattern === null ? [] : findCells(rows, pattern);
     // A new set of matches, from a query typed or rows sorted, starts at the first one.
     const current = matches.length === 0 ? null : picked?.matches === matches ? picked.index : 0;
-    const focusRequest = useMemo<DataGridProps['focusRequest']>(() => (current === null ? null : { ...matches[current]!, quiet: true }), [matches, current]);
+    const focusRequest: DataGridProps['focusRequest'] = current === null ? null : { ...matches[current]!, quiet: true };
 
     const step = (direction: 1 | -1): void => {
         const index = stepIndex(current, matches.length, direction);

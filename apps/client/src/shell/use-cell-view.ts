@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CellView } from '@/shell/cell-view';
 import { looseTabLabel } from '@/shell/panels/tab-label';
@@ -15,5 +14,5 @@ export function useCellView(viewId: string | null): CellView | null {
     const view = useDocument((state) => cellViewOf(state, viewId));
     const tab = useFiles((state) => (viewId === null ? undefined : state.tabs.find((entry) => entry.key === viewId)));
     const name = tab === undefined ? null : looseTabLabel(tab);
-    return useMemo(() => (view !== null || tab === undefined || name === null ? view : { kind: 'loose', id: tab.key, tab, name }), [view, tab, name]);
+    return view !== null || tab === undefined || name === null ? view : { kind: 'loose', id: tab.key, tab, name };
 }

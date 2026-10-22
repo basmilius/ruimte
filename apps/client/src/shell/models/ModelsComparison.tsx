@@ -1,4 +1,4 @@
-import { useId, useMemo, useReducer, useState } from 'react';
+import { useId, useReducer, useState } from 'react';
 import clsx from 'clsx';
 import { SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -29,8 +29,8 @@ export function ModelsComparison({ result }: { result: ModelBenchmarksResult }) 
     const { t } = useTranslation('models');
     useFormatLocale();
     const sidebarId = useId();
-    const models = useMemo(() => chartModels(result.models, result.measurements), [result]);
-    const marks = useMemo(() => modelMarks(models), [models]);
+    const models = chartModels(result.models, result.measurements);
+    const marks = modelMarks(models);
     const [selection, dispatch] = useReducer(reduceComparison.bind(null, models), undefined, initialSelection);
     const [view, setView] = useState<ModelView>('comparison');
     const [scale, setScale] = useState<CostScale>('log');
@@ -39,9 +39,9 @@ export function ModelsComparison({ result }: { result: ModelBenchmarksResult }) 
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [highlighted, setHighlighted] = useState<string | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
-    const { listed, selected, drawn } = useMemo(() => comparisonModels(models, selection), [models, selection]);
-    const efforts = useMemo(() => measuredEfforts(listed), [listed]);
-    const points = useMemo(() => modelPoints(drawn), [drawn]);
+    const { listed, selected, drawn } = comparisonModels(models, selection);
+    const efforts = measuredEfforts(listed);
+    const points = modelPoints(drawn);
     const reference = points.find((point) => point.key === selection.reference) ?? null;
     const candidate =
         points.find((point) => point.key === (preview !== reference?.key ? preview : null)) ??

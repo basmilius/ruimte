@@ -22,6 +22,6 @@ export interface MachineModeBridge {
     mode: MachineMode;
     /* What a switch to `none` ends. In `none` and `ask` there is no work and nothing to say. */
     stopPreview(): Promise<MachineStopPreview>;
-    /* Writes the choice and restarts the app. From `local` to `none` the service the app owns stops and goes, as "Stop the Machine and Quit" does. Rejects when the choice could not be written, and then nothing stopped. */
+    /* Writes the choice and restarts the app. From `local` to `none` the service the app owns stops and goes, as "Stop Machine and Quit" does. Rejects when the choice could not be written, and then nothing stopped. */
     choose(mode: 'local' | 'none'): Promise<void>;
 }

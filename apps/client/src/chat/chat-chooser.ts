@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { create } from 'zustand';
 import { isCanvasView, type AgentKind, type ProjectNode, type ProjectView, type SplitLayout } from '@ruimte/contracts';
 import type { NodesOfView } from '@/project/view-nodes';
@@ -76,10 +75,7 @@ export function chooserSections(chats: readonly ChooserChat[], linkedIds: readon
 export function useChooserSections(linkedIds: readonly string[]): ChooserSections {
     const source = useSidebarSource();
     const layout = useDocument((s) => s.layout);
-    return useMemo(
-        () => chooserSections(chooserChats(source.views, source.nodesOf), linkedIds, chatsOpenHere(source.views, source.nodesOf, layout)),
-        [source, layout, linkedIds]
-    );
+    return chooserSections(chooserChats(source.views, source.nodesOf), linkedIds, chatsOpenHere(source.views, source.nodesOf, layout));
 }
 
 interface ChatChooserState {

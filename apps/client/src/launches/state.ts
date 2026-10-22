@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { LaunchBusy, LaunchesDocument, LaunchHeld, LaunchStatus, LaunchSuggestion } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { EMPTY_DOCUMENT, launchViews, type LaunchView } from '@/launches/model';
@@ -93,7 +93,7 @@ export function useProjectLaunches(): ProjectLaunches {
     const key = projectId === null ? null : endpointKey(endpointId, projectId);
     const document = useLaunches((s) => (key === null ? null : (s.documents[key] ?? null)));
     const statuses = useLaunches((s) => (key === null ? NO_STATUSES : (s.statuses[key] ?? NO_STATUSES)));
-    const views = useMemo(() => launchViews(document ?? EMPTY_DOCUMENT, statuses), [document, statuses]);
+    const views = launchViews(document ?? EMPTY_DOCUMENT, statuses);
     return { key, projectId, folder, document, statuses, views };
 }
 

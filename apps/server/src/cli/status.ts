@@ -10,6 +10,10 @@ export interface StatusOptions {
     readSecret?: (home: string) => Promise<string>;
     out?: (line: string) => void;
     err?: (line: string) => void;
+    /* The answer as JSON, for a script or an agent. */
+    json?: boolean;
+    /* Check how other devices reach the machine before answering, instead of the last check. */
+    check?: boolean;
 }
 
 /*
@@ -24,7 +28,7 @@ export async function runStatus(options: StatusOptions): Promise<number> {
         err(`No daemon has started with ${options.home} as its home. ${startFirst(options.port)}`);
         return 1;
     }
-    const answer = await readMachineStatus(options.port, secret, options.fetch ?? ((input, init) => fetch(input, init)));
+    const answer = await readMachineStatus(options.port, secret, options.fetch ?? ((input, init) => fetch(input, init)), options.check === true);
     if ('problem' in answer) {
         switch (answer.problem) {
             case 'not-running':
@@ -38,6 +42,10 @@ export async function runStatus(options: StatusOptions): Promise<number> {
                 break;
         }
         return 1;
+    }
+    if (options.json === true) {
+        out(JSON.stringify(answer.status, null, 2));
+        return 0;
     }
     statusLines(answer.status, options.port).forEach(out);
     return 0;

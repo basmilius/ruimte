@@ -62,7 +62,7 @@ describe('finderPaths', () => {
         expect(finderPaths(dragOf({ path: '/work/a.png', directory: false }), 'machine', { folders: true, refusal: 'terminal' })).toEqual([]);
         const [toast] = useToasts.getState().toasts;
         expect(toast?.title).toBe('This project runs on Build server');
-        expect(toast?.description).toBe('That machine cannot read files from Finder. Type or paste a path that exists there instead.');
+        expect(toast?.description).toBe('It cannot read files from Finder. Type or paste a path on that machine.');
     });
 
     test('a window without the desktop shell types nothing and says to type the path', () => {
@@ -70,7 +70,7 @@ describe('finderPaths', () => {
         serve('loopback');
 
         expect(finderPaths(dragOf({ path: '/work/a.png', directory: false }), 'machine', { refusal: 'terminal' })).toEqual([]);
-        expect(useToasts.getState().toasts[0]?.description).toBe('Type or paste the path instead.');
+        expect(useToasts.getState().toasts[0]?.description).toBe('Type or paste the path.');
     });
 
     test('a canvas keeps the words about the Files panel', () => {
@@ -78,6 +78,6 @@ describe('finderPaths', () => {
         serve('loopback');
 
         finderPaths(dragOf({ path: '/work/a.png', directory: false }), 'machine');
-        expect(useToasts.getState().toasts[0]?.description).toBe('Open the file from the Files panel instead.');
+        expect(useToasts.getState().toasts[0]?.description).toBe('Open it from the Files panel.');
     });
 });

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 import { WorktreeSchema } from '@adecore/agent-contracts/worktree';
 import { BYTES_CHUNK_MAX } from './bytes.ts';
+import { ChangeSplitSchema } from './change-split.ts';
 
 // Made under the app data dir when the branch has no worktree yet.
 export const WorktreeAddPayloadSchema = z.object({
@@ -418,7 +419,11 @@ export const GitPullRequestSchema = z.object({
     reviewDecision: z.string().nullable(),
     checks: z.array(GitPrCheckSchema),
     checkState: z.enum(['pending', 'success', 'failure', 'none']),
-    threads: z.array(GitPrThreadSchema)
+    threads: z.array(GitPrThreadSchema),
+    // GitHub's own totals for the whole pull request; a machine from before them leaves them out.
+    added: z.number().int().nonnegative().optional(),
+    deleted: z.number().int().nonnegative().optional(),
+    changedFiles: z.number().int().nonnegative().optional()
 });
 export type GitPullRequest = z.infer<typeof GitPullRequestSchema>;
 
@@ -433,6 +438,21 @@ export const GitPullRequestResultSchema = z.object({
     pr: GitPullRequestSchema.nullable()
 });
 export type GitPullRequestResult = z.infer<typeof GitPullRequestResultSchema>;
+
+/* `git.prSplit`: the split of a pull request `git.pr` answered, read from every page of GitHub's file list, so it comes after. */
+export const GitPrSplitPayloadSchema = z.object({
+    cwd: z.string().min(1),
+    number: z.number().int().positive(),
+    // The head `git.pr` answered at; a pull request that moved since gives none, since it would disagree with those totals.
+    headSha: z.string().min(1)
+});
+export type GitPrSplitPayload = z.infer<typeof GitPrSplitPayloadSchema>;
+
+export const GitPrSplitResultSchema = z.object({
+    // Null when GitHub's file list could not be read whole, so a split never disagrees with the totals.
+    split: ChangeSplitSchema.nullable()
+});
+export type GitPrSplitResult = z.infer<typeof GitPrSplitResultSchema>;
 
 // A person's watch on one pull request for one chat. The daemon polls it and wakes the chat once per finished state.
 export const GitPrWatchSchema = z.object({
@@ -576,6 +596,53 @@ export const GitCancelPayloadSchema = z.object({
     actionId: z.string().min(1)
 });
 export type GitCancelPayload = z.infer<typeof GitCancelPayloadSchema>;
+
+/*
+ * `git.clone`: a repository from a remote into a new folder, with its progress over `git.progress` under
+ * `actionId` (phase `fetch`, then `done` or `failed`) and `git.cancel` to stop it. Only a remote URL is
+ * taken (HTTPS, SSH, git), never a local path; the folder must not exist yet or be empty, and its parent must.
+ */
+export const GitClonePayloadSchema = z.object({
+    actionId: z.string().min(1),
+    url: z.string().min(1).max(2048),
+    path: z.string().min(1).max(4096)
+});
+export type GitClonePayload = z.infer<typeof GitClonePayloadSchema>;
+
+export const GitCloneResultSchema = z.object({
+    path: z.string(),
+    // Everything git wrote.
+    output: z.string()
+});
+export type GitCloneResult = z.infer<typeof GitCloneResultSchema>;
+
+// The largest file the client copies from the ignored files of one checkout into a clone of it on another machine.
+export const IGNORED_COPY_MAX_BYTES = 1024 * 1024;
+
+export const GitIgnoredFilesPayloadSchema = z.object({ cwd: z.string().min(1) });
+export type GitIgnoredFilesPayload = z.infer<typeof GitIgnoredFilesPayloadSchema>;
+
+/*
+ * `git.ignoredFiles`: the files git ignores in a checkout, a folder ignored whole (`node_modules/`) left
+ * out. Paths are relative to `root`, the checkout's top level, and `prefix` is where `cwd` sits in it.
+ */
+export const GitIgnoredFilesResultSchema = z.object({
+    root: z.string(),
+    prefix: z.string(),
+    files: z.array(
+        z.object({
+            path: z.string(),
+            size: z.number(),
+            // A symbolic link, which is never copied: where it points means nothing on another machine.
+            link: z.boolean(),
+            // The file's permission bits, which a copy keeps so a private file stays private.
+            mode: z.number().int().optional()
+        })
+    ),
+    // More files than one answer lists.
+    truncated: z.boolean()
+});
+export type GitIgnoredFilesResult = z.infer<typeof GitIgnoredFilesResultSchema>;
 
 export const GitCapabilitiesResultSchema = z.object({
     // Whether `gh` is on the daemon's PATH, which is what opening a pull request needs.

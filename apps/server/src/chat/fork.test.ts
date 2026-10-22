@@ -478,6 +478,23 @@ describe('forkChat', () => {
         expect(asked.agentImages).toEqual([['chat-lead', result.info.chatId]]);
     });
 
+    test('a fork into another CLI reads as much of the conversation as the window of its model allows', async () => {
+        const items = Array.from({ length: 6 }, (_, index): ChatItem[] => [
+            turn(`turn-${index + 1}`, { lastUuid: `u-${index + 1}` }),
+            { id: `user-${index + 1}`, kind: 'user', createdAt: 0, turnId: `turn-${index + 1}`, text: `question ${index + 1} ${'x'.repeat(4000)}` }
+        ]).flat();
+        const handedOver = async (contextWindow: number | null): Promise<string> => {
+            const { deps, asked } = stub({ info: info('claude'), items });
+            await forkChat(
+                { ...deps, startingPoint: () => ({ selection: { model: 'gpt-5.5', options: {} }, contextWindow }) },
+                { chatId: 'chat-lead', turnId: 'turn-6', provider: 'codex' }
+            );
+            return asked.written[0]!.preambles[0]!;
+        };
+        expect(await handedOver(null)).toContain('What follows is its last 3 turns, as text.');
+        expect(await handedOver(1_000_000)).toContain('What follows is all of it, as text.');
+    });
+
     test('Codex is asked for the turn it named, all of it for a last turn without a name, and a count otherwise', async () => {
         const items = [turn('turn-1'), turn('turn-2', { turnId: 'codex-2' }), turn('turn-3')];
         const { deps, asked } = stub({ info: info('codex'), items });

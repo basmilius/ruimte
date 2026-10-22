@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18next from 'i18next';
 import type { FileTreeVisibleRow } from '@pierre/trees';
@@ -75,7 +75,7 @@ function ArchiveTree({
     const { t } = useTranslation('panels');
     const [menuPath, setMenuPath] = useState<string | null>(null);
     const onPickRef = useRef(onPick);
-    const byPath = useMemo(() => new Map(entries.map((entry) => [entry.path, entry])), [entries]);
+    const byPath = new Map(entries.map((entry) => [entry.path, entry]));
     const { model } = useFileTree({
         paths: [],
         flattenEmptyDirectories: true,
@@ -94,15 +94,12 @@ function ArchiveTree({
         model.resetPaths(archiveTreePaths(entries));
     }, [entries, model]);
 
-    const decorate = useCallback(
-        (row: FileTreeVisibleRow) => {
-            const entry = row.kind === 'directory' ? undefined : byPath.get(row.path);
-            return entry === undefined ? null : (
-                <FileTree.Decoration className="text-xs text-text-faint tabular-nums">{formatBytes(entry.size)}</FileTree.Decoration>
-            );
-        },
-        [byPath]
-    );
+    const decorate = (row: FileTreeVisibleRow) => {
+        const entry = row.kind === 'directory' ? undefined : byPath.get(row.path);
+        return entry === undefined ? null : (
+            <FileTree.Decoration className="text-xs text-text-faint tabular-nums">{formatBytes(entry.size)}</FileTree.Decoration>
+        );
+    };
 
     const menuEntry = menuPath === null || isFolderRow(menuPath) ? undefined : byPath.get(menuPath);
     return (
@@ -236,7 +233,7 @@ export function ArchiveFile({ path, name, read }: { path: string; name: string; 
     const bodyRef = useRef<HTMLDivElement>(null);
     const treeRef = useRef<HTMLElement>(null);
     const listing = held !== null && held.key === key ? held.listing : LOADING;
-    const archive: ArchiveVersion = useMemo(() => ({ path, mtime: read.mtime, size: read.size }), [path, read.mtime, read.size]);
+    const archive: ArchiveVersion = { path, mtime: read.mtime, size: read.size };
     const { startResize } = useColumnResize(treeRef, {
         size: treeWidth,
         min: MIN_TREE_WIDTH,
@@ -257,11 +254,11 @@ export function ArchiveFile({ path, name, read }: { path: string; name: string; 
     }, [transport, path, key, attempt]);
 
     const entries = listing.status === 'ready' ? listing.list.entries : null;
-    const byPath = useMemo(() => new Map((entries ?? []).map((entry) => [entry.path, entry])), [entries]);
-    const totals = useMemo(() => (entries === null ? null : archiveTotals(entries)), [entries]);
+    const byPath = new Map((entries ?? []).map((entry) => [entry.path, entry]));
+    const totals = entries === null ? null : archiveTotals(entries);
     const selected = picked !== null && picked.key === key ? byPath.get(picked.path) : undefined;
-    const pick = useCallback((treePath: string | null) => setPicked(treePath === null ? null : { key, path: entryPathOf(treePath) }), [key]);
-    const save = useCallback((entry: ArchiveEntry) => void saveEntry(transport, path, entry), [transport, path]);
+    const pick = (treePath: string | null) => setPicked(treePath === null ? null : { key, path: entryPathOf(treePath) });
+    const save = (entry: ArchiveEntry) => void saveEntry(transport, path, entry);
 
     const retry = (): void => {
         setHeld(null);

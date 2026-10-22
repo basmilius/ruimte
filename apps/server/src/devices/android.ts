@@ -9,6 +9,7 @@ import type {
     DeviceColorFilter,
     DeviceInfo,
     DevicePermission,
+    DevicePower,
     DeviceSettings,
     DeviceTextSize,
     DeviceTool
@@ -475,6 +476,19 @@ export class AndroidBackend implements DeviceBackend {
             ...(this.batteries.has(deviceId) ? { battery: this.batteries.get(deviceId) } : {}),
             ...this.recordings.settingsOf(deviceId)
         };
+    }
+
+    /* An emulator's battery is the console's to set and stands for nothing real, so only a phone answers. */
+    async power(deviceId: string): Promise<DevicePower | null> {
+        const { serial, emulator } = await this.booted(deviceId);
+        if (emulator) {
+            return null;
+        }
+        const fake = this.batteries.get(deviceId);
+        if (fake !== undefined) {
+            return { level: fake.level, plugged: fake.charging, charging: fake.charging, simulated: true };
+        }
+        return batteryOf(await this.shell(serial, 'dumpsys battery'));
     }
 
     async startRecording(deviceId: string, file: string): Promise<void> {
@@ -976,6 +990,43 @@ export function hingeOf(output: string): Pick<DeviceSettings, 'hinge'> {
 /* The tools that go through the screen server's session, so only a device that can stream has them. */
 function sessionTools(streaming: boolean): DeviceTool[] {
     return streaming ? ['clipboard', 'keyboard'] : [];
+}
+
+const POWER_SOURCES: ReadonlyArray<[field: string, source: string]> = [
+    ['ac powered', 'ac'],
+    ['usb powered', 'usb'],
+    ['wireless powered', 'wireless'],
+    ['dock powered', 'dock']
+];
+// BatteryManager.BATTERY_STATUS_CHARGING.
+const STATUS_CHARGING = '2';
+
+/*
+ * The output of `dumpsys battery`, or null when it holds no level. Android marks a dump whose values
+ * were set with `dumpsys battery set` as having its updates stopped, which says a level is fake even
+ * after a daemon restart forgot setting it.
+ */
+export function batteryOf(dump: string): DevicePower | null {
+    const fields = new Map<string, string>();
+    for (const line of dump.split('\n')) {
+        const match = /^\s*([A-Za-z][A-Za-z ]*):\s*(.*?)\s*$/.exec(line);
+        if (match !== null) {
+            fields.set(match[1]!.toLowerCase(), match[2]!);
+        }
+    }
+    const level = Number.parseInt(fields.get('level') ?? '', 10);
+    const scale = Number.parseInt(fields.get('scale') ?? '100', 10);
+    if (!Number.isFinite(level) || !Number.isFinite(scale) || scale <= 0) {
+        return null;
+    }
+    const source = POWER_SOURCES.find(([field]) => fields.get(field) === 'true')?.[1];
+    return {
+        level: Math.max(0, Math.min(100, Math.round((level * 100) / scale))),
+        plugged: source !== undefined,
+        charging: fields.get('status') === STATUS_CHARGING,
+        ...(source === undefined ? {} : { source }),
+        ...(/UPDATES STOPPED/.test(dump) ? { simulated: true } : {})
+    };
 }
 
 function nearestTextSize(scale: number): DeviceTextSize {

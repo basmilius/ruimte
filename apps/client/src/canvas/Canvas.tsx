@@ -1,7 +1,6 @@
 import {
     useEffect,
     useLayoutEffect,
-    useMemo,
     useRef,
     useState,
     useSyncExternalStore,
@@ -32,6 +31,7 @@ import { resizedText } from '@/canvas/text-resize';
 import { framePressHandsKeyboard } from '@/canvas/frame-press';
 import { stackingOrder } from '@/canvas/stacking';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
+import { farNodeKey } from '@/canvas/culling';
 import { notePointer } from '@/canvas/pointer';
 import { carriedByGroups, isNodeActive, maximizedNodeOf, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
@@ -47,6 +47,7 @@ import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
 import { TextToolbar } from '@/canvas/TextToolbar';
 import { CanvasLineLayer, CanvasLineTool, CanvasLineToolbar } from '@/canvas/CanvasLines';
+import { Minimap } from '@/canvas/Minimap';
 import { CellOverlay } from '@/shell/CellOverlay';
 import { isInFloatingLayer, ContextMenu } from '@adecore/ui';
 
@@ -158,24 +159,23 @@ export function Canvas() {
             aiming: s.linkDraft?.aiming === true
         }))
     );
-    const textIds = useMemo(() => Object.keys(texts), [texts]);
+    const textIds = Object.keys(texts);
     const lineTool = useCanvas((s) => s.lineTool);
     const lines = useCanvas((s) => s.lines);
     const nodes = useCanvas((s) => s.nodes);
     const selection = useCanvas((s) => s.selection);
     const hidden = useCanvas((s) => s.hidden);
     const gesturing = useCanvas((s) => s.gesturing);
-    const frames = useMemo(() => gapFrames({ nodes, lines, hidden }), [nodes, lines, hidden]);
-    const editable = useMemo(
-        () => gapEdit ?? (!altDown || activeGesture !== null || gesturing ? [] : editableGaps(Object.values(frames), selection)),
-        [frames, selection, gapEdit, altDown, activeGesture, gesturing]
-    );
+    const frames = gapFrames({ nodes, lines, hidden });
+    const editable = gapEdit ?? (!altDown || activeGesture !== null || gesturing ? [] : editableGaps(Object.values(frames), selection));
     /* The nodes are drawn in a fixed order and stacked with a z-index instead of being reordered in
        the DOM: moving an element takes it out of the document for a moment, and a body that had the
        keyboard loses it. Bringing a node to the front is a click in it, so that is exactly when it
-       may not happen. */
-    const drawIds = useMemo(() => [...order].sort(), [order]);
-    const stacking = useMemo(() => stackingOrder(nodes, order), [order, nodes]);
+       may not happen. A note or a file far from sight is not drawn at all (`farNodeKey`). */
+    const far = useCanvas(farNodeKey);
+    const farIds = new Set(far === '' ? [] : far.split('\n'));
+    const drawIds = order.filter((id) => !farIds.has(id)).sort();
+    const stacking = stackingOrder(nodes, order);
     const maximizedId = useCanvas(maximizedNodeOf);
 
     useLayoutEffect(() => {
@@ -257,10 +257,22 @@ export function Canvas() {
                 setBox(boxScreenRect(gesture, camera));
             }
         };
+        /* While a pan runs the world is a layer of its own, so a frame moves pixels already drawn
+           instead of drawing every node again. Only then: a layer kept through a zoom stays drawn at
+           the scale it had, and its text goes soft. */
+        const lift = (panning: boolean): void => {
+            if (worldRef.current) {
+                worldRef.current.style.willChange = panning ? 'transform' : '';
+            }
+        };
         follow(canvasStore.getState().camera);
+        lift(canvasStore.getState().panning);
         return canvasStore.subscribe((state, previous) => {
             if (state.camera !== previous.camera) {
                 follow(state.camera);
+            }
+            if (state.panning !== previous.panning) {
+                lift(state.panning);
             }
         });
     }, [canvasStore]);
@@ -786,13 +798,13 @@ export function Canvas() {
                         <TextElementView key={id} id={id} />
                     ))}
                     {drawIds.map((id) => (
-                        <NodeFrame key={id} id={id} z={id === maximizedId ? drawIds.length + 1 : (stacking[id] ?? 1)} />
+                        <NodeFrame key={id} id={id} z={id === maximizedId ? order.length + 1 : (stacking[id] ?? 1)} />
                     ))}
                     {/* Over the nodes, so a port beside one is never covered by the node standing next to it. */}
                     {maximizedId === null && <PortHints rootRef={rootRef} />}
                     {maximizedId === null && <ResizeHandles rootRef={rootRef} />}
                 </div>
-                {drawIds.length === 0 && textIds.length === 0 && Object.keys(lines).length === 0 && <EmptyCanvas />}
+                {order.length === 0 && textIds.length === 0 && Object.keys(lines).length === 0 && <EmptyCanvas />}
                 {lineTool !== null && maximizedId === null && <CanvasLineTool key={lineTool} onDraftChange={setLineDraft} />}
                 {/* Over the pages, which the canvas itself cannot draw over. */}
                 <CellOverlay slot="view">
@@ -802,6 +814,7 @@ export function Canvas() {
                     )}
                     <TextToolbar />
                     {maximizedId === null && <CanvasLineToolbar />}
+                    <Minimap />
                     {dropping && <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-accent ring-inset" aria-hidden />}
                     {box && (
                         <div

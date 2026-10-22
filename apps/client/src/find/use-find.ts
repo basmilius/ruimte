@@ -44,7 +44,7 @@ export function findReturnTarget(remembered: HTMLElement | null, surface: HTMLEl
  * focus (`find/hosts.ts`), and it keeps what its bar asks. Closing hands the keyboard back to where it
  * was when the bar opened.
  */
-export function useFind(surface: RefObject<HTMLElement | null>, enabled = true, seed?: FindSeed): FindState {
+export function useFind(surfaceRef: RefObject<HTMLElement | null>, enabled = true, seed?: FindSeed): FindState {
     const [open, setOpen] = useState(false);
     const [query, setQueryState] = useState<FindQuery>(EMPTY_FIND_QUERY);
     const [summons, setSummons] = useState(0);
@@ -66,7 +66,7 @@ export function useFind(surface: RefObject<HTMLElement | null>, enabled = true, 
     }, []);
 
     useEffect(() => {
-        const element = surface.current;
+        const element = surfaceRef.current;
         if (element === null || !enabled) {
             return;
         }
@@ -94,15 +94,15 @@ export function useFind(surface: RefObject<HTMLElement | null>, enabled = true, 
                 setSummons((count) => count + 1);
             }
         });
-    }, [surface, enabled, setQuery]);
+    }, [surfaceRef, enabled, setQuery]);
 
-    const close = useCallback((): void => {
+    const close = (): void => {
         openRef.current = false;
         setOpen(false);
-        const target = findReturnTarget(returnTo.current, surface.current);
+        const target = findReturnTarget(returnTo.current, surfaceRef.current);
         returnTo.current = null;
         target?.focus({ preventScroll: true });
-    }, [surface]);
+    };
 
     // A surface that can no longer be searched (a chat that shows a sub-agent in its place) drops its bar.
     useEffect(() => {

@@ -27,7 +27,7 @@ enum ChatRuntimeMode {
     static func hint(_ mode: String) -> String {
         switch mode {
         case "auto-accept-edits": String(localized: "File edits go through, commands still ask")
-        case "auto": String(localized: "The agent reviews routine actions itself")
+        case "auto": String(localized: "Reviews routine actions itself")
         case "full-access": String(localized: "Never asks for approval")
         default: String(localized: "Asks before commands and file changes")
         }

@@ -24,6 +24,7 @@ import { installLogin } from './main/login';
 import { installMachineMode } from './main/machine-mode';
 import { installMenu } from './main/menu';
 import { installSecrets } from './main/secrets';
+import { installQuickLook } from './main/quick-look';
 import { createMachine } from './main/service';
 import { installSpeech } from './main/speech';
 import { reportShellProblem, startTelemetry } from './main/telemetry';
@@ -577,6 +578,9 @@ ipc.handle('browser:capture', async (_event, id: number) => {
 installSecrets(ipc);
 installSpeech(ipc, { ruimteHome, repoRoot, send: (channel, payload) => windows.send(channel, payload), windows: () => windows.all() });
 installLogin(ipc);
+if (localMachine && process.platform === 'darwin') {
+    installQuickLook(ipc, { ruimteHome, keyOf: (window) => windows.keyOf(window) });
+}
 
 ipc.handle('window:is-fullscreen', (event) => ipc.senderWindow(event)?.isFullScreen() ?? false);
 

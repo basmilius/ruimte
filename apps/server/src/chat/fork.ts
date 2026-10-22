@@ -41,7 +41,7 @@ import type { ChatManager } from './chat-manager.ts';
 import { forkClaudeTranscript, type TranscriptCutPoint } from './claude-fork.ts';
 import { forkThreadOnce, ChatError as AgentChatError } from '@adecore/agents/chat';
 import { ChatError } from './errors.ts';
-import { handoffText } from './handoff.ts';
+import { handoffBudget, handoffText } from './handoff.ts';
 import { errorText } from '../error-text.ts';
 
 /* Where a Codex fork goes on after (the turn Codex named, the n-th turn when it named none, or all of it). */
@@ -380,12 +380,11 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     }
     const provider = payload.provider ?? info.provider;
     const switching = provider !== info.provider;
+    // Checked as named, before the default account becomes none: a turned-off default account is refused, also from a chat on it.
+    requireAccount(deps, provider, payload.account);
     // The original's account while the fork stays with its CLI; another CLI starts on its own default one.
     const account = storedAccount(provider, payload.account ?? (switching ? undefined : info.account));
     const sameAccount = !switching && account === info.account;
-    if (!sameAccount) {
-        requireAccount(deps, provider, account);
-    }
     // Another CLI, or an account that cannot read the original's transcripts, reads the conversation as text instead.
     const handoff = switching || (!sameAccount && deps.accounts?.canContinue(provider, info.account, account) !== true);
     if (!CHAT_CLIS.has(info.provider) || !CHAT_CLIS.has(provider)) {
@@ -416,19 +415,24 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     const now = deps.now();
     const original = { id: payload.chatId, title: originalTitle, view: place.canvasId === null };
     const copied = itemsThrough(source.items, turn.id);
+    const start = forkStart(deps, info, provider, switching, payload.selection, opener?.ceiling);
     let notes = forkNotes(cut, original, files);
     if (handoff) {
-        const text = handoffText(copied, {
-            fromName: nameOf(info.provider),
-            originalId: payload.chatId,
-            originalTitle,
-            view: original.view,
-            turnNumber: cut.number,
-            totalTurns: cut.total,
-            at: now,
-            cwd,
-            worktree: files.kind === 'worktree' ? { branch: files.branch, afterTurn: files.afterTurn } : null
-        });
+        const text = handoffText(
+            copied,
+            {
+                fromName: nameOf(info.provider),
+                originalId: payload.chatId,
+                originalTitle,
+                view: original.view,
+                turnNumber: cut.number,
+                totalTurns: cut.total,
+                at: now,
+                cwd,
+                worktree: files.kind === 'worktree' ? { branch: files.branch, afterTurn: files.afterTurn } : null
+            },
+            handoffBudget(start.contextWindow)
+        );
         const to = switching ? nameOf(provider) : `${nameOf(provider)} under the account '${deps.accounts?.label(provider, account) ?? account}'`;
         notes = { note: switchNote(cut, original, files, { to, turns: text.turns, all: text.all }), preamble: text.text };
     }
@@ -440,7 +444,7 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
         cwd,
         agentSessionId,
         switching,
-        start: forkStart(deps, info, provider, switching, payload.selection, opener?.ceiling),
+        start,
         cut,
         now
     });
@@ -504,11 +508,11 @@ function forkStartOf(deps: ChatForkDeps, info: ChatInfo, provider: AgentKind, sw
         // Going on with another CLI is no way to be allowed more than the original was.
         return { ...point, runtimeMode: narrowerMode(point.runtimeMode ?? info.runtimeMode, info.runtimeMode) };
     }
-    return {
-        selection: selection === undefined ? info.selection : deps.startingPoint(provider, selection).selection,
-        runtimeMode: info.runtimeMode,
-        contextWindow: info.usage.contextWindow
-    };
+    if (selection === undefined) {
+        return { selection: info.selection, runtimeMode: info.runtimeMode, contextWindow: info.usage.contextWindow };
+    }
+    const point = deps.startingPoint(provider, selection);
+    return { selection: point.selection, runtimeMode: info.runtimeMode, contextWindow: point.contextWindow ?? info.usage.contextWindow };
 }
 
 function forkInfoOf(
@@ -550,7 +554,16 @@ function forkInfoOf(
         running: false,
         activeTurnId: null,
         // The turns before the cut are what fixes a chat to its CLI; what they cost stays the original's.
-        usage: { ...info.usage, contextWindow: fork.start.contextWindow, contextTokens: 0, breakdown: undefined, costUsd: 0, turns: fork.cut.number },
+        usage: {
+            ...info.usage,
+            contextWindow: fork.start.contextWindow,
+            contextTokens: 0,
+            breakdown: undefined,
+            costUsd: 0,
+            turns: fork.cut.number,
+            cacheTtlMs: undefined,
+            cacheExpiresAt: undefined
+        },
         forkOf: { chatId: fork.originalId, turnId: fork.cut.turn.id, at: fork.now },
         createdAt: fork.now
     };
@@ -575,7 +588,7 @@ async function landFork(
 ): Promise<ProjectMutation<ChatForkResult>> {
     const { deps, payload, place, forkId, forkInfo, title, provider, account, opener } = fork;
     if (content.views.some((view) => view.id === forkId || (isCanvasView(view) && view.nodes.some((node) => node.id === forkId)))) {
-        throw new ChatError('fork-failed', `The id ${forkId} was taken while the fork was made; try again`);
+        throw new ChatError('fork-failed', 'Could not make the fork. Try again.');
     }
     opener?.recount();
     const nodeCwd = fork.cwd === place.folder ? undefined : fork.cwd;
@@ -632,10 +645,14 @@ function requireAccount(deps: ChatForkDeps, kind: AgentKind, account: string | u
     if (account === undefined) {
         return;
     }
-    if (!deps.accounts) {
+    if (deps.accounts) {
+        deps.accounts.require(kind, account);
+        return;
+    }
+    // Without accounts the default one still starts, named or not.
+    if (storedAccount(kind, account) !== undefined) {
         throw new AccountError('account-unavailable', `The account '${account}' is not available on this machine: it keeps no accounts.`);
     }
-    deps.accounts.require(kind, account);
 }
 
 /*
@@ -649,10 +666,10 @@ async function filesTree(deps: ChatForkDeps, cwd: string, turns: readonly ChatTu
         if (index === turns.length - 1) {
             return await deps.takeTree(cwd);
         }
-        throw new ChatError('checkpoint-missing', 'No tree of the files after this turn was taken, so the fork can only start from HEAD');
+        throw new ChatError('checkpoint-missing', 'The files of this turn were not saved, so the fork starts from the latest commit');
     }
     if (!(await deps.treeExists(cwd, tree))) {
-        throw new ChatError('checkpoint-missing', 'The files of this turn are no longer in the repository, so the fork can only start from HEAD');
+        throw new ChatError('checkpoint-missing', 'The files of this turn are no longer in the repository, so the fork starts from the latest commit');
     }
     return tree;
 }
@@ -754,7 +771,7 @@ export function chatForkDeps(wiring: {
         takeTree: async (cwd) => (wiring.checkpoints ? wiring.checkpoints.take(cwd) : null),
         restoreTree: async (cwd, tree) => {
             if (!wiring.checkpoints) {
-                throw new ChatError('checkpoint-missing', 'This machine keeps no trees of turns');
+                throw new ChatError('checkpoint-missing', 'The files of this turn were not saved, so the fork cannot start from it');
             }
             await wiring.checkpoints.restore(cwd, tree);
         },

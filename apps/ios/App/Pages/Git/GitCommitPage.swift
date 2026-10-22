@@ -153,7 +153,7 @@ struct GitCommitPage: View {
             }
             Section {
                 if model.plan.targets.isEmpty {
-                    Text("Stage what belongs in this commit first.").foregroundStyle(MobileStyle.muted)
+                    Text("Stage changes first.").foregroundStyle(MobileStyle.muted)
                 }
                 ForEach(model.files, id: \.file.path) { entry in
                     fileRow(entry.checkout, entry.file)

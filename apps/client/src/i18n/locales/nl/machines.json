@@ -29,25 +29,42 @@
         "finding": "{{name}} zoeken…",
         "notInstalled": "{{name}} met {{runtime}} staat niet op deze machine.",
         "plate": "Apparaat",
-        "listFailed": "De apparaten konden niet worden gelezen",
+        "listFailed": "Kon apparaten niet lezen",
+        "power": {
+            "battery": "Op batterij",
+            "low": "Batterij bijna leeg · niet aan de stroom",
+            "plugged": "Aan de stroom",
+            "pluggedFrom": "Aan de stroom ({{source}})",
+            "charging": "laadt op",
+            "notCharging": "laadt niet op",
+            "full": "vol",
+            "simulated": "gesimuleerd",
+            "simulatedTooltip": "Gesimuleerd: apps zien {{level}}. Herstel het in de tools.",
+            "source": {
+                "ac": "stopcontact",
+                "usb": "USB",
+                "wireless": "draadloos",
+                "dock": "dock"
+            }
+        },
         "stream": {
             "screen": "Scherm van {{name}}",
             "starting": "Apparaat starten…",
-            "noDecoder": "Deze browser kan de videostream van het apparaat niet decoderen",
-            "undecodable": "De videostream van het apparaat kon niet worden gedecodeerd",
-            "frameFailed": "Een frame van het apparaat kon niet worden getekend",
+            "noDecoder": "Deze browser kan het scherm van het apparaat niet tonen",
+            "undecodable": "Kon het scherm van het apparaat niet tonen",
+            "frameFailed": "Kon het scherm van het apparaat niet tonen",
             "startFailed": "Het apparaat kon niet gaan streamen",
             "notReady": "De stream van het apparaat is nog niet klaar",
-            "httpStatus": "De stream van het apparaat antwoordde met {{status}}",
-            "unknownFormat": "De machine antwoordde met een onbekend streamformaat",
+            "httpStatus": "Kon het scherm van het apparaat niet laden ({{status}})",
+            "unknownFormat": "De machine stuurde een scherm dat deze app niet kan tonen. Update Ruimte.",
             "stopped": "De stream van het apparaat stopte"
         },
         "tools": {
             "title": "Apparaattools",
             "close": "Tools sluiten",
             "loading": "Instellingen van het apparaat lezen…",
-            "readFailed": "De instellingen van het apparaat konden niet worden gelezen",
-            "changeFailed": "De instelling van het apparaat kon niet worden gewijzigd",
+            "readFailed": "Kon de instellingen van het apparaat niet lezen",
+            "changeFailed": "Kon de instelling van het apparaat niet wijzigen",
             "bundleId": "Bundle-ID",
             "packageName": "Packagenaam",
             "app": {
@@ -130,25 +147,25 @@
                 "copy": "Screenshot kopiëren",
                 "save": "Screenshot bewaren",
                 "place": "Screenshot op het canvas zetten",
-                "noCanvas": "Open een canvas om de screenshot op te zetten.",
-                "placeUnsupported": "De machine van dit project draait een Ruimte die geen screenshot van een andere machine kan bewaren.",
-                "placeTooLarge": "De screenshot is te groot om op een canvas van een andere machine te zetten.",
-                "failed": "De screenshot kon niet worden gemaakt",
+                "noCanvas": "Open eerst een canvas.",
+                "placeUnsupported": "De machine van dit project kan geen screenshot van een andere machine bewaren.",
+                "placeTooLarge": "De screenshot is te groot voor een canvas op een andere machine.",
+                "failed": "Kon de screenshot niet maken",
                 "record": "Schermopname",
                 "start": "Opnemen",
                 "stop": "Opname stoppen",
                 "recording": "Opname loopt, {{time}}",
                 "ended": "Afgelopen",
-                "endedLabel": "De opname stopte vanzelf en de video ligt klaar",
+                "endedLabel": "Opname gestopt; video ligt klaar",
                 "saveVideo": "Video bewaren",
-                "recordFailed": "De opname kon niet worden gemaakt",
-                "androidLimit": "Android stopt een opname zelf na 3 minuten."
+                "recordFailed": "Kon de opname niet maken",
+                "androidLimit": "Android stopt opnames na 3 minuten."
             },
             "clipboard": {
                 "title": "Klembord",
                 "send": "Mijn klembord sturen",
                 "copy": "Klembord van het apparaat kopiëren",
-                "failed": "Het klembord was niet bereikbaar"
+                "failed": "Kon het klembord niet bereiken"
             },
             "statusBar": {
                 "title": "Statusbalk",
@@ -173,11 +190,11 @@
                 "up": "Eén map omhoog",
                 "cancel": "Stoppen met kiezen",
                 "list": "Bestanden op de machine",
-                "empty": "Hier staat niets wat dit apparaat aanneemt.",
+                "empty": "Niets wat dit apparaat aanneemt.",
                 "add": "Toevoegen",
                 "drop": "Loslaten om de app te installeren of de foto's toe te voegen",
-                "dropFailed": "Het apparaat nam dat niet aan",
-                "notTaken": "Sleep één app-bundel die dit apparaat installeert, of maximaal 20 foto's en video's."
+                "dropFailed": "Het apparaat kon dat bestand niet gebruiken",
+                "notTaken": "Sleep één app die dit apparaat kan installeren, of maximaal 20 foto's en video's."
             },
             "camera": {
                 "title": "Camera",
@@ -240,10 +257,10 @@
         "erase": {
             "open": "Wissen…",
             "title": "{{name}} wissen?",
-            "description": "Alle apps, hun gegevens en de instellingen op {{name}} worden verwijderd, zoals op een nieuw apparaat. Een draaiend apparaat wordt eerst afgesloten en daarna weer gestart.",
+            "description": "Verwijdert alle apps, hun gegevens en de instellingen op {{name}}, zoals op een nieuw apparaat. Een draaiend apparaat herstart daarna.",
             "confirm": "Wissen",
             "busy": "Wissen…",
-            "failed": "Het apparaat kon niet worden gewist"
+            "failed": "Kon het apparaat niet wissen"
         },
         "shake": "Schudden",
         "memoryWarning": "Geheugenwaarschuwing nabootsen",
@@ -267,12 +284,12 @@
         }
     },
     "handshake": {
-        "noEndpoint": "Geen endpoint {{id}} om mee te verbinden"
+        "noEndpoint": "Machine {{id}} staat niet in de lijst"
     },
     "identity": {
         "mismatch": {
             "title": "{{label}} antwoordt als een andere machine",
-            "description": "{{address}} antwoordt als een andere machine dan die deze client opende. Vergeet hem hier en open hem opnieuw vanuit je account."
+            "description": "{{address}} antwoordt als een andere machine. Vergeet hem hier en open hem opnieuw vanuit je account."
         },
         "merged": {
             "title": "{{label}} staat al in de lijst",
@@ -286,8 +303,8 @@
         "notOnAccount": "Die machine staat niet meer in de lijst of op je account"
     },
     "storage": {
-        "indexedDbClosed": "IndexedDB ging niet open",
-        "indexedDbRefused": "IndexedDB weigerde de request"
+        "indexedDbClosed": "Ruimte kon zijn lokale opslag niet openen",
+        "indexedDbRefused": "De lokale opslag van Ruimte weigerde de wijziging"
     },
     "account": {
         "yours": {
@@ -312,44 +329,44 @@
             "signedIn": "Ingelogd met {{provider}}",
             "signedInAs": "Ingelogd met {{provider}} als {{login}}",
             "linked": "{{provider}} is aan je account toegevoegd",
-            "deleted": "Je Ruimte-account is verwijderd en deze app is uitgelogd",
-            "deletedAndLeft": "Je Ruimte-account is verwijderd, deze app is uitgelogd en de machine van deze computer heeft het account verlaten",
-            "deletedLeaveFailed": "Je Ruimte-account is verwijderd en deze app is uitgelogd, maar de machine van deze computer staat er nog op. Haal hem eraf in zijn instellingen onder Machines voordat je opnieuw inlogt."
+            "deleted": "Account verwijderd en uitgelogd",
+            "deletedAndLeft": "Account verwijderd, uitgelogd, en de machine van deze computer heeft het account verlaten",
+            "deletedLeaveFailed": "Account verwijderd en uitgelogd, maar de machine van deze computer staat er nog op. Haal hem eraf onder Instellingen › Account voordat je opnieuw inlogt."
         },
-        "sessionEndedOnDevice": "Je sessie op dit apparaat is afgelopen. Log opnieuw in om je machines te openen.",
-        "sessionEnded": "Je sessie is afgelopen. Log opnieuw in.",
+        "sessionEndedOnDevice": "Sessie afgelopen. Log opnieuw in om je machines te openen.",
+        "sessionEnded": "Sessie afgelopen. Log opnieuw in.",
         "signInUnavailable": "Inloggen werkt in de desktop-app en op station.ruimte.app",
-        "signInFirst": "Log eerst in op je account",
-        "statementMismatch": "Je account antwoordde met een statement voor iets anders",
+        "signInFirst": "Log eerst in",
+        "statementMismatch": "Je account gaf een onverwacht antwoord. Probeer het opnieuw.",
         "signInAndConnect": "Log eerst in en verbind met de machine",
-        "noBroker": "{{name}} is nog niet met een broker verbonden en is dus alleen op zijn eigen netwerk te bereiken",
+        "noBroker": "{{name}} is nog niet via je account verbonden en is dus alleen op zijn eigen netwerk te bereiken",
         "refusal": {
             "onlyOnMachine": "Alleen de app op die machine kan hem op een account zetten.",
             "machineHasAccount": "Deze machine staat op een ander account. Haal hem daar eerst af, op de machine zelf.",
-            "listedElsewhere": "Een ander account heeft deze machine nog in zijn lijst. Verwijder hem daar eerst, vanaf een client die op dat account is ingelogd."
+            "listedElsewhere": "Een ander account heeft deze machine nog in zijn lijst. Verwijder hem daar eerst, vanaf een apparaat dat op dat account is ingelogd."
         }
     },
     "signIn": {
         "wrongCallback": "Het antwoord van de browser hoort niet bij deze inlogpoging. Probeer het opnieuw.",
-        "cancelled": "Inloggen is geannuleerd.",
-        "failed": "Inloggen lukte niet ({{error}}).",
+        "cancelled": "Inloggen geannuleerd.",
+        "failed": "Kon niet inloggen ({{error}}).",
         "noCode": "De browser kwam terug zonder inlogcode. Probeer het opnieuw.",
         "notStarted": "Deze pagina heeft geen inlogpoging begonnen. Log opnieuw in.",
-        "tooLong": "Het inloggen duurde te lang. Log opnieuw in."
+        "tooLong": "Inloggen duurde te lang. Log opnieuw in."
     },
     "protocol": {
         "daemon-older": "Deze machine draait een oudere Ruimte. Werk Ruimte daar bij, of herstart hem om de update op te pikken.",
         "daemon-newer": "Deze machine draait een nieuwere Ruimte dan deze app. Werk deze app bij."
     },
     "broker": {
-        "badUrl": "De broker-URL {{url}} gaat niet open",
-        "limited": "De broker op {{host}} beperkt deze client; nieuwe poging over {{seconds}} seconden",
-        "refusedClient": "De broker op {{host}} weigerde deze client: {{reason}}",
-        "unreachable": "De broker op {{host}} was niet te bereiken",
-        "machineAbsent": "De machine is niet verbonden met de broker op {{host}}. Hij moet draaien met de broker aan.",
-        "refusedSignal": "De broker op {{host}} weigerde het signaal: {{reason}}",
-        "signInFailed": "Inloggen op de broker lukte niet: {{reason}}",
-        "noVouch": "Je account kon niet instaan voor deze client: {{reason}}"
+        "badUrl": "Het adres {{url}} van de verbindingsdienst gaat niet open",
+        "limited": "De verbindingsdienst beperkt dit apparaat. Nieuwe poging over {{seconds}} seconden.",
+        "refusedClient": "De verbindingsdienst weigerde dit apparaat: {{reason}}",
+        "unreachable": "Kon de verbindingsdienst op {{host}} niet bereiken",
+        "machineAbsent": "De machine is niet via je account verbonden. Zet zijn verbindingsdienst aan.",
+        "refusedSignal": "De verbindingsdienst weigerde de verbinding: {{reason}}",
+        "signInFailed": "Kon niet inloggen bij de verbindingsdienst: {{reason}}",
+        "noVouch": "Je account kon dit apparaat niet bevestigen: {{reason}}"
     },
     "direct": {
         "closed": {
@@ -357,59 +374,59 @@
             "failed": "De machine kon de directe verbinding niet beantwoorden",
             "timeout": "De machine gaf het wachten op de directe verbinding op",
             "done": "De machine heeft de directe verbinding beëindigd",
-            "not-paired": "De machine laat deze client niet binnen. De toegang is ingetrokken, of je account kon er niet voor instaan.",
+            "not-paired": "De machine laat dit apparaat niet binnen. De toegang is ingetrokken, of je account kon het niet bevestigen.",
             "statements-refused": "De machine weigert inloggen via een account.",
             "other": "De machine heeft de directe verbinding gesloten"
         },
-        "channelEarly": "Het channel ging open vóór het answer dat het beschrijft",
-        "badHandshake": "De machine beantwoordde de directe verbinding met iets anders dan haar handshake",
+        "channelEarly": "Kon de directe verbinding niet opzetten. Probeer het opnieuw.",
+        "badHandshake": "De machine gaf een onverwacht antwoord op de directe verbinding",
         "dead": "De machine antwoordt niet meer over de directe verbinding",
-        "badFrame": "De machine stuurde een frame dat deze client niet kan lezen",
+        "badFrame": "De machine stuurde gegevens die deze app niet kan lezen",
         "channelClosed": "De directe verbinding is gesloten",
-        "channelClosedEarly": "Het channel sloot voordat de machine deze client binnenliet",
-        "noPathWithRelay": "Geen netwerkpad naar de machine: ICE mislukte, ook via de relay.",
-        "noPath": "Geen netwerkpad naar de machine: ICE mislukte. Een directe verbinding heeft UDP aan beide kanten nodig, en deze route biedt geen relay.",
-        "noOffer": "De browser maakte geen offer",
+        "channelClosedEarly": "De verbinding sloot voordat de machine dit apparaat binnenliet",
+        "noPathWithRelay": "Geen netwerkpad naar de machine, ook niet via de relay.",
+        "noPath": "Geen netwerkpad naar de machine. Een directe verbinding heeft UDP aan beide kanten nodig, en er is geen relay om op terug te vallen.",
+        "noOffer": "De browser kon geen directe verbinding starten",
         "refused": "De machine nam de directe verbinding niet aan: {{reason}}",
         "noReason": "geen reden gegeven",
-        "unreachable": "De machine was niet te bereiken om een directe verbinding op te zetten",
-        "unreachableWith": "De machine was niet te bereiken om een directe verbinding op te zetten: {{reason}}",
-        "unsignedSignal": "Een signaal op de broker noemt de machine, maar is niet door haar ondertekend",
-        "noKeyOverBroker": "Een directe verbinding via de broker logt in met een key, en deze browser kan er geen maken",
+        "unreachable": "Kon de machine niet bereiken om een directe verbinding op te zetten",
+        "unreachableWith": "Kon de machine niet bereiken om een directe verbinding op te zetten: {{reason}}",
+        "unsignedSignal": "Een verbindingsverzoek zegt van de machine te komen, maar is niet te controleren",
+        "noKeyOverBroker": "Een directe verbinding via je account logt in met een key, en deze browser kan er geen maken",
         "notProven": "{{label}} bewees zijn identiteit niet over de directe verbinding",
         "noKey": "Een directe verbinding logt in met een key, en deze browser kan er geen maken",
         "needsPairedKey": "Een directe verbinding vraagt om een machine op je account, of om de Ruimte-app op deze machine",
         "timedOut": "De directe verbinding kwam niet binnen {{seconds}} seconden op",
-        "frameRefused": "De directe verbinding weigerde een frame: {{reason}}",
-        "answerNotApplied": "Het answer van de machine liet zich niet toepassen: {{reason}}",
+        "frameRefused": "De directe verbinding weigerde gegevens: {{reason}}",
+        "answerNotApplied": "Kon het antwoord van de machine niet gebruiken: {{reason}}",
         "refusedVerdict": "De machine weigerde de directe verbinding: {{reason}}",
         "setupFailed": "Een directe verbinding opzetten lukte niet: {{reason}}"
     },
     "lan": {
         "notProven": "De machine op dit adres in het lokale netwerk kon niet bewijzen dat ze deze machine is",
         "noKey": "Een verbinding op het lokale netwerk logt in met een key, en deze browser kan er geen maken",
-        "unsignedSignal": "Een signaal op het lokale netwerk noemt de machine, maar is niet door haar ondertekend",
-        "refused": "De deur van de machine op het lokale netwerk weigerde deze client: {{reason}}",
-        "failed": "Kon de deur van de machine op het lokale netwerk niet gebruiken: {{reason}}",
-        "unreachable": "De deur van de machine op het lokale netwerk was niet te bereiken"
+        "unsignedSignal": "Een verbinding op het lokale netwerk zegt van de machine te komen, maar is niet te controleren",
+        "refused": "De machine weigerde dit apparaat op het lokale netwerk: {{reason}}",
+        "failed": "Kon niet met de machine verbinden op het lokale netwerk: {{reason}}",
+        "unreachable": "Kon de machine niet bereiken op het lokale netwerk"
     },
     "route": {
-        "none": "Deze machine is niet verbonden met een broker, en deze client kent geen deur van haar op het lokale netwerk"
+        "none": "Kon deze machine niet bereiken via je account of op het lokale netwerk"
     },
     "connection": {
         "notConnected": "De machine is niet verbonden",
         "closedBeforeAnswer": "De verbinding sloot voordat de machine antwoordde",
-        "noMachine": "Er is geen machine gekozen. Log in en open een van je machines.",
+        "noMachine": "Geen machine gekozen. Log in en open er een.",
         "unknownMachine": "Deze machine is hier niet bekend",
         "openFailed": "Een verbinding openen lukte niet: {{reason}}",
-        "badReply": "Het antwoord op {{type}} past niet bij het contract",
+        "badReply": "De machine gaf een onverwacht antwoord op {{type}}. Update Ruimte aan beide kanten.",
         "noAddress": "Geen adres binnen {{seconds}} seconden",
         "noAnswer": "De machine antwoordde niet binnen {{seconds}} seconden",
         "timedOut": "De machine antwoordde niet binnen {{seconds}} seconden op {{type}}"
     },
     "file": {
         "tooLarge": "Dit bestand is {{size}} MB; over een directe verbinding laadt hoogstens {{max}} MB",
-        "emptyPiece": "De machine stuurde een leeg stuk vóór het einde van het bestand",
+        "emptyPiece": "Het bestand stopte met laden voor het einde. Probeer het opnieuw.",
         "changed": "Het bestand veranderde tijdens het laden"
     }
 }

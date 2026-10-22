@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, open, rm, utimes, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, open, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SPEECH_FILES, SpeechModel, validModelFile } from './speech-model';
@@ -81,7 +81,7 @@ test('a start reads only the model files that changed since their last full chec
     expect((await start()).state).toMatchObject({ enabled: true, phase: 'ready' });
     expect(checked).toEqual([]);
 
-    const later = new Date(Date.now() + 60_000);
+    const later = new Date((await stat(join(models, 'tokenizer.model'))).mtimeMs + 60_000);
     await utimes(join(models, 'tokenizer.model'), later, later);
     expect((await start()).state).toMatchObject({ enabled: true, phase: 'ready' });
     expect(checked).toEqual(['tokenizer.model']);

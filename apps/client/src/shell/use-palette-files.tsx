@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileIcon } from '@adecore/ui';
 import { createViewAction, ignoreRefusal, perform } from '@/actions/client-actions';
@@ -50,43 +50,36 @@ export function usePaletteFiles(context: PaletteContext, { skip, picking }: { sk
 
     /* A file row does what the palette was opened for: a node where the menu was clicked, a view of
        its own, or the preview tab every other route here means. */
-    const openFile = useCallback(
-        (path: string, line: number | null = null): void => {
-            if (folder === null) {
-                return;
-            }
-            const absolute = absoluteOf(folder, path);
-            if (filePick?.kind === 'node') {
-                void showFileOnCanvas(absolute, filePick.at);
-                return;
-            }
-            if (filePick?.kind === 'view') {
-                void createViewAction('file', { path: absolute });
-                return;
-            }
-            void perform('file.preview', { path: absolute, line }).catch(ignoreRefusal);
-        },
-        [filePick, folder]
-    );
+    const openFile = (path: string, line: number | null = null): void => {
+        if (folder === null) {
+            return;
+        }
+        const absolute = absoluteOf(folder, path);
+        if (filePick?.kind === 'node') {
+            void showFileOnCanvas(absolute, filePick.at);
+            return;
+        }
+        if (filePick?.kind === 'view') {
+            void createViewAction('file', { path: absolute });
+            return;
+        }
+        void perform('file.preview', { path: absolute, line }).catch(ignoreRefusal);
+    };
 
     /* What the last answer held stays out of a list it no longer belongs to; the effect above
        only fills it, so an empty query or a folder browse never shows yesterday's files. */
-    const files = useMemo<Entry[]>(
-        () =>
-            (query.trim() === '' && !picking ? [] : fileMatches).map((path) => {
-                const name = basenameOf(path);
-                return {
-                    id: `file-${path}`,
-                    label: name,
-                    // The folder the file sits in; a name on its own says too little in a deep tree.
-                    hint: path.slice(0, Math.max(path.length - name.length - 1, 0)) || undefined,
-                    icon: <FileIcon path={path} size={14} />,
-                    section: 'files' as const,
-                    run: () => openFile(path)
-                };
-            }),
-        [fileMatches, openFile, picking, query]
-    );
+    const files: Entry[] = (query.trim() === '' && !picking ? [] : fileMatches).map((path) => {
+        const name = basenameOf(path);
+        return {
+            id: `file-${path}`,
+            label: name,
+            // The folder the file sits in; a name on its own says too little in a deep tree.
+            hint: path.slice(0, Math.max(path.length - name.length - 1, 0)) || undefined,
+            icon: <FileIcon path={path} size={14} />,
+            section: 'files' as const,
+            run: () => openFile(path)
+        };
+    });
 
     const active = activeEntryOf(files, index);
     const run = (entry: Entry | undefined): void => {

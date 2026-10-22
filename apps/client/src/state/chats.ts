@@ -1,7 +1,7 @@
 import type { AgentStatus } from '@ruimte/contracts';
 import { chatSink, useChats, type ChatsById, type ChatSink, type ChatStatuses } from '@adecore/agents-react/state';
 import { nodeWork, type AgentWork } from '@/state/agent-work';
-import { endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
+import { endpointKey, useEndpointId, useEndpointOfNode } from '@/state/keys';
 import { nodeStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
 
 /* The sink of one daemon's chat client: it hands over node ids, this puts them under its machine. */
@@ -54,7 +54,7 @@ export function subscribeChatThreads(listener: () => void): () => void {
 /* One node's rows from both stores, subscribed to each, so a change in either re-renders. */
 function useNodeRows(node: StatusOf): [SessionsByKey, ChatStatuses, string] {
     const endpointId = useEndpointId();
-    const key = endpointKey(endpointOfNode(node, endpointId), node.id);
+    const key = endpointKey(useEndpointOfNode(node, endpointId), node.id);
     const session = useSessions((s) => s.byKey[key]);
     const chat = useChats((s) => s.statusByKey[key]);
     return [session ? { [key]: session } : {}, chat ? { [key]: chat } : {}, endpointId];

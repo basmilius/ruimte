@@ -1,4 +1,4 @@
-import type { GitDiffScope } from '@ruimte/contracts';
+import type { ChangeSplit, GitDiffScope } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { storedText } from '@/state/stored-json';
 
@@ -13,6 +13,12 @@ export const DEFAULT_COMMIT_TREE_WIDTH = 240;
 // A client's own, like the patch view: no project carries it, so no older release meets it in a file.
 const storedWorktreesOpen = storedText('ruimte.git.worktrees-open');
 
+export interface TabCounts {
+    added: number;
+    deleted: number;
+    split?: ChangeSplit;
+}
+
 interface GitStore {
     /* What a diff opens in, remembered per project so a branch review stays a branch review. */
     scope: GitDiffScope;
@@ -20,8 +26,8 @@ interface GitStore {
     collapsedDirs: string[];
     /* The repositories of the folder a person folded away, by label. */
     hiddenRepos: string[];
-    /* What the diff of a tab holds, keyed by that tab, so the strip can say it without reading again. */
-    counts: Record<string, { added: number; deleted: number }>;
+    /* What the diff of a tab holds, keyed by that tab, so the strip can say it without reading again; a diff of many files whose list is whole carries its split. */
+    counts: Record<string, TabCounts>;
     /* The file a commit tab shows, keyed by that tab, so switching tabs comes back to it. */
     commitFiles: Record<string, string>;
     /* Whole pixels the file tree of a commit tab takes, the same in every one of them for as long as the window stays. */
@@ -40,7 +46,7 @@ interface GitStore {
     setLogHeight(height: number): void;
     setMessage(key: string, message: string): void;
     clearMessage(key: string, version: number): void;
-    setCounts(key: string, counts: { added: number; deleted: number }): void;
+    setCounts(key: string, counts: TabCounts): void;
     setCommitFile(key: string, path: string): void;
     setCommitTreeWidth(width: number): void;
     setCollapsedDirs(dirs: string[]): void;

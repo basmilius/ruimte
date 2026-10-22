@@ -13,7 +13,7 @@ import { readFile } from '../fs/read.ts';
 import { planRename } from '../fs/rename.ts';
 import { revealInFileManager } from '../fs/reveal.ts';
 import { grepFiles } from '../fs/grep.ts';
-import { searchFiles } from '../fs/search.ts';
+import { listSearchableFiles, searchFiles } from '../fs/search.ts';
 import type { FolderWatcher } from '../fs/watch.ts';
 import { writeTextFile, type WriteBoundary } from '../fs/write.ts';
 
@@ -65,7 +65,11 @@ export function registerFsHandlers(
 
     dispatcher.register('fs.locate', async (payload) => {
         await machineHome.refuse(payload.cwd);
-        return locateFile(payload, { repos: (folder) => cachedRepos(folder), policy: await machineHome.policy() });
+        return locateFile(payload, {
+            repos: (folder) => cachedRepos(folder),
+            policy: await machineHome.policy(),
+            list: async (folder) => (await listSearchableFiles(folder)).files
+        });
     });
 
     dispatcher.register('fs.list', (payload) => listDirectory(payload.path, { depth: payload.depth, hidden: payload.hidden }));

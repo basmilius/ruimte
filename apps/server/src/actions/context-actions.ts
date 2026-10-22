@@ -63,10 +63,10 @@ export const contextActions: ActionHandlers<ServerActionContext> = {
         refuseOtherMachine(context.host, sourceId);
         const arranged = viewId == null ? null : await arrangedSource(context, actor.id, sourceId, viewId);
         if (arranged) {
-            return { output: { text: await store.answerSource(actor.id, arranged, tail ?? null, subagent ?? null) } };
+            return { output: await store.answerSource(actor.id, arranged, tail ?? null, subagent ?? null) };
         }
         try {
-            return { output: { text: await store.answer(actor.id, sourceId, tail ?? null, subagent ?? null) } };
+            return { output: await store.answer(actor.id, sourceId, tail ?? null, subagent ?? null) };
         } catch (e) {
             // A chat view has no lines, so an unlinked node is one whose canvas it did not name.
             const refusal = e instanceof CodedError && e.code === 'unknown-source' ? await chatViewRefusal(context, actor.id, sourceId) : null;

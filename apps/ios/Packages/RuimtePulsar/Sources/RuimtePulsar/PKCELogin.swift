@@ -13,10 +13,10 @@ public enum LoginError: Error, LocalizedError, Equatable, Sendable {
         switch self {
         case .invalidCallback: return String(localized: "The browser returned to an unexpected address. Try signing in again.", bundle: .module)
         case .wrongState: return String(localized: "The answer from the browser does not belong to this sign-in. Try again.", bundle: .module)
-        case .cancelled: return String(localized: "Signing in was canceled.", bundle: .module)
+        case .cancelled: return String(localized: "Sign-in canceled.", bundle: .module)
         case .missingCode: return String(localized: "The browser came back without a valid sign-in code. Try again.", bundle: .module)
-        case .provider(let code): return String(localized: "Signing in did not work (\(code)).", bundle: .module)
-        case .unavailable: return String(localized: "The sign-in browser could not open. Try again.", bundle: .module)
+        case .provider(let code): return String(localized: "Could not sign in (\(code)).", bundle: .module)
+        case .unavailable: return String(localized: "Could not open the sign-in browser. Try again.", bundle: .module)
         }
     }
 }

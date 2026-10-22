@@ -67,7 +67,7 @@ describe('restarting and erasing a device', () => {
         await clickOn(menuRow('Erase…'));
         await until(() => eraseDialog() !== null);
 
-        expect(eraseDialog()!.textContent).toContain('Every app, its data and the settings on iPhone 18 Pro are deleted');
+        expect(eraseDialog()!.textContent).toContain('Deletes every app, its data and the settings on iPhone 18 Pro');
         expect(lifecycle()).toEqual([]);
 
         await clickOn(dialogButton('Erase'));

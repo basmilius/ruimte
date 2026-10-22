@@ -43,7 +43,7 @@ function moveRow(): HTMLElement | undefined {
 }
 
 function makeProjectRow(): HTMLElement | undefined {
-    return ([...document.querySelectorAll('[role="menuitem"]')] as HTMLElement[]).find((item) => item.textContent?.includes('Make a project'));
+    return ([...document.querySelectorAll('[role="menuitem"]')] as HTMLElement[]).find((item) => item.textContent?.includes('Make project'));
 }
 
 async function openViewMenu(viewId: string): Promise<void> {
@@ -66,10 +66,10 @@ describe('moving a chat out of Chats, from its view menu', () => {
         await setChatStatus('idle');
         await openViewMenu(WRITTEN.id);
         await openSubmenu('Move to project');
-        expect(menuLabels()).toEqual(expect.arrayContaining([expect.stringContaining('Make a project…'), expect.stringContaining('Other project…')]));
+        expect(menuLabels()).toEqual(expect.arrayContaining([expect.stringContaining('Make project…'), expect.stringContaining('Other project…')]));
     });
 
-    test('"Make a project…" asks for the dialog on this chat with no project picked', async () => {
+    test('"Make project…" asks for the dialog on this chat with no project picked', async () => {
         await open({ scratch: true });
         await setChatStatus('idle');
         await openViewMenu(WRITTEN.id);
@@ -123,7 +123,7 @@ describe('moving a chat out of Chats, from its view menu', () => {
             await setChatStatus('idle');
             await openPalette();
             expect(paletteLabels()).toEqual(
-                expect.arrayContaining([expect.stringContaining('Make a project from this chat'), expect.stringContaining('Move this chat to a project')])
+                expect.arrayContaining([expect.stringContaining('Make project from chat'), expect.stringContaining('Move chat to project')])
             );
         });
 
@@ -138,7 +138,7 @@ describe('moving a chat out of Chats, from its view menu', () => {
             );
             await setChatStatus('needs-you', { activeTurnId: null });
             await openPalette();
-            expect(paletteLabels().some((label) => label.includes('Make a project'))).toBe(true);
+            expect(paletteLabels().some((label) => label.includes('Make project'))).toBe(true);
             await act(async () => useProposals.getState().forget('fake-machine'));
         });
 
@@ -146,7 +146,7 @@ describe('moving a chat out of Chats, from its view menu', () => {
             await open({ scratch: true });
             await setChatStatus('running');
             await openPalette();
-            expect(paletteLabels().some((label) => label.includes('Make a project'))).toBe(false);
+            expect(paletteLabels().some((label) => label.includes('Make project'))).toBe(false);
         });
     });
 
@@ -164,7 +164,7 @@ describe('moving a chat out of Chats, from its view menu', () => {
     test('a chat in a project offers neither', async () => {
         await open({});
         await openViewMenu(WRITTEN.id);
-        expect(menuLabels().some((label) => label.includes('Make a project'))).toBe(false);
+        expect(menuLabels().some((label) => label.includes('Make project'))).toBe(false);
     });
 
     test('a machine that does not answer chat.move offers neither', async () => {
@@ -173,6 +173,6 @@ describe('moving a chat out of Chats, from its view menu', () => {
             (Object.keys(REQUEST_SCHEMAS) as RequestType[]).filter((type) => type !== 'chat.move')
         );
         await openViewMenu(WRITTEN.id);
-        expect(menuLabels().some((label) => label.includes('Make a project'))).toBe(false);
+        expect(menuLabels().some((label) => label.includes('Make project'))).toBe(false);
     });
 });

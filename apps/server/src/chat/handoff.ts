@@ -3,9 +3,23 @@ import { renderTranscript } from '../context/context-store.ts';
 
 /*
  * How much of the conversation a new CLI reads as text before its first prompt. It is the dearest
- * part of that prompt, so it is a constant here and not a setting; the rest is one read away.
+ * part of that prompt, so it is computed here and never a setting; the rest is one read away.
+ * A larger window takes a share of itself, between the floor and the ceiling.
  */
-export const HANDOFF_BUDGET_BYTES = 12 * 1024;
+export const HANDOFF_FLOOR_BYTES = 12 * 1024;
+export const HANDOFF_CEILING_BYTES = 64 * 1024;
+const HANDOFF_WINDOW_SHARE = 0.025;
+// A rough average for English text and code; the budget only needs the order of magnitude.
+const BYTES_PER_TOKEN = 4;
+
+/* The handoff budget for a model with this context window in tokens; null when its window is unknown. */
+export function handoffBudget(contextWindow: number | null | undefined): number {
+    if (contextWindow === null || contextWindow === undefined || !Number.isFinite(contextWindow) || contextWindow <= 0) {
+        return HANDOFF_FLOOR_BYTES;
+    }
+    const share = Math.floor(contextWindow * HANDOFF_WINDOW_SHARE * BYTES_PER_TOKEN);
+    return Math.min(HANDOFF_CEILING_BYTES, Math.max(HANDOFF_FLOOR_BYTES, share));
+}
 
 const encoder = new TextEncoder();
 
@@ -54,7 +68,7 @@ function turnsOf(items: readonly ChatItem[]): ChatItem[][] {
  * and its last whole turns as text, added from the newest back until the budget is spent. The last
  * turn always goes along, however long it is, since a handoff without it has nothing to go on from.
  */
-export function handoffText(items: readonly ChatItem[], meta: HandoffMeta, budget = HANDOFF_BUDGET_BYTES): { text: string; turns: number; all: boolean } {
+export function handoffText(items: readonly ChatItem[], meta: HandoffMeta, budget = HANDOFF_FLOOR_BYTES): { text: string; turns: number; all: boolean } {
     const rendered = turnsOf(items)
         .map((turn) => renderTranscript(turn))
         .filter((text) => text !== '');

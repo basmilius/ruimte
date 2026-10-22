@@ -1,5 +1,5 @@
 import { ACTION_DEFINITIONS, VOICE_CONTROL_TOOL, type ActionCall, type ActionName, type ActionResult, type VoiceToolDefinition } from '@ruimte/actions';
-import { voiceReplyOf } from '@ruimte/voice';
+import { voiceReplyOf, type VoiceReplyWords } from '@ruimte/voice';
 import type { VoicePolicy } from './action-policy.ts';
 
 export type VoiceToolOutput = Record<string, unknown>;
@@ -49,7 +49,7 @@ const CONFIRMATION_MEMORY = 32;
 const UNCODED_FAILURE = 'action-failed';
 
 /* The words of a reply only reach the model, so they stay English; the timeline takes its label from the catalog. */
-const REPLY_WORDS = { activity: () => '', machine: (endpointId: string) => endpointId };
+const REPLY_WORDS: VoiceReplyWords = { activity: () => '', machine: (endpointId) => endpointId, color: (accent) => accent ?? '' };
 
 function refused(code: string, message: string): VoiceToolOutput {
     return { ok: false, code, message };

@@ -732,7 +732,7 @@ struct ProjectItemPage: View {
         case "browser":
             if current["browserOwner"] != nil {
                 ContentUnavailableView {
-                    Label("Browser owner unavailable", systemImage: "network.slash")
+                    Label("The project's machine cannot be reached", systemImage: "network.slash")
                 } description: {
                     Text("Open this browser in Ruimte on the machine running the session.")
                 }

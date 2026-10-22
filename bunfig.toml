@@ -5,4 +5,7 @@ pathIgnorePatterns = ["**/*.integration.test.ts", "**/*.dom.test.tsx", "**/docs/
 # The client's English words, so a pure function that reads one off i18next is testable
 # without every test file initializing it first. The dedupe preload goes first and by path,
 # since the root has no copy of the library under the isolated install.
+# No React Compiler here: a unit test renders once, to static markup, where its memoizing cannot
+# show, and Babel in every isolated test file made the run many times slower. The DOM run
+# (`dom.bunfig.toml`) and the browser suite test the compiled client.
 preload = ["./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts", "./apps/client/test-preload.ts"]

@@ -87,6 +87,53 @@ describe('ruimte status', () => {
         );
     });
 
+    test('the reach check says how others reach it, each server that was asked, and what to do', () => {
+        const reach: NonNullable<MachineStatus['reach']> = {
+            checkedAt: Date.UTC(2026, 9, 21, 9, 30),
+            cause: 'vpn-blocks-udp',
+            severity: 'relayed',
+            facts: {
+                broker: { url: 'wss://broker.ruimte.app', connected: true },
+                granted: true,
+                probes: [
+                    { kind: 'stun', url: 'stun:turn.ruimte.app:3478', transport: 'udp', outcome: 'unreachable', error: 'No answer in time' },
+                    { kind: 'turn', url: 'turns:turn.ruimte.app:5349', transport: 'tls', outcome: 'ok' }
+                ],
+                lanDoor: { wanted: true, listening: true, port: 4220, addresses: 2 },
+                tunnel: 'utun4'
+            }
+        };
+        expect(statusLines({ ...STATUS, reach }, 4210).slice(5)).toEqual([
+            'Reach     reachable through the relay only, checked 2026-10-21T09:30:00.000Z',
+            'Route     through utun4, a VPN or an exit node',
+            '          STUN UDP stun:turn.ruimte.app:3478: no answer (No answer in time)',
+            '          TURN TLS turns:turn.ruimte.app:5349: answers',
+            '',
+            'Traffic leaves through utun4, a VPN or exit node that drops UDP, so connections only work through the relay over TCP.',
+            'Let Ruimte bypass the VPN (split tunneling), turn off the exit node, or allow UDP through it.'
+        ]);
+    });
+
+    test('--json prints the answer whole and --check asks for a fresh check', async () => {
+        const asked: string[] = [];
+        const out: string[] = [];
+        const code = await runStatus({
+            port: 4210,
+            home: '/home/ruimte/.ruimte',
+            readSecret: async () => 'secret',
+            fetch: async (input) => {
+                asked.push(input);
+                return Response.json({ ...STATUS, reach: null });
+            },
+            out: (line) => out.push(line),
+            json: true,
+            check: true
+        });
+        expect(code).toBe(0);
+        expect(asked).toEqual(['http://127.0.0.1:4210/machine/status?check=1']);
+        expect(JSON.parse(out.join('\n'))).toEqual({ ...STATUS, reach: null });
+    });
+
     test('no home, no daemon, another home or an older daemon ends with 1 and a sentence', async () => {
         const out: string[] = [];
         const err: string[] = [];

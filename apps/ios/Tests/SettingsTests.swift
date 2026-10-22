@@ -274,7 +274,7 @@ private actor FakeAccountAPI: AccountAPI {
         let agents = MachineAgentsModel.agents(providers: providers, accounts: accounts)
         XCTAssertEqual(agents.map(\.kind), ["claude"])
         XCTAssertEqual(agents[0].models.map { $0.text("slug") }, ["opus"])
-        XCTAssertEqual(agents[0].accounts.map(\.detail), ["Max · bas@example.com", "Signed out"])
+        XCTAssertEqual(agents[0].accounts.map(\.detail), ["Max · bas@example.com", "Not logged in"])
         XCTAssertEqual(agents[0].accounts.map(\.name), ["Claude Code", "Work"])
         XCTAssertTrue(agents[0].accounts[1].signedOut)
     }

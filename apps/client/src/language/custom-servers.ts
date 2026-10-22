@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import type { CustomLanguageServer, CustomLanguageServerInput, LanguageCustomCheckResult } from '@ruimte/contracts';
 import type { Transport } from '@/transport/transport';
 
@@ -79,6 +79,6 @@ export class CustomServersTracker {
 }
 
 export function useCustomServers(tracker: CustomServersTracker): readonly CustomLanguageServer[] | null {
-    const subscribe = useCallback((listener: () => void) => tracker.subscribe(listener), [tracker]);
+    const subscribe = (listener: () => void) => tracker.subscribe(listener);
     return useSyncExternalStore(subscribe, () => tracker.getSnapshot());
 }

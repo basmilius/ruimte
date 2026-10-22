@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
@@ -27,17 +27,15 @@ function GroupCard({ group, footer }: { group: ShortcutGroup; footer?: ReactNode
 
 /* The shortcut categories beside the shortcuts of the one picked; a search looks through every category at once. */
 export function KeyboardPane() {
-    const { t, i18n } = useTranslation('settings');
+    const { t } = useTranslation('settings');
     const target = useUi((s) => s.settings.target);
     const [query, setQuery] = useState('');
     const [picked, setPicked] = useState<string | null>(() => (target === null ? null : shortcutGroupOf(target)));
     const apple = isApplePlatform();
-    // The command list depends on canvas state (layouts, locks), so it is read once per pane visit.
-    // The language is a dependency the linter cannot see. Both lists read their words off i18next.
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
-    const groups = useMemo(() => keyboardGroups(apple).filter((group) => group.shortcuts.length > 0), [apple, i18n.language]);
+    // The command list depends on canvas state (layouts, locks) the compiler cannot see, so it is read once per pane visit.
+    const groups = keyboardGroups(apple).filter((group) => group.shortcuts.length > 0);
     const searching = query.trim() !== '';
-    const visible = useMemo(() => filterShortcuts(groups, query, apple), [groups, query, apple]);
+    const visible = filterShortcuts(groups, query, apple);
     const current = groups.find((group) => group.id === picked) ?? groups[0] ?? null;
 
     // A search result leads to the category of its row, out of a search of the pane's own.

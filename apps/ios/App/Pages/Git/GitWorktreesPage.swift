@@ -206,7 +206,7 @@ struct GitWorktreeOutcomeSection: View {
                 }
                 Button("Dismiss") { state.outcome = nil }
             } header: {
-                Text("Merging \(request.worktree.branch) failed")
+                Text("Could not merge \(request.worktree.branch)")
             }
         }
     }
@@ -292,10 +292,10 @@ struct GitWorktreeMergeSheet: View {
                 }
                 if worktree.hasLooseWork {
                     Section {
-                        Toggle("Commit the uncommitted files first", isOn: $commitFirst)
+                        Toggle("Commit uncommitted files first", isOn: $commitFirst)
                     } footer: {
                         if !commitFirst {
-                            Text("Without that commit the merge would leave half of the work behind.")
+                            Text("Otherwise the merge leaves that work behind.")
                         }
                     }
                 }

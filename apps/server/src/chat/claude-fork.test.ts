@@ -137,7 +137,7 @@ describe('forkClaudeTranscript', () => {
         expect(await Bun.file(written.path).exists()).toBe(false);
     });
 
-    test('a session with no transcript anywhere is refused with the path it was looked for at', async () => {
+    test('a session with no transcript anywhere is refused', async () => {
         const attempt = forkClaudeTranscript({
             projectsDir: projects,
             cwd: '/work/lexer',
@@ -146,6 +146,6 @@ describe('forkClaudeTranscript', () => {
             forkCwd: '/work/lexer',
             newSessionId: FORK
         });
-        await expect(attempt).rejects.toMatchObject({ code: 'transcript-missing', message: expect.stringContaining(claudeProjectSlug('/work/lexer')) });
+        await expect(attempt).rejects.toMatchObject({ code: 'transcript-missing', message: 'Claude Code no longer has this conversation' });
     });
 });

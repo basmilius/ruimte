@@ -56,6 +56,12 @@ const localMachineBridge = {
     }
 } satisfies Pick<DesktopBridge, 'localSecret' | 'takeStartupMs' | 'backgroundService'>;
 
+/* Quick Look reads the folder a project has on this disk, so only a shell with a machine of its own offers it. */
+const quickLookBridge = {
+    previewFile: (path: string): Promise<boolean> => ipcRenderer.invoke('quick-look:show', path),
+    closeFilePreview: (): void => ipcRenderer.send('quick-look:close')
+} satisfies Pick<DesktopBridge, 'previewFile' | 'closeFilePreview'>;
+
 /* What the client may ask the shell for, checked against the type the client reads it through. */
 const bridge = {
     platform: process.platform,
@@ -214,6 +220,7 @@ const bridge = {
         choose: (mode: 'local' | 'none'): Promise<void> => ipcRenderer.invoke('machine:choose', mode)
     },
     ...(machineMode === 'local' ? localMachineBridge : {}),
+    ...(machineMode === 'local' && process.platform === 'darwin' ? quickLookBridge : {}),
     pulsar: {
         addressBook: (): Promise<string> => ipcRenderer.invoke('pulsar:address-book'),
         listen: (): Promise<{ redirectUri: string }> => ipcRenderer.invoke('pulsar:login-listen'),

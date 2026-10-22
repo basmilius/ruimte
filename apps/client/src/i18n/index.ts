@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { AGENTS_LOCALES, AGENTS_NAMESPACES } from '@adecore/agents-react/locales';
 import { UI_NAMESPACE } from '@adecore/ui';
+import { forgetMemoizedWords } from '@/compiler-runtime';
 import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';
 import { FALLBACK_LANGUAGE, type AppLanguage } from '@/i18n/languages';
@@ -62,6 +63,8 @@ function markDocument(language: string): void {
    for and then swapped under them. */
 export async function initI18n(): Promise<void> {
     const language = activeLanguage();
+    // Ahead of every `useTranslation`, so the redraw a change causes already finds the caches emptied.
+    i18next.on('languageChanged', forgetMemoizedWords);
     await i18next.use(initReactI18next).init({
         lng: language,
         fallbackLng: FALLBACK_LANGUAGE,

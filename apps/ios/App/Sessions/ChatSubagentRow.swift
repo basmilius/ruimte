@@ -34,7 +34,7 @@ struct ChatSubagentRow: View {
             if expanded {
                 VStack(alignment: .leading, spacing: 8) {
                     if item.itemsTruncated {
-                        Text("Only the beginning of this agent's work is kept.").font(.caption).foregroundStyle(
+                        Text("Only the start is kept.").font(.caption).foregroundStyle(
                             MobileStyle.muted)
                     }
                     if children.isEmpty {

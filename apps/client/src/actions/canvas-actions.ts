@@ -1,6 +1,17 @@
 import i18next from 'i18next';
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
-import { clipText, isCanvasView, isDiagramView, isDrawingView, isSessionView, isUnknownNode, type ProjectNode, type ProviderInfo } from '@ruimte/contracts';
+import {
+    clipText,
+    isCanvasView,
+    isDiagramView,
+    isDrawingView,
+    isSessionView,
+    isUnknownNode,
+    nodeColorOf,
+    nodeColorPatch,
+    type ProjectNode,
+    type ProviderInfo
+} from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { agentNodeOptions } from '@/agents/nodes';
 import { LOCK_KEYS } from '@/canvas/locks';
@@ -144,6 +155,34 @@ export function canvasActions(document: StoreApi<DocumentState>, reach: CanvasRe
                           }
                       }
                     : {})
+            };
+        },
+        'node.setColor': ({ viewId, nodeId, color }) => {
+            const { canvas } = canvasOnScreen(document, viewId);
+            const node = canvas.nodes[nodeId];
+            if (!node || isUnknownNode(node)) {
+                throw new ActionRefusal('unknown-node', `No node with id “${nodeId}” exists on this canvas to color.`);
+            }
+            const patch = nodeColorPatch(node, color);
+            // A note that already shows the color still changes when an old paper goes, so the file says what it shows.
+            const changed = node.accent !== patch.accent || ('color' in patch && node.color !== undefined);
+            const output = { viewId, nodeId, kind: node.kind, color, previousColor: nodeColorOf(node), changed };
+            if (!changed) {
+                return { output };
+            }
+            const colorAfter = 'color' in patch ? undefined : node.color;
+            const depth = canvas.past.length;
+            canvas.setNodeColor(nodeId, color);
+            return {
+                output,
+                undo: () => {
+                    const current: CanvasState | null = liveCanvas(viewId);
+                    const now = current?.nodes[nodeId];
+                    if (current === null || now === undefined || current.past.length !== depth + 1 || now.accent !== patch.accent || now.color !== colorAfter) {
+                        throw new ActionRefusal('stale-undo', 'The canvas changed after the node was colored, so it cannot be safely undone here.');
+                    }
+                    current.undo();
+                }
             };
         },
         'node.create': ({ viewId, kind, title, content, url, browserOwner, command, path, provider, account, at, cwd, resume, issue }) => {

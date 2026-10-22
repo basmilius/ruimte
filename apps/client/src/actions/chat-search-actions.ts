@@ -25,7 +25,7 @@ export function chatSearchActions(overrides: Partial<ChatSearchMachine> = {}): A
     const reach = (): { transport: Requester; projectId: string } => {
         const transport = machine.transport();
         if (transport === null) {
-            throw new ActionRefusal('no-machine', 'The machine this project runs on is not connected.');
+            throw new ActionRefusal('no-machine', "This project's machine is not connected.");
         }
         const projectId = machine.projectId();
         if (projectId === null) {

@@ -144,7 +144,7 @@ struct UiMapView: View {
             .accessibilityElement(children: .contain)
             .accessibilityLabel(String(localized: "Map of \(places.count) places"))
             if node.omitted > 0 {
-                Text("\(node.omitted) more places are not shown").font(.caption).foregroundStyle(MobileStyle.faint)
+                Text("\(node.omitted) more places not shown").font(.caption).foregroundStyle(MobileStyle.faint)
             }
             ForEach(node.children.filter { $0.type == "Place" && $0.error != nil }) { refused in
                 UiNodeView(node: refused, parent: node.type, context: context)
@@ -159,7 +159,7 @@ struct UiMapView: View {
     /// Why the base map is not there, or nil when it is.
     static func note(tiles: Bool, online: Bool) -> String? {
         if !tiles { return String(localized: "Map tiles are off.") }
-        if !online { return String(localized: "Map tiles are not available offline. The places stay listed.") }
+        if !online { return String(localized: "No map tiles offline. The places stay listed.") }
         return nil
     }
 

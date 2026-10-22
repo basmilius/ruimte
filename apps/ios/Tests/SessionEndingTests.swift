@@ -35,7 +35,7 @@ final class SessionEndingTests: XCTestCase {
             SessionEnding.warning(chats: 2, terminals: 2, agents: 1),
             "Its 2 chats end on this machine, and their conversations are gone. "
                 + "Its 2 terminals end on this machine, with everything running in them. "
-                + "Also ends the agent it opened. Its node stays on the canvas with what it did so far.")
+                + "Also ends the agent it opened. Its node and work so far stay on the canvas.")
     }
 
     @MainActor func testTheQuestionCountsTheAgentsOfEveryGoingSessionOnce() async {
@@ -47,7 +47,7 @@ final class SessionEndingTests: XCTestCase {
             question.warning,
             "The chat ends on this machine, and its conversation is gone. "
                 + "The terminal ends on this machine, with everything running in it. "
-                + "Also ends the agent it opened. Its node stays on the canvas with what it did so far.")
+                + "Also ends the agent it opened. Its node and work so far stay on the canvas.")
         XCTAssertEqual(machine.asked, ["n1", "n2"])
     }
 

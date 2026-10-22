@@ -1,6 +1,7 @@
 import { useRef, useSyncExternalStore } from 'react';
 import { isCanvasView, isHiddenCanvasView, isSessionView, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { defaultCanvases, liveCanvas, subscribeCanvases, type CanvasNode } from '@/state/canvas';
+import { shallow } from 'zustand/shallow';
 import { useDocument } from '@/state/document';
 import type { StatusOf } from '@/state/sessions';
 
@@ -53,10 +54,21 @@ export function nodeRefsOfView(view: ProjectView): readonly ProjectNodeRef[] {
  * out: they are that machine's to show, and nothing here could open a view for them.
  */
 export function projectNodes(): ProjectNodeRef[] {
-    return useDocument
-        .getState()
-        .views.filter((view) => !isHiddenCanvasView(view))
-        .flatMap(nodeRefsOfView);
+    return projectNodesIn(useDocument.getState().views);
+}
+
+/* The same nodes for a render, again whenever one comes, goes or changes on any canvas on screen or in the document. */
+export function useProjectNodes(): readonly ProjectNodeRef[] {
+    return useViewNodes(projectNodesIn, sameNodeRefs);
+}
+
+function projectNodesIn(views: readonly ProjectView[]): ProjectNodeRef[] {
+    return views.filter((view) => !isHiddenCanvasView(view)).flatMap(nodeRefsOfView);
+}
+
+// A standalone view's ref is a new object on every read, so the list is the same when every ref holds the same fields.
+function sameNodeRefs(before: readonly ProjectNodeRef[], next: readonly ProjectNodeRef[]): boolean {
+    return before.length === next.length && before.every((ref, i) => shallow(ref, next[i]));
 }
 
 export function subscribeViewNodes(listener: () => void): () => void {

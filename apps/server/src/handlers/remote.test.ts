@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -28,10 +28,11 @@ let binding: { id: string; since: number } | null | undefined;
 const PEER_KEY = 'P'.repeat(43);
 const MACHINE_KEY = 'A'.repeat(43);
 const addressBook = generateKeyPair();
+const NOW = Date.UTC(2026, 9, 1);
 
 // What the address book signs for machine a to work in machine b, with the fields a test wants changed.
 function statementFor(patch: Record<string, unknown> = {}, signer = addressBook): Record<string, unknown> {
-    const issuedAt = Date.now();
+    const issuedAt = NOW;
     const fields = {
         machineId: 'machine-b',
         machinePublicKey: 'B'.repeat(43),
@@ -76,6 +77,7 @@ function statementFor(patch: Record<string, unknown> = {}, signer = addressBook)
 const LINK = { machineId: 'machine-b', remoteProjectId: 'remote-1', label: 'MacBook Pro', rootCommit: 'abc123' };
 
 beforeEach(async () => {
+    setSystemTime(NOW);
     root = await mkdtemp(join(tmpdir(), 'ruimte-remote-handlers-'));
     const folder = join(root, 'repo');
     await mkdir(folder);
@@ -108,12 +110,13 @@ beforeEach(async () => {
         lapse: async (machineId) => {
             lapsed.push(machineId);
         },
-        now: () => Date.now()
+        now: () => NOW
     });
     projectId = (await store.openProject({ folder })).summary.projectId;
 });
 
 afterEach(async () => {
+    setSystemTime();
     store.closeAll();
     await rm(root, { recursive: true, force: true });
 });

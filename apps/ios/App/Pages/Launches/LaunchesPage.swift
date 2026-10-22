@@ -49,7 +49,7 @@ struct LaunchesPage: View {
             ToolbarItem(placement: .topBarLeading) {
                 Menu {
                     Button(String(localized: "New launch"), lucideIcon: "plus") { sheet = .edit(nil) }
-                    Button(String(localized: "Find in this project…"), lucideIcon: "search") { sheet = .importing }
+                    Button(String(localized: "Find in project…"), lucideIcon: "search") { sheet = .importing }
                     if store.anyLive {
                         Button(String(localized: "Stop all"), lucideIcon: "square", role: .destructive) {
                             Task { await store.stopAll() }
@@ -86,7 +86,7 @@ struct LaunchesPage: View {
         } message: { launch in
             Text(
                 launch.shared
-                    ? "It goes from .ruimte/launches.json, for everyone who shares the project."
+                    ? "It goes from the project file, for everyone who shares the project."
                     : "It goes from the launches only you have on this machine.")
         }
     }
@@ -95,7 +95,7 @@ struct LaunchesPage: View {
         if let document = store.document {
             if document.launches.isEmpty {
                 ContentUnavailableView {
-                    Label(String(localized: "No launches in this project yet."), lucideIcon: "rocket", iconSize: 48)
+                    Label(String(localized: "No launches yet."), lucideIcon: "rocket", iconSize: 48)
                 } actions: {
                     Button("New launch") { sheet = .edit(nil) }
                 }
@@ -113,7 +113,7 @@ struct LaunchesPage: View {
                 }
                 if let held = document.launches.first(where: { views[$0.id]?.phase == .held }) {
                     Text(
-                        "\(held.name) comes from .ruimte/launches.json. Nothing from it runs on this machine until you approve it."
+                        "\(held.name) comes from the project file. It runs on this machine only after you approve it."
                     )
                     .font(.caption).foregroundStyle(MobileStyle.muted)
                 }
@@ -127,7 +127,7 @@ struct LaunchesPage: View {
     /// What the machine finds in the project that is no launch yet, so the next ones need no typing.
     @ViewBuilder private var foundSection: some View {
         if let found, !LaunchEditing.foundRows(found).isEmpty {
-            Section("Found in this project") {
+            Section("Found in project") {
                 ForEach(LaunchEditing.foundRows(found), id: \.id) { row in
                     Button {
                         sheet = .importing
@@ -156,7 +156,7 @@ struct LaunchesPage: View {
                         HStack(spacing: 6) {
                             Text(launch.name).fontWeight(.medium).lineLimit(1)
                             Image(lucide: launch.shared ? "users" : "lock", size: 12).foregroundStyle(MobileStyle.faint)
-                                .accessibilityLabel(launch.shared ? "Shared with the team" : "Only on this machine")
+                                .accessibilityLabel(launch.shared ? "Shared with team" : "Only on this machine")
                         }
                         if let command = launch.command, !command.isEmpty {
                             Text(command).font(.caption.monospaced()).foregroundStyle(MobileStyle.muted)
@@ -360,7 +360,7 @@ struct LaunchAskModifier: ViewModifier {
             } message: {
                 if let busy {
                     Text(
-                        "\(store.name(busy.holder)) uses port \(busy.port). Stop it and launch \(store.name(busy.launchID))?"
+                        "Stop \(store.name(busy.holder)) and launch \(store.name(busy.launchID))?"
                     )
                 }
             }
@@ -378,7 +378,7 @@ struct LaunchApprovalSheet: View {
         NavigationStack {
             MobileList {
                 Text(
-                    "This launch comes from .ruimte/launches.json. Nothing from it runs on this machine until you approve it here."
+                    "This launch comes from the project file. It runs on this machine only after you approve it."
                 )
                 .foregroundStyle(MobileStyle.muted)
                 ForEach(held) { entry in

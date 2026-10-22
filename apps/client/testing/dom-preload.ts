@@ -1,4 +1,5 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
+import { compileReactSourcesAhead } from './react-compiler-transform';
 
 /*
  * The page for `*.dom.test.tsx`, which run through `bun run test:dom` (`dom.bunfig.toml`) and never in the
@@ -15,3 +16,6 @@ Bun.plugin({
         build.onLoad({ filter: /.*/, namespace: 'vite-worker' }, () => ({ contents: 'export default class {}', loader: 'js' }));
     }
 });
+
+// A test that draws the window would otherwise compile the views it opens lazily within its own timeout.
+await compileReactSourcesAhead();

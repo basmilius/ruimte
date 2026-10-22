@@ -31,11 +31,11 @@ struct GeneratedImageRow: View {
     private static func reason(_ failure: UiGeneratedImage.Failure) -> String? {
         switch failure {
         case .provider(let message): message
-        case .empty: String(localized: "The image came back empty")
-        case .notImage: String(localized: "The result is not an image")
+        case .empty: String(localized: "Image is empty")
+        case .notImage: String(localized: "Not an image")
         case .tooLarge:
             String(
-                localized: "The image is larger than \(mobileByteCount(Double(UiGeneratedImage.maxBytes), whole: true))"
+                localized: "Larger than \(mobileByteCount(Double(UiGeneratedImage.maxBytes), whole: true))"
             )
         }
     }
@@ -73,7 +73,7 @@ private struct GeneratedImageFailure: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             GeneratedImageHeader(
-                icon: "circle-alert", title: String(localized: "Image generation failed"), detail: nil, failed: true)
+                icon: "circle-alert", title: String(localized: "Could not generate image"), detail: nil, failed: true)
             if let reason {
                 Button {
                     open.toggle()

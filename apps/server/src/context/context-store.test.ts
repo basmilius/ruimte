@@ -4,6 +4,7 @@ import type { ChatItem, ChatWorkflowAgent, ContextSource, DeviceInfo, DiagramDoc
 import type { CanvasHost } from '../canvas/verb.ts';
 import { handleContextRequest } from './context-route.ts';
 import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
+import type { ChatUsageInfo } from './chat-usage.ts';
 import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 
 /* The route in front of a store, for a caller no project places: `list` and `read` never ask where it stands. */
@@ -111,7 +112,7 @@ const get = route(store);
 describe('ContextStore', () => {
     test('a source handed over with no line is read like a linked one, and one with nothing in it says so', async () => {
         linked.set('viewer', []);
-        expect(await store.answerSource('viewer', { id: 'term', kind: 'terminal', title: 'dev server' }, 1, null)).toBe('line 2499');
+        expect(await store.answerSource('viewer', { id: 'term', kind: 'terminal', title: 'dev server' }, 1, null)).toEqual({ text: 'line 2499' });
         await expect(store.answerSource('viewer', { id: 'gone', kind: 'terminal', title: 'old' }, null, null)).rejects.toMatchObject({
             code: 'unreadable',
             message: 'gone is there, but there is nothing to read in it right now'
@@ -298,6 +299,59 @@ describe('ContextStore', () => {
         expect(store.has('agent')).toBe(false);
         expect(store.list('agent')).toEqual([]);
         expect(store.has('stranger')).toBe(false);
+    });
+});
+
+describe('a chat read with its usage', () => {
+    const NOW = Date.UTC(2026, 9, 22, 10, 0, 0);
+    const info: ChatUsageInfo = {
+        provider: 'claude',
+        model: 'claude-opus-4-5',
+        selection: { model: 'opus', options: {} },
+        usage: { contextTokens: 50_000, contextWindow: 200_000, costUsd: 0.4, turns: 3, cacheTtlMs: 300_000, cacheExpiresAt: NOW + 252_000 }
+    };
+    const withUsage = new ContextStore({
+        sources: () => [
+            { id: 'chat', kind: 'chat', title: 'Child' },
+            { id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' }
+        ],
+        terminalText: async () => null,
+        chatItems: (id) => (id === 'chat' ? items : null),
+        chatInfo: (id) => (id === 'chat' ? info : null),
+        subagentItems: async () => items,
+        now: () => NOW,
+        drawingElements: async () => null,
+        diagramDocument: async () => null
+    });
+
+    test('starts with one line of model, context and prompt cache, and a tail keeps it', async () => {
+        const line =
+            '> Usage: claude claude-opus-4-5, context 50000 of 200000 tokens (25%), prompt cache warm for 4m 12s more (until 2026-10-22T10:04:12.000Z, lifetime 5m 0s)';
+        expect(await withUsage.read('agent', 'chat')).toBe(`${line}\n\n${renderTranscript(items)}`);
+        expect(await withUsage.read('agent', 'chat', 1)).toBe(`${line}\n\nDone.`);
+    });
+
+    test('answers the same numbers beside the text, and none for a subagent or another kind', async () => {
+        const reading = await withUsage.answer('agent', 'chat', null, null);
+        expect(reading.usage).toEqual({
+            provider: 'claude',
+            model: 'claude-opus-4-5',
+            contextTokens: 50_000,
+            contextWindow: 200_000,
+            contextPercent: 25,
+            cache: { ttlMs: 300_000, expiresAt: '2026-10-22T10:04:12.000Z', expiresInMs: 252_000, expired: false }
+        });
+        expect((await withUsage.answer('agent', 'chat', null, 'toolu_1')).usage).toBeUndefined();
+        expect(await withUsage.answer('agent', 'note', null, null)).toEqual({ text: 'ship it' });
+    });
+
+    test('the HTTP face answers JSON when asked, and text otherwise', async () => {
+        const json = await route(withUsage)('/context/chat?tail=1&json', 'tok');
+        expect(json.headers.get('content-type')).toStartWith('application/json');
+        const body = (await json.json()) as { text: string; usage: { contextPercent: number } };
+        expect(body.text).toEndWith('\n\nDone.');
+        expect(body.usage.contextPercent).toBe(25);
+        expect(await (await route(withUsage)('/context/note', 'tok')).text()).toBe('ship it');
     });
 });
 

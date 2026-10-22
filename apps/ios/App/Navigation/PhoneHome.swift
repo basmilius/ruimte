@@ -113,7 +113,7 @@ struct PhoneHome: View {
         if router.tab == .machines {
             ToolbarItem(id: "machines.add", placement: .topBarTrailing) {
                 Button(action: addMachine) {
-                    Image(lucide: "plus").accessibilityLabel("Add a machine")
+                    Image(lucide: "plus").accessibilityLabel("Add machine")
                 }
             }
         }

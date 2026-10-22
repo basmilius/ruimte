@@ -1,6 +1,5 @@
 import type { Connection } from '@adecore/database';
 import i18next from 'i18next';
-import { useMemo } from 'react';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import {
     isAbsolutePath,
@@ -477,7 +476,7 @@ export function useDatabaseConnectionList(): DatabaseConnection[] {
 export function useWithheldPasswords(): Readonly<Record<string, WithheldPassword>> {
     const connections = useDatabaseConnectionList();
     const passwords = useDatabaseConnections((state) => state.passwords);
-    return useMemo(() => withheldPasswords(connections, passwords), [connections, passwords]);
+    return withheldPasswords(connections, passwords);
 }
 
 /* The connections as the views type them. The machine checks every config whole before it opens one, so the views get them as the files hold them. */

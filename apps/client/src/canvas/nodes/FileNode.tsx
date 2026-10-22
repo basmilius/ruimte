@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileNodeGateContext } from '@/shell/panels/edit-gate';
 import { FileSurface } from '@/shell/panels/FileSurface';
@@ -28,7 +27,7 @@ export function FilePlate({ id }: { id: string }) {
  */
 export function FileNode({ id, focused }: { id: string; focused: boolean }) {
     const path = useCanvas((s) => s.nodes[id]?.path ?? null);
-    const gate = useMemo(() => ({ focused }), [focused]);
+    const gate = { focused };
     return (
         <FileNodeGateContext.Provider value={gate}>
             <FileSurface path={path} on="node" nodeId={id} />

@@ -12,8 +12,8 @@
     },
     "secret": {
         "body": "De agent vraagt een secret voor de launch {{launch}}.",
-        "variable": "Bewaard op deze machine als {{variable}} voor {{launch}}. Alleen die launch krijgt het bij het starten; de agent ziet het nooit.",
-        "replaces": "Dit vervangt de waarde die {{variable}} nu heeft.",
+        "variable": "Op deze machine bewaard als {{variable}}. Alleen {{launch}} krijgt het, de agent nooit.",
+        "replaces": "Vervangt de huidige waarde van {{variable}}.",
         "field": "Secret",
         "save": "Bewaren",
         "decline": "Weigeren",
@@ -28,12 +28,12 @@
         "approval": "Toestemming gevraagd door {{tool}}",
         "question": "Vraag van {{tool}}",
         "heading": "Wacht op jou in de terminal",
-        "body": "Deze vraag kan alleen in de terminal beantwoord worden.",
+        "body": "Beantwoord het in de terminal.",
         "goToTerminal": "Ga naar de terminal"
     },
     "error": {
-        "expired": "Dit verzoek is al beantwoord of verlopen",
-        "terminalOnly": "Deze prompt kan alleen in de terminal beantwoord worden",
+        "expired": "Al beantwoord of verlopen",
+        "terminalOnly": "Beantwoord het in de terminal.",
         "notConnected": "Geen verbinding met de machine"
     }
 }

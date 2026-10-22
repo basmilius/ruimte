@@ -38,7 +38,7 @@ actor LocalDocumentRenderer {
             kind, String(decoding: data, as: UTF8.self),
         ])
         guard engine.exception == nil, let json = rendered?.toString(), let resultData = json.data(using: .utf8) else {
-            throw MachineClientError.invalid(String(localized: "This document could not be rendered."))
+            throw MachineClientError.invalid(String(localized: "Could not show this document."))
         }
         try Task.checkCancellation()
         let result = try JSONValue.decode(resultData)
@@ -53,7 +53,7 @@ actor LocalDocumentRenderer {
         }
         engine.evaluateScript(try String(contentsOf: url, encoding: .utf8))
         guard engine.exception == nil, engine.objectForKeyedSubscript("ruimteRenderDocument")?.isObject == true else {
-            throw MachineClientError.invalid(String(localized: "The document renderer could not be loaded."))
+            throw MachineClientError.invalid(String(localized: "Could not load the document view."))
         }
         context = engine
         return engine

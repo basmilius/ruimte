@@ -143,7 +143,7 @@ struct ChatVisualDialogs: ViewModifier {
                 ChatVisualPage(visual: visual, model: model)
             }
             .alert(
-                "Remove this visual?",
+                "Remove visual?",
                 isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
                 presenting: removing
             ) { visual in

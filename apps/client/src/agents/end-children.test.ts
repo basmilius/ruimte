@@ -50,8 +50,8 @@ test('a delete that ends nothing runs at once, and one that does waits for the a
 });
 
 test('the warning counts', () => {
-    expect(endsAgentsWarning(1)).toBe('Also ends the agent it opened. Its node stays on the canvas with what it did so far.');
-    expect(endsAgentsWarning(3)).toBe('Also ends the 3 agents it opened. Their nodes stay on the canvas with what they did so far.');
+    expect(endsAgentsWarning(1)).toBe('Also ends the agent it opened. Its node and work so far stay on the canvas.');
+    expect(endsAgentsWarning(3)).toBe('Also ends the 3 agents it opened. Their nodes and work so far stay on the canvas.');
 });
 
 test('stopping a task always asks, and counts the agents its node opened', async () => {
@@ -63,11 +63,9 @@ test('stopping a task always asks, and counts the agents its node opened', async
     expect(useEndingAgents.getState().pending).toMatchObject({ agents: 1, action: 'stop' });
     useEndingAgents.getState().pending?.run();
     expect(runs).toEqual(['child']);
-    expect(stopsTaskWarning(0)).toBe(
-        'Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node stays on the canvas.'
-    );
+    expect(stopsTaskWarning(0)).toBe('Ends the agent and cancels the task. The chat that gave it is not told. Its node stays on the canvas.');
     expect(stopsTaskWarning(2)).toBe(
-        'Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node stays on the canvas. Also ends the 2 agents it opened. Their nodes stay on the canvas with what they did so far.'
+        'Ends the agent and cancels the task. The chat that gave it is not told. Its node stays on the canvas. Also ends the 2 agents it opened. Their nodes and work so far stay on the canvas.'
     );
 });
 
@@ -84,7 +82,7 @@ test('stopping a turn with its sub-agents runs at once when the chat opened no a
     useEndingAgents.getState().pending?.run();
     expect(runs).toEqual(['now', 'asked']);
     expect(stopsSubagentsWarning(2)).toBe(
-        "Stops the turn and marks the chat's own sub-agents as stopped. Also ends the 2 agents it opened. Their nodes stay on the canvas with what they did so far."
+        "Stops the turn and marks the chat's own sub-agents as stopped. Also ends the 2 agents it opened. Their nodes and work so far stay on the canvas."
     );
 });
 

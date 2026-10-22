@@ -9,8 +9,12 @@ import {
     Braces,
     Cable,
     ChartSpline,
+    ChevronDown,
+    ChevronsDown,
     ChevronsLeft,
     ChevronsRight,
+    ChevronsUp,
+    ChevronUp,
     CircleAlert,
     CircleDot,
     CircleOff,
@@ -45,6 +49,7 @@ import {
     Globe,
     Group,
     Heading,
+    Hourglass,
     Inbox,
     Info,
     Keyboard,
@@ -787,6 +792,15 @@ const TABLE = {
         palette: false,
         menu: { menu: 'go', group: 'prompts', order: 10 }
     },
+    // From anywhere, a terminal included, as the prompts key is.
+    'needs-you-next': {
+        key: 'nextNeedsYou',
+        icon: Hourglass,
+        shortcut: CANVAS_SHORTCUTS.nextNeedsYou,
+        binds: 'workspace',
+        palette: true,
+        menu: { menu: 'go', group: 'prompts', order: 20 }
+    },
     'launch-run': {
         key: 'launch',
         icon: Play,
@@ -990,6 +1004,26 @@ const TABLE = {
         menu: { menu: 'kind', group: 'chat', order: 10 }
     },
     'chat-restart': { key: 'restartAgentSession', icon: RotateCw, palette: true, menu: { menu: 'kind', group: 'chat', order: 20 } },
+    'chat-effort-up': {
+        key: 'raiseEffort',
+        icon: ChevronsUp,
+        shortcut: CANVAS_SHORTCUTS.raiseEffort,
+        binds: 'workspace',
+        palette: true,
+        menu: { menu: 'kind', group: 'chat', order: 30 }
+    },
+    'chat-effort-down': {
+        key: 'lowerEffort',
+        icon: ChevronsDown,
+        shortcut: CANVAS_SHORTCUTS.lowerEffort,
+        binds: 'workspace',
+        palette: true,
+        menu: { menu: 'kind', group: 'chat', order: 40 }
+    },
+    /* No key here: Alt+Up and Alt+Down are the Go menu's node rows, and the canvas listener steps the
+       messages first while the keyboard is in a chat's thread. */
+    'chat-message-previous': { key: 'previousMessage', icon: ChevronUp, palette: true, menu: { menu: 'kind', group: 'chat', order: 50 } },
+    'chat-message-next': { key: 'nextMessage', icon: ChevronDown, palette: true, menu: { menu: 'kind', group: 'chat', order: 60 } },
     'view-fork': {
         key: 'fork',
         icon: GitFork,

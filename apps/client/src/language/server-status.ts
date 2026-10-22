@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import type { TFunction } from 'i18next';
 import type { LanguageServerStatus } from '@ruimte/contracts';
 import { formatNumber } from '@adecore/ui/format';
@@ -7,7 +7,7 @@ import type { LanguageStatusTracker } from './status';
 import { nameOf } from './status-view';
 
 export function useStatuses(tracker: LanguageStatusTracker): readonly LanguageServerStatus[] {
-    const subscribe = useCallback((listener: () => void) => tracker.subscribe(listener), [tracker]);
+    const subscribe = (listener: () => void) => tracker.subscribe(listener);
     return useSyncExternalStore(subscribe, () => tracker.getSnapshot());
 }
 

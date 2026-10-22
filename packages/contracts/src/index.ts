@@ -6,6 +6,16 @@ import {
 } from './terminal-prepare.ts';
 export * from './terminal-prepare.ts';
 import { AgentIntegrationSetPayloadSchema, AgentIntegrationSetResultSchema, AgentIntegrationsResultSchema } from './agent-integrations.ts';
+import {
+    CliUpdatePayloadSchema,
+    CliUpdateResultSchema,
+    CliVersionsPayloadSchema,
+    CliVersionsResultSchema,
+    RegistryAgentPayloadSchema,
+    RegistryAgentResultSchema,
+    RegistryCatalogPayloadSchema,
+    RegistryCatalogResultSchema
+} from './agent-registry.ts';
 import { AgentServerPayloadSchema, AgentServerResultSchema } from './agent-server.ts';
 import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS, EmptySchema } from '@adecore/agent-contracts/protocol';
 import {
@@ -61,6 +71,7 @@ import {
     DeviceOpenResultSchema,
     DeviceOperatedSchema,
     DeviceOperationsResultSchema,
+    DevicePowerResultSchema,
     DeviceRecordPayloadSchema,
     DeviceRecordResultSchema,
     DeviceTargetPayloadSchema
@@ -148,6 +159,10 @@ import {
 import {
     GitActionPayloadSchema,
     GitActionResultSchema,
+    GitClonePayloadSchema,
+    GitCloneResultSchema,
+    GitIgnoredFilesPayloadSchema,
+    GitIgnoredFilesResultSchema,
     GitBlamePayloadSchema,
     GitBlameResultSchema,
     GitIdentityPayloadSchema,
@@ -169,6 +184,8 @@ import {
     GitProgressEventSchema,
     GitIssuePayloadSchema,
     GitPullRequestPayloadSchema,
+    GitPrSplitPayloadSchema,
+    GitPrSplitResultSchema,
     GitPrUnwatchPayloadSchema,
     GitPrWatchesEventSchema,
     GitPrWatchesPayloadSchema,
@@ -227,6 +244,7 @@ import {
     UsageStartupPayloadSchema
 } from './auth.ts';
 import { DirectSignalPayloadSchema } from './direct.ts';
+import { EndpointReachPayloadSchema, EndpointReachResultSchema } from './reach.ts';
 import {
     DatabaseAgentAccessChangedEventSchema,
     DatabaseAgentAccessMapSchema,
@@ -385,6 +403,8 @@ import {
     ComputerUseSetEnabledPayloadSchema,
     ComputerUseStatusSchema
 } from './computer.ts';
+import { NanoGptConfigurePayloadSchema, NanoGptStatusSchema } from './nanogpt.ts';
+export * from './nanogpt.ts';
 import { SecretAnswerResultSchema, SecretDeclinePayloadSchema, SecretRequestsSchema, SecretSavePayloadSchema } from './secrets.ts';
 import {
     VoiceActivityEventSchema,
@@ -401,6 +421,7 @@ import {
 
 export * from './agent.ts';
 export * from './agent-integrations.ts';
+export * from './agent-registry.ts';
 export * from './agent-server.ts';
 export * from './archive.ts';
 export * from './auth.ts';
@@ -416,6 +437,7 @@ export * from './context.ts';
 export * from './direct.ts';
 export * from './direct-liveness.ts';
 export * from './device.ts';
+export * from './change-split.ts';
 export * from './context-sources.ts';
 export * from './database.ts';
 export * from './diagram-host.ts';
@@ -438,6 +460,7 @@ export * from './node-defaults.ts';
 export * from './plan-host.ts';
 export * from './processes.ts';
 export * from './provenance.ts';
+export * from './reach.ts';
 export * from './project.ts';
 export * from './project-flags.ts';
 export * from './project-sidebar.ts';
@@ -538,6 +561,7 @@ export const REQUEST_SCHEMAS = {
     'device.importCapture': { payload: DeviceImportCapturePayloadSchema, result: DeviceCaptureResultSchema },
     'device.record': { payload: DeviceRecordPayloadSchema, result: DeviceRecordResultSchema },
     'device.clipboard': { payload: DeviceClipboardPayloadSchema, result: DeviceClipboardResultSchema },
+    'device.power': { payload: DeviceTargetPayloadSchema, result: DevicePowerResultSchema },
     'agent.resume': { payload: AgentResumePayloadSchema, result: EmptySchema },
     'chat.create': AGENT_REQUEST_SCHEMAS['chat.create'],
     'chat.history': AGENT_REQUEST_SCHEMAS['chat.history'],
@@ -589,6 +613,13 @@ export const REQUEST_SCHEMAS = {
     // The chat server of a CLI that ships one apart (Antigravity), and a person's Install of it; the daemon never installs one itself.
     'provider.server': { payload: AgentServerPayloadSchema, result: AgentServerResultSchema },
     'provider.installServer': { payload: AgentServerPayloadSchema, result: AgentServerResultSchema },
+    // The agents of the public ACP registry with a build for this machine, and a person's Install or removal of one; the daemon never installs one itself.
+    'provider.registry': { payload: RegistryCatalogPayloadSchema, result: RegistryCatalogResultSchema },
+    'provider.installAgent': { payload: RegistryAgentPayloadSchema, result: RegistryAgentResultSchema },
+    'provider.removeAgent': { payload: RegistryAgentPayloadSchema, result: RegistryAgentResultSchema },
+    // How each CLI was installed, its version and the newest its route offers, and a person's update through that route.
+    'provider.versions': { payload: CliVersionsPayloadSchema, result: CliVersionsResultSchema },
+    'provider.update': { payload: CliUpdatePayloadSchema, result: CliUpdateResultSchema },
     'accounts.list': AGENT_REQUEST_SCHEMAS['accounts.list'],
     'accounts.save': AGENT_REQUEST_SCHEMAS['accounts.save'],
     'accounts.refresh': AGENT_REQUEST_SCHEMAS['accounts.refresh'],
@@ -699,6 +730,7 @@ export const REQUEST_SCHEMAS = {
     'git.stage': { payload: GitStagePayloadSchema, result: EmptySchema },
     'git.discard': { payload: GitDiscardPayloadSchema, result: GitDiscardResultSchema },
     'git.pr': { payload: GitPullRequestPayloadSchema, result: GitPullRequestResultSchema },
+    'git.prSplit': { payload: GitPrSplitPayloadSchema, result: GitPrSplitResultSchema },
     'git.pr-watch': { payload: GitPrWatchPayloadSchema, result: GitPrWatchResultSchema },
     'git.pr-unwatch': { payload: GitPrUnwatchPayloadSchema, result: EmptySchema },
     'git.pr-watches': { payload: GitPrWatchesPayloadSchema, result: GitPrWatchesResultSchema },
@@ -709,6 +741,8 @@ export const REQUEST_SCHEMAS = {
     'git.log': { payload: GitLogPayloadSchema, result: GitLogResultSchema },
     'git.action': { payload: GitActionPayloadSchema, result: GitActionResultSchema },
     'git.cancel': { payload: GitCancelPayloadSchema, result: EmptySchema },
+    'git.clone': { payload: GitClonePayloadSchema, result: GitCloneResultSchema },
+    'git.ignoredFiles': { payload: GitIgnoredFilesPayloadSchema, result: GitIgnoredFilesResultSchema },
     'git.conflicts': { payload: GitCwdPayloadSchema, result: GitConflictsResultSchema },
     'git.conflict': { payload: GitConflictPayloadSchema, result: GitConflictResultSchema },
     'git.resolve': { payload: GitResolvePayloadSchema, result: GitResolveResultSchema },
@@ -765,6 +799,7 @@ export const REQUEST_SCHEMAS = {
     'endpoint.reportUpdate': { payload: MachineUpdateReportSchema, result: EmptySchema },
     // Any client may ask, `update-no-app` without the desktop app and `update-none` with nothing to install.
     'endpoint.installUpdate': { payload: EndpointInstallUpdatePayloadSchema, result: EndpointInstallUpdateResultSchema },
+    'endpoint.reach': { payload: EndpointReachPayloadSchema, result: EndpointReachResultSchema },
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
     'auth.revoke': { payload: AuthRevokePayloadSchema, result: EmptySchema },
     'direct.signal': { payload: DirectSignalPayloadSchema, result: EmptySchema },
@@ -776,7 +811,9 @@ export const REQUEST_SCHEMAS = {
     'plan.list': { payload: PlanListPayloadSchema, result: PlanListResultSchema },
     'plan.apply': { payload: PlanApplyPayloadSchema, result: PlanApplyResultSchema },
     'provenance.read': { payload: ProvenanceReadPayloadSchema, result: ProvenanceReadResultSchema },
-    'provenance.review': { payload: ProvenanceReviewPayloadSchema, result: ProvenanceReviewResultSchema }
+    'provenance.review': { payload: ProvenanceReviewPayloadSchema, result: ProvenanceReviewResultSchema },
+    'nanogpt.status': { payload: EmptySchema, result: NanoGptStatusSchema },
+    'nanogpt.configure': { payload: NanoGptConfigurePayloadSchema, result: NanoGptStatusSchema }
 } as const satisfies Record<string, { payload: z.ZodType; result: z.ZodType }>;
 
 export type RequestType = keyof typeof REQUEST_SCHEMAS;
@@ -854,6 +891,8 @@ export const EVENT_SCHEMAS = {
     'usage.changed': AGENT_EVENT_SCHEMAS['usage.changed'],
     'usage.limitsChanged': AGENT_EVENT_SCHEMAS['usage.limitsChanged'],
     'accounts.changed': AGENT_EVENT_SCHEMAS['accounts.changed'],
+    // The list `provider.list` answers, to every client, whenever an agent reported models or abilities the machine did not know.
+    'provider.changed': AGENT_REQUEST_SCHEMAS['provider.list'].result,
     'processes.sample': ProcessesSampleEventSchema,
     'processes.alerts': ProcessesAlertsSchema,
     'computer.status': ComputerUseStatusSchema,

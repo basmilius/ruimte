@@ -54,7 +54,7 @@ describe('the address a socket opens on', () => {
 
     test('a machine this client forgot has no address at all', async () => {
         useEndpoints.setState({ endpoints: [] });
-        await expect(socketAddressFor(DAEMON_ID)).rejects.toThrow(/No endpoint/);
+        await expect(socketAddressFor(DAEMON_ID)).rejects.toThrow(/is not in the list/);
     });
 });
 

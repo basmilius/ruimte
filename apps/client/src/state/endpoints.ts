@@ -307,7 +307,16 @@ export function brokerRouteOf(endpoint: Endpoint): { brokerUrl: string; machineK
  * A machine this client has no row for keeps the name it was given.
  */
 export function endpointIdOfMachine(machineId: string): string {
-    return useEndpoints.getState().endpoints.find((entry) => entry.id === machineId || entry.daemonId === machineId)?.id ?? machineId;
+    return endpointIdIn(useEndpoints.getState().endpoints, machineId);
+}
+
+/* The same row for a render, which follows the list when a row learns its daemon id. */
+export function useEndpointIdOfMachine(machineId: string): string {
+    return useEndpoints((state) => endpointIdIn(state.endpoints, machineId));
+}
+
+export function endpointIdIn(endpoints: readonly Endpoint[], machineId: string): string {
+    return endpoints.find((entry) => entry.id === machineId || entry.daemonId === machineId)?.id ?? machineId;
 }
 
 /* One machine by id, for code that is about a row rather than about the machine being worked on. */

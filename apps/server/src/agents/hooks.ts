@@ -12,8 +12,8 @@ interface HookOutcome {
     subagentId: string | null;
 }
 
-// What each hook event means for the person watching the node. Claude Code and Codex share the
-// event names, so one table serves both; the few events only one of them fires are harmless for the other.
+// What each hook event means for the person watching the node. Claude Code, Codex, Grok and Copilot share the
+// event names, so one table serves them all; the few events only one of them fires are harmless for the others.
 const EVENT_STATUS: Record<string, AgentStatus | 'unchanged' | 'gone'> = {
     SessionStart: 'idle',
     UserPromptSubmit: 'running',
@@ -32,6 +32,8 @@ const EVENT_STATUS: Record<string, AgentStatus | 'unchanged' | 'gone'> = {
     PostCompact: 'running',
     Stop: 'idle',
     StopFailure: 'error',
+    // Grok's turn that ended without completing: an interrupt, a declined prompt, a limit on turns.
+    StopCancelled: 'idle',
     Interrupt: 'idle',
     SessionEnd: 'gone'
 };
@@ -92,7 +94,9 @@ export function requestOfHook(body: unknown, createdAt: number): AgentRequest | 
 const NOTIFICATION_STATUS: Record<string, AgentStatus> = {
     permission_prompt: 'needs-you',
     elicitation_dialog: 'needs-you',
-    idle_prompt: 'idle'
+    idle_prompt: 'idle',
+    // Copilot's.
+    agent_idle: 'idle'
 };
 
 /* A field a CLI wrote in its hook payload; an empty one says as little as a missing one. */
@@ -118,7 +122,36 @@ export const HOOK_EVENTS: Partial<Record<AgentKind, string[]>> = {
         'StopFailure',
         'SessionEnd'
     ],
-    codex: ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PermissionRequest', 'SubagentStop', 'Stop', 'Interrupt', 'SessionEnd']
+    codex: ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PermissionRequest', 'SubagentStop', 'Stop', 'Interrupt', 'SessionEnd'],
+    // Grok 1.0.62 asks for a permission through `Notification` only (`~/.grok/docs/user-guide/10-hooks.md`).
+    grok: [
+        'SessionStart',
+        'UserPromptSubmit',
+        'PreToolUse',
+        'PostToolUse',
+        'PostToolUseFailure',
+        'Notification',
+        'SubagentStop',
+        'Stop',
+        'StopFailure',
+        'StopCancelled',
+        'SessionEnd'
+    ],
+    // Copilot sends a Claude Code payload (snake_case, `hook_event_name`) only to an event named in PascalCase.
+    copilot: [
+        'SessionStart',
+        'UserPromptSubmit',
+        'PreToolUse',
+        'PostToolUse',
+        'PostToolUseFailure',
+        'PermissionRequest',
+        'Notification',
+        'SubagentStop',
+        'Stop',
+        'SessionEnd'
+    ],
+    // Antigravity's CLI has no event for a permission or a prompt, and names neither the event nor the session the Claude Code way.
+    antigravity: ['Stop']
 };
 
 /* Whether the daemon understands this CLI's hooks at all; the receiver turns the others away. */
@@ -136,18 +169,29 @@ export function takesHookContext(kind: AgentKind): boolean {
     return kind === 'claude' || kind === 'codex';
 }
 
+/*
+ * Antigravity sends only the hook it was given (`Stop`), camelCase and without the event's name
+ * (antigravity.google/docs/hooks): its `conversationId` is the session that `agy --conversation` resumes.
+ */
+function antigravityHook(hook: Record<string, unknown>): Record<string, unknown> {
+    return { session_id: hook.conversationId, transcript_path: hook.transcriptPath, hook_event_name: 'Stop' };
+}
+
 /* Turns one hook payload into a status; null when the payload says nothing about status or is not a hook at all. */
-export function normalizeHook(body: unknown): HookOutcome | null {
+export function normalizeHook(body: unknown, kind: AgentKind = 'claude'): HookOutcome | null {
     if (typeof body !== 'object' || body === null) {
         return null;
     }
-    const hook = body as Record<string, unknown>;
+    const hook = kind === 'antigravity' ? antigravityHook(body as Record<string, unknown>) : (body as Record<string, unknown>);
     const agentSessionId = asString(hook.session_id);
     const event = asString(hook.hook_event_name);
     if (!agentSessionId || !event) {
         return null;
     }
     const transcriptPath = asString(hook.transcript_path);
+    // Claude Code 2.1.282 and Codex 0.157 name the subagent on every hook fired inside one, under the parent's session id (measured);
+    // Grok 1.0.62 runs a subagent's hooks in a session of its own and names only its type.
+    const subagentId = asString(hook.agent_id) ?? asString(hook.subagentType);
 
     let status: AgentStatus | 'unchanged' | 'gone' | undefined;
     if (event === 'Notification') {
@@ -160,15 +204,36 @@ export function normalizeHook(body: unknown): HookOutcome | null {
     if (status === undefined) {
         return null;
     }
+    if (status === 'gone') {
+        // A subagent's session that ends leaves the agent the person talks to running.
+        status = subagentId === null ? 'gone' : 'unchanged';
+    }
     return {
         agentSessionId,
         transcriptPath,
         status: status === 'gone' ? null : status,
         permissionMode: asString(hook.permission_mode),
         event,
-        // Claude Code 2.1.282 and Codex 0.157 name the subagent on every hook fired inside one, under the parent's session id (measured).
-        subagentId: asString(hook.agent_id)
+        subagentId
     };
+}
+
+/*
+ * Grok and Copilot also run the hooks in Claude Code's settings, so Ruimte's own Claude hook fires inside them
+ * and posts to `/hooks/claude`. Such a hook speaks for that CLI, which reports through hooks of its own, and never
+ * for Claude Code. Grok's payload says so itself: beside Claude's `hook_event_name` it carries `hookEventName`,
+ * which Claude Code never sends (`~/.grok/docs/user-guide/10-hooks.md`). Copilot's reads like Claude's, so it is
+ * known by its session, once Copilot's own hook named that session for its kind.
+ */
+export function borrowedHook(kind: AgentKind, body: unknown, current: { kind: AgentKind; agentSessionId: string } | null): boolean {
+    if (kind !== 'claude' || typeof body !== 'object' || body === null) {
+        return false;
+    }
+    const hook = body as Record<string, unknown>;
+    if (hook.hookEventName !== undefined) {
+        return true;
+    }
+    return current !== null && current.kind !== 'claude' && current.agentSessionId === asString(hook.session_id);
 }
 
 // The agent the person talks to, as a key beside the subagents' ids.

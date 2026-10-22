@@ -220,7 +220,7 @@ struct DrawingEditorPage: View {
                     }
                 }
                 Section {
-                    Toggle("Keep the tool after drawing", isOn: $model.toolLocked)
+                    Toggle("Keep tool after drawing", isOn: $model.toolLocked)
                     Toggle("Constrain proportions and angles", isOn: $model.constrain)
                 }
             }

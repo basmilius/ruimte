@@ -78,7 +78,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
                     whiteSpace: text.maxWidth ? 'pre-wrap' : 'pre',
                     overflowWrap: 'anywhere',
                     textAlign: text.align ?? 'left',
-                    textDecorationLine: [text.underline && 'underline', text.strikethrough && 'line-through'].filter(Boolean).join(' ') || 'none'
+                    textDecorationLine: decorationOf(text)
                 }}
                 contentEditable={editing ? 'plaintext-only' : false}
                 suppressContentEditableWarning
@@ -130,3 +130,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
         </ContextMenu.Root>
     );
 });
+
+function decorationOf(text: { underline?: boolean; strikethrough?: boolean }): string {
+    return [text.underline && 'underline', text.strikethrough && 'line-through'].filter(Boolean).join(' ') || 'none';
+}

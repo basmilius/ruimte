@@ -119,7 +119,7 @@ final class SessionVisualTests: XCTestCase {
         })
         let defaults = try XCTUnwrap(UserDefaults(suiteName: "ruimte.visual.home"))
         defer { defaults.removePersistentDomain(forName: "ruimte.visual.home") }
-        // The Keychain refuses an unsigned Simulator build, and its Sign-in failed alert would cover the logo.
+        // The Keychain refuses an unsigned Simulator build, and its sign-in alert would cover the logo.
         let key = DeviceKey()
         let vault = SessionVault(client: client, store: EmptySessionStore(), signer: { key })
         let runtime = AppRuntime(client: client, vault: vault, defaults: defaults, deviceKey: key)

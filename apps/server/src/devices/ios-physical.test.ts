@@ -44,6 +44,30 @@ describe('IosPhysicalBackend', () => {
         expect(calls[0]).toContain("properties.hardware.platform = 'iOS' AND properties.hardware.reality = 'physical'");
     });
 
+    test("reads a phone's battery through the bridge by its hardware udid, and calls anything else unknown", async () => {
+        const asked: string[] = [];
+        const answers: Array<() => string> = [
+            () => '{"level":94,"charging":false,"plugged":false}\n',
+            () => '{"level":94}\n',
+            () => {
+                throw new Error('the device did not say its battery in time');
+            }
+        ];
+        const list = async () => ({ exitCode: 0, stdout: listOutput, stderr: '' });
+        const backend = new IosPhysicalBackend(list, undefined, null, undefined, async (udid) => {
+            asked.push(udid);
+            return answers.shift()!();
+        });
+
+        expect(await backend.power('coredevice-phone-1')).toBeNull();
+        await backend.list();
+        expect(await backend.power('coredevice-phone-1')).toEqual({ level: 94, charging: false, plugged: false });
+        expect(await backend.power('coredevice-phone-1')).toBeNull();
+        expect(await backend.power('coredevice-phone-1')).toBeNull();
+        expect(asked).toEqual(['hardware-phone-1', 'hardware-phone-1', 'hardware-phone-1']);
+        expect(await new IosPhysicalBackend(list).power('coredevice-phone-1')).toBeNull();
+    });
+
     test('keeps unpaired devices visible without claiming screenshot support', async () => {
         const output = listOutput.replace('"paired"', '"unpaired"');
         const backend = new IosPhysicalBackend(async () => ({ exitCode: 0, stdout: output, stderr: '' }));

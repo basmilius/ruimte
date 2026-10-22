@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import clsx from 'clsx';
 import { ArrowRight, Check, Info, PanelsTopLeft, Server, Terminal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -132,10 +132,10 @@ function Hub({ titleId }: { titleId: string }) {
     // Here and not in the task, so the list sees computer use change while another task is open.
     const computer = useComputerMachine(LOCAL_ENDPOINT_ID);
     const phase = computer.setup.phase;
-    const rows = useMemo(() => cliRowsOf(providers, accounts), [providers, accounts]);
-    const missing = useMemo(() => missingClisOf(providers), [providers]);
-    const facts = useMemo(() => factsOf(introSeen, rows, phase), [introSeen, rows, phase]);
-    const tasks = useMemo(() => tasksOf(phase), [phase]);
+    const rows = cliRowsOf(providers, accounts);
+    const missing = missingClisOf(providers);
+    const facts = factsOf(introSeen, rows, phase);
+    const tasks = tasksOf(phase);
     const [picked, setPicked] = useState<OnboardingPlace | null>(null);
     // Until a person picks one, the list stands on the first task not done; a task that went away gives way the same.
     const place = picked !== null && (picked === 'done' || tasks.includes(picked)) ? picked : firstPlace(tasks, facts);

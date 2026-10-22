@@ -56,7 +56,7 @@ if (config.command === 'service') {
 
 if (config.command === 'status') {
     const { runStatus } = await import('./cli/status.ts');
-    process.exit(await runStatus({ port: config.port, home: config.home }));
+    process.exit(await runStatus({ port: config.port, home: config.home, json: config.json === true, check: config.check === true }));
 }
 
 if (config.command === 'closed-lid') {

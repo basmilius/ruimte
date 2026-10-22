@@ -1,13 +1,26 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { reactCompilerPlugin } from './react-compiler-transform';
 
 export const clientDirectory = join(import.meta.dir, '..');
 
 // What Vite puts in `import.meta.env` for the client; Bun.build leaves it undefined.
 const viteEnv = { 'import.meta.env': JSON.stringify({ DEV: false, PROD: true, MODE: 'test', BASE_URL: '/' }) };
 
-export async function withBrowserFixture(entryCode: string, styles: string, run: (view: InstanceType<typeof Bun.WebView>) => Promise<void>): Promise<void> {
+export interface BrowserFixtureOptions {
+    /* A script that runs before the bundle, for what has to be in place before React loads (a devtools hook). */
+    head?: string;
+    /* React's production build, the one a packaged app runs; a measurement of time means nothing on the development build. */
+    production?: boolean;
+}
+
+export async function withBrowserFixture(
+    entryCode: string,
+    styles: string,
+    run: (view: InstanceType<typeof Bun.WebView>) => Promise<void>,
+    options: BrowserFixtureOptions = {}
+): Promise<void> {
     const directory = await mkdtemp(join(tmpdir(), 'ruimte-canvas-'));
     let view: InstanceType<typeof Bun.WebView> | null = null;
     let server: ReturnType<typeof Bun.serve> | null = null;
@@ -31,8 +44,10 @@ export async function withBrowserFixture(entryCode: string, styles: string, run:
             entrypoints: [entry],
             target: 'browser',
             conditions: ['source'],
-            define: viteEnv,
+            define: options.production ? { ...viteEnv, 'process.env.NODE_ENV': JSON.stringify('production') } : viteEnv,
             plugins: [
+                // The suite tests what ships, which the compiler made.
+                reactCompilerPlugin,
                 {
                     name: 'fixture-imports',
                     setup(builder) {
@@ -92,7 +107,7 @@ export async function withBrowserFixture(entryCode: string, styles: string, run:
                     return new Response(script, { headers: { 'Content-Type': 'text/javascript' } });
                 }
                 return new Response(
-                    `<!doctype html><style>${theme}body{margin:0}#root{position:relative;width:800px;height:600px}${styles}</style><div id="root"></div><script>window.errors=[];window.addEventListener("error",event=>window.errors.push(event.message));window.addEventListener("unhandledrejection",event=>window.errors.push(String(event.reason)));</script><script type="module" src="/entry.js"></script>`,
+                    `<!doctype html><style>${theme}body{margin:0}#root{position:relative;width:800px;height:600px}${styles}</style><div id="root"></div><script>${options.head ?? ''}</script><script>window.errors=[];window.addEventListener("error",event=>window.errors.push(event.message));window.addEventListener("unhandledrejection",event=>window.errors.push(String(event.reason)));</script><script type="module" src="/entry.js"></script>`,
                     { headers: { 'Content-Type': 'text/html' } }
                 );
             }

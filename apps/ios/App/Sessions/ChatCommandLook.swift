@@ -344,6 +344,7 @@ enum RuimteCommandLook {
         "project": VerbLook(name: "Project", from: 1),
         "database": VerbLook(name: "Database", from: 1),
         "language": VerbLook(name: "Language", from: 1),
+        "provider": VerbLook(name: "Providers", from: 1),
         "computer": VerbLook(name: "Computer Use", from: 1),
     ]
 

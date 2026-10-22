@@ -250,6 +250,8 @@ export interface Settings {
     /* Whether two fingers sideways on a trackpad go back and forward in a browser page. On, because
        it is what every browser on macOS does; off, the pages do not even report their wheel. */
     browserSwipe: boolean;
+    /* Whether a canvas shows a map of its nodes in the bottom right corner. Off, since it covers a corner of every canvas. */
+    canvasMinimap: boolean;
     /* The STUN servers a direct connection asks for this client's public address, separated by spaces.
        Empty offers the addresses of this machine's own interfaces only, which is enough on one network. */
     directStunServers: string;
@@ -340,6 +342,7 @@ const DEFAULT_SETTINGS: Settings = {
     keepAwakeDisplay: false,
     agentsTurnSound: false,
     browserSwipe: true,
+    canvasMinimap: false,
     directStunServers: DEFAULT_STUN_SERVER,
     language: LANGUAGE_SYSTEM,
     formatRegion: FORMAT_LANGUAGE,
@@ -425,6 +428,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         voiceConfirmDestructiveActions: stored.voiceConfirmDestructiveActions !== false,
         agentsTurnSound: stored.agentsTurnSound === true,
         browserSwipe: stored.browserSwipe !== false,
+        canvasMinimap: stored.canvasMinimap === true,
         worktreeMergeStrategy:
             WORKTREE_MERGE_STRATEGIES.find((strategy) => strategy === stored.worktreeMergeStrategy) ?? DEFAULT_SETTINGS.worktreeMergeStrategy,
         // The key before it, `directStunServer`, held the previous default for nearly every client, since the field was hidden
@@ -568,6 +572,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 keepAwakeDisplay,
                 agentsTurnSound,
                 browserSwipe,
+                canvasMinimap,
                 directStunServers,
                 language,
                 formatRegion,
@@ -631,6 +636,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 keepAwakeDisplay,
                 agentsTurnSound,
                 browserSwipe,
+                canvasMinimap,
                 directStunServers,
                 language,
                 formatRegion,

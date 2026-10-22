@@ -20,30 +20,30 @@
     },
     "image": {
         "gone": "That file is no longer there",
-        "notShown": "A {{format}} image, a format this app does not show"
+        "notShown": "Cannot show {{format}} images"
     },
     "modelView": {
-        "notModel": "Its bytes are not a binary glTF, USDZ or STL model."
+        "notModel": "This file is not a 3D model Ruimte can show (glTF, USDZ or STL)."
     },
     "generatedImage": {
         "saveTitle": "Save image to project",
-        "saveIn": "The image is saved inside {{project}}.",
+        "saveIn": "Saves in {{project}}.",
         "folder": "Folder",
         "name": "Name",
-        "exists": "{{name}} already exists in this folder",
+        "exists": "{{name}} already exists",
         "replace": "Replace",
         "openFailed": "Could not open the image",
         "saveFailed": "Could not save the image"
     },
     "login": {
         "title": "Log in to {{account}}",
-        "description": "{{cli}} runs its own login in this terminal. It closes by itself once you are logged in.",
-        "descriptionSilent": "{{cli}} runs its own login in this terminal. Close this window once you are logged in.",
+        "description": "{{cli}} logs you in here. This closes once you are logged in.",
+        "descriptionSilent": "{{cli}} logs you in here. Close this once you are logged in.",
         "landed": "Logged in",
         "landedAs": "Logged in as {{email}}",
         "ended": "The login ended.",
-        "dropped": "The connection to the machine dropped, which ended the login.",
-        "failed": "The login could not start: {{reason}}"
+        "dropped": "The machine disconnected, so the login ended.",
+        "failed": "Could not start the login: {{reason}}"
     },
     "selection": {
         "title": "Add selection to chat",
@@ -51,34 +51,34 @@
         "here": "Open here",
         "others": "Other chats",
         "newWith": "New chat with {{provider}}",
-        "note": "Adds {{label}} to the draft. Nothing is sent yet.",
+        "note": "Adds {{label}} to the draft without sending.",
         "ask": "Ask {{provider}}",
         "problem": "Problem: {{message}}",
-        "noChat": "No chat could be started"
+        "noChat": "Could not start a chat"
     },
     "prepare": {
         "action": "Prepare in terminal",
-        "explanation": "Review the full command below. Ruimte pastes it without Enter. You run it yourself.",
+        "explanation": "Review the command. Ruimte pastes it without Enter, so you run it yourself.",
         "machine": "Machine",
         "cwd": "Working folder",
         "terminal": "Terminal",
         "paste": "Paste without Enter",
-        "noShell": "This folder has no verified empty shell. Open a zsh terminal here, or clear its input. Other shells do not yet support preparing commands.",
-        "offline": "The machine of this chat is not connected.",
-        "failed": "The command could not be prepared.",
+        "noShell": "No empty zsh terminal in this folder. Open one here, or clear its input.",
+        "offline": "This chat's machine is not connected.",
+        "failed": "Could not prepare the command.",
         "ready": "Command prepared",
-        "readyIn": "The command is ready in {{terminal}}. Press Enter there to run it.",
-        "unconfirmed": "Preparation was not confirmed. The command may already be in the terminal. Check its input before preparing again.",
-        "refused": "The shell editor refused the command. Nothing was inserted. Open the preview again."
+        "readyIn": "Ready in {{terminal}}. Press Enter there to run it.",
+        "unconfirmed": "Not confirmed. The command may already be in the terminal, so check its input first.",
+        "refused": "The terminal did not accept the command. Open the preview again."
     },
-    "offline": "The machine of this chat is not connected.",
+    "offline": "This chat's machine is not connected.",
     "uiLink": {
-        "elsewhere": "This link leads into a project that is not open in this window.",
-        "invalidUrl": "This link is not a web address Ruimte opens."
+        "elsewhere": "Links to a project not open in this window.",
+        "invalidUrl": "Ruimte cannot open this link."
     },
     "restart": {
         "done": "Agent session restarted",
-        "doneDescription": "The next message starts a fresh session that goes on with the conversation and picks up new skills, plugins, commands and MCP servers.",
+        "doneDescription": "The next message continues the conversation and loads new skills, plugins, commands and MCP servers.",
         "failed": "Could not restart the agent session"
     },
     "commandLook": {
@@ -88,9 +88,9 @@
         "usedAny_other": "Used Ruimte {{count}} times"
     },
     "providerCommand": {
-        "description": "Press Enter to run the command.",
+        "description": "Press Enter to run.",
         "ended": "The terminal ended.",
-        "dropped": "The connection to the machine dropped, which ended the terminal.",
-        "failed": "The terminal could not start: {{reason}}"
+        "dropped": "The machine disconnected, so the terminal ended.",
+        "failed": "Could not start the terminal: {{reason}}"
     }
 }

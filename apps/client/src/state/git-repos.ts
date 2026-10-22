@@ -5,6 +5,7 @@ import { basenameOf, isPathBelow, relativeTo } from '@/shell/panels/files-tree';
 import { GIT_PANEL_PACE_MS, paced, type Pace } from '@/shell/panels/pace';
 import { watchGit } from '@/state/git-watch';
 import { endpointKey, useEndpointId } from '@/state/keys';
+import { transportFor } from '@/transport';
 import { useTransport } from '@/transport/context';
 import { isConnectionError, TransportError, type Transport } from '@/transport/transport';
 
@@ -209,13 +210,35 @@ export function useProjectRepos(folder: string | null): ProjectRepos {
         });
     }, [transport, folder, key, nonce]);
 
-    const reload = useCallback((): void => {
+    const reload = (): void => {
         freshRef.current = true;
         setNonce((count) => count + 1);
-    }, []);
+    };
     const shown = list?.key === key ? list : lastRepos.get(key);
-    const repos = useMemo(() => shown?.repos ?? [], [shown]);
+    const repos = shown?.repos ?? [];
     return { repos, truncated: shown?.truncated === true, reload };
+}
+
+/* Whether a folder is in a git repository of the machine on screen; false until the machine answered. */
+export function useFolderInRepo(folder: string | null): boolean {
+    const endpointId = useEndpointId();
+    const key = endpointKey(endpointId, String(folder));
+    const [answer, setAnswer] = useState<{ key: string; repos: readonly GitRepo[] } | null>(null);
+    const [nonce, setNonce] = useState(0);
+
+    useEffect(() => {
+        const transport = transportFor(endpointId);
+        if (folder === null || transport === null) {
+            return;
+        }
+        return readProjectRepos(transport, folder, false, {
+            answered: (listed) => setAnswer({ key, repos: listed.repos }),
+            again: () => setNonce((count) => count + 1),
+            timedOut: () => undefined
+        });
+    }, [endpointId, folder, key, nonce]);
+
+    return folder !== null && answer?.key === key && answer.repos.some((repo) => repo.kind === 'root');
 }
 
 export interface GitCheckouts {

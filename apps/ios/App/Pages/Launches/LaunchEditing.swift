@@ -80,9 +80,9 @@ enum LaunchDraftProblem: Equatable {
 
     var message: String {
         switch self {
-        case .name: String(localized: "Give this launch a name.")
-        case .command: String(localized: "A service or a task needs a command.")
-        case .members: String(localized: "Check at least one launch for this group.")
+        case .name: String(localized: "Give it a name.")
+        case .command: String(localized: "Needs a command.")
+        case .members: String(localized: "Check at least one launch.")
         }
     }
 }
@@ -289,7 +289,7 @@ enum LaunchEditing {
         places.count == 1 ? places.first ?? "" : many(places.count)
     }
 
-    /// A row under "Found in this project" per file things were found in: "3 scripts in package.json".
+    /// A row under "Found in project" per file things were found in: "3 scripts in package.json".
     static func foundRows(_ suggestions: [LaunchSuggestion]) -> [(id: String, text: String)] {
         let usable = suggestions.filter { $0.unsupported == nil }
         var order: [String] = []
@@ -312,7 +312,7 @@ enum LaunchEditing {
         }
     }
 
-    /// The line under "Found in this project": how many of each, and where; nil when there is nothing to import.
+    /// The line under "Found in project": how many of each, and where; nil when there is nothing to import.
     static func foundText(_ suggestions: [LaunchSuggestion]) -> String? {
         let usable = suggestions.filter { $0.unsupported == nil }
         let runFiles = usable.filter(readsAsRunConfiguration)

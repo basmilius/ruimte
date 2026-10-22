@@ -86,5 +86,5 @@ export function useAgentChanges(editor: Editor | null, path: string, language: s
 
     const review = useSyncExternalStore(reviews.subscribe, reviews.get);
     const state = useSyncExternalStore(changes?.subscribe ?? noSubscription, changes?.getState ?? (() => NOT_DRAWN));
-    return useMemo(() => ({ ...state, review, holdCard: (inside: boolean) => changes?.holdCard(inside) }), [state, changes, review]);
+    return { ...state, review, holdCard: (inside: boolean) => changes?.holdCard(inside) };
 }

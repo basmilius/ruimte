@@ -1,8 +1,11 @@
+import { dirname } from 'node:path';
 import type { AgentKind, GitActionPhase } from '@ruimte/contracts';
 import { RequestError, sendEvent, type ClientConnection, type Dispatcher } from '../dispatcher.ts';
 import { fetchBundle, makeBundle, type BundleStore } from '../git/bundles.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import { GitActions } from '../git/actions.ts';
+import { cloneRepository } from '../git/clone.ts';
+import { listIgnoredFiles } from '../git/ignored.ts';
 import { blameFile } from '../git/blame.ts';
 import { readCapabilities } from '../git/capabilities.ts';
 import { readConflict, readConflicts, resolveConflict, runOperation } from '../git/conflict.ts';
@@ -12,6 +15,7 @@ import { IdentityReader } from '../git/identity.ts';
 import { readLog } from '../git/log.ts';
 import { suggestMessage } from '../git/message.ts';
 import { parseIssueRef, readIssue, readPullRequest, runGh } from '../git/github.ts';
+import { prSplits } from '../git/pr-split.ts';
 import { GitError } from '../git/run.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
 import type { PrWatchStore } from '../github/pr-watch.ts';
@@ -180,7 +184,18 @@ export function registerGitHandlers(
         return await readIssue(runGh, payload.cwd, ref);
     });
 
-    dispatcher.register('git.pr', async (payload) => ({ pr: await readPullRequest(runGh, payload.cwd, payload.number) }));
+    // The split waits on every page of GitHub's file list, so it is a request of its own and the dialog draws before it.
+    dispatcher.register('git.pr', async (payload) => {
+        const pr = await readPullRequest(runGh, payload.cwd, payload.number);
+        if (pr !== null) {
+            prSplits.note(payload.cwd, pr);
+        }
+        return { pr };
+    });
+
+    dispatcher.register('git.prSplit', async (payload) => ({
+        split: await prSplits.splitAt(payload.cwd, payload.number, payload.headSha, () => readPullRequest(runGh, payload.cwd, payload.number))
+    }));
 
     const watching = (): PrWatchStore => {
         if (!prWatches) {
@@ -211,6 +226,40 @@ export function registerGitHandlers(
 
     /* Progress streams while the git runs; the reply lands after. */
     dispatcher.register('git.action', (payload, client) => actions.run(payload, progressTo(client, payload.cwd, payload.actionId)));
+
+    /*
+     * A person's client putting a project on this machine: the folder is judged like a file request's
+     * path, before git makes it. Not on a peer's list, and no agent reaches it.
+     */
+    dispatcher.register('git.clone', async (payload, client) => {
+        await Promise.all([machineHome?.refuse(payload.path), machineHome?.refuse(dirname(payload.path))]);
+        const slot = actions.claim(payload.actionId);
+        let canceled = false;
+        try {
+            return await cloneRepository({
+                url: payload.url,
+                path: payload.path,
+                job: {
+                    hold: (kill) =>
+                        slot.hold(() => {
+                            canceled = true;
+                            kill();
+                        }),
+                    get canceled() {
+                        return canceled;
+                    }
+                },
+                onProgress: progressTo(client, payload.path, payload.actionId)
+            });
+        } finally {
+            slot.release();
+        }
+    });
+
+    dispatcher.register('git.ignoredFiles', async (payload) => {
+        await machineHome?.refuse(payload.cwd);
+        return listIgnoredFiles(payload.cwd);
+    });
 
     dispatcher.register('git.cancel', (payload) => {
         actions.cancel(payload.actionId);

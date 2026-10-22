@@ -126,6 +126,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         devices,
         databases,
         remote,
+        usage,
         later: { language: () => language.host, push: () => push }
     });
 
@@ -218,6 +219,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         usage: usage.usage,
         limits: usage.limits,
         providerAccounts: providers.accounts,
+        providerList: providers.feed,
         processes: processes.processes,
         tasks: stores.tasks,
         worktrees: git.worktrees,

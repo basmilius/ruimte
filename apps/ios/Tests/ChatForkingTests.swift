@@ -17,10 +17,10 @@ final class ChatForkingTests: XCTestCase {
         XCTAssertEqual(ChatForking.refusal(info: chat(info), turn: nil), "This turn is not in the conversation")
         XCTAssertEqual(
             ChatForking.refusal(info: chat(info.setting("provider", .string("gemini"))), turn: turn),
-            "This CLI has no conversation that can be forked")
+            "This agent cannot fork its conversation")
         XCTAssertEqual(
             ChatForking.refusal(info: chat(info.setting("agentSessionId", .null)), turn: turn),
-            "The CLI never started a conversation here")
+            "Nothing to fork yet. Send a message first.")
         XCTAssertEqual(
             ChatForking.refusal(info: chat(info), turn: self.turn("t2", state: "running").chatItem),
             "Wait for the turn to end")
@@ -33,7 +33,7 @@ final class ChatForkingTests: XCTestCase {
         XCTAssertNil(ChatForking.summaryRefusal(info: chat(info), originalPresent: true))
         XCTAssertEqual(
             ChatForking.summaryRefusal(info: chat(info), originalPresent: false),
-            "The original is no longer in this project")
+            "Original no longer in this project")
         XCTAssertEqual(
             ChatForking.summaryRefusal(info: chat(info.setting("activeTurnId", .string("t"))), originalPresent: true),
             "Wait for the turn to end")
@@ -101,7 +101,7 @@ final class ChatForkingTests: XCTestCase {
         XCTAssertEqual(ChatForking.origin(in: views, chatID: "node")?.title, "Build")
         XCTAssertNil(ChatForking.origin(in: views, chatID: "gone"))
         XCTAssertEqual(ChatForking.branchRefusal("  ", taken: []), "Name the branch")
-        XCTAssertEqual(ChatForking.branchRefusal("main ", taken: ["main"]), "A branch with this name exists already")
+        XCTAssertEqual(ChatForking.branchRefusal("main ", taken: ["main"]), "Name already taken")
         XCTAssertNil(ChatForking.branchRefusal("fork", taken: ["main"]))
     }
 
@@ -111,8 +111,8 @@ final class ChatForkingTests: XCTestCase {
             fork("d", of: "other", after: "t1"), .object(["chatId": .string("plain")]),
         ]
         XCTAssertEqual(ChatForking.forks(chats: chats, chatID: "chat"), ["t1": ["a", "b"], "t2": ["c"]])
-        XCTAssertEqual(ChatForking.forksLabel(1), "A fork goes on after this turn")
-        XCTAssertEqual(ChatForking.forksLabel(3), "3 forks go on after this turn")
+        XCTAssertEqual(ChatForking.forksLabel(1), "A fork after this turn")
+        XCTAssertEqual(ChatForking.forksLabel(3), "3 forks after this turn")
     }
 
     func testSummaryNoteFoldsAfterItsFirstLine() {

@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { Workflow } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { layoutOf } from '@adecore/diagram';
@@ -31,7 +30,7 @@ export function DiagramNode({ id }: { id: string }) {
     const viewId = useCanvas((s) => s.nodes[id]?.viewId ?? null);
     const mirror = useDiagramMirror(viewId);
     const content = mirror?.snapshot ?? null;
-    const layout = useMemo(() => (content === null ? null : layoutOf(content)), [content]);
+    const layout = content === null ? null : layoutOf(content);
     const drawn = content !== null && layout !== null && content.nodes.length > 0;
     const box = layout?.bounds;
 

@@ -23,16 +23,16 @@ describe('removeQuestion', () => {
     test('with work in it, the question names the three numbers and asks for force', () => {
         expect(removeQuestion({ ...lexer, work: { changed: 3, untracked: 2, ahead: 1 } })).toEqual({
             title: 'Remove worktree lexer?',
-            description: 'It holds 3 uncommitted files, 2 new files and 1 commit that main lacks. They are lost, and so is the branch.',
+            description: 'It holds 3 uncommitted files, 2 new files and 1 commit that main lacks. That is lost with the branch.',
             confirmLabel: 'Remove anyway',
             force: true,
-            note: 'Files git ignores in it, such as .env or a local database, go too and are not counted above.'
+            note: 'Ignored files, such as .env or a local database, go too.'
         });
     });
 
     test('only what is not zero is named, in the singular where it is one', () => {
         expect(removeQuestion({ ...lexer, work: { changed: 0, untracked: 1, ahead: 0 } }).description).toBe(
-            'It holds 1 new file. They are lost, and so is the branch.'
+            'It holds 1 new file. That is lost with the branch.'
         );
     });
 
@@ -58,7 +58,7 @@ describe('removeQuestion', () => {
 
     test('a merge that stopped halfway is work too', () => {
         expect(removeQuestion({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0, operation: 'merge' } })).toMatchObject({
-            description: 'It holds a merge that stopped halfway. They are lost, and so is the branch.',
+            description: 'It holds a merge that stopped halfway. That is lost with the branch.',
             force: true
         });
     });
@@ -67,7 +67,7 @@ describe('removeQuestion', () => {
 describe('removeVerdict', () => {
     test('names what stands in the way, an agent and a lock before the counts', () => {
         const held = { ...lexer, work: { changed: 1, untracked: 0, ahead: 0 } };
-        expect(removeVerdict(held, true)).toEqual({ removable: false, reason: 'An agent is working in it. Stop the agent before you remove it.' });
+        expect(removeVerdict(held, true)).toEqual({ removable: false, reason: 'An agent is working in it. Stop it first.' });
         expect(removeVerdict({ ...held, locked: true }, false).reason).toContain('locked');
         expect(removeVerdict(held, false)).toEqual({ removable: false, reason: 'It holds 1 uncommitted file. Removing it loses that.' });
     });

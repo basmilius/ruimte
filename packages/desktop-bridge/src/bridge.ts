@@ -199,6 +199,11 @@ export interface DesktopBridge {
        them. False when a path is not absolute or no longer exists. Absent on a platform the shell has
        no format for. */
     copyFiles?(paths: string[]): Promise<boolean>;
+    /* Shows a file in Quick Look over this window, or moves an open Quick Look on to it. False when
+       the shell refused it: only a file inside the folder of the project this window shows, on the
+       machine this app runs. Absent off macOS and without a machine of its own. */
+    previewFile?(path: string): Promise<boolean>;
+    closeFilePreview?(): void;
     /* Without the update methods the client shows no update button and About says where updates come from. */
     updateState?(): Promise<UpdateState>;
     onUpdateState?(listener: (state: UpdateState) => void): () => void;

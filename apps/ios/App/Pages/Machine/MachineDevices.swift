@@ -214,7 +214,7 @@ final class MachineDevices {
             case "adb-unavailable":
                 note = String(
                     localized:
-                        "The Android SDK was not found on this machine. Install it to use Android emulators and devices."
+                        "Install the Android SDK to use Android emulators and devices."
                 )
             case "simctl-unavailable", "devicectl-unavailable":
                 note = String(localized: "Install Xcode to use iOS simulators and iPhones.")

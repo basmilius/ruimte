@@ -2,9 +2,9 @@
     "dialog": {
         "title": "Compare models",
         "subtitle": "Artificial Analysis benchmarks",
-        "description": "Compare model intelligence, coding, agentic performance, costs and output speed. Filter models and reasoning levels and select two measurements to compare.",
+        "description": "Compare intelligence, coding, agentic performance, cost and speed. Filter models and reasoning levels, then pick two measurements.",
         "close": "Close model comparison",
-        "failed": "The model comparison failed to render",
+        "failed": "Could not show the model comparison",
         "scale": "Horizontal axis scale",
         "scales": {
             "log": "Log",
@@ -22,18 +22,18 @@
         "totalCost": "Total cost"
     },
     "chart": {
-        "point": "{{model}}, {{effort}}: Intelligence Index {{intelligence}}, {{metric}} {{value}",
-        "frontier": "Measurements not beaten within this selection on both axes.",
+        "point": "{{model}}, {{effort}}: Intelligence Index {{intelligence}}, {{metric}} {{value}}",
+        "frontier": "Not beaten on both axes in this selection.",
         "pareto": "Not beaten on both axes",
         "logarithmic": "log scale",
-        "keyboard": "Use arrow keys to explore measurements, Enter or Space to pin one, and Escape to clear the comparison.",
+        "keyboard": "Arrow keys to explore, Enter or Space to pin, Escape to clear.",
         "hint": "Select a measurement to pin A, then hover or select another to compare."
     },
     "bars": {
         "grouped": "Grouped",
         "ranked": "Ranked",
-        "order": "Chart ordering",
-        "point": "{{model}}, {{effort}}: {{metric}} {{value}"
+        "order": "Order",
+        "point": "{{model}}, {{effort}}: {{metric}} {{value}}"
     },
     "metrics": {
         "intelligence": "Intelligence Index",
@@ -112,21 +112,21 @@
         "metric": "Metric",
         "change": "Change",
         "unavailable": "n/a",
-        "pinHint": "Select this measurement to pin it as reference A.",
+        "pinHint": "Select to pin as reference A.",
         "changeHint": "Indices: difference in points. Costs and speed: B / A.",
         "notices": {
-            "referenceHidden": "The reference was hidden by a filter. The comparison has been cleared.",
-            "candidateHidden": "Measurement B was hidden by a filter. Reference A is still pinned.",
+            "referenceHidden": "A filter hid the reference, so the comparison was cleared.",
+            "candidateHidden": "A filter hid measurement B. Reference A stays pinned.",
             "cleared": "Comparison cleared."
         }
     },
     "empty": {
-        "unavailable": "There are no benchmarks to show yet.",
-        "unreachable": "The benchmarks could not be loaded. Check the connection and try again.",
+        "unavailable": "No benchmarks yet.",
+        "unreachable": "Could not load benchmarks. Check the connection and try again.",
         "models": "No models selected. Turn on a model to see its measurements.",
         "efforts": "All reasoning levels are turned off.",
         "matching": "No measurements match these models and reasoning levels.",
-        "metric": "No measurements are available for this chart with the current selection."
+        "metric": "No measurements for this chart and selection."
     },
     "footer": {
         "source": "Source: Artificial Analysis (artificialanalysis.ai)",

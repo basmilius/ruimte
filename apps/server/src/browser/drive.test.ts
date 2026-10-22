@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -67,6 +67,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+    setSystemTime();
     await rm(home, { recursive: true, force: true });
 });
 
@@ -122,10 +123,12 @@ describe('BrowserDriver', () => {
     });
 
     test('yesterday’s shots are swept as a new one is written', async () => {
+        const now = Date.UTC(2026, 9, 1);
+        setSystemTime(now);
         const folder = join(home, 'screenshots');
         await mkdir(folder, { recursive: true });
-        const old = join(folder, `page-1-${Date.now() - 48 * 60 * 60 * 1000}.png`);
-        const recent = join(folder, `page-1-${Date.now() - 60_000}.png`);
+        const old = join(folder, `page-1-${now - 48 * 60 * 60 * 1000}.png`);
+        const recent = join(folder, `page-1-${now - 60_000}.png`);
         await writeFile(old, 'old');
         await writeFile(recent, 'recent');
 

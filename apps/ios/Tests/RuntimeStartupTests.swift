@@ -9,7 +9,7 @@ final class RuntimeStartupTests: XCTestCase {
     @MainActor func testRestoringAnAccountSurvivesTheRootViewTaskBeingCanceled() async throws {
         let fixture = try RuntimeStartupFixture()
         defer { fixture.close() }
-        fixture.runtime.problem = "The address book could not be reached."
+        fixture.runtime.problem = "Could not reach the address book."
         let firstView = Task { await fixture.runtime.start() }
         await fixture.probe.waitForMachines()
         XCTAssertEqual(fixture.runtime.account?.id, "startup-account")

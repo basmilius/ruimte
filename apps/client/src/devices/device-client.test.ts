@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import type { DeviceInfo, EventMap, EventType, LiveFrameHeader, RequestMap, RequestType } from '@ruimte/contracts';
 import type { LiveFrameHandler, Transport, TransportStatus } from '@/transport/transport';
 import { DeviceClient } from './device-client';
+import { powerKey, useDevicePowers } from './device-power';
 import { useDevices } from './state';
 
 const phone: DeviceInfo = {
@@ -36,6 +37,9 @@ class FakeTransport implements Transport {
         }
         if (type === 'device.shutdown') {
             return { ...phone, state: 'shutdown' } as RequestMap[T]['result'];
+        }
+        if (type === 'device.power') {
+            return { power: { level: 14, plugged: false, charging: false } } as RequestMap[T]['result'];
         }
         if (type === 'device.detail' || type === 'device.action') {
             return {
@@ -134,6 +138,48 @@ describe('DeviceClient', () => {
         await settle();
         expect(transport.calls.filter((call) => call.type === 'device.list')).toHaveLength(3);
         client.dispose();
+    });
+
+    test("reads a phone's power at once and once a minute while watched, again after a fake level, and never on an older machine", async () => {
+        jest.useFakeTimers();
+        const transport = new FakeTransport();
+        Object.assign(transport, { connection: { features: ['device.power'] } });
+        const client = new DeviceClient('machine-1', transport);
+        const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+        const reads = (): number => transport.calls.filter((call) => call.type === 'device.power').length;
+        const stopFirst = client.watchPower(phone);
+        const stopSecond = client.watchPower(phone);
+        await settle();
+        expect(reads()).toBe(1);
+        expect(useDevicePowers.getState()[powerKey('machine-1', phone)]).toEqual({ level: 14, plugged: false, charging: false });
+
+        jest.advanceTimersByTime(60_000);
+        await settle();
+        expect(reads()).toBe(2);
+
+        await client.action({
+            backendId: phone.backendId,
+            platform: phone.platform,
+            deviceId: phone.deviceId,
+            action: 'setBattery',
+            level: 50,
+            charging: true
+        });
+        await settle();
+        expect(reads()).toBe(3);
+
+        stopFirst();
+        stopSecond();
+        jest.advanceTimersByTime(60_000);
+        await settle();
+        expect(reads()).toBe(3);
+        client.dispose();
+
+        const older = new FakeTransport();
+        const stop = new DeviceClient('machine-2', older).watchPower(phone);
+        await settle();
+        expect(older.calls.some((call) => call.type === 'device.power')).toBe(false);
+        stop();
     });
 
     test('shares one remote attachment between two mounted surfaces', async () => {

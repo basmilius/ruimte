@@ -1,16 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { describeLastSeen } from '@/shell/connection-info';
-import { StatusCard } from '@/shell/ProjectSwitchScreen';
+import { MachineCard } from '@/shell/MachineCard';
 import { useMachineEntry } from '@/shell/use-machine-entry';
-import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';
 import { pool } from '@/transport';
-import { useLastSeenAt } from '@/transport/status';
 import type { RemoteNodeState } from '@/canvas/remote-node-state';
-import { Button, useNow } from '@adecore/ui';
-
-const MINUTE_MS = 60_000;
+import { Button } from '@adecore/ui';
 
 /*
  * The body of a node whose machine is not there: which machine, when it last answered, and what
@@ -31,19 +25,13 @@ export function RemoteNodeOffline({
     onLinkAgain(): void;
 }) {
     const { t } = useTranslation(['canvas', 'common']);
-    const entry = useMachineEntry(machine);
-    const icon = useMachineIcon(entry);
-    const lastSeen = useLastSeenAt(machine);
-    const now = useNow(MINUTE_MS);
-    const name = nameOf(entry);
-    const seen = state === 'connecting' || state === 'offline' ? describeLastSeen(lastSeen, now) : null;
+    const name = nameOf(useMachineEntry(machine));
     const connecting = state === 'connecting';
     return (
         <div className="grid h-full place-items-center bg-surface" role="status" aria-live="polite">
-            <StatusCard
-                glyph={<MachineGlyph icon={icon} size={24} className="text-text-faint" />}
-                title={name}
-                meta={seen && <span className="text-xs text-text-muted">{seen}</span>}
+            <MachineCard
+                machine={machine}
+                seen={state === 'connecting' || state === 'offline'}
                 line={t(`remote.${state === 'too-old' ? 'tooOld' : state === 'connecting' ? 'retrying' : state}`, { machine: name })}
                 failed={!connecting && state !== 'unstarted'}
             >
@@ -58,7 +46,7 @@ export function RemoteNodeOffline({
                         {t('remote.linkAgain')}
                     </Button>
                 )}
-            </StatusCard>
+            </MachineCard>
         </div>
     );
 }

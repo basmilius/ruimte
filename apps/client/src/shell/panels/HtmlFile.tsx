@@ -1,6 +1,6 @@
 import { useFileActions } from '@/shell/panels/file-actions';
 import { useFiles } from '@/state/files';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Code, Eye, FileWarning } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
@@ -94,14 +94,19 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
     const page = useRef<PreviewWebview | null>(null);
     const cell = useContext(CellViewContext);
     const url = localFileUrl(path);
-    const staticDocument = useMemo(() => staticPreviewDocument(read.text), [read.text]);
+    const staticDocument = staticPreviewDocument(read.text);
     const surface = useRef<HTMLDivElement>(null);
     // The source is the editor's to search.
     const find = useFind(surface, view === 'preview');
     const pageFind = usePreviewFind(find, page);
-    const { found, refresh } = pageFind;
+    // Read by the page's own events, so the find's new functions never put a fresh webview in place of the one that is loaded.
+    const pageFindRef = useRef(pageFind);
     // The inert iframe is another origin, whose text the client cannot read.
     const findUnavailable = nativePreview ? null : isDesktop() ? t('file.html.findLocalOnly') : t('file.html.findDesktopOnly');
+
+    useEffect(() => {
+        pageFindRef.current = pageFind;
+    });
 
     useEffect(() => {
         const parent = host.current;
@@ -122,10 +127,10 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
             element.dataset.loaded = '';
             setLoading(false);
             element.executeJavaScript(scrollScript(restore)).catch(() => {});
-            refresh();
+            pageFindRef.current.refresh();
         });
         trackPageReady(element);
-        element.addEventListener('found-in-page', (event) => found((event as unknown as { result: FoundInPage }).result));
+        element.addEventListener('found-in-page', (event) => pageFindRef.current.found((event as unknown as { result: FoundInPage }).result));
         element.addEventListener('console-message', (event) => {
             const message = (event as unknown as { message: string }).message;
             if (!message.startsWith(SCROLL_MESSAGE)) {
@@ -155,7 +160,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
             page.current = null;
             element.remove();
         };
-    }, [nativePreview, url, path, cell, found, refresh]);
+    }, [nativePreview, url, path, cell]);
 
     useEffect(() => {
         if (!nativePreview) {
@@ -169,10 +174,10 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
         });
     }, [transport, nativePreview, path]);
 
-    const retry = useCallback(() => {
+    const retry = () => {
         setError(null);
         page.current?.reload();
-    }, []);
+    };
 
     const controls = (
         <ButtonGroup>

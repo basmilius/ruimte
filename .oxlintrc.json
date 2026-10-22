@@ -7,10 +7,31 @@
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }],
-    // Only says the React Compiler skipped a component, and the client does not build with it.
+    // Only says the React Compiler skipped a component, which outside the files it builds says nothing.
     "react/preserve-manual-memoization": "off"
   },
   "overrides": [
+    {
+      // The client's files the React Compiler builds (`apps/client/react-compiler.ts`), held to the Rules of React it relies on.
+      // Its `todo` (syntax it cannot compile yet) and `rule-suppression` (a dependency list left short on purpose) are no faults.
+      "files": ["apps/client/src/**"],
+      "rules": {
+        "react/hooks": "error",
+        "react/refs": "error",
+        "react/purity": "error",
+        "react/immutability": "error",
+        "react/globals": "error",
+        "react/set-state-in-render": "error",
+        "react/set-state-in-effect": "error",
+        "react/static-components": "error",
+        "react/use-memo": "error",
+        "react/void-use-memo": "error",
+        "react/unsupported-syntax": "error",
+        "react/incompatible-library": "error",
+        "react/error-boundaries": "error",
+        "react/preserve-manual-memoization": "error"
+      }
+    },
     {
       // Next.js reads these exports from a layout or page, beside the component.
       "files": ["apps/site/src/app/**"],

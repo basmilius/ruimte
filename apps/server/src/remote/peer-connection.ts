@@ -107,8 +107,8 @@ export async function openBrokerLine(options: BrokerLineOptions): Promise<Signal
     });
     socket.onopen = () => peer.start();
     socket.onmessage = (message) => void peer.receive(String(message.data));
-    socket.onerror = () => fail(new Error(`The broker at ${options.url} did not answer`));
-    socket.onclose = () => fail(new Error('The broker closed the connection'));
+    socket.onerror = () => fail(new Error('Could not connect through your account'));
+    socket.onclose = () => fail(new Error('The connection through your account closed'));
     try {
         await withTimeout(ready, timeoutMs, 'The broker did not sign this machine in');
         iceId = peer.ice();

@@ -121,7 +121,7 @@ enum PaletteCommands {
                 PaletteCommand(
                     title: several
                         ? String(localized: "Open a folder on \(machine.name)…")
-                        : String(localized: "Open a folder as a project…"),
+                        : String(localized: "Open folder as project…"),
                     icon: "folder-open", action: .openFolder(machineID: machine.id)))
             commands.append(
                 PaletteCommand(
@@ -132,7 +132,7 @@ enum PaletteCommands {
         commands.append(
             PaletteCommand(
                 title: String(localized: "Recently closed"), icon: "clock-arrow-left", action: .recentlyClosed))
-        commands.append(PaletteCommand(title: String(localized: "Add a machine"), icon: "plus", action: .addMachine))
+        commands.append(PaletteCommand(title: String(localized: "Add machine"), icon: "plus", action: .addMachine))
         commands.append(PaletteCommand(title: String(localized: "Settings"), icon: "settings", action: .settings))
         let looks = [
             ("light", String(localized: "Use the light appearance"), "sun"),

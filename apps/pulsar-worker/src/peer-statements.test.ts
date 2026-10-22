@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import type { Database } from 'bun:sqlite';
 import { generateKeyPairSync, sign, verify, type KeyObject } from 'node:crypto';
 import {
@@ -34,12 +34,13 @@ function signWith(pair: Pair, message: string): string {
 }
 
 const statementKey = generateKeyPairSync('ed25519');
+const NOW = Date.UTC(2026, 9, 1);
 
 let sqlite: Database;
 let env: Env;
 
 async function signIn(accountId: string): Promise<string> {
-    sqlite.query('INSERT INTO account (id, provider, subject, created_at) VALUES (?, ?, ?, ?)').run(accountId, 'github', accountId, Date.now());
+    sqlite.query('INSERT INTO account (id, provider, subject, created_at) VALUES (?, ?, ?, ?)').run(accountId, 'github', accountId, NOW);
     const session = await createSession(env.DB, { id: accountId, provider: 'github', login: accountId, displayName: null }, 'laptop', newPair().publicKey);
     return session.accessToken;
 }
@@ -54,7 +55,7 @@ function post(token: string, body: unknown, ip = '192.0.2.1'): Request {
 
 async function addMachine(token: string, accountId: string, machineId: string): Promise<Pair> {
     const machine = newPair();
-    const issuedAt = Date.now();
+    const issuedAt = NOW;
     const payload: RegisterMachinePayload = {
         id: machineId,
         name: machineId,
@@ -98,12 +99,17 @@ function logged(): unknown[] {
 }
 
 beforeEach(() => {
+    setSystemTime(NOW);
     sqlite = migratedDatabase();
     env = {
         DB: d1(sqlite),
         PUBLIC_ORIGIN: 'https://pulsar.test',
         STATEMENT_PRIVATE_KEY: statementKey.privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64url')
     };
+});
+
+afterEach(() => {
+    setSystemTime();
 });
 
 describe('a peer statement', () => {

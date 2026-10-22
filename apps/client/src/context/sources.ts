@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { deriveContextSources, type ContextSource } from '@ruimte/contracts';
 import { useCanvas, type CanvasNode, type Edge, type TextElement } from '@/state/canvas';
 import { memoByIdentity } from '@/state/identity-memo';
@@ -20,7 +19,7 @@ export function useContextSources(id: string): ContextSource[] {
     const nodes = useCanvas((s) => s.nodes);
     const texts = useCanvas((s) => s.texts);
     const edges = useCanvas((s) => s.edges);
-    return useMemo(() => contextSourcesOf(nodes, texts, edges).get(id) ?? NONE, [nodes, texts, edges, id]);
+    return contextSourcesOf(nodes, texts, edges).get(id) ?? NONE;
 }
 
 /*

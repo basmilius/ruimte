@@ -63,7 +63,7 @@ describe('signing in on the web', () => {
         const storage = memoryStorage();
         const query = await leave(storage, 0);
         expect(() => completeWebLogin(storage, new URLSearchParams({ code: 'c'.repeat(43), state: query.state }), PENDING_LOGIN_LIFETIME_MS + 1)).toThrow(
-            'too long'
+            'timed out'
         );
         const cancelled = await leave(storage);
         expect(() => completeWebLogin(storage, new URLSearchParams({ error: 'access_denied', state: cancelled.state }), 2_000)).toThrow('cancelled');

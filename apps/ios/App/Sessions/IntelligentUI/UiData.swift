@@ -431,7 +431,7 @@ enum UiReason {
         switch code {
         case "access-unavailable": String(localized: "The access of the chat that wrote this is no longer available.")
         case "block-stale": String(localized: "This block changed since it was drawn.")
-        case "busy": String(localized: "Too many live blocks are reading right now.")
+        case "busy": String(localized: "Too many live blocks reading.")
         case "link-unchecked": String(localized: "This link has to be checked again.")
         case "link-unsupported": String(localized: "This is not a link the machine can open.")
         case "links-unsupported": String(localized: "The machine does not open links from blocks.")
@@ -445,7 +445,7 @@ enum UiReason {
         case "stale-read": String(localized: "Read the source again before you choose.")
         case "target-unavailable": String(localized: "What this points to is no longer available.")
         case "timed-out": String(localized: "The source took too long to answer.")
-        case "unreadable": String(localized: "The source could not be read.")
+        case "unreadable": String(localized: "Could not read the source.")
         default: reason
         }
     }

@@ -324,7 +324,7 @@ describe('installing a release', () => {
     it('refuses a download that does not match its checksum and unpacks none of it', async () => {
         await expect(
             installRelease(asset({ sha256: '0'.repeat(64) }), folder, serving({ 'https://example.test/server.tar.gz': archive }), () => undefined)
-        ).rejects.toThrow('does not match its checksum');
+        ).rejects.toThrow('The download is damaged');
         await expect(stat(join(folder, 'bin'))).rejects.toThrow();
     });
 

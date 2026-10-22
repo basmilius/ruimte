@@ -100,7 +100,7 @@ describe('stopping an inline edit', () => {
 
         await made.stop();
 
-        expect(harness.toasts).toEqual([{ title: 'The turn could not be stopped.' }]);
+        expect(harness.toasts).toEqual([{ title: 'Could not stop the turn.' }]);
         expect(made.store.getState().phase).toBe('running');
     });
 

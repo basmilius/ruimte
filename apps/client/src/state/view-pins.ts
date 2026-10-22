@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { z } from 'zod';
 import { endpointKey } from '@/state/keys';
-import { useProject } from '@/state/project';
+import { useProject, type ProjectState } from '@/state/project';
 import { storedJson } from '@/state/stored-json';
 
 /*
@@ -45,7 +45,15 @@ export const useViewPins = create<ViewPinsState>((set) => ({
 
 /* The project on screen, as the key its pins are under; null on the start screen. */
 export function currentProjectKey(): string | null {
-    const { current, currentEndpointId } = useProject.getState();
+    return projectKeyOf(useProject.getState());
+}
+
+/* The same key for a render, which redraws when the project on screen changes. */
+export function useCurrentProjectKey(): string | null {
+    return useProject(projectKeyOf);
+}
+
+function projectKeyOf({ current, currentEndpointId }: Pick<ProjectState, 'current' | 'currentEndpointId'>): string | null {
     return current === null || currentEndpointId === null ? null : endpointKey(currentEndpointId, current.projectId);
 }
 
@@ -62,6 +70,6 @@ export function setViewPinned(viewId: string, pinned: boolean): void {
 }
 
 export function useViewPinned(viewId: string): boolean {
-    const key = useProject((s) => (s.current === null || s.currentEndpointId === null ? null : endpointKey(s.currentEndpointId, s.current.projectId)));
+    const key = useCurrentProjectKey();
     return useViewPins((s) => key !== null && (s.pins[key]?.includes(viewId) ?? false));
 }

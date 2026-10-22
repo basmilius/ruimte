@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
 import { AccountTab } from '@/shell/settings/AccountTab';
 import { findSettings } from '@/shell/settings/find-settings';
@@ -58,6 +59,8 @@ export function SettingsDialog() {
     const target = useUi((s) => s.settings.target);
     const searchAt = useUi((s) => s.settings.searchAt);
     const setSettings = useUi((s) => s.setSettings);
+    // The labels come from `i18next.t`, which no redraw follows: this one is what draws them again in a language picked here.
+    useTranslation('settings');
 
     return (
         <Dialog

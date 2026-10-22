@@ -11,7 +11,7 @@
             "runningAndroid": "Running Android emulators",
             "runningIos": "Running iOS simulators"
         },
-        "none": "No devices were found on this machine.",
+        "none": "No devices on this machine.",
         "openAsView": "Open as view",
         "openElsewhere": "Open device elsewhere",
         "openInPanel": "Open in device panel",
@@ -21,7 +21,7 @@
         "shutdownFailed": "Could not shut down {{name}}",
         "start": "Start device",
         "startFailed": "Could not start {{name}}",
-        "starting": "Starting device",
+        "starting": "Starting device…",
         "state": {
             "changing": "Changing state",
             "connected": "Connected",
@@ -33,24 +33,24 @@
             "unauthorized": "Allow USB debugging on the device",
             "unavailable": "Unavailable"
         },
-        "streamingOff": "Browser and device streaming is disabled in this machine's settings.",
+        "streamingOff": "Browser and device streaming is off in settings.",
         "thisMachine": "This machine",
         "tools": "Device tools",
         "unavailable": {
-            "androidSdk": "The Android SDK was not found on this machine. Install it to use Android emulators and devices.",
+            "androidSdk": "Install the Android SDK to use Android emulators and devices.",
             "needsMac": "iOS simulators need a Mac.",
             "xcode": "Install Xcode to use iOS simulators and iPhones."
         }
     },
     "diff": {
-        "commitCrashed": "The commit view failed",
+        "commitCrashed": "Could not show the commit",
         "commitFailed": "Could not read the commit.",
         "layout": {
             "split": "Split",
             "stacked": "Stacked"
         },
-        "loading": "Loading diff",
-        "moreFiles": "More files changed than this list holds.",
+        "loading": "Loading diff…",
+        "moreFiles": "More files changed than shown.",
         "noChange": "Nothing changed in {{path}} in this scope.",
         "noFiles": "This commit changed no files.",
         "nothingSince": "Nothing changed since {{base}}.",
@@ -60,9 +60,9 @@
         },
         "readAgain": "Read again",
         "readFailed": "Could not read the diff.",
-        "reading": "Reading the diff of {{path}}…",
-        "readingChanges": "Reading the changes.",
-        "readingCommit": "Reading the commit.",
+        "reading": "Reading {{path}}…",
+        "readingChanges": "Reading changes…",
+        "readingCommit": "Reading commit…",
         "scope": {
             "base": "Against the base branch",
             "worktree": "Against the working tree"
@@ -85,10 +85,10 @@
         },
         "html": {
             "failed": "{{name}} did not load ({{error}})",
-            "findDesktopOnly": "Finding in an HTML preview needs the desktop app",
-            "findLocalOnly": "Finding in an HTML preview works only for a file on this machine",
+            "findDesktopOnly": "Find in HTML preview needs the desktop app",
+            "findLocalOnly": "Find in HTML preview works only for local files",
             "findTextOnly": "An HTML preview finds plain text only",
-            "loading": "Loading the page",
+            "loading": "Loading page",
             "previewTitle": "{{name}} preview"
         },
         "image": {
@@ -107,9 +107,9 @@
             "copyRelativePath": "Copy relative path",
             "copyMention": "Copy as @mention",
             "openAsView": "Open as view",
-            "openInBrowser": "Open in a browser node",
+            "openInBrowser": "Open in browser node",
             "refresh": "Refresh",
-            "revealInFiles": "Reveal in the Files panel",
+            "revealInFiles": "Reveal in Files",
             "showOnCanvas": "Show on canvas"
         },
         "noFile": "No file to show.",
@@ -123,18 +123,18 @@
             "closeOthers": "Close other tabs",
             "copyCommit": "Copy commit hash",
             "keepInSidebar": "Keep in sidebar",
-            "openItself": "Open the file itself",
+            "openItself": "Open file",
             "pin": "Pin tab",
-            "stage": "Stage this file",
+            "stage": "Stage file",
             "unpin": "Unpin tab",
-            "unstage": "Unstage this file",
+            "unstage": "Unstage file",
             "closeToRight": "Close tabs to the right"
         },
         "model": {
-            "crashed": "The 3D viewer failed",
+            "crashed": "Could not show the 3D model",
             "failed": "Could not show {{name}}. {{reason}}",
-            "nestedRoot": "Its root layer sits in a folder inside the package, which this app does not open.",
-            "noWebgl": "{{name}} is a 3D model, and this window cannot draw 3D. WebGL is not available here.",
+            "nestedRoot": "Its model sits in a subfolder of the file, which this app does not open.",
+            "noWebgl": "{{name}} is a 3D model, and this window cannot show 3D.",
             "pause": "Pause animation",
             "play": "Play animation",
             "resetCamera": "Reset camera",
@@ -146,7 +146,7 @@
             "wireframe": "Wireframe"
         },
         "pdf": {
-            "crashed": "The PDF viewer failed",
+            "crashed": "Could not show the PDF",
             "failed": "Could not open {{name}}. {{reason}}",
             "page": "Page {{page}} of {{total}}",
             "password": "It is protected with a password, which this app does not ask for."
@@ -162,33 +162,33 @@
             "preview": "Preview",
             "source": "Source",
             "table": "Table",
-            "tableAfterSave": "The table shows once the changes are saved",
-            "previewAfterSave": "Preview shows once the changes are saved"
+            "tableAfterSave": "Save to show the table",
+            "previewAfterSave": "Save to show the preview"
         },
         "patch": {
             "patch": "Patch view",
             "text": "Plain text",
             "binary": "binary",
             "truncated": "Cut off",
-            "truncatedHint": "This patch is too long to show in full. The files after the cut are not listed and not colored.",
+            "truncatedHint": "Too long to show in full. Files after the cut are not listed or colored.",
             "mismatch": "Hunks out of date",
-            "mismatchHint": "This patch no longer matches its hunk headers. You can keep editing; the counts in the headers are not repaired."
+            "mismatchHint": "The patch no longer matches its hunk headers. Editing works, but header counts are not repaired."
         },
         "markdown": {
             "frontmatter": "Frontmatter",
-            "invalidFrontmatter": "Frontmatter could not be read as YAML. The original text is shown below."
+            "invalidFrontmatter": "Frontmatter is not valid YAML. Shown as text below."
         },
         "edit": {
             "label": "Code file {{path}}",
             "readOnly": "Read only",
             "outsideProject": "Only files in this project and its worktrees can be edited",
-            "ruimteState": "Ruimte keeps its own state here, so it is not edited by hand",
-            "large": "Over {{size}}, so it is plain text and not edited here",
-            "plain": "Over {{lines}} lines, so it is plain text and not edited here",
+            "ruimteState": "Ruimte's own state, not edited by hand",
+            "large": "Over {{size}}, shown as plain text and read only",
+            "plain": "Over {{lines}} lines, shown as plain text and read only",
             "touch": "Editing needs a mouse or a trackpad",
-            "loadFailed": "The editor did not load",
+            "loadFailed": "Could not load the editor",
             "noMoreOccurrences": "No more occurrences",
-            "failed": "The editor failed"
+            "failed": "Could not show the editor"
         },
         "draft": {
             "changedOnDisk": "The file changed on disk",
@@ -205,17 +205,17 @@
             "mark": "Unsaved changes",
             "title_one": "Close {{name}} without saving?",
             "title_other": "Close {{count}} files without saving?",
-            "description_one": "The changes could not be saved. Closing drops them.",
-            "description_other": "The changes could not be saved. Closing drops them.",
+            "description_one": "Could not save the changes. Closing drops them.",
+            "description_other": "Could not save the changes. Closing drops them.",
             "confirm": "Close without saving",
-            "failedTitle": "Some files could not be saved",
+            "failedTitle": "Could not save some files",
             "keepEditing": "Keep editing"
         },
         "revealFailed": "Could not show this file",
-        "breadcrumb": "Location of the cursor in the project and the file",
+        "breadcrumb": "Cursor location",
         "agent": {
             "editing": "{{name}} is editing",
-            "focusChat": "Show the chat",
+            "focusChat": "Show chat",
             "inChat": "in {{chat}}",
             "openChat": "Open chat",
             "openChatAtTurn": "Open chat at turn {{turn}}",
@@ -263,13 +263,13 @@
         "notFound": "{{path}} is not on this machine",
         "choice": {
             "title": "Which {{path}}?",
-            "description": "More than one folder of the project holds this file. Pick the one the agent meant."
+            "description": "Several project folders hold this file. Pick the one the agent meant."
         },
         "table": {
-            "crashed": "The table view failed",
+            "crashed": "Could not show the table",
             "empty": "{{name}} is empty.",
             "noRows": "{{name}} has a header and no rows.",
-            "malformed": "This file may be malformed. A quoted value does not end where it should, so the rows after it may be off.",
+            "malformed": "A quoted value does not close where it should, so later rows may be off.",
             "header": "First row is header",
             "column": "Column {{position}}",
             "delimiter": "Delimiter",
@@ -284,14 +284,14 @@
             "columns_other": "{{value}} columns"
         },
         "archive": {
-            "crashed": "The archive viewer failed",
+            "crashed": "Could not show the archive",
             "listing": "Reading the contents of {{name}}…",
             "failed": "Could not open {{name}}. {{reason}}",
             "empty": "{{name}} is empty.",
             "truncated": "Only the first {{value}} entries are listed.",
-            "unsafe_one": "{{count}} entry is left out, since its name would land outside the folder it is extracted into.",
-            "unsafe_other": "{{count}} entries are left out, since their names would land outside the folder they are extracted into.",
-            "pick": "Pick a file to preview it.",
+            "unsafe_one": "{{count}} entry is left out because its name points outside the folder.",
+            "unsafe_other": "{{count}} entries are left out because their names point outside the folder.",
+            "pick": "Pick a file to preview.",
             "tree": "Contents of {{name}}",
             "extractAll": "Extract all",
             "files_one": "{{value}} file",
@@ -322,8 +322,8 @@
                 "badName": "Enter one folder name, without slashes.",
                 "done_one": "Extracted {{count}} file into {{folder}}",
                 "done_other": "Extracted {{count}} files into {{folder}}",
-                "skipped_one": "{{count}} entry was left out. Links are never made, and names that escape the folder or land in .git are skipped.",
-                "skipped_other": "{{count}} entries were left out. Links are never made, and names that escape the folder or land in .git are skipped."
+                "skipped_one": "{{count}} entry was skipped. Links, and names outside the folder or in .git, are never extracted.",
+                "skipped_other": "{{count}} entries were skipped. Links, and names outside the folder or in .git, are never extracted."
             }
         }
     },
@@ -353,8 +353,8 @@
                 "exists": "That name is already taken.",
                 "git-state": "Git keeps its own state in there, so nothing is made in it.",
                 "machine-state": "That belongs to the machine and cannot be made here.",
-                "no-machine": "The machine this project runs on is not connected.",
-                "not-a-directory": "A part of that path is a file, not a folder.",
+                "no-machine": "This project's machine is not connected.",
+                "not-a-directory": "Part of that path is a file.",
                 "not-writable": "The machine cannot write there.",
                 "outside-project": "That is outside this project.",
                 "ruimte-state": "Ruimte keeps its own state in there, so nothing is made in it.",
@@ -364,28 +364,28 @@
         "delete": "Move to trash…",
         "deleteDialog": {
             "confirm": "Move to trash",
-            "fallback": "Move this to the trash?",
-            "fileDescription": "The file goes to the trash of the machine this project runs on, where it can be restored from.",
-            "fileTitle": "Move {{name}} to the trash?",
-            "folderDescription": "The folder and everything in it go to the trash of the machine this project runs on, where they can be restored from.",
-            "folderTitle": "Move {{name}} to the trash?",
-            "manyDescription": "The files and folders, with everything in the folders, go to the trash of the machine this project runs on, where they can be restored from.",
-            "manyTitle": "Move {{count}} items to the trash?"
+            "fallback": "Move to trash?",
+            "fileDescription": "It goes to the trash on this project's machine, where you can restore it.",
+            "fileTitle": "Move {{name}} to trash?",
+            "folderDescription": "The folder and everything in it go to the trash on this project's machine, where you can restore them.",
+            "folderTitle": "Move {{name}} to trash?",
+            "manyDescription": "The files and folders, with everything in them, go to the trash on this project's machine, where you can restore them.",
+            "manyTitle": "Move {{count}} items to trash?"
         },
-        "deleteFailed": "Could not move it to the trash",
+        "deleteFailed": "Could not move to trash",
         "deleteMany": "Move {{count}} items to trash…",
         "empty": "This folder is empty.",
         "filter": "Filter files",
         "noMatch": "No files match the filter.",
         "onlyHidden": "Everything in this folder is hidden or ignored. Turn on Show hidden and ignored files in the More menu.",
-        "reading": "Reading {{name}}.",
+        "reading": "Reading {{name}}…",
         "rename": {
             "confirm": "Rename",
-            "description": "Type a new name, or a path in the project to move it. The language servers of the project change what the move touches first, such as the namespace and the imports of a PHP class.",
+            "description": "Type a new name, or a path in the project to move it. Imports and namespaces that refer to it are updated too.",
             "failed": "Could not move",
             "fallback": "Rename this?",
             "fileTitle": "Rename {{name}}",
-            "folderTitle": "Rename the folder {{name}}",
+            "folderTitle": "Rename folder {{name}}",
             "menu": "Rename…",
             "name": "Name",
             "refused": {
@@ -393,14 +393,14 @@
                 "exists": "That name is already taken.",
                 "git-state": "Git keeps its own state in there, so nothing moves in or out of it.",
                 "into-itself": "A folder cannot go inside itself.",
-                "language-failed": "A language server could not make the edits the move brings, so nothing moved.",
+                "language-failed": "Could not update the references to it, so nothing moved.",
                 "machine-state": "That belongs to the machine and cannot be moved from here.",
-                "no-machine": "The machine this project runs on is not connected.",
-                "not-a-directory": "A part of that path is a file, not a folder.",
+                "no-machine": "This project's machine is not connected.",
+                "not-a-directory": "Part of that path is a file.",
                 "not-found": "That is not there any more.",
                 "not-writable": "The machine cannot write there.",
                 "outside-project": "That is outside this project.",
-                "project-root": "The project folder is moved outside Ruimte.",
+                "project-root": "Move the project folder in Finder or a terminal.",
                 "ruimte-state": "Ruimte keeps its own state in there, so nothing moves in or out of it."
             },
             "unsaved": "{{name}} has changes that could not be saved, so nothing moved."
@@ -414,19 +414,19 @@
             "checkout": "Switching branch",
             "commit": "Committing",
             "commit-push": "Committing and pushing",
-            "create-branch": "Creating the branch",
-            "create-pr": "Opening the pull request",
-            "delete-branch": "Deleting the branch",
+            "create-branch": "Creating branch",
+            "create-pr": "Opening pull request",
+            "delete-branch": "Deleting branch",
             "fetch": "Fetching",
             "force-push": "Force pushing",
             "merge": "Merging",
-            "publish": "Publishing the branch",
+            "publish": "Publishing branch",
             "pull": "Pulling",
             "push": "Pushing",
             "rebase": "Rebasing",
-            "rename-branch": "Renaming the branch",
+            "rename-branch": "Renaming branch",
             "stash": "Stashing",
-            "stash-pop": "Popping the stash",
+            "stash-pop": "Popping stash",
             "sync": "Syncing",
             "working": "Working"
         },
@@ -454,9 +454,15 @@
             "stashGroup": "Stash",
             "pullRequestGroup": "Pull request"
         },
+        "changeKind": {
+            "code": "Code",
+            "tests": "Tests",
+            "mocks": "Mocks",
+            "generated": "Generated"
+        },
         "pr": {
             "title": "Pull request",
-            "loading": "Reading the pull request…",
+            "loading": "Reading pull request…",
             "none": "This branch has no pull request.",
             "open": "Open on GitHub",
             "refresh": "Refresh",
@@ -467,25 +473,27 @@
                 "merged": "Merged",
                 "closed": "Closed"
             },
-            "noChecks": "No checks have run on this commit.",
+            "files_one": "{{count}} file changed",
+            "files_other": "{{count}} files changed",
+            "noChecks": "No checks on this commit.",
             "status": "Status",
             "noThreads": "No review threads",
             "checks": "Checks",
             "checksFailed_one": "{{count}} check failed",
             "checksFailed_other": "{{count}} checks failed",
-            "checksPending_one": "{{count}} check still running",
-            "checksPending_other": "{{count}} checks still running",
+            "checksPending_one": "{{count}} check running",
+            "checksPending_other": "{{count}} checks running",
             "checksPassed_one": "{{count}} check passed",
             "checksPassed_other": "{{count}} checks passed",
             "merge": {
                 "clean": "Ready to merge",
                 "blocked": "Merging is blocked",
-                "behind": "The branch is behind its base",
+                "behind": "Behind its base",
                 "dirty": "Merge conflicts",
                 "draft": "Still a draft",
                 "has_hooks": "Ready to merge, with checks to pass",
-                "unstable": "Merging is possible but checks failed",
-                "unknown": "Merge state not known yet",
+                "unstable": "Mergeable, but checks failed",
+                "unknown": "Merge state unknown",
                 "review": {
                     "approved": "Approved",
                     "changes_requested": "Changes requested",
@@ -501,18 +509,18 @@
             "outdated": "outdated",
             "bot": "bot",
             "copyToChat": "Copy to chat…",
-            "copyToChatHint": "Puts the thread in the prompt of a chat. Nothing is sent.",
-            "truncated": "There are more comments in this thread than shown here.",
+            "copyToChatHint": "Adds the thread to a chat's prompt. Nothing is sent.",
+            "truncated": "More comments than shown.",
             "watch": {
                 "forChat": "Watch for chat…",
-                "forChatHint": "Wakes the chat once when the checks of the current commit finish, and when a review comes in. Nothing is merged or pushed.",
+                "forChatHint": "Wakes the chat when this commit's checks finish or a review comes in. Nothing is merged or pushed.",
                 "stop": "Stop watching",
                 "watching": "Watched for {{chat}}",
                 "ended": "The watch ended.",
                 "merged": "The pull request was merged, so the watch ended.",
                 "closed": "The pull request was closed, so the watch ended.",
                 "expired": "The watch ran for 7 days and ended.",
-                "folderMissing": "The folder of this chat no longer exists, so the watch ended.",
+                "folderMissing": "The chat's folder is gone, so the watch ended.",
                 "limit": "This machine already watches 50 pull requests. Stop one first.",
                 "failed": "Could not start the watch"
             }
@@ -524,17 +532,17 @@
             "default": "default",
             "detached": "detached",
             "inWorktree": "in another worktree",
-            "loading": "Reading the branches.",
+            "loading": "Reading branches…",
             "noCheckouts": "No checkouts",
-            "noMatch": "No branch by that name.",
+            "noMatch": "No matching branch.",
             "repositories": "Repositories",
             "search": "Search branches",
-            "tooltip": "The branch this checkout is on",
+            "tooltip": "Current branch",
             "chipRepos_one": "{{count}} repository",
             "chipRepos_other": "{{count}} repositories",
             "tooltipRepos_one": "{{count}} repository and its branches",
             "tooltipRepos_other": "{{count}} repositories and their branches",
-            "tooltipWorktree": "{{branch}}, in the worktree {{worktree}}",
+            "tooltipWorktree": "{{branch}}, in worktree {{worktree}}",
             "worktrees": "Worktrees",
             "failed": "Could not read branches: {{reason}}"
         },
@@ -545,16 +553,16 @@
             "commitAndPushHint": "Commit and push",
             "commitStagedHint": "Commit what is staged",
             "in": "Commit in {{repos}}",
-            "letWrite": "Let {{provider}} write the message from the staged changes",
+            "letWrite": "Let {{provider}} write the message",
             "needsMessage": "Needs a message and a change",
-            "needsStaged": "Stage what belongs in this commit first",
+            "needsStaged": "Stage changes first",
             "placeholder": "Summary, then a blank line and the details",
-            "stageAllHint": "Stage every change and commit it",
+            "stageAllHint": "Stage all and commit",
             "stopWriting": "Stop writing the message",
             "writeFailedBody": "The message could not be written.",
             "writeFailedTitle": "Could not write the message",
-            "writeOneRepo": "A message is written from one repository at a time",
-            "suggestionReady": "Your draft changed while this suggestion was being written.",
+            "writeOneRepo": "Writes for one repository at a time",
+            "suggestionReady": "Your draft changed during this suggestion.",
             "useSuggestion": "Use suggestion"
         },
         "conflict": {
@@ -571,51 +579,51 @@
             "createBranch": {
                 "confirm": "Create branch",
                 "description": "Starts from the current commit and switches to it.",
-                "title": "Create a branch"
+                "title": "Create branch"
             },
             "deleteBranch": {
                 "anyway": "Delete anyway",
                 "confirm": "Delete branch",
-                "description": "Deletes the local branch. A remote branch with the same name stays.",
-                "fallback": "Delete this branch?",
+                "description": "Deletes the local branch. The remote branch stays.",
+                "fallback": "Delete branch?",
                 "title": "Delete {{branch}}?",
-                "unmerged": "This branch has commits that no other branch has. Deleting it loses them."
+                "unmerged": "This branch has commits no other branch has. Deleting loses them."
             },
             "deleteFile": {
                 "confirm": "Move to trash",
-                "description": "The file is new, so there is nothing in git to restore it from. It goes to the trash of the machine this project runs on.",
-                "descriptionMany": "The files are new, so there is nothing in git to restore them from. They go to the trash of the machine this project runs on.",
-                "fallback": "Move this file to the trash?",
-                "title": "Move {{name}} to the trash?",
-                "titleMany": "Move {{count}} files to the trash?"
+                "description": "The file is new, so git cannot restore it. It goes to the trash on this project's machine.",
+                "descriptionMany": "The files are new, so git cannot restore them. They go to the trash on this project's machine.",
+                "fallback": "Move file to trash?",
+                "title": "Move {{name}} to trash?",
+                "titleMany": "Move {{count}} files to trash?"
             },
             "discard": {
                 "confirm": "Discard",
                 "description": "Reverts the file to HEAD. The changes are stashed first, so \"git stash pop\" restores them.",
                 "descriptionMany": "Reverts the files to HEAD. The changes are stashed first, so \"git stash pop\" restores them.",
-                "fallback": "Discard this file?",
+                "fallback": "Discard file?",
                 "title": "Discard {{name}}?",
                 "titleMany": "Discard {{count}} files?"
             },
             "diverged": {
-                "description": "Your branch and the remote have each gained commits the other does not have.",
+                "description": "Your branch and the remote each have commits the other lacks.",
                 "merge": "Merge",
                 "mergeHint": "Keeps both histories and writes a merge commit.",
                 "rebase": "Rebase",
-                "rebaseHint": "Replays your commits on top of the remote, leaving one line of history.",
-                "title": "How should {{branch}} come together?"
+                "rebaseHint": "Replays your commits on top of the remote, in one line.",
+                "title": "How do you want to update {{branch}}?"
             },
             "filter": "Filter",
             "forcePush": {
                 "confirm": "Force push",
-                "description": "Overwrites the remote branch with this checkout, so commits only the remote has are lost. It stops if someone else pushed since the last fetch.",
-                "title": "Force push this branch?"
+                "description": "Overwrites the remote branch, so commits only the remote has are lost. Stops if someone pushed since the last fetch.",
+                "title": "Force push branch?"
             },
             "message": "Message",
             "name": "Name",
             "optional": "Optional",
             "pick": {
-                "delete": "Delete a branch",
+                "delete": "Delete branch",
                 "empty": "No other branches.",
                 "fallback": "Pick a branch",
                 "merge": "Merge a branch into this one",
@@ -624,7 +632,7 @@
             "popStash": {
                 "description": "Applies the stash to the working tree and removes it.",
                 "empty": "No stashes.",
-                "title": "Pop a stash"
+                "title": "Pop stash"
             },
             "pullRequest": {
                 "body": "Description",
@@ -632,23 +640,23 @@
                 "confirm": "Create pull request",
                 "description": "Publishes the branch first if needed. The pull request opens in your browser.",
                 "subject": "Title",
-                "title": "Open a pull request"
+                "title": "Create pull request"
             },
             "rebase": {
                 "confirm": "Rebase",
-                "description": "Your commits are written again on top of that branch, as new commits. A branch you already pushed then needs a force push. A conflict stops the rebase halfway, for you to resolve or take back.",
-                "fallback": "Rebase this branch?",
+                "description": "Rewrites your commits on top of that branch. A pushed branch then needs a force push. A conflict pauses the rebase for you to resolve or abort.",
+                "fallback": "Rebase branch?",
                 "title": "Rebase onto {{onto}}?"
             },
             "renameBranch": {
                 "confirm": "Rename branch",
                 "description": "The remote branch keeps the old name until the next push.",
-                "title": "Rename this branch"
+                "title": "Rename branch"
             },
             "stash": {
                 "confirm": "Stash changes",
                 "description": "Stashes every change, including untracked files, and resets the working tree to HEAD.",
-                "title": "Stash the changes"
+                "title": "Stash changes"
             },
             "switch": {
                 "confirm": "Stash and switch",
@@ -663,16 +671,16 @@
             "unversioned": "Unversioned Files"
         },
         "list": {
-            "collapseFolder": "Collapse this folder",
+            "collapseFolder": "Collapse folder",
             "deleteFile": "Move to trash…",
             "deleteMany": "Move {{count}} new files to trash…",
             "discard": "Discard changes…",
             "discardMany": "Discard {{count}} files…",
-            "expandFolder": "Expand this folder",
+            "expandFolder": "Expand folder",
             "files_one": "{{count}} file",
             "files_other": "{{count}} files",
             "noChanges": "No changes.",
-            "noRepo": "This folder is not a git repository.",
+            "noRepo": "Not a git repository.",
             "openChanges": "Open changes",
             "stage": "Stage",
             "stageHere": "Stage everything here",
@@ -688,9 +696,9 @@
             "failed": "Could not read the history.",
             "loadMore": "Load more",
             "moreRefs": "+{{count}}",
-            "open": "Open the commit",
+            "open": "Open commit",
             "today": "Today",
-            "tracked": "{{name}}, the same commit as {{remote}}",
+            "tracked": "{{name}}, same commit as {{remote}}",
             "yesterday": "Yesterday"
         },
         "many": {
@@ -712,9 +720,9 @@
         },
         "panel": {
             "collapseAll": "Collapse all folders",
-            "deleteDone": "Moved {{path}} to the trash",
+            "deleteDone": "Moved {{path}} to trash",
             "deleteFailed": "Could not delete the file",
-            "discardFailed": "Discard failed",
+            "discardFailed": "Could not discard",
             "discardNothing": "{{path}} had nothing to discard",
             "discardRestore": "Restore {{stash}} with \"git stash pop\".",
             "discardStashed": "Stashed {{path}}",
@@ -730,7 +738,7 @@
             "failed": "That did not work",
             "fetch": "Fetching",
             "merge": "Merging",
-            "pr": "Opening the pull request",
+            "pr": "Opening pull request",
             "pull": "Pulling",
             "push": "Pushing",
             "rebase": "Rebasing",
@@ -754,7 +762,7 @@
         },
         "follow": {
             "label": "Follows the selection: {{node}}",
-            "back": "Back to the project folder"
+            "back": "Back to project folder"
         },
         "repo": {
             "ahead_one": "{{count}} commit to push",
@@ -762,18 +770,18 @@
             "behind_one": "{{count}} commit to pull",
             "behind_other": "{{count}} commits to pull",
             "needsYou": "Stopped halfway or holds a conflict",
-            "hide": "Hide this repository",
+            "hide": "Hide repository",
             "showAll_one": "Show {{count}} hidden repository",
             "showAll_other": "Show {{count}} hidden repositories"
         },
         "stage": {
-            "failed": "Staging failed",
-            "unstageFailed": "Unstaging failed"
+            "failed": "Could not stage",
+            "unstageFailed": "Could not unstage"
         },
         "tab": {
             "changes": "Changes",
             "checkoutHint": "Everything {{name}} changed since {{base}}",
-            "commitHint": "The commit {{hash}}"
+            "commitHint": "Commit {{hash}}"
         }
     },
     "language": {
@@ -791,8 +799,8 @@
         "documents_one": "{{formatted}} open file",
         "documents_other": "{{formatted}} open files",
         "install": "Install",
-        "installDetail": "Installs {{name}} {{version}} on this machine, once.",
-        "unavailable": "No release of this server is available yet",
+        "installDetail": "Installs {{name}} {{version}} on this machine.",
+        "unavailable": "No release available yet",
         "update": "Update to {{version}}",
         "rebuild": "Rebuild",
         "rollback": "Use {{version}}",
@@ -807,7 +815,7 @@
         "logTitle": "{{name}} log",
         "logEmpty": "Nothing logged yet",
         "failed": "Could not reach the language server: {{message}}",
-        "none": "No language server serves this file",
+        "none": "No language server for this file",
         "logs": "Logs",
         "sidecar": {
             "idle": "{{title}}, for more code actions, starts when needed",
@@ -817,24 +825,24 @@
         },
         "hover": {
             "quickFix": "Quick fix…",
-            "quickFixNone": "This language server offers no quick fixes",
+            "quickFixNone": "No quick fixes",
             "definition": "Go to definition",
             "references_one": "{{formatted}} reference",
             "references_other": "{{formatted}} references",
-            "none": "No information for this position"
+            "none": "No information here"
         },
         "edit": {
-            "staged_one": "{{count}} file changed and not saved yet",
-            "staged_other": "{{count}} files changed and not saved yet",
+            "staged_one": "{{count}} unsaved file",
+            "staged_other": "{{count}} unsaved files",
             "stagedMore": "{{names}} and {{count}} more",
             "saveAll": "Save all",
-            "notSaved": "{{name}} could not be saved"
+            "notSaved": "Could not save {{name}}"
         },
         "actions": {
             "show": "Show code actions",
             "none": "No code actions here",
             "unavailable": "No language server offers code actions here",
-            "organized": "The imports are already organized",
+            "organized": "Imports already organized",
             "noFormatter": "No language server formats this file",
             "readOnly": "This file is read only",
             "failed": "Could not apply the action: {{message}}",
@@ -857,9 +865,9 @@
         },
         "rename": {
             "unavailable": "No language server renames in this file",
-            "nothing": "There is nothing to rename here",
+            "nothing": "Nothing to rename here",
             "refused": "The language server refused the new name",
-            "stale": "The text changed while the rename was being asked for",
+            "stale": "The text changed during the rename",
             "failed": "Could not rename: {{message}}",
             "occurrences_one": "{{formatted}} occurrence",
             "occurrences_other": "{{formatted}} occurrences",
@@ -887,7 +895,7 @@
         "peek": {
             "unavailable": "No language server finds references in this file",
             "none": "No references found",
-            "failed": "Could not look up the references: {{message}}",
+            "failed": "Could not find references: {{message}}",
             "references_one": "{{formatted}} reference",
             "references_other": "{{formatted}} references",
             "close": "Close",
@@ -905,7 +913,7 @@
             "newCode": "new *",
             "lines_one": "{{formatted}} line",
             "lines_other": "{{formatted}} lines",
-            "uncommitted": "Not committed yet",
+            "uncommitted": "Uncommitted",
             "latest": "Latest change",
             "showCommit": "Show commit"
         },
@@ -918,7 +926,7 @@
             "workspace": "Workspace symbols",
             "line": "Go to line",
             "none": "No matching symbols",
-            "workspaceHint": "Type the name of a symbol in the project",
+            "workspaceHint": "Type a symbol name",
             "lineHint": "Type a line number",
             "goToLine": "Go to line {{line}}",
             "groups": {
@@ -952,9 +960,9 @@
         "onDevice": {
             "explain": "Explain",
             "explanation": "Explanation · Apple Foundation Models, on device",
-            "note": "Written by the model on this Mac. It costs no credit, and the code stays on this Mac.",
+            "note": "Written on this Mac. Free, and the code stays here.",
             "thinking": "Explaining on this Mac…",
-            "off": "Explain is turned off. Turn it on in Settings, Editor, AI.",
+            "off": "Explain is off. Turn it on in Settings, Editor, AI.",
             "nothing": "Select code, or put the caret in a function, to explain it."
         },
         "ghost": {
@@ -962,8 +970,8 @@
             "accept": "Accept",
             "next": "Next",
             "thinking": "Thinking on this Mac",
-            "off": "Suggestions are turned off. Turn them on in Settings, Editor, AI.",
-            "none": "No suggestion for this spot",
+            "off": "Suggestions are off. Turn them on in Settings, Editor, AI.",
+            "none": "No suggestion here",
             "unavailable": "The on-device model is not available."
         }
     },
@@ -975,7 +983,7 @@
         "warning_other": "{{formatted}} warnings",
         "info_one": "{{formatted}} message",
         "info_other": "{{formatted}} messages",
-        "empty": "No problems in the files that are open. The language servers report on the files they have been given.",
+        "empty": "No problems in open files.",
         "filter": "Filter",
         "nothingMatches": "No problem matches the filter"
     },
@@ -994,7 +1002,7 @@
         "expand": "Expand {{name}}",
         "force": {
             "confirm": "Force quit",
-            "description": "SIGKILL ends process {{pid}} immediately. It cannot save or clean up, so files it was writing may be left incomplete.",
+            "description": "Ends process {{pid}} at once, without saving or cleaning up. Files it was writing may be incomplete.",
             "title": "Force quit {{name}}?"
         },
         "interruptFailed": "Could not interrupt the turn",
@@ -1017,7 +1025,7 @@
             "interrupt": "Interrupt",
             "terminate": "Terminate"
         },
-        "signalFailed": "Could not signal {{name}}",
+        "signalFailed": "Could not stop {{name}}",
         "sortBy": {
             "cpu": "Sort by CPU",
             "disk": "Sort by disk",
@@ -1058,7 +1066,7 @@
             "strategy": {
                 "merge": {
                     "label": "Merge",
-                    "line": "A merge commit; every commit of the worktree stays in the history."
+                    "line": "A merge commit; every worktree commit stays in history."
                 },
                 "rebase": {
                     "label": "Rebase",
@@ -1077,17 +1085,17 @@
         },
         "remove": {
             "anyway": "Remove anyway",
-            "clean": "Nothing in it is lost: it holds no uncommitted files, no new files and no commits that {{target}} lacks.",
-            "cleanMissing": "Its folder is already gone. Nothing in it is lost: it holds no uncommitted files, no new files and no commits that {{target}} lacks.",
-            "holding": "It holds {{work}}. They are lost, and so is the branch.",
+            "clean": "Nothing is lost. No uncommitted files, new files or commits that {{target}} lacks.",
+            "cleanMissing": "Its folder is already gone. Nothing is lost. No uncommitted files, new files or commits that {{target}} lacks.",
+            "holding": "It holds {{work}}. That is lost with the branch.",
             "holdingMissing": "Its folder is already gone, and the branch holds {{work}}. Those commits are lost with the branch.",
-            "ignoredNote": "Files git ignores in it, such as .env or a local database, go too and are not counted above.",
+            "ignoredNote": "Ignored files, such as .env or a local database, go too.",
             "title": "Remove worktree {{branch}}?"
         },
         "removeAll": {
-            "clean": "Nothing in them is lost: none holds uncommitted files, new files or commits its branch lacks.",
+            "clean": "Nothing is lost. None holds uncommitted files, new files or commits its branch lacks.",
             "holding": "{{lines}}. That is lost, and so are their branches.",
-            "ignoredNote": "Files git ignores in them, such as .env or a local database, go too and are not counted above.",
+            "ignoredNote": "Ignored files, such as .env or a local database, go too.",
             "line": "{{branch}} holds {{work}}",
             "title_one": "Remove {{count}} worktree?",
             "title_other": "Remove {{count}} worktrees?"
@@ -1118,9 +1126,9 @@
             "inspecting": "Inspecting…",
             "clean": "Nothing to lose. It can be removed.",
             "hasWork": "It holds {{work}}. Removing it loses that.",
-            "locked": "It is locked with git worktree lock. Removing it needs force.",
-            "agentWorking": "An agent is working in it. Stop the agent before you remove it.",
-            "missing": "The folder is gone. Only the record of it is left to remove.",
+            "locked": "It is locked. Use Remove anyway to remove it.",
+            "agentWorking": "An agent is working in it. Stop it first.",
+            "missing": "The folder is gone. Only its record remains.",
             "failed": "Could not inspect the worktree"
         },
         "work": {

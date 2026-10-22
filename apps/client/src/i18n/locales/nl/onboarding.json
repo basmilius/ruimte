@@ -3,8 +3,8 @@
     "description": "Ruimte instellen op deze machine: hoe het werkt, de agent-CLI's en computer use.",
     "welcome": {
         "title": "Welkom bij Ruimte",
-        "bodyThree": "Space for AI Engineering. Drie korte taken helpen je op weg. Doe ze in elke volgorde, of kom er later op terug.",
-        "bodyTwo": "Space for AI Engineering. Twee korte taken helpen je op weg. Doe ze in elke volgorde, of kom er later op terug.",
+        "bodyThree": "Space for AI Engineering. Drie korte taken helpen je op weg, in elke volgorde of later.",
+        "bodyTwo": "Space for AI Engineering. Twee korte taken helpen je op weg, in elke volgorde of later.",
         "start": "Aan de slag",
         "notNow": "Niet nu"
     },
@@ -13,7 +13,7 @@
         "count": "{{done}} van {{total}} klaar",
         "progress": "Taken klaar",
         "tasks": "Taken",
-        "closeNote": "Sluit dit wanneer je wilt. Het blijft onder Instellingen › Over.",
+        "closeNote": "Sluit wanneer je wilt; heropen via Instellingen › Over.",
         "next": "Volgende: {{task}}",
         "finish": "Afronden"
     },
@@ -48,16 +48,16 @@
         },
         "machines": {
             "title": "Meerdere accounts, meerdere machines",
-            "body": "Voeg per CLI meer dan één account toe en kies er per chat een. Zet een andere machine één keer op je account en de projecten erop openen als lokale."
+            "body": "Voeg per CLI meer dan één account toe en kies er per chat een. Voeg een andere machine toe aan je account en de projecten erop openen als lokale."
         },
         "gotIt": "Begrepen"
     },
     "providers": {
-        "info": "Ruimte start de agent-CLI's die op deze machine staan. De CLI houdt de login bij en Ruimte vraagt alleen wie er is ingelogd. Inloggen opent een terminal. Je hebt één provider nodig om te beginnen.",
+        "info": "Ruimte start de agent-CLI's op deze machine. Elke CLI houdt zijn eigen login. Inloggen opent een terminal. Je hebt één provider nodig om te beginnen.",
         "checkAgain": "Opnieuw controleren",
-        "looking": "Zoeken naar agent-CLI's",
-        "none": "Ruimte vond nog geen agent-CLI's op deze machine.",
-        "notLoggedIn": "Niet ingelogd. Inloggen opent een terminal.",
+        "looking": "Zoeken naar agent-CLI's…",
+        "none": "Geen agent-CLI's gevonden op deze machine.",
+        "notLoggedIn": "Niet ingelogd.",
         "chatAndTerminal": "chat en terminal",
         "terminalOnly": "alleen terminal",
         "apple": "Gebruik het model op deze Mac voor chats en tools.",
@@ -79,14 +79,14 @@
             "loggedIn_one": "{{clis}} is ingelogd.",
             "loggedIn_other": "{{clis}} zijn ingelogd.",
             "computer": "Computer use staat aan.",
-            "logInLater": "{{clis}} kun je later inloggen onder Instellingen › Providers.",
+            "logInLater": "Log later in op {{clis}} onder Instellingen › Providers.",
             "noProvider": "Log in bij een agent-CLI onder Instellingen › Providers voor je eerste chat.",
-            "computerLater": "Computer use kun je later aanzetten onder Instellingen › Computer Use."
+            "computerLater": "Zet computer use later aan onder Instellingen › Computer Use."
         }
     },
     "about": {
         "label": "Ruimte instellen",
-        "description": "De korte taken van de eerste start: hoe Ruimte werkt, de agent-CLI's op deze machine en computer use."
+        "description": "Taken van de eerste start: hoe Ruimte werkt, agent-CLI's en computer use."
     },
     "firstRun": {
         "body": "Ruimte kan je projecten en agents op deze computer draaien, of alleen de machines op je account openen.",
@@ -99,7 +99,7 @@
             "title": "Alleen verbinden met mijn machines",
             "description": "Log in en open de machines op je account. Op deze computer draaien geen agents."
         },
-        "note": "Ruimte start daarna één keer opnieuw. Je kunt dit later wijzigen in Instellingen, onder Machines.",
+        "note": "Ruimte start één keer opnieuw. Wijzig dit later onder Instellingen › Account.",
         "continue": "Doorgaan",
         "restarting": "Opnieuw starten…",
         "failed": "Ruimte kon deze keuze niet opslaan. {{reason}}",

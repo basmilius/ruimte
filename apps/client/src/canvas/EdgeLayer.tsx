@@ -1,14 +1,16 @@
-import { memo, useState } from 'react';
+import { memo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pencil, Trash, X } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { isAgentKind, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { edgeLook, lineMeaning } from '@/canvas/edge-look';
-import { routeDraft, SIDE_NORMAL, type Obstacle, type Side } from '@/canvas/edge-route';
+import { routeDraft, SIDE_NORMAL, type EdgeRoute, type Obstacle, type Side } from '@/canvas/edge-route';
+import type { EdgeLine } from '@/canvas/edge-lines';
 import { lineRoutes } from '@/canvas/line-routes';
 import { markerPath, type MarkerShape } from '@/canvas/marker-path';
 import type { Point, Rect } from '@/canvas/math';
-import { endpointOfNode, useEndpointId } from '@/state/keys';
+import { endpointOfNodeIn, useEndpointId } from '@/state/keys';
+import { useEndpoints } from '@/state/endpoints';
 import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
 import { Icon, IconButton, ContextMenu, Input } from '@adecore/ui';
 
@@ -128,10 +130,94 @@ function DraftLine({ draft, from, obstacles }: { draft: NonNullable<CanvasState[
     );
 }
 
-/* Memoized with no props: it reads the store itself, so what renders the canvas above moves nothing drawn here. */
-export const EdgeLayer = memo(function EdgeLayer() {
+interface EdgeRowProps {
+    layer: 'lines' | 'labels';
+    line: EdgeLine;
+    route: EdgeRoute;
+    label: string | undefined;
+    stroke: string;
+    width: number;
+    dashed: boolean;
+    tail: MarkerShape;
+    head: MarkerShape;
+    active: boolean;
+    editing: boolean;
+    onHover: Dispatch<SetStateAction<string | null>>;
+    onEdit: Dispatch<SetStateAction<string | null>>;
+}
+
+/* One line in one of the two layers. Memoized, since a canvas holds a line per agent it ran and a hover or a click changes one of them. */
+const EdgeRow = memo(function EdgeRow({ layer, line, route, label, stroke, width, dashed, tail, head, active, editing, onHover, onEdit }: EdgeRowProps) {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
+    const key = line.edge.id;
+    const remove = (): void => {
+        for (const id of line.ids) {
+            canvasStore.getState().removeEdge(id);
+        }
+    };
+    return (
+        <ContextMenu.Root>
+            <ContextMenu.Trigger render={<g />} onPointerEnter={() => onHover(key)} onPointerLeave={() => onHover((h) => (h === key ? null : h))}>
+                {layer === 'lines' && (
+                    <>
+                        {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
+                        <path
+                            d={route.d}
+                            fill="none"
+                            stroke="transparent"
+                            strokeWidth="14"
+                            className="pointer-events-auto cursor-pointer"
+                            onPointerDown={(e) => {
+                                e.stopPropagation();
+                                // One line is one thing to click, so both of its directions are selected together.
+                                canvasStore.getState().select(line.ids, e.shiftKey);
+                            }}
+                            onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(key);
+                            }}
+                        />
+                        <path
+                            d={route.d}
+                            fill="none"
+                            stroke={stroke}
+                            strokeWidth={width}
+                            strokeDasharray={dashed ? '6 6' : undefined}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+                        <EdgeMarker shape={tail} at={route.from} side={route.fromSide} stroke={stroke} />
+                        <EdgeMarker shape={head} at={route.to} side={route.toSide} stroke={stroke} />
+                    </>
+                )}
+                {layer === 'labels' && (
+                    <EdgeLabel
+                        ids={line.ids}
+                        label={label}
+                        at={route.mid}
+                        editing={editing}
+                        active={active}
+                        onRemove={remove}
+                        onEdit={(on) => onEdit(on ? key : null)}
+                    />
+                )}
+            </ContextMenu.Trigger>
+            <ContextMenu.Popup>
+                <ContextMenu.Item onClick={() => onEdit(key)}>
+                    <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <ContextMenu.Hint>{t('menu.doubleClick')}</ContextMenu.Hint>
+                </ContextMenu.Item>
+                <ContextMenu.Separator />
+                <ContextMenu.Item onClick={remove}>
+                    <Icon icon={Trash} size={14} /> {t('common:action.remove')}
+                </ContextMenu.Item>
+            </ContextMenu.Popup>
+        </ContextMenu.Root>
+    );
+});
+
+/* It reads the store itself, so what renders the canvas above moves nothing drawn here. */
+export function EdgeLayer() {
     const edges = useCanvas((s) => s.edges);
     const nodes = useCanvas((s) => s.nodes);
     const texts = useCanvas((s) => s.texts);
@@ -141,6 +227,7 @@ export const EdgeLayer = memo(function EdgeLayer() {
     const [hovered, setHovered] = useState<string | null>(null);
     const [editing, setEditing] = useState<string | null>(null);
     const endpointId = useEndpointId();
+    const endpoints = useEndpoints((s) => s.endpoints);
     const tasks = useTasks((s) => s.byEndpoint);
 
     const { lines, obstacles, routes, rectOf } = lineRoutes(edges, nodes, texts, hidden);
@@ -175,83 +262,33 @@ export const EdgeLayer = memo(function EdgeLayer() {
                             const active = hovered === key || line.ids.some((id) => selection.includes(id));
                             // A line a task went along says how the task stands, and only looks open while it is.
                             // The tasks a machine keeps are about its own nodes, so a line between nodes of another machine reads that machine's.
-                            const machineTasks = tasks[endpointOfNode(nodes[line.edge.from] ?? {}, endpointId)];
+                            const machineTasks = tasks[endpointOfNodeIn(endpoints, nodes[line.edge.from] ?? {}, endpointId)];
                             const task =
                                 edgeTask(machineTasks, line.edge.from, line.edge.to) ??
                                 (line.back === null ? null : edgeTask(machineTasks, line.back.from, line.back.to));
-                            const label = task === null ? line.label : taskEdgeLabel(task.status);
                             const look = edgeLook(lineMeaning(line, readsContext, drivenByAgent), {
                                 pair: line.back !== null,
                                 openTask: task !== null && task.status === 'open'
                             });
-                            const stroke = look.accent ? (active ? 'var(--accent)' : 'var(--edge-context)') : active ? 'var(--text-muted)' : 'var(--edge-line)';
-                            const remove = (): void => {
-                                for (const id of line.ids) {
-                                    canvasStore.getState().removeEdge(id);
-                                }
-                            };
                             return (
-                                <ContextMenu.Root key={key}>
-                                    <ContextMenu.Trigger
-                                        render={<g />}
-                                        onPointerEnter={() => setHovered(key)}
-                                        onPointerLeave={() => setHovered((h) => (h === key ? null : h))}
-                                    >
-                                        {layer === 'lines' && (
-                                            <>
-                                                {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
-                                                <path
-                                                    d={route.d}
-                                                    fill="none"
-                                                    stroke="transparent"
-                                                    strokeWidth="14"
-                                                    className="pointer-events-auto cursor-pointer"
-                                                    onPointerDown={(e) => {
-                                                        e.stopPropagation();
-                                                        // One line is one thing to click, so both of its directions are selected together.
-                                                        canvasStore.getState().select(line.ids, e.shiftKey);
-                                                    }}
-                                                    onDoubleClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setEditing(key);
-                                                    }}
-                                                />
-                                                <path
-                                                    d={route.d}
-                                                    fill="none"
-                                                    stroke={stroke}
-                                                    strokeWidth={active ? look.width + 1 : look.width}
-                                                    strokeDasharray={look.dashed ? '6 6' : undefined}
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-                                                <EdgeMarker shape={look.tail} at={route.from} side={route.fromSide} stroke={stroke} />
-                                                <EdgeMarker shape={look.head} at={route.to} side={route.toSide} stroke={stroke} />
-                                            </>
-                                        )}
-                                        {layer === 'labels' && (
-                                            <EdgeLabel
-                                                ids={line.ids}
-                                                label={label}
-                                                at={route.mid}
-                                                editing={editing === key}
-                                                active={active}
-                                                onRemove={remove}
-                                                onEdit={(on) => setEditing(on ? key : null)}
-                                            />
-                                        )}
-                                    </ContextMenu.Trigger>
-                                    <ContextMenu.Popup>
-                                        <ContextMenu.Item onClick={() => setEditing(key)}>
-                                            <Icon icon={Pencil} size={14} /> {t('common:action.rename')}{' '}
-                                            <ContextMenu.Hint>{t('menu.doubleClick')}</ContextMenu.Hint>
-                                        </ContextMenu.Item>
-                                        <ContextMenu.Separator />
-                                        <ContextMenu.Item onClick={remove}>
-                                            <Icon icon={Trash} size={14} /> {t('common:action.remove')}
-                                        </ContextMenu.Item>
-                                    </ContextMenu.Popup>
-                                </ContextMenu.Root>
+                                <EdgeRow
+                                    key={key}
+                                    layer={layer}
+                                    line={line}
+                                    route={route}
+                                    label={task === null ? line.label : taskEdgeLabel(task.status)}
+                                    stroke={
+                                        look.accent ? (active ? 'var(--accent)' : 'var(--edge-context)') : active ? 'var(--text-muted)' : 'var(--edge-line)'
+                                    }
+                                    width={active ? look.width + 1 : look.width}
+                                    dashed={look.dashed}
+                                    tail={look.tail}
+                                    head={look.head}
+                                    active={active}
+                                    editing={editing === key}
+                                    onHover={setHovered}
+                                    onEdit={setEditing}
+                                />
                             );
                         })}
                     {layer === 'lines' && draft && <DraftLine draft={draft} from={rectOf(draft.from)} obstacles={obstacles} />}
@@ -259,4 +296,4 @@ export const EdgeLayer = memo(function EdgeLayer() {
             ))}
         </>
     );
-});
+}

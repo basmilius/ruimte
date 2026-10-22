@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Code, PanelTop, Sheet, Table } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
@@ -36,9 +36,9 @@ export function TableFile({ path, name, read }: { path: string; name: string; re
     const [picked, setPicked] = useState<Delimiter | null>(null);
     const unsaved = useUnsaved(useEndpointId(), path);
     const view = unsaved || (reveal != null && reveal.nonce !== dismissedReveal) ? 'source' : chosen;
-    const detected = useMemo(() => delimiterOf(name, read.text), [name, read.text]);
+    const detected = delimiterOf(name, read.text);
     const delimiter = picked ?? detected;
-    const blank = useMemo(() => read.text.replace(/^﻿/, '').trim() === '', [read.text]);
+    const blank = read.text.replace(/^﻿/, '').trim() === '';
 
     const toggle = (
         <ButtonGroup>

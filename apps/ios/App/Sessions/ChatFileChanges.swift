@@ -213,7 +213,7 @@ struct ChatChangedFilesRow: View {
                         header(files, moved: moved)
                         if let moved {
                             Text(
-                                "The branch moved during this turn (\(moved.from) to \(moved.to)), so this includes what came in with it."
+                                "Branch moved this turn (\(moved.from) to \(moved.to)). Includes its incoming changes."
                             )
                             .font(.caption).foregroundStyle(MobileStyle.faint)
                             .padding(.leading, 34).padding(.trailing, 12).padding(.bottom, 10)
@@ -246,11 +246,11 @@ struct ChatChangedFilesRow: View {
                 Text(
                     moved == nil
                         ? String(localized: "\(files.count) changed files")
-                        : String(localized: "\(files.count) changes in the folder this turn")
+                        : String(localized: "\(files.count) folder changes this turn")
                 )
                 .font(.footnote.weight(.medium)).foregroundStyle(MobileStyle.text).lineLimit(1).layoutPriority(1)
                 if (stored ?? fetched)?.truncated == true {
-                    Text("and more, truncated").foregroundStyle(MobileStyle.faint).lineLimit(1)
+                    Text("and more").foregroundStyle(MobileStyle.faint).lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 Group {

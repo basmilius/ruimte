@@ -1,2 +1,3 @@
 [test]
 pathIgnorePatterns = ["**/node_modules/**"]
+preload = ["./apps/client/testing/browser-preload.ts"]

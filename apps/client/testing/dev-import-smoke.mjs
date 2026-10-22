@@ -77,12 +77,17 @@ try {
     const navigation = new Promise((resolve) => {
         navigationReady = resolve;
     });
-    await send('Page.navigate', { url: process.argv[2] ?? 'http://localhost:4212' }, sessionId);
+    const base = process.argv[2] ?? 'http://localhost:4212';
+    const probing = process.argv[4] !== undefined;
+    // A probe imports what it tests into an empty page, so it waits on those modules and not on a cold start of the whole app.
+    await send('Page.navigate', { url: probing ? `${base}/testing/probe.html` : base }, sessionId);
     await navigation;
-    const boot = await send(
-        'Runtime.evaluate',
-        {
-            expression: `new Promise((resolve, reject) => {
+    const boot = probing
+        ? null
+        : await send(
+              'Runtime.evaluate',
+              {
+                  expression: `new Promise((resolve, reject) => {
             const ready = () => document.querySelector('#root')?.childElementCount > 0;
             if (ready()) { resolve(document.body.innerText); return; }
             const observer = new MutationObserver(() => {
@@ -91,11 +96,11 @@ try {
             observer.observe(document, { childList: true, subtree: true });
             const timer = setTimeout(() => { observer.disconnect(); reject(new Error('Client did not render')); }, 15000);
         })`,
-            awaitPromise: true,
-            returnByValue: true
-        },
-        sessionId
-    );
+                  awaitPromise: true,
+                  returnByValue: true
+              },
+              sessionId
+          );
     const probe = await send(
         'Runtime.evaluate',
         {
@@ -138,7 +143,7 @@ try {
             result.message = saved.exceptionDetails.exception?.description ?? saved.exceptionDetails.text;
         }
     }
-    console.log(JSON.stringify({ boot: boot.result?.value, probe: result }, null, 2));
+    console.log(JSON.stringify({ boot: boot?.result?.value ?? null, probe: result }, null, 2));
     if (!result.ok) {
         process.exitCode = 1;
     }

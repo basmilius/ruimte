@@ -27,11 +27,11 @@ import {
     Terminal,
     Trash
 } from 'lucide-react';
-import type { NoteColor, ProviderInfo, Task } from '@ruimte/contracts';
+import { nodeColorOf, type NodeAccent, type ProviderInfo, type Task } from '@ruimte/contracts';
 import {
     arrangeGroupAction,
     clearTerminalAction,
-    colorNoteAction,
+    colorNodeAction,
     createNodeAction,
     duplicateNodeAction,
     focusNodeAction,
@@ -45,7 +45,6 @@ import { askBeforeClearingChat, askBeforeStoppingTask } from '@/agents/end-child
 import { FlagSubmenu } from '@/project/FlagSubmenu';
 import { askOpenAsView, canOpenAsView, showView } from '@/project/views';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
-import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
 import { EMPTY_DRAFT, writeDraft } from '@adecore/agents-react/chat';
 import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
 import { ForkMenuItem } from '@/chat/ForkMenuItem';
@@ -81,6 +80,8 @@ interface NodeMenuProps {
     viewId?: string;
     onRename(): void;
     snooze?: ReactNode;
+    /* False when a pick moved the keyboard somewhere the menu must not take it back from, such as a rename field. */
+    finalFocus?: () => boolean;
 }
 
 /* A closed canvas is read from the document; only an action that needs its editor opens it. */
@@ -98,7 +99,7 @@ export function NodeMenuPopup(props: NodeMenuProps) {
     );
 }
 
-function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze }: NodeMenuProps & { node: CanvasNode | undefined }) {
+function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, finalFocus }: NodeMenuProps & { node: CanvasNode | undefined }) {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const endpointId = useEndpointId();
@@ -106,6 +107,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze }: N
     const waitingTask = useUnstartedTask(id, node?.machine);
     const maximized = useCanvas((s) => maximizedNodeOf(s) === id);
     const moveLocked = useCanvas((s) => s.locks.move);
+    const canvasViewId = useCanvas((s) => s.viewId);
     const agent = useSessionRow(id, (row) => row?.agent);
     const sessionAccount = useSessionRow(id, (row) => row?.account);
     const chatSession = useChatRow(id, (row) => row?.info.agentSessionId);
@@ -129,7 +131,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze }: N
         return snooze ? <ContextMenu.Popup>{snooze}</ContextMenu.Popup> : null;
     }
 
-    const viewId = targetViewId ?? canvasStore.getState().viewId;
+    const viewId = targetViewId ?? canvasViewId;
     const canvas = () => {
         if (viewId !== null) {
             showView(viewId);
@@ -234,7 +236,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze }: N
     const conversation = node.kind === 'chat' && (offersFork || bookmarked || Boolean(chatSession) || prWatch !== null);
 
     return (
-        <ContextMenu.Popup>
+        <ContextMenu.Popup {...(finalFocus === undefined ? {} : { finalFocus })}>
             {snooze}
             <ContextMenu.Item onClick={onRename}>
                 <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <ContextMenu.Hint>{t('menu.doubleClick')}</ContextMenu.Hint>
@@ -378,11 +380,8 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze }: N
                 />
             )}
             <ContextMenu.Separator />
-            <AccentSubmenu picked={node.accent} onPick={(accent) => canvas().getState().setNodeAccent(id, accent)} />
+            <AccentSubmenu picked={nodeColorOf(node) ?? undefined} onPick={(accent) => colorNodeAction(canvas().getState().viewId, id, accent)} />
             <FlagSubmenu id={id} />
-            {node.kind === 'note' && (
-                <NoteColorSubmenu picked={node.color ?? DEFAULT_NOTE_COLOR} onPick={(color) => colorNoteAction(canvas().getState().viewId, id, color)} />
-            )}
             {place && <ContextMenu.Separator />}
             {canOpenAsView(node.kind) && (
                 <ContextMenu.Item
@@ -428,26 +427,7 @@ function WorktreeItems({ folder, paths }: { folder: string; paths: string[] }) {
     );
 }
 
-function NoteColorSubmenu({ picked, onPick }: { picked: string; onPick(color: NoteColor): void }) {
-    const { t } = useTranslation('canvas');
-    return (
-        <ContextMenu.SubmenuRoot>
-            <ContextMenu.SubmenuTrigger>
-                <Icon icon={Palette} size={14} /> {t('menu.noteColor')}
-            </ContextMenu.SubmenuTrigger>
-            <ContextMenu.Popup className="min-w-40">
-                {NOTE_COLORS.map((color) => (
-                    <ContextMenu.Item key={color.id} onClick={() => onPick(color.id)}>
-                        <ContextMenu.Check kind="radio" checked={picked === color.id} />
-                        <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} /> {t(`noteColors.${color.id}`)}
-                    </ContextMenu.Item>
-                ))}
-            </ContextMenu.Popup>
-        </ContextMenu.SubmenuRoot>
-    );
-}
-
-function AccentSubmenu({ picked, onPick }: { picked: string | undefined; onPick(accent: string | null): void }) {
+function AccentSubmenu({ picked, onPick }: { picked: string | undefined; onPick(accent: NodeAccent | null): void }) {
     const { t } = useTranslation('canvas');
     return (
         <ContextMenu.SubmenuRoot>

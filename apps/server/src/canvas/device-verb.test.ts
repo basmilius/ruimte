@@ -125,6 +125,7 @@ describe('ruimte-context device', () => {
         expect(await run(['state', 'phone-1'])).toEqual([
             'device\tphone-1\tiPhone 18 Pro\tios\tsimulator\tiOS 27.0',
             'state\tbooted',
+            'power\tnone',
             'screen\tunknown',
             'buttons\thome swipeHome appSwitcher lock siri',
             'can\tshot\tyes',
@@ -161,12 +162,32 @@ describe('ruimte-context device', () => {
 
     test('says a device this machine does not have is missing, and touches nothing', async () => {
         backend.info = { ...SIMULATOR, name: 'iPhone 12' };
-        expect((await run(['state', 'phone-1'])).slice(0, 3)).toEqual([
+        expect((await run(['state', 'phone-1'])).slice(0, 4)).toEqual([
             'device\tphone-1\tiPhone 18 Pro\tios\tsimulator\tiOS 27.0',
             'state\tmissing',
+            'power\tnone',
             'screen\tunknown'
         ]);
         expect((await run(['shot', 'phone-1']))[0]).toStartWith('refused\tdevice-missing\t');
+    });
+
+    test("says a phone's own battery, a simulated one as such, and unknown when the phone cannot say", async () => {
+        const phone = linkedTo({
+            ...SIMULATOR,
+            backendId: 'android',
+            platform: 'android',
+            kind: 'physical',
+            name: 'Pixel 9',
+            runtime: 'API 36',
+            deviceId: 'R5CT'
+        });
+        const answers = [{ level: 14, plugged: false, charging: false }, { level: 50, plugged: true, charging: true, simulated: true }, null];
+        Object.assign(phone, { power: async () => answers.shift() ?? null });
+        const powerOf = async (): Promise<string | undefined> => (await run(['state', 'other-1'])).find((line) => line.startsWith('power\t'));
+
+        expect(await powerOf()).toBe('power\t14%\tbattery\tnot-charging');
+        expect(await powerOf()).toBe('power\t50%\tplugged\tcharging\tsimulated');
+        expect(await powerOf()).toBe('power\tunknown');
     });
 
     test('writes a shot and prints its path and size, then taps in its pixels', async () => {

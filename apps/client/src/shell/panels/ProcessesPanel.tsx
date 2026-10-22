@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import {
@@ -33,13 +33,11 @@ import {
 } from '@/processes/format';
 import { ignoreRefusal, perform } from '@/actions/client-actions';
 import { messageOf, Segmented, Button, Icon, IconButton, ListRow, Menu, Tooltip, PanelEmpty, PromptDialog, SectionLabel, ContextMenu } from '@adecore/ui';
-import { projectNodes } from '@/project/view-nodes';
+import { useProjectNodes } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { ProcessChart } from '@/shell/panels/ProcessChart';
 import { niceScale } from '@adecore/agents-react/usage';
-import { useCanvas } from '@/state/canvas';
-import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { useProjectList } from '@/state/project-list';
@@ -187,17 +185,12 @@ export function ProcessesPanel() {
     const row = useProcesses((s) => s.byEndpoint[endpointId] ?? EMPTY_PROCESSES);
     const alerts = useProcessAlerts(endpointId);
     const projectRows = useProjectList((s) => s.projects);
-    const projectNames = useMemo(
-        () => new Map(projectRows.filter((entry) => entry.endpointId === endpointId).map((entry) => [entry.summary.projectId, entry.summary.name])),
-        [projectRows, endpointId]
-    );
-    // Titles come from the project; these two subscriptions are what redraws a row after a rename.
-    useDocument((s) => s.views);
-    useCanvas((s) => s.nodes);
+    const projectNames = new Map(projectRows.filter((entry) => entry.endpointId === endpointId).map((entry) => [entry.summary.projectId, entry.summary.name]));
+    const nodes = useProjectNodes();
     const [toggled, setToggled] = useState<ReadonlySet<string>>(new Set());
     const [highlight, setHighlight] = useState<Target | null>(null);
     const [forcing, setForcing] = useState<Target | null>(null);
-    const scopes = useMemo(() => SCOPES.map((id) => ({ id, label: id === 'ruimte' ? 'Ruimte' : t('processes.scope.all') })), [t]);
+    const scopes = SCOPES.map((id) => ({ id, label: id === 'ruimte' ? 'Ruimte' : t('processes.scope.all') }));
 
     const header = (
         <PanelHeaderSlot>
@@ -231,7 +224,7 @@ export function ProcessesPanel() {
     }
 
     const now = sample.at;
-    const titles = new Map(projectNodes().map((node) => [node.id, node.title]));
+    const titles = new Map(nodes.map((node) => [node.id, node.title]));
     const groups = sample.groups;
     const series = chartSeries(row.fine, row.coarse);
     const { machine } = sample;

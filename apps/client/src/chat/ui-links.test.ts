@@ -20,7 +20,7 @@ afterEach(() => {
 
 test('a link into another machine or project says why it does not open', () => {
     openUiLink('elsewhere', { state: 'chip', target: { type: 'Node', id: 'node' } });
-    expect(titles()).toEqual(['This link leads into a project that is not open in this window.']);
+    expect(titles()).toEqual(['Links to a project not open in this window.']);
 });
 
 test('a plain link opens nothing and says nothing', () => {
@@ -31,5 +31,5 @@ test('a plain link opens nothing and says nothing', () => {
 test('an address that is not a web address says so', () => {
     openUiUrl('here', 'javascript:alert(1)');
     openUiUrl('here', 'not a url');
-    expect(titles()).toEqual(['This link is not a web address Ruimte opens.', 'This link is not a web address Ruimte opens.']);
+    expect(titles()).toEqual(['Ruimte cannot open this link.', 'Ruimte cannot open this link.']);
 });

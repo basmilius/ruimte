@@ -68,7 +68,7 @@ describe('an archive opened as a file', () => {
     test('lists what it holds, with the format and the totals under it', async () => {
         await until(() => machine.requests('archive.list').length > 0);
         expect(machine.requests('archive.list')).toEqual([{ path: ARCHIVE }]);
-        await until(() => page.host.textContent?.includes('Pick a file to preview it.') === true);
+        await until(() => page.host.textContent?.includes('Pick a file to preview.') === true);
         expect(page.host.textContent).toContain('ZIP');
         expect(page.host.textContent).toContain('1 file');
     });
@@ -82,7 +82,7 @@ describe('an archive opened as a file', () => {
     });
 
     test('"Extract all" asks for the folder and extracts into it', async () => {
-        await until(() => page.host.textContent?.includes('Pick a file to preview it.') === true);
+        await until(() => page.host.textContent?.includes('Pick a file to preview.') === true);
         await clickOn(button('Extract all'));
         await until(() => button('Extract') !== null);
         await until(() => machine.requests('fs.list').length > 0);

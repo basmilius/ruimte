@@ -16,12 +16,15 @@ interface FakePr {
     reviews: Array<{ id: string; submittedAt: string | null; state: string; login: string }>;
     fails: boolean;
     folderGone?: boolean;
+    // GitHub's totals and its list of files; without it the pull request reads as one from before them.
+    files?: Array<{ path: string; additions: number; deletions: number }>;
 }
 
 let home: string;
 let clock: ManualClock;
 let pr: FakePr;
 let polls: number;
+let fileReads: number;
 let wakes: Array<{ chatId: string; work: OutboxWork }>;
 let queued: OutboxEntry[];
 let removed: string[];
@@ -36,10 +39,21 @@ const fakeGh: GhRunner = (args) => {
     if (args[0] === 'pr') {
         return Promise.resolve({ code: 0, stdout: JSON.stringify({ number: 12, url: 'https://github.com/o/r/pull/12' }), stderr: '' });
     }
+    if (args.some((arg) => arg.startsWith('query=') && arg.includes('files('))) {
+        fileReads += 1;
+        const nodes = pr.files ?? [];
+        return Promise.resolve({
+            code: 0,
+            stdout: JSON.stringify({ data: { repository: { pullRequest: { files: { nodes, pageInfo: { hasNextPage: false } } } } } }),
+            stderr: ''
+        });
+    }
     polls += 1;
     if (pr.fails) {
         return Promise.resolve({ code: 1, stdout: '', stderr: 'HTTP 502' });
     }
+    const sum = (field: 'additions' | 'deletions'): number => (pr.files ?? []).reduce((total, file) => total + file[field], 0);
+    const totals = pr.files === undefined ? {} : { additions: sum('additions'), deletions: sum('deletions'), changedFiles: pr.files.length };
     const page = {
         data: {
             viewer: { login: 'me' },
@@ -50,6 +64,7 @@ const fakeGh: GhRunner = (args) => {
                     title: 'Add things',
                     state: pr.state,
                     headRefOid: pr.head,
+                    ...totals,
                     reviews: {
                         nodes: pr.reviews.map((review) => ({
                             id: review.id,
@@ -121,6 +136,7 @@ beforeEach(async () => {
         fails: false
     };
     polls = 0;
+    fileReads = 0;
     wakes = [];
     queued = [];
     removed = [];
@@ -165,6 +181,24 @@ describe('a pull request watch', () => {
         await tick(store, 600_000);
         await tick(store, 600_000);
         expect(wakes).toHaveLength(1);
+    });
+
+    test('says how large the pull request is and what kind of files its lines are in, asking for its files once per head', async () => {
+        pr.files = [
+            { path: 'src/a.ts', additions: 10, deletions: 2 },
+            { path: 'src/a.test.ts', additions: 20, deletions: 0 },
+            { path: 'bun.lock', additions: 5, deletions: 5 }
+        ];
+        const store = open();
+        await store.start('p', 'chat-1', '/repo');
+        finish('SUCCESS');
+        await tick(store, 60_000);
+        await tick(store, 60_000);
+        expect(wakes).toHaveLength(1);
+        const text = (wakes[0]!.work as { payload: { text: string } }).payload.text;
+        expect(text).toContain('Its size is +35 -7 over 3 files (code +10 -2, tests +20 -0, mocks +0 -0, generated +5 -5).');
+        await tick(store, 600_000);
+        expect(fileReads).toBe(1);
     });
 
     test('does not wake for checks that had finished before the watch started', async () => {

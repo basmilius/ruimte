@@ -26,28 +26,28 @@
         "loading": "Laden",
         "empty": "Hier staat nog niets",
         "error": "Er ging iets mis",
-        "sidebarFailed": "De sidebar kon niet worden getekend",
+        "sidebarFailed": "De zijbalk kon niet worden getoond",
         "failed": {
-            "toolbar": "De toolbar kon niet worden getekend",
-            "pages": "De browserpagina's konden niet worden getekend",
-            "cellChrome": "De knoppen boven de weergaven konden niet worden getekend",
-            "machine": "De status van de machine kon niet worden getekend",
-            "projectSwitch": "Het scherm voor het wisselen van project kon niet worden getekend",
-            "projectBanner": "De projectbanner kon niet worden getekend",
-            "voice": "Het Voice-paneel kon niet worden getekend",
-            "dialog": "Dit venster kon niet worden getekend",
-            "conflicts": "Het conflictoverzicht kon niet worden getekend",
-            "palette": "Het opdrachtenpalet kon niet worden getekend",
-            "settings": "De instellingen konden niet worden getekend",
-            "toasts": "De meldingen konden niet worden getekend",
-            "machineUpdate": "De vraag over de update van de machine kon niet worden getekend",
-            "link": "Het venster om een machine te koppelen kon niet worden getekend",
-            "shortcutHints": "De sneltoetshints konden niet worden getekend",
-            "deviceTools": "De apparaattools konden niet worden getekend",
-            "login": "De terminal voor het inloggen kon niet worden getekend",
-            "providerCommand": "De terminal voor een providercommando kon niet worden getekend",
-            "onboarding": "Het instellen van Ruimte kon niet worden getekend",
-            "agentIntegrations": "De vraag over de CLI-instellingen kon niet worden getekend",
+            "toolbar": "De toolbar kon niet worden getoond",
+            "pages": "De browserpagina's konden niet worden getoond",
+            "cellChrome": "De knoppen boven de weergaven konden niet worden getoond",
+            "machine": "De status van de machine kon niet worden getoond",
+            "projectSwitch": "Het scherm voor het wisselen van project kon niet worden getoond",
+            "projectBanner": "De projectbanner kon niet worden getoond",
+            "voice": "Het Voice-paneel kon niet worden getoond",
+            "dialog": "Dit venster kon niet worden getoond",
+            "conflicts": "Het conflictoverzicht kon niet worden getoond",
+            "palette": "Het opdrachtenpalet kon niet worden getoond",
+            "settings": "De instellingen konden niet worden getoond",
+            "toasts": "De meldingen konden niet worden getoond",
+            "machineUpdate": "De vraag over de update van de machine kon niet worden getoond",
+            "link": "Het venster om een machine te koppelen kon niet worden getoond",
+            "shortcutHints": "De sneltoetshints konden niet worden getoond",
+            "deviceTools": "De apparaattools konden niet worden getoond",
+            "login": "De terminal voor het inloggen kon niet worden getoond",
+            "providerCommand": "De terminal voor een providercommando kon niet worden getoond",
+            "onboarding": "Het instellen van Ruimte kon niet worden getoond",
+            "agentIntegrations": "De vraag over de agentinstellingen kon niet worden getoond",
             "firstRun": "De eerste start kon niet worden getoond."
         }
     },
@@ -85,11 +85,11 @@
         "default": "Standaardmicrofoon",
         "error": {
             "disabled": "Toegang tot de microfoon staat uit in Systeeminstellingen",
-            "noTrack": "Er was geen audiospoor van de microfoon beschikbaar",
-            "stopped": "De microfoontest is gestopt",
+            "noTrack": "Er kwam geen geluid van de microfoon",
+            "stopped": "Microfoontest gestopt",
             "denied": "Toegang tot de microfoon is geweigerd. Sta die toe in Systeeminstellingen en probeer het opnieuw.",
             "missing": "Er is geen microfoon gevonden.",
-            "failed": "De microfoon kon niet worden geopend."
+            "failed": "Kon de microfoon niet openen."
         }
     },
     "find": {
@@ -117,6 +117,6 @@
         },
         "countLimited": "{{current}} / {{total}}+",
         "countMore": "{{total}}+ resultaten",
-        "unavailable": "Zoeken kan hier nu niet"
+        "unavailable": "Zoeken kan hier niet"
     }
 }

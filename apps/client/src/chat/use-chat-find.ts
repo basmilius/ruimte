@@ -8,7 +8,7 @@ import { FindBar } from '@/find/FindBar';
 import { clearFindHighlights, setFindHighlights } from '@/find/highlights';
 import { compileFind, stepIndex } from '@adecore/editor-react/models';
 import { useFind, type FindState } from '@/find/use-find';
-import { currentEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/keys';
 
 // A fold that opens but still hides the hit would otherwise be asked again on every render.
 const MAX_SEEK_STEPS = 4;
@@ -37,7 +37,7 @@ export function useChatFind(options: TimelineFindOptions): ChatFind {
     const { chatId, rows, structure, order } = options;
     const find = useFind(options.frame, options.enabled);
     // The thread of a workspace is a chat of the machine this window works on.
-    const nameOf = useContextNames(currentEndpointId(), chatId);
+    const nameOf = useContextNames(useEndpointId(), chatId);
     // The structure and not the items, so a streamed word does not search the whole thread again; a reply is searched once it settles.
     const search = useMemo(() => {
         if (!find.open || structure === undefined || order === undefined) {
@@ -143,7 +143,7 @@ export function useChatFind(options: TimelineFindOptions): ChatFind {
         pendingScroll.current = { key: seeking.key, tries: 0 };
     }, [seeking, rows, rowIndex, ordered, structure]);
 
-    const compiled = useMemo(() => compileFind(find.query), [find.query]);
+    const compiled = compileFind(find.query);
     const pattern = find.open && compiled.kind === 'pattern' ? compiled.pattern : null;
     const withHits = useMemo(() => new Set(search.hits.map((hit) => hit.itemId)), [search]);
     const paintRef = useRef<() => void>(() => undefined);
@@ -235,11 +235,8 @@ export function useChatFind(options: TimelineFindOptions): ChatFind {
     const revealId = current?.itemId ?? null;
     const revealField = current?.field ?? null;
     // Once per hit, so a row opens again when the bar comes back to it after a person closed it.
-    const reveal = useMemo<FindReveal | null>(
-        () => (revealId === null || revealField === null || currentKey === null ? null : { itemId: revealId, field: revealField }),
-        [revealId, revealField, currentKey]
-    );
-    const hitRows = useMemo(() => ordered.map((entry) => entry.row), [ordered]);
+    const reveal: FindReveal | null = revealId === null || revealField === null || currentKey === null ? null : { itemId: revealId, field: revealField };
+    const hitRows = ordered.map((entry) => entry.row);
 
     return {
         find,

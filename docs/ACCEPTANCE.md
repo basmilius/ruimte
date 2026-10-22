@@ -62,6 +62,11 @@ with the next push to main, which starts Xcode Cloud.
 - [ ] The October 2 audit scenarios against current code: ACT-04, NAT-05, CLI-04, SRV-05, AGT-03, ACT-02, ACT-08,
   CLI-03, and the iOS fixtures in UnifiedProjectsTests, WorkspaceVisualTests, SessionVisualTests,
   AttentionStoreTests and PhaseZeroTests.
+- [ ] Chat controls from ADE CORE: a Claude chat over 100k tokens offers "Prompt cache expired" above the composer
+  once the cache it named runs out, and Compact compacts; Mod+Shift+. and Mod+Shift+, step the reasoning effort with
+  the notice line and the pill following, also from the Chat menu and the palette; a star in the composer's model menu
+  and in a new agent's picker puts a model first; the even-pace mark on the usage page, the sidebar card and the
+  account rows of the model menu, and what a screen reader says for each bar.
 
 ## Measurements
 
@@ -277,6 +282,130 @@ and its device token. `apps/pulsar-worker/APNS.md` has the environments and secr
 - [ ] CPU-only performance on the oldest supported Apple silicon.
 - [ ] Native undo after dictating into a prompt answer.
 - [ ] A signed, packaged build downloads the model, dictates and removes the model again.
+
+## Providers from the ACP registry and CLI updates
+
+- [ ] Settings, Providers, Add provider lists the registry's agents for this Mac without a search, and the search narrows
+  them. Install one with a download (goose or OpenCode) and one npm package (Kilo); each opens as a chat and answers.
+- [ ] With the network off, the page shows the last catalog with the reason; on a fresh `RUIMTE_HOME` it says the registry
+  could not be reached and Try again reads it once the network is back.
+- [ ] Remove an installed registry agent; the pane moves to another CLI and the agent is gone from the new chat menu.
+- [ ] The Version section of Copilot (npm under Homebrew's prefix) offers an update when one exists and Update brings it;
+  Claude Code from its own installer shows only its version. A Homebrew formula or cask, if one is installed, says so.
+- [ ] From a remote client the Install, Update and Remove buttons are off and the section says why.
+
+## Add to another machine
+
+- [ ] On a canvas, On another machine, Add to another machine: pick the other Mac, a folder there and SSH, and the clone
+  shows its progress; Cancel stops it and leaves no folder. HTTPS on a private repository fails with git's reason, and Try
+  again after fixing it clones.
+- [ ] The ignored files list `.env` checked and leaves out `node_modules`; Copy writes them in the clone, a link or a
+  file over 1 MB is listed as not copied, and the clone shows under the other machine's projects.
+- [ ] A new chat on a machine without a checkout offers Clone it on that machine, and Continue comes back to the new
+  chat with the clone picked.
+
+## Reachable from other devices
+
+- [ ] Settings, Machines, this machine shows Reachable from other devices with a verdict, and Check again runs a new check.
+- [ ] With a VPN or a Tailscale exit node that drops UDP, the row and `ruimte status` name the tunnel and say what to change;
+  with it off again, Check again says the machine is reachable.
+- [ ] With the broker off the row says so; with another process on the door's port it says the port is taken.
+- [ ] `ruimte status --check --json` prints the whole check, and the TURN servers of the default broker allocate (`answers`).
+
+## Size of a pull request
+
+- [ ] The pull request dialog shows `+N -N` beside the state, the same totals GitHub shows; on hover it says how many
+  files changed and the lines per kind (code, tests, mocks, generated), which add up to the totals.
+- [ ] A pull request of more than 1000 files shows the totals and the number of files without the kinds.
+- [ ] On a pull request of several hundred files the dialog draws its checks and threads at once, and the kinds join the
+  hover a moment later; Refresh on a head that did not move keeps them without a wait.
+- [ ] A commit tab and an "Everything ... changed since ..." tab name the kinds in their hint when not every line is code.
+- [ ] A watched pull request's checks wake names its size and the kinds in the chat's prompt.
+
+## Agents reading usage
+
+- [ ] A parent chat runs `ruimte-context read <child>` on a Claude child: the first line names the model, the context
+  of the window and how long the prompt cache stays warm, matching the child's own header; read again after the cache
+  lifetime and it says the cache went cold and how long ago. `--json` carries the same under `usage`.
+- [ ] `ruimte-context provider limits` in a Claude and in a Codex chat lists the windows the usage page shows for that
+  account, with the same even-pace mark; a chat on a second account reads that account's windows.
+
+## Waiting and changes at a glance
+
+- [ ] With the git panel closed, the git button carries a gray dot while the project folder has a change (staged,
+  unstaged or untracked) and its tooltip says "Git, N changes"; it goes once everything is committed, also when an
+  agent made or committed the change. Light and dark, pressed and not.
+- [ ] A project on another machine and a folder on this machine that is no git repository show the git button without a
+  dot, and the git panel still opens on them as before.
+- [ ] Mod+Alt+P, from a canvas, a chat composer, a terminal and a file editor, goes to the chat or terminal that waited
+  longest, in another view too, with its prompt in front; pressed again it goes to the next one, and answering one
+  goes on to the next rather than back to the start. With nothing waiting it does nothing, and the palette row says so.
+- [ ] Go > Next That Needs You does the same from the menu, and Settings, Keyboard lists the key under Prompts.
+
+## Quick Look from the files panel
+
+macOS, a project on this machine, in the Electron dev app.
+
+- [ ] Space on a file in the files panel tree opens Quick Look on it over the window; Space again closes it, and so
+  does Escape. Try a PDF, an image, a video and a file Ruimte does not draw itself.
+- [ ] Space on a folder row does nothing, nor does Space in the filter field, in a canvas or in an editor.
+- [ ] Once Quick Look closed by its own Space or Escape, one Space in the tree opens it again. The arrows do not move an
+  open Quick Look on: the panel keeps the keyboard, and macOS takes it straight back when the window asks for it.
+- [ ] A project on another machine gets no Quick Look: Space on a file there does nothing.
+- [ ] Switching the project or closing the files panel while Quick Look is open closes it.
+
+## Map of the canvas
+
+Settings, Views, Canvas, "Map of the canvas" turned on, in the Electron dev app.
+
+- [ ] A canvas with nodes far apart shows the map in the bottom right corner: every node a gray rectangle, a group an
+  outline under its nodes, the view a frame. Light and dark, and over a browser node that reaches into the corner.
+- [ ] A click on the map brings that spot to the middle of the view at the same zoom; dragging the frame pans along
+  without the map rescaling under the pointer; Mod+Alt+[ steps back to where the view was. With pan locked nothing moves.
+- [ ] Panning and zooming with the trackpad moves the frame smoothly, and React DevTools shows no render of the map per
+  frame. Moving a node moves its rectangle.
+- [ ] A chat or terminal waiting on you carries a dot in the needs-you color on the map; a snoozed one does not.
+- [ ] The map leaves when the canvas is narrower than about 1030 pixels (a split, a narrow window) or shorter than about
+  420, when a node is maximized and on an empty canvas, and never overlaps the dock or the prompt stack.
+- [ ] A press, a double-click or a right-click on the map starts no box selection, adds no text and opens no menu.
+
+## React Compiler
+
+The client and ADE CORE's React sources are compiled in the Electron dev app and in a build. Compare with `77bed5fa3`,
+the last commit without the compiler, through React DevTools' highlight updates or its profiler.
+
+- [ ] A long chat streaming: only the turn being written redraws, the rows above it and the sidebar stay still.
+- [ ] Typing in a busy composer (a long draft, mentions, a model picker open once): no lag, and the thread above does
+  not redraw per key.
+- [ ] Panning and zooming a full canvas (twenty nodes, lines, a group): smooth, and a node's body redraws only when its
+  own state changes; a `chat.status` or `session.status` push redraws only that node's frame and the sidebar row.
+- [ ] Switch the language and the region in Settings, Appearance: every visible label, date and number follows,
+  the canvas, the sidebar and an open chat included, without a reload.
+- [ ] Toasts: a git failure, a node made the default size and a deletion with Undo each show and go.
+- [ ] Settings, Machines: "Checked 2m ago" under Reachable from other devices, and the last seen and last used times
+  under Apps with access and Linked machines, count on while the pane stays open.
+- [ ] A paused child task in a chat says "Paused until" with the day while the time is tomorrow, and with the time
+  alone once midnight passed, without reopening the chat.
+- [ ] `bun dev` after `rm -rf apps/client/node_modules/.vite` opens the start screen within about ten seconds without a
+  reload of the page, and a second `bun dev` within about five. Editing a component still updates it in place.
+- [ ] Pick another folder in the dialog that saves a generated image: the path under the tree follows it.
+
+## A canvas of many lines
+
+A chat that added a hundred notes in a row with `ruimte-context node new`, a line from the chat to each (the "Canvas
+2" shape), in the Electron dev app. `apps/client/src/canvas/canvas-pan-performance.browser.integration.test.ts` holds
+the same canvas to a budget in a headless browser; these are what it cannot feel.
+
+- [ ] Ask a chat to "add 100 random notes to this canvas": it makes them with one `node new --json` call, they land
+  together, and the canvas draws once.
+- [ ] An agent adding the notes one by one anyway (a loop of `node new`): each lands at once and the canvas keeps
+  panning while they arrive.
+- [ ] Moving the pointer over the canvas, near a node and across lines, and hovering a line: the port dots and the
+  resize pill follow without a stall, and only the hovered line thickens.
+- [ ] Panning with two fingers and with the middle button, at 100% and zoomed out to the whole row: smooth, the notes
+  sharp again the moment the pan stops, and a note further than a screen away is in place before it scrolls in.
+- [ ] A note far out of sight that is selected, edited, being resized or the one a reveal goes to stays where it is;
+  Find in a note being edited still finds; every line still ends at its note.
 
 ## Apple Foundation Models
 

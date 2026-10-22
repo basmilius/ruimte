@@ -61,6 +61,10 @@ export class BrokerSwitch implements Relay {
         return this.relay?.iceServers?.() ?? [];
     }
 
+    grantedIceServers(): IceServer[] {
+        return this.relay?.grantedIceServers?.() ?? [];
+    }
+
     async publish(local: { host: string; port: number }): Promise<string | null> {
         this.local = local;
         await this.apply();

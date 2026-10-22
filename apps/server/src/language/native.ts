@@ -341,7 +341,7 @@ export async function installRelease(asset: NativeAsset, directory: string, get:
         log(`Downloaded ${asset.url}`);
         const actual = await sha256Of(file);
         if (actual !== asset.sha256.toLowerCase()) {
-            throw new Error(`The download does not match its checksum (expected ${asset.sha256}, got ${actual})`);
+            throw new Error('The download is damaged. Try again.');
         }
         log('Checksum matches');
         const entries = readArchive(await readFile(file), asset.format);

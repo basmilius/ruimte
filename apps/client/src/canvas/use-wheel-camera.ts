@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import type { StoreApi } from 'zustand';
 import type { CameraSlice } from '@/canvas/camera-slice';
 import { isApplePlatform } from '@/desktop/bridge';
@@ -144,5 +144,5 @@ export function useWheelCamera(rootRef: RefObject<HTMLElement | null>, store: St
             document.removeEventListener('gesturechange', swallowGesture);
         };
     }, [rootRef, store]);
-    return useCallback(() => flushRef.current?.(), []);
+    return () => flushRef.current?.();
 }

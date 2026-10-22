@@ -33,7 +33,7 @@ async function isDirectory(path: string): Promise<boolean> {
 export async function moveClaudeTranscript(options: MoveTranscriptOptions): Promise<MovedTranscript> {
     const { projectsDir, sessionId, fromCwd, toCwd, rename = renameNoReplace } = options;
     if (!isPathSegment(sessionId)) {
-        throw new ChatError('move-failed', 'The session id is not one name, so no conversation file is moved');
+        throw new ChatError('move-failed', 'Could not move the conversation');
     }
     const found = await findClaudeSession(projectsDir, sessionId, fromCwd);
     // Claude Code runs in the resolved folder (its working directory is never a symlink), so that is what it slugs.

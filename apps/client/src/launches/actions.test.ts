@@ -10,7 +10,7 @@ describe('what a launch acts on', () => {
     });
 
     test('a toast from another project does nothing to the one on screen', () => {
-        // `dev` of project a failed, and the person switched to b before pressing "Start again".
+        // `dev` of project a failed, and the person switched to b before pressing "Restart".
         expect(launchTarget(onScreen, { endpointId: 'local', projectId: 'a' })).toBeNull();
         expect(launchTarget(onScreen, { endpointId: 'laptop', projectId: 'b' })).toBeNull();
         expect(launchTarget(onScreen, { endpointId: 'local', projectId: 'b' })).toEqual({ endpointId: 'local', projectId: 'b', key: 'local:b' });

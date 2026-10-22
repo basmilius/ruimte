@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cloud, Copy, GitCommitHorizontal } from 'lucide-react';
 import { GIT_GROUP } from '@/shell/panels/classes';
@@ -110,11 +110,11 @@ export function CommitLog({ sources, reading, onOpen }: CommitLogProps) {
     useLayoutEffect(() => {
         openRef.current = onOpen;
     });
-    const open = useCallback((cwd: string, commit: LogRow) => openRef.current(cwd, commit), []);
+    const open = (cwd: string, commit: LogRow) => openRef.current(cwd, commit);
 
     const state = shown === null ? 'loading' : shown.failed ? 'error' : 'ready';
-    const { rows: commits, more } = useMemo(() => mergeLogs(shown?.logs ?? []), [shown]);
-    const sections = useMemo(() => groupCommits(commits, now), [commits, now]);
+    const { rows: commits, more } = mergeLogs(shown?.logs ?? []);
+    const sections = groupCommits(commits, now);
 
     if (state === 'error') {
         return <PanelEmpty icon={GitCommitHorizontal}>{t('git.log.failed')}</PanelEmpty>;

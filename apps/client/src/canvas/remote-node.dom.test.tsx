@@ -185,6 +185,8 @@ describe('the machine of a node', () => {
         await act(async () => there.lose());
         await until(() => cardOf(REMOTE_SHELL.id) !== null && cardOf(REMOTE_CHAT.id) !== null);
         expect(cardOf(REMOTE_SHELL.id)).toContain('MacBook Pro is not answering. It may be asleep.');
+        // Ruimte's own icon heads the card, the way it heads the window when the open project's machine goes.
+        expect(frame(REMOTE_SHELL.id).querySelector('[role="status"] img')).not.toBeNull();
         expect(frame(REMOTE_SHELL.id).querySelector('textarea')).toBeNull();
         expect(frame(LOCAL_SHELL.id).querySelector('textarea')).not.toBeNull();
         expect(cardOf(LOCAL_SHELL.id)).toBeNull();

@@ -146,7 +146,7 @@ for (const [platform, language, zoom] of [
                 );
                 await view.evaluate(frame);
                 const text = zoom === 1 ? reference : reference.slice(1, -1);
-                const words = language === 'en' ? '⌘+click to open file in preview' : 'Ctrl+klik om bestand in preview te openen';
+                const words = language === 'en' ? '⌘+click to preview' : 'Ctrl+klik voor preview';
                 await hover(view, 'local', 0);
                 await tooltipSettled(view);
                 expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toBe(words + text);

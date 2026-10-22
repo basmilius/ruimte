@@ -12,7 +12,7 @@
         },
         "palette": {
             "label": "Palet",
-            "description": "De tint van de achtergronden, panelen en tekst, in licht en donker. De neutrale tinten en kleuren zijn die van Tailwind.",
+            "description": "De tint van achtergronden, panelen en tekst, in licht en donker.",
             "options": {
                 "default": "Standaard",
                 "slate": "Leisteen",
@@ -54,7 +54,7 @@
             },
             "projects": {
                 "label": "Projecten",
-                "description": "Wissel tussen projecten via een menu, of houd de projecten van een venster als tabs in de werkbalk.",
+                "description": "Wissel van project via een menu, of toon de projecten van een venster als tabs in de werkbalk.",
                 "switcher": "Menu",
                 "tabs": "Tabs"
             },
@@ -67,7 +67,7 @@
         },
         "language": {
             "label": "Taal",
-            "description": "Systeem volgt je besturingssysteem en valt terug op Engels voor een taal die Ruimte nog niet spreekt.",
+            "description": "Systeem volgt je besturingssysteem, met Engels als terugval.",
             "system": "Systeem"
         },
         "region": {
@@ -83,7 +83,7 @@
             "title": "Lettertype",
             "interface": {
                 "label": "Lettertype interface",
-                "description": "Valt terug op het systeemlettertype als het niet is geïnstalleerd.",
+                "description": "Valt terug op het systeemlettertype als het ontbreekt.",
                 "system": "Systeem"
             },
             "interfaceSize": {
@@ -92,23 +92,23 @@
             },
             "mono": {
                 "label": "Monospace-lettertype",
-                "description": "Voor terminals en code. Valt terug op het systeemlettertype als het niet is geïnstalleerd.",
+                "description": "Voor terminals en code. Valt terug op het systeemlettertype als het ontbreekt.",
                 "system": "Systeem"
             }
         },
         "sidebar": {
-            "label": "Sidebar",
-            "description": "Kies welke projecten de sidebar en Needs attention tonen, over al je machines.",
+            "label": "Zijbalk",
+            "description": "Projecten in de zijbalk en onder Wacht op jou, over al je machines.",
             "current": "Huidig project",
             "all-open": "Alle open projecten"
         },
         "needsYou": {
             "label": "Wacht op jou uit elk open project",
-            "description": "Toon ook wat in je andere open projecten op je wacht, gegroepeerd per project."
+            "description": "Toon ook wat in andere open projecten wacht, per project."
         },
         "projectGlow": {
-            "label": "Gloed in de kleur van het project",
-            "description": "De gloed bovenaan de sidebar krijgt de kleur van het project op het scherm. Met de sidebar dicht staat hij in de werkbalk."
+            "label": "Gloed in projectkleur",
+            "description": "Kleurt de bovenkant van de zijbalk in de kleur van het huidige project, of de werkbalk als de zijbalk dicht is."
         }
     },
     "editor": {
@@ -131,7 +131,7 @@
                 },
                 "lineHeight": {
                     "label": "Regelhoogte code",
-                    "description": "Als veelvoud van de tekstgrootte van code, afgerond op hele pixels. Geldt overal waar code staat."
+                    "description": "Een veelvoud van de tekstgrootte van code."
                 },
                 "ligatures": {
                     "label": "Ligaturen",
@@ -146,7 +146,7 @@
                 },
                 "indentGuides": {
                     "label": "Inspringlijnen",
-                    "description": "Een lijn bij elk inspringniveau in de editor, met de lijn rond de cursor sterker."
+                    "description": "Een lijn per inspringniveau, sterker rond de cursor."
                 },
                 "whitespace": {
                     "label": "Witruimte tonen",
@@ -154,7 +154,7 @@
                 },
                 "stickyScroll": {
                     "label": "Plakkend scrollen",
-                    "description": "Houd de regels die de omliggende blokken openen bovenin de editor vast terwijl je scrolt."
+                    "description": "Houdt de regels die de huidige blokken openen bovenaan vast terwijl je scrolt."
                 },
                 "rightMargin": {
                     "label": "Rechtermarge",
@@ -172,18 +172,18 @@
                 "title": "Documentatie",
                 "render": {
                     "label": "Documentatiecommentaar renderen",
-                    "description": "Toont documentatiecommentaar als opgemaakte tekst in plaats van de regels zelf. De boekknop in de goot wisselt één commentaar, en het commentaar waarin je typt blijft tekst."
+                    "description": "Toont documentatiecommentaar als opgemaakte tekst. De boekknop naast een commentaar zet het terug."
                 }
             },
             "codeVision": {
                 "title": "Code vision",
                 "usages": {
                     "label": "Gebruik",
-                    "description": "Toont boven een klasse, functie of methode hoe vaak hij wordt gebruikt. Klik erop om te zien waar."
+                    "description": "Aantal keer gebruikt, boven elke klasse, functie en methode. Klik erop om te zien waar."
                 },
                 "authors": {
                     "label": "Auteurs",
-                    "description": "Toont boven een klasse, functie of methode wie hem volgens git schreef, met een plus voor andere auteurs. Klik erop voor de commits."
+                    "description": "Toont wie een klasse, functie of methode schreef, boven de declaratie. Klik erop voor de commits."
                 }
             }
         },
@@ -191,7 +191,7 @@
             "title": "AI",
             "inlineAgent": {
                 "label": "Inline edit",
-                "description": "De agent die inline edits uitvoert, en het account waaronder hij draait als je er meer dan één hebt. Hij draait als chat in het project."
+                "description": "De agent en het account die inline edits maken."
             },
             "agentChanges": {
                 "label": "Wijzigingen van agents in open bestanden",
@@ -204,7 +204,7 @@
             },
             "attribution": {
                 "label": "Toeschrijving in de gutter",
-                "description": "Markeert de regels die een agent schreef. Hover toont de chat en de turn."
+                "description": "Markeert regels die een agent schreef. Hover voor de chat en turn."
             },
             "onDevice": {
                 "title": "Op het apparaat",
@@ -214,7 +214,7 @@
                 },
                 "ghost": {
                     "label": "Suggesties tijdens het typen",
-                    "description": "Ghost text van het model op het apparaat, twee tot drie seconden per suggestie.",
+                    "description": "Suggesties van het model op deze Mac verschijnen terwijl je typt. Elke suggestie duurt twee tot drie seconden.",
                     "options": {
                         "off": "Uit",
                         "request": "Op verzoek"
@@ -227,7 +227,7 @@
             "outline": {
                 "title": "Pijltjes",
                 "label": "Vouwpijltjes tonen",
-                "description": "De pijltjes in de marge waarmee je een blok in- of uitvouwt. Een ingevouwen blok toont zijn markering altijd in de tekst.",
+                "description": "Pijltjes naast de regels om blokken in en uit te vouwen. Een ingevouwen blok toont altijd zijn markering.",
                 "options": {
                     "off": "Nooit",
                     "hover": "Bij aanwijzen",
@@ -236,14 +236,14 @@
             },
             "general": {
                 "title": "Standaard invouwen",
-                "description": "Wat ingevouwen is als een bestand voor het eerst opengaat. Een bestand dat je zelf in- of uitvouwde, houdt wat je achterliet. Bodies komen van de language servers en vouwen in zodra die antwoorden.",
+                "description": "Wat ingevouwen is als een bestand voor het eerst opengaat. Een bestand dat je al vouwde, blijft zoals je het achterliet.",
                 "fileHeader": {
                     "label": "Bestandskop",
                     "description": "De opmerking bovenaan een bestand, zoals een licentie."
                 },
                 "imports": {
                     "label": "Imports",
-                    "description": "De reeks importregels bovenaan."
+                    "description": "Importregels bovenaan."
                 },
                 "docComments": {
                     "label": "Documentatiecommentaar",
@@ -255,7 +255,7 @@
                 },
                 "customRegions": {
                     "label": "Eigen gebieden",
-                    "description": "Wat tussen // region en // endregion staat."
+                    "description": "Tussen // region en // endregion."
                 }
             },
             "script": {
@@ -271,12 +271,12 @@
                 },
                 "xmlLiterals": {
                     "label": "JSX-elementen",
-                    "description": "Elementen die over meerdere regels gaan, zodra de language server heeft geantwoord."
+                    "description": "Elementen over meerdere regels."
                 }
             },
             "php": {
                 "title": "PHP",
-                "description": "Imports, documentatiecommentaar en de bestandskop volgen de schakelaars hierboven. Bodies komen van de language server.",
+                "description": "Imports, documentatiecommentaar en de bestandskop volgen de schakelaars hierboven.",
                 "tags": {
                     "label": "PHP-tags",
                     "description": "Blokken PHP tussen markup, van <?php tot ?>, behalve het blok dat het bestand opent."
@@ -299,20 +299,20 @@
                 },
                 "attributes": {
                     "label": "Attributen",
-                    "description": "Een lijst attributen die over meerdere regels gaat."
+                    "description": "Attributenlijsten over meerdere regels."
                 }
             },
             "markup": {
                 "title": "HTML en XML",
-                "description": "Voor HTML, XML, Vue en Svelte, zodra de language server heeft geantwoord.",
+                "description": "Ook voor Vue en Svelte.",
                 "tags": {
                     "label": "Tags",
-                    "description": "Elementen die over meerdere regels gaan."
+                    "description": "Elementen over meerdere regels."
                 }
             },
             "markdown": {
                 "title": "Markdown",
-                "description": "Wat in een Markdown-bestand invouwt. De sectie onder een kop vouw je zelf in.",
+                "description": "Secties onder een kop vouw je zelf in.",
                 "frontMatter": {
                     "label": "Front matter",
                     "description": "Het blok tussen de --- regels bovenaan."
@@ -364,9 +364,9 @@
         },
         "servers": {
             "title": "Language servers",
-            "needsProject": "Open een project om de language servers ervan te beheren. Een server installeer je eenmalig per machine en hij draait per project.",
-            "description": "Eenmalig geïnstalleerd op de machine, per project gestart als een bestand het nodig heeft.",
-            "failed": "De language servers konden niet worden getoond",
+            "needsProject": "Open een project om de language servers ervan te beheren.",
+            "description": "Eenmalig geïnstalleerd per machine, per project gestart als het nodig is.",
+            "failed": "Kon de language servers niet tonen",
             "groups": {
                 "scripts": "JavaScript en TypeScript",
                 "web": "Web",
@@ -375,8 +375,8 @@
             },
             "own": {
                 "title": "Je eigen servers",
-                "description": "Een language server die je zelf draait. Ruimte start precies het commando dat je opslaat, voor de bestanden die hij bedient.",
-                "empty": "Je hebt nog geen eigen servers.",
+                "description": "Ruimte start precies het commando dat je opslaat, voor de bestanden die hij bedient.",
+                "empty": "Nog geen.",
                 "add": "Server toevoegen",
                 "edit": "Bewerken",
                 "remove": "Verwijderen",
@@ -385,14 +385,14 @@
                 "someProjects_one": "Draait in {{count}} project",
                 "someProjects_other": "Draait in {{count}} projecten",
                 "removeTitle": "{{name}} verwijderen?",
-                "removeDescription": "Ruimte stopt hem overal waar hij draait. Het programma zelf blijft op deze machine staan.",
+                "removeDescription": "Stopt hem overal. Het programma blijft geïnstalleerd.",
                 "dialog": {
                     "titleAdd": "Language server toevoegen",
                     "titleEdit": "{{name}} bewerken",
-                    "description": "Opslaan start precies dit commando op deze machine voor de bestanden die hij bedient, en opnieuw zodra een project hem nodig heeft. Verander je het commando, dan sla je het opnieuw op.",
+                    "description": "Opslaan start precies dit commando op deze machine zodra een project het nodig heeft.",
                     "name": "Naam",
                     "command": "Commando",
-                    "commandHint": "Een absoluut pad, of een programma dat op het PATH van deze machine staat.",
+                    "commandHint": "Een absoluut pad, of een programma op het PATH van deze machine.",
                     "commandFound": "Gevonden op {{path}}",
                     "commandMissing": "Niet gevonden op deze machine. Geef een absoluut pad.",
                     "args": "Argumenten",
@@ -410,7 +410,7 @@
                     "scopeSome": "Sommige projecten",
                     "cancel": "Annuleren",
                     "save": "Opslaan",
-                    "failed": "De server kon niet worden opgeslagen",
+                    "failed": "Kon de server niet opslaan",
                     "problem": {
                         "name": "Geef de server een naam.",
                         "command": "Zeg welk commando hem start.",
@@ -426,11 +426,11 @@
         "colors": {
             "light": {
                 "label": "Licht thema",
-                "description": "De kleuren van code als de app licht is, in bestanden, de editor en chats."
+                "description": "Codekleuren in lichte modus, in bestanden, de editor en chats."
             },
             "dark": {
                 "label": "Donker thema",
-                "description": "De kleuren van code als de app donker is."
+                "description": "Codekleuren in donkere modus."
             },
             "preview": "Voorbeeld van {{theme}}"
         }
@@ -444,13 +444,13 @@
             },
             "lineHeight": {
                 "label": "Regelhoogte terminal",
-                "description": "Als veelvoud van de rijhoogte die het lettertype nodig heeft."
+                "description": "Een veelvoud van de rijhoogte van het lettertype."
             }
         },
         "links": {
             "title": "Links",
             "label": "Terminallinks openen in",
-            "description": "Ruimte opent een nieuwe browserweergave, of een browsernode naast de terminal op het canvas. Zonder project op dezelfde machine openen links in je externe browser.",
+            "description": "Opent een browserweergave, of een browsernode naast de terminal op een canvas. Zonder project op dezelfde machine openen links in je externe browser.",
             "options": {
                 "external": "Externe browser",
                 "ruimte": "Ruimte"
@@ -460,15 +460,15 @@
     "sections": {
         "appearance": {
             "label": "Uiterlijk",
-            "description": "Thema, accentkleur, het lettertype van de terminal en de regio waarin getallen en datums worden geschreven."
+            "description": "Thema, accentkleur, lettertypen, taal en regio."
         },
         "keyboard": {
             "label": "Toetsenbord",
-            "description": "Elke sneltoets."
+            "description": "Alle sneltoetsen."
         },
         "editor": {
             "label": "Editor",
-            "description": "De code-editor: het lettertype, regelafbreking en slimme toetsen, en de language servers erachter."
+            "description": "Lettertype, regelafbreking, slimme toetsen en language servers."
         },
         "terminal": {
             "label": "Terminal",
@@ -476,11 +476,11 @@
         },
         "views": {
             "label": "Weergaven",
-            "description": "Hoe groot nieuwe nodes beginnen, en hoe tekeningen en browserpagina's zich gedragen."
+            "description": "Nodegroottes, canvaskaart, tekeningen en browserpagina's."
         },
         "files": {
             "label": "Bestanden en Git",
-            "description": "Wat de panelen Bestanden en Git tonen, en waar het bladeren naar een map begint."
+            "description": "Panelen Bestanden en Git, en waar bladeren begint."
         },
         "agents": {
             "label": "Agents",
@@ -492,11 +492,11 @@
         },
         "computer": {
             "label": "Computer Use",
-            "description": "Laat agents de apps op een computer bedienen. Ze komen pas bij een app nadat je die toestaat."
+            "description": "Laat agents apps bedienen die je toestaat."
         },
         "machines": {
             "label": "Account",
-            "description": "Je Ruimte-account, de machines erop en hoe elke machine bereikt wordt."
+            "description": "Je account, de machines erop en hoe ze verbinden."
         },
         "about": {
             "label": "Over",
@@ -511,7 +511,7 @@
     "views": {
         "nodeSizes": {
             "title": "Nieuwe nodes op {{machine}}",
-            "description": "De grootte waarmee een nieuwe node van een soort begint, ook de nodes die agents toevoegen. Typ er hier een, of klik met rechts op een node en kies Maak dit de standaardgrootte.",
+            "description": "Begingrootte per soort node, ook voor nodes van agents. Typ hem hier, of klik met rechts op een node en kies Als standaardgrootte instellen.",
             "searchLabel": "Standaardgrootte van nodes",
             "builtIn": "Ingebouwd",
             "custom": "Eigen grootte, ingebouwd {{builtIn}}",
@@ -525,10 +525,17 @@
             "reset": "Herstellen",
             "resetLabel": "De grootte van {{kind}}-nodes op {{machine}} herstellen"
         },
+        "canvas": {
+            "title": "Canvas",
+            "minimap": {
+                "label": "Canvaskaart",
+                "description": "Een kleine kaart rechtsonder toont elke node en het deel dat je ziet. Klik om erheen te gaan, sleep het kader om te schuiven. Verborgen op een smal canvas."
+            }
+        },
         "drawing": {
             "title": "Tekening",
             "snap": {
-                "label": "Uitlijnen op het raster",
+                "label": "Uitlijnen op raster",
                 "description": "Vormen landen op het raster van 8 eenheden terwijl je ze tekent, verplaatst of van formaat verandert. Lijnen uit de vrije hand lijnen nooit uit."
             }
         },
@@ -536,7 +543,7 @@
             "title": "Browser",
             "swipe": {
                 "label": "Vegen tussen pagina's",
-                "description": "Twee vingers naar links of rechts op het trackpad gaan terug of vooruit in een browsernode of -weergave. Een pagina die zelf zijwaarts scrolt houdt het gebaar."
+                "description": "Veeg met twee vingers op het trackpad om terug of vooruit te gaan. Pagina's die zijwaarts scrollen houden het gebaar."
             }
         }
     },
@@ -549,11 +556,11 @@
             },
             "hidden": {
                 "label": "Verborgen en genegeerde bestanden tonen",
-                "description": "Wat git negeert, bouwoutput zoals node_modules, en dotfiles in een map zonder repository. Bestanden die het besturingssysteem voor zichzelf houdt blijven altijd verborgen."
+                "description": "Door git genegeerde bestanden, bouwoutput zoals node_modules, en dotfiles buiten een repository. Systeembestanden blijven verborgen."
             },
             "browseStart": {
                 "label": "Bladeren beginnen in",
-                "description": "De map waarin het opdrachtenpalet begint als je bladert. Geldt voor elke machine. Leeg of niet gevonden valt terug op de thuismap."
+                "description": "De map waarin het opdrachtenpalet begint als je bladert, op elke machine. Laat leeg om in je thuismap te beginnen."
             }
         },
         "git": {
@@ -568,7 +575,7 @@
             },
             "whitespace": {
                 "label": "Witruimtewijzigingen tonen",
-                "description": "Uit verbergt wijzigingen die alleen witruimte raken, in de diff en in de aantallen."
+                "description": "Uit verbergt wijzigingen in alleen witruimte, in diffs en aantallen."
             }
         }
     },
@@ -580,21 +587,21 @@
             "title": "Canvas",
             "palette": "Opdrachtenpalet",
             "findInFiles": "Zoeken in bestanden",
-            "pan": "Het canvas verschuiven",
-            "zoomPointer": "Zoomen rond de muis",
+            "pan": "Canvas verschuiven",
+            "zoomPointer": "Zoomen bij de muis",
             "zoomIn": "Inzoomen",
             "zoomOut": "Uitzoomen",
             "undo": "Ongedaan maken",
             "redo": "Opnieuw",
             "gaps": "Afstanden tussen nodes aanpassen",
-            "enterNode": "Focus de inhoud van de geselecteerde node"
+            "enterNode": "Inhoud van geselecteerde node focussen"
         },
         "selection": {
             "title": "Selectie",
             "selectAll": "Alles selecteren",
-            "add": "Toevoegen aan de selectie",
-            "delete": "De selectie verwijderen",
-            "escape": "De selectie opheffen, of de node verlaten waar je in zit"
+            "add": "Toevoegen aan selectie",
+            "delete": "Selectie verwijderen",
+            "escape": "Selectie opheffen, of node verlaten"
         },
         "views": {
             "title": "Weergaven",
@@ -602,15 +609,15 @@
             "previous": "Vorige weergave",
             "next": "Volgende weergave",
             "new": "Nieuwe canvasweergave",
-            "rename": "Node hernoemen, of de instellingen van een weergave openen"
+            "rename": "Node hernoemen, of weergave-instellingen openen"
         },
         "split": {
             "title": "Splitsen",
-            "right": "De cel naar rechts splitsen",
-            "down": "De cel naar beneden splitsen",
-            "focusNeighbor": "De cel ernaast focussen (elke pijltoets)",
-            "maximize": "De geselecteerde node of de gefocuste cel maximaliseren, of herstellen",
-            "close": "De gefocuste cel sluiten"
+            "right": "Rechts splitsen",
+            "down": "Omlaag splitsen",
+            "focusNeighbor": "Cel ernaast focussen (pijltoetsen)",
+            "maximize": "Geselecteerde node of cel maximaliseren of herstellen",
+            "close": "Gefocuste cel sluiten"
         },
         "drawing": {
             "title": "Tekening",
@@ -624,30 +631,31 @@
             "freehand": "Vrije hand (7)",
             "text": "Tekst (8)",
             "eraser": "Gum (0)",
-            "keepTool": "Het gereedschap geselecteerd houden na het tekenen",
-            "lock": "De selectie vergrendelen of ontgrendelen",
-            "duplicate": "De selectie dupliceren",
+            "keepTool": "Gereedschap houden na tekenen",
+            "lock": "Selectie vergrendelen of ontgrendelen",
+            "duplicate": "Selectie dupliceren",
             "bringToFront": "Naar voren halen",
             "sendToBack": "Naar achteren sturen",
             "snap": "Uitlijnen op het raster aan- of uitzetten tijdens het slepen",
-            "copy": "De selectie kopiëren",
-            "paste": "Plakken in de tekening"
+            "copy": "Selectie kopiëren",
+            "paste": "Plakken in tekening"
         },
         "panels": {
             "title": "Panelen",
-            "toggle": "Het laatst geopende paneel tonen of verbergen"
+            "toggle": "Laatste paneel tonen of verbergen"
         },
         "launches": {
             "title": "Launches",
-            "run": "De gekozen launch starten of herstarten",
-            "stop": "De gekozen launch stoppen"
+            "run": "Gekozen launch starten of herstarten",
+            "stop": "Gekozen launch stoppen"
         },
         "prompts": {
             "title": "Prompts",
-            "answerFront": "De voorste prompt van het canvas beantwoorden",
+            "answerFront": "Voorste prompt beantwoorden",
+            "nextNeedsYou": "Naar wat op je wacht, oudste eerst",
             "primary": "Toestaan, Volgende of Antwoorden",
-            "previous": "Vorige prompt in de stapel",
-            "next": "Volgende prompt in de stapel",
+            "previous": "Vorige prompt",
+            "next": "Volgende prompt",
             "escape": "Terug naar waar je was"
         },
         "chat": {
@@ -655,7 +663,7 @@
             "previousMessage": "Vorig bericht dat je stuurde",
             "nextMessage": "Volgend bericht dat je stuurde",
             "sendAndNewChat": "Versturen en daarnaast een nieuwe chat starten",
-            "dictation": "Dicteren: tik om te schakelen, houd vast om te spreken"
+            "dictation": "Dicteren: druk om te schakelen, houd vast om te spreken"
         },
         "browser": {
             "title": "Browser",
@@ -664,20 +672,20 @@
         },
         "nodes": {
             "title": "Nodes",
-            "nextNode": "De focus naar de volgende node verplaatsen",
-            "select": "De node selecteren waar het toetsenbord op staat",
-            "escape": "De selectie opheffen (een terminal geeft Escape door aan zijn programma)",
+            "nextNode": "Volgende node focussen",
+            "select": "Gefocuste node selecteren",
+            "escape": "Selectie opheffen (terminals geven Escape door)",
             "leave": "Een terminalnode verlaten"
         },
         "terminal": {
             "title": "Terminal",
-            "clear": "Het scherm en de scrollback wissen",
-            "find": "Zoeken in de terminal",
-            "lineStart": "Naar het begin van de regel",
-            "lineEnd": "Naar het einde van de regel",
+            "clear": "Scherm en scrollback wissen",
+            "find": "Zoeken in terminal",
+            "lineStart": "Naar begin van regel",
+            "lineEnd": "Naar einde van regel",
             "wordBack": "Eén woord terug",
             "wordForward": "Eén woord vooruit",
-            "deleteToLineStart": "Verwijderen tot het begin van de regel"
+            "deleteToLineStart": "Verwijderen tot begin van regel"
         }
     },
     "keyboard": {
@@ -691,17 +699,17 @@
     "backgroundService": {
         "title": "Als Ruimte afsluit",
         "keepRunning": {
-            "label": "Deze machine laten draaien als Ruimte afsluit",
-            "description": "Sessies en agents werken door op de achtergrond, zodat deze machine bereikbaar blijft vanaf je andere clients en het web."
+            "label": "Deze machine laten draaien",
+            "description": "Sessies en agents werken door op de achtergrond, en de machine blijft bereikbaar."
         },
         "unavailable": {
             "dev": "De dev-app draait altijd een eigen machine en stopt die als hij afsluit.",
             "windows": "Nog niet beschikbaar op Windows, dus deze machine stopt als Ruimte afsluit.",
-            "appimage": "Niet beschikbaar voor de AppImage, die weg is zodra Ruimte afsluit. Installeer het deb- of rpm-pakket om deze machine te laten draaien.",
+            "appimage": "Niet beschikbaar in de AppImage. Installeer het deb- of rpm-pakket om deze machine te laten draaien.",
             "commandLine": "Deze machine draait als de achtergronddienst die `npx ruimte service install` heeft ingesteld. Ruimte gebruikt die zoals hij is en laat hem met rust; `npx ruimte service uninstall` verwijdert hem."
         },
         "pending": {
-            "takeOver": "Ruimte draait deze machine nu zelf. Vanaf de volgende keer dat Ruimte afsluit blijft die draaien.",
+            "takeOver": "Gaat in zodra Ruimte de volgende keer afsluit.",
             "handBack": "Deze machine stopt als Ruimte afsluit."
         },
         "restart": {
@@ -711,28 +719,28 @@
         "failure": "De achtergrondservice heeft deze machine niet gedraaid: {{reason}}",
         "linger": {
             "label": "Blijven draaien nadat je uitlogt",
-            "on": "Lingering staat aan, dus deze machine blijft draaien nadat je uitlogt.",
-            "off": "Zonder dat stopt deze machine als je uitlogt uit je desktopsessie.",
+            "on": "Deze machine blijft draaien nadat je uitlogt.",
+            "off": "Uit stopt deze machine als je uitlogt.",
             "action": "Toestaan"
         },
         "stop": {
             "label": "De machine stoppen",
-            "description": "Beëindigt elke sessie hier en sluit Ruimte af. De machine start weer zodra je Ruimte opent.",
+            "description": "Beëindigt elke sessie en sluit Ruimte af. De machine start weer met Ruimte.",
             "action": "Stoppen"
         },
         "confirmStop": {
             "title": "Deze machine stoppen en Ruimte afsluiten?",
-            "description": "Elke terminal en agent op deze machine eindigt, en geen enkele andere client kan erbij tot je Ruimte weer opent.",
+            "description": "Elke terminal en agent op deze machine eindigt, en geen enkel ander apparaat kan erbij tot je Ruimte weer opent.",
             "action": "Stoppen en afsluiten"
         },
         "confirmRestart": {
             "title": "Deze machine nu herstarten?",
-            "description": "Elke terminal en agent op deze machine eindigt, en de machine komt terug op de bijgewerkte versie.",
+            "description": "Elke terminal en agent eindigt, en de machine komt bijgewerkt terug.",
             "action": "Nu herstarten"
         },
         "confirmLinger": {
             "title": "Blijven draaien nadat je uitlogt?",
-            "description": "Ruimte draait loginctl enable-linger voor je gebruiker, zodat je gebruikersservices zonder sessie blijven draaien. Ongedaan maken doe je met loginctl disable-linger.",
+            "description": "Ruimte laat je services doordraaien nadat je uitlogt. Ongedaan maken doe je met loginctl disable-linger.",
             "action": "Toestaan"
         },
         "stopRunning": {
@@ -772,28 +780,28 @@
         "deleteAnyView": {
             "label": "Agents mogen elke weergave of node verwijderen",
             "rowLabel": "Agents op {{machine}} mogen elke weergave of node verwijderen",
-            "description": "Uit verwijdert een agent alleen weergaven en nodes die hij zelf maakte. Aan mag hij elke weergave en node in elk project daar verwijderen, ook die van jou.",
+            "description": "Uit verwijderen agents alleen weergaven en nodes die ze zelf maakten.",
             "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Account, of terwijl er een project op open staat."
         },
         "resumeAtReset": {
             "label": "Chats gaan verder na een limiet",
             "rowLabel": "Chats op {{machine}} gaan verder na een limiet",
-            "description": "Aan gaat een chat die op een verbruikslimiet stopte vanzelf verder zodra de limiet reset, en wordt een turn die mislukte omdat het model overbelast was na 1, 5 en 15 minuten opnieuw geprobeerd.",
+            "description": "Een chat die op een verbruikslimiet stopte, gaat verder zodra die reset. Een turn die mislukte op een overbelast model, probeert het opnieuw na 1, 5 en 15 minuten.",
             "notConnected": "Niet verbonden. Pas dit aan terwijl er een project op de machine open staat."
         },
         "visualReplies": {
             "label": "Visuele antwoorden",
             "rowLabel": "Agents op {{machine}} mogen visuele antwoorden tonen",
-            "description": "Aan mag een agent een grafiek, tabel of mockup als pagina boven zijn antwoord tonen. Uit antwoordt hij in tekst. Visualisaties die al in een chat staan, blijven staan.",
+            "description": "Agents mogen een grafiek, tabel of mockup boven een antwoord tonen. Uit antwoorden ze in tekst; bestaande visualisaties blijven.",
             "notConnected": "Niet verbonden. Pas dit aan terwijl er een project op de machine open staat."
         },
         "machine": {
             "title": "Op {{machine}}",
-            "description": "Per machine opgeslagen. Geldt voor elke client die ermee verbonden is."
+            "description": "Per machine opgeslagen. Geldt voor elk apparaat dat ermee verbonden is."
         },
         "defaults": {
             "title": "Standaarden voor nieuwe agents",
-            "description": "Geldt voor elke provider. Het model en account van elke CLI stel je in onder <link>Providers</link>.",
+            "description": "Voor elke provider. Model en account per CLI stel je in onder <link>Providers</link>.",
             "permissions": "Permissies",
             "terminalMode": "Terminal-agents starten in"
         },
@@ -801,7 +809,7 @@
             "title": "Terwijl een agent werkt",
             "description": "Slaap pauzeert elke agent.",
             "sound": {
-                "label": "Een geluid spelen bij een notificatie",
+                "label": "Notificatiegeluid",
                 "description": "Geldt voor elke notificatie van een agent."
             }
         },
@@ -823,18 +831,18 @@
                 "description": "Uit houdt deze computer alleen wakker op de netadapter."
             },
             "display": {
-                "label": "Het scherm aan laten",
-                "description": "Uit mag het scherm nog uitgaan terwijl de computer wakker blijft.",
-                "needsBattery": "Alleen samen met Ook op de batterij, omdat macOS het scherm niet alleen op de netadapter aan kan houden."
+                "label": "Scherm aan laten",
+                "description": "Uit mag het scherm uitgaan.",
+                "needsBattery": "Zet eerst Ook op de batterij aan."
             },
             "lid": {
                 "label": "Ook met de klep dicht",
-                "description": "Zet slaap uit zolang wakker houden geldt, zodat de Mac doorwerkt met de klep dicht. Slaap komt terug zodra wakker houden loslaat of de machine stopt. Op de batterij geldt het alleen met Ook op de batterij, en onder {{percent}} laat het los. Zonder dit gaat de Mac slapen als je de klep sluit, tenzij er een extern scherm en de netadapter aan hangen.",
+                "description": "Je Mac blijft met de klep dicht doorwerken zolang hij wakker blijft. Op de batterij is Ook op de batterij nodig en stopt het onder {{percent}}.",
                 "search": "De Mac laten doorwerken met de klep dicht zolang wakker houden geldt.",
                 "rule": {
                     "label": "Toestemming op deze Mac",
-                    "missing": "Voegt een regel toe aan /etc/sudoers.d waarmee Ruimte pmset -a disablesleep 1 en 0 zonder wachtwoord mag uitvoeren, en verder niets. macOS vraagt eerst om een beheerderswachtwoord.",
-                    "installed": "Een regel in /etc/sudoers.d laat Ruimte pmset -a disablesleep 1 en 0 zonder wachtwoord uitvoeren, en verder niets. Verwijderen zet slaap weer aan en de schakelaar hierboven uit.",
+                    "missing": "Laat Ruimte slaap zonder wachtwoord uit- en aanzetten, en verder niets. macOS vraagt eerst om een beheerderswachtwoord.",
+                    "installed": "Ruimte mag slaap zonder wachtwoord uit- en aanzetten, en verder niets. Verwijderen zet slaap weer aan en de schakelaar hierboven uit.",
                     "install": "Toestaan",
                     "remove": "Verwijderen",
                     "prompt": {
@@ -843,7 +851,7 @@
                     }
                 }
             },
-            "saveFailed": "Wakker houden kon niet worden aangepast"
+            "saveFailed": "Kon wakker houden niet aanpassen"
         },
         "chats": {
             "title": "Chats",
@@ -864,47 +872,48 @@
             },
             "readingWidth": {
                 "label": "Leesbreedte",
-                "description": "Hoe breed het gesprek en het invoerveld lopen in een chat die een eigen weergave is. Een chat op het canvas gebruikt de breedte van zijn node."
+                "description": "De breedte van de berichten in een chatweergave. Een chat op een canvas vult zijn node."
             },
             "showViews": {
-                "label": "Een agent een weergave laten tonen",
-                "description": "Aan vervangt de weergave waarin je werkt door de weergave die een agent opent, en een banner brengt je terug. Uit biedt de banner een knop om ernaartoe te gaan."
+                "label": "Agents van weergave laten wisselen",
+                "description": "Aan vervangt een weergave die een agent opent de jouwe, met een banner om terug te gaan. Uit biedt de banner aan erheen te gaan."
             },
             "mapTiles": {
                 "label": "Kaarttegels",
-                "description": "Kaarten in chats laden hun tegels van de kaartdienst van Ruimte. Staat dit uit, dan toont een kaart alleen een omtrek en de lijst met plekken."
+                "description": "Laadt kaarttegels in chats van de kaartdienst van Ruimte. Uit tonen kaarten alleen een omtrek en hun plekken."
             },
             "sendKey": {
                 "label": "Versturen met",
-                "description": "Welke toets een bericht uit het invoerveld verstuurt. Waar Enter niet verstuurt, voegt het een regel toe."
+                "description": "Welke toets een bericht verstuurt. Als Enter niet verstuurt, voegt het een regel toe."
             },
             "steerByDefault": {
                 "label": "Werkende agents standaard bijsturen",
-                "description": "Stuur berichten naar Codex of Claude bij de volgende toolaanroep. Als dit uitstaat, wachten berichten tot de beurt klaar is. Houd Option of Alt ingedrukt bij het sturen om het andere gedrag te gebruiken."
+                "description": "Een bericht dat je stuurt terwijl Codex of Claude werkt, komt bij de volgende stap aan. Uit wacht het tot de agent klaar is. Houd Option of Alt ingedrukt bij het sturen voor het omgekeerde."
             }
         },
         "integrations": {
             "title": "Agentstatus in terminals",
-            "description": "Via hooks in de instellingen van Claude Code en Codex ziet Ruimte of de CLI in een terminal werkt, klaar is of op je wacht. Die instellingen gelden overal: voor elke keer dat de CLI op deze computer draait, ook buiten Ruimte, waar de hook niets doet.",
+            "description": "Ruimte toont of een codeertool in een terminal werkt, klaar is of op je wacht door een paar regels aan de instellingen van die tool toe te voegen. Die gelden overal op deze computer, ook buiten Ruimte.",
             "dialog": {
-                "title": "Mag Ruimte je CLI-instellingen aanpassen?",
-                "description": "Ruimte wil een paar instellingen toevoegen aan je codeertools. Die gelden overal op deze computer, ook buiten Ruimte.",
+                "title": "Mag Ruimte CLI-instellingen aanpassen?",
+                "description": "Ruimte voegt een paar instellingen toe aan je codeertools. Die gelden overal op deze computer, ook buiten Ruimte.",
                 "status": "Laat zien wanneer een terminal bezig is, klaar is of je nodig heeft.",
                 "statusAndTool": "Laat zien wanneer een terminal bezig is, klaar is of je nodig heeft. Laat ook de eigen tool van Ruimte draaien zonder te vragen.",
-                "tool": "Laat de eigen tool van Ruimte draaien zonder te vragen."
+                "tool": "Laat de eigen tool van Ruimte draaien zonder te vragen.",
+                "doneAndTool": "Laat zien wanneer een terminal klaar is. Laat ook de eigen tool van Ruimte draaien zonder te vragen."
             },
-            "off": "Zonder deze hooks tonen terminals met {{provider}} geen status en vragen ze nooit om je aandacht. Chats merken hier niets van; die krijgen hun status langs een andere weg.",
-            "codexRule": "Voor Codex geldt deze keuze ook voor de regel waarmee ruimte-context buiten de sandbox van Codex mag draaien. Zonder die regel kan Codex in een sandboxmodus Ruimte niet bereiken: ruimte-context mislukt of vraagt elke keer om je toestemming, in terminals en in chats.",
-            "antigravityRule": "Voor Antigravity geldt deze keuze alleen voor de regel waarmee ruimte-context zonder vragen mag draaien, ook buiten de sandbox. Zonder die regel vraagt Antigravity in een terminal elke keer om je toestemming als het ruimte-context gebruikt.",
+            "off": "Zonder deze instellingen tonen terminals met {{provider}} geen status of meldingen. Chats merken er niets van.",
+            "codexRule": "Voor Codex laat dit ook de eigen tool van Ruimte buiten de sandbox van Codex draaien. Zonder dit mislukt Codex in een sandboxmodus of vraagt het elke keer om toestemming als het Ruimte gebruikt.",
+            "antigravityRule": "Voor Antigravity laat dit ook de eigen tool van Ruimte zonder vragen draaien. Zonder dit vraagt Antigravity in een terminal elke keer om toestemming als het Ruimte gebruikt.",
             "files": "Ruimte schrijft in:",
             "allow": "Toestaan",
             "deny": "Niet toestaan",
             "keep": "Behouden",
             "remove": "Verwijderen",
             "notNow": "Niet nu",
-            "migrated": "Ruimte heeft deze al aan {{provider}} toegevoegd. Behoud ze of verwijder ze nu.",
-            "fixed": "Deze machine is gestart met --no-hooks, dus Ruimte schrijft niets in de instellingen van de CLI's.",
-            "search": "hooks, status, Claude, Codex, Antigravity, settings.json",
+            "migrated": "Ruimte heeft deze al aan {{provider}} toegevoegd. Behoud of verwijder ze.",
+            "fixed": "Deze machine is gestart met agentstatus uit, dus Ruimte laat de instellingen van de tools met rust.",
+            "search": "hooks, status, Claude, Codex, Antigravity, Copilot, Grok, settings.json",
             "state": {
                 "on": "Toegestaan",
                 "off": "Niet toegestaan"
@@ -917,7 +926,7 @@
                 "none": "Geen regels van Ruimte gevonden",
                 "keptEdited": "Ongemoeid: je hebt de regel van Ruimte aangepast",
                 "missing": "Bestand niet gevonden",
-                "refused": "Niet aangepast: het bestand is geen instellingenobject",
+                "refused": "Niet aangepast: Ruimte kan dit bestand niet lezen",
                 "failed": "Mislukt: {{message}}"
             }
         }
@@ -933,7 +942,7 @@
             "unknown": "Onbekend",
             "machine": {
                 "label": "Machine",
-                "description": "De machine van de huidige workspace, en de versie ervan."
+                "description": "Machine van de huidige workspace en de versie."
             },
             "platform": "Platform",
             "dataFolder": {
@@ -945,10 +954,10 @@
             "title": "Updates",
             "auto": {
                 "label": "Updates automatisch downloaden",
-                "description": "Aan worden nieuwe versies op de achtergrond gedownload. Uit start je elke download zelf."
+                "description": "Uit start je elke download zelf."
             },
             "check": "Controleren op updates",
-            "checking": "Bezig met controleren",
+            "checking": "Bezig met controleren…",
             "download": "Downloaden",
             "install": "Herstarten om te installeren",
             "released": "Verschenen op {{date}}",
@@ -973,48 +982,48 @@
     "voice": {
         "key": {
             "title": "Voice Control",
-            "sectionDescription": "Bedien je werkruimte met je stem. Gebruikt OpenAI GPT-Live en verstuurt audio alleen tijdens een actief gesprek naar OpenAI. Vereist je eigen API-sleutel.",
+            "sectionDescription": "Bedien je werkruimte met je stem via OpenAI GPT-Live. Audio gaat alleen tijdens een gesprek naar OpenAI. Vereist je eigen API key.",
             "label": "API key",
             "fieldLabel": "OpenAI API key",
-            "desktopOnly": "API keys kun je instellen in de Ruimte-desktopapp.",
+            "desktopOnly": "Stel API keys in via de desktop-app.",
             "create": "API key aanmaken",
-            "checking": "Bezig met de keychain van de desktop…",
+            "checking": "Keychain controleren…",
             "configured": "Ingesteld",
             "notConfigured": "Niet ingesteld",
-            "persistent": "Versleuteld met de keychain van deze computer. Ruimte toont de opgeslagen waarde nooit meer.",
-            "session": "Versleutelen is niet beschikbaar, dus deze key blijft alleen bewaard tot Ruimte afsluit.",
-            "missing": "Nodig voor GPT-Live. De key blijft in de desktop-shell en wordt nooit in een project bewaard.",
-            "replacePlaceholder": "Voer een vervangende key in",
-            "remove": "Opgeslagen API key verwijderen",
-            "saveFailure": "De API key kon niet worden opgeslagen.",
-            "readFailure": "De instellingen konden niet worden gelezen.",
-            "removeFailure": "De API-sleutel kon niet worden verwijderd."
+            "persistent": "Versleuteld in de keychain van deze computer en nooit meer getoond.",
+            "session": "Versleutelen niet beschikbaar; de key blijft tot Ruimte afsluit.",
+            "missing": "Nodig voor GPT-Live. Nooit in een project bewaard.",
+            "replacePlaceholder": "Nieuwe key",
+            "remove": "API key verwijderen",
+            "saveFailure": "Kon API key niet opslaan.",
+            "readFailure": "Kon de instellingen niet lezen.",
+            "removeFailure": "Kon API key niet verwijderen."
         },
         "toast": {
             "readFailed": "Kon de instellingen van GPT-Live niet lezen",
             "saved": "OpenAI API key opgeslagen",
-            "saveFailed": "Kon de API key niet opslaan",
-            "removed": "Opgeslagen OpenAI API key verwijderd",
-            "removeFailed": "Kon de API key niet verwijderen"
+            "saveFailed": "Kon API key niet opslaan",
+            "removed": "OpenAI API key verwijderd",
+            "removeFailed": "Kon API key niet verwijderen"
         },
         "microphone": {
             "systemDefault": "Systeemstandaard",
-            "systemDefaultHint": "Volgt de invoerkeuze van het systeem",
+            "systemDefaultHint": "Volgt systeeminvoer",
             "unavailable": "Microfoon niet beschikbaar",
             "unavailableHint": "Gebruikt de systeemstandaard tot die terug is"
         },
         "conversation": {
             "title": "Gesprek",
-            "description": "Wijzigingen gelden vanaf het volgende gesprek. Alleen een lopend gesprek stuurt microfoonaudio naar OpenAI.",
+            "description": "Wijzigingen gelden vanaf het volgende gesprek.",
             "microphone": {
                 "label": "Microfoon",
                 "description": "Microfoon voor dicteren en Voice Control.",
-                "unavailableDescription": "Microfoons konden niet worden opgehaald. De standaardmicrofoon wordt gebruikt.",
+                "unavailableDescription": "Kon microfoons niet ophalen; de standaard wordt gebruikt.",
                 "selectLabel": "Microfoon"
             },
             "language": {
                 "label": "Taal",
-                "description": "De taal voor dicteren en Voice Control. Sommige talen zijn alleen beschikbaar in Voice Control.",
+                "description": "Sommige talen werken alleen in Voice Control.",
                 "selectLabel": "Spraaktaal"
             },
             "voice": {
@@ -1026,7 +1035,7 @@
             },
             "confirm": {
                 "label": "Verwijderen bevestigen",
-                "description": "Vraag het voordat Voice Control weergaven of nodes verwijdert. Staat dit uit, dan worden gesproken verzoeken om iets te verwijderen meteen uitgevoerd.",
+                "description": "Vraag het voordat Voice Control weergaven of nodes verwijdert. Uit gebeurt het meteen.",
                 "toggle": "Verwijderen door Voice Control bevestigen"
             }
         },
@@ -1036,15 +1045,15 @@
         }
     },
     "computer": {
-        "description": "Agents kunnen de apps op een computer zien en bedienen. Ze komen pas bij een app nadat jij die toestaat.",
+        "description": "Agents zien en bedienen alleen apps die je toestaat.",
         "enable": "Computer Use toestaan op {{machine}}",
         "allow": "Computer Use toestaan",
-        "failed": "Computer Use kon niet laden",
+        "failed": "Kon Computer Use niet laden",
         "machine": {
             "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Account, of terwijl er een project op open staat.",
             "checking": "Controleren…",
-            "unsupported": "Computer Use is nog niet beschikbaar voor het systeem van deze machine.",
-            "unavailable": "Deze machine heeft geen Ruimte Computer Use. Dat zit in de desktop-app van Ruimte.",
+            "unsupported": "Nog niet beschikbaar op het systeem van deze machine.",
+            "unavailable": "Niet op deze machine. Het zit in de desktop-app van Ruimte.",
             "off": "Uit. Agents op deze machine kunnen de apps niet zien of bedienen.",
             "starting": "Ruimte Computer Use starten…",
             "grants": "Wacht op twee toestemmingen.",
@@ -1058,22 +1067,22 @@
             },
             "screenRecording": {
                 "label": "Schermopname",
-                "description": "Laat agents een afbeelding zien van het venster waarin ze werken."
+                "description": "Laat agents het venster zien waarin ze werken."
             }
         },
         "permissions": "Toestemmingen",
         "state": {
             "granted": "Toegestaan",
             "missing": "Niet toegestaan",
-            "unknown": "Controleren"
+            "unknown": "Controleren…"
         },
         "open": "Open Systeeminstellingen",
-        "restartNote": "Schermopname werkt pas als Ruimte Computer Use opnieuw start. Ruimte herstart het zodra je terugkomt in dit venster.",
+        "restartNote": "Schermopname werkt na een herstart van Ruimte Computer Use, zodra je terugkomt in dit venster.",
         "checkAgain": "Opnieuw controleren",
         "remote": "Sta deze toe op {{machine}} zelf, in Systeeminstellingen > Privacy en beveiliging.",
         "apps": {
             "always": "Toegestane apps",
-            "alwaysEmpty": "Geen apps die altijd zijn toegestaan.",
+            "alwaysEmpty": "Geen apps toegestaan.",
             "terminals": "Behandeld als terminal",
             "terminalsEmpty": "Geen apps gezien die een shell draaien.",
             "thisTime": "Deze keer",
@@ -1104,66 +1113,118 @@
         "notAnswering": "Geeft geen antwoord. Pas dit aan zodra de machine terug is.",
         "toast": {
             "saveFailed": "{{machine}} kon de wijziging niet opslaan",
-            "unchanged": "De instelling is onveranderd."
+            "unchanged": "Niets gewijzigd."
         },
         "direct": {
             "label": "Direct",
-            "description": "Verbinden via WebRTC in plaats van via de socket (experimenteel).",
+            "description": "Rechtstreeks met de machine verbinden (experimenteel).",
             "toggle": "Direct verbinden met {{machine}} (experimenteel)"
         },
         "broker": {
-            "label": "Broker",
+            "label": "Verbindingsdienst",
             "modes": {
                 "default": "Standaard",
                 "custom": "Eigen",
                 "off": "Uit"
             },
-            "description": "Hoe een ingelogde client de machine vindt zonder het adres. {{where}}{{fixed}}",
-            "on": "Op {{host}}.",
-            "none": "Geen broker.",
-            "fixed": " Ingesteld bij het starten van de machine, dus deze keuze wacht tot die zonder dat draait.",
-            "selectLabel": "Broker voor {{machine}}",
-            "urlLabel": "Broker-URL voor {{machine}}"
+            "description": "Hoe je ingelogde apparaten deze machine vinden als ze niet op zijn netwerk zitten.",
+            "none": "Uit, dus alleen apparaten op zijn netwerk bereiken hem.",
+            "fixed": "De machine is gestart met een eigen keuze hiervoor, dus jouw keuze geldt pas als hij zonder start.",
+            "selectLabel": "Verbindingsdienst voor {{machine}}",
+            "urlLabel": "Adres van de verbindingsdienst voor {{machine}}"
         },
         "lanDoor": {
             "label": "Lokaal netwerk",
-            "search": "Laat een client op hetzelfde netwerk verbinden met de machine zonder de broker.",
-            "open": "Een client op hetzelfde netwerk verbindt hier zonder de broker. Open op {{addresses}}.",
-            "noAddress": "Open op poort {{port}}, maar de machine heeft nu geen adres op een lokaal netwerk.",
-            "notListening": "Nu niet open: de poort is bezet, of de machine is zonder gestart.",
-            "closed": "Dicht. Elke client bereikt deze machine via de broker.",
-            "fixed": "Ingesteld met een flag bij het starten van de machine, dus deze schakelaar wacht tot die zonder draait",
-            "fixedNote": "Ingesteld met een flag bij het starten van de machine, dus deze schakelaar wacht tot die zonder draait.",
-            "toggle": "{{machine}} bereikbaar maken voor een client op het lokale netwerk, zonder de broker"
+            "search": "Laat een apparaat op hetzelfde netwerk direct verbinden met de machine.",
+            "open": "Een apparaat op hetzelfde netwerk verbindt hier direct.",
+            "noAddress": "Open, maar de machine heeft geen adres op een lokaal netwerk.",
+            "notListening": "Niet open: de poort is bezet, of de machine is zonder gestart.",
+            "closed": "Dicht. Elk apparaat bereikt deze machine via je account.",
+            "fixed": "De machine is hiermee gestart, dus de schakelaar geldt pas als hij zonder start",
+            "fixedNote": "De machine is hiermee gestart, dus de schakelaar geldt pas als hij zonder start.",
+            "toggle": "{{machine}} direct bereikbaar maken voor een apparaat op het lokale netwerk"
+        },
+        "reach": {
+            "label": "Bereikbaar voor andere apparaten",
+            "search": "Controleert of je andere apparaten deze machine kunnen bereiken.",
+            "checking": "Bereikbaarheid controleren…",
+            "checkAgain": "Opnieuw controleren",
+            "checkAgainLabel": "Opnieuw controleren of andere apparaten {{machine}} bereiken",
+            "failed": "De controle is niet afgerond: {{message}}",
+            "checkedAt": "Gecontroleerd {{when}}.",
+            "causes": {
+                "ok": { "problem": "Je andere apparaten kunnen deze machine bereiken." },
+                "brokerOff": {
+                    "problem": "De verbindingsdienst staat uit, dus apparaten buiten dit netwerk bereiken de machine niet.",
+                    "fix": "Zet de verbindingsdienst hierboven aan."
+                },
+                "brokerUnreachable": {
+                    "problem": "De machine bereikt de verbindingsdienst niet, dus apparaten buiten dit netwerk vinden hem niet.",
+                    "fix": "Controleer de internetverbinding van de machine, en of een firewall of proxy {{broker}} blokkeert."
+                },
+                "noRelay": {
+                    "problem": "De verbindingsdienst biedt geen relay, dus apparaten op sommige netwerken kunnen niet verbinden.",
+                    "fix": "Gebruik een verbindingsdienst met een relay, zoals de standaarddienst."
+                },
+                "turnUnreachable": {
+                    "problem": "De relay antwoordt niet, dus apparaten op sommige netwerken kunnen niet verbinden.",
+                    "fix": "Laat de machine de relay bereiken door de firewall, op UDP 3478 en TCP 3478 of 5349."
+                },
+                "turnRefused": {
+                    "problem": "De relay weigert de machine, dus apparaten op sommige netwerken kunnen niet verbinden.",
+                    "fix": "Beheer je de verbindingsdienst zelf, geef hem dan het geheim dat de relay verwacht. Probeer het bij de standaarddienst later opnieuw."
+                },
+                "udpBlocked": {
+                    "problem": "Dit netwerk blokkeert de directe route, dus elke verbinding gaat via de relay en is trager.",
+                    "fix": "Sta uitgaand UDP toe op dit netwerk, in elk geval naar poort 3478."
+                },
+                "vpnRelayed": {
+                    "problem": "{{tunnel}} blokkeert de directe route, dus elke verbinding gaat via de relay en is trager.",
+                    "fix": "Laat Ruimte buiten de VPN om gaan, zet de exit node uit, of laat UDP erdoor."
+                },
+                "vpnBlocked": {
+                    "problem": "{{tunnel}} blokkeert de routes die andere apparaten nodig hebben, dus die kunnen niet verbinden.",
+                    "fix": "Laat Ruimte buiten de VPN om gaan, zet de exit node uit, of laat UDP erdoor."
+                },
+                "blocked": {
+                    "problem": "Dit netwerk blokkeert de routes die andere apparaten nodig hebben, dus die kunnen niet verbinden.",
+                    "fix": "Controleer de firewall of proxy van dit netwerk. Die moet UDP doorlaten, of TCP naar de relay op poort 3478 of 5349."
+                },
+                "lanDoorDown": {
+                    "problem": "Poort {{port}} is bezet, dus apparaten op dit netwerk verbinden via je account.",
+                    "fix": "Stop wat de poort gebruikt, of start de machine met een andere --lan-port."
+                },
+                "unknown": { "problem": "De machine meldt een probleem dat deze versie van Ruimte niet kent: {{cause}}." }
+            }
         },
         "worktreeFolder": {
             "label": "Worktree-map",
-            "description": "Nieuwe worktrees komen in de datamap van Ruimte. Kies een andere map om ze daar te maken.",
-            "descriptionTyped": "Nieuwe worktrees komen in de datamap van Ruimte. Typ een ander pad om ze daar te maken.",
-            "descriptionChosen": "Nieuwe worktrees komen hier. Worktrees die je al hebt, blijven waar ze zijn.",
+            "description": "Nieuwe worktrees komen in de datamap van Ruimte, of in een map die je kiest.",
+            "descriptionTyped": "Nieuwe worktrees komen in de datamap van Ruimte, of op een pad dat je typt.",
+            "descriptionChosen": "Nieuwe worktrees komen hier. Bestaande blijven staan.",
             "placeholder": "Datamap van Ruimte",
             "choose": "Kiezen…",
             "reset": "Herstellen",
-            "refusedRoot": "Die map mag niet: gebruik een absoluut pad dat niet de root van de schijf, je thuismap of de datamap van Ruimte is.",
+            "refusedRoot": "Gebruik een absoluut pad buiten de schijfroot, je thuismap of de datamap van Ruimte.",
             "notAFolder": "Dat is geen map, of de map kan niet worden aangemaakt of beschreven."
         },
         "streaming": {
             "label": "Streamen van browser en apparaten",
-            "description": "Sta deze machine toe browserpagina's en schermen van apparaten te streamen naar clients zonder eigen native weergave.",
+            "description": "Laat deze machine browserpagina's en schermen van apparaten tonen in apps die dat zelf niet kunnen.",
             "toggle": "Streamen van browser en apparaten toestaan vanaf {{machine}}"
         },
         "usageStats": {
             "label": "Gebruiksstatistieken",
-            "description": "Stuurt één keer per dag dagtotalen van de functies die deze machine gebruikte, zonder namen, paden of iets dat jou herkenbaar maakt. <privacy>Wat er verstuurd wordt</privacy>",
+            "description": "Stuurt dagtotalen van functiegebruik, zonder namen, paden of iets dat jou herkenbaar maakt. <privacy>Wat er verstuurd wordt</privacy>",
             "search": "Anonieme dagtotalen van gebruikte functies, één keer per dag verstuurd",
             "toggle": "Gebruiksstatistieken versturen vanaf {{machine}}"
         },
         "access": {
             "title": "Apps met toegang",
             "description": "Browsers en apps die via een account binnenkwamen.",
-            "listFailed": "Kon de clients met toegang niet opsommen",
+            "listFailed": "Kon de apparaten met toegang niet opsommen",
             "empty": "Verder heeft niets toegang tot deze machine.",
-            "thisClient": "deze client",
+            "thisClient": "dit apparaat",
             "revoke": "Toegang intrekken",
             "revokeOne": "{{label}} intrekken",
             "session": "{{origin}} {{date}}, laatst gezien {{ago}}",
@@ -1178,7 +1239,7 @@
             },
             "confirm": {
                 "title": "{{label}} intrekken?",
-                "current": "Dit is de client die je gebruikt. Hij verliest toegang tot deze machine en vergeet die hier.",
+                "current": "Dit is het apparaat dat je gebruikt. Het verliest toegang tot deze machine en vergeet die hier.",
                 "statement": "Hij verliest toegang bij de volgende verbinding, en inloggen via een account laat hem er niet meer in.",
                 "link": "Hij verliest toegang bij de volgende verbinding.",
                 "machine": "Deze machine kan hier geen taken meer geven, en opnieuw koppelen laat hem er niet meer in. Taken die hij al startte, blijven hier doorlopen, maar de resultaten bereiken hem niet meer. Om ze te stoppen, koppel je zijn projecten los onder Gekoppelde projecten.",
@@ -1188,9 +1249,9 @@
         "links": {
             "title": "Gekoppelde projecten",
             "description": "Projecten op deze machine waarin je andere machines werken.",
-            "listFailed": "De gekoppelde projecten konden niet worden opgehaald",
-            "changeFailed": "De modus kon niet worden gewijzigd",
-            "unlinkFailed": "Het project kon niet worden losgekoppeld",
+            "listFailed": "Kon de gekoppelde projecten niet ophalen",
+            "changeFailed": "Kon de modus niet wijzigen",
+            "unlinkFailed": "Kon het project niet loskoppelen",
             "empty": "Geen andere machine werkt in een project op deze machine.",
             "from": "van {{machine}}",
             "used": "Agents van {{machine}} starten hoogstens in de gekozen modus. Gekoppeld {{date}}, laatst gebruikt {{ago}}.",
@@ -1211,17 +1272,17 @@
     },
     "machineDialog": {
         "availableWhenAnswering": "Beschikbaar zodra de machine antwoordt",
-        "openFailed": "{{machine}} kon niet worden geopend",
+        "openFailed": "Kon {{machine}} niet openen",
         "addFailed": "{{machine}} is niet aan je account toegevoegd",
         "notOpened": {
-            "title": "Niet geopend op deze client",
+            "title": "Niet geopend op dit apparaat",
             "label": "Open hem om de naam, het icoon en de verbinding te wijzigen",
-            "canOpen": "Hij verbindt via de broker, op gezag van je account.",
-            "noBroker": "Deze machine is nog niet verbonden met een broker, dus hij is alleen op zijn eigen netwerk te bereiken."
+            "canOpen": "Hij verbindt via je account.",
+            "noBroker": "Deze machine is nog niet via je account verbonden, dus hij is alleen op zijn eigen netwerk te bereiken."
         },
         "identity": {
             "title": "Naam en icoon",
-            "description": "Elke client die deze machine bereikt ziet ze."
+            "description": "Elk apparaat dat deze machine bereikt ziet ze."
         },
         "connection": "Verbinding",
         "worktrees": "Worktrees",
@@ -1231,50 +1292,50 @@
             "title": "Account",
             "registrationFailure": "Kon deze machine niet bijwerken op je account: {{reason}}",
             "addAgain": {
-                "label": "Opnieuw aan je account toevoegen",
-                "description": "Iemand heeft deze machine van je account gehaald, dus hij komt er niet vanzelf op terug.",
+                "label": "Opnieuw aan account toevoegen",
+                "description": "Van je account gehaald; hij komt er niet vanzelf op terug.",
                 "action": "Toevoegen"
             },
-            "onYours": "Deze machine staat op je account",
-            "onAnother": "Deze machine staat op een ander account",
-            "onNone": "Deze machine staat nog op geen account",
+            "onYours": "Op je account",
+            "onAnother": "Op een ander account",
+            "onNone": "Nog op geen account",
             "leave": {
-                "description": "Een machine staat op één account. Verlaten sluit elke client af die via een account binnenkwam.",
+                "description": "Een machine staat op één account. Verlaten sluit elk apparaat af dat via een account binnenkwam.",
                 "action": "Verlaten"
             }
         },
         "confirmLeave": {
             "title": "{{machine}} van zijn account halen?",
-            "description": "Elke client die via een account binnenkwam verliest nu zijn toegang, en er komt er geen meer binnen tot de machine weer op een account staat.",
+            "description": "Elk apparaat dat via een account binnenkwam verliest nu zijn toegang, en er komt er geen meer binnen tot de machine weer op een account staat.",
             "action": "Account verlaten"
         },
         "left": {
             "title": "{{machine}} staat nu op geen account",
-            "revoked_one": "{{count}} client verloor zijn toegang",
-            "revoked_other": "{{count}} clients verloren hun toegang"
+            "revoked_one": "{{count}} apparaat verloor zijn toegang",
+            "revoked_other": "{{count}} apparaten verloren hun toegang"
         },
         "remove": {
             "title": "Verwijderen",
             "forget": {
-                "label": "Vergeten op deze client",
-                "description": "Laat de regel van deze machine hier los. De machine, je account en andere clients houden de hunne.",
+                "label": "Vergeten op dit apparaat",
+                "description": "Haalt hem alleen uit deze lijst.",
                 "action": "Vergeten"
             },
             "account": {
                 "label": "Van account verwijderen",
-                "local": "Elke andere client die op je account is ingelogd laat deze machine vallen. Hier blijft hij staan, want deze app draait erop.",
-                "description": "Elke client die op je account is ingelogd laat deze machine vallen. De app op die machine zet hem terug.",
+                "local": "Elk ander apparaat dat op je account is ingelogd laat deze machine vallen. Hier blijft hij staan, want deze app draait erop.",
+                "description": "Elk apparaat dat op je account is ingelogd laat deze machine vallen. De app op die machine zet hem terug.",
                 "action": "Verwijderen"
             }
         },
         "confirmForget": {
-            "title": "{{machine}} vergeten op deze client?",
+            "title": "{{machine}} vergeten op dit apparaat?",
             "description": "De sessies en projecten blijven op de machine staan. Open hem vanuit je account om hem hier terug te krijgen.",
             "action": "Vergeten"
         },
         "confirmRemove": {
             "title": "{{machine}} van je account verwijderen?",
-            "description": "Elke client die op je account is ingelogd laat hem vallen bij de volgende verversing. Clients die uitgelogd zijn houden hem. De machine houdt de clients die ze binnenliet.",
+            "description": "Elk apparaat dat op je account is ingelogd laat hem vallen bij de volgende verversing. Apparaten die uitgelogd zijn houden hem. De machine houdt de apparaten die ze binnenliet.",
             "action": "Verwijderen"
         },
         "subtitle": "{{reach}} · {{version}}"
@@ -1285,7 +1346,7 @@
             "label": "Nog geen machines",
             "description": "Voeg er een toe om de projecten, terminals en agents ervan hiervandaan te openen."
         },
-        "notOpened": "Niet geopend op deze client",
+        "notOpened": "Niet geopend op dit apparaat",
         "mismatch": "Een andere machine antwoordt voor deze. Vergeet hem hier en open hem opnieuw vanuit je account.",
         "withRoute": "{{reach}} · {{route}}",
         "dot": {
@@ -1293,24 +1354,24 @@
         },
         "account": {
             "title": "Inloggen",
-            "description": "Machines op je account open je vanaf elke client waarop je inlogt.",
+            "description": "Machines op je account open je vanaf elk apparaat waarop je inlogt.",
             "unavailable": {
                 "label": "Inloggen werkt in de desktopapp en op station.ruimte.app.",
                 "description": "Het account stuurt een inlog alleen daarheen terug."
             },
             "signedOut": {
                 "label": "Niet ingelogd",
-                "description": "Zodra je inlogt, komt de machine waarop deze app draait vanzelf op je account, en de machines van het account verschijnen hier.",
-                "descriptionNoMachine": "Zodra je inlogt, verschijnen de machines op je account hier."
+                "description": "Log in om deze machine aan je account toe te voegen en je machines hier te zien.",
+                "descriptionNoMachine": "Log in om je machines hier te zien."
             },
             "signingIn": {
-                "label": "Bezig met inloggen",
-                "description": "Rond het inloggen af in de browser en kom dan hier terug."
+                "label": "Bezig met inloggen…",
+                "description": "Rond af in de browser en kom dan terug."
             },
             "signOut": "Uitloggen",
-            "onlyIdentity": "{{detail}}. De enige manier om op dit account in te loggen, dus die blijft tot je er een toevoegt.",
-            "finishWith": "Rond het inloggen met {{provider}} af en kom dan hier terug.",
-            "notAdded": "Niet toegevoegd. Voeg hem toe om dit account ook met {{provider}} te openen.",
+            "onlyIdentity": "{{detail}}. Je enige manier van inloggen, dus die blijft tot je er een toevoegt.",
+            "finishWith": "Rond af met {{provider}} en kom dan terug.",
+            "notAdded": "Niet toegevoegd. Voeg hem toe om ook met {{provider}} in te loggen.",
             "row": "Ruimte-account",
             "delete": {
                 "label": "Account verwijderen",
@@ -1327,19 +1388,19 @@
                 "field": "Typ {{name}} om te bevestigen",
                 "fieldWord": "Dit account heeft geen naam. Typ {{word}} om te bevestigen",
                 "confirm": "Account verwijderen",
-                "busy": "Bezig met verwijderen"
+                "busy": "Bezig met verwijderen…"
             }
         },
         "add": {
-            "title": "Een machine toevoegen",
-            "description": "Een machine komt erbij via je account. Draai op die machine `npx ruimte login`, of open daar de Ruimte-app en log in. Hij verschijnt hier zodra hij op je account staat.",
+            "title": "Machine toevoegen",
+            "description": "Draai op die machine `npx ruimte login`, of open de Ruimte-app en log in. Hij verschijnt hier zodra hij op je account staat.",
             "codeHint": "Voor een machine zonder de app die `ruimte login` draaide",
             "withCode": "Een machine koppelen met een code",
             "enterCode": "Code invoeren",
             "short": "Toevoegen"
         },
         "listLabel": "Account en machines",
-        "failed": "De instellingen van het account konden niet worden getekend",
+        "failed": "Kon de instellingen van het account niet tonen",
         "thisComputer": {
             "row": "Deze computer",
             "none": "Verbindt alleen met je machines",
@@ -1369,7 +1430,7 @@
         }
     },
     "scope": {
-        "client": "Deze client",
+        "client": "Dit apparaat",
         "computer": "Deze computer",
         "machine": "Machine"
     },
@@ -1378,13 +1439,45 @@
             "label": "Apple Foundation Models inschakelen",
             "description": "Gebruik het model op deze Mac voor chats en tools. Vereist Apple silicon, macOS 26.4 of nieuwer en Apple Intelligence.",
             "toggleDescription": "Uitschakelen stopt actieve Apple-chats en openstaande toolgoedkeuringen op deze machine.",
-            "tools": "Het model draait op deze Mac. Webzoeken, pagina’s ophalen en MCP-tools kunnen na goedkeuring gegevens naar hun ingestelde diensten sturen.",
+            "tools": "Het model draait op deze Mac. Webzoeken, pagina’s ophalen en MCP-tools die je goedkeurt, kunnen gegevens naar hun eigen diensten sturen.",
             "status": "Beschikbaarheid",
-            "disabled": "Uitgeschakeld op deze machine.",
-            "ready": "Het lokale model is beschikbaar.",
-            "unavailable": "Het lokale model is niet beschikbaar.",
-            "saveFailed": "Apple Foundation Models kon niet worden gewijzigd",
-            "requiresMac": "Vereist een Mac met Apple silicon."
+            "disabled": "Uit op deze machine.",
+            "ready": "Beschikbaar.",
+            "unavailable": "Niet beschikbaar.",
+            "saveFailed": "Kon Apple Foundation Models niet wijzigen",
+            "requiresMac": "Vereist een Mac met Apple silicon.",
+            "off": "Uit"
+        },
+        "nanogpt": {
+            "description": "Chat met de modellen die je NanoGPT-abonnement bevat. Verzoeken gaan alleen naar de abonnements-API, nooit naar pay as you go.",
+            "footer": "De sleutel blijft op deze machine en wordt nooit meer getoond. Elke tool die een model vraagt, heeft jouw goedkeuring nodig.",
+            "key": "API-sleutel",
+            "keyDescription": "Een abonnements-API-sleutel van nano-gpt.com. Bij opslaan wordt hij gecontroleerd en worden de inbegrepen modellen opgehaald.",
+            "saved": "Opgeslagen",
+            "status": "Abonnement",
+            "save": "Opslaan",
+            "refresh": "Modellen vernieuwen",
+            "disconnect": "Ontkoppelen",
+            "loading": "Bezig met controleren bij NanoGPT…",
+            "unknown": "De machine heeft nog niet geantwoord.",
+            "ready_one": "Gekoppeld, {{count}} model inbegrepen.",
+            "ready_other": "Gekoppeld, {{count}} modellen inbegrepen.",
+            "disconnected": "Geen sleutel opgeslagen op deze machine.",
+            "unavailable": "Deze machine biedt NanoGPT nog niet aan. Werk Ruimte daar bij.",
+            "failed": "Kon NanoGPT niet wijzigen op deze machine.",
+            "noKey": "Geen sleutel",
+            "continue": {
+                "label": "Automatisch doorgaan",
+                "description": "Een chat die de toolrondes van een run opmaakt, start zelf de volgende. Uit wacht hij op jou."
+            },
+            "rounds": {
+                "label": "Toolrondes per run",
+                "description": "Toolrondes voordat een run stopt, 5 tot 200."
+            },
+            "runs": {
+                "label": "Runs voordat hij stopt",
+                "description": "Hoeveel runs een chat zelf neemt, van 1 tot 20. Elke run kost tegoed, dus dit stopt een chat die blijft doorgaan."
+            }
         },
         "acpServer": {
             "title": "Chatserver van {{name}}",
@@ -1397,12 +1490,54 @@
                 "missing": "Niet geïnstalleerd.",
                 "installing": "Installeren…",
                 "installed": "Versie {{version}} is geïnstalleerd.",
-                "failed": "De installatie is mislukt.",
+                "failed": "Kon niet installeren.",
                 "unsupported": "De chatserver is niet beschikbaar voor deze machine."
             },
             "searchLabel": "Chatserver van Antigravity",
             "step": "Installeer de chatserver"
         },
-        "keyNote": "Ruimte leest deze sleutel nooit."
+        "keyNote": "Ruimte leest deze sleutel nooit.",
+        "registry": {
+            "title": "Provider toevoegen",
+            "subtitle": "Agents die je op deze machine kunt installeren",
+            "refresh": "Lijst vernieuwen",
+            "search": "Agents zoeken",
+            "listTitle": "Beschikbare agents",
+            "listDescription": "Installeer er een om ermee te chatten op deze machine.",
+            "install": "Installeren",
+            "update": "Bijwerken naar {{version}}",
+            "open": "Openen",
+            "version": "Versie {{version}}",
+            "checksum": "gecontroleerd",
+            "cached": "Kon de lijst niet vernieuwen ({{error}}). Deze is van {{date}}.",
+            "unavailable": "Kon de agents niet laden",
+            "tryAgain": "Opnieuw proberen",
+            "empty": "Er is geen agent beschikbaar voor deze machine.",
+            "noMatch": "Geen agent past bij \"{{search}}\".",
+            "localOnly": "Installeer agents in de Ruimte-app op die machine."
+        },
+        "version": {
+            "title": "Versie",
+            "method": {
+                "homebrew": "Geïnstalleerd met Homebrew ({{package}})",
+                "homebrew-cask": "Geïnstalleerd met Homebrew ({{package}})",
+                "npm": "Geïnstalleerd met npm ({{package}})",
+                "pnpm": "Geïnstalleerd met pnpm ({{package}})",
+                "bun": "Geïnstalleerd met Bun ({{package}})",
+                "ruimte": "Geïnstalleerd door Ruimte",
+                "unknown": "Op een andere manier geïnstalleerd"
+            },
+            "current": "Versie {{version}}.",
+            "noVersion": "Geen versie gevonden.",
+            "available": "Versie {{version}} is beschikbaar.",
+            "upToDate": "Bijgewerkt.",
+            "ownInstaller": "De eigen installer houdt hem bij.",
+            "update": "Bijwerken naar {{version}}",
+            "check": "Controleren op updates",
+            "localOnly": "Werk hem bij in de Ruimte-app op die machine.",
+            "remove": "Van deze machine verwijderen",
+            "removeDescription": "De chats van {{name}} blijven en werken weer na een herinstallatie.",
+            "removeButton": "Verwijderen"
+        }
     }
 }

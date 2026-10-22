@@ -110,7 +110,7 @@ export function GitFileList({ checkouts, reposTruncated, ...props }: ListProps) 
             ),
         [checkouts, t]
     );
-    const statuses = useMemo(() => new Map(checkouts.map((checkout) => [checkout.path, checkout.status])), [checkouts]);
+    const statuses = new Map(checkouts.map((checkout) => [checkout.path, checkout.status]));
 
     const read = checkouts.filter((checkout) => checkout.status !== null);
     if (checkouts.length === 0 || (read.length > 0 && read.every((checkout) => checkout.status?.repo !== true))) {
@@ -173,26 +173,23 @@ function GitTree({
         return node === undefined || node.kind === 'file' ? null : node.key;
     }, []);
 
-    const decorate = useCallback(
-        (item: FileTreeVisibleRow) => {
-            const node = nodeOf(layout, item.path);
-            if (node === undefined) {
-                return null;
-            }
-            if (node.kind === 'file') {
-                return <GitTreeMarks parts={entryParts(node.item.entry)} />;
-            }
-            if (node.kind === 'folder') {
-                return <GitTreeMarks parts={[{ text: String(node.items.length), kind: 'count' }]} />;
-            }
-            const parts: DecorationPart[] = [{ text: t('git.list.files', { count: node.items.length }), color: COUNT_COLOR, kind: 'count' }];
-            if (node.kind === 'repo') {
-                parts.push(...repoParts(statuses.get(node.cwd) ?? null));
-            }
-            return <GitTreeMarks parts={parts} />;
-        },
-        [statuses, layout, t]
-    );
+    const decorate = (item: FileTreeVisibleRow) => {
+        const node = nodeOf(layout, item.path);
+        if (node === undefined) {
+            return null;
+        }
+        if (node.kind === 'file') {
+            return <GitTreeMarks parts={entryParts(node.item.entry)} />;
+        }
+        if (node.kind === 'folder') {
+            return <GitTreeMarks parts={[{ text: String(node.items.length), kind: 'count' }]} />;
+        }
+        const parts: DecorationPart[] = [{ text: t('git.list.files', { count: node.items.length }), color: COUNT_COLOR, kind: 'count' }];
+        if (node.kind === 'repo') {
+            parts.push(...repoParts(statuses.get(node.cwd) ?? null));
+        }
+        return <GitTreeMarks parts={parts} />;
+    };
 
     const { model } = useFileTree({
         paths: [],

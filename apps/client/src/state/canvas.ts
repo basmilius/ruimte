@@ -1,5 +1,5 @@
 import { createStore, type StoreApi } from 'zustand';
-import type { ProjectCanvasLine, ProjectCanvasView, ProjectLayout, ProjectViewLocal, NodeKind, NodeTitleSource } from '@ruimte/contracts';
+import type { ProjectCanvasLine, ProjectCanvasView, ProjectLayout, ProjectViewLocal, NodeAccent, NodeKind, NodeTitleSource } from '@ruimte/contracts';
 import { DEFAULT_TITLES, NODE_SIZE, isAgentKind } from '@ruimte/contracts';
 import { textRect } from '@/canvas/edge-lines';
 import { unionOf, type Point, type Rect } from '@/canvas/math';
@@ -131,12 +131,13 @@ export interface CanvasState extends CameraSlice {
     setGesturing(gesturing: boolean): void;
     setPanning(panning: boolean): void;
     bringToFront(id: string): void;
-    setNodeAccent(id: string, accent: string | null): void;
+    /* One of the accents or none; a note takes its paper from it. One undo step. */
+    setNodeColor(id: string, accent: NodeAccent | null): void;
     /* A rename is a person's unless the session that named itself says otherwise. */
     /* A null source unnames the node, since nothing named it, so its own source may name it again. */
     renameNode(id: string, title: string, source?: NodeTitleSource | null): void;
     /* Changes what a node carries (its page, its folder) without touching its placement. */
-    updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume' | 'body' | 'color' | 'provider'>>, undoable?: boolean): void;
+    updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume' | 'body' | 'provider'>>, undoable?: boolean): void;
     duplicateNode(id: string): void;
     /* Null with no view under the canvas, since nothing in the project file could hold such a node. */
     addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string | null;

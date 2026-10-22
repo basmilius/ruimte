@@ -396,7 +396,7 @@ enum ChatSubagents {
     static func stopsTaskWarning(_ agents: Int) -> String {
         let warning = String(
             localized:
-                "Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node stays on the canvas."
+                "Ends the agent and cancels the task. The chat that gave it is not told. Its node stays on the canvas."
         )
         return agents == 0 ? warning : "\(warning) \(endsAgentsWarning(agents))"
     }
@@ -409,7 +409,7 @@ enum ChatSubagents {
     static func endsAgentsWarning(_ agents: Int) -> String {
         String(
             localized:
-                "Also ends the \(agents) agents it opened. Their nodes stay on the canvas with what they did so far.")
+                "Also ends the \(agents) agents it opened. Their nodes and work so far stay on the canvas.")
     }
 
     /// The live agents these nodes opened, counted once. A machine that does not know the question counts none.

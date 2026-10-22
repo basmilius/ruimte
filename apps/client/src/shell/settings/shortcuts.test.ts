@@ -20,9 +20,9 @@ describe('shortcutGroups', () => {
     const labels = (apple: boolean): string[] => shortcutGroups(apple).flatMap((group) => group.shortcuts.map((row) => row.label));
 
     test('the line motions of a terminal are listed on macOS only', () => {
-        expect(labels(true)).toContain('Move back one word');
-        expect(labels(false)).not.toContain('Move back one word');
-        expect(labels(false)).toContain('Clear the screen and the scrollback');
+        expect(labels(true)).toContain('Back one word');
+        expect(labels(false)).not.toContain('Back one word');
+        expect(labels(false)).toContain('Clear screen and scrollback');
     });
 });
 
@@ -45,7 +45,7 @@ describe('filterShortcuts', () => {
     test('matches on the label, case-insensitively, and drops groups that end up empty', () => {
         const groups = filterShortcuts(mac, 'ZOOM', true);
         expect(groups.map((group) => group.title)).toEqual(['Canvas']);
-        expect(found(groups)).toEqual(['Zoom around the pointer', 'Zoom in', 'Zoom out']);
+        expect(found(groups)).toEqual(['Zoom at pointer', 'Zoom in', 'Zoom out']);
     });
 
     test('matches on the keys as this platform prints them, with or without spaces', () => {

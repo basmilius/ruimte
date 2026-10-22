@@ -51,11 +51,11 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
     const field = useRef<HTMLInputElement>(null);
     const host = useNodeHost(id);
     const saved = host?.url;
-    useLocalDaemonId();
+    const localDaemonId = useLocalDaemonId();
     const current = state?.url ?? saved ?? '';
     const url = draft ?? current;
     // A node showing its splash has no page behind the bar, so nothing there is worth pressing.
-    const hasPage = current !== '' && browserRouteAvailable(endpointId, current, host?.browserOwner);
+    const hasPage = current !== '' && browserRouteAvailable(endpointId, current, host?.browserOwner, localDaemonId);
     const secure = url.startsWith('https://');
     const scaleLimit = browserStreamScaleLimit();
     const scale = clampBrowserStreamScale(preferredScale, scaleLimit);
@@ -273,8 +273,8 @@ export function BrowserFallback({ id, className }: { id: string; className?: str
     const saved = host?.url ?? '';
     const routeFailed = useBrowserRow(id, (row) => row?.error?.ownerRoute === true);
     const endpointId = useEndpointId();
-    useLocalDaemonId();
-    if (!browserRouteAvailable(endpointId, saved, host?.browserOwner) || (routeFailed && !browserRegistry.has(endpointKey(endpointId, id)))) {
+    const localDaemonId = useLocalDaemonId();
+    if (!browserRouteAvailable(endpointId, saved, host?.browserOwner, localDaemonId) || (routeFailed && !browserRegistry.has(endpointKey(endpointId, id)))) {
         return (
             <div className={clsx('flex h-full items-center justify-center bg-surface-sunken', className)}>
                 <EmptyState icon={Unplug} title={t('browser.ownerUnavailable')}>

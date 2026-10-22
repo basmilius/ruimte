@@ -102,7 +102,7 @@ struct TerminalScreen: View {
             Button("Clear scrollback", role: .destructive) { Task { await model.clear() } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This clears the shared terminal scrollback on every client.")
+            Text("This clears the shared terminal scrollback on every device.")
         }
     }
 }

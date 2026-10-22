@@ -1,6 +1,6 @@
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
-import type { CanvasNodeKind } from '@ruimte/contracts';
-import { memo, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { notePaperOf, type CanvasNodeKind } from '@ruimte/contracts';
+import { memo, useState, type CSSProperties, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import {
@@ -36,12 +36,13 @@ import { WorkingMark } from '@/attention/WorkingMark';
 import { TaskMark } from '@/tasks/TaskMark';
 import { useChildTask } from '@/state/tasks';
 import { useUnseen } from '@/state/attention';
+import { useHiddenNeedsYou } from '@/canvas/use-group-waits';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { useWorkspace } from '@/transport/connections';
 import { markPeerLapsed, usePeerLapse } from '@/project/peer-lapse';
 import { linkToPeer } from '@/project/peer-linker';
 import { useUntakenTask, useWaitingMachines } from '@/canvas/remote-wait';
-import { endpointIdOfMachine } from '@/state/endpoints';
+import { useEndpointIdOfMachine } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 import { NodeMachineScope } from '@/transport/node-machine';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
@@ -56,13 +57,13 @@ import { useNodeStatus, useNodeWork } from '@/state/chats';
 import { ProcessAlertMark } from '@/processes/ProcessAlertMark';
 import { useNodeAlerts } from '@/processes/use-node-alerts';
 import { useHasContextLinks } from '@/context/sources';
-import { accentColor } from '@/canvas/accents';
+import { accentColor, notePaperClass } from '@/canvas/accents';
 import { DeviceOperatedStrip } from '@/devices/DeviceOperatedStrip';
 import { ComputerIndicator } from '@/computer/ComputerIndicator';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { FlagMarkOf } from '@/project/FlagMark';
 import { SnoozeMenuItems } from '@/shell/Snooze';
-import { endpointOfNode, useEndpointId } from '@/state/keys';
+import { useEndpointId, useEndpointOfNode } from '@/state/keys';
 import { useUi } from '@/state/ui';
 import { useCellHasFocus } from '@/state/document';
 import { useProject } from '@/state/project';
@@ -83,7 +84,6 @@ import { DiagramNode, DiagramPlate } from '@/canvas/nodes/DiagramNode';
 import { DrawingNode } from '@/canvas/nodes/DrawingNode';
 import { FileNode, FilePlate } from '@/canvas/nodes/FileNode';
 import { UnknownNodePlate } from '@/canvas/nodes/UnknownNode';
-import { noteColorClass } from '@/canvas/note-colors';
 import { Favicon } from '@/browser/Favicon';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
@@ -214,7 +214,7 @@ function MachinePill({ machineId, endpointId, narrow }: { machineId: string; end
 /* A parent whose task was given to a machine that does not answer yet: the task starts there by itself once it does. */
 function RemoteWaitPill({ machine, count }: { machine: string; count: number }) {
     const { t } = useTranslation('canvas');
-    const entry = useMachineEntry(endpointIdOfMachine(machine));
+    const entry = useMachineEntry(useEndpointIdOfMachine(machine));
     const icon = useMachineIcon(entry);
     const name = nameOf(entry);
     const label = t('remote.waitTooltip', { machine: name, count });
@@ -384,11 +384,12 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     /* Where a file node's controls go: its own header, so the body draws no second bar under it.
        Every other node hands its body an empty slot, which keeps the canvas out of the window's. */
     const [fileControls, setFileControls] = useState<HTMLElement | null>(null);
-    const toolbarSlot = useMemo(() => fixedSlot(fileControls), [fileControls]);
+    const toolbarSlot = fixedSlot(fileControls);
     const status = useNodeStatus(node);
     const work = useNodeWork(node);
     const endpointId = useEndpointId();
     const workspaceId = useWorkspace()?.connection.endpointId;
+    const nodeEndpointId = useEndpointOfNode(node, '');
     // A node of another machine draws a card for that machine in place of its body while the machine is away.
     const remote = useRemoteNodeState(node?.machine, workspaceId);
     const unseen = useUnseen(id);
@@ -400,6 +401,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const nodeWorktree = useWorktreeOf(node?.kind === 'terminal' || node?.kind === 'chat' ? node.cwd : undefined);
     const groupWorktrees = useGroupWorktrees(node?.kind === 'group' && !node.worktree ? id : null);
     const hidden = useCanvas((s) => s.hidden.has(id));
+    const hiddenNeedsYou = useHiddenNeedsYou(node?.kind === 'group' && node.collapsed === true ? id : null);
     const browserTitle = useBrowserDisplayTitle(id, node?.title ?? '', node?.titleSource);
     const unsavedFile = useUnsavedStoredPath(node?.kind === 'file' ? (node.path ?? null) : null);
 
@@ -412,6 +414,9 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const isGroup = node.kind === 'group';
     const isNote = node.kind === 'note';
     const frameAccent = !isGroup && !isNote ? accent : undefined;
+    // A note is colored the way a colored node's header is, all over; only the neutral paper keeps a sheet of its own.
+    const noteAccent = isNote ? accentColor(notePaperOf(node) ?? 'yellow') : undefined;
+    const borderAccent = isNote ? noteAccent : frameAccent;
     // A newer Ruimte's node: it moves, resizes and goes away like any other, and nothing else about it is this version's to change.
     const isUnknown = node.kind === 'unknown';
     const collapsed = isGroup && node.collapsed === true;
@@ -425,6 +430,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
             <ContextMenu.Trigger
                 render={<div />}
                 data-node-id={id}
+                data-paper={isNote ? (notePaperOf(node) ?? 'yellow') : undefined}
                 className={clsx(
                     // isolate: xterm's layers carry z-indexes; without a stacking context they would paint over a node added later.
                     'absolute isolate flex flex-col overflow-hidden focus-visible:outline-none',
@@ -432,7 +438,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     isGroup
                         ? GROUP_FRAME
                         : isNote
-                          ? clsx(!maximized && 'shadow-node', noteColorClass(node.color))
+                          ? clsx(!maximized && 'shadow-node', noteAccent ? 'bg-clip-padding' : notePaperClass(notePaperOf(node)))
                           : clsx('bg-surface', !maximized && 'shadow-node'),
                     (selected || linkTarget) && !maximized && 'node-selected',
                     /* Never transparent: a surface clips to its padding box, so that would show a line of
@@ -446,7 +452,8 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     height: node.h,
                     ...maximizedPlace,
                     zIndex: z,
-                    ...(frameAccent ? { borderColor: `color-mix(in srgb, ${frameAccent} 45%, var(--border))` } : {}),
+                    ...(borderAccent ? { borderColor: `color-mix(in srgb, ${borderAccent} 45%, var(--border))` } : {}),
+                    ...(noteAccent ? { backgroundColor: `color-mix(in srgb, ${noteAccent} 20%, var(--surface-raised))` } : {}),
                     ...(isGroup && accent ? { '--group-accent': accent } : {})
                 }}
                 tabIndex={0}
@@ -479,7 +486,9 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                                   backgroundColor: `color-mix(in srgb, ${frameAccent} 20%, var(--surface-raised))`,
                                   borderColor: `color-mix(in srgb, ${frameAccent} 35%, var(--border))`
                               }
-                            : undefined
+                            : noteAccent
+                              ? { borderColor: `color-mix(in srgb, ${noteAccent} 35%, var(--border))` }
+                              : undefined
                     }
                 >
                     {isGroup && (
@@ -512,6 +521,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     </span>
                     {!renaming && <FlagMarkOf id={id} />}
                     {collapsed && <Pill className="tabular-nums">{t('group.inside', { count: node.memberIds?.length ?? 0 })}</Pill>}
+                    {hiddenNeedsYou && <StatusDot status="needs-you" />}
                     {node.kind === 'chat' && !renaming && (
                         <>
                             <AccountPill chatId={id} />
@@ -524,8 +534,8 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     )}
                     {node.kind === 'terminal' && !renaming && <SessionPorts id={id} />}
                     {(node.kind === 'chat' || node.kind === 'terminal') && !renaming && <ComputerIndicator nodeId={id} />}
-                    {node.machine !== undefined && endpointOfNode(node, '') !== workspaceId && !renaming && (
-                        <MachinePill machineId={node.machine} endpointId={endpointOfNode(node, '')} narrow={node.w < MACHINE_PILL_MIN_WIDTH} />
+                    {node.machine !== undefined && nodeEndpointId !== workspaceId && !renaming && (
+                        <MachinePill machineId={node.machine} endpointId={nodeEndpointId} narrow={node.w < MACHINE_PILL_MIN_WIDTH} />
                     )}
                     {!renaming && waitingFor.map(({ machine, count }) => <RemoteWaitPill key={machine} machine={machine} count={count} />)}
                     {nodeWorktree && !renaming && <WorktreePill worktree={nodeWorktree} />}
@@ -555,7 +565,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                         </Tooltip>
                     )}
                     {node.kind === 'file' && <ButtonGroup ref={setFileControls} render={<span />} className="shrink-0" />}
-                    {node.kind === 'device' && <DeviceToolbar id={id} />}
+                    {node.kind === 'device' && <DeviceToolbar id={id} narrow={node.w < MACHINE_PILL_MIN_WIDTH} />}
                     <ButtonGroup className="shrink-0">
                         {maximized ? (
                             <IconButton icon={Shrink} size="sm" label={t('node.restore')} onClick={() => canvasStore.getState().toggleMaximizedNode(id)} />
@@ -587,7 +597,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                         <NodeBodyBoundary kind={node.kind}>
                             {(remote !== 'ready' || unstarted !== null) && node.machine !== undefined ? (
                                 <RemoteNodeOffline
-                                    machine={endpointOfNode(node, '')}
+                                    machine={nodeEndpointId}
                                     state={remote === 'ready' ? 'unstarted' : remote}
                                     task={unstarted?.title}
                                     onLinkAgain={() =>

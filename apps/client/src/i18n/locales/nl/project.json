@@ -2,23 +2,23 @@
     "error": {
         "machineGone": "Die machine staat niet meer in de lijst",
         "machineDisconnected": "Die machine is niet meer verbonden",
-        "openFailed": "Dat project kon niet worden geopend",
-        "couldNotOpen": "Dat kon niet worden geopend",
-        "projectNotSaved": "Het project kon niet worden opgeslagen",
-        "reopenFailed": "Het project kon niet opnieuw worden geopend",
-        "idsTaken": "Er staat al een andere kopie van dit canvas open op deze machine, uit een andere checkout van dezelfde repository. Sluit dat project eerst, anders delen ze hun terminals en chats."
+        "openFailed": "Kon het project niet openen",
+        "couldNotOpen": "Kon dat niet openen",
+        "projectNotSaved": "Kon het project niet opslaan",
+        "reopenFailed": "Kon het project niet opnieuw openen",
+        "idsTaken": "Dit canvas is al open vanuit een andere checkout. Sluit dat project eerst, anders delen ze terminals en chats."
     },
     "close": {
-        "idle": "Er draait niets in dit project. Het gaat naar Recent zoals je het achterliet.",
-        "ending_one": "Sluiten beëindigt de lopende sessie. Een terminal verliest zijn scrollback en een agent stopt. De rest gaat naar Recent zoals je het achterliet.",
-        "ending_other": "Sluiten beëindigt de {{count}} lopende sessies. Een terminal verliest zijn scrollback en een agent stopt. De rest gaat naar Recent zoals je het achterliet.",
-        "held_one": "Een andere client heeft dit project nog open, dus er stopt niets. Het gaat alleen hier naar Recent.",
-        "held_other": "{{count}} andere clients hebben dit project nog open, dus er stopt niets. Het gaat alleen hier naar Recent."
+        "idle": "Er draait niets. Het gaat naar Recent zoals je het achterliet.",
+        "ending_one": "Sluiten beëindigt de lopende sessie. Terminals verliezen hun scrollback en agents stoppen.",
+        "ending_other": "Sluiten beëindigt de {{count}} lopende sessies. Terminals verliezen hun scrollback en agents stoppen.",
+        "held_one": "Dit project is nog open op een ander apparaat, dus er stopt niets. Het gaat alleen hier naar Recent.",
+        "held_other": "Dit project is nog open op {{count}} andere apparaten, dus er stopt niets. Het gaat alleen hier naar Recent."
     },
     "showView": {
         "someone": "Een agent",
-        "alreadyThere": "{{agent}} wees naar {{view}}, waar je al naar keek",
-        "follow": "{{agent}} liet {{view}} zien in de cel waarin je werkte",
+        "alreadyThere": "{{agent}} wees {{view}} aan, die je al zag",
+        "follow": "{{agent}} liet {{view}} zien waar je aan het werk was",
         "go": "{{agent}} vroeg je om naar {{view}} te kijken",
         "newTab": "{{view}} geopend als tabblad"
     },
@@ -36,10 +36,10 @@
     "moveChat": {
         "titleMake": "Project maken",
         "titleMove": "Verplaatsen naar {{project}}",
-        "failedToRender": "Het verplaatsvenster kon niet worden getekend",
+        "failedToRender": "Het verplaatsvenster kon niet worden getoond",
         "project": "Project",
         "chooseProject": "Kies een project",
-        "newProject": "Een nieuw project",
+        "newProject": "Nieuw project",
         "name": "Naam",
         "folder": "Map",
         "workedFiles_one": "Waar deze chat werkte · {{count}} bestand",
@@ -48,7 +48,7 @@
         "newFolder": "Nieuwe map",
         "initGit": "Een git-repository starten",
         "chooseFolder": "Kies een map…",
-        "chooseFolderHint": "Een map die al bestaat",
+        "chooseFolderHint": "Een bestaande map",
         "folderPath": "Pad op de machine",
         "looking": "Kijken waar deze chat werkte…",
         "ownFiles": "Bestanden van deze chat",
@@ -57,23 +57,23 @@
         "ownFilesList_one": "{{count}} bestand: {{names}}",
         "ownFilesList_other": "{{count}} bestanden: {{names}}",
         "conflict": "{{name}} staat al in {{project}}. Laat de bestanden in Chats, of geef het daar eerst een andere naam.",
-        "references_one": "Eén chat in Chats is met @ aan deze gekoppeld. Na het verplaatsen kan die chat deze niet meer lezen.",
-        "references_other": "{{count}} chats in Chats zijn met @ aan deze gekoppeld. Na het verplaatsen kunnen ze deze niet meer lezen.",
+        "references_one": "Een chat in Chats verwijst met @ naar deze en verliest na het verplaatsen toegang.",
+        "references_other": "{{count}} chats in Chats verwijzen met @ naar deze en verliezen na het verplaatsen toegang.",
         "make": "Project maken",
         "making": "Project maken…",
         "move": "Verplaatsen",
         "moving": "Verplaatsen…",
         "close": "Sluiten",
-        "failed": "De chat kon niet worden verplaatst",
+        "failed": "Kon de chat niet verplaatsen",
         "infoFailed": "De machine kon niet zeggen waar deze chat werkte",
         "refusal": {
             "not-in-chats": "Alleen een chat in Chats kan naar een project.",
-            "working": "Deze chat is nog bezig. Stop hem of wacht tot hij klaar is, en probeer het dan opnieuw.",
-            "agents": "Deze chat startte eigen agents, of een agent startte hem. Een chat met agents kan nog niet naar een project.",
-            "tasks": "Deze chat gaf een taak of heeft er een. Een chat met taken kan nog niet naar een project.",
+            "working": "Deze chat is nog bezig. Stop hem of laat hem eerst afronden.",
+            "agents": "Een chat met agents kan nog niet naar een project.",
+            "tasks": "Een chat met taken kan nog niet naar een project.",
             "owedAt": "Deze chat gaat om {{time}} vanzelf verder. Schrijf er eerst in of zet hervatten uit.",
             "owed": "De machine moet nog werk voor deze chat doen. Probeer het opnieuw als dat klaar is.",
-            "messages": "Er wachten nog berichten van andere chats op deze chat. Hij leest ze in zijn volgende turn. Verplaats hem daarna.",
+            "messages": "Berichten van andere chats wachten op de volgende turn. Verplaats hem daarna.",
             "pr-watch": "Deze chat volgt een pull request. Stop dat eerst."
         }
     }

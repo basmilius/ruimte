@@ -15,7 +15,7 @@ struct MachineClientAccess: Identifiable, Equatable {
 
     init(_ value: JSONValue) {
         id = value.text("id")
-        label = value.text("label", fallback: String(localized: "Unnamed client"))
+        label = value.text("label", fallback: String(localized: "Unnamed device"))
         origin = value.text("origin", fallback: "link")
         createdAt = Date(timeIntervalSince1970: value.number("createdAt") / 1000)
         lastSeenAt = Date(timeIntervalSince1970: value.number("lastSeenAt") / 1000)
@@ -46,7 +46,7 @@ struct MachineClientAccess: Identifiable, Equatable {
     var revokeMessage: String {
         if current {
             return String(
-                localized: "This is the client you are using. It loses access to this machine and forgets it here.")
+                localized: "This is the device you are using. It loses access to this machine and forgets it here.")
         }
         if origin == "statement" {
             return String(
@@ -133,7 +133,7 @@ struct MachineAccessSection: View {
     var body: some View {
         Section {
             if access.state.loading {
-                MobileLoadingRow(String(localized: "Loading clients")).frame(maxWidth: .infinity)
+                MobileLoadingRow(String(localized: "Loading devices")).frame(maxWidth: .infinity)
             }
             ForEach(access.clients) { client in
                 HStack(spacing: 11) {
@@ -142,7 +142,7 @@ struct MachineAccessSection: View {
                         HStack(spacing: 4) {
                             Text(client.label).lineLimit(1)
                             if client.current {
-                                Text("· this client").font(.caption).foregroundStyle(MobileStyle.muted)
+                                Text("· this device").font(.caption).foregroundStyle(MobileStyle.muted)
                             }
                         }
                         Text(client.detail()).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(2)
@@ -169,7 +169,7 @@ struct MachineAccessSection: View {
         }
         .task { await access.load() }
         .alert(
-            "Revoke \(revoking?.label ?? String(localized: "this client"))?",
+            "Revoke \(revoking?.label ?? String(localized: "this device"))?",
             isPresented: Binding(get: { revoking != nil }, set: { if !$0 { revoking = nil } }),
             presenting: revoking
         ) { client in

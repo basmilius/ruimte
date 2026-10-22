@@ -26,28 +26,28 @@
         "loading": "Loading",
         "empty": "Nothing here yet",
         "error": "Something went wrong",
-        "sidebarFailed": "The sidebar failed to render",
+        "sidebarFailed": "The sidebar could not be shown",
         "failed": {
-            "toolbar": "The toolbar failed to render",
-            "pages": "The browser pages failed to render",
-            "cellChrome": "The controls over the views failed to render",
-            "machine": "The machine status failed to render",
-            "projectSwitch": "The project switch screen failed to render",
-            "projectBanner": "The project banner failed to render",
-            "voice": "The Voice panel failed to render",
-            "dialog": "This dialog failed to render",
-            "conflicts": "The conflict overlay failed to render",
-            "palette": "The command palette failed to render",
-            "settings": "Settings failed to render",
-            "toasts": "The notifications failed to render",
-            "machineUpdate": "The machine update prompt failed to render",
-            "link": "The dialog for linking a machine failed to render",
-            "shortcutHints": "The shortcut hints failed to render",
-            "deviceTools": "The device tools failed to render",
-            "login": "The login terminal failed to render",
-            "providerCommand": "The terminal for a provider command failed to render",
-            "onboarding": "The setup of Ruimte failed to render",
-            "agentIntegrations": "The question about the CLI settings failed to render",
+            "toolbar": "The toolbar could not be shown",
+            "pages": "The browser pages could not be shown",
+            "cellChrome": "The controls over the views could not be shown",
+            "machine": "The machine status could not be shown",
+            "projectSwitch": "The project switch screen could not be shown",
+            "projectBanner": "The project banner could not be shown",
+            "voice": "The Voice panel could not be shown",
+            "dialog": "This dialog could not be shown",
+            "conflicts": "The conflict overlay could not be shown",
+            "palette": "The command palette could not be shown",
+            "settings": "Settings could not be shown",
+            "toasts": "The notifications could not be shown",
+            "machineUpdate": "The machine update prompt could not be shown",
+            "link": "The dialog for linking a machine could not be shown",
+            "shortcutHints": "The shortcut hints could not be shown",
+            "deviceTools": "The device tools could not be shown",
+            "login": "The login terminal could not be shown",
+            "providerCommand": "The terminal for a provider command could not be shown",
+            "onboarding": "The setup of Ruimte could not be shown",
+            "agentIntegrations": "The question about agent settings could not be shown",
             "firstRun": "The first start could not be shown."
         }
     },
@@ -85,11 +85,11 @@
         "default": "Default microphone",
         "error": {
             "disabled": "Microphone access is disabled in System Settings",
-            "noTrack": "No microphone audio track was available",
-            "stopped": "The microphone test was stopped",
+            "noTrack": "No sound came from the microphone",
+            "stopped": "Microphone test stopped",
             "denied": "Microphone access was denied. Allow it in System Settings, then try again.",
             "missing": "No microphone was found.",
-            "failed": "The microphone could not be opened."
+            "failed": "Could not open the microphone."
         }
     },
     "find": {
@@ -100,7 +100,7 @@
         "caseSensitive": "Match case",
         "wholeWord": "Match whole word",
         "regex": "Use regular expression",
-        "inSelection": "Search in selection",
+        "inSelection": "Find in selection",
         "noSelection": "No selection",
         "selectAll": "Select all matches",
         "previous": "Previous match",
@@ -117,6 +117,6 @@
         },
         "countLimited": "{{current}} / {{total}}+",
         "countMore": "{{total}}+ matches",
-        "unavailable": "Find is not available here right now"
+        "unavailable": "Find is not available here"
     }
 }

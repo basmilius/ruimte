@@ -123,7 +123,8 @@ function CommandTerminal({ request, onRetry }: { request: ProviderCommandRequest
         const start = async (): Promise<void> => {
             const { cols, rows } = view.size();
             try {
-                await link.request('session.create', { sessionId, cols, rows });
+                // Ends with this window as well, which may go without the dialog closing.
+                await link.request('session.create', { sessionId, cols, rows, endsWithClient: true });
                 const attached = await sessions.open(sessionId, { follow: true }, { cols, rows });
                 if (viewRef.current !== view) {
                     return;

@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { create } from 'zustand';
 import type { ProjectProposal } from '@ruimte/contracts';
 
@@ -29,5 +28,5 @@ export function proposalsOf(endpointId: string): readonly ProjectProposal[] {
 /* The suggestion of one chat, which is at most one. */
 export function useNodeProposals(endpointId: string, chatId: string): readonly ProjectProposal[] {
     const all = useProposals((s) => s.proposals[endpointId] ?? NONE);
-    return useMemo(() => (all.some((proposal) => proposal.chatId === chatId) ? all.filter((proposal) => proposal.chatId === chatId) : NONE), [all, chatId]);
+    return all.some((proposal) => proposal.chatId === chatId) ? all.filter((proposal) => proposal.chatId === chatId) : NONE;
 }

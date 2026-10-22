@@ -17,7 +17,7 @@ export function terminalPrepareActions(
     const connected = (endpointId: string, machineId: string): Transport => {
         const transport = machine.transport(endpointId);
         if (!transport || transport.status !== 'open' || machine.machineId(endpointId) !== machineId) {
-            throw new ActionRefusal('wrong-machine', 'The machine of this chat is not connected.');
+            throw new ActionRefusal('wrong-machine', "This chat's machine is not connected.");
         }
         return transport;
     };

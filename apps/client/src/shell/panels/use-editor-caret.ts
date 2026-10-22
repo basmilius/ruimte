@@ -1,4 +1,4 @@
-import { useMemo, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import type { Editor, EditorPosition } from '@adecore/editor';
 
 const START: EditorPosition = { line: 0, character: 0 };
@@ -20,6 +20,6 @@ function caretStore(editor: Editor | null): { get(): EditorPosition; subscribe(l
 
 /* Where the editor's caret is, said again whenever it moves. */
 export function useEditorCaret(editor: Editor | null): EditorPosition {
-    const store = useMemo(() => caretStore(editor), [editor]);
+    const store = caretStore(editor);
     return useSyncExternalStore(store.subscribe, store.get);
 }

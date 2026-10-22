@@ -1,9 +1,9 @@
 {
     "phase": {
-        "idle": "In rust",
+        "idle": "in rust",
         "held": "goedkeuring nodig",
         "starting": "start op",
-        "running": "Draait",
+        "running": "draait",
         "stopping": "stopt",
         "passed": "geslaagd",
         "failed": "mislukt"
@@ -24,31 +24,31 @@
     },
     "approve": {
         "title": "Een commando uit het projectbestand uitvoeren?",
-        "description": "Deze launch komt uit .ruimte/launches.json. Er draait niets van op deze machine tot je hem hier goedkeurt.",
+        "description": "Deze launch komt uit het projectbestand. Hij draait pas op deze machine als je hem goedkeurt.",
         "cancel": "Annuleren",
         "confirm": "Starten"
     },
     "busy": {
         "title": "Poort {{port}} is bezet",
-        "description": "{{other}} gebruikt poort {{port}}. Stoppen en {{name}} starten?",
+        "description": "{{other}} stoppen en {{name}} starten?",
         "confirm": "Stoppen en starten"
     },
     "failed": {
         "title": "{{name}} is gestopt",
         "description": "Exitcode {{code}} na {{duration}}",
-        "again": "Opnieuw starten"
+        "again": "Herstarten"
     },
-    "startFailed": "{{name}} starten lukte niet",
-    "stopFailed": "{{name}} stoppen lukte niet",
+    "startFailed": "Kon {{name}} niet starten",
+    "stopFailed": "Kon {{name}} niet stoppen",
     "panel": {
         "reading": "Launches lezen…",
-        "empty": "Dit project heeft nog geen launches.",
+        "empty": "Nog geen launches.",
         "notRun": "{{name}} liep nog niet sinds de machine startte.",
         "stopped": "gestopt",
         "attachFailed": "Kon de output niet tonen."
     },
     "found": {
-        "title": "Gevonden in dit project",
+        "title": "Gevonden in project",
         "searching": "Zoekt naar run-configuraties…",
         "runFiles_one": "{{count}} run-configuratie in {{place}}",
         "runFiles_other": "{{count}} run-configuraties in {{place}}",
@@ -64,12 +64,12 @@
     },
     "edit": {
         "title": "Launches",
-        "drift": "Gewijzigd in {{path}} sinds de import",
-        "takeOver": "Overnemen uit het bestand",
-        "description": "De launches van dit project. Wie een launch opslaat, keurt zijn commando goed op deze machine.",
+        "drift": "Gewijzigd in {{path}} sinds import",
+        "takeOver": "Overnemen uit bestand",
+        "description": "Opslaan keurt het commando goed op deze machine.",
         "new": "Nieuwe launch",
         "untitled": "Naamloos",
-        "find": "Zoeken in dit project…",
+        "find": "Zoeken in project…",
         "name": "Naam",
         "kind": "Soort",
         "kinds": {
@@ -79,8 +79,8 @@
         },
         "kindHint": {
             "service": "Blijft draaien, zoals een webserver. Met een adres draait hij pas als de poort antwoordt.",
-            "task": "Loopt tot hij klaar is, zoals de tests of een build.",
-            "group": "Start de launches die hieronder aangevinkt staan samen."
+            "task": "Draait tot hij klaar is, zoals tests of een build.",
+            "group": "Start de aangevinkte launches samen."
         },
         "directory": "Map",
         "projectFolder": "Projectmap",
@@ -96,36 +96,36 @@
         "members": "Launches",
         "noMembers": "Voeg eerst een service of een task toe.",
         "autostart": "Starten als het project opent",
-        "autostartHint": "Pas als hij op deze machine is goedgekeurd.",
-        "share": "Delen met het team",
-        "shareHint": "Gedeelde launches komen in .ruimte/launches.json en in git. Houd geheimen uit de omgeving hierboven.",
-        "shared": "Gedeeld met het team",
+        "autostartHint": "Na goedkeuring op deze machine.",
+        "share": "Delen met team",
+        "shareHint": "Gedeelde launches worden met het project gecommit. Houd geheimen uit de omgeving hierboven.",
+        "shared": "Gedeeld met team",
         "private": "Alleen op deze machine",
-        "overlay": "Deze machine legt een eigen map of eigen variabelen over deze launch; die blijven zoals ze zijn.",
+        "overlay": "Deze machine gebruikt een eigen map of eigen variabelen voor deze launch. Die blijven zoals ze zijn.",
         "empty": "Nog geen launches.",
         "delete": "Verwijderen",
         "cancel": "Annuleren",
         "save": "Opslaan",
         "problem": {
-            "name": "Geef deze launch een naam.",
-            "command": "Een service of een task heeft een commando nodig.",
-            "members": "Vink minstens één launch aan voor deze groep."
+            "name": "Geef het een naam.",
+            "command": "Heeft een commando nodig.",
+            "members": "Vink minstens één launch aan."
         },
-        "conflict": "De launches zijn elders gewijzigd terwijl je ze bewerkte.",
-        "startOver": "Opnieuw beginnen vanaf de nieuwste",
+        "conflict": "De launches zijn elders gewijzigd.",
+        "startOver": "Opnieuw beginnen",
         "failed": "Kon de launches niet opslaan."
     },
     "import": {
         "title": "Launches importeren",
-        "description": "Er wordt niets opgeslagen tot je importeert. Geïmporteerde launches vragen de eerste keer dat ze draaien om je goedkeuring.",
-        "descriptionInEditor": "Wat je importeert, komt in de lijst. Er wordt niets opgeslagen tot je opslaat. Geïmporteerde launches vragen de eerste keer dat ze draaien om je goedkeuring.",
+        "description": "Geïmporteerde launches vragen bij hun eerste run om goedkeuring.",
+        "descriptionInEditor": "Imports komen in de lijst tot je opslaat. Ze vragen bij hun eerste run om goedkeuring.",
         "searching": "Zoekt naar run-configuraties en scripts…",
-        "nothing": "Niets gevonden om te importeren in dit project.",
+        "nothing": "Niets om te importeren.",
         "failed": "Kon het project niet doorzoeken.",
         "unsupported": "Niet ondersteund: {{reason}}",
-        "private": "Blijft op deze machine: hij noemt een pad buiten het project.",
+        "private": "Blijft op deze machine. Het pad ligt buiten het project.",
         "pick": "{{name}} importeren",
-        "share": "Delen met het team in .ruimte/launches.json",
+        "share": "Delen met team",
         "cancel": "Annuleren",
         "confirm_one": "{{count}} importeren",
         "confirm_other": "{{count}} importeren"

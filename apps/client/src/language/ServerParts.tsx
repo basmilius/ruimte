@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LanguageLogLine } from '@ruimte/contracts';
 import { Dialog } from '@adecore/ui';
+import { useStatuses } from './server-status';
 import type { LanguageStatusTracker } from './status';
 import { nameOf, type ServerTone } from './status-view';
 
@@ -19,6 +20,7 @@ export function Dot({ tone }: { tone: ServerTone }) {
 export function LogDialog({ server, tracker, onClose }: { server: string | null; tracker: LanguageStatusTracker; onClose(): void }) {
     const { t } = useTranslation('panels');
     const [lines, setLines] = useState<LanguageLogLine[] | null>(null);
+    const statuses = useStatuses(tracker);
 
     useEffect(() => {
         if (server === null) {
@@ -38,7 +40,7 @@ export function LogDialog({ server, tracker, onClose }: { server: string | null;
     return (
         <Dialog.Root open={server !== null} onOpenChange={(next) => !next && onClose()}>
             <Dialog.Popup className="flex h-[480px] w-[720px] flex-col gap-3 p-4">
-                <Dialog.Title>{t('language.logTitle', { name: server === null ? '' : nameOf(server, tracker.getSnapshot()) })}</Dialog.Title>
+                <Dialog.Title>{t('language.logTitle', { name: server === null ? '' : nameOf(server, statuses) })}</Dialog.Title>
                 <div className="min-h-0 grow overflow-auto rounded-md bg-surface-sunken p-3 font-mono text-xs whitespace-pre-wrap text-text-muted select-text">
                     {lines !== null && (lines.length === 0 ? t('language.logEmpty') : lines.map((line) => line.text).join('\n'))}
                 </div>

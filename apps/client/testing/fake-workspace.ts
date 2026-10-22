@@ -1,5 +1,7 @@
 import type { ProjectDocument, ProjectLocal, ProjectSummary } from '@ruimte/contracts';
+import { forgetCachedList } from '@/project/list';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { useProjectList } from '@/state/project-list';
 import { dropMachine, enterWorkspace, showStart } from '@/transport/connections';
 import { connectFakeMachine, type FakeMachine } from './fake-machine';
 
@@ -30,12 +32,16 @@ export interface FakeWorkspace {
     close(): void;
 }
 
-/* A project open in the window, on a fake machine that answered `project.open` with these views. */
+/*
+ * A project open in the window, on a fake machine that answered `project.open` with these views. With
+ * `thisMachine` the fake stands in for the machine the app runs, which needs a desktop bridge set first.
+ */
 export async function openFakeWorkspace(
     machine: FakeMachine,
     document: Omit<ProjectDocument, 'version' | 'rev' | 'name' | 'color'>,
     local: ProjectLocal,
-    summary: Partial<ProjectSummary> = {}
+    summary: Partial<ProjectSummary> = {},
+    options: { thisMachine?: boolean } = {}
 ): Promise<FakeWorkspace> {
     const project = { ...FAKE_PROJECT, ...summary };
     machine.answer('project.open', () => ({
@@ -44,16 +50,25 @@ export async function openFakeWorkspace(
         local
     }));
     machine.answer('project.list', () => ({ projects: [project] }));
-    useEndpoints.getState().add(ENDPOINT);
-    const disconnect = connectFakeMachine(machine, ENDPOINT.id);
-    await enterWorkspace(ENDPOINT.id, { projectId: FAKE_PROJECT.projectId });
+    const endpointId = options.thisMachine === true ? LOCAL_ENDPOINT_ID : ENDPOINT.id;
+    if (endpointId === ENDPOINT.id) {
+        useEndpoints.getState().add(ENDPOINT);
+    }
+    const disconnect = connectFakeMachine(machine, endpointId);
+    await enterWorkspace(endpointId, { projectId: FAKE_PROJECT.projectId });
     return {
         close(): void {
             showStart();
-            dropMachine(ENDPOINT.id);
+            dropMachine(endpointId);
             disconnect();
             useEndpoints.getState().setActive(LOCAL_ENDPOINT_ID);
-            useEndpoints.getState().remove(ENDPOINT.id);
+            if (endpointId === ENDPOINT.id) {
+                useEndpoints.getState().remove(ENDPOINT.id);
+            } else {
+                // The row of this machine stays for the next test, so what it listed goes instead.
+                useProjectList.getState().setProjects(endpointId, []);
+                forgetCachedList(endpointId);
+            }
         }
     };
 }

@@ -24,8 +24,8 @@
         "build:computer-use": "bun ../computer-use/scripts/build.ts"
     },
     "dependencies": {
-        "@adecore/service": "0.31.3",
-        "@adecore/shell": "0.31.3",
+        "@adecore/service": "0.32.0",
+        "@adecore/shell": "0.32.0",
         "@ruimte/actions": "workspace:*",
         "@ruimte/contracts": "workspace:*",
         "@ruimte/csp": "workspace:*",

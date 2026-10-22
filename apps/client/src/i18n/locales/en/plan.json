@@ -39,14 +39,14 @@
         "title": "Results of the plan \"{{title}}\":"
     },
     "pill": {
-        "count_one": "{{count}} plan in this chat",
-        "count_other": "{{count}} plans in this chat",
+        "count_one": "{{count}} plan",
+        "count_other": "{{count}} plans",
         "unseen": "New plan",
         "failed": "A step failed"
     },
     "toast": {
         "notChanged": "The plan did not change",
-        "copied": "Copied the plan as Markdown"
+        "copied": "Copied as Markdown"
     },
     "menu": {
         "copyPlan": "Copy as Markdown"
@@ -58,8 +58,8 @@
         }
     },
     "empty": {
-        "all": "This plan has no steps yet.",
-        "open": "Nothing is open.",
+        "all": "No steps yet.",
+        "open": "Nothing open.",
         "issues": "No issues."
     },
     "step": {

@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
 import { CircleCheck, CircleDashed, CircleX, ExternalLink, Eye, EyeOff, GitPullRequest, MessagesSquare, RefreshCw } from 'lucide-react';
-import type { GitPrCheck, GitPrThread, GitPullRequest as PullRequest } from '@ruimte/contracts';
+import type { ChangeSplit, GitPrCheck, GitPrThread, GitPullRequest as PullRequest } from '@ruimte/contracts';
 import { Button, ButtonGroup, Dialog, EmptyState, ErrorBoundary, FormError, Icon, IconButton, Menu, Pill, SectionLabel, Switch, Tooltip } from '@adecore/ui';
 import { useChooserSections } from '@/chat/chat-chooser';
 import { sendToChat } from '@/chat/selection-to-chat';
@@ -14,7 +14,10 @@ import { usePrWatches } from '@/state/pr-watches';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
+import { useMachineAnswers } from '@/transport/features';
 import { AgentIcon } from '@adecore/agents-react/providers';
+import { formatNumber } from '@adecore/ui/format';
+import { splitRows } from '@/shell/change-size';
 
 /*
  * A pull request read-only: its checks, how it stands to merge and its review threads. A thread can be
@@ -79,6 +82,7 @@ function PullRequestView({ cwd, onDone }: { cwd: string; onDone(): void }) {
     }, [transport, cwd, attempt, t]);
 
     const pr = reading !== null && 'pr' in reading ? reading.pr : null;
+    const split = useSplit(cwd, pr);
     return (
         <>
             <header className="border-b border-border px-5 pt-4 pb-3">
@@ -90,7 +94,7 @@ function PullRequestView({ cwd, onDone }: { cwd: string; onDone(): void }) {
                         <IconButton icon={RefreshCw} size="sm" label={t('git.pr.refresh')} disabled={busy} onClick={() => setAttempt((count) => count + 1)} />
                     </ButtonGroup>
                 </div>
-                {pr !== null && <PullRequestMeta pr={pr} />}
+                {pr !== null && <PullRequestMeta pr={pr} split={split} />}
             </header>
             <div className="flex min-h-0 grow flex-col overflow-y-auto">
                 {reading === null && (
@@ -198,7 +202,32 @@ function PullRequestWatch({ cwd, pr }: { cwd: string; pr: PullRequest }) {
 
 const STATE_TONES = { OPEN: 'accent', MERGED: 'accent', CLOSED: 'error' } as const;
 
-function PullRequestMeta({ pr }: { pr: PullRequest }) {
+/* The split of the pull request on screen, which the machine reads after it answered the rest; null until then, and when there is none. */
+function useSplit(cwd: string, pr: PullRequest | null): ChangeSplit | null {
+    const transport = useTransport();
+    const answers = useMachineAnswers(useEndpointId(), 'git.prSplit');
+    const [held, setHeld] = useState<{ headSha: string; split: ChangeSplit | null } | null>(null);
+    const number = pr?.number ?? null;
+    const headSha = pr?.headSha ?? null;
+
+    useEffect(() => {
+        if (number === null || headSha === null || !answers) {
+            return;
+        }
+        let current = true;
+        transport
+            .request('git.prSplit', { cwd, number, headSha })
+            .then((answer) => current && setHeld({ headSha, split: answer.split }))
+            .catch(() => undefined);
+        return () => {
+            current = false;
+        };
+    }, [transport, answers, cwd, number, headSha]);
+
+    return held !== null && held.headSha === headSha ? held.split : null;
+}
+
+function PullRequestMeta({ pr, split }: { pr: PullRequest; split: ChangeSplit | null }) {
     const { t } = useTranslation('panels');
     const tone = pr.isDraft ? 'muted' : (STATE_TONES[pr.state as keyof typeof STATE_TONES] ?? 'muted');
     return (
@@ -214,7 +243,47 @@ function PullRequestMeta({ pr }: { pr: PullRequest }) {
             </span>
             <span aria-hidden>·</span>
             <Pill tone={tone}>{pr.isDraft ? t('git.pr.draft') : t(`git.pr.state.${pr.state.toLowerCase()}`, { defaultValue: pr.state })}</Pill>
+            <PullRequestSize pr={pr} split={split} />
         </div>
+    );
+}
+
+function Lines({ added, deleted }: { added: number; deleted: number }) {
+    return (
+        <span className="flex shrink-0 items-center gap-1 font-mono tabular-nums">
+            <span className="text-term-green">+{formatNumber(added)}</span>
+            <span className="text-term-red">-{formatNumber(deleted)}</span>
+        </span>
+    );
+}
+
+/* GitHub's `+N -N` for the whole pull request, and on hover how many files and the lines per kind of file. A machine from before the totals shows none. */
+function PullRequestSize({ pr, split }: { pr: PullRequest; split: ChangeSplit | null }) {
+    const { t } = useTranslation('panels');
+    if (pr.added === undefined || pr.deleted === undefined || pr.changedFiles === undefined) {
+        return null;
+    }
+    const details = (
+        <span className="flex flex-col items-stretch gap-0.5">
+            <span>{t('git.pr.files', { count: pr.changedFiles })}</span>
+            {split !== null &&
+                splitRows(split).map((row) => (
+                    <span key={row.kind} className="flex items-center justify-between gap-4">
+                        <span className="text-text-muted">{row.label}</span>
+                        <Lines added={row.added} deleted={row.deleted} />
+                    </span>
+                ))}
+        </span>
+    );
+    return (
+        <>
+            <span aria-hidden>·</span>
+            <Tooltip label={details}>
+                <span className="flex">
+                    <Lines added={pr.added} deleted={pr.deleted} />
+                </span>
+            </Tooltip>
+        </>
     );
 }
 

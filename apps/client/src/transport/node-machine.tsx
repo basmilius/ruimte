@@ -1,6 +1,6 @@
 import { useMemo, type ReactElement, type ReactNode } from 'react';
-import { endpointIdOfMachine } from '@/state/endpoints';
-import { machineFor, type Connection } from './connections';
+import { endpointIdIn, useEndpoints } from '@/state/endpoints';
+import { machineIn, type Connection } from './connections';
 import { ConnectionProvider } from './ConnectionProvider';
 import { useOptionalConnection } from './context';
 
@@ -12,10 +12,11 @@ import { useOptionalConnection } from './context';
  */
 export function NodeMachineScope({ machine, children }: { machine: string | undefined; children: ReactNode }): ReactElement {
     const workspace = useOptionalConnection();
+    const endpoints = useEndpoints((state) => state.endpoints);
     // A node names its machine by the daemon's id, and this client keys the machine on its row.
-    const endpointId = machine === undefined ? undefined : endpointIdOfMachine(machine);
+    const endpointId = machine === undefined ? undefined : endpointIdIn(endpoints, machine);
     const own = endpointId === undefined || workspace === null || endpointId === workspace.endpointId;
-    const remote = own ? null : machineFor(endpointId);
+    const remote = own ? null : machineIn(endpoints, endpointId);
     const connection = useMemo<Connection | null>(
         () =>
             remote === null || workspace === null

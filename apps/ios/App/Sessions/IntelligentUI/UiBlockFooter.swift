@@ -88,7 +88,7 @@ struct UiBlockFooter: View {
 
     private static func reason(_ text: UiBlockText) -> String {
         switch text {
-        case .unreadable: String(localized: "The block could not be read")
+        case .unreadable: String(localized: "Could not read block")
         case .tooLarge: String(localized: "The block is too large to draw")
         case .diagnostic(let message): message
         }

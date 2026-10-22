@@ -163,7 +163,7 @@ describe('peek definition', () => {
     test('says so when there is no definition or no server for it', async () => {
         const { language } = await setup(null);
         await language.peek.openDefinition();
-        expect(useToasts.getState().toasts.at(-1)?.title).toBe('No language server finds definitions in this file');
+        expect(useToasts.getState().toasts.at(-1)?.title).toBe('Definitions unavailable in this file');
     });
 });
 

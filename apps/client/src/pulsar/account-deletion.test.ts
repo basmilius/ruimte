@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { startPulsarAccount, usePulsarAccount } from './account';
 import { deleteAccountHere, type LocalLeave } from './account-deletion';
 import { useAccountConfirmation } from './confirmation';
@@ -6,6 +6,7 @@ import type { PulsarPlatform } from './desktop';
 
 const account = { id: 'account-1', provider: 'github' as const, login: 'someone', displayName: null };
 const realFetch = globalThis.fetch;
+const NOW = Date.UTC(2026, 9, 1);
 
 interface Sent {
     method: string;
@@ -21,8 +22,8 @@ function platformWith() {
             exchange: async () => {
                 throw new Error('not used');
             },
-            refresh: async () => ({ accessToken: 'a'.repeat(43), accessExpiresAt: Date.now() + 900_000, expiresAt: Date.now() + 86_400_000, account }),
-            restore: async () => ({ account, expiresAt: Date.now() + 86_400_000 }),
+            refresh: async () => ({ accessToken: 'a'.repeat(43), accessExpiresAt: NOW + 900_000, expiresAt: NOW + 86_400_000, account }),
+            restore: async () => ({ account, expiresAt: NOW + 86_400_000 }),
             signOut: async () => {
                 calls.signOuts += 1;
             }
@@ -46,10 +47,12 @@ function answerDeleteWith(response: () => Response): Sent[] {
 
 describe('deleting the account', () => {
     beforeEach(() => {
+        setSystemTime(NOW);
         useAccountConfirmation.setState({ text: null });
     });
 
     afterEach(() => {
+        setSystemTime();
         globalThis.fetch = realFetch;
     });
 
@@ -69,7 +72,7 @@ describe('deleting the account', () => {
         expect(calls.signOuts).toBe(1);
         expect(left).toEqual(['account-1']);
         expect(usePulsarAccount.getState()).toMatchObject({ status: 'signed-out', account: null });
-        expect(useAccountConfirmation.getState().text).toBe("Your Ruimte account is deleted, this app signed out and this computer's machine left the account");
+        expect(useAccountConfirmation.getState().text).toBe("Account deleted, signed out, and this computer's machine left it");
     });
 
     test('says when this computer was on no account, and when it could not leave', async () => {
@@ -79,9 +82,9 @@ describe('deleting the account', () => {
             await deleteAccountHere('someone', async () => outcome);
             return useAccountConfirmation.getState().text;
         };
-        expect(await said('not-on-it')).toBe('Your Ruimte account is deleted, and this app signed out');
+        expect(await said('not-on-it')).toBe('Account deleted and signed out');
         expect(await said('failed')).toBe(
-            "Your Ruimte account is deleted and this app signed out, but this computer's machine is still on it. Take it off in its settings under Machines before you sign in again."
+            "Account deleted and signed out, but this computer's machine is still on it. Remove it under Settings › Account before signing in again."
         );
     });
 

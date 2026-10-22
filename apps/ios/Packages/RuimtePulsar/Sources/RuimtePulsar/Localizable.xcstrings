@@ -41,12 +41,12 @@
         }
       }
     },
-    "Notifications could not be registered." : {
+    "Could not register notifications." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Meldingen konden niet worden geregistreerd."
+            "value" : "Kon meldingen niet registreren."
           }
         }
       }
@@ -61,22 +61,22 @@
         }
       }
     },
-    "Signing in did not work (%@)." : {
+    "Could not sign in (%@)." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Inloggen lukte niet (%@)."
+            "value" : "Kon niet inloggen (%@)."
           }
         }
       }
     },
-    "Signing in was canceled." : {
+    "Sign-in canceled." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Inloggen is geannuleerd."
+            "value" : "Inloggen geannuleerd."
           }
         }
       }
@@ -91,22 +91,22 @@
         }
       }
     },
-    "The address book answered with something this client cannot read." : {
+    "The address book answered with something this app cannot read." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het adresboek antwoordde met iets wat deze client niet kan lezen."
+            "value" : "Het adresboek antwoordde met iets wat deze app niet kan lezen."
           }
         }
       }
     },
-    "The address book could not be reached." : {
+    "Could not reach the address book." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het adresboek kon niet worden bereikt."
+            "value" : "Kon het adresboek niet bereiken."
           }
         }
       }
@@ -161,22 +161,22 @@
         }
       }
     },
-    "The notification could not be verified." : {
+    "Could not verify the notification." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De melding kon niet worden geverifieerd."
+            "value" : "Kon de melding niet verifiëren."
           }
         }
       }
     },
-    "The sign-in browser could not open. Try again." : {
+    "Could not open the sign-in browser. Try again." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De inlogbrowser kon niet openen. Probeer het opnieuw."
+            "value" : "Kon de inlogbrowser niet openen. Probeer het opnieuw."
           }
         }
       }
@@ -241,12 +241,12 @@
         }
       }
     },
-    "Your account answered with a statement for something else." : {
+    "Your account sent an unexpected answer. Try again." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Je account antwoordde met een verklaring voor iets anders."
+            "value" : "Je account gaf een onverwacht antwoord. Probeer het opnieuw."
           }
         }
       }

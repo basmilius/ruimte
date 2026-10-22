@@ -142,7 +142,7 @@ final class ProjectSettingsTests: XCTestCase {
         XCTAssertTrue(ProjectSettingsLogic.closing(sessions: 3, otherClients: 0).hasPrefix("3 running sessions end:"))
         XCTAssertEqual(
             ProjectSettingsLogic.closing(sessions: 3, otherClients: 2),
-            "2 other clients still have it open, so nothing stops running. It moves to Recently closed on this phone only."
+            "2 other devices still have it open, so nothing stops running. It moves to Recently closed on this phone only."
         )
     }
 

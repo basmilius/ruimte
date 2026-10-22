@@ -59,9 +59,9 @@ function host(): CanvasHost {
                 if (subagent !== null) {
                     throw new SubagentUnreadable('note-1 is a text, and only a chat has subagents');
                 }
-                return tail === null ? 'one\ntwo' : 'two';
+                return { text: tail === null ? 'one\ntwo' : 'two' };
             },
-            answerSource: async (targetId: string, source: ContextSource) => `${targetId} read ${source.kind} ${source.id}`
+            answerSource: async (targetId: string, source: ContextSource) => ({ text: `${targetId} read ${source.kind} ${source.id}` })
         },
         lineage: {
             put: async (record) => {

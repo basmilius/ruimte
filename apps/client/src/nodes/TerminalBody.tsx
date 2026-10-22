@@ -7,7 +7,7 @@ import { finderPaths } from '@/canvas/finder-drop';
 import { FindBar } from '@/find/FindBar';
 import { openFocusedFind } from '@/find/hosts';
 import { useFind } from '@/find/use-find';
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import i18next from 'i18next';
 import clsx from 'clsx';
 import type { TerminalViewHandle } from '@adecore/terminal';
@@ -80,9 +80,9 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const [menuLink, setMenuLink] = useState<TerminalFileLink | null>(null);
     const [dropping, setDropping] = useState(false);
     const onCanvas = useCanvas((s) => s.nodes[id] !== undefined);
-    const onFileLinkHover = useCallback((link: TerminalFileLink | null) => {
+    const onFileLinkHover = (link: TerminalFileLink | null) => {
         fileHover.current = link;
-    }, []);
+    };
     const status = useTransportStatus();
     const endpointId = useEndpointId();
     const exited = useSessionRow(id, (row) => row?.exited);

@@ -164,7 +164,7 @@ for (const platform of ['darwin', 'linux', 'browser'] as const) {
             const expected = platform === 'browser' ? [github] : [github, localhost];
             expect(await view.evaluate<string[]>('window.opened')).toEqual(expected);
             if (platform === 'browser') {
-                expect(await view.evaluate<string>('window.toasts.getState().toasts[0].description')).toContain('does not forward');
+                expect(await view.evaluate<string>('window.toasts.getState().toasts[0].description')).toContain('This address only works on');
             }
             const rows = await view.evaluate<number>('Math.ceil(' + wrapped.length + '/window.instances.local.terminal.cols)');
             for (let row = 2; row < 2 + rows; row++) {
@@ -201,7 +201,7 @@ for (const platform of ['darwin', 'linux', 'browser'] as const) {
             expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toContain('Build server');
             await click(view, remote, modifier);
             expect(await view.evaluate<string[]>('window.opened')).toEqual(expected);
-            expect(await view.evaluate<string>('window.toasts.getState().toasts.at(-1).description')).toContain('does not forward');
+            expect(await view.evaluate<string>('window.toasts.getState().toasts.at(-1).description')).toContain('This address only works on');
             await view.evaluate('window.remount()');
             await click(view, await hover(view, 'local', 0), modifier);
             expected.push(github);
@@ -281,7 +281,7 @@ for (const platform of ['darwin', 'browser'] as const) {
             expect(await view.evaluate<string[]>('window.opened')).toEqual([github]);
             await view.evaluate('window.setupProject("remote", true)');
             await click(view, await hover(view, 'remote', 1), modifier);
-            expect(await view.evaluate<string>('window.toasts.getState().toasts.at(-1).description')).toContain('does not forward');
+            expect(await view.evaluate<string>('window.toasts.getState().toasts.at(-1).description')).toContain('This address only works on');
             expect(await view.evaluate<string[]>('Object.keys(window.canvases.of("main").getState().nodes)')).toEqual(['terminal-remote']);
             await click(view, await hover(view, 'remote', 0), modifier);
             await view.evaluate(frame);
@@ -294,7 +294,7 @@ for (const platform of ['darwin', 'browser'] as const) {
             await view.evaluate('window.settings.getState().update({terminalLinkDestination:"external"})');
             await click(view, await hover(view, 'remote', 0), modifier);
             expect(await view.evaluate<string[]>('window.opened')).toEqual([github, github]);
-            expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toContain('open in your browser');
+            expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toContain('+click to open in browser');
         });
     }, 15000);
 }
@@ -367,7 +367,7 @@ test('TerminalBody links work through canvas focus, zoom, selection and dragging
             await click(view, await hover(view, 'canvas', 3 + rows), modifier);
             expect(await view.evaluate<unknown>('window.files.getState().revealLine')).toMatchObject({ key: '/tmp/example.ts', line: 12, nonce: 1 });
             const filePoint = await hover(view, 'canvas', 3 + rows);
-            expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toContain('click to open file in preview');
+            expect(await view.evaluate<string>(`document.querySelector('[role=tooltip]').textContent`)).toContain('+click to preview');
             await view.evaluate(
                 `Promise.all([...document.querySelectorAll('.tooltip-positioner,.tooltip-popup')].flatMap(element=>element.getAnimations()).map(animation=>animation.finished.catch(()=>undefined)))`
             );

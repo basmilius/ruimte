@@ -1,7 +1,7 @@
 import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
 import { z } from 'zod';
 import { defineStandaloneActionVerb, runAction } from './action-verb.ts';
-import { AGENT_KINDS, chatKinds } from './agents.ts';
+import { AGENT_KINDS, REGISTRY_KINDS_LINE, agentKindField, chatKinds } from './agents.ts';
 import { DEPTH_LIMIT_LINES } from './depth.ts';
 import { readsFlag, readsLines } from './link-verb.ts';
 import { modeFlag } from '@adecore/agents/providers';
@@ -25,6 +25,7 @@ const AGENT_DETAIL: readonly string[] = [
     'prints\treads\tid\tfrom\tto\tone line per --reads node, under the first: the line drawn from it into the new agent',
     'prints\tnext\tthe last line under --task, saying what to do while the task runs',
     `kinds\tchat\tThe default for ${chatKinds().join(', ')}: the CLI as a thread in the node, fixed to that CLI, with no model picker on the composer; its last answer settles a task`,
+    REGISTRY_KINDS_LINE,
     'kinds\tterminal\tThat CLI running in a shell, which is what the person sees and can type in; the only kind for a CLI without a chat backend, and a terminal child has to call done to settle a task',
     'edge\tThe edge runs from you into the new node, which is the direction that makes you readable to it: it can run ruimte-context read on your id',
     'edge\tA line only joins two nodes of one canvas, so from any other view the edge column shows -',
@@ -139,7 +140,7 @@ export const agentVerb = defineStandaloneActionVerb({
     ],
     detail: AGENT_DETAIL,
     dryRun: true,
-    positionals: z.tuple([z.enum(AGENT_KINDS, { error: KIND_MESSAGE })], {
+    positionals: z.tuple([agentKindField('agent')], {
         error: (issue) => (issue.code === 'too_big' ? 'agent takes one CLI and nothing else; what it should do goes in --prompt' : KIND_MESSAGE)
     }),
     switches: ['terminal', 'worktree'],

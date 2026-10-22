@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import type { UiMapSource } from '@adecore/agents-react';
 import { usePulsarAccount, withAccessToken } from '@/pulsar/account';
 import { useSettings } from '@/state/settings';
@@ -25,5 +25,5 @@ export function useMapSource(_scopeId: string): UiMapSource {
         tickets.setIdentity(enabled ? accountId : null);
         void tickets.ensure();
     }, [enabled, accountId]);
-    return useMemo(() => mapSourceFor({ enabled, signedIn, tickets: { header: () => tickets.header(), state: () => held } }), [enabled, signedIn, held]);
+    return mapSourceFor({ enabled, signedIn, tickets: { header: () => tickets.header(), state: () => held } });
 }

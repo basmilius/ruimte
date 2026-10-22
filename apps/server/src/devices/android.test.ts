@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
     AndroidBackend,
+    batteryOf,
     hingeOf,
     parseAdbDevices,
     readAvdFolder,
@@ -95,7 +96,72 @@ describe('shellQuote', () => {
     });
 });
 
+const USB_CHARGING = [
+    'Current Battery Service state:',
+    '  AC powered: false',
+    '  USB powered: true',
+    '  Wireless powered: false',
+    '  Max charging current: 500000',
+    '  status: 2',
+    '  health: 2',
+    '  present: true',
+    '  level: 82',
+    '  scale: 100',
+    '  voltage: 4123',
+    '  technology: Li-ion'
+].join('\n');
+
+describe('batteryOf', () => {
+    test('reads a phone that charges over USB', () => {
+        expect(batteryOf(USB_CHARGING)).toEqual({ level: 82, plugged: true, charging: true, source: 'usb' });
+    });
+
+    test('reads a phone on its battery, and one full on AC that no longer charges', () => {
+        expect(batteryOf(USB_CHARGING.replace('USB powered: true', 'USB powered: false').replace('status: 2', 'status: 3'))).toEqual({
+            level: 82,
+            plugged: false,
+            charging: false
+        });
+        expect(
+            batteryOf(
+                USB_CHARGING.replace('AC powered: false', 'AC powered: true')
+                    .replace('USB powered: true', 'USB powered: false')
+                    .replace('status: 2', 'status: 5')
+                    .replace('level: 82', 'level: 100')
+            )
+        ).toEqual({ level: 100, plugged: true, charging: false, source: 'ac' });
+    });
+
+    test('scales a level that is not out of 100', () => {
+        expect(batteryOf(USB_CHARGING.replace('level: 82', 'level: 41').replace('scale: 100', 'scale: 50'))?.level).toBe(82);
+    });
+
+    test('calls a level someone set with dumpsys simulated, and a dump without a level unknown', () => {
+        expect(
+            batteryOf(USB_CHARGING.replace('Current Battery Service state:', "Current Battery Service state:\n  (UPDATES STOPPED -- use 'reset' to restart)"))
+                ?.simulated
+        ).toBe(true);
+        expect(batteryOf("Can't find service: battery")).toBeNull();
+    });
+});
+
 describe('AndroidBackend', () => {
+    test('reads the battery of a phone, says a fake level is simulated, and has none for an emulator', async () => {
+        const adb = new FakeAdb();
+        adb.devices += 'R5CT device usb:1-1 model:SM_S921B transport_id:3\n';
+        adb.shell.set('dumpsys battery', USB_CHARGING);
+        const backend = backendWith(adb);
+        await backend.list();
+
+        expect(await backend.power('R5CT')).toEqual({ level: 82, plugged: true, charging: true, source: 'usb' });
+        expect(await backend.power('Pixel_9_Pro_API_35')).toBeNull();
+
+        await backend.action('R5CT', { backendId: 'android', platform: 'android', deviceId: 'R5CT', action: 'setBattery', level: 15, charging: false });
+        adb.calls.length = 0;
+        expect(await backend.power('R5CT')).toEqual({ level: 15, plugged: false, charging: false, simulated: true });
+        expect(adb.calls.some((call) => call.includes('dumpsys battery'))).toBe(false);
+    });
+
     test('lists every AVD by its name, running or not, and phones by their serial', async () => {
         const adb = new FakeAdb();
         adb.devices += 'R5CT device usb:1-1 model:SM_S921B transport_id:3\n0A281FDD unauthorized usb:1-2 transport_id:4\n';

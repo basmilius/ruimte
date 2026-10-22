@@ -1334,7 +1334,7 @@ private struct ChatTimelineRow: View {
         switch decision {
         case .allow: String(localized: "Allowed")
         case .allowAlways: String(localized: "Always allowed")
-        case .deny: String(localized: "Declined")
+        case .deny: String(localized: "Denied")
         case .cancelled: String(localized: "No longer needed")
         case .pending: decision.rawValue
         }

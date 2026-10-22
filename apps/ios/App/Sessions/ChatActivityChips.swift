@@ -137,7 +137,7 @@ struct ChatActivityChips: View {
             try await model.stopSubagent(item)
         } catch {
             failure = ChatActivityFailure(
-                title: String(localized: "The sub-agent could not be stopped"), message: error.localizedDescription)
+                title: String(localized: "Could not stop sub-agent"), message: error.localizedDescription)
         }
     }
 
@@ -174,7 +174,7 @@ struct ChatActivityChips: View {
                     "chat.stopTask", payload: model.target(["taskId": .string(task.id)]))
             } catch {
                 failure = ChatActivityFailure(
-                    title: String(localized: "The task could not be stopped"), message: error.localizedDescription)
+                    title: String(localized: "Could not stop the task"), message: error.localizedDescription)
             }
         }
     }

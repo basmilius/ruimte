@@ -575,12 +575,12 @@ public struct MachineResource: Sendable, Equatable {
                     return MachineResource(data: data, mime: piece.mime)
                 }
                 if bytes.isEmpty {
-                    throw MachineClientError.invalid(String(localized: "The machine sent an empty piece before the end of the resource.", bundle: .module))
+                    throw MachineClientError.invalid(String(localized: "The file stopped loading before the end. Try again.", bundle: .module))
                 }
             } while true
             if changed && attempt < min(restarts, 3) { continue }
             throw MachineClientError.invalid(String(localized: "The resource changed while it was loading.", bundle: .module))
         }
-        throw MachineClientError.invalid(String(localized: "The resource could not be loaded.", bundle: .module))
+        throw MachineClientError.invalid(String(localized: "Could not load the file.", bundle: .module))
     }
 }

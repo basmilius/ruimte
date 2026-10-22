@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type RefObject } from 'react';
 import { findRanges } from '@/find/dom-text';
 import { clearFindHighlights, setFindHighlights } from '@/find/highlights';
 import { compileFind, stepIndex } from '@adecore/editor-react/models';
@@ -33,11 +33,11 @@ function markOf(scroller: HTMLElement, range: Range): number {
 /*
  * Find over a rendered document, a markdown preview: what the reader sees is what is searched. The
  * matches are ranges over the document's own text nodes, so they are read again whenever it renders.
- * `content` sits directly in the element that scrolls it.
+ * `contentRef` sits directly in the element that scrolls it.
  */
-export function useDomFind(find: FindState, content: RefObject<HTMLElement | null>): DomFind {
+export function useDomFind(find: FindState, contentRef: RefObject<HTMLElement | null>): DomFind {
     const owner = useId();
-    const compiled = useMemo(() => compileFind(find.query), [find.query]);
+    const compiled = compileFind(find.query);
     const pattern = find.open && compiled.kind === 'pattern' ? compiled.pattern : null;
     const ranges = useRef<Range[]>([]);
     const currentRef = useRef<number | null>(null);
@@ -52,17 +52,17 @@ export function useDomFind(find: FindState, content: RefObject<HTMLElement | nul
             setCurrent(index);
             const range = index === null ? null : (ranges.current[index] ?? null);
             setFindHighlights(owner, ranges.current, range);
-            const box = content.current?.parentElement ?? null;
+            const box = contentRef.current?.parentElement ?? null;
             setCurrentMark(range === null || box === null ? null : markOf(box, range));
             if (scroll && range !== null && box !== null) {
                 bringIntoView(box, range);
             }
         },
-        [owner, content]
+        [owner, contentRef]
     );
 
     useEffect(() => {
-        const element = content.current;
+        const element = contentRef.current;
         const box = element?.parentElement ?? null;
         if (element === null || box === null || pattern === null) {
             ranges.current = [];
@@ -121,7 +121,7 @@ export function useDomFind(find: FindState, content: RefObject<HTMLElement | nul
             cancelAnimationFrame(frame);
             clearFindHighlights(owner);
         };
-    }, [pattern, content, owner, show]);
+    }, [pattern, contentRef, owner, show]);
 
     const step = (direction: 1 | -1): void => {
         const index = stepIndex(currentRef.current, ranges.current.length, direction);

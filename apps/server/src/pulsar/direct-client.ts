@@ -227,7 +227,7 @@ export class DirectClient {
                             !signedBy ||
                             !verifySignature(credential.daemonPublicKey, daemonChannelMessage(daemon.id, challenge.data.challenge, binding), daemon.signature)
                         ) {
-                            reject(new Error('The machine on the other end did not sign this channel with the key that was pinned'));
+                            reject(new Error('The other machine could not prove who it is'));
                             channel.close(1000, 'imposter');
                             return;
                         }

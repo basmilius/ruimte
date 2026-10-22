@@ -9,7 +9,7 @@ import { DeviceDriver } from '../devices/agent-driver.ts';
 import { AndroidBackend } from '../devices/android.ts';
 import { DeviceControl } from '../devices/control.ts';
 import { createDeviceHelperLauncher } from '../devices/helper-source.ts';
-import { IosPhysicalBackend } from '../devices/ios-physical.ts';
+import { createPhysicalBatteryReader, IosPhysicalBackend } from '../devices/ios-physical.ts';
 import { IosSimulatorBackend } from '../devices/ios-simulator.ts';
 import { DeviceManager } from '../devices/manager.ts';
 import { createPhysicalStreamSourceFactory, physicalStreamHelperPath } from '../devices/physical-stream-source.ts';
@@ -101,7 +101,7 @@ export function wireDevices(runtime: DaemonRuntime, computer: ComputerUse): Devi
                       undefined,
                       new SimulatorCamera(config.home, realCameraHost, simctlWithEnv)
                   ),
-                  new IosPhysicalBackend(undefined, undefined, physicalStreamSource),
+                  new IosPhysicalBackend(undefined, undefined, physicalStreamSource, undefined, createPhysicalBatteryReader(deviceBridge)),
                   android
               ]
             : process.platform === 'linux'

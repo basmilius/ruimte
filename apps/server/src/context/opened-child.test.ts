@@ -79,10 +79,10 @@ async function refusalOf(reader: string, source: string): Promise<string> {
 
 describe('a node the caller opened itself', () => {
     test('reads without a line, whole, by --tail and by --subagent', async () => {
-        expect(await store.answer('parent', 'child', null, null)).toBe('## User\n\nthe thread of child\n\n## Assistant\n\nDone: the thread of child');
-        expect(await store.answer('parent', 'child', 1, null)).toBe('Done: the thread of child');
-        expect(await store.answer('parent', 'child', null, 'toolu_1')).toContain('toolu_1 of child');
-        expect(await store.answer('other', 'others-child', null, null)).toBe('others-child screen');
+        expect((await store.answer('parent', 'child', null, null)).text).toBe('## User\n\nthe thread of child\n\n## Assistant\n\nDone: the thread of child');
+        expect((await store.answer('parent', 'child', 1, null)).text).toBe('Done: the thread of child');
+        expect((await store.answer('parent', 'child', null, 'toolu_1')).text).toContain('toolu_1 of child');
+        expect((await store.answer('other', 'others-child', null, null)).text).toBe('others-child screen');
     });
 
     test('a child of another agent still needs a line', async () => {
@@ -93,7 +93,7 @@ describe('a node the caller opened itself', () => {
 
     test('a grandchild is its own parent to read, never the grandparent', async () => {
         expect(await refusalOf('parent', 'grandchild')).toBe('not-linked');
-        expect(await store.answer('child', 'grandchild', 1, null)).toBe('Done: the thread of grandchild');
+        expect((await store.answer('child', 'grandchild', 1, null)).text).toBe('Done: the thread of grandchild');
     });
 
     test('a child reads its parent no more than before, and a note the caller made is no agent', async () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import type { Endpoint } from '@/state/endpoints';
 import { useLastSeen } from '@/state/last-seen';
 import { pool, transport, type ConnectionState, type TransportStatus } from '@/transport';
@@ -40,8 +40,8 @@ export function useConnection(): ConnectionState {
 /* The socket of one machine, for a list that shows a dot per row. */
 export function useEndpointConnection(endpointId: string): ConnectionState {
     return useSyncExternalStore(
-        useCallback((onChange: () => void) => pool.subscribeStatus(endpointId, onChange), [endpointId]),
-        useCallback(() => pool.statusOf(endpointId), [endpointId])
+        (onChange: () => void) => pool.subscribeStatus(endpointId, onChange),
+        () => pool.statusOf(endpointId)
     );
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
 import { useTranslation } from 'react-i18next';
 import { usePulsarAccount } from '@/pulsar/account';
@@ -19,10 +19,7 @@ export function AccountTab() {
     const accountMachines = usePulsarMachines((s) => s.machines);
     const endpoints = useEndpoints((s) => s.endpoints);
     const signedIn = status === 'signed-in' && account !== null;
-    const count = useMemo(
-        () => mergeMachines({ endpoints, accountMachines: signedIn ? accountMachines : null, showLocal: hasLocalMachine() }).length,
-        [endpoints, accountMachines, signedIn]
-    );
+    const count = mergeMachines({ endpoints, accountMachines: signedIn ? accountMachines : null, showLocal: hasLocalMachine() }).length;
     const name = signedIn ? accountName(account) : null;
 
     // The count includes the account's machines, which this client only learns by asking. The Account pane asks again whenever it opens.

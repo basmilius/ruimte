@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import i18next from 'i18next';
 import { Trash } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
-import { brokerHostOf, brokerUrlProblem, type BrokerSetting } from '@ruimte/pulsar';
-import type { AuthSession, LanDoor, PeerLink, RuntimeMode } from '@ruimte/contracts';
+import { brokerUrlProblem, type BrokerSetting } from '@ruimte/pulsar';
+import type { AuthSession, PeerLink, ReachCheck, RuntimeMode } from '@ruimte/contracts';
 import { RUNTIME_MODES, runtimeModeLabel } from '@adecore/agents-react/chat';
-import { messageOf, Segmented, Select, Skeleton, Switch, Button, IconButton, Tooltip, FormError, Input } from '@adecore/ui';
+import { messageOf, Segmented, Select, Skeleton, Switch, Button, IconButton, Tooltip, FormError, Input, useNow } from '@adecore/ui';
 import { formatNumericDate, formatAgo } from '@adecore/ui/format';
 import { ConfirmDialog, SettingsRow } from '@adecore/ui/settings';
 import { perform } from '@/actions/client-actions';
 import { desktop } from '@/desktop/bridge';
 import { forgetEndpoint } from '@/endpoint';
+import { reachText } from '@/shell/settings/reach-text';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
@@ -18,6 +19,8 @@ import { useToasts } from '@/state/toasts';
 import { pool, transportFor } from '@/transport';
 import { useMachineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
+
+const MINUTE_MS = 60_000;
 
 /* A disabled control does not take the pointer, so the reason sits on a wrapper around it. */
 export function WithReason({ reason, children }: { reason: string | null; children: ReactElement }) {
@@ -111,7 +114,7 @@ type BrokerMode = BrokerSetting['mode'];
 
 const MODES: readonly BrokerMode[] = ['default', 'custom', 'off'];
 
-/* Which broker the machine announces itself to. It lives on the machine because the daemon is the one that dials it. */
+/* Which broker the machine announces itself to, a connection service to a person. It lives on the machine because the daemon is the one that dials it. */
 export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
     const { t } = useTranslation('settings');
     const info = useServers((s) => s.byEndpoint[endpoint.id]);
@@ -158,9 +161,14 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
         if (reason !== null) {
             return t('machine.notAnswering');
         }
-        const where = endpoint.brokerUrl ? t('machine.broker.on', { host: brokerHostOf(endpoint.brokerUrl) }) : t('machine.broker.none');
-        const fixed = info?.brokerFixed ? t('machine.broker.fixed') : '';
-        return t('machine.broker.description', { where, fixed });
+        const parts = [t('machine.broker.description')];
+        if (!endpoint.brokerUrl) {
+            parts.push(t('machine.broker.none'));
+        }
+        if (info?.brokerFixed) {
+            parts.push(t('machine.broker.fixed'));
+        }
+        return parts.join(' ');
     };
 
     return (
@@ -212,11 +220,6 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
     );
 }
 
-/* Where the door listens, as addresses a person could type: a port is no quantity, so it is not formatted as a number. */
-function doorAddresses(lan: LanDoor): string {
-    return lan.addresses.map((address) => (address.includes(':') ? `[${address}]:${lan.port}` : `${address}:${lan.port}`)).join(', ');
-}
-
 /*
  * Whether the machine keeps its door on the local network open, so a client on the same network
  * reaches it without the broker. It lives on the machine because the daemon is the one that listens.
@@ -242,9 +245,7 @@ export function LanDoorRow({ endpoint, reason }: { endpoint: Endpoint; reason: s
         const where =
             lan === null
                 ? t(kept ? 'machine.lanDoor.notListening' : 'machine.lanDoor.closed')
-                : lan.addresses.length > 0
-                  ? t('machine.lanDoor.open', { addresses: doorAddresses(lan) })
-                  : t('machine.lanDoor.noAddress', { port: String(lan.port) });
+                : t(lan.addresses.length > 0 ? 'machine.lanDoor.open' : 'machine.lanDoor.noAddress');
         return fixed ? `${where} ${t('machine.lanDoor.fixedNote')}` : where;
     };
 
@@ -261,6 +262,88 @@ export function LanDoorRow({ endpoint, reason }: { endpoint: Endpoint; reason: s
                         label={t('machine.lanDoor.toggle', { machine: endpoint.label })}
                         disabled={busy || unavailable !== null}
                     />
+                </WithReason>
+            }
+        />
+    );
+}
+
+type ReachState = { state: 'checking'; last: ReachCheck | null } | { state: 'done'; check: ReachCheck | null } | { state: 'failed'; message: string };
+
+/*
+ * Whether other devices reach the machine, as the machine checks it itself: what is wrong and what a
+ * person can do about it. The machine checks when its broker takes it and when its network changed;
+ * Check again asks it now.
+ */
+export function ReachRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
+    const { t } = useTranslation('settings');
+    const answers = useMachineAnswers(endpoint.id, 'endpoint.reach');
+    const [reach, setReach] = useState<ReachState>({ state: 'checking', last: null });
+    const [attempt, setAttempt] = useState<{ check: boolean; n: number }>({ check: false, n: 0 });
+    const now = useNow(MINUTE_MS);
+
+    useEffect(() => {
+        const transport = transportFor(endpoint.id);
+        if (!answers || reason !== null || transport === null) {
+            return;
+        }
+        let current = true;
+        transport.request('endpoint.reach', attempt.check ? { check: true } : {}).then(
+            (answer) => current && setReach({ state: 'done', check: answer.reach }),
+            (e: unknown) => current && setReach({ state: 'failed', message: messageOf(e) })
+        );
+        return () => {
+            current = false;
+        };
+    }, [endpoint.id, answers, reason, attempt]);
+
+    if (!answers) {
+        return null;
+    }
+    const shown = reach.state === 'done' ? reach.check : reach.state === 'checking' ? reach.last : null;
+    const text = shown === null ? null : reachText(shown);
+    const description = (): ReactNode => {
+        if (reason !== null) {
+            return t('machine.notAnswering');
+        }
+        if (reach.state === 'failed') {
+            return (
+                <span className="text-status-error" role="alert">
+                    {t('machine.reach.failed', { message: reach.message })}
+                </span>
+            );
+        }
+        if (text === null || shown === null) {
+            return reach.state === 'checking' ? t('machine.reach.checking') : null;
+        }
+        const sentence = [text.problem, text.fix, t('machine.reach.checkedAt', { when: ago(shown.checkedAt, now) })].filter((part) => part !== null).join(' ');
+        return shown.severity === 'unreachable' ? (
+            <span className="text-status-error" role="alert">
+                {sentence}
+            </span>
+        ) : (
+            sentence
+        );
+    };
+
+    return (
+        <SettingsRow
+            searchId="machines.machine.reach"
+            label={t('machine.reach.label')}
+            description={description()}
+            control={
+                <WithReason reason={reason}>
+                    <Button
+                        variant="secondary"
+                        disabled={reason !== null || reach.state === 'checking'}
+                        aria-label={t('machine.reach.checkAgainLabel', { machine: endpoint.label })}
+                        onClick={() => {
+                            setReach({ state: 'checking', last: shown });
+                            setAttempt((before) => ({ check: true, n: before.n + 1 }));
+                        }}
+                    >
+                        {t('machine.reach.checkAgain')}
+                    </Button>
                 </WithReason>
             }
         />
@@ -353,8 +436,8 @@ export function UsageStatsRow({ endpoint, reason }: { endpoint: Endpoint; reason
     );
 }
 
-function ago(timestamp: number): string {
-    return formatAgo(Date.now() - timestamp);
+function ago(timestamp: number, now: number): string {
+    return formatAgo(now - timestamp);
 }
 
 /* The browsers and apps one machine let in, each with a way to cut it off. */
@@ -365,6 +448,7 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
     const [sessions, setSessions] = useState<AuthSession[] | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
     const [target, setTarget] = useState<AuthSession | null>(null);
+    const now = useNow(MINUTE_MS);
 
     const load = (): void => {
         const transport = transportFor(endpoint.id);
@@ -434,7 +518,7 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
                                   ? t('machine.access.origin.statement')
                                   : t('machine.access.origin.link'),
                         date: formatNumericDate(session.createdAt),
-                        ago: ago(session.lastSeenAt)
+                        ago: ago(session.lastSeenAt, now)
                     })}
                     control={
                         <IconButton
@@ -485,6 +569,7 @@ export function MachineLinks({ endpoint }: { endpoint: Endpoint }) {
     const [links, setLinks] = useState<PeerLink[] | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
     const [target, setTarget] = useState<PeerLink | null>(null);
+    const now = useNow(MINUTE_MS);
 
     const load = (): void => {
         const transport = transportFor(endpoint.id);
@@ -566,7 +651,7 @@ export function MachineLinks({ endpoint }: { endpoint: Endpoint }) {
                     description={t(link.lastUsedAt === undefined ? 'machine.links.unused' : 'machine.links.used', {
                         machine: link.label,
                         date: formatNumericDate(link.createdAt),
-                        ago: link.lastUsedAt === undefined ? '' : ago(link.lastUsedAt)
+                        ago: link.lastUsedAt === undefined ? '' : ago(link.lastUsedAt, now)
                     })}
                     control={
                         <div className="flex shrink-0 items-center gap-1">

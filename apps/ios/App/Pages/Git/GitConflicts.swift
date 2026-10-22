@@ -183,11 +183,11 @@ enum GitConflictModel {
 
     static func title(_ operation: String?) -> String {
         switch operation {
-        case "merge": String(localized: "Resolve the merge")
-        case "rebase": String(localized: "Resolve the rebase")
-        case "cherry-pick": String(localized: "Resolve the cherry-pick")
-        case "revert": String(localized: "Resolve the revert")
-        default: String(localized: "Resolve the conflicts")
+        case "merge": String(localized: "Resolve merge")
+        case "rebase": String(localized: "Resolve rebase")
+        case "cherry-pick": String(localized: "Resolve cherry-pick")
+        case "revert": String(localized: "Resolve revert")
+        default: String(localized: "Resolve conflicts")
         }
     }
 
@@ -211,12 +211,12 @@ enum GitConflictModel {
 
     static func wholeDetail(kind: String, ours: String, theirs: String) -> String {
         switch kind {
-        case "binary": String(localized: "This file is not UTF-8 text. Keep one side whole or drop it.")
+        case "binary": String(localized: "This file is not text. Keep one side whole or drop it.")
         case "deleted-by-them":
             String(localized: "\(theirs) deleted this file while it changed on \(ours).", comment: "Both are git refs")
         case "deleted-by-us":
             String(localized: "\(ours) deleted this file while it changed on \(theirs).", comment: "Both are git refs")
-        case "submodule": String(localized: "This is a submodule. Pick the commit one side points at.")
+        case "submodule": String(localized: "Submodule. Pick the commit of one side.")
         default: String(localized: "Pick a side for this file.")
         }
     }
@@ -481,11 +481,11 @@ func gitRefusalCode(_ error: any Error) -> String? {
 
     private static func takenBack(_ operation: String) -> String {
         switch operation {
-        case "merge": String(localized: "The merge was taken back.")
-        case "rebase": String(localized: "The rebase was taken back.")
-        case "cherry-pick": String(localized: "The cherry-pick was taken back.")
-        case "revert": String(localized: "The revert was taken back.")
-        default: String(localized: "The operation was taken back.")
+        case "merge": String(localized: "Aborted the merge.")
+        case "rebase": String(localized: "Aborted the rebase.")
+        case "cherry-pick": String(localized: "Aborted the cherry-pick.")
+        case "revert": String(localized: "Aborted the revert.")
+        default: String(localized: "Aborted the operation.")
         }
     }
 

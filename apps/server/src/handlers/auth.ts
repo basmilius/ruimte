@@ -271,7 +271,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
             }
             const report = await current.set(payload.provider, payload.on).catch((e: unknown) => {
                 if (e instanceof IntegrationsFixed) {
-                    throw new RequestError('integrations-fixed', 'This machine was started with --no-hooks');
+                    throw new RequestError('integrations-fixed', 'This machine was started with agent status turned off');
                 }
                 throw e;
             });

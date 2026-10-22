@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import type { Database } from 'bun:sqlite';
 import { generateKeyPairSync, type KeyObject } from 'node:crypto';
 import { MAPS_TICKET_LIFETIME_MS, MapsTicketSchema, mapsTicketSubject, verifyMapsTicket, type MapsTicket } from '@ruimte/pulsar';
@@ -23,11 +23,14 @@ function newPair(): Pair {
 const SECRET = 'rpEgLz0VDkQ2M4v1o9s3bYt7JfHaCwXn6iUeNy8PqKg';
 const OTHER_SECRET = 'Zk3mQ8vJx1LpT5aRn0cWy7DbHfUe2GsOi9NtV4Xr6Ml';
 
+// A second into a counting window, so the limit tests stand still inside one.
+const NOW = windowStartOf(Date.UTC(2026, 9, 1)) + 1_000;
+
 let sqlite: Database;
 let env: Env;
 
 async function signIn(accountId: string): Promise<string> {
-    sqlite.query('INSERT INTO account (id, provider, subject, created_at) VALUES (?, ?, ?, ?)').run(accountId, 'github', accountId, Date.now());
+    sqlite.query('INSERT INTO account (id, provider, subject, created_at) VALUES (?, ?, ?, ?)').run(accountId, 'github', accountId, NOW);
     const session = await createSession(env.DB, { id: accountId, provider: 'github', login: accountId, displayName: null }, 'laptop', newPair().publicKey);
     return session.accessToken;
 }
@@ -45,25 +48,27 @@ async function errorCode(response: Response): Promise<string> {
 }
 
 beforeEach(() => {
+    setSystemTime(NOW);
     sqlite = migratedDatabase();
     env = { DB: d1(sqlite), PUBLIC_ORIGIN: 'https://pulsar.test', MAP_TICKET_SECRET: SECRET };
+});
+
+afterEach(() => {
+    setSystemTime();
 });
 
 describe('a ticket for a signed-in client', () => {
     test('is good for an hour, names a digest of the account, and the secret verifies it', async () => {
         const token = await signIn('owner');
-        const before = Date.now();
         const response = await issueMapsTicket(post({}, token), env);
         expect(response.status).toBe(200);
         const issued = MapsTicketSchema.parse(await response.json()) satisfies MapsTicket;
-        expect(issued.issuedAt).toBeGreaterThanOrEqual(before);
-        expect(issued.expiresAt - issued.issuedAt!).toBe(MAPS_TICKET_LIFETIME_MS);
-        expect(issued.expiresAt).toBeGreaterThanOrEqual(before + MAPS_TICKET_LIFETIME_MS);
-        expect(issued.expiresAt).toBeLessThanOrEqual(Date.now() + MAPS_TICKET_LIFETIME_MS);
+        expect(issued.issuedAt).toBe(NOW);
+        expect(issued.expiresAt).toBe(NOW + MAPS_TICKET_LIFETIME_MS);
         const subject = await mapsTicketSubject(SECRET, 'owner');
-        expect(await verifyMapsTicket(SECRET, issued.ticket, Date.now())).toEqual({ subject, expiresAt: issued.expiresAt });
+        expect(await verifyMapsTicket(SECRET, issued.ticket, NOW)).toEqual({ subject, expiresAt: issued.expiresAt });
         expect(issued.ticket).not.toContain('owner');
-        expect(await verifyMapsTicket(OTHER_SECRET, issued.ticket, Date.now())).toBeNull();
+        expect(await verifyMapsTicket(OTHER_SECRET, issued.ticket, NOW)).toBeNull();
         expect(await verifyMapsTicket(SECRET, issued.ticket, issued.expiresAt)).toBeNull();
     });
 
@@ -83,17 +88,7 @@ describe('a ticket for a signed-in client', () => {
     });
 });
 
-/* A counting window is a minute of the clock, so the limit tests stand still inside one. */
-function holdClock(): void {
-    const held = windowStartOf(Date.now()) + 1_000;
-    spyOn(Date, 'now').mockReturnValue(held);
-}
-
 describe('without the secret or past the limits', () => {
-    afterEach(() => {
-        spyOn(Date, 'now').mockRestore();
-    });
-
     test('the address book says it issues no tickets, and signs nothing', async () => {
         const token = await signIn('owner');
         const response = await issueMapsTicket(post({}, token), { ...env, MAP_TICKET_SECRET: undefined });
@@ -113,7 +108,6 @@ describe('without the secret or past the limits', () => {
 
     test('an account is limited per minute, and the answer says when to try again', async () => {
         const token = await signIn('owner');
-        holdClock();
         for (let i = 0; i < LIMITS.mapsTicketAccount; i++) {
             expect((await issueMapsTicket(post({}, token, `192.0.2.${i + 10}`), env)).status).toBe(200);
         }
@@ -123,7 +117,6 @@ describe('without the secret or past the limits', () => {
     });
 
     test('an address is limited per minute even when its requests fail', async () => {
-        holdClock();
         for (let i = 0; i < LIMITS.mapsTicketIp; i++) {
             expect((await issueMapsTicket(post({}, 'A'.repeat(43)), env)).status).toBe(401);
         }

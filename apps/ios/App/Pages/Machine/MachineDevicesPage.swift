@@ -110,7 +110,7 @@ struct MachineDevicesPage: View {
         if !session.endpoint.streamingAllowed || devices.streamingOff {
             ContentUnavailableView(
                 String(localized: "Streaming is off"), lucideIcon: "circle-alert",
-                description: Text("Browser and device streaming is disabled in this machine's settings."))
+                description: Text("Browser and device streaming is off in this machine's settings."))
         } else if !session.connected {
             ContentUnavailableView(String(localized: "The machine is not answering"), lucideIcon: "circle-alert")
         } else if !devices.loaded {
@@ -118,7 +118,7 @@ struct MachineDevicesPage: View {
         } else if devices.devices.isEmpty {
             ContentUnavailableView(
                 String(localized: "No devices"), lucideIcon: "smartphone",
-                description: Text(([String(localized: "No devices were found on this machine.")] + devices.notes).joined(separator: "\n")))
+                description: Text(([String(localized: "No devices on this machine.")] + devices.notes).joined(separator: "\n")))
         } else {
             ForEach(devices.groups) { group in
                 Section {
@@ -204,7 +204,7 @@ struct MachineDevicesPage: View {
         workspace.start()
         await workspace.open()
         guard workspace.ready else {
-            problem = workspace.problem ?? String(localized: "The project could not be opened.")
+            problem = workspace.problem ?? String(localized: "Could not open the project.")
             workspace.stop()
             return
         }

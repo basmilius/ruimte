@@ -12,7 +12,7 @@
         },
         "palette": {
             "label": "Palette",
-            "description": "The tint of the grounds, panels and text, on both light and dark. The neutrals and colors are Tailwind's.",
+            "description": "The tint of backgrounds, panels and text, in light and dark.",
             "options": {
                 "default": "Default",
                 "slate": "Slate",
@@ -49,12 +49,12 @@
         "interface": {
             "title": "Interface",
             "dock": {
-                "label": "Hide the dock",
+                "label": "Hide dock",
                 "description": "The bar under a canvas or drawing hides until the pointer nears the bottom edge."
             },
             "projects": {
                 "label": "Projects",
-                "description": "Switch between projects from a menu, or keep the projects of a window as tabs in the toolbar.",
+                "description": "Switch projects from a menu, or show a window's projects as tabs in the toolbar.",
                 "switcher": "Switcher",
                 "tabs": "Tabs"
             },
@@ -67,7 +67,7 @@
         },
         "language": {
             "label": "Language",
-            "description": "System follows your OS, and falls back to English for a language Ruimte does not speak yet.",
+            "description": "System follows your OS, with English as fallback.",
             "system": "System"
         },
         "region": {
@@ -83,7 +83,7 @@
             "title": "Font",
             "interface": {
                 "label": "Interface font",
-                "description": "Falls back to the system font if it is not installed.",
+                "description": "Falls back to the system font if missing.",
                 "system": "System"
             },
             "interfaceSize": {
@@ -92,23 +92,23 @@
             },
             "mono": {
                 "label": "Monospace font",
-                "description": "For terminals and code. Falls back to the system font if it is not installed.",
+                "description": "For terminals and code. Falls back to the system font if missing.",
                 "system": "System"
             }
         },
         "sidebar": {
             "label": "Sidebar",
-            "description": "Choose which projects appear in the sidebar and Needs attention, across all your machines.",
+            "description": "Projects in the sidebar and under Needs you, across all machines.",
             "current": "Current project",
             "all-open": "All open projects"
         },
         "needsYou": {
             "label": "Needs you from every open project",
-            "description": "Also list what waits for you in your other open projects, grouped by project."
+            "description": "Also list what waits in other open projects, grouped by project."
         },
         "projectGlow": {
-            "label": "Glow in the project's color",
-            "description": "The glow at the top of the sidebar takes the color of the project on screen. With the sidebar closed it shows in the toolbar."
+            "label": "Glow in project color",
+            "description": "Tints the top of the sidebar in the current project's color, or the toolbar when the sidebar is closed."
         }
     },
     "editor": {
@@ -131,7 +131,7 @@
                 },
                 "lineHeight": {
                     "label": "Code line height",
-                    "description": "As a multiple of the code font size, rounded to whole pixels. Applies wherever code is drawn."
+                    "description": "A multiple of the code font size."
                 },
                 "ligatures": {
                     "label": "Ligatures",
@@ -146,7 +146,7 @@
                 },
                 "indentGuides": {
                     "label": "Indent guides",
-                    "description": "A line at each indentation level in the editor, with the one around the cursor stronger."
+                    "description": "A line per indentation level, stronger around the cursor."
                 },
                 "whitespace": {
                     "label": "Show whitespace",
@@ -154,7 +154,7 @@
                 },
                 "stickyScroll": {
                     "label": "Sticky scroll",
-                    "description": "Keep the lines that open the surrounding scopes pinned at the top of the editor while you scroll."
+                    "description": "Pins the lines that open the current scopes to the top while you scroll."
                 },
                 "rightMargin": {
                     "label": "Right margin",
@@ -172,18 +172,18 @@
                 "title": "Documentation",
                 "render": {
                     "label": "Render documentation comments",
-                    "description": "Draws documentation comments as formatted text in place of their lines. The book button in the gutter switches one comment, and the comment you are editing stays text."
+                    "description": "Shows documentation comments as formatted text. The book button beside a comment switches it back."
                 }
             },
             "codeVision": {
                 "title": "Code vision",
                 "usages": {
                     "label": "Usages",
-                    "description": "Shows how many times a class, function or method is used, above its declaration. Press it to see where."
+                    "description": "Usage count above each class, function and method. Click it to see where."
                 },
                 "authors": {
                     "label": "Authors",
-                    "description": "Shows above a class, function or method who wrote it according to git, with a plus for other authors. Press it for the commits."
+                    "description": "Shows who wrote a class, function or method, above its declaration. Click it to see the commits."
                 }
             }
         },
@@ -191,7 +191,7 @@
             "title": "AI",
             "inlineAgent": {
                 "label": "Inline edit",
-                "description": "The agent that handles inline edits, and the account it runs under when you have more than one. It runs as a chat in the project."
+                "description": "The agent and account that make inline edits."
             },
             "agentChanges": {
                 "label": "Agent changes in open files",
@@ -204,7 +204,7 @@
             },
             "attribution": {
                 "label": "Attribution in gutter",
-                "description": "Marks the lines an agent wrote. Hover shows the chat and the turn."
+                "description": "Marks lines an agent wrote. Hover for the chat and turn."
             },
             "onDevice": {
                 "title": "On device",
@@ -214,7 +214,7 @@
                 },
                 "ghost": {
                     "label": "Suggestions while typing",
-                    "description": "Ghost text from the on-device model, two to three seconds per suggestion.",
+                    "description": "Suggestions from the model on this Mac appear as you type. Each takes two to three seconds.",
                     "options": {
                         "off": "Off",
                         "request": "On request"
@@ -227,7 +227,7 @@
             "outline": {
                 "title": "Outline",
                 "label": "Show fold arrows",
-                "description": "The arrows in the gutter that fold and open a block. A folded block always shows its marker in the text.",
+                "description": "Arrows beside the lines that fold and unfold blocks. A folded block always shows its marker.",
                 "options": {
                     "off": "Never",
                     "hover": "On hover",
@@ -236,14 +236,14 @@
             },
             "general": {
                 "title": "Fold by default",
-                "description": "What folds when a file opens for the first time. A file you folded or opened yourself keeps what you left. Bodies come from the language servers, so they fold once those have answered.",
+                "description": "What folds when a file opens for the first time. A file you already folded stays the way you left it.",
                 "fileHeader": {
                     "label": "File header",
                     "description": "The comment at the top of a file, such as a license."
                 },
                 "imports": {
                     "label": "Imports",
-                    "description": "The run of import lines at the top."
+                    "description": "Import lines at the top."
                 },
                 "docComments": {
                     "label": "Documentation comments",
@@ -255,7 +255,7 @@
                 },
                 "customRegions": {
                     "label": "Custom regions",
-                    "description": "What sits between // region and // endregion."
+                    "description": "Between // region and // endregion."
                 }
             },
             "script": {
@@ -271,12 +271,12 @@
                 },
                 "xmlLiterals": {
                     "label": "JSX elements",
-                    "description": "Elements that span several lines, once the language server has answered."
+                    "description": "Multi-line elements."
                 }
             },
             "php": {
                 "title": "PHP",
-                "description": "Imports, documentation comments and the file header follow the switches above. Bodies come from the language server.",
+                "description": "Imports, documentation comments and the file header follow the switches above.",
                 "tags": {
                     "label": "PHP tags",
                     "description": "Blocks of PHP between markup, from <?php to ?>, other than the one that opens the file."
@@ -299,20 +299,20 @@
                 },
                 "attributes": {
                     "label": "Attributes",
-                    "description": "An attribute list that spans several lines."
+                    "description": "Multi-line attribute lists."
                 }
             },
             "markup": {
                 "title": "HTML and XML",
-                "description": "For HTML, XML, Vue and Svelte, once the language server has answered.",
+                "description": "Also for Vue and Svelte.",
                 "tags": {
                     "label": "Tags",
-                    "description": "Elements that span several lines."
+                    "description": "Multi-line elements."
                 }
             },
             "markdown": {
                 "title": "Markdown",
-                "description": "What folds in a Markdown file. The section under a heading folds by hand.",
+                "description": "Sections under a heading fold by hand.",
                 "frontMatter": {
                     "label": "Front matter",
                     "description": "The block between --- lines at the top."
@@ -364,9 +364,9 @@
         },
         "servers": {
             "title": "Language servers",
-            "needsProject": "Open a project to manage its language servers. A server is installed once per machine and runs per project.",
-            "description": "Installed once on the machine, started per project when a file needs it.",
-            "failed": "The language servers failed to render",
+            "needsProject": "Open a project to manage its language servers.",
+            "description": "Installed once per machine, started per project when needed.",
+            "failed": "Could not show the language servers",
             "groups": {
                 "scripts": "JavaScript and TypeScript",
                 "web": "Web",
@@ -375,8 +375,8 @@
             },
             "own": {
                 "title": "Your own servers",
-                "description": "A language server you run yourself. Ruimte starts exactly the command you save, for the files it serves.",
-                "empty": "No servers of your own yet.",
+                "description": "Ruimte runs exactly the command you save, for the files it serves.",
+                "empty": "None yet.",
                 "add": "Add server",
                 "edit": "Edit",
                 "remove": "Remove",
@@ -385,14 +385,14 @@
                 "someProjects_one": "Runs in {{count}} project",
                 "someProjects_other": "Runs in {{count}} projects",
                 "removeTitle": "Remove {{name}}?",
-                "removeDescription": "Ruimte stops it wherever it runs. The program itself stays on this machine.",
+                "removeDescription": "Stops it everywhere. The program stays installed.",
                 "dialog": {
-                    "titleAdd": "Add a language server",
+                    "titleAdd": "Add language server",
                     "titleEdit": "Edit {{name}}",
-                    "description": "Saving starts exactly this command on this machine for the files it serves, and again whenever a project needs it. Change the command and you save it again.",
+                    "description": "Saving runs exactly this command on this machine whenever a project needs it.",
                     "name": "Name",
                     "command": "Command",
-                    "commandHint": "An absolute path, or a program that is on the PATH of this machine.",
+                    "commandHint": "An absolute path, or a program on this machine's PATH.",
                     "commandFound": "Found at {{path}}",
                     "commandMissing": "Not found on this machine. Give an absolute path.",
                     "args": "Arguments",
@@ -410,7 +410,7 @@
                     "scopeSome": "Some projects",
                     "cancel": "Cancel",
                     "save": "Save",
-                    "failed": "The server could not be saved",
+                    "failed": "Could not save the server",
                     "problem": {
                         "name": "Give the server a name.",
                         "command": "Say which command starts it.",
@@ -426,11 +426,11 @@
         "colors": {
             "light": {
                 "label": "Light theme",
-                "description": "The colors of code while the app is light, in files, the editor and chats."
+                "description": "Code colors in light mode, in files, the editor and chats."
             },
             "dark": {
                 "label": "Dark theme",
-                "description": "The colors of code while the app is dark."
+                "description": "Code colors in dark mode."
             },
             "preview": "Preview of {{theme}}"
         }
@@ -444,13 +444,13 @@
             },
             "lineHeight": {
                 "label": "Terminal line height",
-                "description": "As a multiple of the row height the font needs."
+                "description": "A multiple of the font's row height."
             }
         },
         "links": {
             "title": "Links",
             "label": "Open terminal links in",
-            "description": "Ruimte opens a new browser view, or a browser node beside the terminal on its canvas. Without a project on the same machine, links use your external browser.",
+            "description": "Opens a browser view, or a browser node beside the terminal on a canvas. Without a project on the same machine, links open in your external browser.",
             "options": {
                 "external": "External browser",
                 "ruimte": "Ruimte"
@@ -460,15 +460,15 @@
     "sections": {
         "appearance": {
             "label": "Appearance",
-            "description": "Theme, accent, the terminal font and the region numbers and dates are written in."
+            "description": "Theme, accent, fonts, language and region."
         },
         "keyboard": {
             "label": "Keyboard",
-            "description": "Every keyboard shortcut."
+            "description": "All shortcuts."
         },
         "editor": {
             "label": "Editor",
-            "description": "The code editor: its font, wrapping and smart keys, and the language servers behind it."
+            "description": "Font, wrapping, smart keys and language servers."
         },
         "terminal": {
             "label": "Terminal",
@@ -476,11 +476,11 @@
         },
         "views": {
             "label": "Views",
-            "description": "What new nodes start at, and how drawings and browser pages behave."
+            "description": "Node sizes, canvas map, drawings and browser pages."
         },
         "files": {
             "label": "Files and Git",
-            "description": "What the Files and Git panels show, and where browsing for a folder starts."
+            "description": "Files and Git panels, and where folder browsing starts."
         },
         "agents": {
             "label": "Agents",
@@ -492,11 +492,11 @@
         },
         "computer": {
             "label": "Computer Use",
-            "description": "Let agents operate the apps on a computer. They only reach an app after you allow it."
+            "description": "Let agents operate apps you allow."
         },
         "machines": {
             "label": "Account",
-            "description": "Your Ruimte account, the machines on it, and how each one is reached."
+            "description": "Your account, its machines and how they connect."
         },
         "about": {
             "label": "About",
@@ -511,7 +511,7 @@
     "views": {
         "nodeSizes": {
             "title": "New nodes on {{machine}}",
-            "description": "The size a new node of a kind starts at, the nodes agents add included. Type one here, or right-click a node and choose Make this the default size.",
+            "description": "Starting size per node kind, also for nodes agents add. Type it here, or right-click a node and choose Set as default size.",
             "searchLabel": "Default node sizes",
             "builtIn": "Built in",
             "custom": "Custom, built in {{builtIn}}",
@@ -525,10 +525,17 @@
             "reset": "Reset",
             "resetLabel": "Reset the size of {{kind}} nodes on {{machine}}"
         },
+        "canvas": {
+            "title": "Canvas",
+            "minimap": {
+                "label": "Canvas map",
+                "description": "A small map in the bottom right shows every node and the part you see. Click to jump there, drag the frame to pan. Hidden on a narrow canvas."
+            }
+        },
         "drawing": {
             "title": "Drawing",
             "snap": {
-                "label": "Snap to the grid",
+                "label": "Snap to grid",
                 "description": "Shapes land on the 8 unit grid when you draw, move or resize them. Freehand strokes never snap."
             }
         },
@@ -536,7 +543,7 @@
             "title": "Browser",
             "swipe": {
                 "label": "Swipe between pages",
-                "description": "Two fingers left or right on the trackpad go back or forward in a browser node or view. A page that scrolls sideways itself keeps the gesture."
+                "description": "Swipe two fingers on the trackpad to go back or forward. Pages that scroll sideways keep the gesture."
             }
         }
     },
@@ -549,11 +556,11 @@
             },
             "hidden": {
                 "label": "Show hidden and ignored files",
-                "description": "What git ignores, build output such as node_modules, and dotfiles in a folder without a repository. Files the operating system keeps to itself stay hidden either way."
+                "description": "Git-ignored files, build output such as node_modules, and dotfiles outside a repository. System files stay hidden."
             },
             "browseStart": {
                 "label": "Start browsing in",
-                "description": "The folder the command palette starts in when you browse. Applies to every machine. Empty or missing falls back to the home folder."
+                "description": "The folder the command palette starts in when you browse, on every machine. Leave empty to start in your home folder."
             }
         },
         "git": {
@@ -568,7 +575,7 @@
             },
             "whitespace": {
                 "label": "Show whitespace changes",
-                "description": "Off hides changes that only touch whitespace, in the diff and in the counts."
+                "description": "Off hides whitespace-only changes in diffs and counts."
             }
         }
     },
@@ -580,21 +587,21 @@
             "title": "Canvas",
             "palette": "Command palette",
             "findInFiles": "Find in files",
-            "pan": "Pan the canvas",
-            "zoomPointer": "Zoom around the pointer",
+            "pan": "Pan canvas",
+            "zoomPointer": "Zoom at pointer",
             "zoomIn": "Zoom in",
             "zoomOut": "Zoom out",
             "undo": "Undo",
             "redo": "Redo",
             "gaps": "Adjust gaps between nodes",
-            "enterNode": "Focus the selected node's content"
+            "enterNode": "Focus selected node's content"
         },
         "selection": {
             "title": "Selection",
-            "selectAll": "Select everything",
-            "add": "Add to the selection",
-            "delete": "Delete the selection",
-            "escape": "Clear the selection, or leave the node you are in"
+            "selectAll": "Select all",
+            "add": "Add to selection",
+            "delete": "Delete selection",
+            "escape": "Clear selection, or leave the node"
         },
         "views": {
             "title": "Views",
@@ -602,15 +609,15 @@
             "previous": "Previous view",
             "next": "Next view",
             "new": "New canvas view",
-            "rename": "Rename a node, or open the settings of a view"
+            "rename": "Rename node, or open view settings"
         },
         "split": {
             "title": "Split",
-            "right": "Split the cell to the right",
-            "down": "Split the cell down",
-            "focusNeighbor": "Focus the neighboring cell (any arrow key)",
-            "maximize": "Maximize the selected node or the focused cell, or restore it",
-            "close": "Close the focused cell"
+            "right": "Split right",
+            "down": "Split down",
+            "focusNeighbor": "Focus neighboring cell (arrow keys)",
+            "maximize": "Maximize or restore selected node or cell",
+            "close": "Close focused cell"
         },
         "drawing": {
             "title": "Drawing",
@@ -624,38 +631,39 @@
             "freehand": "Freehand (7)",
             "text": "Text (8)",
             "eraser": "Eraser (0)",
-            "keepTool": "Keep the tool selected after drawing",
-            "lock": "Lock or unlock the selection",
-            "duplicate": "Duplicate the selection",
+            "keepTool": "Keep tool after drawing",
+            "lock": "Lock or unlock selection",
+            "duplicate": "Duplicate selection",
             "bringToFront": "Bring to front",
             "sendToBack": "Send to back",
             "snap": "Toggle grid snapping while dragging",
-            "copy": "Copy the selection",
-            "paste": "Paste into the drawing"
+            "copy": "Copy selection",
+            "paste": "Paste into drawing"
         },
         "panels": {
             "title": "Panels",
-            "toggle": "Toggle the last open panel"
+            "toggle": "Toggle last panel"
         },
         "launches": {
             "title": "Launches",
-            "run": "Launch the chosen launch, or restart it",
-            "stop": "Stop the chosen launch"
+            "run": "Run or restart chosen launch",
+            "stop": "Stop chosen launch"
         },
         "prompts": {
             "title": "Prompts",
-            "answerFront": "Answer the front prompt of the canvas",
+            "answerFront": "Answer front prompt",
+            "nextNeedsYou": "Go to what needs you, oldest first",
             "primary": "Allow, Next or Answer",
-            "previous": "Previous prompt in the stack",
-            "next": "Next prompt in the stack",
+            "previous": "Previous prompt",
+            "next": "Next prompt",
             "escape": "Back to where you were"
         },
         "chat": {
             "title": "Chat",
             "previousMessage": "Previous message you sent",
             "nextMessage": "Next message you sent",
-            "sendAndNewChat": "Send, then start a new chat beside it",
-            "dictation": "Dictate: tap to toggle, hold to talk"
+            "sendAndNewChat": "Send and start new chat beside it",
+            "dictation": "Dictate: press to toggle, hold to talk"
         },
         "browser": {
             "title": "Browser",
@@ -664,20 +672,20 @@
         },
         "nodes": {
             "title": "Nodes",
-            "nextNode": "Move focus to the next node",
-            "select": "Select the node the keyboard is on",
-            "escape": "Clear the selection (a terminal passes Escape to its program)",
+            "nextNode": "Focus next node",
+            "select": "Select focused node",
+            "escape": "Clear selection (terminals pass Escape on)",
             "leave": "Leave a terminal node"
         },
         "terminal": {
             "title": "Terminal",
-            "clear": "Clear the screen and the scrollback",
-            "find": "Find in the terminal",
-            "lineStart": "Move to the beginning of the line",
-            "lineEnd": "Move to the end of the line",
-            "wordBack": "Move back one word",
-            "wordForward": "Move forward one word",
-            "deleteToLineStart": "Delete to the beginning of the line"
+            "clear": "Clear screen and scrollback",
+            "find": "Find in terminal",
+            "lineStart": "Go to line start",
+            "lineEnd": "Go to line end",
+            "wordBack": "Back one word",
+            "wordForward": "Forward one word",
+            "deleteToLineStart": "Delete to line start"
         }
     },
     "keyboard": {
@@ -691,17 +699,17 @@
     "backgroundService": {
         "title": "When Ruimte quits",
         "keepRunning": {
-            "label": "Keep this machine running when Ruimte quits",
-            "description": "Sessions and agents keep working in the background, so this machine stays reachable from your other clients and the web."
+            "label": "Keep this machine running",
+            "description": "Sessions and agents keep working in the background, and the machine stays reachable."
         },
         "unavailable": {
             "dev": "The dev app always runs a machine of its own and stops it when it quits.",
             "windows": "Not available on Windows yet, so this machine stops when Ruimte quits.",
-            "appimage": "Not available for the AppImage, which is gone once Ruimte quits. Install the deb or rpm package to keep this machine running.",
+            "appimage": "Not available in the AppImage. Install the deb or rpm package to keep this machine running.",
             "commandLine": "This machine runs as the background service that `npx ruimte service install` set up. Ruimte uses it as it is and leaves it alone; `npx ruimte service uninstall` removes it."
         },
         "pending": {
-            "takeOver": "Ruimte runs this machine itself right now. It keeps running from the next time Ruimte quits.",
+            "takeOver": "Takes effect the next time Ruimte quits.",
             "handBack": "This machine stops when Ruimte quits."
         },
         "restart": {
@@ -711,28 +719,28 @@
         "failure": "The background service did not run this machine: {{reason}}",
         "linger": {
             "label": "Keep running after you log out",
-            "on": "Lingering is on, so this machine keeps running after you log out.",
-            "off": "Without it, this machine stops when you log out of your desktop session.",
+            "on": "This machine keeps running after you log out.",
+            "off": "Off, this machine stops when you log out.",
             "action": "Allow"
         },
         "stop": {
             "label": "Stop the machine",
-            "description": "Ends every session here and quits Ruimte. The machine starts again the next time you open Ruimte.",
+            "description": "Ends every session and quits Ruimte. The machine starts again with Ruimte.",
             "action": "Stop"
         },
         "confirmStop": {
             "title": "Stop this machine and quit Ruimte?",
-            "description": "Every terminal and agent on this machine ends, and no other client can reach it until you open Ruimte again.",
+            "description": "Every terminal and agent on this machine ends, and no other device can reach it until you open Ruimte again.",
             "action": "Stop and quit"
         },
         "confirmRestart": {
             "title": "Restart this machine now?",
-            "description": "Every terminal and agent on this machine ends, and it comes back on the updated version.",
+            "description": "Every terminal and agent ends, and the machine comes back updated.",
             "action": "Restart now"
         },
         "confirmLinger": {
             "title": "Keep running after you log out?",
-            "description": "Ruimte runs loginctl enable-linger for your user, so your user services keep running without a session. Undo it with loginctl disable-linger.",
+            "description": "Ruimte lets your services keep running after you log out. Undo it with loginctl disable-linger.",
             "action": "Allow"
         },
         "stopRunning": {
@@ -772,28 +780,28 @@
         "deleteAnyView": {
             "label": "Agents may delete any view or node",
             "rowLabel": "Agents on {{machine}} may delete any view or node",
-            "description": "Off, an agent only deletes views and nodes it created. On, it can delete any view or node in any project there, including yours.",
+            "description": "Off, agents only delete views and nodes they created.",
             "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open."
         },
         "resumeAtReset": {
             "label": "Chats resume after a limit",
             "rowLabel": "Chats on {{machine}} resume after a limit",
-            "description": "On, a chat that stopped on a usage limit goes on by itself once the limit resets, and a turn that failed because the model was overloaded is tried again after 1, 5 and 15 minutes.",
+            "description": "A chat stopped by a usage limit continues once it resets. A turn that failed on an overloaded model retries after 1, 5 and 15 minutes.",
             "notConnected": "Not connected. Change this while a project on the machine is open."
         },
         "visualReplies": {
             "label": "Visual replies",
             "rowLabel": "Agents on {{machine}} may show visual replies",
-            "description": "On, an agent may show a chart, table or mockup above its reply, as a page. Off, it answers in text. Visuals already in a chat stay.",
+            "description": "Agents may show a chart, table or mockup above a reply. Off, they answer in text; existing visuals stay.",
             "notConnected": "Not connected. Change this while a project on the machine is open."
         },
         "machine": {
             "title": "On {{machine}}",
-            "description": "Saved per machine. Applies to every client connected to it."
+            "description": "Saved per machine. Applies to every device connected to it."
         },
         "defaults": {
             "title": "Defaults for new agents",
-            "description": "Applies to every provider. The model and account of each CLI are set under <link>Providers</link>.",
+            "description": "For every provider. Set each CLI's model and account under <link>Providers</link>.",
             "permissions": "Permissions",
             "terminalMode": "Terminal agents start in"
         },
@@ -801,7 +809,7 @@
             "title": "While an agent works",
             "description": "Sleep pauses every agent.",
             "sound": {
-                "label": "Play a sound with a notification",
+                "label": "Notification sound",
                 "description": "Applies to every agent notification."
             }
         },
@@ -823,18 +831,18 @@
                 "description": "Off, this computer only stays awake on the power adapter."
             },
             "display": {
-                "label": "Keep the display on",
-                "description": "Off, the display can still turn off while the computer stays awake.",
-                "needsBattery": "Only together with Also on battery, since macOS cannot keep the display on for the power adapter alone."
+                "label": "Keep display on",
+                "description": "Off, the display may sleep.",
+                "needsBattery": "Turn on Also on battery first."
             },
             "lid": {
                 "label": "Also with the lid closed",
-                "description": "Turns sleep off while keep awake holds, so the Mac keeps running with its lid shut. Sleep comes back as soon as keep awake lets go or the machine stops. On battery it holds only with Also on battery, and lets go below {{percent}}. Without this, a closed lid sleeps the Mac unless an external display and the power adapter are connected.",
+                "description": "Your Mac keeps running with its lid closed while it stays awake. On battery this needs Also on battery and stops below {{percent}}.",
                 "search": "Keep the Mac running with its lid shut while keep awake holds.",
                 "rule": {
                     "label": "Permission on this Mac",
-                    "missing": "Adds a rule to /etc/sudoers.d that lets Ruimte run pmset -a disablesleep 1 and 0 without a password, and nothing else. macOS asks for an administrator password first.",
-                    "installed": "A rule in /etc/sudoers.d lets Ruimte run pmset -a disablesleep 1 and 0 without a password, and nothing else. Removing it turns sleep back on and the switch above off.",
+                    "missing": "Lets Ruimte turn sleep off and on without a password, and nothing else. macOS asks for an administrator password first.",
+                    "installed": "Ruimte may turn sleep off and on without a password, and nothing else. Removing this turns sleep back on and the switch above off.",
                     "install": "Allow",
                     "remove": "Remove",
                     "prompt": {
@@ -843,7 +851,7 @@
                     }
                 }
             },
-            "saveFailed": "Keep awake could not be changed"
+            "saveFailed": "Could not change keep awake"
         },
         "chats": {
             "title": "Chats",
@@ -864,47 +872,48 @@
             },
             "readingWidth": {
                 "label": "Reading width",
-                "description": "How wide the thread and the composer run in a chat that is a view of its own. A chat on the canvas uses the width of its node."
+                "description": "The width of the messages in a chat view. A chat on a canvas fills its node."
             },
             "showViews": {
-                "label": "Let an agent show you a view",
-                "description": "On, a view an agent opens replaces the one you are working in, and a banner takes you back. Off, the banner offers a button to go there."
+                "label": "Let agents switch views",
+                "description": "On, a view an agent opens replaces yours, with a banner to go back. Off, the banner offers to go there."
             },
             "mapTiles": {
                 "label": "Map tiles",
-                "description": "Maps in chats load their tiles from Ruimte's map service. When this is off, a map shows only an outline and its list of places."
+                "description": "Loads map tiles in chats from Ruimte's map service. Off, maps show only an outline and their places."
             },
             "sendKey": {
                 "label": "Send with",
-                "description": "Which key sends a message from the composer. Where Enter does not send, it adds a line."
+                "description": "Which key sends a message. When Enter does not send, it adds a line."
             },
             "steerByDefault": {
                 "label": "Steer running agents by default",
-                "description": "Send messages to Codex or Claude at the next tool call. With this off, messages wait until the turn ends. Hold Option or Alt when sending to use the other behavior."
+                "description": "A message you send while Codex or Claude works reaches it at its next step. Off, it waits until the agent is done. Hold Option or Alt while sending to do the opposite."
             }
         },
         "integrations": {
             "title": "Agent status in terminals",
-            "description": "Ruimte learns whether Claude Code or Codex in a terminal is working, done or waiting for you from hooks in that CLI's own settings. These settings are global: they apply to every run of the CLI on this computer, also outside Ruimte, where the hook does nothing.",
+            "description": "Ruimte shows whether a coding tool in a terminal is working, done or waiting for you by adding a few lines to that tool's settings. They apply to the tool everywhere on this computer, also outside Ruimte.",
             "dialog": {
-                "title": "Let Ruimte change your CLI settings?",
-                "description": "Ruimte would like to add a few settings to your coding tools. They apply to each tool everywhere on this computer, also outside Ruimte.",
+                "title": "Let Ruimte change CLI settings?",
+                "description": "Ruimte adds a few settings to your coding tools. They apply everywhere on this computer, also outside Ruimte.",
                 "status": "Shows when a terminal is working, done or needs you.",
                 "statusAndTool": "Shows when a terminal is working, done or needs you. Also lets Ruimte's own tool run without asking.",
-                "tool": "Lets Ruimte's own tool run without asking."
+                "tool": "Lets Ruimte's own tool run without asking.",
+                "doneAndTool": "Shows when a terminal is done. Also lets Ruimte's own tool run without asking."
             },
-            "off": "Without them, terminals running {{provider}} show no status and never ask for your attention. Chats are not affected; they get their status another way.",
-            "codexRule": "For Codex this choice also covers the rule that lets ruimte-context run outside Codex's sandbox. Without it, Codex in a sandboxed mode cannot reach Ruimte: ruimte-context fails or asks for your approval each time, in terminals and chats.",
-            "antigravityRule": "For Antigravity this choice only covers the rule that lets ruimte-context run without asking, also outside its sandbox. Without it, Antigravity in a terminal asks for your approval each time it uses ruimte-context.",
+            "off": "Without them, {{provider}} terminals show no status or alerts. Chats are not affected.",
+            "codexRule": "For Codex this also lets Ruimte's own tool run outside Codex's sandbox. Without it, Codex in a sandboxed mode fails or asks for your approval each time it uses Ruimte.",
+            "antigravityRule": "For Antigravity this also lets Ruimte's own tool run without asking. Without it, Antigravity in a terminal asks for your approval each time it uses Ruimte.",
             "files": "Ruimte writes to:",
             "allow": "Allow",
             "deny": "Don't allow",
             "keep": "Keep",
             "remove": "Remove",
             "notNow": "Not now",
-            "migrated": "Ruimte already added these to {{provider}}. Keep them, or remove them now.",
-            "fixed": "This machine was started with --no-hooks, so Ruimte writes nothing into the CLIs' settings.",
-            "search": "hooks, status, Claude, Codex, Antigravity, settings.json",
+            "migrated": "Ruimte already added these to {{provider}}. Keep or remove them.",
+            "fixed": "This machine was started with agent status turned off, so Ruimte leaves the tools' settings alone.",
+            "search": "hooks, status, Claude, Codex, Antigravity, Copilot, Grok, settings.json",
             "state": {
                 "on": "Allowed",
                 "off": "Not allowed"
@@ -917,7 +926,7 @@
                 "none": "No Ruimte entries found",
                 "keptEdited": "Left alone: you changed Ruimte's entry",
                 "missing": "File not found",
-                "refused": "Left alone: not a settings object",
+                "refused": "Left alone: Ruimte cannot read this file",
                 "failed": "Failed: {{message}}"
             }
         }
@@ -933,7 +942,7 @@
             "unknown": "Unknown",
             "machine": {
                 "label": "Machine",
-                "description": "The machine of the current workspace, and its version."
+                "description": "Current workspace's machine and version."
             },
             "platform": "Platform",
             "dataFolder": {
@@ -945,10 +954,10 @@
             "title": "Updates",
             "auto": {
                 "label": "Download updates automatically",
-                "description": "On, new versions download in the background. Off, you start each download yourself."
+                "description": "Off, you start each download yourself."
             },
             "check": "Check for updates",
-            "checking": "Checking",
+            "checking": "Checking…",
             "download": "Download",
             "install": "Restart to install",
             "released": "Released {{date}}",
@@ -973,48 +982,48 @@
     "voice": {
         "key": {
             "title": "Voice Control",
-            "sectionDescription": "Control your workspace by speaking. Uses OpenAI GPT-Live and sends audio to OpenAI only during an active conversation. Requires your own API key.",
+            "sectionDescription": "Control your workspace by voice with OpenAI GPT-Live. Audio goes to OpenAI only during a conversation. Needs your own API key.",
             "label": "API key",
             "fieldLabel": "OpenAI API key",
-            "desktopOnly": "API keys can be configured in the Ruimte desktop app.",
+            "desktopOnly": "Set API keys in the desktop app.",
             "create": "Create API key",
-            "checking": "Checking the desktop keychain…",
+            "checking": "Checking keychain…",
             "configured": "Configured",
             "notConfigured": "Not configured",
-            "persistent": "Encrypted with this computer's keychain. Ruimte never shows the saved value again.",
-            "session": "Encryption is unavailable, so this key is kept only until Ruimte quits.",
-            "missing": "Required for GPT-Live. The key stays in the desktop shell and is never stored in a project.",
-            "replacePlaceholder": "Enter a replacement key",
-            "remove": "Remove saved API key",
-            "saveFailure": "The API key could not be saved.",
-            "readFailure": "The settings could not be read.",
-            "removeFailure": "The API key could not be removed."
+            "persistent": "Encrypted in this computer's keychain and never shown again.",
+            "session": "Encryption unavailable; the key is kept until Ruimte quits.",
+            "missing": "Required for GPT-Live. Never stored in a project.",
+            "replacePlaceholder": "New key",
+            "remove": "Remove API key",
+            "saveFailure": "Could not save API key.",
+            "readFailure": "Could not read the settings.",
+            "removeFailure": "Could not remove API key."
         },
         "toast": {
             "readFailed": "Could not read GPT-Live settings",
             "saved": "OpenAI API key saved",
-            "saveFailed": "Could not save the API key",
-            "removed": "Saved OpenAI API key removed",
-            "removeFailed": "Could not remove the API key"
+            "saveFailed": "Could not save API key",
+            "removed": "OpenAI API key removed",
+            "removeFailed": "Could not remove API key"
         },
         "microphone": {
             "systemDefault": "System default",
-            "systemDefaultHint": "Follows the system input selection",
+            "systemDefaultHint": "Follows system input",
             "unavailable": "Unavailable microphone",
             "unavailableHint": "Uses the system default until it returns"
         },
         "conversation": {
             "title": "Conversation",
-            "description": "Changes apply when you start the next conversation. Only an active conversation sends microphone audio to OpenAI.",
+            "description": "Changes apply from the next conversation.",
             "microphone": {
                 "label": "Microphone",
                 "description": "Input used for dictation and Voice Control.",
-                "unavailableDescription": "Microphones could not be listed. The system default is used.",
+                "unavailableDescription": "Could not list microphones; using system default.",
                 "selectLabel": "Microphone"
             },
             "language": {
                 "label": "Language",
-                "description": "The language for dictation and Voice Control. Some languages are only available in Voice Control.",
+                "description": "Some languages work only in Voice Control.",
                 "selectLabel": "Speech language"
             },
             "voice": {
@@ -1026,7 +1035,7 @@
             },
             "confirm": {
                 "label": "Confirm deletions",
-                "description": "Ask before Voice Control deletes views or nodes. When off, spoken deletion requests run immediately.",
+                "description": "Ask before Voice Control deletes views or nodes. Off, spoken deletions run at once.",
                 "toggle": "Confirm Voice Control deletions"
             }
         },
@@ -1036,15 +1045,15 @@
         }
     },
     "computer": {
-        "description": "Agents can see and operate the apps on a computer. They only reach an app after you allow it.",
+        "description": "Agents see and operate only the apps you allow.",
         "enable": "Allow computer use on {{machine}}",
         "allow": "Allow computer use",
-        "failed": "Computer Use could not load",
+        "failed": "Could not load Computer Use",
         "machine": {
             "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open.",
             "checking": "Checking…",
-            "unsupported": "Computer Use is not available for this machine's system yet.",
-            "unavailable": "This machine has no Ruimte Computer Use. It comes with the Ruimte desktop app.",
+            "unsupported": "Not available on this machine's system yet.",
+            "unavailable": "Not on this machine. It comes with the Ruimte desktop app.",
             "off": "Off. Agents on this machine cannot see or operate its apps.",
             "starting": "Starting Ruimte Computer Use…",
             "grants": "Waiting for two permissions.",
@@ -1058,24 +1067,24 @@
             },
             "screenRecording": {
                 "label": "Screen Recording",
-                "description": "Lets agents see a picture of the window they work in."
+                "description": "Lets agents see the window they work in."
             }
         },
         "permissions": "Permissions",
         "state": {
             "granted": "Allowed",
             "missing": "Not allowed",
-            "unknown": "Checking"
+            "unknown": "Checking…"
         },
         "open": "Open System Settings",
-        "restartNote": "Screen Recording takes effect once Ruimte Computer Use starts again. Ruimte restarts it when you come back to this window.",
+        "restartNote": "Screen Recording applies after Ruimte Computer Use restarts, which happens when you return to this window.",
         "checkAgain": "Check again",
         "remote": "Allow these on {{machine}} itself, in System Settings > Privacy & Security.",
         "apps": {
             "always": "Allowed apps",
-            "alwaysEmpty": "No apps are allowed for always.",
+            "alwaysEmpty": "No apps allowed.",
             "terminals": "Treated as terminals",
-            "terminalsEmpty": "No apps have been seen running a shell.",
+            "terminalsEmpty": "No apps seen running a shell.",
             "thisTime": "This time",
             "allowed": "Allowed {{date}}",
             "seen": "Seen {{date}}",
@@ -1104,66 +1113,118 @@
         "notAnswering": "Not answering. Change this once the machine is back.",
         "toast": {
             "saveFailed": "{{machine}} could not save the change",
-            "unchanged": "The setting is unchanged."
+            "unchanged": "No change."
         },
         "direct": {
             "label": "Direct",
-            "description": "Connect over WebRTC instead of the socket (experimental).",
+            "description": "Connect to the machine directly (experimental).",
             "toggle": "Connect directly to {{machine}} (experimental)"
         },
         "broker": {
-            "label": "Broker",
+            "label": "Connection service",
             "modes": {
                 "default": "Default",
                 "custom": "Custom",
                 "off": "Off"
             },
-            "description": "How a signed-in client finds the machine without its address. {{where}}{{fixed}}",
-            "on": "On {{host}}.",
-            "none": "No broker.",
-            "fixed": " Set when the machine started, so this choice waits until it runs without that.",
-            "selectLabel": "Broker for {{machine}}",
-            "urlLabel": "Broker URL for {{machine}}"
+            "description": "How your signed-in devices find this machine when they are not on its network.",
+            "none": "Off, so only devices on its network reach it.",
+            "fixed": "The machine was started with its own choice here, so yours applies once it starts without it.",
+            "selectLabel": "Connection service for {{machine}}",
+            "urlLabel": "Address of the connection service for {{machine}}"
         },
         "lanDoor": {
             "label": "Local network",
-            "search": "Lets a client on the same network connect to the machine without the broker.",
-            "open": "A client on the same network connects here without the broker. Open on {{addresses}}.",
-            "noAddress": "Open on port {{port}}, but the machine has no address on a local network right now.",
-            "notListening": "Not open right now: the port is taken, or the machine started without it.",
-            "closed": "Closed. Every client reaches this machine through the broker.",
-            "fixed": "Set by a flag when the machine started, so this switch waits until it runs without that",
-            "fixedNote": "Set by a flag when the machine started, so this switch waits until it runs without that.",
-            "toggle": "Let a client on the local network reach {{machine}} without the broker"
+            "search": "Lets a device on the same network connect to the machine directly.",
+            "open": "A device on the same network connects here directly.",
+            "noAddress": "Open, but the machine has no address on a local network.",
+            "notListening": "Not open: the port is taken, or the machine started without it.",
+            "closed": "Closed. Every device reaches this machine through your account.",
+            "fixed": "The machine was started with this set, so the switch applies once it starts without it",
+            "fixedNote": "The machine was started with this set, so the switch applies once it starts without it.",
+            "toggle": "Let a device on the local network reach {{machine}} directly"
+        },
+        "reach": {
+            "label": "Reachable from other devices",
+            "search": "Checks whether your other devices can reach this machine.",
+            "checking": "Checking reachability…",
+            "checkAgain": "Check again",
+            "checkAgainLabel": "Check again whether other devices reach {{machine}}",
+            "failed": "The check did not finish: {{message}}",
+            "checkedAt": "Checked {{when}}.",
+            "causes": {
+                "ok": { "problem": "Your other devices can reach this machine." },
+                "brokerOff": {
+                    "problem": "The connection service is off, so devices outside this network cannot reach the machine.",
+                    "fix": "Turn the connection service on above."
+                },
+                "brokerUnreachable": {
+                    "problem": "The machine cannot reach the connection service, so devices outside this network cannot find it.",
+                    "fix": "Check the internet connection of the machine, and whether a firewall or proxy blocks {{broker}}."
+                },
+                "noRelay": {
+                    "problem": "The connection service offers no relay, so devices on some networks cannot connect.",
+                    "fix": "Use a connection service with a relay, such as the default one."
+                },
+                "turnUnreachable": {
+                    "problem": "The relay does not answer, so devices on some networks cannot connect.",
+                    "fix": "Let the machine reach the relay through its firewall, on UDP 3478 and TCP 3478 or 5349."
+                },
+                "turnRefused": {
+                    "problem": "The relay refuses the machine, so devices on some networks cannot connect.",
+                    "fix": "If you run the connection service yourself, give it the secret its relay expects. On the default one, try again later."
+                },
+                "udpBlocked": {
+                    "problem": "This network blocks the direct route, so every connection goes through the relay and is slower.",
+                    "fix": "Allow outgoing UDP on this network, at least to port 3478."
+                },
+                "vpnRelayed": {
+                    "problem": "{{tunnel}} blocks the direct route, so every connection goes through the relay and is slower.",
+                    "fix": "Let Ruimte bypass the VPN, turn off the exit node, or allow UDP through it."
+                },
+                "vpnBlocked": {
+                    "problem": "{{tunnel}} blocks the routes other devices need, so they cannot connect.",
+                    "fix": "Let Ruimte bypass the VPN, turn off the exit node, or allow UDP through it."
+                },
+                "blocked": {
+                    "problem": "This network blocks the routes other devices need, so they cannot connect.",
+                    "fix": "Check the firewall or proxy of this network. It has to allow UDP, or TCP to the relay on port 3478 or 5349."
+                },
+                "lanDoorDown": {
+                    "problem": "Port {{port}} is taken, so devices on this network connect through your account.",
+                    "fix": "Stop what uses the port, or start the machine with another --lan-port."
+                },
+                "unknown": { "problem": "The machine reports a problem this version of Ruimte does not know: {{cause}}." }
+            }
         },
         "worktreeFolder": {
             "label": "Worktree folder",
-            "description": "New worktrees are made in the data folder of Ruimte. Choose another folder to make them there.",
-            "descriptionTyped": "New worktrees are made in the data folder of Ruimte. Type another path to make them there.",
-            "descriptionChosen": "New worktrees are made here. Worktrees you already have stay where they are.",
-            "placeholder": "Data folder of Ruimte",
+            "description": "New worktrees go in Ruimte's data folder, or a folder you choose.",
+            "descriptionTyped": "New worktrees go in Ruimte's data folder, or a path you type.",
+            "descriptionChosen": "New worktrees go here. Existing ones stay put.",
+            "placeholder": "Ruimte's data folder",
             "choose": "Choose…",
             "reset": "Reset",
-            "refusedRoot": "That folder is not allowed: use an absolute path that is not the root of the disk, your home folder or the data folder of Ruimte.",
+            "refusedRoot": "Use an absolute path other than the disk root, your home folder or Ruimte's data folder.",
             "notAFolder": "That is not a folder, or it cannot be made or written to."
         },
         "streaming": {
             "label": "Browser and device streaming",
-            "description": "Allow this machine to stream browser pages and device screens to clients without a native view of their own.",
+            "description": "Lets this machine show browser pages and device screens in apps that cannot show them themselves.",
             "toggle": "Allow browser and device streaming from {{machine}}"
         },
         "usageStats": {
             "label": "Usage statistics",
-            "description": "Sends daily totals of the features this machine used, once a day, without names, paths or anything that identifies you. <privacy>What is sent</privacy>",
+            "description": "Sends daily feature-use totals, without names, paths or anything that identifies you. <privacy>What is sent</privacy>",
             "search": "Anonymous daily totals of feature use, sent once a day",
             "toggle": "Send usage statistics from {{machine}}"
         },
         "access": {
             "title": "Apps with access",
             "description": "Browsers and apps that came in through an account.",
-            "listFailed": "Could not list the clients with access",
+            "listFailed": "Could not list the devices with access",
             "empty": "Nothing else has access to this machine.",
-            "thisClient": "this client",
+            "thisClient": "this device",
             "revoke": "Revoke access",
             "revokeOne": "Revoke {{label}}",
             "session": "{{origin}} {{date}}, last seen {{ago}}",
@@ -1178,7 +1239,7 @@
             },
             "confirm": {
                 "title": "Revoke {{label}}?",
-                "current": "This is the client you are using. It loses access to this machine and forgets it here.",
+                "current": "This is the device you are using. It loses access to this machine and forgets it here.",
                 "statement": "It loses access the next time it connects, and signing in through an account will not let it back in.",
                 "link": "It loses access the next time it connects.",
                 "machine": "This machine can no longer give tasks here, and linking it again will not let it back in. Tasks it already started keep running here, but their results never reach it. To stop them, unlink its projects under Linked projects.",
@@ -1211,17 +1272,17 @@
     },
     "machineDialog": {
         "availableWhenAnswering": "Available once the machine answers",
-        "openFailed": "{{machine}} could not be opened",
+        "openFailed": "Could not open {{machine}}",
         "addFailed": "{{machine}} was not added to your account",
         "notOpened": {
-            "title": "Not opened on this client",
+            "title": "Not opened on this device",
             "label": "Open it to change its name, icon and connection",
-            "canOpen": "It connects through the broker, on the strength of your account.",
-            "noBroker": "This machine is not connected to a broker yet, so it can only be reached on its own network."
+            "canOpen": "It connects through your account.",
+            "noBroker": "This machine is not connected through your account yet, so it can only be reached on its own network."
         },
         "identity": {
             "title": "Name and icon",
-            "description": "Every client that reaches this machine sees these."
+            "description": "Every device that reaches this machine sees these."
         },
         "connection": "Connection",
         "worktrees": "Worktrees",
@@ -1231,50 +1292,50 @@
             "title": "Account",
             "registrationFailure": "Could not update this machine on your account: {{reason}}",
             "addAgain": {
-                "label": "Add to your account again",
-                "description": "Someone took this machine off your account, so it does not join on its own.",
+                "label": "Add to account again",
+                "description": "Removed from your account; it will not rejoin on its own.",
                 "action": "Add"
             },
-            "onYours": "This machine is on your account",
-            "onAnother": "This machine is on another account",
-            "onNone": "This machine is on no account yet",
+            "onYours": "On your account",
+            "onAnother": "On another account",
+            "onNone": "Not on an account yet",
             "leave": {
-                "description": "A machine is on one account. Leaving it cuts off every client that came in through an account.",
+                "description": "A machine is on one account. Leaving it cuts off every device that came in through an account.",
                 "action": "Leave"
             }
         },
         "confirmLeave": {
             "title": "Take {{machine}} off its account?",
-            "description": "Every client that came in through an account loses access now, and none gets in until the machine joins an account again.",
+            "description": "Every device that came in through an account loses access now, and none gets in until the machine joins an account again.",
             "action": "Leave account"
         },
         "left": {
             "title": "{{machine}} is on no account now",
-            "revoked_one": "{{count}} client lost access",
-            "revoked_other": "{{count}} clients lost access"
+            "revoked_one": "{{count}} device lost access",
+            "revoked_other": "{{count}} devices lost access"
         },
         "remove": {
             "title": "Remove",
             "forget": {
-                "label": "Forget on this client",
-                "description": "Drops this machine's row here. The machine, your account and other clients keep theirs.",
+                "label": "Forget on this device",
+                "description": "Removes it from this list only.",
                 "action": "Forget"
             },
             "account": {
                 "label": "Remove from account",
-                "local": "Every other client signed in to your account drops this machine. It stays here, since this app runs on it.",
-                "description": "Every client signed in to your account drops this machine. The app on that machine puts it back.",
+                "local": "Every other device signed in to your account drops this machine. It stays here, since this app runs on it.",
+                "description": "Every device signed in to your account drops this machine. The app on that machine puts it back.",
                 "action": "Remove"
             }
         },
         "confirmForget": {
-            "title": "Forget {{machine}} on this client?",
+            "title": "Forget {{machine}} on this device?",
             "description": "Its sessions and projects stay on the machine. To get it back here, open it from your account.",
             "action": "Forget"
         },
         "confirmRemove": {
             "title": "Remove {{machine}} from your account?",
-            "description": "Every client signed in to your account drops it the next time it refreshes. Clients that are signed out keep it. The machine keeps the clients it let in.",
+            "description": "Every device signed in to your account drops it the next time it refreshes. Devices that are signed out keep it. The machine keeps the devices it let in.",
             "action": "Remove"
         },
         "subtitle": "{{reach}} · {{version}}"
@@ -1285,7 +1346,7 @@
             "label": "No machines yet",
             "description": "Add one to open its projects, terminals and agents from here."
         },
-        "notOpened": "Not opened on this client",
+        "notOpened": "Not opened on this device",
         "mismatch": "A different machine answers for this one. Forget it here and open it from your account again.",
         "withRoute": "{{reach}} · {{route}}",
         "dot": {
@@ -1293,24 +1354,24 @@
         },
         "account": {
             "title": "Sign-in",
-            "description": "Machines on your account open from any client you sign in on.",
+            "description": "Machines on your account open from any device you sign in on.",
             "unavailable": {
                 "label": "Signing in works in the desktop app and at station.ruimte.app.",
                 "description": "The account sends a sign-in back to those places only."
             },
             "signedOut": {
                 "label": "Not signed in",
-                "description": "Once you sign in, the machine this app runs on joins your account on its own, and the account's machines show up here.",
-                "descriptionNoMachine": "Once you sign in, the machines on your account show up here."
+                "description": "Sign in to add this machine to your account and see your machines here.",
+                "descriptionNoMachine": "Sign in to see your machines here."
             },
             "signingIn": {
-                "label": "Signing in",
-                "description": "Finish signing in in the browser, then come back here."
+                "label": "Signing in…",
+                "description": "Finish in the browser, then come back."
             },
             "signOut": "Sign out",
-            "onlyIdentity": "{{detail}}. The only way to sign in to this account, so it stays until you add another.",
-            "finishWith": "Finish signing in with {{provider}}, then come back here.",
-            "notAdded": "Not added. Add it to open this account with {{provider}} as well.",
+            "onlyIdentity": "{{detail}}. Your only sign-in, so it stays until you add another.",
+            "finishWith": "Finish with {{provider}}, then come back.",
+            "notAdded": "Not added. Add it to also sign in with {{provider}}.",
             "row": "Ruimte account",
             "delete": {
                 "label": "Delete account",
@@ -1327,19 +1388,19 @@
                 "field": "Type {{name}} to confirm",
                 "fieldWord": "This account has no name. Type {{word}} to confirm",
                 "confirm": "Delete account",
-                "busy": "Deleting"
+                "busy": "Deleting…"
             }
         },
         "add": {
-            "title": "Add a machine",
-            "description": "A machine joins through your account. On that machine, run `npx ruimte login`, or open the Ruimte app there and sign in. It shows up here once it is on your account.",
+            "title": "Add machine",
+            "description": "On that machine, run `npx ruimte login`, or open the Ruimte app and sign in. It shows up here once it is on your account.",
             "codeHint": "For a machine without the app that ran `ruimte login`",
             "withCode": "Link a machine with a code",
             "enterCode": "Enter code",
             "short": "Add"
         },
         "listLabel": "Account and machines",
-        "failed": "The account settings failed to render",
+        "failed": "Could not show the account settings",
         "thisComputer": {
             "row": "This computer",
             "none": "Only connects to your machines",
@@ -1369,7 +1430,7 @@
         }
     },
     "scope": {
-        "client": "This client",
+        "client": "This device",
         "computer": "This computer",
         "machine": "Machine"
     },
@@ -1378,13 +1439,45 @@
             "label": "Enable Apple Foundation Models",
             "description": "Use the model on this Mac for chats and tools. Requires Apple silicon, macOS 26.4 or later, and Apple Intelligence.",
             "toggleDescription": "Turning this off stops active Apple chats and pending tool approvals on this machine.",
-            "tools": "Model inference stays on this Mac. Web searches, page requests and MCP tools can send data to their configured services after approval.",
+            "tools": "The model runs on this Mac. Web searches, page requests and MCP tools you approve can send data to their own services.",
             "status": "Availability",
-            "disabled": "Turned off on this machine.",
-            "ready": "The local model is ready.",
-            "unavailable": "The local model is not available.",
+            "disabled": "Off on this machine.",
+            "ready": "Ready.",
+            "unavailable": "Not available.",
             "saveFailed": "Could not change Apple Foundation Models",
-            "requiresMac": "Requires a Mac with Apple silicon."
+            "requiresMac": "Requires a Mac with Apple silicon.",
+            "off": "Off"
+        },
+        "nanogpt": {
+            "description": "Chat with the models your NanoGPT subscription includes. Requests go only to the subscription API, never to pay as you go.",
+            "footer": "The key stays on this machine and is never shown again. Every tool a model asks for needs your approval.",
+            "key": "API key",
+            "keyDescription": "A subscription API key from nano-gpt.com. Saving checks it and fetches the included models.",
+            "saved": "Saved",
+            "status": "Subscription",
+            "save": "Save",
+            "refresh": "Refresh models",
+            "disconnect": "Disconnect",
+            "loading": "Checking with NanoGPT…",
+            "unknown": "The machine has not answered yet.",
+            "ready_one": "Connected, {{count}} model included.",
+            "ready_other": "Connected, {{count}} models included.",
+            "disconnected": "No key saved on this machine.",
+            "unavailable": "This machine does not offer NanoGPT yet. Update Ruimte on it.",
+            "failed": "Could not change NanoGPT on this machine.",
+            "noKey": "No key",
+            "continue": {
+                "label": "Continue automatically",
+                "description": "A chat that uses up a run's tool rounds starts the next run itself. Off, it waits for you."
+            },
+            "rounds": {
+                "label": "Tool rounds per run",
+                "description": "Tool rounds before a run stops, 5 to 200."
+            },
+            "runs": {
+                "label": "Runs before it stops",
+                "description": "How many runs a chat takes by itself, from 1 to 20. Each run spends your allowance, so this stops a chat that keeps going."
+            }
         },
         "acpServer": {
             "title": "{{name}} chat server",
@@ -1397,12 +1490,54 @@
                 "missing": "Not installed.",
                 "installing": "Installing…",
                 "installed": "Version {{version}} is installed.",
-                "failed": "The install failed.",
+                "failed": "Could not install.",
                 "unsupported": "The chat server is not available for this machine."
             },
             "searchLabel": "Antigravity chat server",
             "step": "Install the chat server"
         },
-        "keyNote": "Ruimte never reads this key."
+        "keyNote": "Ruimte never reads this key.",
+        "registry": {
+            "title": "Add provider",
+            "subtitle": "Agents you can install on this machine",
+            "refresh": "Refresh the list",
+            "search": "Search agents",
+            "listTitle": "Available agents",
+            "listDescription": "Install one to chat with it on this machine.",
+            "install": "Install",
+            "update": "Update to {{version}}",
+            "open": "Open",
+            "version": "Version {{version}}",
+            "checksum": "verified",
+            "cached": "Could not refresh the list ({{error}}). This one is from {{date}}.",
+            "unavailable": "Could not load the agents",
+            "tryAgain": "Try again",
+            "empty": "No agent is available for this machine.",
+            "noMatch": "No agent matches \"{{search}}\".",
+            "localOnly": "Install agents in the Ruimte app on that machine."
+        },
+        "version": {
+            "title": "Version",
+            "method": {
+                "homebrew": "Installed with Homebrew ({{package}})",
+                "homebrew-cask": "Installed with Homebrew ({{package}})",
+                "npm": "Installed with npm ({{package}})",
+                "pnpm": "Installed with pnpm ({{package}})",
+                "bun": "Installed with Bun ({{package}})",
+                "ruimte": "Installed by Ruimte",
+                "unknown": "Installed some other way"
+            },
+            "current": "Version {{version}}.",
+            "noVersion": "No version found.",
+            "available": "Version {{version}} is available.",
+            "upToDate": "Up to date.",
+            "ownInstaller": "Its own installer keeps it up to date.",
+            "update": "Update to {{version}}",
+            "check": "Check for updates",
+            "localOnly": "Update it in the Ruimte app on that machine.",
+            "remove": "Remove from this machine",
+            "removeDescription": "{{name}}'s chats stay and work again once it is reinstalled.",
+            "removeButton": "Remove"
+        }
     }
 }

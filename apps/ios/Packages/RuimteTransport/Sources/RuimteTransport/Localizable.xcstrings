@@ -1,32 +1,32 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "A broker signal names the machine but is not signed by it." : {
+    "A connection request claims to come from the machine but cannot be verified." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een broker-signaal noemt de machine, maar is niet door hem ondertekend."
+            "value" : "Een verbindingsverzoek zegt van de machine te komen, maar is niet te controleren."
           }
         }
       }
     },
-    "A signal on the local network names the machine but is not signed by it." : {
+    "A connection on the local network claims to come from the machine but cannot be verified." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een signaal op het lokale netwerk noemt de machine, maar is niet door hem ondertekend."
+            "value" : "Een verbinding op het lokale netwerk zegt van de machine te komen, maar is niet te controleren."
           }
         }
       }
     },
-    "No network path to the machine: ICE failed." : {
+    "No network path to the machine." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Geen netwerkpad naar de machine: ICE is mislukt."
+            "value" : "Geen netwerkpad naar de machine."
           }
         }
       }
@@ -41,12 +41,12 @@
         }
       }
     },
-    "The broker is limiting this client. Try again later." : {
+    "The broker is limiting this device. Try again later." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De broker beperkt deze client. Probeer het later opnieuw."
+            "value" : "De broker beperkt dit apparaat. Probeer het later opnieuw."
           }
         }
       }
@@ -81,12 +81,12 @@
         }
       }
     },
-    "The channel opened before its answer was applied." : {
+    "Could not set up the direct connection. Try again." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het kanaal ging open voordat het antwoord ervan was toegepast."
+            "value" : "Kon de directe verbinding niet opzetten. Probeer het opnieuw."
           }
         }
       }
@@ -271,12 +271,12 @@
         }
       }
     },
-    "The machine sent an empty piece before the end of the resource." : {
+    "The file stopped loading before the end. Try again." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De machine stuurde een leeg stuk vóór het einde van de resource."
+            "value" : "Het bestand stopte met laden voor het einde. Probeer het opnieuw."
           }
         }
       }
@@ -351,12 +351,12 @@
         }
       }
     },
-    "The resource could not be loaded." : {
+    "Could not load the file." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De resource kon niet worden geladen."
+            "value" : "Kon het bestand niet laden."
           }
         }
       }

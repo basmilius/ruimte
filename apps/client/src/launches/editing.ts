@@ -251,7 +251,7 @@ function readsAsRunConfiguration(suggestion: LaunchSuggestion): boolean {
     return suggestion.source === 'run-xml' || suggestion.source === 'vscode-launch';
 }
 
-/* The line under "Found in this project": how many of each, and where. */
+/* The line under "Found in project": how many of each, and where. */
 export function foundText(suggestions: readonly LaunchSuggestion[]): string | null {
     const usable = suggestions.filter((suggestion) => suggestion.unsupported === undefined);
     const runFiles = usable.filter(readsAsRunConfiguration);

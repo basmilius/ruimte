@@ -14,6 +14,7 @@ import { isLooseView, type LooseCellView } from '@/shell/cell-view';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { LooseGlyph } from '@/shell/panels/LooseGlyph';
 import { basenameOf } from '@/shell/panels/files-tree';
+import { splitSentence } from '@/shell/change-size';
 import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import { TabMenuItems } from '@/shell/TabMenuItems';
 import { useCellView } from '@/shell/use-cell-view';
@@ -107,15 +108,16 @@ function FileTabItem({ tab, tabKey, label }: { tab: FileTab; tabKey: string; lab
     const { t } = useTranslation('panels');
     const endpointId = useEndpointId();
     const unsaved = useTextDrafts((s) => tab.view === undefined && isUnsavedDraft(s.rows[endpointKey(endpointId, tab.path)]));
+    const split = useGit((s) => s.counts[tabKey]?.split);
     const commit = tab.view?.commit;
-    const hint =
+    const whole =
         commit !== undefined
             ? t('git.tab.commitHint', { hash: commit.slice(0, 7) })
             : isCheckoutDiff(tab.path, tab.view)
               ? t('git.tab.checkoutHint', { name: basenameOf(tab.path), base: tab.view?.base ?? t('worktree.baseBranch') })
-              : tab.view
-                ? basenameOf(tab.path)
-                : tab.path;
+              : null;
+    const sentence = whole === null || split === undefined ? null : splitSentence(split);
+    const hint = whole !== null ? (sentence === null ? whole : `${whole} (${sentence})`) : tab.view ? basenameOf(tab.path) : tab.path;
     return (
         <TabShell
             id={tabKey}

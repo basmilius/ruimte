@@ -21,7 +21,7 @@ describe('usage of Grok', () => {
         const grokHome = join(root, 'grok');
         const session = join(grokHome, 'sessions', encodeURIComponent('/work/site'), 'session-1');
         await mkdir(session, { recursive: true });
-        const endedAt = new Date().toISOString();
+        const endedAt = '2026-10-01T11:00:00.000Z';
         await writeFile(
             join(session, 'usage.json'),
             JSON.stringify({

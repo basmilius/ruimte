@@ -3,6 +3,7 @@ import type { Dispatcher } from '../dispatcher.ts';
 import type { IdentityLanDoor } from '../endpoint-id.ts';
 import { reachabilityOf } from '../auth/access.ts';
 import { registerDirectHandlers } from '../handlers/direct.ts';
+import { registerReachHandlers } from '../handlers/reach.ts';
 import { BrokerRelay } from '../pulsar/broker-relay.ts';
 import { BrokerSwitch } from '../pulsar/broker-switch.ts';
 import { authenticateChannel } from '../pulsar/channel-auth.ts';
@@ -10,6 +11,8 @@ import { AUTHENTICATED_FRAME_CHARS } from '../pulsar/data-channel.ts';
 import { lanAddresses } from '../pulsar/lan-addresses.ts';
 import { LanDoor } from '../pulsar/lan-door.ts';
 import { DirectPeers } from '../pulsar/peers.ts';
+import { readTunnel } from '../pulsar/default-route.ts';
+import { ReachChecker } from '../pulsar/reach-check.ts';
 import { SignalGate } from '../pulsar/signal-gate.ts';
 import { StatementGate, TEST_STATEMENT_KEY_VARIABLE, trustedStatementKeys } from '../pulsar/statement.ts';
 import { guardWeriftTurn } from '../pulsar/turn-guard.ts';
@@ -26,6 +29,8 @@ export interface NetworkBundle {
     /* Open unless a person closed it or `--no-lan` keeps it closed. */
     lanDoorWanted(): boolean;
     describeLanDoor: IdentityLanDoor['describe'];
+    /* Whether other devices reach this machine, for `endpoint.reach` and `ruimte status`. */
+    reach: ReachChecker;
 }
 
 export function wireNetwork(
@@ -90,7 +95,8 @@ export function wireNetwork(
                 url,
                 publicKey: identity.publicKey,
                 sign: (message) => identity.sign(message),
-                gate
+                gate,
+                onSettled: () => reach.brokerSettled()
             })
     });
     identity.attachBroker(brokerSwitch);
@@ -116,5 +122,18 @@ export function wireNetwork(
         },
         describe: describeLanDoor
     });
-    return { peers, brokerSwitch, lanDoor, lanDoorWanted, describeLanDoor };
+    const reach = new ReachChecker({
+        broker: () => ({ url: brokerSwitch.describe().brokerUrl, connected: brokerSwitch.isReady }),
+        iceServers: () => [...config.stun.map((urls) => ({ urls })), ...brokerSwitch.grantedIceServers()],
+        granted: () => brokerSwitch.grantedIceServers().length > 0,
+        lanDoor: () => ({
+            wanted: lanDoorWanted(),
+            listening: lanDoor.port !== null,
+            port: lanDoor.port ?? (config.lanPort === 0 ? null : config.lanPort),
+            addresses: lanAddresses().length
+        }),
+        tunnel: () => readTunnel()
+    });
+    registerReachHandlers(dispatcher, reach);
+    return { peers, brokerSwitch, lanDoor, lanDoorWanted, describeLanDoor, reach };
 }

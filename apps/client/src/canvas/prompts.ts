@@ -1,7 +1,15 @@
-import type { AgentKind, ComputerApproval, ProjectProposal, SecretRequest } from '@ruimte/contracts';
+import {
+    CHAT_REQUEST_LIMITS,
+    type AgentKind,
+    type ChatApprovalItem,
+    type ChatQuestionItem,
+    type ComputerApproval,
+    type ProjectProposal,
+    type SecretRequest
+} from '@ruimte/contracts';
 import { orderPrompts, isBlockingSubject, promptCreatedAt, promptIdOf, type PromptSubject } from '@adecore/agents-react/prompts';
 import type { CanvasNode } from '@/state/canvas';
-import { waitingRequestsOf, type ChatsById } from '@adecore/agents-react/state';
+import { waitingRequestsOf, type ChatsById, type ChatState } from '@adecore/agents-react/state';
 import { endpointKey, endpointOfNode } from '@/state/keys';
 import { computerPrompt, proposalPrompt, ruimtePayloadOf, secretPrompt, waitingPrompt } from '@/prompts/ruimte-prompts';
 import { nodeStatus, type SessionsByKey } from '@/state/sessions';
@@ -68,7 +76,7 @@ export function canvasPrompts({ nodes, endpointId, sessions, chats, computer, se
                     add(node, { kind: 'host', nodeId: node.id, prompt: proposalPrompt(machine, node.id, proposal) }, provider, 'chat');
                 }
             }
-            for (const item of waitingRequestsOf(chats[key])) {
+            for (const item of standingRequestsOf(chats[key])) {
                 add(node, { kind: 'chat', nodeId: node.id, item }, provider, 'chat');
             }
             continue;
@@ -98,6 +106,28 @@ export function canvasPrompts({ nodes, endpointId, sessions, chats, computer, se
         ),
         waitingSince: since
     };
+}
+
+/*
+ * The requests a chat's thread holds as waiting, as far as its status agrees. The status reaches every
+ * client on each change; the thread only one attached to it, so a chat whose node went out of view (a
+ * collapsed group, a closed cell) keeps whatever waited when it detached, answered or not.
+ */
+export function standingRequestsOf(chat: ChatState | undefined): Array<ChatApprovalItem | ChatQuestionItem> {
+    const requests = waitingRequestsOf(chat);
+    if (chat === undefined || requests.length === 0) {
+        return requests;
+    }
+    if (chat.info.status !== 'needs-you') {
+        return [];
+    }
+    const listed = chat.info.requests;
+    // A machine that lists none is older, and a full list may leave out the newest.
+    if (listed === undefined || listed.length >= CHAT_REQUEST_LIMITS.perChat) {
+        return requests;
+    }
+    const open = new Set(listed.map((request) => request.requestId));
+    return requests.filter((request) => open.has(request.requestId));
 }
 
 /*

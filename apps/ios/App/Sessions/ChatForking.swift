@@ -68,10 +68,10 @@ enum ChatForking {
             return String(localized: "This turn is not in the conversation")
         }
         guard forkable(provider: info.provider) else {
-            return String(localized: "This CLI has no conversation that can be forked")
+            return String(localized: "This agent cannot fork its conversation")
         }
         guard info.agentSessionId != nil else {
-            return String(localized: "The CLI never started a conversation here")
+            return String(localized: "Nothing to fork yet. Send a message first.")
         }
         if turn.state == .running || info.activeTurnId != nil {
             return String(localized: "Wait for the turn to end")
@@ -81,7 +81,7 @@ enum ChatForking {
 
     /// Why a fork cannot write a summary for its original right now, or nil when it can.
     static func summaryRefusal(info: ChatInfo?, originalPresent: Bool) -> String? {
-        if !originalPresent { return String(localized: "The original is no longer in this project") }
+        if !originalPresent { return String(localized: "Original no longer in this project") }
         if info?.activeTurnId != nil { return String(localized: "Wait for the turn to end") }
         return nil
     }
@@ -139,7 +139,7 @@ enum ChatForking {
     static func branchRefusal(_ branch: String, taken: [String]) -> String? {
         let name = branch.trimmingCharacters(in: .whitespaces)
         if name.isEmpty { return String(localized: "Name the branch") }
-        if taken.contains(name) { return String(localized: "A branch with this name exists already") }
+        if taken.contains(name) { return String(localized: "Name already taken") }
         return nil
     }
 
@@ -181,7 +181,7 @@ enum ChatForking {
     }
 
     static func forksLabel(_ count: Int) -> String {
-        String(localized: "\(count) forks go on after this turn")
+        String(localized: "\(count) forks after this turn")
     }
 
     /// The places the message index lists, in thread order.

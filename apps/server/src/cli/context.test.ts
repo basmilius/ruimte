@@ -25,6 +25,10 @@ const daemon = {
         if (url.pathname === '/context') {
             return Response.json({ sources });
         }
+        if (url.pathname === '/context/c2') {
+            const text = '> Usage: claude opus\n\nthe thread';
+            return url.searchParams.has('json') ? Response.json({ text, usage: { contextTokens: 10 } }) : new Response(text);
+        }
         if (url.pathname === '/context/n1') {
             const tail = url.searchParams.get('tail');
             if (tail === null) {
@@ -146,12 +150,20 @@ describe('runContext', () => {
         expect(seen).toEqual([]);
     });
 
+    test('--json asks the daemon for one object and prints it, and a daemon that answers text alone gives that as its text', async () => {
+        expect(await runContext(['read', 'c2', '--json'], env)).toBe(0);
+        expect(JSON.parse(stdout)).toEqual({ text: '> Usage: claude opus\n\nthe thread', usage: { contextTokens: 10 } });
+        stdout = '';
+        expect(await runContext(['read', 'n1', '--json'], env)).toBe(0);
+        expect(JSON.parse(stdout)).toEqual({ text: 'the plan' });
+    });
+
     test('read without an id is a refusal that lists what there is to read', async () => {
         expect(await runContext(['read'], env)).toBe(3);
         expect(stderr).toBe(
             [
                 'refused\tbad-arguments\tread takes the id of a linked source',
-                'usage\tread\t<id> [--tail N] [--subagent T] [--view V]',
+                'usage\tread\t<id> [--tail N] [--subagent T] [--view V] [--json]',
                 'detail\truimte-context help read',
                 'n1\ttext\tPlan'
             ].join('\n') + '\n'
@@ -296,6 +308,28 @@ describe('runContext', () => {
         expect(sent[0]).toEqual(['new', 'note', '--text=Line one\nLine two\\\\n still one line\n']);
         expect(sent[1]).toEqual(sent[0]);
         expect(unescapeText((sent[0] as string[])[2]!.slice('--text='.length))).toBe(body);
+    });
+
+    test('node new --json - takes the array of nodes from stdin as it is, since JSON has escapes of its own', async () => {
+        const nodes = '[{"kind":"note","text":"a\\nb"}]\n';
+        expect(await runContext(['node', 'new', '--json', '-', '--view', 'board'], env, async () => nodes)).toBe(0);
+        expect(await runContext(['node', 'new', '--json=-'], env, async () => nodes)).toBe(0);
+        expect(seen.map((call) => call.argv)).toEqual([
+            ['new', `--json=${nodes}`, '--view', 'board'],
+            ['new', `--json=${nodes}`]
+        ]);
+    });
+
+    test('node edit and node rename take --json - from stdin the same way, and node edit keeps --text - as it was', async () => {
+        const edits = '[{"id":"note-1","text":"a\\nb"}]\n';
+        expect(await runContext(['node', 'edit', '--json', '-'], env, async () => edits)).toBe(0);
+        expect(await runContext(['node', 'rename', '--json=-', '--view', 'board'], env, async () => edits)).toBe(0);
+        expect(await runContext(['node', 'edit', 'note-1', '--text', '-'], env, async () => 'a\\b')).toBe(0);
+        expect(seen.map((call) => call.argv)).toEqual([
+            ['edit', `--json=${edits}`],
+            ['rename', `--json=${edits}`, '--view', 'board'],
+            ['edit', 'note-1', '--text=a\\\\b']
+        ]);
     });
 
     test('--result - takes the result of a task from stdin the same way', async () => {

@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import type { RemoteStatusEvent, Task } from '@ruimte/contracts';
 import { useCanvas } from '@/state/canvas';
 import { isUnstarted, isUntaken, useRemoteStatus } from '@/state/remote-status';
@@ -47,19 +46,13 @@ export function useWaitingMachines(parentId: string): WaitedFor[] {
     const workspaceId = useWorkspace()?.connection.endpointId ?? '';
     const tasks = useTasks((state) => state.byEndpoint[workspaceId]);
     const status = useRemoteStatus((state) => state.byEndpoint[workspaceId]);
-    const childIds = useMemo(
-        () =>
-            Object.values(tasks ?? {})
-                .filter((task) => task.parentId === parentId && task.status === 'open')
-                .map((task) => task.childId),
-        [tasks, parentId]
-    );
+    const childIds = Object.values(tasks ?? {})
+        .filter((task) => task.parentId === parentId && task.status === 'open')
+        .map((task) => task.childId);
     // One string, so a node moving on the canvas does not redraw every parent.
     const machines = useCanvas((state) => childIds.map((childId) => state.nodes[childId]?.machine ?? '').join('\n'));
-    return useMemo(() => {
-        const byChild = new Map(childIds.map((childId, i) => [childId, machines.split('\n')[i] || undefined]));
-        return waitingMachinesOf(tasks, parentId, (childId) => byChild.get(childId), status);
-    }, [tasks, parentId, status, childIds, machines]);
+    const byChild = new Map(childIds.map((childId, i) => [childId, machines.split('\n')[i] || undefined]));
+    return waitingMachinesOf(tasks, parentId, (childId) => byChild.get(childId), status);
 }
 
 /* The task of a node that its machine has not taken yet, or null once it did or when nothing was given to it. */
@@ -67,14 +60,14 @@ export function useUnstartedTask(childId: string, machine: string | undefined): 
     const workspaceId = useWorkspace()?.connection.endpointId ?? '';
     const tasks = useTasks((state) => state.byEndpoint[workspaceId]);
     const unstarted = useRemoteStatus((state) => machine !== undefined && isUnstarted(state.byEndpoint[workspaceId]?.[machine], childId));
-    return useMemo(() => (unstarted ? openTaskOf(tasks, childId) : null), [unstarted, tasks, childId]);
+    return unstarted ? openTaskOf(tasks, childId) : null;
 }
 
 /* The task of a node that its machine has not taken yet, with the link open or not: the node is not shown before the task is there. */
 export function useUntakenTask(childId: string, machine: string | undefined): Task | null {
     const workspaceId = useWorkspace()?.connection.endpointId ?? '';
     const tasks = useTasks((state) => state.byEndpoint[workspaceId]);
-    const open = useMemo(() => openTaskOf(tasks, childId), [tasks, childId]);
+    const open = openTaskOf(tasks, childId);
     const untaken = useRemoteStatus((state) => machine !== undefined && isUntaken(state.byEndpoint[workspaceId]?.[machine], childId, open !== null));
     return untaken ? open : null;
 }

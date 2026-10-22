@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import type { OutboxWorker } from '@adecore/agents/coordination';
 import { errorText } from '../error-text.ts';
 import { runGh } from '../git/github.ts';
+import { prSplits } from '../git/pr-split.ts';
 import { PrWatchStore } from '../github/pr-watch.ts';
 import { AfterSettleStore } from '../launches/after-settle.ts';
 import type { EndChildrenWiring } from '../outbox/end-children.ts';
@@ -71,6 +72,7 @@ export function wireAgentWork({ home, identity, stores, agents, projects, remote
     const prWatches = new PrWatchStore({
         path: join(home, 'pr-watches.json'),
         gh: runGh,
+        splits: prSplits,
         enqueue: (projectId, chatId, work) => outboxLink.enqueue(projectId, chatId, work),
         entries: () => outbox.list(),
         removeEntry: (id) => outbox.remove(id),

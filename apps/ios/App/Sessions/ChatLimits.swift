@@ -19,14 +19,14 @@ enum ChatLimits {
         let resumes = info.resumeAt.map(moment)
         if limit.kind == .overload {
             return ChatLimitView(
-                title: String(localized: "The model was overloaded"),
-                detail: resumes.map { String(localized: "Tries again by itself at \($0).") }
+                title: String(localized: "Model overloaded"),
+                detail: resumes.map { String(localized: "Retries at \($0).") }
                     ?? String(localized: "Send a message to try again."))
         }
         let resets = limit.resetsAt.map(moment)
         return ChatLimitView(
             title: String(localized: "Stopped on a usage limit"),
-            detail: resumes.map { String(localized: "Goes on by itself at \($0), when the limit resets.") }
+            detail: resumes.map { String(localized: "Resumes at \($0).") }
                 ?? resets.map { String(localized: "The limit resets at \($0).") })
     }
 
@@ -234,7 +234,7 @@ struct ChatLimitBanner: View {
             .opacity(model.continuing || !model.connected ? 0.5 : 1)
             .accessibilityLabel("Continue on \(name)")
             .accessibilityHint(
-                "Goes on under \(name), which has the most room left. The interrupted turn is sent again.")
+                "Switches to \(name), which has the most room left, and resends the turn.")
         }
     }
 }

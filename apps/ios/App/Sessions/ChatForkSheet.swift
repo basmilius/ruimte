@@ -93,7 +93,7 @@ struct ChatForkSheet: View {
                     Section { Text(failure).foregroundStyle(.red) }
                 }
             }
-            .navigationTitle("Fork this conversation")
+            .navigationTitle("Fork conversation")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -163,8 +163,8 @@ struct ChatForkSheet: View {
             Section {
                 Text(
                     point?.last == false
-                        ? "This folder is not in a git repository, so the fork works in the same folder. The files stay as they are now; the agent is told the folder is newer than this turn."
-                        : "This folder is not in a git repository, so the fork works in the same folder."
+                        ? "Not a git repository, so the fork works in the same folder. The files stay as they are now. The agent knows they changed after this turn."
+                        : "Not a git repository, so the fork works in the same folder."
                 ).foregroundStyle(MobileStyle.muted)
             }
         } else {
@@ -179,7 +179,7 @@ struct ChatForkSheet: View {
                         Text(branchProblem).font(.footnote).foregroundStyle(.red)
                     }
                     Toggle(
-                        point?.last ?? true ? "Take the uncommitted files along" : "Undo the work after this turn",
+                        point?.last ?? true ? "Take uncommitted files along" : "Undo the work after this turn",
                         isOn: Binding(get: { filesAfterTurn && canRestoreFiles }, set: { filesAfterTurn = $0 })
                     )
                     .disabled(!canRestoreFiles)
@@ -188,18 +188,18 @@ struct ChatForkSheet: View {
                 if !inWorktree {
                     if point?.last == false { Text(sharedFolderNote) }
                 } else if !canRestoreFiles {
-                    Text("The files of this turn are no longer in the repository, so the worktree starts from HEAD.")
+                    Text("The files of this turn are no longer in the repository, so the worktree starts from the latest commit.")
                 } else if filesAfterTurn {
                     Text("The worktree starts from the files as they were after this turn; the original keeps its own.")
                 } else {
-                    Text("The worktree starts from HEAD, without uncommitted work.")
+                    Text("The worktree starts from the latest commit, without uncommitted work.")
                 }
             }
         }
     }
 
     private var sharedFolderNote: String {
-        String(localized: "The files stay as they are now; the agent is told the folder is newer than this turn.")
+        String(localized: "The files stay as they are now. The agent knows they changed after this turn.")
     }
 
     /// The newest pick for a CLI when that model is still offered, else what the machine calls its default.

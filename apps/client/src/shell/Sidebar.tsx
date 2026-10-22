@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ChartNoAxesColumn, Plus, Settings } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -16,9 +16,10 @@ import { askDeleteView, newFileViewsAfter, promoteLooseDatabase, promoteLooseFil
 import { useChats } from '@adecore/agents-react/state';
 import { useDocument } from '@/state/document';
 import { isDatabaseTab, isPromotableTab, useFiles } from '@/state/files';
-import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
+import { nodeProvider, nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { useUi } from '@/state/ui';
-import { useEndpointId, endpointOfNode } from '@/state/keys';
+import { useEndpointId, endpointOfNodeIn } from '@/state/keys';
+import { useEndpoints } from '@/state/endpoints';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
 import { buildSidebar, gapIndex, isSessionKind, rowAfterArrow, rowOrder, type SidebarNode, type SidebarProject } from '@/shell/sidebar-rows';
 import { useSidebarSource } from '@/shell/sidebar-source';
@@ -104,6 +105,7 @@ export function Sidebar() {
     const shared = useDocument(useShallow((state) => state.shared));
     const flags = useDocument((state) => state.flags);
     const endpointId = useEndpointId();
+    const endpoints = useEndpoints((s) => s.endpoints);
     const projectMenu = useProjectMenu();
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.statusByKey);
@@ -128,53 +130,50 @@ export function Sidebar() {
     const [projectDrag, setProjectDrag] = useState<string | null>(null);
     const [projectInsert, setProjectInsert] = useState<{ key: string; after: boolean } | null>(null);
 
-    const project = useMemo<SidebarProject>(
-        () => ({
-            activeViewId: source.activeViewId,
-            openViewIds: source.openViewIds,
-            views: source.views.map((view) => {
-                const live = source.nodesOf(view);
-                const asRow = (node: StatusOf & { title: string; titleSource?: SidebarNode['titleSource']; provider?: AgentKind }): SidebarNode => {
-                    // A node that runs on another machine is that machine's to report on.
-                    const machine = endpointOfNode(node, endpointId);
-                    return {
-                        id: node.id,
-                        title: node.title,
-                        titleSource: node.titleSource,
-                        kind: node.kind,
-                        provider: node.provider ?? null,
-                        status: nodeStatus(node, sessions, chats, endpointId) ?? null,
-                        work: nodeWork(node, sessions, chats, endpointId),
-                        draft: node.kind === 'chat' && drafts.includes(node.id),
-                        alert: (warnings[machine] ?? []).some((alert) => alert.nodeId === node.id),
-                        finished: isUnseen(unseen, machine, node.id),
-                        task: childTask(tasks[machine], node.id),
-                        snoozedUntil: snoozeOf(snoozes, machine, node.id)
-                    };
-                };
-                const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : undefined;
+    const project: SidebarProject = {
+        activeViewId: source.activeViewId,
+        openViewIds: source.openViewIds,
+        views: source.views.map((view) => {
+            const live = source.nodesOf(view);
+            const asRow = (node: StatusOf & { title: string; titleSource?: SidebarNode['titleSource']; provider?: AgentKind }): SidebarNode => {
+                // A node that runs on another machine is that machine's to report on.
+                const machine = endpointOfNodeIn(endpoints, node, endpointId);
                 return {
-                    id: view.id,
-                    name: view.name ?? '',
-                    titleSource: 'titleSource' in view ? view.titleSource : undefined,
-                    kind: view.kind,
-                    shared: shared.includes(view.id),
-                    flag: flags[view.id],
-                    icon: viewIconOf(view),
-                    provider: provider ?? null,
-                    path: view.kind === 'file' ? view.path : null,
-                    nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
-                    // Only a session view is a node of its own; a divider and a drawing have no status.
-                    self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, titleSource: view.titleSource, provider }) : null,
-                    hidden: isUnlistedView(view)
+                    id: node.id,
+                    title: node.title,
+                    titleSource: node.titleSource,
+                    kind: node.kind,
+                    provider: nodeProvider(node, chats, endpointId) ?? null,
+                    status: nodeStatus(node, sessions, chats, endpointId) ?? null,
+                    work: nodeWork(node, sessions, chats, endpointId),
+                    draft: node.kind === 'chat' && drafts.includes(node.id),
+                    alert: (warnings[machine] ?? []).some((alert) => alert.nodeId === node.id),
+                    finished: isUnseen(unseen, machine, node.id),
+                    task: childTask(tasks[machine], node.id),
+                    snoozedUntil: snoozeOf(snoozes, machine, node.id)
                 };
-            })
-        }),
-        [source, shared, flags, endpointId, sessions, chats, drafts, warnings, unseen, tasks, snoozes]
-    );
+            };
+            const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : undefined;
+            return {
+                id: view.id,
+                name: view.name ?? '',
+                titleSource: 'titleSource' in view ? view.titleSource : undefined,
+                kind: view.kind,
+                shared: shared.includes(view.id),
+                flag: flags[view.id],
+                icon: viewIconOf(view),
+                provider: provider ?? null,
+                path: view.kind === 'file' ? view.path : null,
+                nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
+                // Only a session view is a node of its own; a divider and a drawing have no status.
+                self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, titleSource: view.titleSource, provider }) : null,
+                hidden: isUnlistedView(view)
+            };
+        })
+    };
 
     const activeViewId = project.activeViewId;
-    const expandedIds = useMemo(() => new Set(expanded ?? (activeViewId === null ? [] : [activeViewId])), [expanded, activeViewId]);
+    const expandedIds = new Set(expanded ?? (activeViewId === null ? [] : [activeViewId]));
 
     /* The list seeds itself with the canvas that is up, once per project. From there the set is the
        person's own and lands in the project's local file, so no switch ever folds a canvas shut. */

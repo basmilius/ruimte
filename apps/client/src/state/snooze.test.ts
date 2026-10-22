@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, setSystemTime, test } from 'bun:test';
 import type { EventMap, EventType, RequestMap, RequestType, Snooze } from '@ruimte/contracts';
 import type { Transport, TransportStatus } from '@/transport/transport';
 import { isSnoozed, MAX_TICK_MS, snoozeOf, nextWake, snoozeUntil, startSnoozeClock, useSnoozes, watchSnoozes, withoutExpired } from './snooze';
@@ -148,15 +148,18 @@ function settle(): Promise<void> {
 describe('snoozes a machine keeps', () => {
     let transport: FakeTransport;
     let stop: () => void = () => {};
-    const later = Date.now() + 3_600_000;
+    const now = at(2026, 9, 24, 14, 5);
+    const later = now + 3_600_000;
 
     beforeEach(() => {
+        setSystemTime(now);
         transport = new FakeTransport();
         useSnoozes.setState({ byKey: {} });
     });
 
     afterEach(() => {
         stop();
+        setSystemTime();
     });
 
     test('come from the machine and follow its changes', async () => {
@@ -191,7 +194,7 @@ describe('snoozes a machine keeps', () => {
         transport.status = 'closed';
         useSnoozes.getState().snooze('Xk3p', 't1', later);
         // One that ran out before the link came back goes nowhere.
-        useSnoozes.getState().snooze('Xk3p', 't2', Date.now() - 1);
+        useSnoozes.getState().snooze('Xk3p', 't2', now - 1);
         useSnoozes.getState().unsnooze('Xk3p', 't3');
         expect(transport.sent.filter((request) => request.type !== 'snooze.list')).toEqual([]);
         transport.open();

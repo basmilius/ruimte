@@ -105,6 +105,14 @@ describe('keeping the machine awake', () => {
     });
 });
 
+describe('the map of a canvas', () => {
+    test('stays away until a person turns it on, and only a stored true does', () => {
+        expect(settingsFrom({}).canvasMinimap).toBe(false);
+        expect(settingsFrom({ canvasMinimap: true }).canvasMinimap).toBe(true);
+        expect(settingsFrom({ canvasMinimap: 'yes' as unknown as boolean }).canvasMinimap).toBe(false);
+    });
+});
+
 describe('agent notifications', () => {
     test('makes no sound until somebody asks for one', () => {
         expect(settingsFrom({}).agentsTurnSound).toBe(false);

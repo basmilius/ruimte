@@ -3,7 +3,7 @@ import { useStore } from 'zustand';
 import { useTranslation } from 'react-i18next';
 import { FileTree, useFileTree } from '@adecore/ui';
 import { GeneratedImageSaveDialog } from '@/chat/GeneratedImageSaveDialog';
-import { imageSaveDialog, ImageSaveSession, validImageFileName } from '@/chat/image-save';
+import { imageSaveDialog, ImageSaveSession } from '@/chat/image-save';
 import { absoluteOf, basenameOf, buildTreeInput, LOADING_NAME, type EntryCache } from '@/shell/panels/files-tree';
 import type { Transport } from '@/transport';
 
@@ -94,6 +94,7 @@ function ImageSaveFolders({ session, transport }: { session: ImageSaveSession; t
 
 function ImageSaveBody({ session, transport }: { session: ImageSaveSession; transport: Transport }) {
     const state = useStore(session.state);
+    const path = session.pathOf(state);
     return (
         <GeneratedImageSaveDialog
             open={!state.closed}
@@ -102,11 +103,11 @@ function ImageSaveBody({ session, transport }: { session: ImageSaveSession; tran
             folderTree={<ImageSaveFolders session={session} transport={transport} />}
             fileName={state.name}
             onFileNameChange={(name) => session.name(name)}
-            destinationPath={session.path()}
+            destinationPath={path}
             pending={state.pending}
             error={state.error}
             exists={state.target?.exists === true}
-            canSave={validImageFileName(state.name) && state.checkedPath === session.path()}
+            canSave={session.canSave(state)}
             onSave={() => void session.save(false)}
             onReplace={() => void session.save(true)}
         />

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SettingsRow } from '@adecore/ui/settings';
 import { Switch } from '@adecore/ui';
@@ -67,7 +67,7 @@ function MachineSwitchRow({ endpoint, setting, searchId }: { endpoint: Endpoint;
 export function MachineSwitchSections() {
     const { t } = useTranslation('settings');
     const stored = useEndpoints((s) => s.endpoints);
-    const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
+    const endpoints = listedEndpoints(stored);
 
     // This machine first, which is the one a person with a single machine is looking at.
     const ordered = [

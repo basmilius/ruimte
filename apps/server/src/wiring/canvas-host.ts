@@ -21,6 +21,7 @@ import type { ProjectsBundle } from './projects.ts';
 import type { ProvidersBundle } from './providers.ts';
 import { chatIsInChats } from './chat-move.ts';
 import type { RemoteBundle } from './remote.ts';
+import type { UsageBundle } from './usage.ts';
 
 export interface CanvasHostInput {
     identity: EndpointIdentity;
@@ -34,6 +35,7 @@ export interface CanvasHostInput {
     devices: DevicesBundle;
     databases: DatabasesBundle;
     remote: RemoteBundle;
+    usage: UsageBundle;
     later: {
         language(): LanguageHost;
         push(): PushService;
@@ -42,7 +44,7 @@ export interface CanvasHostInput {
 
 /* The services the agent verbs reach the daemon through. */
 export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
-    const { identity, stores, providers, agents, work, launches, git, devices, databases, remote, later } = input;
+    const { identity, stores, providers, agents, work, launches, git, devices, databases, remote, usage, later } = input;
     const { lineage, outbox, tasks } = stores;
     const { sessions, chats } = agents;
     const { store: projects } = input.projects;
@@ -112,6 +114,11 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
             },
             sql: databases.sqlAnalysis
         }),
+        providerInstalls: {
+            catalog: (refresh) => providers.registryAgents.catalog(refresh),
+            versions: (refresh) => providers.versions.list(refresh)
+        },
+        planLimits: { snapshot: () => usage.limits.snapshot(), now: Date.now },
         secrets: launches.secrets,
         proposals: { inChats: (chatId) => chatIsInChats(projects, chatId), propose: (ask) => Promise.resolve(agents.proposals.ask(ask)) },
         snoozes: work.snoozes

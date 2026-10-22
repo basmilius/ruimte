@@ -21,6 +21,9 @@ function CopyOutput({ output }: { output: string }) {
     );
 }
 
+// The stack subscribes to the store itself; under its hook name the React Compiler would refuse to hand it on.
+const toastStore = useToasts;
+
 function footerOf(toast: Toast) {
     if (toast.output === undefined || toast.output === '') {
         return null;
@@ -37,5 +40,5 @@ function footerOf(toast: Toast) {
  * say about a view is not here but in the banner over the views, where a person looks for a decision.
  */
 export function Toasts() {
-    return <ToastStack store={useToasts} footer={footerOf} />;
+    return <ToastStack store={toastStore} footer={footerOf} />;
 }

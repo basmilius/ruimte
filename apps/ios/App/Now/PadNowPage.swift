@@ -23,7 +23,7 @@ struct PadNowPage: View {
                     } description: {
                         Text("Connect your computer to see what your agents are doing.")
                     } actions: {
-                        Button("Add a machine", action: addMachine)
+                        Button("Add machine", action: addMachine)
                     }
                 } else if !now.loaded && board.isEmpty {
                     MobileLoadingRow(String(localized: "Connecting to your machines"))

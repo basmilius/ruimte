@@ -23,6 +23,7 @@ import { renderDevice } from './context-device.ts';
 import { renderDiagram } from './context-diagram.ts';
 import { renderDrawing } from './context-drawing.ts';
 import { readableAssistantText } from '@adecore/agents/chat';
+import { chatReadUsage, chatUsageLine, type ChatReadUsage, type ChatUsageInfo } from './chat-usage.ts';
 
 export const CONTEXT_PATH = '/context';
 
@@ -32,6 +33,10 @@ export const MAX_SCREEN_LINES = 2000;
 function lastLines(text: string, count: number): string {
     const lines = text.split('\n');
     return lines.slice(Math.max(0, lines.length - count)).join('\n');
+}
+
+function asReading(text: string | null): ContextReading | null {
+    return text === null ? null : { text };
 }
 
 /* A read that found nothing to answer, under the code and the sentence that say why. */
@@ -72,6 +77,15 @@ interface ContextReaders {
     /* The canvas this agent is a node on, for saying why a read of a neighbor is refused; null when
        it is a view of its own, or when no known project places it. */
     canvasOf?(targetId: string): ProjectCanvasView | null;
+    /* The model and usage of a chat, which a read of it starts with; null when there is none. */
+    chatInfo?(chatId: string): ChatUsageInfo | null;
+    now?(): number;
+}
+
+/* A source as text, and for a chat the usage its first line says in words. */
+export interface ContextReading {
+    text: string;
+    usage?: ChatReadUsage;
 }
 
 /* The first line of a subagent's report that says something, which is all a line about it has room for. */
@@ -239,19 +253,20 @@ export class ContextStore {
 
     /* A source the caller may read for a reason of its own, such as a chat view naming the canvas it stands on. */
     async readSource(targetId: string, source: ContextSource, tail: number | null = null, subagent: string | null = null): Promise<string | null> {
+        return (await this.reading(targetId, source, tail, subagent))?.text ?? null;
+    }
+
+    private async reading(targetId: string, source: ContextSource, tail: number | null, subagent: string | null): Promise<ContextReading | null> {
         if (subagent !== null) {
-            return this.readSubagent(source, subagent, tail);
+            return { text: await this.readSubagent(source, subagent, tail) };
         }
         switch (source.kind) {
             case 'text':
-                return tail === null ? (source.text ?? '') : lastLines(source.text ?? '', tail);
+                return asReading(tail === null ? (source.text ?? '') : lastLines(source.text ?? '', tail));
             case 'terminal': {
                 const text = await this.readers.terminalText(source.id);
-                if (text === null) {
-                    return null;
-                }
                 // The screen cap stays the ceiling: a --tail past it cannot reach further back than the daemon keeps.
-                return lastLines(text, Math.min(tail ?? MAX_SCREEN_LINES, MAX_SCREEN_LINES));
+                return asReading(text === null ? null : lastLines(text, Math.min(tail ?? MAX_SCREEN_LINES, MAX_SCREEN_LINES)));
             }
             case 'chat':
                 return this.readChat(source.id, tail);
@@ -259,31 +274,31 @@ export class ContextStore {
             case 'browser': {
                 const page = (await this.readers.browserPage?.(source.id).catch(() => null)) ?? null;
                 if (page === null) {
-                    return renderPage(source.text ?? '', null, tail);
+                    return asReading(renderPage(source.text ?? '', null, tail));
                 }
-                return renderPage(page.url || (source.text ?? ''), page.text, tail, true);
+                return asReading(renderPage(page.url || (source.text ?? ''), page.text, tail, true));
             }
             // Looked up now rather than when the line was drawn: what a machine has changes while nobody touches the canvas.
             case 'device': {
                 if (!source.device) {
                     return null;
                 }
-                return renderDevice(source.device, (await this.readers.devices?.().catch(() => [])) ?? []);
+                return asReading(renderDevice(source.device, (await this.readers.devices?.().catch(() => [])) ?? []));
             }
             case 'drawing': {
                 const elements = await this.readers.drawingElements(source.id);
-                return elements ? renderDrawing(elements, tail) : null;
+                return asReading(elements ? renderDrawing(elements, tail) : null);
             }
             case 'diagram': {
                 const document = await this.readers.diagramDocument(targetId, source.id);
-                return document ? renderDiagram(document, tail) : null;
+                return asReading(document ? renderDiagram(document, tail) : null);
             }
             /*
              * The path, never the bytes: an agent's own file tools read a fresher copy, and a large file
              * cannot push the rest of its context out. A drawing is rendered here since nothing else reads it.
              */
             case 'file':
-                return source.text ? `This is a file on disk. Read it with your own tools.\n\n${source.text}` : null;
+                return asReading(source.text ? `This is a file on disk. Read it with your own tools.\n\n${source.text}` : null);
         }
     }
 
@@ -293,7 +308,7 @@ export class ContextStore {
         return linked.find((entry) => entry.id === sourceId || entry.nodeId === sourceId) ?? this.readers.opened?.(targetId, sourceId) ?? null;
     }
 
-    private async readChat(chatId: string, tail: number | null): Promise<string | null> {
+    private async readChat(chatId: string, tail: number | null): Promise<ContextReading | null> {
         const items = this.readers.chatItems(chatId);
         if (!items) {
             return null;
@@ -302,7 +317,14 @@ export class ContextStore {
         const thread = tail === null ? transcript : lastLines(transcript, tail);
         // Above the thread, where a tail never cuts it off: how far a child got is what its parent reads for first.
         const plans = (await this.readers.chatPlans?.(chatId).catch(() => [])) ?? [];
-        return plans.length === 0 ? thread : `${plans.map((plan) => renderPlanText(plan)).join('\n\n')}\n\n${thread}`;
+        const text = plans.length === 0 ? thread : `${plans.map((plan) => renderPlanText(plan)).join('\n\n')}\n\n${thread}`;
+        const info = this.readers.chatInfo?.(chatId) ?? null;
+        if (info === null) {
+            return { text };
+        }
+        // Kept under a tail too: whether a child is near its window or about to lose its cache is a parent's cheap question.
+        const usage = chatReadUsage(info, this.readers.now?.() ?? Date.now());
+        return { text: `${chatUsageLine(usage)}\n\n${text}`, usage };
     }
 
     /* A subagent is only ever reached through the chat it belongs to, so a link to that chat is what lets it be read. */
@@ -327,21 +349,22 @@ export class ContextStore {
      * One source as text, or a refusal that says why there is none. Only this side has the canvas the
      * id may be a node on, so a line drawn the other way round reads apart from an id nobody drew.
      */
-    async answer(targetId: string, sourceId: string, tail: number | null, subagent: string | null): Promise<string> {
-        const text = await this.read(targetId, sourceId, tail, subagent);
-        if (text === null) {
+    async answer(targetId: string, sourceId: string, tail: number | null, subagent: string | null): Promise<ContextReading> {
+        const source = this.findSource(targetId, sourceId);
+        const reading = source ? await this.reading(targetId, source, tail, subagent) : null;
+        if (reading === null) {
             const { code, message, lines } = readRefusal(targetId, sourceId, this.readers.sources(targetId), this.readers.canvasOf?.(targetId) ?? null);
             throw new ContextRefusal(code, message, lines);
         }
-        return text;
+        return reading;
     }
 
     /* The same for a source that comes with its own reason to be read, so there is no line to explain. */
-    async answerSource(targetId: string, source: ContextSource, tail: number | null, subagent: string | null): Promise<string> {
-        const text = await this.readSource(targetId, source, tail, subagent);
-        if (text === null) {
+    async answerSource(targetId: string, source: ContextSource, tail: number | null, subagent: string | null): Promise<ContextReading> {
+        const reading = await this.reading(targetId, source, tail, subagent);
+        if (reading === null) {
             throw new ContextRefusal('unreadable', `${source.nodeId ?? source.id} is there, but there is nothing to read in it right now`);
         }
-        return text;
+        return reading;
     }
 }

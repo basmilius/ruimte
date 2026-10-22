@@ -60,7 +60,7 @@ describe('a computer use card', () => {
         const prompt = computerPrompt('chat-1', request);
         await answerRuimtePrompt(prompt, { kind: 'choose', choiceId: 'always' }, answer, NO_SECRETS);
         expect(calls).toEqual([['computer-1', 'always']]);
-        await expect(answerRuimtePrompt(prompt, { kind: 'choose', choiceId: 'once' }, machine(false).answer, NO_SECRETS)).rejects.toThrow('already answered');
+        await expect(answerRuimtePrompt(prompt, { kind: 'choose', choiceId: 'once' }, machine(false).answer, NO_SECRETS)).rejects.toThrow('Already answered');
         await expect(answerRuimtePrompt(prompt, { kind: 'choose', choiceId: 'allow' }, answer, NO_SECRETS)).rejects.toThrow();
         expect(calls).toHaveLength(1);
     });
@@ -123,7 +123,7 @@ describe('a secret card', () => {
         const prompt = secretPrompt('m1', 'chat-1', secret);
         await expect(answerRuimtePrompt(prompt, { kind: 'answer', answers: { value: '' } }, machine().answer, answers)).rejects.toThrow();
         expect(calls).toEqual([]);
-        await expect(answerRuimtePrompt(prompt, { kind: 'choose', choiceId: 'decline' }, machine().answer, answers)).rejects.toThrow('already answered');
+        await expect(answerRuimtePrompt(prompt, { kind: 'choose', choiceId: 'decline' }, machine().answer, answers)).rejects.toThrow('Already answered');
     });
 
     test('blocks, is dated by when the agent asked, and stands for its request', () => {
@@ -155,7 +155,7 @@ describe('a project suggestion card', () => {
         expect(calls).toEqual([['decline', 'm1', 'proposal-1']]);
         const gone = proposalMachine(false);
         await expect(answerRuimtePrompt(card.prompt, { kind: 'choose', choiceId: 'decline' }, machine().answer, NO_SECRETS, gone.answers)).rejects.toThrow(
-            'already answered'
+            'Already answered'
         );
     });
 

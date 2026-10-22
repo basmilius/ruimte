@@ -11,8 +11,15 @@ const account = { id: 'account', provider: 'github' as const, login: 'someone', 
 const deviceKey = generateKeyPairSync('ed25519');
 const sessionKey = deviceKey.publicKey.export({ format: 'jwk' }).x!;
 let db: D1Database;
+// The system time a test set last, which a refresh is signed at unless it says otherwise.
+let clock = NOW;
 
-function signedWith(key: ReturnType<typeof generateKeyPairSync>, refreshToken: string, issuedAt = Date.now()): SessionRefreshPayload {
+function moveClockTo(time: number): void {
+    clock = time;
+    setSystemTime(new Date(time));
+}
+
+function signedWith(key: ReturnType<typeof generateKeyPairSync>, refreshToken: string, issuedAt = clock): SessionRefreshPayload {
     return {
         refreshToken,
         issuedAt,
@@ -20,7 +27,7 @@ function signedWith(key: ReturnType<typeof generateKeyPairSync>, refreshToken: s
     };
 }
 
-function signed(refreshToken: string, issuedAt = Date.now()): SessionRefreshPayload {
+function signed(refreshToken: string, issuedAt = clock): SessionRefreshPayload {
     return signedWith(deviceKey, refreshToken, issuedAt);
 }
 
@@ -36,7 +43,7 @@ function rotated(outcome: Awaited<ReturnType<typeof rotateSession>>): SessionRes
 }
 
 beforeEach(() => {
-    setSystemTime(new Date(NOW));
+    moveClockTo(NOW);
     const sqlite = migratedDatabase();
     sqlite.query('INSERT INTO account (id, provider, subject, created_at) VALUES (?, ?, ?, ?)').run('account', 'github', 'subject', NOW);
     sqlite
@@ -54,7 +61,7 @@ describe('a refresh whose answer got lost', () => {
         const session = await createSession(db, account, 'phone', sessionKey);
         const lost = rotated(await rotateSession(db, signed(session.refreshToken)));
 
-        setSystemTime(new Date(NOW + 30_000));
+        moveClockTo(NOW + 30_000);
         const again = rotated(await rotateSession(db, signed(session.refreshToken)));
         expect(again).toEqual(lost);
         expect(again.accessExpiresAt).toBe(NOW + ACCESS_LIFETIME_MS);
@@ -75,7 +82,7 @@ describe('a refresh whose answer got lost', () => {
         const session = await createSession(db, account, 'phone', sessionKey);
         const lost = rotated(await rotateSession(db, signed(session.refreshToken)));
 
-        setSystemTime(new Date(NOW + ROTATION_GRACE_MS + 1));
+        moveClockTo(NOW + ROTATION_GRACE_MS + 1);
         expect(await rotateSession(db, signed(session.refreshToken))).toBeNull();
         expect(await rotateSession(db, signed(lost.refreshToken))).toBeNull();
     });

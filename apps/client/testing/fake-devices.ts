@@ -1,5 +1,5 @@
 import { spyOn } from 'bun:test';
-import type { DeviceInfo, DeviceReference, DeviceSettings } from '@ruimte/contracts';
+import type { DeviceInfo, DevicePower, DeviceReference, DeviceSettings } from '@ruimte/contracts';
 import type { FakeMachine } from './fake-machine';
 
 /* A running simulator that announces every tool a person drives from the node. */
@@ -64,6 +64,15 @@ export const FAKE_EMULATOR: DeviceInfo = {
     }
 };
 
+/* An Android phone on wireless debugging, the one kind with a battery of its own. */
+export const FAKE_PHONE: DeviceInfo = {
+    ...FAKE_EMULATOR,
+    deviceId: 'R5CT',
+    kind: 'physical',
+    name: 'Galaxy S26',
+    capabilities: { ...FAKE_EMULATOR.capabilities, boot: false, shutdown: false }
+};
+
 export function referenceOf(device: DeviceInfo): DeviceReference {
     return { platform: device.platform, kind: device.kind, name: device.name, runtime: device.runtime };
 }
@@ -71,6 +80,8 @@ export function referenceOf(device: DeviceInfo): DeviceReference {
 export interface FakeDevices {
     /* What the last `device.detail` and `device.action` answer with. */
     settings: DeviceSettings;
+    /* What `device.power` answers for a phone. */
+    power: DevicePower | null;
     /* What the device clipboard holds, which a write replaces. */
     clipboard: string;
     recording: boolean;
@@ -85,7 +96,7 @@ export interface FakeDevices {
  * A file the page reads from the machine answers four bytes of a png.
  */
 export function answerDevices(machine: FakeMachine, devices: readonly DeviceInfo[] = [FAKE_SIMULATOR, FAKE_EMULATOR]): FakeDevices {
-    const state: FakeDevices = { settings: {}, clipboard: '', recording: false, read: [], restore: () => undefined };
+    const state: FakeDevices = { settings: {}, power: null, clipboard: '', recording: false, read: [], restore: () => undefined };
     const find = (deviceId: string): DeviceInfo => {
         const device = devices.find((candidate) => candidate.deviceId === deviceId);
         if (device === undefined) {
@@ -105,6 +116,7 @@ export function answerDevices(machine: FakeMachine, devices: readonly DeviceInfo
     machine.answer('device.detail', (payload) => ({ ...target(payload), settings: { ...state.settings, recording: state.recording } }));
     machine.answer('device.action', (payload) => ({ ...target(payload), settings: { ...state.settings, recording: state.recording } }));
     machine.answer('device.input', () => ({}));
+    machine.answer('device.power', (payload) => ({ power: find(payload.deviceId).kind === 'physical' ? state.power : null }));
     machine.answer('device.capture', (payload) => ({ path: `/home/.ruimte/device-captures/${payload.deviceId}-1.png`, width: 1206, height: 2622 }));
     machine.answer('device.record', (payload) => {
         state.recording = payload.mode === 'start';

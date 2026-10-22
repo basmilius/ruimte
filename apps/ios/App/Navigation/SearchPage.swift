@@ -65,7 +65,7 @@ struct SearchPage: View {
                     Section("Files") { ProgressView("Searching files…") }
                 }
                 if !fileFailures.isEmpty {
-                    Section("File search failed") {
+                    Section("Could not search files") {
                         ForEach(fileFailures) { failure in
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(failure.name).font(.headline)

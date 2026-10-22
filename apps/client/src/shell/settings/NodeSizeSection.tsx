@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Scaling } from 'lucide-react';
 import { NODE_SIZE, NODE_SIZE_MAX, NODE_SIZE_MIN, NodeKindSchema, type NodeKind, type NodeSize, type NodeSizes } from '@ruimte/contracts';
@@ -192,7 +192,7 @@ function NodeSizeSection({ endpoint, sizes, searchId }: { endpoint: Endpoint; si
 export function NodeSizeSections() {
     useFormatLocale();
     const stored = useEndpoints((s) => s.endpoints);
-    const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
+    const endpoints = listedEndpoints(stored);
     // Nothing here holds a link, so a section reads what a connected machine last said.
     const servers = useServers((s) => s.byEndpoint);
     const keeping = [

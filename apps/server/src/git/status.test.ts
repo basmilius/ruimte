@@ -66,7 +66,8 @@ describe('parsePorcelain', () => {
 describe('readStatus', () => {
     test('reading leaves the index alone, so a commit beside it never meets its lock', async () => {
         await write('tracked.txt', 'one\ntwo\nthree\nfour\n');
-        await utimes(join(repo, 'tracked.txt'), new Date(), new Date());
+        const touched = new Date((await stat(join(repo, 'tracked.txt'))).mtimeMs + 2_000);
+        await utimes(join(repo, 'tracked.txt'), touched, touched);
         const before = await stat(join(repo, '.git', 'index'));
         await readStatus(repo);
         const after = await stat(join(repo, '.git', 'index'));

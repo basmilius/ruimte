@@ -60,7 +60,7 @@ final class SharedMachineSession {
         references += 1
         guard lease == nil, let runtime, let key = runtime.key else { return }
         guard runtime.reachable(machine) else {
-            problem = String(localized: "This machine needs a secure broker address.")
+            problem = String(localized: "This machine cannot be reached through your account.")
             return
         }
         let events = LinkEvents(

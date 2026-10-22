@@ -15,9 +15,11 @@ import { DEVICE_ACTIONS, DEVICE_DETAIL, DEVICE_SUMMARY } from './device-verb.ts'
 import { diagramAction } from './diagram-verb.ts';
 import { flagVerb } from './flag-verb.ts';
 import { forkVerb } from './fork-verb.ts';
+import { nodeColorAction } from './color-verb.ts';
 import { nodeEditAction } from './edit-verb.ts';
 import { groupAction } from './group-verb.ts';
 import { LANGUAGE_ACTIONS, LANGUAGE_DETAIL, LANGUAGE_SUMMARY } from './language-verb.ts';
+import { PROVIDER_ACTIONS, PROVIDER_DETAIL, PROVIDER_SUMMARY } from './provider-verb.ts';
 import { LAUNCHES_ACTIONS, LAUNCHES_DETAIL, LAUNCHES_SUMMARY } from './launch-verb.ts';
 import { linkDeleteAction, linkListAction, linkNewAction } from './link-verb.ts';
 import { notifyVerb } from './notify-verb.ts';
@@ -71,17 +73,19 @@ const listVerb: ContextVerb = {
 const readVerb: ContextVerb = {
     served: 'context',
     name: 'read',
-    usage: '<id> [--tail N] [--subagent T] [--view V]',
+    usage: '<id> [--tail N] [--subagent T] [--view V] [--json]',
     summary: actionDescription('context.read', 'agent'),
     detail: [
         'argument\t<id>\trequired\tThe id of a source, from ruimte-context list, or of an agent you opened yourself, or with --view of any node or text on that canvas; a drawing or diagram also takes the id of the node that shows it',
         'flag\t--tail N\toptional\tOnly the last N lines, N a positive whole number; without it the whole source',
         'flag\t--view V\toptional\tOnly from a chat view: the canvas the source stands on, which lets you read every node and text there, other chats and terminals included, without a line; a node on a canvas reads over its lines and leaves it out',
         `flag\t--subagent T\toptional\tThe whole conversation of one subagent of a chat you may read instead of the chat, T the id in its > Subagent line; read from ${ChatSubagentSourceSchema.options.join(' or ')}; --tail counts lines of that conversation`,
+        'flag\t--json\toptional\tOne JSON object instead: text holds what the read prints, and a chat adds usage, the same numbers as its > Usage line with cache.expiresInMs negative once the cache went cold',
         'prints\tThe source itself, as text, not as tab-separated lines',
         'kind\ttext\tThe text the person wrote: a note or a text on the canvas\t--tail counts its lines',
         `kind\tterminal\tThe screen of that session, its last ${MAX_SCREEN_LINES} lines, read the moment you ask\t--tail counts screen lines and cannot reach past those ${MAX_SCREEN_LINES}`,
-        'kind\tchat\tThe plans of that chat as text, then the whole thread as markdown: who said what, what every tool ran, and one line per subagent with the id --subagent takes\t--tail counts lines of the thread and leaves the plans out',
+        'kind\tchat\tOne > Usage line first: its CLI and model, its context tokens of the window, and how long its prompt cache stays warm or how long ago it went cold; then the plans of that chat as text, then the whole thread as markdown: who said what, what every tool ran, and one line per subagent with the id --subagent takes\t--tail counts lines of the thread and leaves the > Usage line and the plans out of the count',
+        'kind\tchat\tA prompt cache that went cold makes the next turn of that chat read its whole context again, so a message sent while it is warm costs less; ruimte-context provider limits reads the plan of the account you run on',
         'kind\tchat\tA Workflow call has one line per phase under its > Tool line, each agent of that phase with its state and the id --subagent takes',
         'kind\tchat\tA question or an approval in the thread is one > Question or > Approval line with its state and its request id; a question that still waits lists its question ids and choices under it, which is what ruimte-context answer takes',
         'kind\tchat\tA chat the person attached to one of your messages reads the same way, by the id that message named, with no line to it and without showing up in ruimte-context list',
@@ -104,12 +108,12 @@ const readVerb: ContextVerb = {
 
 const nodeNoun = defineNoun({
     name: 'node',
-    summary: 'Lists, adds, writes in, renames, removes, frames and lays out the nodes of a canvas',
+    summary: 'Lists, adds, writes in, renames, colors, removes, frames and lays out the nodes of a canvas',
     detail: [
         'note\tA node is a note, a browser, a drawing, a diagram, a file, a terminal, a chat or a group on a canvas; agent and team add agent nodes that start working',
         SCOPE_LINE
     ],
-    actions: [nodeListAction, nodeNewAction, nodeEditAction, renameAction, nodeDeleteAction, groupAction, arrangeAction]
+    actions: [nodeListAction, nodeNewAction, nodeEditAction, renameAction, nodeColorAction, nodeDeleteAction, groupAction, arrangeAction]
 });
 
 const linkNoun = defineNoun({
@@ -203,6 +207,13 @@ const languageNoun = defineNoun({
     actions: [...LANGUAGE_ACTIONS]
 });
 
+const providerNoun = defineNoun({
+    name: 'provider',
+    summary: PROVIDER_SUMMARY,
+    detail: PROVIDER_DETAIL,
+    actions: [...PROVIDER_ACTIONS]
+});
+
 const taskNoun = defineNoun({
     name: 'task',
     summary:
@@ -244,6 +255,7 @@ export const VERBS: readonly VerbEntry[] = [
     projectNoun,
     databaseNoun,
     languageNoun,
+    providerNoun,
     computerNoun
 ];
 

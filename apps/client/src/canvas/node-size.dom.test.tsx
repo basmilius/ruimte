@@ -139,7 +139,7 @@ describe('a default size per node kind', () => {
         await open();
         await openNodeMenu(PLAN.id);
         await openSubmenu('Size and position');
-        const item = menuItem('Make this the default size');
+        const item = menuItem('Set as default size');
         expect(item?.textContent).toContain('400 × 320');
         await clickOn(item);
 

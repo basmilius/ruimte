@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { canvasPrompts, samePrompts, type CanvasPrompt } from '@/canvas/prompts';
 import { useCanvasStore } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state';
@@ -8,6 +8,7 @@ import { endpointOfNode, useEndpointId } from '@/state/keys';
 import { proposalsOf, useProposals } from '@/state/proposals';
 import { secretRequestsOf, useSecrets } from '@/state/secrets';
 import { useSessions } from '@/state/sessions';
+import { useWaitingSince } from '@/state/waiting';
 
 const NONE: CanvasPrompt[] = [];
 
@@ -19,7 +20,6 @@ export function useCanvasPrompts(): CanvasPrompt[] {
     const canvasStore = useCanvasStore();
     const endpointId = useEndpointId();
     const [prompts, setPrompts] = useState<CanvasPrompt[]>(NONE);
-    const waitingSince = useRef(new Map<string, number>());
 
     useEffect(() => {
         const update = (): void => {
@@ -34,9 +34,8 @@ export function useCanvasPrompts(): CanvasPrompt[] {
                 computer: machines.flatMap(computerApprovalsOf),
                 secrets: machines.flatMap(secretRequestsOf),
                 proposals: machines.flatMap(proposalsOf),
-                waitingSince: waitingSince.current
+                waitingSince: useWaitingSince.getState().byKey
             });
-            waitingSince.current = next.waitingSince;
             setPrompts((current) => (samePrompts(current, next.prompts) ? current : next.prompts));
         };
         update();

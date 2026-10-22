@@ -1,4 +1,4 @@
-import { useMemo, type ComponentProps } from 'react';
+import { type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Markdown, useFileLinkCwd } from '@adecore/agents-react/chat/ui';
 import { parseMarkdownDocument, markdownImagePath, markdownImageStyle } from '@/shell/panels/markdown-document';
@@ -35,7 +35,7 @@ const DOCUMENT_COMPONENTS = { img: DocumentImage };
 
 export function FileMarkdown({ text }: { text: string }) {
     const { t } = useTranslation('panels');
-    const document = useMemo(() => parseMarkdownDocument(text), [text]);
+    const document = parseMarkdownDocument(text);
     return (
         <div className="file-markdown">
             {document.rows !== null && document.rows.length > 0 && (

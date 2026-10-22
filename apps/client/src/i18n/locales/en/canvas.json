@@ -18,13 +18,6 @@
         "pink": "Pink",
         "rose": "Rose"
     },
-    "noteColors": {
-        "yellow": "Yellow",
-        "green": "Green",
-        "blue": "Blue",
-        "pink": "Pink",
-        "gray": "Gray"
-    },
     "locks": {
         "pan": {
             "label": "Pan",
@@ -52,17 +45,17 @@
         "delegating": "Sub-agents working"
     },
     "node": {
-        "failed": "This node failed to render",
+        "failed": "This node could not be shown",
         "zoomTo": "Zoom to node",
         "maximize": "Maximize node",
         "restore": "Restore node",
         "close": "Close node",
         "context": {
-            "tooltip": "Linked context. The agent reads it with ruimte-context.",
+            "tooltip": "Linked context. The agent can read it.",
             "pill": "context"
         },
         "issuePill": "Open {{issue}} on GitHub",
-        "prWatchPill": "Watching {{pr}}: {{state}}. Click to open the pull request.",
+        "prWatchPill": "Watching {{pr}}: {{state}}",
         "prWatchState": {
             "pending": "checks running",
             "success": "checks passed",
@@ -71,11 +64,11 @@
         }
     },
     "group": {
-        "arrange": "Arrange group members",
+        "arrange": "Arrange group",
         "arrangeRefused": "Arranging would move a node into or out of a group.",
-        "arrangeCollapsed": "Expand the group before arranging its members.",
-        "arrangeEmpty": "The group has no nodes of its own to arrange.",
-        "arrangeLocked": "Moving is locked on this canvas.",
+        "arrangeCollapsed": "Expand the group first.",
+        "arrangeEmpty": "Nothing in this group to arrange.",
+        "arrangeLocked": "Moving is locked.",
         "expand": "Expand",
         "collapse": "Collapse",
         "inside_one": "{{count}} inside",
@@ -103,12 +96,11 @@
         "openAsView": "Open as view",
         "openAsViewHint": "Keeps its session",
         "startAgentFromNote": "Start agent from note",
-        "noteColor": "Note color",
         "color": "Color",
         "noAccent": "None",
         "stopPrWatch": "Stop watching pull request",
         "stopWaiting": "Stop waiting",
-        "makeDefaultSize": "Make this the default size",
+        "makeDefaultSize": "Set as default size",
         "conversation": "Conversation",
         "worktree": "Worktree",
         "sizeAndPosition": "Size and position",
@@ -134,11 +126,11 @@
         "sections": {
             "agents": "Agents",
             "place": "Add",
-            "project": "From this project"
+            "project": "From project"
         },
         "agent": {
             "chat": "Chat",
-            "terminal": "In a terminal"
+            "terminal": "Terminal"
         },
         "connecting": {
             "title": "Connecting",
@@ -150,24 +142,24 @@
         },
         "node": {
             "chat": "Pick a model",
-            "terminal": "A shell",
-            "browser": "A web page",
+            "terminal": "Shell",
+            "browser": "Web page",
             "note": "Markdown",
-            "group": "A frame around nodes"
+            "group": "Frame around nodes"
         },
         "file": "From the project folder",
         "text": "Or double-click",
-        "layout": "Apply this layout",
-        "drawing": "Show the drawing here",
-        "diagram": "Show the diagram here",
-        "hint": "Drop files here, right-click for more, or press <palette/>."
+        "layout": "Apply layout",
+        "drawing": "Show drawing",
+        "diagram": "Show diagram",
+        "hint": "Drop files, right-click for more, or press <palette/>."
     },
     "promptStack": {
         "goToNode": "Go to node",
         "previous": "Previous prompt",
         "next": "Next prompt",
         "position": "{{index}} of {{count}}",
-        "failed": "This prompt failed to render"
+        "failed": "This prompt could not be shown"
     },
     "text": {
         "placeholder": "Type something",
@@ -192,7 +184,7 @@
         "alignment": "Alignment",
         "color": "Text color",
         "defaultColor": "Default text color",
-        "resizeWidth": "Drag to resize width. Double-click for automatic width."
+        "resizeWidth": "Drag to resize. Double-click to fit."
     },
     "delete": {
         "nodes_one": "{{count}} node",
@@ -201,17 +193,17 @@
     "drop": {
         "controlCharacter": {
             "title": "That file name cannot be typed",
-            "description": "A name with a control character could run a command in the terminal, so Ruimte typed nothing from this drop."
+            "description": "The name contains a hidden character that could run a command, so Ruimte typed nothing."
         },
         "noBridge": {
             "title": "Files from {{app}} only drop in the desktop app",
-            "description": "Open the file from the Files panel instead.",
-            "terminalDescription": "Type or paste the path instead."
+            "description": "Open it from the Files panel.",
+            "terminalDescription": "Type or paste the path."
         },
         "otherMachine": {
             "title": "This project runs on {{machine}}",
-            "description": "That machine cannot read files from {{app}}. Open the file from the Files panel instead.",
-            "terminalDescription": "That machine cannot read files from {{app}}. Type or paste a path that exists there instead.",
+            "description": "It cannot read files from {{app}}. Open it from the Files panel.",
+            "terminalDescription": "It cannot read files from {{app}}. Type or paste a path on that machine.",
             "unknown": "another machine"
         }
     },
@@ -224,12 +216,12 @@
         "empty": "Click to write"
     },
     "drawing": {
-        "gone": "This drawing was removed from the project.",
+        "gone": "This drawing was removed.",
         "empty": "Nothing drawn yet. Double-click to draw."
     },
     "diagram": {
-        "gone": "This diagram was removed from the project.",
-        "empty": "Nothing in this diagram yet. An agent fills it with ruimte-context view diagram; double-click to open it.",
+        "gone": "This diagram was removed.",
+        "empty": "Empty diagram. Double-click to open.",
         "label": "Diagram"
     },
     "file": {
@@ -237,7 +229,7 @@
         "unsaved": "Unsaved changes"
     },
     "unknown": {
-        "needsNewer": "This node needs a newer version of Ruimte"
+        "needsNewer": "Needs a newer Ruimte"
     },
     "notice": {
         "connecting": "Connecting to the machine",
@@ -246,14 +238,14 @@
     "terminal": {
         "links": {
             "previewFile": "Open in preview",
-            "openFile": "{{modifier}}+click to open file in preview",
-            "open": "{{modifier}}+click to open in your browser",
+            "openFile": "{{modifier}}+click to preview",
+            "open": "{{modifier}}+click to open in browser",
             "openInRuimte": "{{modifier}}+click to open in Ruimte",
-            "remoteLoopback": "This address belongs to {{machine}}. Ruimte does not forward its local ports to this computer.",
-            "unavailable": "This machine-local link cannot be opened here",
+            "remoteLoopback": "This address only works on {{machine}}.",
+            "unavailable": "Cannot open this link here",
             "thisMachine": "the terminal’s machine"
         },
-        "startFailed": "The session could not be started",
+        "startFailed": "Could not start the session",
         "sessionEnded": "[session ended]",
         "exited": "[process exited with code {{code}}]",
         "resume": "Resume",
@@ -263,32 +255,32 @@
         "ports": {
             "label": "Session ports",
             "open": "Open :{{port}}",
-            "openHint": "Verify this listener and open a linked browser",
-            "remote": "Open this port in Ruimte on the machine running the session.",
+            "openHint": "Open in a linked browser",
+            "remote": "Opens in Ruimte on the session’s machine.",
             "unknown": "Session ports unknown",
-            "unavailable": "Session port discovery is unavailable. This needs macOS and a current Ruimte daemon.",
-            "openFailed": "Could not open this session port",
-            "retry": "The listener could not be verified. Try again after the next scan."
+            "unavailable": "Showing ports needs macOS and a current Ruimte on the machine.",
+            "openFailed": "Could not open the port",
+            "retry": "Could not verify the port. Try again after the next scan."
         }
     },
     "chat": {
-        "openFailed": "The chat could not be opened",
-        "retargetFailed": "The provider could not be changed",
-        "sendFailed": "The message could not be sent",
-        "conversationFailed": "This conversation failed to render"
+        "openFailed": "Could not open the chat",
+        "retargetFailed": "Could not change the provider",
+        "sendFailed": "Could not send the message",
+        "conversationFailed": "This conversation could not be shown"
     },
     "browser": {
-        "routeUnavailable": "This address belongs to the project’s machine. No route to that machine is available in this desktop browser.",
-        "ownerUnavailable": "Browser owner unavailable",
+        "routeUnavailable": "This address is on the project’s machine, which this browser cannot reach.",
+        "ownerUnavailable": "The project’s machine cannot be reached",
         "back": "Back",
         "forward": "Forward",
         "stop": "Stop loading",
         "reloadHint": "{{shortcut}} skips the cache",
         "address": "Address",
-        "addressPlaceholder": "Enter an address",
-        "loading": "Loading the page",
-        "streamDpi": "Browser stream DPI",
-        "openExternal": "Open in the system browser",
+        "addressPlaceholder": "Enter address",
+        "loading": "Loading",
+        "streamDpi": "Page sharpness",
+        "openExternal": "Open in system browser",
         "inspect": "Inspect",
         "error": {
             "openExternal": "Open in system browser"
@@ -300,31 +292,32 @@
     },
     "defaultSize": {
         "saved": "{{kind}} nodes now start at {{size}}",
-        "savedDescription": "On {{machine}}, the nodes agents add there included. Change or reset it in Settings, under Views.",
-        "failed": "The default size of {{kind}} nodes did not change",
-        "resetFailed": "The size of {{kind}} nodes did not reset"
+        "savedDescription": "On {{machine}}, also for nodes agents add. Change it in Settings, under Views.",
+        "failed": "Could not change the default size of {{kind}} nodes",
+        "resetFailed": "Could not reset the size of {{kind}} nodes"
     },
     "remote": {
         "offline": "{{machine}} is not answering. It may be asleep.",
         "retrying": "Trying to reach {{machine}} again…",
         "unlinked": "This project is no longer linked on {{machine}}.",
-        "unstarted": "{{machine}} has not taken this task yet. It starts there by itself when {{machine}} answers.",
+        "unstarted": "Not started yet. It starts once {{machine}} answers.",
         "taskNotStarted": "Task: {{title}} · not started",
         "linkAgain": "Link again",
         "tooOld": "{{machine}} runs an older Ruimte. Update it to use this node.",
         "pill": "This node runs on {{machine}}",
-        "pillLapsed": "This node runs on {{machine}}. Agents there cannot give tasks until you link it again. Click to link.",
+        "pillLapsed": "This node runs on {{machine}}. Agents there cannot give tasks until you link it again.",
         "linkAgainFailed": "Could not link {{machine}} again",
         "waiting": "Waiting for {{machine}}",
-        "waitTooltip_one": "The task waits until {{machine}} answers. It carries on there by itself then.",
-        "waitTooltip_other": "{{count}} tasks wait until {{machine}} answers. They carry on there by themselves then."
+        "waitTooltip_one": "The task waits until {{machine}} answers.",
+        "waitTooltip_other": "{{count}} tasks wait until {{machine}} answers."
     },
     "otherMachine": {
         "group": "On another machine",
+        "addProject": "Add to another machine…",
         "notAnswering": "Not answering",
         "needsUpdate": "Needs an update",
         "needsUpdateTip": "{{machine}} runs an older Ruimte",
-        "shared": "A canvas shared with the team cannot hold a node on another machine"
+        "shared": "A shared canvas cannot hold nodes on another machine"
     },
     "bringBack": {
         "item": "Bring back to this machine",
@@ -341,6 +334,9 @@
         "reverse": "Reverse direction",
         "drawHint": "Drag to draw. Hold Shift for straight or diagonal lines. Escape cancels.",
         "defaultColor": "Default line color"
+    },
+    "minimap": {
+        "label": "Canvas map"
     },
     "missingProvider": {
         "notInstalled": "{{name}} is not installed on this machine.",

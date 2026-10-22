@@ -132,7 +132,7 @@ describe('a chat view', () => {
 
     test('Stop ends the running turn on the machine', async () => {
         tell(first, { status: 'running', running: true, activeTurnId: 'turn-1' });
-        await clickOn(button('Stop, Shift-click to also stop its sub-agents'));
+        await clickOn(button('Stop. Shift-click stops sub-agents too'));
         await until(() => machine.requests('chat.cancel').length === 1);
         expect(machine.requests('chat.cancel')[0]).toEqual({ chatId: first });
     });
@@ -216,7 +216,7 @@ describe('a stashed prompt', () => {
         await until(() => text(first) !== '');
         expect(chipOf('Third')).not.toBeNull();
         expect(chipOf('Second')).toBeNull();
-        expect(notice(first)).toBe('1 attached chat is not in this project and was left out');
+        expect(notice(first)).toBe('Left out 1 chat from another project');
         await pressKey(composer(first)!.contentDOM, 'Enter');
         await until(() => machine.requests('chat.send').length === 1);
         expect(machine.requests('chat.send')[0]).toMatchObject({ chatId: first, chats: [third] });

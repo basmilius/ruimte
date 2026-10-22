@@ -31,13 +31,29 @@ export function hookCommand(kind: AgentKind): string {
 
 // A `command` hook with curl, never Claude Code's `http` kind: that one cannot read the port from the
 // environment and reports an error whenever Ruimte is not running.
-interface HookEntry {
-    type: 'command';
-    command: string;
-    timeout: number;
+type HookEntry = Record<string, string | number>;
+
+/*
+ * How a CLI lays out a hooks file. `groups` is Claude Code's (`hooks.<Event>[].hooks[]`), which Codex and Grok read too;
+ * `entries` is Copilot's (`hooks.<Event>[]`, under `version: 1`); `named` is Antigravity's, whose top level names each hook.
+ */
+export type HookShape = 'groups' | 'entries' | 'named';
+
+export function shapeOf(kind: AgentKind): HookShape {
+    if (kind === 'copilot') {
+        return 'entries';
+    }
+    return kind === 'antigravity' ? 'named' : 'groups';
 }
 
+// The key Ruimte's hook goes under in Antigravity's `hooks.json`, whose top level names each hook.
+export const NAMED_HOOK = 'ruimte';
+
 export function hookEntry(kind: AgentKind): HookEntry {
+    if (kind === 'copilot') {
+        // Copilot names the shell its command runs in, and its timeout in seconds.
+        return { type: 'command', bash: hookCommand(kind), timeoutSec: HOOK_TIMEOUT_S };
+    }
     return {
         type: 'command',
         command: hookCommand(kind),
@@ -50,11 +66,11 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export function isOurs(hook: unknown): boolean {
-    return isRecord(hook) && typeof hook.command === 'string' && hook.command.includes(HOOK_MARKER);
+    return isRecord(hook) && [hook.command, hook.bash].some((command) => typeof command === 'string' && command.includes(HOOK_MARKER));
 }
 
 export function sameEntry(hook: unknown, wanted: HookEntry): boolean {
-    return isRecord(hook) && hook.type === wanted.type && hook.command === wanted.command && hook.timeout === wanted.timeout;
+    return isRecord(hook) && Object.entries(wanted).every(([key, value]) => hook[key] === value);
 }
 
 export interface SettingsMerge {
@@ -70,6 +86,10 @@ export interface SettingsMerge {
  * top level, `hooks` or an event is not the shape the CLI reads is refused, never rebuilt.
  */
 export function mergeHooks(config: unknown, kind: AgentKind): SettingsMerge {
+    const shape = shapeOf(kind);
+    if (shape === 'named') {
+        return mergeNamedHook(config, kind);
+    }
     const shapeKept = isRecord(config) && (config.hooks === undefined || (isRecord(config.hooks) && Object.values(config.hooks).every(Array.isArray)));
     if (!shapeKept) {
         return { config: {}, changed: false, refused: true };
@@ -78,51 +98,19 @@ export function mergeHooks(config: unknown, kind: AgentKind): SettingsMerge {
     const hooks: Record<string, unknown> = isRecord(root.hooks) ? { ...root.hooks } : {};
     const wantedEvents = new Set(HOOK_EVENTS[kind] ?? []);
     let changed = false;
+    if (shape === 'entries' && root.version === undefined) {
+        root.version = 1;
+        changed = true;
+    }
 
     const wanted = hookEntry(kind);
     const allEvents = new Set([...wantedEvents, ...Object.keys(hooks)]);
     for (const event of allEvents) {
         const groups = Array.isArray(hooks[event]) ? (hooks[event] as unknown[]) : [];
-        let placed = false;
-        const nextGroups: unknown[] = [];
-        for (const group of groups) {
-            if (!isRecord(group) || !Array.isArray(group.hooks)) {
-                nextGroups.push(group);
-                continue;
-            }
-            const kept: unknown[] = [];
-            let groupChanged = false;
-            for (const hook of group.hooks) {
-                if (!isOurs(hook)) {
-                    kept.push(hook);
-                    continue;
-                }
-                if (wantedEvents.has(event) && !placed) {
-                    placed = true;
-                    if (sameEntry(hook, wanted)) {
-                        kept.push(hook);
-                    } else {
-                        kept.push(wanted);
-                        groupChanged = true;
-                    }
-                } else {
-                    // A second copy, or an event the daemon stopped listening for.
-                    groupChanged = true;
-                }
-            }
-            changed ||= groupChanged;
-            if (kept.length > 0) {
-                nextGroups.push(groupChanged ? { ...group, hooks: kept } : group);
-            } else if (group.hooks.length === 0) {
-                nextGroups.push(group);
-            }
-        }
-        if (wantedEvents.has(event) && !placed) {
-            nextGroups.push({ hooks: [wanted] });
-            changed = true;
-        }
-        if (nextGroups.length > 0) {
-            hooks[event] = nextGroups;
+        const merged = shape === 'entries' ? mergeEntries(groups, wanted, wantedEvents.has(event)) : mergeGroups(groups, wanted, wantedEvents.has(event));
+        changed ||= merged.changed;
+        if (merged.next.length > 0) {
+            hooks[event] = merged.next;
         } else {
             delete hooks[event];
         }
@@ -130,6 +118,115 @@ export function mergeHooks(config: unknown, kind: AgentKind): SettingsMerge {
 
     root.hooks = hooks;
     return { config: root, changed, refused: false };
+}
+
+/* One event of a `groups` file: our hook in the first group that holds one, or a group of its own. */
+function mergeGroups(groups: unknown[], wanted: HookEntry, isWanted: boolean): { next: unknown[]; changed: boolean } {
+    let placed = false;
+    let changed = false;
+    const next: unknown[] = [];
+    for (const group of groups) {
+        if (!isRecord(group) || !Array.isArray(group.hooks)) {
+            next.push(group);
+            continue;
+        }
+        const kept: unknown[] = [];
+        let groupChanged = false;
+        for (const hook of group.hooks) {
+            if (!isOurs(hook)) {
+                kept.push(hook);
+                continue;
+            }
+            if (isWanted && !placed) {
+                placed = true;
+                if (sameEntry(hook, wanted)) {
+                    kept.push(hook);
+                } else {
+                    kept.push(wanted);
+                    groupChanged = true;
+                }
+            } else {
+                // A second copy, or an event the daemon stopped listening for.
+                groupChanged = true;
+            }
+        }
+        changed ||= groupChanged;
+        if (kept.length > 0) {
+            next.push(groupChanged ? { ...group, hooks: kept } : group);
+        } else if (group.hooks.length === 0) {
+            next.push(group);
+        }
+    }
+    if (isWanted && !placed) {
+        next.push({ hooks: [wanted] });
+        changed = true;
+    }
+    return { next, changed };
+}
+
+/* One event of an `entries` file: the same, one level up. */
+function mergeEntries(entries: unknown[], wanted: HookEntry, isWanted: boolean): { next: unknown[]; changed: boolean } {
+    let placed = false;
+    let changed = false;
+    const next: unknown[] = [];
+    for (const entry of entries) {
+        if (!isOurs(entry)) {
+            next.push(entry);
+        } else if (isWanted && !placed) {
+            placed = true;
+            next.push(sameEntry(entry, wanted) ? entry : { ...wanted });
+            changed ||= !sameEntry(entry, wanted);
+        } else {
+            changed = true;
+        }
+    }
+    if (isWanted && !placed) {
+        next.push({ ...wanted });
+        changed = true;
+    }
+    return { next, changed };
+}
+
+/* Antigravity's hook under a name of its own, one entry per event; a name a person filled differently is refused. */
+function namedHook(kind: AgentKind): Record<string, HookEntry[]> {
+    return Object.fromEntries((HOOK_EVENTS[kind] ?? []).map((event) => [event, [hookEntry(kind)]]));
+}
+
+function mergeNamedHook(config: unknown, kind: AgentKind): SettingsMerge {
+    if (!isRecord(config)) {
+        return { config: {}, changed: false, refused: true };
+    }
+    const wanted = namedHook(kind);
+    const current = config[NAMED_HOOK];
+    if (current !== undefined && !isOursNamed(current)) {
+        return { config: {}, changed: false, refused: true };
+    }
+    if (JSON.stringify(current) === JSON.stringify(wanted)) {
+        return { config, changed: false, refused: false };
+    }
+    return { config: { ...config, [NAMED_HOOK]: wanted }, changed: true, refused: false };
+}
+
+/* Whether a named hook holds Ruimte's command under any of its events. */
+export function isOursNamed(value: unknown): boolean {
+    return isRecord(value) && Object.values(value).some((entries) => Array.isArray(entries) && entries.some(isOurs));
+}
+
+/* Whether a hooks file of a CLI holds a hook of Ruimte's anywhere it would run. */
+export function holdsOurHook(config: unknown, kind: AgentKind): boolean {
+    if (!isRecord(config)) {
+        return false;
+    }
+    if (shapeOf(kind) === 'named') {
+        return isOursNamed(config[NAMED_HOOK]);
+    }
+    if (!isRecord(config.hooks)) {
+        return false;
+    }
+    return Object.values(config.hooks).some(
+        (groups) =>
+            Array.isArray(groups) && groups.some((group) => isOurs(group) || (isRecord(group) && Array.isArray(group.hooks) && group.hooks.some(isOurs)))
+    );
 }
 
 type InstallResult = 'unchanged' | 'written';
@@ -167,7 +264,8 @@ export async function textOrNull(path: string): Promise<string | null> {
 
 /* Idempotent: the second run on the same file is a no-op. A file that is not JSON, or not an object, is left alone (throws). */
 export function installHooks(link: string, kind: AgentKind): Promise<HooksInstall> {
-    return mergeIntoSettings(link, 'hooks', (config) => mergeHooks(config, kind), 'is not a settings object with hooks in the shape the CLI reads');
+    const key = shapeOf(kind) === 'named' ? NAMED_HOOK : 'hooks';
+    return mergeIntoSettings(link, key, (config) => mergeHooks(config, kind), 'is not a settings object with hooks in the shape the CLI reads');
 }
 
 /* Merges into a JSON settings file of a CLI, written only when the merge changed something; `key` is the one top-level key Ruimte writes under. */
@@ -217,6 +315,13 @@ export function hookPathIn(kind: AgentKind, folder: string): string | null {
     if (kind === 'codex') {
         return join(folder, 'hooks.json');
     }
+    // A file of Ruimte's own among the CLI's hook files, each of which it reads.
+    if (kind === 'grok' || kind === 'copilot') {
+        return join(folder, 'hooks', 'ruimte.json');
+    }
+    if (kind === 'antigravity') {
+        return join(folder, 'config', 'hooks.json');
+    }
     return null;
 }
 
@@ -230,6 +335,12 @@ export function defaultConfigFolder(kind: AgentKind, env: Record<string, string 
     }
     if (kind === 'antigravity') {
         return env.GEMINI_HOME ?? join(env.HOME ?? homedir(), '.gemini');
+    }
+    if (kind === 'grok') {
+        return env.GROK_HOME ?? join(env.HOME ?? homedir(), '.grok');
+    }
+    if (kind === 'copilot') {
+        return env.COPILOT_HOME ?? join(env.HOME ?? homedir(), '.copilot');
     }
     return null;
 }
@@ -326,19 +437,20 @@ export interface FolderInstall extends HooksInstall {
 
 /*
  * Everything the daemon puts in one config folder of a CLI: its hooks, for Codex the rule that lets
- * `ruimte-context` out of the sandbox, and for Antigravity only that rule, since `agy` has no hooks Ruimte
- * reads. Answers what was written where, so the caller can say so.
+ * `ruimte-context` out of the sandbox, and for Antigravity the rule that lets `agy` run it without asking.
+ * Answers what was written where, so the caller can say so.
  */
 export async function installInFolder(kind: AgentKind, folder: string): Promise<FolderInstall[]> {
+    const installs: FolderInstall[] = [];
     if (kind === 'antigravity') {
         const path = antigravitySettingsPathIn(folder);
-        return [{ path, kind: 'rules', ...(await installAntigravityRules(path)) }];
+        installs.push({ path, kind: 'rules', ...(await installAntigravityRules(path)) });
     }
     const hookPath = hookPathIn(kind, folder);
     if (hookPath === null) {
-        return [];
+        return installs;
     }
-    const installs: FolderInstall[] = [{ path: hookPath, kind: 'hooks', ...(await installHooks(hookPath, kind)) }];
+    installs.push({ path: hookPath, kind: 'hooks', ...(await installHooks(hookPath, kind)) });
     if (kind === 'codex') {
         const rulesPath = codexRulesPathIn(folder);
         const existed = await stat(rulesPath).then(

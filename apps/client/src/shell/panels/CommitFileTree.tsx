@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { FileTreeVisibleRow } from '@pierre/trees';
 import { ContextMenu, FileTree, useFileTree } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
@@ -41,17 +41,14 @@ export function CommitFileTree({ files, shown, onPick, marks = diffFileParts, me
 
     const byPath = useMemo(() => new Map(files.map((file) => [file.path, file])), [files]);
 
-    const decorate = useCallback(
-        (item: FileTreeVisibleRow) => {
-            if (item.kind === 'directory') {
-                const parts = folderParts(files, dirPathOf(item.path));
-                return parts === null ? null : <GitTreeMarks parts={parts} />;
-            }
-            const file = byPath.get(item.path);
-            return file === undefined ? null : <GitTreeMarks parts={marks(file)} />;
-        },
-        [byPath, files, marks]
-    );
+    const decorate = (item: FileTreeVisibleRow) => {
+        if (item.kind === 'directory') {
+            const parts = folderParts(files, dirPathOf(item.path));
+            return parts === null ? null : <GitTreeMarks parts={parts} />;
+        }
+        const file = byPath.get(item.path);
+        return file === undefined ? null : <GitTreeMarks parts={marks(file)} />;
+    };
 
     const { model } = useFileTree({
         paths: [],

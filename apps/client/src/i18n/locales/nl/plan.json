@@ -39,14 +39,14 @@
         "title": "Resultaten van het plan \"{{title}}\":"
     },
     "pill": {
-        "count_one": "{{count}} plan in deze chat",
-        "count_other": "{{count}} plannen in deze chat",
+        "count_one": "{{count}} plan",
+        "count_other": "{{count}} plannen",
         "unseen": "Nieuw plan",
         "failed": "Een stap is mislukt"
     },
     "toast": {
         "notChanged": "Het plan is niet gewijzigd",
-        "copied": "Plan als Markdown gekopieerd"
+        "copied": "Gekopieerd als Markdown"
     },
     "menu": {
         "copyPlan": "Kopiëren als Markdown"
@@ -58,8 +58,8 @@
         }
     },
     "empty": {
-        "all": "Dit plan heeft nog geen stappen.",
-        "open": "Er staat niets open.",
+        "all": "Nog geen stappen.",
+        "open": "Niets open.",
         "issues": "Geen problemen."
     },
     "step": {

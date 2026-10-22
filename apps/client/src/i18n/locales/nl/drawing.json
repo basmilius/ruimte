@@ -79,8 +79,8 @@
     },
     "export": {
         "label": "Exporteren",
-        "selection": "De selectie exporteren",
-        "drawing": "De tekening exporteren",
+        "selection": "Selectie exporteren",
+        "drawing": "Tekening exporteren",
         "copyPng": "Kopiëren als PNG",
         "savePng": "PNG opslaan",
         "copySvg": "Kopiëren als SVG",
@@ -89,34 +89,34 @@
     },
     "diagram": {
         "title": "Diagram",
-        "openJson": "Het JSON-bestand openen",
+        "openJson": "JSON openen",
         "copyJson": "Kopiëren als JSON",
         "nodeLabel": "Label",
         "tone": "Tint",
         "resetPosition": "Positie terugzetten",
         "empty": {
-            "description": "Dit diagram is leeg. Een agent schrijft er een uit wat je hem vertelt.",
+            "description": "Leeg diagram. Een agent kan het voor je vullen.",
             "agent": {
                 "title": "Vraag het een agent",
-                "description": "Een chat ernaast op het canvas"
+                "description": "Opent een chat ernaast"
             },
             "json": {
                 "title": "JSON openen",
-                "description": "Schrijf de nodes en verbindingen met de hand"
+                "description": "Nodes en verbindingen met de hand schrijven"
             },
             "example": {
-                "title": "Een voorbeeld invoegen",
-                "description": "Een kleine flow om je eigen van te maken"
+                "title": "Voorbeeld invoegen",
+                "description": "Een kleine flow om mee te beginnen"
             }
         }
     },
     "error": {
-        "drawingCopy": "De tekening kon niet worden gekopieerd",
-        "drawingOpen": "De tekening kon niet worden geopend",
-        "drawingSave": "De tekening kon niet worden opgeslagen",
-        "diagramCopy": "Het diagram kon niet worden gekopieerd",
-        "diagramOpen": "Het diagram kon niet worden geopend",
-        "diagramSave": "Het diagram kon niet worden opgeslagen"
+        "drawingCopy": "Kon de tekening niet kopiëren",
+        "drawingOpen": "Kon de tekening niet openen",
+        "drawingSave": "Kon de tekening niet opslaan",
+        "diagramCopy": "Kon het diagram niet kopiëren",
+        "diagramOpen": "Kon het diagram niet openen",
+        "diagramSave": "Kon het diagram niet opslaan"
     },
     "menu": {
         "cut": "Knippen",
@@ -130,6 +130,6 @@
         "zoom": "Zoom"
     },
     "empty": {
-        "description": "Er is nog niets getekend. Kies een gereedschap met <tools/> of plak vormen uit een andere tekening met <paste/>."
+        "description": "Nog niets getekend. Kies gereedschap met <tools/> of plak met <paste/>."
     }
 }

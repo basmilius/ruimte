@@ -308,7 +308,7 @@ describe('client actions', () => {
         store.getState().toggleGroupCollapse('g');
         expect(await clientActions.execute('group.arrange', { viewId: 'main', groupId: 'g' }, PERSON_ACTION_CALL)).toMatchObject({
             status: 'failed',
-            error: { code: 'arrange-refused', message: 'Expand the group before arranging its members.' }
+            error: { code: 'arrange-refused', message: 'Expand the group first.' }
         });
     });
 

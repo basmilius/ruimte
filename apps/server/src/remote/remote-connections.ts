@@ -49,7 +49,7 @@ export function brokerDialer(options: BrokerDialerOptions): PeerDialer {
         async dial(machine, statement) {
             const url = machine.brokerUrl ?? options.defaultBroker();
             if (url === null || url === undefined) {
-                throw new RemoteLinkError('no-broker', 'Neither machine has a broker set, so they cannot find each other');
+                throw new RemoteLinkError('no-broker', 'These machines cannot reach each other through your account');
             }
             const timeoutMs = options.timeoutMs ?? PEER_ATTEMPT_TIMEOUT_MS;
             const line = await openBrokerLine({ url, signer: options.signer, machinePublicKey: machine.publicKey, timeoutMs });

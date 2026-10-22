@@ -65,6 +65,7 @@ describe('a node whose CLI is not on its machine', () => {
         await clickOn(install!);
         await until(() => document.querySelector('[role="dialog"]')?.textContent?.includes('Not installed') === true);
         expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Grok');
+        expect(useUi.getState().settings.target).toBe('providers.install.grok');
     });
 
     test('a chat view says so as well', async () => {

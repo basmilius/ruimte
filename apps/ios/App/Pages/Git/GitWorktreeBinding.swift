@@ -212,7 +212,7 @@ struct GitWorktreeBindSheet: View {
                     Section { Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red) }
                 }
             }
-            .navigationTitle("Bind to a worktree")
+            .navigationTitle("Bind to worktree")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }

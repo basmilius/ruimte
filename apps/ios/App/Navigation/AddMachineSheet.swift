@@ -39,7 +39,7 @@ struct AddMachineSheet: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
             }
-            .navigationTitle("Add a machine")
+            .navigationTitle("Add machine")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }

@@ -1,7 +1,7 @@
 import { MAX_PROMPT_LENGTH, MAX_OPENED_PER_CALLER } from '@ruimte/actions';
 import { z } from 'zod';
 import { defineStandaloneActionVerb, runAction } from './action-verb.ts';
-import { AGENT_KINDS, chatKinds } from './agents.ts';
+import { AGENT_KINDS, agentKindField, chatKinds } from './agents.ts';
 import { DEPTH_LIMIT_LINES, MAX_TEAM_DEPTH } from './depth.ts';
 import { readsFlag, readsLines } from './link-verb.ts';
 import { modeFlag } from '@adecore/agents/providers';
@@ -29,7 +29,7 @@ const RoleSchema = z.strictObject({
         .max(MAX_PROMPT_LENGTH, {
             error: (issue) => `prompt is ${lengthOf(issue.input)} characters and at most ${MAX_PROMPT_LENGTH} fit on the line a CLI is started with`
         }),
-    provider: z.enum(AGENT_KINDS, { error: `provider needs a CLI: ${AGENT_KINDS.join(', ')}` }),
+    provider: agentKindField('provider'),
     model: modelFlag,
     terminal: z.boolean({ error: 'terminal is true or false' }).optional(),
     effort: effortFlag
@@ -49,7 +49,7 @@ const ROLES_LINES: readonly string[] = [
     `roles\tshape\t${ROLES_SHAPE}`,
     `roles\ttitle\trequired\tThe title of the node, at most ${MAX_TITLE_LENGTH} characters; the session never renames over it`,
     `roles\tprompt\trequired\tWhat that agent starts working on, at most ${MAX_PROMPT_LENGTH} characters`,
-    `roles\tprovider\trequired\t${AGENT_KINDS.join(', ')}`,
+    `roles\tprovider\trequired\t${AGENT_KINDS.join(', ')}, or the kind of an agent a person installed from the ACP registry`,
     `roles\tterminal\toptional\ttrue opens a terminal node instead of a chat node; a CLI without a chat backend is a terminal anyway (only ${chatKinds().join(', ')} have one)`,
     "roles\tmodel\toptional\tThe model id for a chat role, with that model's default options; omitted uses the composer preference. Refused for terminals and unknown models",
     "roles\teffort\toptional\tThe reasoning effort for a chat role, one its model offers; omitted keeps the person's last pick when the model offers it, else the model's default. Refused for terminals",

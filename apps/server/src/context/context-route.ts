@@ -39,7 +39,7 @@ interface ContextRouteDeps {
 }
 
 /*
- * `GET /context` lists, `GET /context/<id>[?tail=N][&subagent=T][&view=V]` reads; the bearer token names the
+ * `GET /context` lists, `GET /context/<id>[?tail=N][&subagent=T][&view=V][&json]` reads; the bearer token names the
  * agent asking. Both run `context.list` and `context.read`, so the CLI is one adapter among others.
  */
 export async function handleContextRequest(request: Request, pathname: string, deps: ContextRouteDeps): Promise<Response> {
@@ -80,5 +80,5 @@ export async function handleContextRequest(request: Request, pathname: string, d
         return failed(read);
     }
     countVerb('read');
-    return new Response(read.output.text, { headers: TEXT });
+    return query.has('json') ? Response.json(read.output) : new Response(read.output.text, { headers: TEXT });
 }

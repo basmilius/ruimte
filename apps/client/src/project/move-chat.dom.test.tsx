@@ -125,7 +125,7 @@ describe('making a project of a chat, or moving it into one', () => {
         await ask('make');
         await until(() => dialog()!.textContent!.includes('/work/vinyl-shelf'));
         const text = dialog()!.textContent!;
-        expect(text).toContain('Make a project');
+        expect(text).toContain('Make project');
         expect(text).toContain('Where this chat worked · 7 files');
         expect(text).toContain('Where this chat worked · project Atlas');
         expect(text).toContain('New folder');
@@ -138,7 +138,7 @@ describe('making a project of a chat, or moving it into one', () => {
     test('says why a chat cannot move, turns the fields off and keeps the window in Chats', async () => {
         await open(() => ({ ...INFO, refusal: { reason: 'agents' } }));
         await ask('make');
-        await until(() => dialog()!.textContent!.includes('started agents of its own'));
+        await until(() => dialog()!.textContent!.includes('A chat with agents cannot move'));
         expect(nameField().disabled).toBe(true);
         expect(footerButtons()).toEqual(['Close']);
         await clickOn(button('Close') ?? null);
@@ -245,12 +245,12 @@ describe('making a project of a chat, or moving it into one', () => {
         await open();
         await ask('make');
         await until(() => dialog()!.textContent!.includes('Files this chat made'));
-        expect(dialog()!.textContent).not.toContain('attached to this one with @');
+        expect(dialog()!.textContent).not.toContain('to this one with @');
         await dismiss();
         await until(() => dialog() === null);
         machine.answer('chat.moveInfo', () => ({ ...INFO, references: 2 }));
         await ask('make');
-        await until(() => dialog()!.textContent!.includes('2 chats in Chats are attached to this one with @'));
+        await until(() => dialog()!.textContent!.includes('2 chats in Chats refer to this one with @'));
     });
 
     test('a move the machine refuses after confirming asks again and shows its reason', async () => {
@@ -264,7 +264,7 @@ describe('making a project of a chat, or moving it into one', () => {
         await until(() => button('Move') !== undefined && !button('Move')!.disabled);
         const before = machine.requests('chat.moveInfo').length;
         await clickOn(button('Move') ?? null);
-        await until(() => dialog()!.textContent!.includes('Messages from other chats are waiting'));
+        await until(() => dialog()!.textContent!.includes('Messages from other chats wait'));
         expect(machine.requests('chat.moveInfo').length).toBeGreaterThan(before);
         expect(footerButtons()).toEqual(['Close']);
         expect(useProject.getState().current?.name).toBe('Chats');

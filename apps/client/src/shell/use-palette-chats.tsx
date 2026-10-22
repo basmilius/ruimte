@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Kbd, KEY_SHORTCUTS, Tooltip } from '@adecore/ui';
 import { PaletteNote } from '@/shell/PaletteEntryList';
@@ -17,7 +16,7 @@ export function usePaletteChats(context: PaletteContext, enabled: boolean): Pale
     const currentEndpointId = useProject((s) => s.currentEndpointId);
     const chatSearch = useChatSearch(enabled && open ? currentProjectId : null, enabled ? query : '');
     const externalAll = useExternalSessions(enabled && open ? currentProjectId : null);
-    const external = useMemo(() => (enabled ? externalMatching(externalAll.sessions, query) : []), [enabled, externalAll.sessions, query]);
+    const external = enabled ? externalMatching(externalAll.sessions, query) : [];
     const count = chatSearch.hits.length + external.length;
     const activeHit = Math.min(index, count - 1);
 

@@ -1,4 +1,6 @@
 import {
+    CliVersionSchema,
+    RegistryCatalogSchema,
     TerminalPrepareSourceSchema,
     TerminalPreparePreviewResultSchema,
     TerminalPrepareResultSchema,
@@ -27,6 +29,7 @@ import {
     DeviceControlPayloadSchema,
     DeviceAppearanceSchema,
     DevicePermissionSchema,
+    DevicePowerSchema,
     DeviceReferenceSchema,
     DeviceStateSchema,
     DeviceStatusBarSchema,
@@ -65,7 +68,6 @@ import {
     ModelSelectionSchema,
     NodeKindSchema,
     NODE_ACCENT_NAMES,
-    NOTE_COLOR_NAMES,
     PROJECT_PROPOSAL_LIMITS,
     PROJECT_VIEW_KINDS,
     PlanChecksSchema,
@@ -86,7 +88,7 @@ import {
     WorktreeSchema
 } from '@ruimte/contracts';
 import { z } from 'zod';
-import { MAX_KEY_COMBOS, MAX_NOTICE_LENGTH, MAX_OPENED_PER_CALLER, MAX_PROMPT_LENGTH, MAX_TITLE_LENGTH, MAX_TYPED_LENGTH } from './limits.ts';
+import { MAX_KEY_COMBOS, MAX_NOTICE_LENGTH, MAX_OPENED_PER_CALLER, MAX_PER_CALL, MAX_PROMPT_LENGTH, MAX_TITLE_LENGTH, MAX_TYPED_LENGTH } from './limits.ts';
 
 export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as const;
 export const ActionActorKindSchema = z.enum(ACTION_ACTOR_KINDS);
@@ -437,6 +439,26 @@ const listedProjectId = z.string().min(1).describe('The project, by the projectI
 
 const usageDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+/* A chat as the agent reading it sees its spend: the model, how full its context is and whether its prompt cache is still warm. */
+const chatReadUsage = z.object({
+    provider: AgentKindSchema,
+    model: z.string().describe('The model the CLI reported, else the one picked for the chat'),
+    contextTokens: z.number().int(),
+    contextWindow: z.number().int().nullable().describe('Null when the CLI named no window'),
+    contextPercent: z.number().int().nullable().describe('How much of the window the context fills, in whole percent; null without a window'),
+    cache: z
+        .object({
+            ttlMs: z.number().int().nullable().describe('How long the cache lives, in milliseconds'),
+            expiresAt: z.iso.datetime(),
+            expiresInMs: z.number().int().describe('Negative once the cache went cold'),
+            expired: z.boolean()
+        })
+        .nullable()
+        .describe('Null while the CLI names no prompt cache lifetime')
+});
+
+const PaceSchema = z.enum(['ahead', 'behind', 'even']);
+
 export const TARGET_KINDS = ['view', 'node', 'chat', 'agent', 'project'] as const;
 const resolvedTarget = z.object({
     id: z.string(),
@@ -598,6 +620,22 @@ export const ACTION_DEFINITIONS = {
         output: z.object({
             proposalId: z.string(),
             outcome: z.enum(['declined', 'waiting'])
+        })
+    },
+    'project.ignoredFiles': {
+        title: 'List the ignored files of the project',
+        description:
+            'Lists the files git ignores in the repository of the project (.env files, local settings), which a clone elsewhere does not bring. A folder ignored whole, such as node_modules, is left out.',
+        agentDescription: 'Lists the files git ignores in the project repository: path, size, link; folders ignored whole are left out',
+        effect: 'read',
+        domain: 'projects',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({
+            // The repository's top level, which every path is relative to.
+            root: z.string(),
+            files: z.array(z.object({ path: z.string(), size: z.number().int(), link: z.boolean() })),
+            truncated: z.boolean()
         })
     },
     'project.delete': {
@@ -823,6 +861,50 @@ export const ACTION_DEFINITIONS = {
             changed: z.boolean()
         })
     },
+    'node.renameMany': {
+        title: 'Rename canvas nodes',
+        description:
+            'Renames several nodes of one canvas in one write, each the way node.rename renames one. Every node is checked before any is renamed, so a refusal renames none.',
+        agentDescription: 'Renames several nodes in one write; nothing a node hosts renames over its new title again.',
+        effect: 'shared',
+        domain: 'canvas',
+        actors: AGENT,
+        input: z.object({
+            viewId,
+            nodes: z
+                .array(z.object({ nodeId: z.string().min(1), name: givenName }))
+                .min(1)
+                .max(MAX_PER_CALL)
+        }),
+        output: z.object({
+            viewId,
+            nodes: z.array(
+                z.object({ nodeId: z.string().min(1), kind: ActionCanvasNodeKindSchema, previousName: z.string(), name: viewName, changed: z.boolean() })
+            )
+        })
+    },
+    'node.setColor': {
+        title: 'Color canvas node',
+        description: 'Gives a node on a canvas one of the colors, or takes its color off with null. A note takes its paper from it.',
+        agentDescription: 'Colors one node you made or have a line with; a note takes its paper from the color.',
+        effect: 'shared',
+        domain: 'canvas',
+        actors: PERSON_VOICE_AND_AGENT,
+        input: z.object({
+            viewId,
+            nodeId: nodeId.describe('The node, by id'),
+            color: z.enum(NODE_ACCENT_NAMES).nullable().describe('The color; null takes it off')
+        }),
+        output: z.object({
+            viewId,
+            nodeId,
+            kind: ActionCanvasNodeKindSchema,
+            color: z.enum(NODE_ACCENT_NAMES).nullable(),
+            // What the node showed before: a note's paper, which may be the neutral one of an old gray note.
+            previousColor: z.string().nullable(),
+            changed: z.boolean()
+        })
+    },
     'node.create': {
         title: 'Create canvas node',
         description:
@@ -855,7 +937,8 @@ export const ACTION_DEFINITIONS = {
             resume: resumedSession,
             issue: forActors(PERSON, z.object({ repo: z.string().min(1), number: z.number().int().positive(), url: z.string().min(1) })).describe(
                 'The GitHub issue an agent node is started on, which the node shows as a pill'
-            )
+            ),
+            color: agentField(z.enum(NODE_ACCENT_NAMES)).describe('The color of the node; a note takes its paper from it')
         }),
         output: z.object({
             viewId,
@@ -865,6 +948,47 @@ export const ACTION_DEFINITIONS = {
             kind: ActionCanvasNodeKindSchema,
             // The line drawn from the agent into what it made; a dry run has no id for it yet.
             edge: z.object({ edgeId: z.string().nullable(), from: nodeId, to: nodeId }).nullable().optional()
+        })
+    },
+    'node.createMany': {
+        title: 'Create canvas nodes',
+        description:
+            'Creates several nodes on one canvas in one write, each the way node.create makes one, with a line from the caller into each. Every node is checked before any is made, so a refusal makes none.',
+        agentDescription: 'Adds several nodes to a canvas in one write, with a line from you into each.',
+        effect: 'shared',
+        domain: 'canvas',
+        actors: AGENT,
+        input: z.object({
+            viewId,
+            nodes: z
+                .array(
+                    z.object({
+                        kind: z.union([ActionCreatableCanvasNodeKindSchema, z.enum(AGENT_NODE_KINDS)]),
+                        title: givenName.nullable(),
+                        content: z.string().nullable().describe('The body of a note'),
+                        url: z.string().trim().min(1).nullable().describe('An http or https address'),
+                        path: z.string().trim().min(1).nullable().describe('The file the node shows, relative to the project folder or absolute'),
+                        source: viewId.nullable().describe('The id of a view of this project of the same kind as the node'),
+                        cwd: z.string().min(1).nullable().describe('The directory the shell starts in'),
+                        beside: nodeId.nullable().describe('Puts the node directly right of this node, top edges level'),
+                        device: z.string().min(1).nullable().describe('The device a device node shows'),
+                        color: z.enum(NODE_ACCENT_NAMES).nullable().describe('The color of the node; a note takes its paper from it')
+                    })
+                )
+                .min(1)
+                .max(MAX_PER_CALL)
+        }),
+        output: z.object({
+            viewId,
+            view: viewName,
+            nodes: z.array(
+                z.object({
+                    nodeId: z.string().min(1),
+                    node: z.string(),
+                    kind: ActionCanvasNodeKindSchema,
+                    edge: z.object({ edgeId: z.string().nullable(), from: nodeId, to: nodeId }).nullable()
+                })
+            )
         })
     },
     'node.duplicate': {
@@ -952,7 +1076,7 @@ export const ACTION_DEFINITIONS = {
         })
     },
     'group.arrange': {
-        title: 'Arrange group members',
+        title: 'Arrange group',
         description:
             'Tidies the nodes that stand directly in a group into a grid under its title bar. The frame only grows, and nothing is moved into or out of another group.',
         effect: 'shared',
@@ -1665,6 +1789,32 @@ export const ACTION_DEFINITIONS = {
         }),
         output: z.object({ viewId, nodeId, lines: z.number().int(), characters: z.number().int(), changed: z.boolean() })
     },
+    'node.updateMany': {
+        title: 'Write in notes',
+        description:
+            'Writes the bodies of several notes of one canvas in one write, each the way node.update writes one. Every note is checked before any is written, so a refusal writes none.',
+        agentDescription: 'Writes in several notes in one write, each a note you made or a line joins you to, or any note of the canvas a chat view names.',
+        effect: 'shared',
+        domain: 'content',
+        actors: AGENT,
+        input: z.object({
+            viewId,
+            nodes: z
+                .array(
+                    z.object({
+                        nodeId,
+                        text: z.string().describe('What to write'),
+                        append: z.boolean().describe('Adds the text as a line under what is there instead of replacing the body')
+                    })
+                )
+                .min(1)
+                .max(MAX_PER_CALL)
+        }),
+        output: z.object({
+            viewId,
+            nodes: z.array(z.object({ nodeId, lines: z.number().int(), characters: z.number().int(), changed: z.boolean() }))
+        })
+    },
     'flag.set': {
         title: 'Flag',
         description: 'Puts a colored flag on views and nodes, or takes it off with null. A flag is personal: it never goes into the shared project file.',
@@ -1680,15 +1830,6 @@ export const ACTION_DEFINITIONS = {
             color: flagColor.nullable(),
             changed: z.boolean()
         })
-    },
-    'note.setColor': {
-        title: 'Color a note',
-        description: 'Gives a note on a canvas on screen another paper color.',
-        effect: 'shared',
-        domain: 'content',
-        actors: PERSON_AND_VOICE,
-        input: z.object({ viewId, nodeId: nodeId.describe('The note, by id'), color: z.enum(NOTE_COLOR_NAMES) }),
-        output: z.object({ viewId, nodeId, color: z.enum(NOTE_COLOR_NAMES), previousColor: z.string(), changed: z.boolean() })
     },
     'node.arrange': {
         title: 'Arrange canvas nodes',
@@ -1754,6 +1895,16 @@ export const ACTION_DEFINITIONS = {
         actors: AGENT,
         input: z.object({ viewId, edgeId: z.string().min(1) }),
         output: z.object({ viewId, edgeId: z.string(), from: nodeId, to: nodeId, label: z.string().nullable() })
+    },
+    'link.deleteMany': {
+        title: 'Remove canvas lines',
+        description:
+            'Removes several lines of one canvas in one write, each the way link.delete removes one. Every line is checked before any goes, so a refusal removes none.',
+        effect: 'shared',
+        domain: 'canvas',
+        actors: AGENT,
+        input: z.object({ viewId, edgeIds: z.array(z.string().min(1)).min(1).max(MAX_PER_CALL) }),
+        output: z.object({ viewId, edges: z.array(z.object({ edgeId: z.string(), from: nodeId, to: nodeId, label: z.string().nullable() })) })
     },
     'agent.alert': {
         title: 'Notify the person',
@@ -2420,6 +2571,8 @@ export const ACTION_DEFINITIONS = {
             screen: deviceSize.nullable(),
             buttons: z.array(z.string()),
             can: z.object({ shot: z.boolean(), input: z.boolean(), type: z.boolean(), launch: z.boolean(), tree: z.boolean() }),
+            // A phone's own battery; null for a simulator or an emulator, and for a phone that could not say.
+            power: DevicePowerSchema.nullable(),
             // What the device shows as elements, frames in pixels of its screen; null when it has no tree, and treeError says why when reading one failed.
             tree: z
                 .object({
@@ -2687,7 +2840,10 @@ export const ACTION_DEFINITIONS = {
                     `The whole conversation of one subagent of a chat the caller may read instead of the chat, read from ${ChatSubagentSourceSchema.options.join(' or ')}`
                 )
         }),
-        output: z.object({ text: z.string() })
+        output: z.object({
+            text: z.string(),
+            usage: chatReadUsage.optional().describe('Only on a chat read whole or by its tail, not on a subagent of it')
+        })
     },
     'agent.start': {
         title: 'Start an agent',
@@ -3111,7 +3267,7 @@ export const ACTION_DEFINITIONS = {
         output: gitRunOutput
     },
     'git.createPullRequest': {
-        title: 'Open a pull request',
+        title: 'Create pull request',
         description: 'Publishes the branch when needed and opens a pull request with a title and body, after confirmation. Needs gh on the machine.',
         effect: 'external',
         domain: 'developer',
@@ -4094,6 +4250,59 @@ export const ACTION_DEFINITIONS = {
             installed: z.boolean()
         })
     },
+    'provider.catalog': {
+        title: 'Read the ACP registry',
+        description:
+            "Reads the agents of the public ACP registry this machine can run, with the version the registry names and whether each is installed here. Installing one stays a person's, in Settings, Providers.",
+        effect: 'read',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({
+            search: z.string().nullable().describe('Words the name, id or description of an agent holds; every agent without it'),
+            refresh: z.boolean().nullable().describe('Reads the registry again instead of the copy of the last hour')
+        }),
+        output: RegistryCatalogSchema
+    },
+    'provider.versions': {
+        title: 'Read the versions of the agent CLIs',
+        description:
+            "Reads the version of each agent CLI on this machine, how it was installed and whether that route offers a newer one. Updating one stays a person's, in Settings, Providers.",
+        effect: 'read',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ refresh: z.boolean().nullable().describe('Asks each route for its newest version again instead of the answer of the last hour') }),
+        output: z.object({ versions: z.array(CliVersionSchema) })
+    },
+    'provider.limits': {
+        title: 'Read the plan of my own account',
+        description:
+            'Reads the plan windows of the account the calling agent runs on, as its CLI last reported them: how much of each is used, when it resets and how that stands against an even pace. Nothing reads a credential or asks the provider.',
+        effect: 'read',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({
+            provider: AgentKindSchema,
+            account: z.string().nullable().describe('The account by name; null on a machine without accounts'),
+            plan: z.string().nullable(),
+            checkedAt: z.iso.datetime().nullable().describe('When these numbers came in; null before the first read'),
+            unavailable: z.string().nullable().describe('Why there are no windows, when there are none for a reason'),
+            windows: z.array(
+                z.object({
+                    label: z.string(),
+                    kind: z.string(),
+                    usedPercent: z.number().int(),
+                    resetsAt: z.iso.datetime().nullable(),
+                    evenPacePercent: z
+                        .number()
+                        .int()
+                        .nullable()
+                        .describe('Where usedPercent would stand had the window been spent evenly from its start; null when the CLI named no reset or length'),
+                    pace: PaceSchema.nullable().describe('ahead uses more than that even pace, behind less; null without one')
+                })
+            )
+        })
+    },
     'usage.summary': {
         title: 'Read AI usage',
         description:
@@ -4133,7 +4342,20 @@ export const ACTION_DEFINITIONS = {
                     plan: z.string().nullable(),
                     checkedAt: z.number(),
                     unavailable: z.string().nullable(),
-                    windows: z.array(z.object({ label: z.string(), kind: z.string(), usedPercent: z.number(), resetsAt: z.number().nullable() }))
+                    windows: z.array(
+                        z.object({
+                            label: z.string(),
+                            kind: z.string(),
+                            usedPercent: z.number(),
+                            resetsAt: z.number().nullable(),
+                            evenPacePercent: z
+                                .number()
+                                .nullable()
+                                .describe(
+                                    'Where usedPercent would stand had the window been spent evenly from its start; above it is ahead of that pace. Null when the CLI named no reset or length'
+                                )
+                        })
+                    )
                 })
             )
         })

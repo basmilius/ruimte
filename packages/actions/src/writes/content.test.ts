@@ -1,5 +1,5 @@
 import { DRAWING_TEXT_SIZE_MAX, DrawingElementSchema } from '@ruimte/contracts';
-import type { ActionInput } from '../index.ts';
+import { MAX_PER_CALL, type ActionInput } from '../index.ts';
 import { describeWrites } from './harness.ts';
 import { sampleOf } from './sample.ts';
 
@@ -27,10 +27,23 @@ describeWrites('content', {
             'an empty note': { viewId: 'board', nodeId: '', text: 'Hi', append: false }
         }
     },
-    'note.setColor': {
-        actors: ['person', 'voice'],
-        input: { viewId: 'board', nodeId: 'note-1', color: 'green' },
-        refused: { 'a paper a note has not': { viewId: 'board', nodeId: 'note-1', color: 'teal' } }
+    'node.updateMany': {
+        actors: ['agent'],
+        input: {
+            viewId: 'board',
+            nodes: [
+                { nodeId: 'note-1', text: 'Second line', append: true },
+                { nodeId: 'note-2', text: 'All of it', append: false }
+            ]
+        },
+        refused: {
+            'no notes at all': { viewId: 'board', nodes: [] },
+            'more notes than one call writes': {
+                viewId: 'board',
+                nodes: Array.from({ length: MAX_PER_CALL + 1 }, () => ({ nodeId: 'note-1', text: 'Hi', append: true }))
+            },
+            'no answer to append': { viewId: 'board', nodes: [{ nodeId: 'note-1', text: 'Hi' }] }
+        }
     },
     'diagram.replaceContent': {
         actors: ['person', 'voice', 'agent'],

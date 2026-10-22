@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { createPublicKey, generateKeyPairSync, sign, verify } from 'node:crypto';
 import { BrokerPeerFrameSchema, brokerHelloMessage, signalMessage, type BrokerPeerFrame, type SignalAccess, type SignalEnvelope } from '@ruimte/pulsar';
 import type { ClientKey } from '@/endpoint/client-key';
@@ -7,6 +7,7 @@ import type { Signal, SignalingEvents } from './signaling';
 
 const BROKER_URL = 'wss://broker.example.com';
 const NONCE = 'n'.repeat(32);
+const NOW = Date.UTC(2026, 9, 1);
 
 function newKey() {
     const pair = generateKeyPairSync('ed25519');
@@ -89,7 +90,7 @@ function setup(access?: (key: ClientKey) => Promise<SignalAccess>) {
         await settle();
         const ice = socket.sent.at(-1) as Extract<BrokerPeerFrame, { type: 'ice' }>;
         expect(ice.type).toBe('ice');
-        socket.deliver({ type: 'ice', id: ice.id, servers, expiresAt: servers.length > 0 ? Date.now() + 3_600_000 : null });
+        socket.deliver({ type: 'ice', id: ice.id, servers, expiresAt: servers.length > 0 ? NOW + 3_600_000 : null });
         await settle();
         return socket;
     };
@@ -103,6 +104,9 @@ function setup(access?: (key: ClientKey) => Promise<SignalAccess>) {
 }
 
 describe('brokerSignaling', () => {
+    beforeEach(() => setSystemTime(NOW));
+    afterEach(() => setSystemTime());
+
     test('announces the client key, signs the offer for the machine, and passes on an answer the machine signed', async () => {
         const { client, machine, attempt, announce, answerFrom } = setup();
         const { signaling, log } = attempt('attempt-0001');
@@ -137,7 +141,7 @@ describe('brokerSignaling', () => {
         socket.deliver(answerFrom(newKey(), { connectionId: 'attempt-0001', signal: { kind: 'answer', sdp: 'v=0' } }));
         await settle();
         expect(log.signals).toEqual([]);
-        expect(log.failures).toEqual(['A signal on the broker names the machine but is not signed by it']);
+        expect(log.failures).toEqual(['A connection request claims to come from the machine but cannot be verified']);
         expect(socket.closed).toBe(true);
     });
 
@@ -150,7 +154,7 @@ describe('brokerSignaling', () => {
         const relay = socket.sent[3] as Extract<BrokerPeerFrame, { type: 'relay' }>;
         socket.deliver({ type: 'error', code: 'not-connected', message: 'Nobody with that key is connected', id: relay.id });
         await settle();
-        expect(log.failures).toEqual(['The machine is not connected to the broker at broker.example.com. It needs to run with the broker switched on.']);
+        expect(log.failures).toEqual(['The machine is not connected through your account. Turn its connection service on.']);
     });
 
     test('asks the broker for ICE servers before signals go out, and hands them to every attempt on the socket', async () => {
@@ -219,13 +223,13 @@ describe('brokerSignaling', () => {
         const first = attempt('attempt-0001');
         const socket = await announce();
         socket.onclose?.();
-        expect(first.log.failures).toEqual(['The broker at broker.example.com could not be reached']);
+        expect(first.log.failures).toEqual(['Could not reach the connection service at broker.example.com']);
 
         const second = attempt('attempt-0002');
         const next = await announce();
         next.deliver({ type: 'error', code: 'replaced', message: 'The same key announced on another socket' });
         await settle();
-        expect(second.log.failures).toEqual(['The broker at broker.example.com refused this client: The same key announced on another socket']);
+        expect(second.log.failures).toEqual(['The connection service refused this device: The same key announced on another socket']);
     });
     test('an offer to a machine that needs a statement carries one asked for with this client key, signed along with the offer', async () => {
         const asked: string[] = [];
@@ -249,13 +253,13 @@ describe('brokerSignaling', () => {
 
     test('an account that cannot vouch ends the attempt with why, and sends no offer', async () => {
         const { attempt, announce } = setup(async () => {
-            throw new Error('Sign in to your account first');
+            throw new Error('Sign in first');
         });
         const { signaling, log } = attempt('attempt-0001');
         const socket = await announce();
         signaling.send({ kind: 'offer', sdp: 'v=0' });
         await settle();
-        expect(log.failures).toEqual(['Your account could not vouch for this client: Sign in to your account first']);
+        expect(log.failures).toEqual(['Your account could not confirm this device: Sign in first']);
         expect(socket.sent.filter((frame) => frame.type === 'relay')).toEqual([]);
     });
 });

@@ -3,8 +3,8 @@
     "description": "Set up Ruimte on this machine: how it works, the agent CLIs and computer use.",
     "welcome": {
         "title": "Welcome to Ruimte",
-        "bodyThree": "Space for AI Engineering. Three short tasks get you started. Do them in any order, or come back to them later.",
-        "bodyTwo": "Space for AI Engineering. Two short tasks get you started. Do them in any order, or come back to them later.",
+        "bodyThree": "Space for AI Engineering. Three short tasks get you started, in any order or later.",
+        "bodyTwo": "Space for AI Engineering. Two short tasks get you started, in any order or later.",
         "start": "Get started",
         "notNow": "Not now"
     },
@@ -13,7 +13,7 @@
         "count": "{{done}} of {{total}} done",
         "progress": "Tasks done",
         "tasks": "Tasks",
-        "closeNote": "Close this any time. It stays under Settings › About.",
+        "closeNote": "Close any time; reopen it from Settings › About.",
         "next": "Next: {{task}}",
         "finish": "Finish"
     },
@@ -48,16 +48,16 @@
         },
         "machines": {
             "title": "Several accounts, several machines",
-            "body": "Add more than one account per CLI and pick one per chat. Put another machine on your account once and its projects open like local ones."
+            "body": "Add more than one account per CLI and pick one per chat. Add another machine to your account and its projects open like local ones."
         },
         "gotIt": "Got it"
     },
     "providers": {
-        "info": "Ruimte starts the agent CLIs installed on this machine. The CLI keeps the login and Ruimte only asks who is signed in. Logging in opens a terminal. You need one provider to start.",
+        "info": "Ruimte starts the agent CLIs on this machine. Each CLI keeps its own login. Logging in opens a terminal. You need one provider to start.",
         "checkAgain": "Check again",
-        "looking": "Looking for agent CLIs",
-        "none": "Ruimte found no agent CLIs on this machine yet.",
-        "notLoggedIn": "Not logged in. Logging in opens a terminal.",
+        "looking": "Looking for agent CLIs…",
+        "none": "No agent CLIs found on this machine.",
+        "notLoggedIn": "Not logged in.",
         "chatAndTerminal": "chat and terminal",
         "terminalOnly": "terminal only",
         "apple": "Use the model on this Mac for chats and tools.",
@@ -79,14 +79,14 @@
             "loggedIn_one": "{{clis}} is logged in.",
             "loggedIn_other": "{{clis}} are logged in.",
             "computer": "Computer use is on.",
-            "logInLater": "{{clis}} can be logged in later under Settings › Providers.",
+            "logInLater": "Log in to {{clis}} later under Settings › Providers.",
             "noProvider": "Log in to an agent CLI under Settings › Providers before your first chat.",
-            "computerLater": "Computer use can be turned on later under Settings › Computer Use."
+            "computerLater": "Turn on computer use later under Settings › Computer Use."
         }
     },
     "about": {
         "label": "Set up Ruimte",
-        "description": "The short tasks of the first start: how Ruimte works, the agent CLIs on this machine and computer use."
+        "description": "First-run tasks: how Ruimte works, agent CLIs and computer use."
     },
     "firstRun": {
         "body": "Ruimte can run your projects and agents on this computer, or only open the machines on your account.",
@@ -99,7 +99,7 @@
             "title": "Only connect to my machines",
             "description": "Sign in and open the machines on your account. No agents run on this computer."
         },
-        "note": "Ruimte restarts once to apply this. You can change it later in Settings, under Machines.",
+        "note": "Ruimte restarts once to apply this. Change it later under Settings › Account.",
         "continue": "Continue",
         "restarting": "Restarting…",
         "failed": "Ruimte could not save this choice. {{reason}}",

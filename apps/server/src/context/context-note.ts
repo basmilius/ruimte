@@ -23,10 +23,15 @@ const COMMANDS_NOTE =
 
 const CHAT_VIEW_NOTE = 'You are working in a chat view. Skip linked-context discovery.';
 
+/* Agents changed one node at a time in a loop, a write and a redraw of every client each. */
+const MANY_AT_ONCE =
+    'To change several at once, use one call, never a loop of calls: `--json` on node new, node edit and node rename, and ids separated by commas on node delete, link delete and flag.';
+
 /* Told only that it may name a canvas for a note, a chat view tried to link itself to a device it
    had just placed, and no line can reach a view; so the whole of what --view gives it is spelled out. */
 const CHAT_VIEW_CANVAS_NOTE =
-    'No line runs to a chat view, so you arrange a canvas the way the person does: name it with --view (`ruimte-context view list` lists them) and you may add, edit, rename, arrange and group its nodes, draw lines between them, and read and operate any node there without a line: `read <id> --view <canvas>` for a note, a chat or a terminal, `browser` for a page and `device` for a simulator or phone (take a `shot`, act in its pixels with `tap`, `swipe` and `button`, and take the next shot to see what happened). Without --view these refuse with view-required. Work on a canvas only for what the person asks of it.';
+    'No line runs to a chat view, so you arrange a canvas the way the person does: name it with --view (`ruimte-context view list` lists them) and you may add, edit, rename, arrange and group its nodes, draw lines between them, and read and operate any node there without a line: `read <id> --view <canvas>` for a note, a chat or a terminal, `browser` for a page and `device` for a simulator or phone (take a `shot`, act in its pixels with `tap`, `swipe` and `button`, and take the next shot to see what happened). Without --view these refuse with view-required. Work on a canvas only for what the person asks of it. ' +
+    MANY_AT_ONCE;
 
 /* A hidden agent a chat opened stands on no canvas either, but it is no view and arranges none. */
 const HIDDEN_AGENT_PLACEMENT = 'For a note or drawing the person asks for in Ruimte, name its destination with --view.';
@@ -39,7 +44,8 @@ const CANVAS_NODE_NOTE =
     'You are working in a node on a canvas. ' +
     '`ruimte-context list` lists your linked context, and `ruimte-context read <id>` reads a source. ' +
     `\`ruimte-context node new\` creates nodes in this view: ${NODE_KINDS}. ` +
-    'Use these commands for notes or drawings the person requests in this view.';
+    'Use these commands for notes or drawings the person requests in this view. ' +
+    MANY_AT_ONCE;
 
 /* The brake below reads as "use your own means" exactly when the person asked for a second agent
    beside this one, so the difference between answering yourself and hiding the work is spelled out. */
@@ -91,7 +97,7 @@ function uiNote(databases: boolean): string {
             'Children sit in their parent: Stat in Stats, Column in Table, Option in Segmented or Select, Item in Checklist, Choice in Choices, Step in Steps, Event in Timeline, Place in Map, Image in Gallery, Entry in EntityList, Tab in Tabs, Section in Sections, Source in Sources.',
             'Stat takes numbers; Entry holds text.',
             'Show an image file of your own with `ruimte-context chat attach --file <path>` and `Image attachment=<id>`, a model file (STL, binary glTF, USDZ) with `Model attachment=<id>` only when the person asks to see it.',
-            'Each items={$rows} as="row" names each item, read without $ as {row.name}. Chart data rows are {label: "Core", passed: 32, failed: 1}. File and Diff paths are relative to your working folder; a Node id is one ruimte-context printed.',
+            'Each items={$rows} as="row" names each item, read without $ as {row.name}. Chart data rows are {label: "Core", passed: 32, failed: 1}. File and Diff paths, and file links, are relative to your working folder; a Node id is one ruimte-context printed.',
             `Live data: $name = @Query("source", {args}), with these sources and arguments: ${sources}. git.status gives the branch, ahead, behind, counts per state and the first files.${databases ? ' database.query rows are records for Table and Chart.' : ''} Sources are literal; arguments may reference local inputs. Queries only read, never start work or run writes.`
         ].join(' ')
     );

@@ -21,6 +21,7 @@ const DAEMON_VOICE_REACH: Record<string, 'voice' | 'blocked'> = {
     'view.create': 'blocked',
     'view.delete': 'blocked',
     'node.rename': 'blocked',
+    'node.setColor': 'blocked',
     'node.create': 'blocked',
     'node.delete': 'blocked',
     'group.create': 'blocked',

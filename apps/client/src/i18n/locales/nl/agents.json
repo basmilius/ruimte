@@ -1,10 +1,10 @@
 {
     "ending": {
-        "alsoEnds_one": "Beëindigt ook de agent die hij opende. Zijn node blijft op het canvas staan met wat hij tot nu toe deed.",
-        "alsoEnds_other": "Beëindigt ook de {{count}} agents die hij opende. Hun nodes blijven op het canvas staan met wat ze tot nu toe deden.",
-        "stopsTask": "Beëindigt de agent die aan deze taak werkt en annuleert de taak zonder de chat te wekken die hem gaf. Zijn node blijft op het canvas staan.",
+        "alsoEnds_one": "Beëindigt ook de agent die hij opende. Zijn node en werk tot nu toe blijven op het canvas.",
+        "alsoEnds_other": "Beëindigt ook de {{count}} agents die hij opende. Hun nodes en werk tot nu toe blijven op het canvas.",
+        "stopsTask": "Beëindigt de agent en annuleert de taak. De chat die hem gaf, hoort er niets van. Zijn node blijft op het canvas staan.",
         "stopsSubagents": "Stopt de turn en markeert de sub-agents van de chat als gestopt.",
-        "clears": "Stopt een lopende turn en verwijdert het gesprek met de bijlagen en plannen. De chat zelf blijft."
+        "clears": "Stopt een lopende turn en verwijdert het gesprek, de bijlagen en plannen. De chat blijft."
     },
     "dialog": {
         "stopTitle": "{{what}} stoppen?",
@@ -23,7 +23,8 @@
     },
     "menu": {
         "none": "Geen agent-CLI gevonden",
-        "connecting": "Verbinden",
+        "connecting": "Verbinden…",
+        "onAccount": "{{provider}} ({{account}})",
         "newChat": "Nieuwe chat",
         "setup": "Agents instellen",
         "defaultModel": "Standaardmodel"

@@ -55,7 +55,7 @@ export function installMenu(ipc: AppIpc, options: MenuOptions): AppMenu {
             }
         };
         const quitItems: Electron.MenuItemConstructorOptions[] = options.canStopMachine
-            ? [{ label: 'Stop the Machine and Quit', click: () => options.stopMachine() }]
+            ? [{ label: 'Stop Machine and Quit', click: () => options.stopMachine() }]
             : [];
         const template = staticMenuTemplate({
             appName: app.name,

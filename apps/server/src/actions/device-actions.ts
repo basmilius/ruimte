@@ -211,6 +211,7 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
                     screen: null,
                     buttons: [],
                     can: { shot: false, input: false, type: false, launch: false, tree: false },
+                    power: null,
                     tree: null,
                     treeError: null
                 }
@@ -239,6 +240,7 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
                 screen: driver.screen(device),
                 buttons: deviceButtons(device),
                 can,
+                power: await driver.power(device),
                 tree:
                     tree === null
                         ? null

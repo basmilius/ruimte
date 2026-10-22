@@ -51,6 +51,8 @@ export interface BrokerRelayOptions {
     silenceMs?: number;
     log?: Pick<Console, 'log' | 'warn'>;
     now?(): number;
+    /* The broker took this machine and answered whether it has ICE servers for it: the moment to check how others reach it. */
+    onSettled?(): void;
 }
 
 /*
@@ -76,6 +78,7 @@ export class BrokerRelay implements Relay {
     private grant: { servers: IceServer[]; expiresAt: number | null } | null = null;
     private iceRequestId: string | null = null;
     private iceTimer: ReturnType<typeof setTimeout> | null = null;
+    private settledOnce = false;
 
     constructor(options: BrokerRelayOptions) {
         this.options = options;
@@ -94,10 +97,15 @@ export class BrokerRelay implements Relay {
 
     /* The servers for a direct connection, as werift reads them; none once the credentials expired. */
     iceServers(): IceServer[] {
+        return weriftIceServers(this.grantedIceServers());
+    }
+
+    /* Every server the broker handed out, for the reach check; none once the credentials expired. */
+    grantedIceServers(): IceServer[] {
         if (this.grant === null || (this.grant.expiresAt !== null && this.grant.expiresAt <= this.now())) {
             return [];
         }
-        return weriftIceServers(this.grant.servers);
+        return this.grant.servers;
     }
 
     async stop(): Promise<void> {
@@ -143,6 +151,7 @@ export class BrokerRelay implements Relay {
             send: (frame) => socket.send(frame),
             events: {
                 ready: () => {
+                    this.settledOnce = false;
                     this.attempts = 0;
                     this.announcedFailure = false;
                     this.log.log(`Announced to the broker at ${this.options.url}`);
@@ -192,11 +201,13 @@ export class BrokerRelay implements Relay {
         if (frame.id !== undefined && frame.id === this.iceRequestId) {
             this.iceRequestId = null;
             this.scheduleIce(frame.type === 'rate-limited' ? frame.retryAfterMs : ICE_RETRY_MS);
+            this.settled();
             return;
         }
         if (frame.type === 'error' && frame.code === 'bad-frame' && frame.id === undefined && this.iceRequestId !== null) {
             // A broker from before `ice` refuses the frame without its id and keeps the socket; it has no servers to give.
             this.iceRequestId = null;
+            this.settled();
             return;
         }
         if (frame.id !== undefined) {
@@ -275,6 +286,16 @@ export class BrokerRelay implements Relay {
             // Asked again with a third of the lifetime left, so an attempt never starts on credentials about to lapse.
             this.scheduleIce(Math.max(1_000, Math.floor(((frame.expiresAt - this.now()) * 2) / 3)));
         }
+        this.settled();
+    }
+
+    // Once per connection: renewed credentials change nothing about how others reach this machine.
+    private settled(): void {
+        if (this.settledOnce) {
+            return;
+        }
+        this.settledOnce = true;
+        this.options.onSettled?.();
     }
 
     private drop(): void {

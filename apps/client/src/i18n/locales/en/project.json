@@ -2,23 +2,23 @@
     "error": {
         "machineGone": "That machine is no longer in the list",
         "machineDisconnected": "That machine is no longer connected",
-        "openFailed": "That project could not be opened",
-        "couldNotOpen": "That could not be opened",
-        "projectNotSaved": "The project could not be saved",
-        "reopenFailed": "The project could not be opened again",
-        "idsTaken": "Another copy of this canvas is open on this machine, from another checkout of the same repository. Close that project first, or the two would share their terminals and chats."
+        "openFailed": "Could not open the project",
+        "couldNotOpen": "Could not open that",
+        "projectNotSaved": "Could not save the project",
+        "reopenFailed": "Could not reopen the project",
+        "idsTaken": "This canvas is already open from another checkout. Close that project first, or both share terminals and chats."
     },
     "close": {
-        "idle": "Nothing in this project is running. It moves to Recent just as you left it.",
-        "ending_one": "Closing ends its running session. A terminal loses its scrollback and an agent stops. The rest moves to Recent as you left it.",
-        "ending_other": "Closing ends its {{count}} running sessions. A terminal loses its scrollback and an agent stops. The rest moves to Recent as you left it.",
-        "held_one": "Another client still has this project open, so nothing stops running. It moves to Recent here only.",
-        "held_other": "{{count}} other clients still have this project open, so nothing stops running. It moves to Recent here only."
+        "idle": "Nothing is running. It moves to Recent as you left it.",
+        "ending_one": "Closing ends its running session. Terminals lose scrollback and agents stop.",
+        "ending_other": "Closing ends its {{count}} running sessions. Terminals lose scrollback and agents stop.",
+        "held_one": "This project is still open on another device, so nothing stops. It moves to Recent here only.",
+        "held_other": "This project is still open on {{count}} other devices, so nothing stops. It moves to Recent here only."
     },
     "showView": {
         "someone": "An agent",
-        "alreadyThere": "{{agent}} pointed at {{view}}, which you were already looking at",
-        "follow": "{{agent}} showed {{view}} in the cell you were working in",
+        "alreadyThere": "{{agent}} pointed at {{view}}, already in view",
+        "follow": "{{agent}} showed {{view}} where you were working",
         "go": "{{agent}} asked you to look at {{view}}",
         "newTab": "Opened {{view}} as a tab"
     },
@@ -34,12 +34,12 @@
         "flagged": "Flagged {{color}}"
     },
     "moveChat": {
-        "titleMake": "Make a project",
+        "titleMake": "Make project",
         "titleMove": "Move to {{project}}",
-        "failedToRender": "The move dialog failed to render",
+        "failedToRender": "The move dialog could not be shown",
         "project": "Project",
         "chooseProject": "Choose a project",
-        "newProject": "A new project",
+        "newProject": "New project",
         "name": "Name",
         "folder": "Folder",
         "workedFiles_one": "Where this chat worked · {{count}} file",
@@ -48,7 +48,7 @@
         "newFolder": "New folder",
         "initGit": "Start a git repository",
         "chooseFolder": "Choose a folder…",
-        "chooseFolderHint": "A folder that already exists",
+        "chooseFolderHint": "An existing folder",
         "folderPath": "Path on the machine",
         "looking": "Looking where this chat worked…",
         "ownFiles": "Files this chat made",
@@ -57,23 +57,23 @@
         "ownFilesList_one": "{{count}} file: {{names}}",
         "ownFilesList_other": "{{count}} files: {{names}}",
         "conflict": "{{name}} is already in {{project}}. Leave the files in Chats, or rename it there first.",
-        "references_one": "One chat in Chats is attached to this one with @. After the move, that chat can no longer read this one.",
-        "references_other": "{{count}} chats in Chats are attached to this one with @. After the move, they can no longer read this one.",
+        "references_one": "A chat in Chats refers to this one with @ and loses access after the move.",
+        "references_other": "{{count}} chats in Chats refer to this one with @ and lose access after the move.",
         "make": "Make project",
         "making": "Making project…",
         "move": "Move",
         "moving": "Moving…",
         "close": "Close",
-        "failed": "The chat could not be moved",
+        "failed": "Could not move the chat",
         "infoFailed": "The machine could not say where this chat worked",
         "refusal": {
             "not-in-chats": "Only a chat in Chats can move to a project.",
-            "working": "This chat is still working. Stop it or wait for it to finish, then try again.",
-            "agents": "This chat started agents of its own, or an agent started it. A chat with agents cannot move to a project yet.",
-            "tasks": "This chat gave a task or has one. A chat with tasks cannot move to a project yet.",
+            "working": "This chat is still working. Stop it or let it finish first.",
+            "agents": "A chat with agents cannot move to a project yet.",
+            "tasks": "A chat with tasks cannot move to a project yet.",
             "owedAt": "This chat resumes by itself at {{time}}. Write in it or turn off resuming first.",
             "owed": "The machine still has work queued for this chat. Try again once it is done.",
-            "messages": "Messages from other chats are waiting for this chat. It reads them in its next turn. Move it after that.",
+            "messages": "Messages from other chats wait for its next turn. Move it after that.",
             "pr-watch": "This chat watches a pull request. Stop watching it first."
         }
     }

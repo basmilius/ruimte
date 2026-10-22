@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -58,7 +57,7 @@ function MachinePicker({ endpointId }: { endpointId: string }) {
     const { t } = useTranslation('usage');
     const stored = useEndpoints((s) => s.endpoints);
     const servers = useServers((s) => s.byEndpoint);
-    const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
+    const endpoints = listedEndpoints(stored);
     if (endpoints.length < 2) {
         return null;
     }

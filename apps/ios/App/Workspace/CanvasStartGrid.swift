@@ -52,10 +52,10 @@ struct CanvasStartGrid: View {
                         ) {
                             insert(kind: "chat", title: "Chat")
                         }
-                        tile(String(localized: "Terminal"), detail: String(localized: "A shell"), icon: "terminal") {
+                        tile(String(localized: "Terminal"), detail: String(localized: "Shell"), icon: "terminal") {
                             insert(kind: "terminal", title: "Terminal")
                         }
-                        tile(String(localized: "Browser"), detail: String(localized: "A web page"), icon: "globe") {
+                        tile(String(localized: "Browser"), detail: String(localized: "Web page"), icon: "globe") {
                             compose("browser")
                         }
                         tile(

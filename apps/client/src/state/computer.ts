@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { create } from 'zustand';
 import type { ComputerAppGrants, ComputerApproval, ComputerUseStatus } from '@ruimte/contracts';
 
@@ -45,5 +44,5 @@ export function computerApprovalsOf(endpointId: string): readonly ComputerApprov
 /* The cards of one chat or terminal, oldest first, which is the order the machine sends them in. */
 export function useNodeComputerApprovals(endpointId: string, nodeId: string): readonly ComputerApproval[] {
     const all = useComputer((s) => s.approvals[endpointId] ?? NONE);
-    return useMemo(() => (all.some((approval) => approval.nodeId === nodeId) ? all.filter((approval) => approval.nodeId === nodeId) : NONE), [all, nodeId]);
+    return all.some((approval) => approval.nodeId === nodeId) ? all.filter((approval) => approval.nodeId === nodeId) : NONE;
 }

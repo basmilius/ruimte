@@ -1,14 +1,12 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 import { CircleCheck } from 'lucide-react';
-import { projectNodes } from '@/project/view-nodes';
+import { useProjectNodes } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { groupAttention, useAttention } from '@/state/attention';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state';
 import { useEndpointId } from '@/state/keys';
-import { useDocument } from '@/state/document';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { StatusDot } from '@/canvas/NodeFrame';
@@ -47,13 +45,9 @@ export function StatusSummary() {
     const chats = useChats((s) => s.statusByKey);
     const unseen = useAttention((s) => s.unseen);
     const snoozes = useSnoozes((s) => s.byKey);
-    // Subscribed to render again when a node comes or goes; `projectNodes` reads the stores as they are.
-    useDocument((s) => s.views);
-    useDocument((s) => s.activeViewId);
-    useCanvas(useShallow((s) => s.order));
-    useCanvas((s) => s.nodes);
+    const nodes = useProjectNodes();
 
-    const groups = groupAttention(projectNodes(), sessions, chats, endpointId, unseen, snoozes);
+    const groups = groupAttention(nodes, sessions, chats, endpointId, unseen, snoozes);
     if (groups.needsYou.length === 0 && groups.working.length === 0 && groups.finished.length === 0) {
         return null;
     }

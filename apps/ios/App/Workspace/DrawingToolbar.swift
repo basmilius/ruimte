@@ -168,7 +168,7 @@ private struct DrawingToolOptions: View {
                 }
                 .pickerStyle(.segmented)
             }
-            Toggle("Snap to the grid", isOn: $model.snap)
+            Toggle("Snap to grid", isOn: $model.snap)
         }
         .font(.subheadline)
         .padding(16)

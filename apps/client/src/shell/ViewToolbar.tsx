@@ -47,7 +47,7 @@ export function ViewToolbar({ view, focused }: { view: CellView | null; focused:
     }
     if (view.kind === 'device') {
         return (
-            <div className="flex min-w-0 grow items-center justify-end">
+            <div className="flex min-w-0 grow items-center justify-end gap-2">
                 <DeviceToolbar id={view.id} />
             </div>
         );

@@ -89,9 +89,7 @@ describe('describeUpdate', () => {
     test('carries the reason a check failed, and says so when there is none', () => {
         expect(describeUpdate(state({ status: 'error', error: 'net::ERR_INTERNET_DISCONNECTED' })).detail).toBe('net::ERR_INTERNET_DISCONNECTED');
         expect(describeUpdate(state({ status: 'error' })).detail).toBe('No reason given.');
-        expect(describeUpdate(state({ status: 'error', error: '404 Not Found', errorCode: 'no-feed' })).detail).toBe(
-            'No release feed found. There is no published release yet, or the repository is private.'
-        );
+        expect(describeUpdate(state({ status: 'error', error: '404 Not Found', errorCode: 'no-feed' })).detail).toBe('No published release found.');
     });
 
     test('treats a checkout as a place updates do not come from', () => {

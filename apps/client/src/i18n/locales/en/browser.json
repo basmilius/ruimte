@@ -25,7 +25,7 @@
         },
         "dns": {
             "title": "That address has no server",
-            "hint": "Check the spelling, or whether the address exists on this network."
+            "hint": "Check the spelling, or whether it exists on this network."
         },
         "refused": {
             "title": "The server refused the connection",
@@ -33,7 +33,7 @@
         },
         "certificate": {
             "title": "The connection is not secure",
-            "hint": "The certificate is not valid, so the page was not loaded."
+            "hint": "Invalid certificate, so the page was not loaded."
         },
         "timeout": {
             "title": "The server took too long",
@@ -54,18 +54,18 @@
     "stream": {
         "pageLabel": "Remote web page",
         "starting": "Starting browser…",
-        "frameFailed": "A frame could not be drawn",
+        "frameFailed": "Could not show the page",
         "startFailed": "The browser could not start",
-        "notReady": "The browser stream is not ready yet",
-        "status": "The browser stream returned {{status}}",
-        "unknownFormat": "The machine returned an unknown stream format",
+        "notReady": "The browser is not ready yet",
+        "status": "The browser did not answer ({{status}})",
+        "unknownFormat": "Could not show the page",
         "stopped": "The browser stream stopped",
         "failed": "The remote browser failed"
     },
     "splash": {
         "title": "Open a page here",
-        "hint": "Pick a dev server, or type an address in the bar above.",
-        "running": "Running now",
+        "hint": "Pick a dev server or type an address above.",
+        "running": "Running",
         "common": "Common ports"
     },
     "node": {
