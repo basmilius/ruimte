@@ -44,7 +44,12 @@ Do not reverse one without asking Bas.
 - Deleting to the Recycle Bin (`apps/server/src/fs/trash.ts`, the script in `fs/recycle-bin.ts`). The
   shell is called with no error dialogs and the item is refused, not deleted for good, when the Recycle Bin
   would not take it: a drive that is not fixed, a bin that is off, an item larger than the bin, or a linked
-  folder. PowerShell is ended after 30 seconds. Unit tested through an injected spawner; unverified on a PC.
+  folder. PowerShell is ended after 30 seconds. The C# helper behind it is compiled once per version into
+  `%LOCALAPPDATA%\Ruimte\recycle-bin`; an integration test compiles it as C# 5 wherever `pwsh` is. Should
+  the shell still mean to delete for good, `FOF_WANTNUKEWARNING` makes it ask on the PC's own screen,
+  whoever deleted; with nobody there the time limit leaves the file. A file replaced by a rename that the
+  bin refuses stays in its hidden `.ruimte-overwrite-*` folder, as on another volume on macOS and Linux.
+  Unit tested through an injected spawner; unverified on a PC.
 - `bun run dev` through `apps/server/scripts/dev.ts`, since Bun's shell on Windows has no `${VAR:-default}`
   and no `HOME`.
 - `win:` and `nsis:` in `apps/desktop/electron-builder.yml`: an installer and a zip, unsigned.
@@ -170,11 +175,13 @@ Open questions for the next test at the PC:
 - Does a console window appear beside the desktop app when it starts the daemon?
 - Deleting from the file tree (`fs/recycle-bin.ts`), each with the file still there afterwards unless it
   is in the Recycle Bin:
-  - A file and a folder land in the Recycle Bin and Restore puts them back. How long does a delete take,
-    with PowerShell compiling its helper each time? A `node_modules` folder finishes within 30 seconds.
+  - A file and a folder land in the Recycle Bin and Restore puts them back. How long does the first delete
+    take, which compiles the helper, and how long the ones after? A `node_modules` folder finishes within
+    30 seconds.
   - A file another program holds open (an open Excel workbook) is refused within seconds with "Another
     program has the file open", and no dialog appears.
-  - A file on a mapped network drive, on a USB stick and on a SUBST drive is refused.
+  - A file on a mapped network drive and on a USB stick is refused. On a SUBST drive it is refused, or lands
+    in the bin of the drive under it if the daemon resolved the path there first.
   - With "Don't move files to the Recycle Bin" on for the drive, a file is refused. With a custom size of
     1 MB, a 5 MB file is refused and a 100 KB file lands in the bin.
   - A junction (`mklink /J linked C:\Elsewhere`) and a directory symbolic link (`mklink /D`) are refused,

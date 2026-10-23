@@ -25,7 +25,7 @@ export const RecycleBinExit = {
  * the shell still mean to delete for good, it asks instead, and with nobody there the time limit in
  * `trash.ts` ends the process with the item left where it was.
  */
-const SOURCE = String.raw`
+export const RECYCLE_BIN_SOURCE = String.raw`
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -85,7 +85,8 @@ public static class RuimteRecycleBin
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     static extern bool GetDiskFreeSpaceExW(string root, out ulong available, out ulong total, out ulong free);
 
-    const int Moved = 0, NotFixed = 10, RecycleBinOff = 11, TooLarge = 12, LinkedFolder = 13, InUse = 14, ShellFailed = 15, Canceled = 16;
+    const int Moved = ${RecycleBinExit.moved}, NotFixed = ${RecycleBinExit.notFixed}, RecycleBinOff = ${RecycleBinExit.recycleBinOff}, TooLarge = ${RecycleBinExit.tooLarge};
+    const int LinkedFolder = ${RecycleBinExit.linkedFolder}, InUse = ${RecycleBinExit.inUse}, ShellFailed = ${RecycleBinExit.shellFailed}, Canceled = ${RecycleBinExit.canceled};
     const uint DriveFixed = 3;
     const uint AttributeDirectory = 0x10, AttributeReparsePoint = 0x400;
     // Junctions, symbolic links and mount points carry this bit; a OneDrive placeholder does not, and is walked.
@@ -173,17 +174,14 @@ public static class RuimteRecycleBin
         {
             throw new Win32Exception();
         }
-        int percent = Policy("RecycleBinSize");
-        if (percent >= 0)
-        {
-            return (long)(total / 100 * (ulong)percent);
-        }
         // A SUBST drive has no volume of its own, and the shell deletes from it for good.
         StringBuilder name = new StringBuilder(64);
         if (!GetVolumeNameForVolumeMountPointW(root, name, (uint)name.Capacity))
         {
             return -1;
         }
+        // Without a size of its own the bin is taken to be small: a refusal can be tried again, a deletion cannot.
+        long capacity = (long)(total / 20);
         string id = name.ToString();
         int open = id.IndexOf('{');
         int close = id.IndexOf('}');
@@ -200,13 +198,17 @@ public static class RuimteRecycleBin
                     int megabytes = Number(key.GetValue("MaxCapacity"));
                     if (megabytes >= 0)
                     {
-                        return (long)megabytes * 1024 * 1024;
+                        capacity = (long)megabytes * 1024 * 1024;
                     }
                 }
             }
         }
-        // Without a size of its own the bin is taken to be small: a refusal can be tried again, a deletion cannot.
-        return (long)(total / 20);
+        int percent = Policy("RecycleBinSize");
+        if (percent >= 0)
+        {
+            capacity = Math.Min(capacity, (long)(total / 100 * (ulong)percent));
+        }
+        return capacity;
     }
 
     static int Policy(string name)
@@ -302,20 +304,31 @@ public static class RuimteRecycleBin
 `;
 
 /*
+ * Compiling the helper takes seconds, so it is compiled once per version of its source, into the
+ * assembly `trash.ts` names, and loaded from there after. The draft carries the process id, so two
+ * deletes at once never write one file, and the first to finish keeps its name.
  * The path comes from `RUIMTE_TRASH_PATH`, never from the script text, so no quoting can break it.
- * An error is written by hand: under `-EncodedCommand` PowerShell writes its own errors as CLIXML.
+ * An error is written by hand, in UTF-8: under `-EncodedCommand` PowerShell writes its own as CLIXML,
+ * and the console's code page would garble a message Windows wrote in another language.
  */
 export const RECYCLE_BIN_SCRIPT = [
     "$ErrorActionPreference = 'Stop'",
     "$ProgressPreference = 'SilentlyContinue'",
+    '[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false',
     'try {',
-    `Add-Type -TypeDefinition @'${SOURCE}'@`,
-    '$code = [RuimteRecycleBin]::Run($env:RUIMTE_TRASH_PATH)',
+    '    $assembly = $env:RUIMTE_RECYCLE_BIN_ASSEMBLY',
+    '    if (-not (Test-Path -LiteralPath $assembly)) {',
+    '        $draft = $assembly -replace \'\\.dll$\', ".$PID.dll"',
+    '        Add-Type -LiteralPath $env:RUIMTE_RECYCLE_BIN_SOURCE -OutputAssembly $draft',
+    '        try { [System.IO.File]::Move($draft, $assembly) } catch { Remove-Item -LiteralPath $draft -Force -ErrorAction SilentlyContinue }',
+    '    }',
+    "    $helper = Add-Type -LiteralPath $assembly -PassThru | Where-Object { $_.Name -eq 'RuimteRecycleBin' }",
+    '    $code = $helper::Run($env:RUIMTE_TRASH_PATH)',
     '} catch {',
-    '$failure = $_.Exception',
-    'while ($failure.InnerException) { $failure = $failure.InnerException }',
-    '[Console]::Error.WriteLine($failure.Message)',
-    'exit 1',
+    '    $failure = $_.Exception',
+    '    while ($failure.InnerException) { $failure = $failure.InnerException }',
+    '    [Console]::Error.WriteLine($failure.Message)',
+    '    exit 1',
     '}',
     'exit $code'
 ].join('\n');

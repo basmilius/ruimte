@@ -1,8 +1,9 @@
+import { createHash } from 'node:crypto';
 import { link, lstat, mkdir, rename, unlink, writeFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { basename, extname, join } from 'node:path';
 import { CodedError } from '@adecore/agents';
-import { RecycleBinExit, recycleBinCommand } from './recycle-bin.ts';
+import { RECYCLE_BIN_SOURCE, RecycleBinExit, recycleBinCommand } from './recycle-bin.ts';
 
 type TrashErrorCode = 'trash-unsupported' | 'trash-failed';
 
@@ -62,7 +63,7 @@ export function spawnTrash(command: string[], env: NodeJS.ProcessEnv): TrashProc
     };
 }
 
-/* Long enough for the shell to count a large folder; a dialog nobody answers would otherwise hold the request for good. */
+/* Long enough to compile the helper and count a large folder; a dialog nobody answers would otherwise hold the request for good. */
 const RECYCLE_BIN_LIMIT_MS = 30_000;
 
 const RECYCLE_BIN_REFUSALS: Record<number, string> = {
@@ -74,9 +75,38 @@ const RECYCLE_BIN_REFUSALS: Record<number, string> = {
     [RecycleBinExit.canceled]: 'Moving the file to the Recycle Bin was canceled'
 };
 
+const RECYCLE_BIN_VERSION = createHash('sha256').update(RECYCLE_BIN_SOURCE).digest('hex').slice(0, 16);
+
+/* Where the script finds the helper's source and keeps what it compiled from it, named by its version. */
+async function recycleBinHelper(env: NodeJS.ProcessEnv): Promise<{ source: string; assembly: string }> {
+    const folder = join(env.LOCALAPPDATA || tmpdir(), 'Ruimte', 'recycle-bin');
+    const source = join(folder, `recycle-bin-${RECYCLE_BIN_VERSION}.cs`);
+    if (!(await exists(source))) {
+        await mkdir(folder, { recursive: true });
+        const draft = `${source}.${process.pid}`;
+        await writeFile(draft, RECYCLE_BIN_SOURCE);
+        // Another delete may have put it there first, and be compiling from it.
+        await rename(draft, source).catch(async (e: unknown) => {
+            await unlink(draft).catch(() => undefined);
+            if (!(await exists(source))) {
+                throw e;
+            }
+        });
+    }
+    return { source, assembly: join(folder, `recycle-bin-${RECYCLE_BIN_VERSION}.dll`) };
+}
+
 /* The Recycle Bin keeps its own record of where an item came from, so only the shell may put it there. */
 async function trashWindows(path: string, env: NodeJS.ProcessEnv, spawn: SpawnTrash): Promise<void> {
-    const child = spawn(recycleBinCommand(), { ...env, RUIMTE_TRASH_PATH: path });
+    const helper = await recycleBinHelper(env).catch((e: unknown) => {
+        throw new TrashError('trash-failed', e instanceof Error ? e.message : 'The Recycle Bin helper could not be written');
+    });
+    const child = spawn(recycleBinCommand(), {
+        ...env,
+        RUIMTE_TRASH_PATH: path,
+        RUIMTE_RECYCLE_BIN_SOURCE: helper.source,
+        RUIMTE_RECYCLE_BIN_ASSEMBLY: helper.assembly
+    });
     let timer: ReturnType<typeof setTimeout> | undefined;
     const late = new Promise<null>((resolve) => {
         timer = setTimeout(() => resolve(null), RECYCLE_BIN_LIMIT_MS);
@@ -86,7 +116,7 @@ async function trashWindows(path: string, env: NodeJS.ProcessEnv, spawn: SpawnTr
     if (code === null) {
         // The shell works inside this process, so ending it ends a dialog too, and the file stays where it was.
         child.kill();
-        throw new TrashError('trash-failed', 'Moving the file to the Recycle Bin did not finish within 30 seconds; another program may have it open');
+        throw new TrashError('trash-failed', 'Moving the file to the Recycle Bin did not finish within 30 seconds and was stopped');
     }
     if (code === RecycleBinExit.moved) {
         return;
