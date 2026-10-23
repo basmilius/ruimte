@@ -1,3 +1,4 @@
+import { createPtyKill } from './pty-kill.ts';
 import { signalExitCode, type PtyAdapter, type PtyProcess, type PtySpawnOptions } from './pty.ts';
 
 // A backgrounded grandchild may keep the PTY open forever, so only wait briefly for trailing output.
@@ -12,6 +13,7 @@ class BunPtyProcess implements PtyProcess {
     private processExitCode: number | null = null;
     private exitReported = false;
     private drainTimer: ReturnType<typeof setTimeout> | null = null;
+    private readonly killProcess: (signal: NodeJS.Signals) => void;
 
     constructor(options: PtySpawnOptions) {
         this.process = Bun.spawn([options.shell, ...options.args], {
@@ -35,6 +37,12 @@ class BunPtyProcess implements PtyProcess {
             }
         });
         this.pid = this.process.pid;
+        this.killProcess = createPtyKill({
+            pid: this.pid,
+            hasExited: () => this.processExitCode !== null,
+            write: (data) => this.process.terminal?.write(data),
+            signal: (signal) => this.process.kill(signal)
+        });
     }
 
     write(data: string): void {
@@ -46,32 +54,7 @@ class BunPtyProcess implements PtyProcess {
     }
 
     kill(signal: NodeJS.Signals = 'SIGHUP'): void {
-        if (this.processExitCode !== null) {
-            return;
-        }
-        if (process.platform === 'win32') {
-            this.killOnWindows(signal);
-            return;
-        }
-        this.process.kill(signal);
-    }
-
-    /*
-     * Windows has no signals, and Bun terminates the process for any it accepts (SIGHUP it refuses). An
-     * interrupt is the Ctrl+C the console turns into its own event; anything else takes the whole tree,
-     * since an agent the shell started is no child the console would end with it.
-     */
-    private killOnWindows(signal: NodeJS.Signals): void {
-        if (signal === 'SIGINT') {
-            this.process.terminal?.write('\x03');
-            return;
-        }
-        Bun.spawnSync(['taskkill', '/PID', String(this.pid), '/T', '/F'], { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore' });
-        try {
-            this.process.kill('SIGKILL');
-        } catch {
-            // taskkill already ended it.
-        }
+        this.killProcess(signal);
     }
 
     onData(callback: (data: Uint8Array) => void): void {
