@@ -1,9 +1,10 @@
 import { X } from 'lucide-react';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { IconButton, Select } from '@adecore/ui';
 import { formatDecimal, formatRounded } from '@adecore/ui/format';
 import type { ChartModel, ModelMark } from './chart';
-import { formatMetric, metricChange, metricValue, METRICS, shortModelName, type ModelPoint } from './comparison';
+import { formatMetric, metricChange, metricValue, METRICS, PRICE_METRICS, shortModelName, type ModelPoint } from './comparison';
 import { LabLogo } from './LabLogo';
 
 interface ModelsPointComparisonProps {
@@ -26,11 +27,16 @@ export function ModelsPointComparison({ models, marks, points, reference, candid
     const comparing = reference !== null && candidate !== null && reference.key !== candidate.key;
     const model = models.find((model) => model.id === shown.modelId)!;
     const label = (point: ModelPoint): string => `${shortModelName(point.modelName)} · ${t(`efforts.${point.effort}`, { defaultValue: point.effort })}`;
-    const metrics = METRICS.filter((metric) => metricValue(shown, metric) !== null || (reference !== null && metricValue(reference, metric) !== null));
+    const groups = [METRICS, PRICE_METRICS].map((metrics) =>
+        metrics.filter((metric) => metricValue(shown, metric) !== null || (reference !== null && metricValue(reference, metric) !== null))
+    );
     return (
         <section
             aria-label={t('compare.label')}
-            className="pointer-events-none absolute top-8 left-4 z-10 w-96 max-w-[calc(100%-2rem)] rounded-lg border border-border-strong bg-surface-raised/95 p-3 shadow-lg backdrop-blur-sm max-[760px]:pointer-events-auto max-[760px]:top-5 max-[760px]:max-h-[60%] max-[760px]:overflow-y-auto"
+            className={clsx(
+                'absolute top-8 left-4 z-10 max-h-[calc(100%-3rem)] w-96 max-w-[calc(100%-2rem)] overflow-y-auto overscroll-contain rounded-lg border border-border-strong bg-surface-raised/95 p-3 shadow-lg backdrop-blur-sm max-[760px]:top-5 max-[760px]:max-h-[60%]',
+                reference === null && 'pointer-events-none max-[760px]:pointer-events-auto'
+            )}
         >
             <div className="flex items-center gap-2">
                 <span style={{ color: marks.get(model.id)?.color }}>
@@ -65,35 +71,46 @@ export function ModelsPointComparison({ models, marks, points, reference, candid
                         </tr>
                     </thead>
                 )}
-                <tbody>
-                    {metrics.map((metric) => {
-                        const value = reference !== null && !comparing ? null : metricValue(shown, metric);
-                        const original = reference === null ? null : metricValue(reference, metric);
-                        const change = comparing ? metricChange(reference, candidate!, metric) : null;
-                        return (
-                            <tr key={metric} className="first:border-t first:border-border">
-                                <th className="py-1.5 pr-2 text-left font-normal text-text-muted">{t(`metrics.${metric}`)}</th>
-                                {reference !== null && (
-                                    <td className="py-1.5 pl-2 text-right text-text">
-                                        {original === null ? t('compare.unavailable') : formatMetric(original, metric)}
-                                    </td>
-                                )}
-                                <td className="py-1.5 pl-2 text-right font-medium text-text">
-                                    {value === null ? t('compare.unavailable') : formatMetric(value, metric)}
-                                </td>
-                                {reference !== null && (
-                                    <td className="py-1.5 pl-2 text-right font-medium text-text">
-                                        {change === null
-                                            ? t('compare.unavailable')
-                                            : change.ratio
-                                              ? `${change.value > 0 && change.value < 0.001 ? `<${formatRounded(0.001, 3)}` : formatRounded(change.value, 3)}×`
-                                              : `${change.value > 0 ? '+' : ''}${formatDecimal(change.value)}`}
-                                    </td>
-                                )}
-                            </tr>
-                        );
-                    })}
-                </tbody>
+                {groups.map((metrics, index) =>
+                    metrics.length === 0 ? null : (
+                        <tbody key={index}>
+                            {index === 1 && (
+                                <tr>
+                                    <th colSpan={reference === null ? 2 : 4} className="border-t border-border pt-3 pb-1 text-left font-medium text-text">
+                                        {t('compare.tokenPrices')}
+                                    </th>
+                                </tr>
+                            )}
+                            {metrics.map((metric) => {
+                                const value = reference !== null && !comparing ? null : metricValue(shown, metric);
+                                const original = reference === null ? null : metricValue(reference, metric);
+                                const change = comparing ? metricChange(reference, candidate!, metric) : null;
+                                return (
+                                    <tr key={metric} className="first:border-t first:border-border">
+                                        <th className="py-1.5 pr-2 text-left font-normal text-text-muted">{t(`metrics.${metric}`)}</th>
+                                        {reference !== null && (
+                                            <td className="py-1.5 pl-2 text-right text-text">
+                                                {original === null ? t('compare.unavailable') : formatMetric(original, metric)}
+                                            </td>
+                                        )}
+                                        <td className="py-1.5 pl-2 text-right font-medium text-text">
+                                            {value === null ? t('compare.unavailable') : formatMetric(value, metric)}
+                                        </td>
+                                        {reference !== null && (
+                                            <td className="py-1.5 pl-2 text-right font-medium text-text">
+                                                {change === null
+                                                    ? t('compare.unavailable')
+                                                    : change.ratio
+                                                      ? `${change.value > 0 && change.value < 0.001 ? `<${formatRounded(0.001, 3)}` : formatRounded(change.value, 3)}×`
+                                                      : `${change.value > 0 ? '+' : ''}${formatDecimal(change.value)}`}
+                                            </td>
+                                        )}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    )
+                )}
             </table>
             <p className="mt-2 text-xs text-text-faint">{t(reference === null ? 'compare.pinHint' : 'compare.changeHint')}</p>
         </section>

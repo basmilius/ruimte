@@ -14,12 +14,12 @@
     "views": {
         "label": "Benchmarkgrafieken",
         "comparison": "Kosten vs intelligentie",
-        "speed": "Snelheid vs intelligentie",
+        "speed": "Snelheid",
         "score": "Intelligentie",
         "coding": "Code",
         "agentic": "Agents",
         "cost": "Kosten per taak",
-        "totalCost": "Totale kosten"
+        "totalCost": "Evaluatiekosten"
     },
     "chart": {
         "point": "{{model}}, {{effort}}: Intelligence Index {{intelligence}}, {{metric}} {{value}}",
@@ -40,8 +40,14 @@
         "coding": "Coding Index",
         "agentic": "Agentic Index",
         "costPerTask": "Kosten per taak",
-        "totalCost": "Totale kosten",
-        "outputSpeed": "Uitvoersnelheid (tok/s)"
+        "totalCost": "Evaluatiekosten",
+        "outputSpeed": "Uitvoersnelheid (tok/s)",
+        "timeToFirstAnswer": "Eerste antwoord (s)",
+        "responseTime": "Antwoordtijd (s)",
+        "inputPrice": "Input",
+        "outputPrice": "Output",
+        "cacheReadPrice": "Cache lezen",
+        "cacheWritePrice": "Cache schrijven"
     },
     "units": {
         "intelligence": "Indexpunten, hoger is beter",
@@ -49,17 +55,32 @@
         "agentic": "Indexpunten, hoger is beter",
         "costPerTask": "USD, lager is beter",
         "totalCost": "USD, volledige Intelligence Index-evaluatie",
-        "outputSpeed": "Uitvoertokens per seconde"
+        "outputSpeed": "Uitvoertokens per seconde",
+        "timeToFirstAnswer": "Seconden, lager is beter",
+        "responseTime": "Seconden, lager is beter"
     },
     "axes": {
         "costPerTask": "Kosten per taak (USD, lager is beter)",
-        "outputSpeed": "Uitvoertokens per seconde (hoger is beter)"
+        "outputSpeed": "Uitvoertokens per seconde (hoger is beter)",
+        "timeToFirstAnswer": "Tijd tot eerste antwoordtoken (seconden, lager is beter)",
+        "responseTime": "Totale antwoordtijd (seconden, lager is beter)"
     },
     "legend": {
         "label": "Modellen",
         "notMeasured": "Geen data",
         "legacy": "Legacy-modellen tonen",
-        "filtered": "Geen meetpunt voor deze grafiek en denkniveaus"
+        "filtered": "Verborgen door denkniveau- of asfilters",
+        "hidden": "Uitgezet",
+        "missing": {
+            "intelligence": "Geen intelligentiescore beschikbaar",
+            "coding": "Geen Code-score beschikbaar",
+            "agentic": "Geen Agents-score beschikbaar",
+            "costPerTask": "Geen kostenmeting beschikbaar",
+            "totalCost": "Geen evaluatiekosten beschikbaar",
+            "outputSpeed": "Geen uitvoersnelheid beschikbaar",
+            "timeToFirstAnswer": "Geen wachttijd beschikbaar",
+            "responseTime": "Geen antwoordtijd beschikbaar"
+        }
     },
     "efforts": {
         "low": "Laag",
@@ -113,12 +134,13 @@
         "change": "Verschil",
         "unavailable": "n.b.",
         "pinHint": "Selecteer om als referentie A vast te zetten.",
-        "changeHint": "Indices: verschil in punten. Kosten en snelheid: B / A.",
+        "changeHint": "Indices: verschil in punten. Kosten, tijden en snelheid: B / A.",
         "notices": {
             "referenceHidden": "Een filter verborg de referentie, dus de vergelijking is gewist.",
             "candidateHidden": "Een filter verborg meetpunt B. Referentie A blijft vastgezet.",
             "cleared": "Vergelijking gewist."
-        }
+        },
+        "tokenPrices": "Tokenprijzen (USD per 1M tokens)"
     },
     "empty": {
         "unavailable": "Nog geen benchmarks.",
@@ -141,5 +163,15 @@
     },
     "bench": {
         "home": "Ruimte, Space for AI Engineering"
+    },
+    "speed": {
+        "metric": "Snelheidsmaatstaf",
+        "outputSpeed": "Uitvoertokens/s",
+        "timeToFirstAnswer": "Tijd tot eerste antwoord",
+        "responseTime": "Totale antwoordtijd",
+        "context": "Medianen over API-aanbieders. Totale antwoordtijd is gemeten met 500 antwoordtokens."
+    },
+    "evaluation": {
+        "context": "Kosten van de volledige Artificial Analysis Intelligence Index-evaluatie."
     }
 }

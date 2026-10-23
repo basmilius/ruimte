@@ -1,10 +1,13 @@
-import { formatDecimal, formatTokens, formatUsdSignificant } from '@adecore/ui/format';
-import { compareEfforts, costAxis, intelligenceAxis, type Axis, type ChartModel, type ChartPoint } from './chart';
+import { formatDecimal, formatRounded, formatTokens, formatUsdSignificant } from '@adecore/ui/format';
+import { compareEfforts, costAxis, frontier, intelligenceAxis, type Axis, type ChartModel, type ChartPoint, type CostScale } from './chart';
 
 export const MODEL_VIEWS = ['comparison', 'speed', 'score', 'coding', 'agentic', 'cost', 'totalCost'] as const;
 export type ModelView = (typeof MODEL_VIEWS)[number];
 export type BarMetric = Exclude<ModelView, 'comparison' | 'speed'>;
 export type Metric = Exclude<keyof ChartPoint, 'effort'>;
+export const SPEED_METRICS = ['outputSpeed', 'timeToFirstAnswer', 'responseTime'] as const;
+export type SpeedMetric = (typeof SPEED_METRICS)[number];
+export type ScatterMetric = 'costPerTask' | SpeedMetric;
 export const VIEW_METRICS: Record<ModelView, Metric> = {
     comparison: 'costPerTask',
     speed: 'outputSpeed',
@@ -14,7 +17,8 @@ export const VIEW_METRICS: Record<ModelView, Metric> = {
     cost: 'costPerTask',
     totalCost: 'totalCost'
 };
-export const METRICS: readonly Metric[] = ['intelligence', 'coding', 'agentic', 'costPerTask', 'totalCost', 'outputSpeed'];
+export const METRICS: readonly Metric[] = ['intelligence', 'coding', 'agentic', 'costPerTask', 'outputSpeed', 'timeToFirstAnswer', 'responseTime', 'totalCost'];
+export const PRICE_METRICS = ['inputPrice', 'outputPrice', 'cacheReadPrice', 'cacheWritePrice'] as const;
 
 export function metricValue(point: ChartPoint, metric: Metric): number | null {
     const value = point[metric];
@@ -22,8 +26,11 @@ export function metricValue(point: ChartPoint, metric: Metric): number | null {
 }
 
 export function formatMetric(value: number, metric: Metric, compact = false): string {
-    if (metric === 'costPerTask' || metric === 'totalCost') {
+    if (metric === 'costPerTask' || metric === 'totalCost' || PRICE_METRICS.some((price) => price === metric)) {
         return compact && value >= 1000 ? `$${formatTokens(value)}` : formatUsdSignificant(value);
+    }
+    if (metric === 'timeToFirstAnswer' || metric === 'responseTime') {
+        return formatRounded(value, 2);
     }
     return formatDecimal(value);
 }
@@ -33,7 +40,18 @@ export function shortModelName(name: string): string {
 }
 
 export function lowerIsBetter(metric: Metric): boolean {
-    return metric === 'costPerTask' || metric === 'totalCost';
+    return metric !== 'intelligence' && metric !== 'coding' && metric !== 'agentic' && metric !== 'outputSpeed';
+}
+
+export function matchesChart(point: ChartPoint, metric: Metric, scatter: boolean, scale: CostScale): boolean {
+    const value = metricValue(point, metric);
+    return value !== null && (!scatter || (metricValue(point, 'intelligence') !== null && (scale !== 'log' || value > 0)));
+}
+
+export function metricFrontier<T extends { value: number; score: number }>(points: readonly T[], metric: ScatterMetric): T[] {
+    return frontier(points.map((point) => ({ costPerTask: lowerIsBetter(metric) ? point.value : -point.value, intelligence: point.score, point }))).map(
+        (entry) => entry.point
+    );
 }
 
 export interface ModelPoint extends ChartPoint {
@@ -102,7 +120,7 @@ export function metricChange(reference: ChartPoint, candidate: ChartPoint, metri
     if (from === null || to === null) {
         return null;
     }
-    const ratio = metric === 'costPerTask' || metric === 'totalCost' || metric === 'outputSpeed';
+    const ratio = metric !== 'intelligence' && metric !== 'coding' && metric !== 'agentic';
     if (ratio && from <= 0) {
         return null;
     }

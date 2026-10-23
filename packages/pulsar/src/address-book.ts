@@ -256,7 +256,15 @@ export const BenchmarkMeasurementSchema = z.object({
     agentic: z.number().optional(),
     costPerTask: z.number().nonnegative().optional(),
     totalCost: z.number().nonnegative().optional(),
-    outputSpeed: z.number().positive().optional()
+    outputSpeed: z.number().positive().optional(),
+    // Median seconds; responseTime is measured with 500 answer tokens by Artificial Analysis.
+    timeToFirstAnswer: z.number().nonnegative().optional(),
+    responseTime: z.number().nonnegative().optional(),
+    // USD per million tokens, for the measured model variant.
+    inputPrice: z.number().nonnegative().optional(),
+    outputPrice: z.number().nonnegative().optional(),
+    cacheReadPrice: z.number().nonnegative().optional(),
+    cacheWritePrice: z.number().nonnegative().optional()
 });
 export type BenchmarkMeasurement = z.infer<typeof BenchmarkMeasurementSchema>;
 

@@ -6,9 +6,12 @@ import {
     barGroups,
     comparisonModels,
     effortSegments,
+    formatMetric,
     initialSelection,
     measuredEfforts,
+    matchesChart,
     metricChange,
+    metricFrontier,
     modelPoints,
     pointDifference,
     pointKey,
@@ -142,6 +145,49 @@ describe('model comparison selection', () => {
 });
 
 describe('comparison chart math', () => {
+    test('preserves subsecond latency precision instead of rounding positive measurements to zero', () => {
+        expect(formatMetric(0.04, 'timeToFirstAnswer')).toBe('0.04');
+        expect(formatMetric(10.23, 'responseTime')).toBe('10.23');
+        expect(formatMetric(0, 'timeToFirstAnswer')).toBe('0');
+    });
+
+    test('latency frontiers favor lower times while throughput frontiers favor higher speeds', () => {
+        const fast = { value: 2, score: 50 };
+        const slow = { value: 20, score: 50 };
+        const better = { value: 30, score: 60 };
+        expect(metricFrontier([slow, fast, better], 'timeToFirstAnswer')).toEqual([fast, better]);
+        expect(metricFrontier([slow, fast, better], 'responseTime')).toEqual([fast, better]);
+        expect(metricFrontier([slow, fast, better], 'outputSpeed')).toEqual([better]);
+    });
+
+    test('chart availability distinguishes missing metrics from effort and logarithmic filters', () => {
+        const models: ChartModel[] = [
+            {
+                ...MODELS[0]!,
+                points: [
+                    { effort: 'low', intelligence: 40, timeToFirstAnswer: 0 },
+                    { effort: 'high', intelligence: 50, timeToFirstAnswer: 10 }
+                ]
+            }
+        ];
+        const state = reduceComparison(models, initialSelection(), { type: 'effort', id: 'high' });
+        const filtered = comparisonModels(models, state).drawn[0]!;
+        expect(models[0]!.points.some((point) => matchesChart(point, 'coding', false, 'linear'))).toBe(false);
+        expect(models[0]!.points.some((point) => matchesChart(point, 'timeToFirstAnswer', true, 'linear'))).toBe(true);
+        expect(filtered.points.some((point) => matchesChart(point, 'timeToFirstAnswer', true, 'log'))).toBe(false);
+        expect(filtered.points.some((point) => matchesChart(point, 'timeToFirstAnswer', true, 'linear'))).toBe(true);
+        expect(matchesChart({ effort: 'low', responseTime: 10 }, 'responseTime', true, 'linear')).toBe(false);
+    });
+
+    test('compares latency and token prices by ratio, retaining zero and omitting missing cache prices', () => {
+        const one = { effort: 'low', timeToFirstAnswer: 10, inputPrice: 4, cacheReadPrice: 0 };
+        const two = { effort: 'high', timeToFirstAnswer: 5, inputPrice: 0 };
+        expect(metricChange(one, two, 'timeToFirstAnswer')).toEqual({ value: 0.5, ratio: true });
+        expect(metricChange(one, two, 'inputPrice')).toEqual({ value: 0, ratio: true });
+        expect(metricChange(two, one, 'inputPrice')).toBeNull();
+        expect(metricChange(one, two, 'cacheReadPrice')).toBeNull();
+    });
+
     test('groups models by their maximum value and retains metric-specific partial data, including zero', () => {
         const partial: ChartModel[] = [
             {

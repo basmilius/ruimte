@@ -14,12 +14,12 @@
     "views": {
         "label": "Benchmark charts",
         "comparison": "Cost vs intelligence",
-        "speed": "Speed vs intelligence",
+        "speed": "Speed",
         "score": "Intelligence",
         "coding": "Coding",
         "agentic": "Agentic",
         "cost": "Cost per task",
-        "totalCost": "Total cost"
+        "totalCost": "Evaluation cost"
     },
     "chart": {
         "point": "{{model}}, {{effort}}: Intelligence Index {{intelligence}}, {{metric}} {{value}}",
@@ -40,8 +40,14 @@
         "coding": "Coding Index",
         "agentic": "Agentic Index",
         "costPerTask": "Cost per task",
-        "totalCost": "Total cost",
-        "outputSpeed": "Output speed (tok/s)"
+        "totalCost": "Evaluation cost",
+        "outputSpeed": "Output speed (tok/s)",
+        "timeToFirstAnswer": "First answer (s)",
+        "responseTime": "Response time (s)",
+        "inputPrice": "Input",
+        "outputPrice": "Output",
+        "cacheReadPrice": "Cache read",
+        "cacheWritePrice": "Cache write"
     },
     "units": {
         "intelligence": "Index points, higher is better",
@@ -49,17 +55,32 @@
         "agentic": "Index points, higher is better",
         "costPerTask": "USD, lower is better",
         "totalCost": "USD, full Intelligence Index run",
-        "outputSpeed": "Output tokens per second"
+        "outputSpeed": "Output tokens per second",
+        "timeToFirstAnswer": "Seconds, lower is better",
+        "responseTime": "Seconds, lower is better"
     },
     "axes": {
         "costPerTask": "Cost per task (USD, lower is better)",
-        "outputSpeed": "Output tokens per second (higher is better)"
+        "outputSpeed": "Output tokens per second (higher is better)",
+        "timeToFirstAnswer": "Time to first answer token (seconds, lower is better)",
+        "responseTime": "Total response time (seconds, lower is better)"
     },
     "legend": {
         "label": "Models",
         "notMeasured": "No data",
         "legacy": "Show legacy models",
-        "filtered": "No measurement for this chart and these reasoning levels"
+        "filtered": "Hidden by reasoning or axis filters",
+        "hidden": "Turned off",
+        "missing": {
+            "intelligence": "No Intelligence score available",
+            "coding": "No Coding score available",
+            "agentic": "No Agentic score available",
+            "costPerTask": "No cost measurement available",
+            "totalCost": "No evaluation cost available",
+            "outputSpeed": "No output speed available",
+            "timeToFirstAnswer": "No first-answer time available",
+            "responseTime": "No response time available"
+        }
     },
     "efforts": {
         "low": "Low",
@@ -113,12 +134,13 @@
         "change": "Change",
         "unavailable": "n/a",
         "pinHint": "Select to pin as reference A.",
-        "changeHint": "Indices: difference in points. Costs and speed: B / A.",
+        "changeHint": "Indices: difference in points. Costs, times and speed: B / A.",
         "notices": {
             "referenceHidden": "A filter hid the reference, so the comparison was cleared.",
             "candidateHidden": "A filter hid measurement B. Reference A stays pinned.",
             "cleared": "Comparison cleared."
-        }
+        },
+        "tokenPrices": "Token prices (USD per 1M tokens)"
     },
     "empty": {
         "unavailable": "No benchmarks yet.",
@@ -141,5 +163,15 @@
     },
     "bench": {
         "home": "Ruimte, Space for AI Engineering"
+    },
+    "speed": {
+        "metric": "Speed metric",
+        "outputSpeed": "Output tokens/s",
+        "timeToFirstAnswer": "Time to first answer",
+        "responseTime": "Total response time",
+        "context": "Median values across API providers. Total response time is benchmarked with 500 answer tokens."
+    },
+    "evaluation": {
+        "context": "Cost of the full Artificial Analysis Intelligence Index evaluation."
     }
 }

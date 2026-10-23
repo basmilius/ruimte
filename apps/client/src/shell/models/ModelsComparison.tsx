@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ModelBenchmarksResult } from '@ruimte/pulsar';
-import { Button, Checkbox, EmptyState, IconButton, Segmented, Tabs, Tooltip } from '@adecore/ui';
+import { Button, Checkbox, EmptyState, IconButton, Segmented, Select, Tabs, Tooltip } from '@adecore/ui';
 import { formatNumber, useFormatLocale } from '@adecore/ui/format';
 import { chartLabs, chartModels, modelMarks, type CostScale } from './chart';
 import {
@@ -11,12 +11,14 @@ import {
     comparisonModels,
     initialSelection,
     measuredEfforts,
-    metricValue,
+    matchesChart,
     modelPoints,
     reduceComparison,
     MODEL_VIEWS,
     VIEW_METRICS,
-    type ModelView
+    SPEED_METRICS,
+    type ModelView,
+    type SpeedMetric
 } from './comparison';
 import { ModelsChart } from './ModelsChart';
 import { ModelsBarChart } from './ModelsBarChart';
@@ -36,6 +38,7 @@ export function ModelsComparison({ result, start }: { result: ModelBenchmarksRes
     const [selection, dispatch] = useReducer(reduceComparison.bind(null, models), undefined, initialSelection);
     const [view, setView] = useState<ModelView>('comparison');
     const [scale, setScale] = useState<CostScale>('log');
+    const [speedMetric, setSpeedMetric] = useState<SpeedMetric>('outputSpeed');
     const [grouped, setGrouped] = useState(true);
     const [showFrontier, setShowFrontier] = useState(true);
     const [filtersOpen, setFiltersOpen] = useState(false);
@@ -50,15 +53,9 @@ export function ModelsComparison({ result, start }: { result: ModelBenchmarksRes
         points.find((point) => point.key === selection.candidate) ??
         null;
     const scatter = view === 'comparison' || view === 'speed';
-    const metric = VIEW_METRICS[view];
-    const available = new Set(
-        points
-            .filter((point) => {
-                const value = metricValue(point, metric);
-                return value !== null && (!scatter || (metricValue(point, 'intelligence') !== null && (scale !== 'log' || value > 0)));
-            })
-            .map((point) => point.modelId)
-    );
+    const metric = view === 'speed' ? speedMetric : VIEW_METRICS[view];
+    const measured = new Set(models.filter((model) => model.points.some((point) => matchesChart(point, metric, scatter, 'linear'))).map((model) => model.id));
+    const available = new Set(points.filter((point) => matchesChart(point, metric, scatter, scale)).map((point) => point.modelId));
     const visibleHighlight = highlighted !== null && available.has(highlighted) ? highlighted : null;
     const empty = listed.every((model) => model.points.length === 0)
         ? 'unavailable'
@@ -122,7 +119,19 @@ export function ModelsComparison({ result, start }: { result: ModelBenchmarksRes
                 <div className="flex min-h-0 min-w-0 flex-col px-5 pt-4 pb-2 max-[760px]:px-2">
                     <header className="mb-2 flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-2">
                         <h2 className="text-sm font-semibold text-text">{t(`views.${view}`)}</h2>
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            {view === 'speed' && (
+                                <Select<SpeedMetric>
+                                    value={speedMetric}
+                                    onValueChange={(next) => {
+                                        setPreview(null);
+                                        setSpeedMetric(next);
+                                    }}
+                                    label={t('speed.metric')}
+                                    size="sm"
+                                    items={SPEED_METRICS.map((id) => ({ value: id, label: t(`speed.${id}`) }))}
+                                />
+                            )}
                             {scatter ? (
                                 <>
                                     <Tooltip label={t('chart.frontier')}>
@@ -151,6 +160,8 @@ export function ModelsComparison({ result, start }: { result: ModelBenchmarksRes
                             )}
                         </div>
                     </header>
+                    {view === 'speed' && <p className="mb-2 text-xs text-text-muted">{t('speed.context')}</p>}
+                    {view === 'totalCost' && <p className="mb-2 text-xs text-text-muted">{t('evaluation.context')}</p>}
                     {MODEL_VIEWS.map((id) => (
                         <Tabs.Panel key={id} value={id} className="relative min-h-0 grow outline-none">
                             {id === view && (
@@ -183,7 +194,7 @@ export function ModelsComparison({ result, start }: { result: ModelBenchmarksRes
                                             originals={models}
                                             marks={marks}
                                             scale={scale}
-                                            axisMetric={view === 'comparison' ? 'costPerTask' : 'outputSpeed'}
+                                            axisMetric={view === 'comparison' ? 'costPerTask' : speedMetric}
                                             showFrontier={showFrontier}
                                             highlighted={visibleHighlight}
                                             {...interaction}
@@ -236,6 +247,8 @@ export function ModelsComparison({ result, start }: { result: ModelBenchmarksRes
                         hiddenEfforts={selection.hiddenEfforts}
                         efforts={efforts}
                         available={available}
+                        measured={measured}
+                        metric={metric}
                         showLegacy={selection.legacy}
                         onToggle={(id) => dispatch({ type: 'model', id })}
                         onEffort={(id) => dispatch({ type: 'effort', id })}

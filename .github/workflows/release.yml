@@ -123,12 +123,6 @@ jobs:
           bun run build:main
           bun x electron-builder --mac --arm64 --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION" -c.mac.notarize=true
-      - uses: ./.github/actions/electron-symbols
-        with:
-          platform: darwin
-          arch: arm64
-          release: ruimte@${{ env.RUIMTE_VERSION }}
-          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
       - name: Shred the key
         if: always()
         run: rm -f "$RUNNER_TEMP/AuthKey.p8"
@@ -186,12 +180,6 @@ jobs:
           bun run build:main
           bun x electron-builder --linux --${{ matrix.arch }} --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION"
-      - uses: ./.github/actions/electron-symbols
-        with:
-          platform: linux
-          arch: ${{ matrix.arch }}
-          release: ruimte@${{ env.RUIMTE_VERSION }}
-          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
 
   # Unsigned until Bas picks a code signing route (docs/RELEASE.md, "Windows"); the certificate goes in
   # here as WIN_CSC_LINK and WIN_CSC_KEY_PASSWORD, or as a signing service's step before the build.
@@ -239,12 +227,6 @@ jobs:
           bun run build:main
           bun x electron-builder --win --x64 --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION"
-      - uses: ./.github/actions/electron-symbols
-        with:
-          platform: win32
-          arch: x64
-          release: ruimte@${{ env.RUIMTE_VERSION }}
-          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
 
   # The deploy of the release the daemon, the shell and the page report under, `ruimte@<version>`, once
   # it is published, so its commits run from the release before. Bun maps a stack trace of the daemon

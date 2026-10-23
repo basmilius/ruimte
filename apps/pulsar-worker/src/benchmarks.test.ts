@@ -24,7 +24,7 @@ describe('benchmark measurements', () => {
                 }
             ])
         );
-        expect(parsed?.measurements.get(LOW)).toEqual({ intelligence: 0, coding: 24, totalCost: 50, outputSpeed: 125 });
+        expect(parsed?.measurements.get(LOW)).toEqual({ intelligence: 0, coding: 24, totalCost: 50, outputSpeed: 125, responseTime: 3, outputPrice: 1 });
         expect(parsed?.intelligenceIndexVersion).toBe(4.3);
     });
 
@@ -39,6 +39,50 @@ describe('benchmark measurements', () => {
         expect(parsed?.measurements.get(LOW)).toEqual({ coding: 0 });
         expect(parsed?.measurements.has(HIGH)).toBe(false);
         expect(parsed?.measurements.has('empty')).toBe(false);
+    });
+
+    test('delivers first-answer latency and token prices independently of missing Code scores', () => {
+        const parsed = measurementsOf(
+            page([
+                {
+                    id: LOW,
+                    evaluations: { artificial_analysis_intelligence_index: 42.3, artificial_analysis_coding_index: null },
+                    performance: {
+                        median_time_to_first_token_seconds: 0.1,
+                        median_time_to_first_answer_token_seconds: 12.5,
+                        median_end_to_end_response_time_seconds: 20
+                    },
+                    pricing: { price_1m_input_tokens: 4, price_1m_output_tokens: 20, price_1m_cache_hit_tokens: 0, price_1m_cache_write_tokens: null }
+                }
+            ])
+        )!;
+        const result = benchmarksFrom(parsed.measurements, 123)!;
+        expect(result.measurements).toEqual([
+            {
+                modelId: MODEL.slug,
+                effort: 'low',
+                intelligence: 42.3,
+                timeToFirstAnswer: 12.5,
+                responseTime: 20,
+                inputPrice: 4,
+                outputPrice: 20,
+                cacheReadPrice: 0
+            }
+        ]);
+        expect(ModelBenchmarksResultSchema.safeParse(result).success).toBe(true);
+    });
+
+    test('retains zero latency and free tokens, and omits negative measurements', () => {
+        const parsed = measurementsOf(
+            page([
+                {
+                    id: LOW,
+                    performance: { median_time_to_first_answer_token_seconds: 0, median_end_to_end_response_time_seconds: -1 },
+                    pricing: { price_1m_input_tokens: 0, price_1m_output_tokens: -1, price_1m_cache_hit_tokens: -1, price_1m_cache_write_tokens: 0 }
+                }
+            ])
+        )!;
+        expect(parsed.measurements.get(LOW)).toEqual({ timeToFirstAnswer: 0, inputPrice: 0, cacheWritePrice: 0 });
     });
 
     test('delivers partial Haiku measurements while preserving the original client contract', () => {

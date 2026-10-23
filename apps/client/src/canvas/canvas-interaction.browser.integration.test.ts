@@ -170,3 +170,37 @@ test('the canvas keeps selection anchored during scroll, pans over focused bodie
         }
     );
 }, 15000);
+
+test('a node in a group resizes from its handle without moving the group', async () => {
+    await withBrowserFixture(
+        `
+        import { Canvas } from ${JSON.stringify(join(import.meta.dir, 'Canvas.tsx'))};
+        import { defaultCanvasStore } from ${JSON.stringify(join(import.meta.dir, '../state/canvas.ts'))};
+        import { ChatScopeProvider } from ${JSON.stringify(join(import.meta.dir, '../transport/ChatScopeProvider.tsx'))};
+        import { ConnectionContext } from ${JSON.stringify(join(import.meta.dir, '../transport/context.ts'))};
+        import { machineTransport } from ${JSON.stringify(join(import.meta.dir, '../transport/index.ts'))};
+        defaultCanvasStore.setState({
+            viewId: 'fixture', camera: { x: 0, y: 0, zoom: 1 }, texts: {}, order: ['group', 'inner'],
+            nodes: {
+                group: { id: 'group', kind: 'group', title: 'Group', x: 0, y: 0, w: 600, h: 500, memberIds: ['inner'] },
+                inner: { id: 'inner', kind: 'group', title: 'Inner', x: 200, y: 160, w: 200, h: 160 }
+            }
+        });
+        window.canvas = defaultCanvasStore;
+        createRoot(document.getElementById('root')).render(React.createElement(UIProvider, {i18n:i18next}, React.createElement(ConnectionContext.Provider, {value:{endpointId:'fixture',transport:machineTransport('fixture')}}, React.createElement(ChatScopeProvider, null, React.createElement(Canvas)))));
+    `,
+        '.absolute{position:absolute}.relative{position:relative}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}[data-canvas-surface]{position:relative;width:800px;height:600px;overflow:hidden}svg{overflow:visible}',
+        async (view) => {
+            // On the east edge of the inner node, inside the group, away from the port and the corners.
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 407, y: 200 });
+            await view.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+            expect(await view.evaluate<string | null>(`document.elementFromPoint(407, 200)?.getAttribute('data-resize-node') ?? null`)).toBe('inner');
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: 407, y: 200, button: 'left', buttons: 1, clickCount: 1 });
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 447, y: 200, button: 'left', buttons: 1 });
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 447, y: 200, button: 'left', buttons: 0, clickCount: 1 });
+            expect(await view.evaluate<number>('window.canvas.getState().nodes.inner.w')).toBe(240);
+            expect(await view.evaluate<number[]>('[window.canvas.getState().nodes.group.x, window.canvas.getState().nodes.group.y]')).toEqual([0, 0]);
+            expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
+        }
+    );
+}, 15000);

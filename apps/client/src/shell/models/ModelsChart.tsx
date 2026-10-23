@@ -2,8 +2,18 @@ import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useContentSize } from '@adecore/ui';
 import { formatDecimal } from '@adecore/ui/format';
-import { costAxis, frontier, intelligenceAxis, nearestPoint, type ChartModel, type CostScale, type ModelMark } from './chart';
-import { effortSegments, formatMetric, metricValue, pointKey, shortModelName, type PointInteraction } from './comparison';
+import { costAxis, intelligenceAxis, nearestPoint, type ChartModel, type CostScale, type ModelMark } from './chart';
+import {
+    effortSegments,
+    formatMetric,
+    matchesChart,
+    metricFrontier,
+    metricValue,
+    pointKey,
+    shortModelName,
+    type PointInteraction,
+    type ScatterMetric
+} from './comparison';
 import { LabLogo } from './LabLogo';
 import { usePointNavigation } from './use-point-navigation';
 
@@ -12,7 +22,7 @@ interface ModelsChartProps extends PointInteraction {
     originals: readonly ChartModel[];
     marks: ReadonlyMap<string, ModelMark>;
     scale: CostScale;
-    axisMetric: 'costPerTask' | 'outputSpeed';
+    axisMetric: ScatterMetric;
     showFrontier: boolean;
     highlighted: string | null;
 }
@@ -51,7 +61,7 @@ export function ModelsChart({
             points: model.points.flatMap((point) => {
                 const score = metricValue(point, 'intelligence');
                 const value = metricValue(point, axisMetric);
-                return score === null || value === null || (scale === 'log' && value <= 0)
+                return score === null || value === null || !matchesChart(point, axisMetric, true, scale)
                     ? []
                     : [{ ...point, score, value, key: pointKey(model.id, point.effort) }];
             })
@@ -72,9 +82,7 @@ export function ModelsChart({
     const { root: rootRef, nodes, focused, tabbable, focus, blur, navigate } = usePointNavigation(lines.map((line) => line.map((point) => point.key)));
     const preview = hovered ?? focused;
     const active = lines.flat().find((point) => point.key === preview);
-    const band = frontier(
-        lines.flat().map((point) => ({ costPerTask: axisMetric === 'outputSpeed' ? -point.value : point.value, intelligence: point.score, point }))
-    ).map((entry) => entry.point);
+    const band = metricFrontier(lines.flat(), axisMetric);
     const labels = lines.map((line, index) => ({ index, point: line.at(-1)!, y: line.at(-1)!.y })).sort((one, other) => one.y - other.y);
     for (let index = 0; index < labels.length; index++) {
         labels[index]!.y = Math.max(TOP, labels[index]!.y, index === 0 ? TOP : labels[index - 1]!.y + 24);

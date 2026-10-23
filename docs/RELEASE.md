@@ -235,6 +235,8 @@ and electron-builder leaves out any `.map` that is still there. Without the toke
 deleted and the page's stack traces stay minified. The station deploy does the same under
 `ruimte@station-<commit>` and reports that deploy, and `.assetsignore` keeps a map out of its assets.
 
-A native crash of the shell arrives as a minidump in an envelope. `.github/actions/electron-symbols`
-uploads the breakpad symbols of the Electron each build ships (the shell has no native module of its
-own), so its frames resolve. A failed upload leaves the release alone.
+A native crash of the shell arrives as a minidump in an envelope, without Electron's symbols: the
+module, the process and the crash reason say whether it is ours, and the shell has no native module of
+its own. Electron's symbols take hundreds of MB per platform and are more than Observatory's ingest
+takes in one request; a crash that keeps coming back is symbolicated locally with the symbols of its
+Electron version.

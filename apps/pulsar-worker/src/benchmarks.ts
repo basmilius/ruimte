@@ -23,7 +23,21 @@ const MeasuredModelSchema = z.object({
             cost_per_task: z.object({ total_cost: z.number().nullish() }).nullish()
         })
         .nullish(),
-    performance: z.object({ median_output_tokens_per_second: z.number().nullish() }).nullish()
+    performance: z
+        .object({
+            median_output_tokens_per_second: z.number().nullish(),
+            median_time_to_first_answer_token_seconds: z.number().nullish(),
+            median_end_to_end_response_time_seconds: z.number().nullish()
+        })
+        .nullish(),
+    pricing: z
+        .object({
+            price_1m_input_tokens: z.number().nullish(),
+            price_1m_output_tokens: z.number().nullish(),
+            price_1m_cache_hit_tokens: z.number().nullish(),
+            price_1m_cache_write_tokens: z.number().nullish()
+        })
+        .nullish()
 });
 
 const ModelsPageSchema = z.object({
@@ -51,6 +65,8 @@ export function measurementsOf(raw: unknown): (Measurements & { hasMore: boolean
         }
         const evaluations = model.data.evaluations;
         const costs = model.data.artificial_analysis_intelligence_index_cost;
+        const performance = model.data.performance;
+        const pricing = model.data.pricing;
         const values: Measurement = {};
         for (const [field, value] of [
             ['intelligence', evaluations?.artificial_analysis_intelligence_index],
@@ -58,12 +74,18 @@ export function measurementsOf(raw: unknown): (Measurements & { hasMore: boolean
             ['agentic', evaluations?.artificial_analysis_agentic_index],
             ['costPerTask', costs?.cost_per_task?.total_cost],
             ['totalCost', costs?.total_cost],
-            ['outputSpeed', model.data.performance?.median_output_tokens_per_second]
+            ['outputSpeed', performance?.median_output_tokens_per_second],
+            ['timeToFirstAnswer', performance?.median_time_to_first_answer_token_seconds],
+            ['responseTime', performance?.median_end_to_end_response_time_seconds],
+            ['inputPrice', pricing?.price_1m_input_tokens],
+            ['outputPrice', pricing?.price_1m_output_tokens],
+            ['cacheReadPrice', pricing?.price_1m_cache_hit_tokens],
+            ['cacheWritePrice', pricing?.price_1m_cache_write_tokens]
         ] as const) {
             if (typeof value !== 'number' || !Number.isFinite(value)) {
                 continue;
             }
-            if ((field === 'costPerTask' || field === 'totalCost') && value < 0) {
+            if (field !== 'intelligence' && field !== 'coding' && field !== 'agentic' && value < 0) {
                 continue;
             }
             if (field === 'outputSpeed' && value <= 0) {

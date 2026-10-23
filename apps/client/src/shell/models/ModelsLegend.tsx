@@ -1,12 +1,12 @@
 import { useId, useState } from 'react';
 import clsx from 'clsx';
-import { Search, RotateCcw, X } from 'lucide-react';
+import { Check, Search, RotateCcw, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button, IconButton, Input, Switch, Tooltip } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import type { BenchmarkLab } from '@ruimte/pulsar';
 import type { ChartModel, ModelMark } from './chart';
-import { shortModelName } from './comparison';
+import { shortModelName, type Metric } from './comparison';
 import { LabLogo } from './LabLogo';
 import { ModelsReasoningFilter } from './ModelsReasoningFilter';
 
@@ -18,6 +18,8 @@ interface ModelsLegendProps {
     hiddenEfforts: ReadonlySet<string>;
     efforts: readonly string[];
     available: ReadonlySet<string>;
+    measured: ReadonlySet<string>;
+    metric: Metric;
     showLegacy: boolean;
     onToggle(id: string): void;
     onEffort(effort: string): void;
@@ -36,6 +38,8 @@ export function ModelsLegend({
     hiddenEfforts,
     efforts,
     available,
+    measured: measuredModels,
+    metric,
     showLegacy,
     onToggle,
     onEffort,
@@ -96,17 +100,24 @@ export function ModelsLegend({
                                 const measured = model.points.length > 0;
                                 const selected = measured && !hidden.has(model.id);
                                 const matches = available.has(model.id);
+                                const status = !measured
+                                    ? t('legend.notMeasured')
+                                    : !selected
+                                      ? t('legend.hidden')
+                                      : !measuredModels.has(model.id)
+                                        ? t(`legend.missing.${metric}`)
+                                        : !matches
+                                          ? t('legend.filtered')
+                                          : null;
+                                const statusId = `${searchId}-${model.id}`;
                                 const color = marks.get(model.id)?.color ?? 'var(--text-muted)';
                                 return (
-                                    <Tooltip
-                                        key={model.id}
-                                        label={!measured ? t('legend.notMeasured') : !matches ? t('legend.filtered') : model.name}
-                                        side="left"
-                                    >
+                                    <Tooltip key={model.id} label={status ?? model.name} side="left">
                                         <button
                                             type="button"
                                             aria-label={model.name}
                                             aria-pressed={selected}
+                                            aria-describedby={status === null ? undefined : statusId}
                                             disabled={!measured}
                                             className={clsx(
                                                 'flex min-h-7 w-full items-center gap-2 rounded px-1 text-left text-xs enabled:hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-accent max-[760px]:min-h-9',
@@ -121,19 +132,17 @@ export function ModelsLegend({
                                             <span style={{ color }} className={clsx(!selected && 'opacity-40')}>
                                                 <LabLogo lab={model.lab} size={14} />
                                             </span>
-                                            <span className="min-w-0 grow truncate">{shortModelName(model.name)}</span>
-                                            {!measured ? (
-                                                <span className="text-text-faint">{t('legend.notMeasured')}</span>
-                                            ) : (
-                                                <span
-                                                    className="size-1.5 shrink-0 rounded-full border"
-                                                    style={{
-                                                        borderColor: color,
-                                                        background: selected && matches ? color : 'transparent',
-                                                        opacity: selected ? 1 : 0.4
-                                                    }}
-                                                />
-                                            )}
+                                            <span className="min-w-0 grow py-1">
+                                                <span className="block truncate">{shortModelName(model.name)}</span>
+                                                {status !== null && (
+                                                    <span id={statusId} className="mt-0.5 block text-2xs text-text-muted">
+                                                        {status}
+                                                    </span>
+                                                )}
+                                            </span>
+                                            <span aria-hidden className="flex size-3 shrink-0 items-center justify-center" style={{ color }}>
+                                                {selected ? <Check size={12} /> : <span className="size-1.5 rounded-full border border-current opacity-40" />}
+                                            </span>
                                         </button>
                                     </Tooltip>
                                 );
