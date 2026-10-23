@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { forgetInheritedSession, parseServerArgs } from './config.ts';
+import { argvForExecutable, forgetInheritedSession, parseServerArgs } from './config.ts';
 
 describe('forgetInheritedSession', () => {
     test('drops the session variables and keeps the rest', () => {
@@ -15,6 +15,26 @@ describe('forgetInheritedSession', () => {
         };
         forgetInheritedSession(env);
         expect(env).toEqual({ RUIMTE_HOME: '/tmp/ruimte-dev', RUIMTE_LABEL: 'box', PATH: '/usr/bin' });
+    });
+});
+
+describe('argvForExecutable', () => {
+    test('a binary named ruimte-context is ruimte context, with the words as they came', () => {
+        const words = ['alert', '--text', '100% done ^ really %USERPROFILE%'];
+        expect(argvForExecutable('C:\\Users\\bas\\.ruimte\\bin\\ruimte-context.exe', words)).toEqual(['context', ...words]);
+        expect(argvForExecutable('C:\\Program Files\\Ruimte\\resources\\bin\\RUIMTE-CONTEXT.EXE', ['list'])).toEqual(['context', 'list']);
+        expect(argvForExecutable('/opt/ruimte/bin/ruimte-context', [])).toEqual(['context']);
+        expect(parseServerArgs(argvForExecutable('C:\\bin\\ruimte-context.exe', ['read', 'abc']), {})).toMatchObject({
+            command: 'context',
+            args: ['read', 'abc']
+        });
+    });
+
+    test('any other binary, Bun in a checkout among them, keeps its words', () => {
+        expect(argvForExecutable('C:\\Program Files\\Ruimte\\resources\\bin\\ruimte.exe', ['status'])).toEqual(['status']);
+        expect(argvForExecutable('/usr/local/bin/ruimte', [])).toEqual([]);
+        expect(argvForExecutable('/Users/bas/.bun/bin/bun', ['context', 'list'])).toEqual(['context', 'list']);
+        expect(argvForExecutable('C:\\tools\\ruimte-context-old.exe', ['list'])).toEqual(['list']);
     });
 });
 

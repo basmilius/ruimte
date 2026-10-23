@@ -1,5 +1,5 @@
 import { homedir, hostname } from 'node:os';
-import { join } from 'node:path';
+import { join, win32 } from 'node:path';
 import { parseArgs } from 'node:util';
 import { DEFAULT_STUN_SERVER, brokerUrlProblem, type BrokerOverride } from '@ruimte/pulsar';
 import { RUIMTE_SESSION_VARIABLES } from '@adecore/agents/host';
@@ -104,6 +104,19 @@ export function parseBrokerOverride(noBroker: boolean, value: string | undefined
     }
     const url = parseBrokerUrl(value, '--broker');
     return url === null ? null : { mode: 'custom', url };
+}
+
+/*
+ * On Windows `ruimte-context.exe` is a copy of `ruimte.exe` (`scripts/compile.ts`), so cmd and PowerShell
+ * start it directly: a batch file would pass the words on through `%*`, which cmd reads again for `%` and `^`.
+ * Under that name the binary is `ruimte context`. `win32.basename` takes both separators, so a POSIX path works too.
+ */
+export function argvForExecutable(executable: string, argv: string[]): string[] {
+    const name = win32.basename(executable).toLowerCase();
+    if (name === 'ruimte-context' || name === 'ruimte-context.exe') {
+        return ['context', ...argv];
+    }
+    return argv;
 }
 
 export function parseServerArgs(argv: string[], env: Record<string, string | undefined> = process.env): ServerConfig {

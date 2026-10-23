@@ -310,17 +310,33 @@ describe('the copy the service runs', () => {
     test('on Windows the running executable is renamed out of the way, and removed by the next copy', () => {
         dir = mkdtempSync(join(tmpdir(), 'ruimte-service-bin-'));
         const binDir = join(dir, 'home', 'bin');
-        const executables = ['ruimte.exe', 'ruimte-context', 'ruimte-context.cmd'];
+        const executables = ['ruimte.exe', 'ruimte-context', 'ruimte-context.exe'];
         copyServiceBinaries(packageBin(join(dir, 'first'), 'one', [], executables), binDir, 'win32');
         expect(readdirSync(binDir).filter((name) => name.endsWith('.retired'))).toEqual([]);
 
+        // An agent may be running `ruimte-context.exe` as well, so both executables move aside.
         copyServiceBinaries(packageBin(join(dir, 'second'), 'two', [], executables), binDir, 'win32');
-        expect(readdirSync(binDir).filter((name) => name.endsWith('.retired'))).toHaveLength(1);
+        expect(readdirSync(binDir).filter((name) => name.endsWith('.retired'))).toHaveLength(2);
         expect(readFileSync(join(binDir, 'ruimte.build'), 'utf8')).toBe('two');
+        expect(readFileSync(join(binDir, 'ruimte-context.exe'), 'utf8')).toBe('#!ruimte-context.exe');
 
         copyServiceBinaries(packageBin(join(dir, 'third'), 'three', [], executables), binDir, 'win32');
-        expect(readdirSync(binDir).filter((name) => name.endsWith('.retired'))).toHaveLength(1);
+        expect(readdirSync(binDir).filter((name) => name.endsWith('.retired'))).toHaveLength(2);
 
+        removeServiceBinaries(binDir, 'win32');
+        expect(readdirSync(binDir)).toEqual([]);
+    });
+
+    test('on Windows the ruimte-context.cmd of an earlier release goes, so cmd and PowerShell find the executable', () => {
+        dir = mkdtempSync(join(tmpdir(), 'ruimte-service-bin-'));
+        const binDir = join(dir, 'home', 'bin');
+        mkdirSync(binDir, { recursive: true });
+        writeFileSync(join(binDir, 'ruimte-context.cmd'), '@echo off');
+        copyServiceBinaries(packageBin(join(dir, 'first'), 'one', [], ['ruimte.exe', 'ruimte-context', 'ruimte-context.exe']), binDir, 'win32');
+        expect(existsSync(join(binDir, 'ruimte-context.cmd'))).toBe(false);
+        expect(existsSync(join(binDir, 'ruimte-context.exe'))).toBe(true);
+
+        writeFileSync(join(binDir, 'ruimte-context.cmd'), '@echo off');
         removeServiceBinaries(binDir, 'win32');
         expect(readdirSync(binDir)).toEqual([]);
     });

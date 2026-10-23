@@ -8,7 +8,7 @@ import { placeDatabaseHelper } from './database-helper.ts';
 
 /*
  * Compiles the daemon into one executable per platform, with the `ruimte-context` script next
- * to it, under `dist/<os>-<arch>/`. The folder names follow electron-builder's macros, so the
+ * to it (and on Windows a `ruimte-context.exe`), under `dist/<os>-<arch>/`. The folder names follow electron-builder's macros, so the
  * desktop build picks the right one with `${os}-${arch}`.
  *
  *   bun scripts/compile.ts                                     the machine it runs on
@@ -190,8 +190,9 @@ if (values.os === 'mac' || values.os === 'linux') {
 await copyFile(join(root, 'bin', 'ruimte-context'), join(outDir, 'ruimte-context'));
 await chmod(join(outDir, 'ruimte-context'), 0o755);
 if (values.os === 'win') {
-    // Git Bash runs the script above; cmd and PowerShell find this one through PATHEXT.
-    await copyFile(join(root, 'bin', 'ruimte-context.cmd'), join(outDir, 'ruimte-context.cmd'));
+    // Git Bash runs the script above; cmd and PowerShell find this copy, which is `ruimte context` under its
+    // name (`argvForExecutable`). A `.cmd` in its place would pass the words through `%*`, which cmd reads again.
+    await copyFile(binary, join(outDir, 'ruimte-context.exe'));
 }
 await writeFile(join(outDir, 'ruimte.build'), `${buildId}\n`);
 console.log(`Compiled ${binary}`);

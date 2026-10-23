@@ -11,7 +11,7 @@ import { binaryNameOf, LAUNCHER_NAME, targetId, TARGETS } from '../src/targets';
  *   bun scripts/build.ts --version 0.2.0 --binaries <dir> --out <dir>
  *
  * `--binaries` holds one folder per target (`darwin-arm64/`, ...), each what `compile.ts --target`
- * wrote: `ruimte` (`ruimte.exe` on Windows), `ruimte-context` and `ruimte.build`. `--only darwin-arm64`
+ * wrote: `ruimte` (`ruimte.exe` and `ruimte-context.exe` on Windows), `ruimte-context` and `ruimte.build`. `--only darwin-arm64`
  * builds the packages for the binaries that exist, which is what a local try on one machine has.
  * `--skip win32-x64` leaves a platform out of the release, the launcher's dependencies included.
  */
@@ -51,8 +51,8 @@ for (const target of targets) {
     const dir = join(out, targetId(target));
     await mkdir(join(dir, 'bin'), { recursive: true });
     const binary = binaryNameOf(target.os);
-    // Git Bash runs `ruimte-context`; cmd and PowerShell find the `.cmd` beside it.
-    const files = [binary, 'ruimte-context', 'ruimte.build', ...(target.os === 'win32' ? ['ruimte-context.cmd'] : [])];
+    // Git Bash runs `ruimte-context`; cmd and PowerShell find the `ruimte-context.exe` beside it.
+    const files = [binary, 'ruimte-context', 'ruimte.build', ...(target.os === 'win32' ? ['ruimte-context.exe'] : [])];
     for (const name of files) {
         if (!existsSync(join(source, name))) {
             console.error(`Missing ${join(source, name)}`);
@@ -87,6 +87,9 @@ for (const target of targets) {
     // An artifact download drops the mode, and npm packs the mode it finds.
     await chmod(join(dir, 'bin', binary), 0o755);
     await chmod(join(dir, 'bin', 'ruimte-context'), 0o755);
+    if (target.os === 'win32') {
+        await chmod(join(dir, 'bin', 'ruimte-context.exe'), 0o755);
+    }
     await writeJson(join(dir, 'package.json'), platformManifest(target, version));
     await copyFile(join(repoRoot, 'LICENSE'), join(dir, 'LICENSE'));
     console.log(`Laid out ${dir}`);

@@ -15,7 +15,7 @@ compiles the daemon on `windows-latest` (NSIS needs Windows; the daemon itself w
 then `electron-builder --win --x64 --publish always` uploads `Ruimte-<version>-x64-setup.exe`, its
 blockmap, `latest.yml` and a zip into the same draft. `publish` waits for it, so a failed Windows build
 keeps the whole release a draft. `after-pack.cjs` refuses a Windows package without `bin/ruimte.exe`,
-`bin/ruimte-context.cmd` and `bin/native/adecore-database.exe`. The site sends `/download/windows` to
+`bin/ruimte-context.exe` and `bin/native/adecore-database.exe`. The site sends `/download/windows` to
 the installer of the latest release.
 
 npm reads the same variable: without it `build.ts --skip win32-x64` leaves `@ruimte/win32-x64` out of

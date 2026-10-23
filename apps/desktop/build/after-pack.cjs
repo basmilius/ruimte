@@ -13,7 +13,7 @@ module.exports = async (context) => {
         throw new Error(`No daemon at ${daemon}; run \`bun run --cwd apps/server compile\` for this os and arch first`);
     }
     if (context.electronPlatformName === 'win32') {
-        for (const name of ['ruimte-context.cmd', join('native', 'adecore-database.exe')]) {
+        for (const name of ['ruimte-context.exe', join('native', 'adecore-database.exe')]) {
             if (!existsSync(join(resources, 'bin', name))) {
                 throw new Error(`No ${name} in ${join(resources, 'bin')}; run \`bun run --cwd apps/server compile -- --os win --arch x64\` first`);
             }

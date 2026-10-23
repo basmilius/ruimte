@@ -2,7 +2,7 @@
 import 'reflect-metadata';
 import { askRunningMachine } from './cli/fatal.ts';
 import { portTaken, startMachine } from './cli/start.ts';
-import { forgetInheritedSession, parseServerArgs } from './config.ts';
+import { argvForExecutable, forgetInheritedSession, parseServerArgs } from './config.ts';
 import { errorText } from './error-text.ts';
 import { stampConsole } from './telemetry/log-time.ts';
 import { reportFatal, startTelemetry, telemetrySettings } from './telemetry/reporter.ts';
@@ -26,7 +26,7 @@ process.on('uncaughtException', crash);
 process.on('unhandledRejection', crash);
 
 /* One binary, several jobs. The daemon is imported only when it serves, so the CLI commands do not pay for loading the terminal emulator. */
-const arguments_ = process.argv.slice(2);
+const arguments_ = argvForExecutable(process.execPath, process.argv.slice(2));
 if (arguments_[0] === 'device-helper') {
     const deviceId = arguments_[1];
     if (!deviceId || arguments_.length !== 2) {

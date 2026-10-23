@@ -18,10 +18,13 @@ import { replaceSync, tempNameFor } from '@adecore/agents';
 /* What travels with the daemon: `ruimte-context` goes on every session's PATH, `ruimte.build` is how an update is seen. */
 export function binaryFiles(platform: NodeJS.Platform): string[] {
     if (platform === 'win32') {
-        return ['ruimte.exe', 'ruimte-context', 'ruimte-context.cmd', 'ruimte.build'];
+        return ['ruimte.exe', 'ruimte-context', 'ruimte-context.exe', 'ruimte.build'];
     }
     return ['ruimte', 'ruimte-context', 'ruimte.build'];
 }
+
+/* What an earlier release copied and this one no longer does; a copy left behind would answer in place of the new one. */
+const FORMER_FILES = ['ruimte-context.cmd'];
 
 /* Windows will not replace an executable that runs, but lets it be renamed; what is left is removed once it ended. */
 const RETIRED_SUFFIX = '.retired';
@@ -248,6 +251,9 @@ export function copyServiceBinaries(from: string, to: string, platform: NodeJS.P
         replaceSync(temporary, native);
     }
     removeRetired(to);
+    for (const name of FORMER_FILES) {
+        rmSync(join(to, name), { force: true });
+    }
     for (const name of binaryFiles(platform)) {
         const target = join(to, name);
         const temporary = tempNameFor(target);
@@ -273,7 +279,7 @@ function removeRetired(dir: string): void {
 }
 
 export function removeServiceBinaries(dir: string, platform: NodeJS.Platform = process.platform): void {
-    for (const name of binaryFiles(platform)) {
+    for (const name of [...binaryFiles(platform), ...FORMER_FILES]) {
         rmSync(join(dir, name), { force: true });
     }
     rmSync(join(dir, NATIVE_DIR), { recursive: true, force: true });
