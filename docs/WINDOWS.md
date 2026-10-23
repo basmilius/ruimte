@@ -40,7 +40,10 @@ Do not reverse one without asking Bas.
   and a detected launch writes its paths with `/` (`launches/detect.ts`, `launches/vscode.ts`).
 - `ruimte-context` finds `ruimte.exe`, and `ruimte-context.exe` ships beside it for cmd and PowerShell: a copy
   of `ruimte.exe` that runs `context` under that name, so no batch file reads the words again for `%` and `^`.
-  `apps/server/bin/ruimte-context.cmd` is only for a checkout.
+  It costs a second copy of the daemon (about 100 MB, half that compressed) in the installer, the npm
+  package and `$RUIMTE_HOME\bin`; a small native launcher would avoid that at the price of one more helper
+  to build. `apps/server/bin/ruimte-context.cmd` is only for a checkout under `bun dev`, and still reads `%`
+  and `^` a second time there.
 - Terminals start in Git Bash with `-l`; `shellName` drops `.exe`, so `plainShell` applies.
 - Ending a session, as in the stopping decision.
 - Deleting to the Recycle Bin (`apps/server/src/fs/trash.ts`).

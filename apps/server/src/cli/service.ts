@@ -251,9 +251,7 @@ export function copyServiceBinaries(from: string, to: string, platform: NodeJS.P
         replaceSync(temporary, native);
     }
     removeRetired(to);
-    for (const name of FORMER_FILES) {
-        rmSync(join(to, name), { force: true });
-    }
+    removeFormer(to);
     for (const name of binaryFiles(platform)) {
         const target = join(to, name);
         const temporary = tempNameFor(target);
@@ -267,6 +265,17 @@ export function copyServiceBinaries(from: string, to: string, platform: NodeJS.P
 }
 
 /* Best effort: a retired executable that still runs stays until a later copy or removal. */
+/* Only a cleanup: a former file another process holds open never stops an install or an uninstall. */
+function removeFormer(dir: string): void {
+    for (const name of FORMER_FILES) {
+        try {
+            rmSync(join(dir, name), { force: true });
+        } catch {
+            continue;
+        }
+    }
+}
+
 function removeRetired(dir: string): void {
     const names = existsSync(dir) ? readdirSync(dir) : [];
     for (const name of names.filter((entry) => entry.endsWith(RETIRED_SUFFIX))) {
@@ -279,9 +288,10 @@ function removeRetired(dir: string): void {
 }
 
 export function removeServiceBinaries(dir: string, platform: NodeJS.Platform = process.platform): void {
-    for (const name of [...binaryFiles(platform), ...FORMER_FILES]) {
+    for (const name of binaryFiles(platform)) {
         rmSync(join(dir, name), { force: true });
     }
+    removeFormer(dir);
     rmSync(join(dir, NATIVE_DIR), { recursive: true, force: true });
     removeRetired(dir);
 }
